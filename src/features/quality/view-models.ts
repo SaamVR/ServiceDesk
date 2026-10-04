@@ -1,103 +1,14 @@
-import type { AttentionItemDTO, VisitDTO } from "@/contracts";
+import type { AttentionItemDTO, QualityCaseDTO, VisitDTO } from "@/contracts";
+import type { ProductActionState } from "@/features/operations/action-state";
+import type { QualityCaseAction } from "@/server/core/facade";
 
-export type QualityCaseState = "OPEN" | "IN_REVIEW" | "RESOLVED";
-export type ReviewRequestState = "NOT_ELIGIBLE" | "ELIGIBLE" | "REQUESTED";
+export interface QualityActionAvailability { enabledActions: QualityCaseAction[]; actionLabels?: Partial<Record<QualityCaseAction, string>>; disabledReason?: string; pendingAction?: QualityCaseAction; actionState?: ProductActionState; acceptedActionHandlerSupplied?: boolean; }
+export interface QualityCaseViewInput { qualityCase: QualityCaseDTO; visit: VisitDTO; attentionItems: readonly AttentionItemDTO[]; sourceLabel: "SERVER_SNAPSHOT" | "FIXTURE_UI_ONLY"; actionAvailability?: QualityActionAvailability; }
+export interface QualityCaseView { caseId: string; visitId: string; visitStatus: VisitDTO["status"]; qualityState: QualityCaseDTO["state"]; feedbackLabel: string; issueSummary: string; ownerLabel: string; deadlineLabel: string; resolutionLabel: string; canRequestReview: boolean; reviewRequestLabel: string; relatedAttentionCount: number; dataSource: "SERVER_SNAPSHOT" | "FIXTURE_UI_ONLY"; actionAvailability: Required<Pick<QualityActionAvailability, "enabledActions" | "acceptedActionHandlerSupplied">> & Omit<QualityActionAvailability, "enabledActions" | "acceptedActionHandlerSupplied">; }
 
-export interface QualityCaseFixture {
-  id: string;
-  visitId: string;
-  state: QualityCaseState;
-  feedbackScore?: number;
-  summary: string;
-  ownerUserId?: string;
-  dueAt?: string;
-  resolutionNote?: string;
-  reviewRequestState: ReviewRequestState;
-}
-
-export interface QualityCaseView {
-  caseId: string;
-  visitId: string;
-  visitStatus: VisitDTO["status"];
-  feedbackLabel: string;
-  issueSummary: string;
-  ownerLabel: string;
-  deadlineLabel: string;
-  resolutionLabel: string;
-  canRequestReview: boolean;
-  reviewRequestLabel: string;
-  relatedAttentionCount: number;
-  dataSource: "FIXTURE_UI_ONLY";
-}
-
-function reviewRequestLabel(
-  state: ReviewRequestState,
-  qualityState: QualityCaseState,
-): string {
-  if (qualityState !== "RESOLVED") {
-    return "Resolve quality case before requesting a review";
-  }
-
-  switch (state) {
-    case "REQUESTED":
-      return "Review request queued in fixture UI";
-    case "ELIGIBLE":
-      return "Optional review request available";
-    case "NOT_ELIGIBLE":
-      return "Review request not eligible";
-  }
-}
-
-export function buildQualityCaseView({
-  visit,
-  qualityCase,
-  attentionItems,
-}: {
-  visit: VisitDTO;
-  qualityCase: QualityCaseFixture;
-  attentionItems: readonly AttentionItemDTO[];
-}): QualityCaseView {
-  const relatedAttentionCount = attentionItems.filter(
-    (item) =>
-      item.resourceId === qualityCase.id ||
-      item.resourceId === qualityCase.visitId,
-  ).length;
-
-  const resolutionLabel =
-    qualityCase.state === "RESOLVED"
-      ? qualityCase.resolutionNote
-        ? `Resolved · ${qualityCase.resolutionNote}`
-        : "Resolved"
-      : qualityCase.state === "IN_REVIEW"
-        ? "In review · owner action required"
-        : "Open · resolution required";
-
-  return {
-    caseId: qualityCase.id,
-    visitId: qualityCase.visitId,
-    visitStatus: visit.status,
-    feedbackLabel:
-      typeof qualityCase.feedbackScore === "number"
-        ? `${qualityCase.feedbackScore}/5 customer feedback`
-        : "Feedback not recorded",
-    issueSummary: qualityCase.summary,
-    ownerLabel: qualityCase.ownerUserId ?? "Unassigned",
-    deadlineLabel: qualityCase.dueAt
-      ? new Date(qualityCase.dueAt).toLocaleString("en-GB", {
-          dateStyle: "medium",
-          timeStyle: "short",
-          timeZone: "UTC",
-        })
-      : "No deadline",
-    resolutionLabel,
-    canRequestReview:
-      qualityCase.state === "RESOLVED" &&
-      qualityCase.reviewRequestState === "ELIGIBLE",
-    reviewRequestLabel: reviewRequestLabel(
-      qualityCase.reviewRequestState,
-      qualityCase.state,
-    ),
-    relatedAttentionCount,
-    dataSource: "FIXTURE_UI_ONLY",
-  };
-}
+const defaultQualityActions: QualityActionAvailability = { enabledActions: [], acceptedActionHandlerSupplied: false, disabledReason: "Quality actions require an injected accepted server command." };
+function reviewRequestLabel(caseState: QualityCaseDTO["state"], reviewState: QualityCaseDTO["reviewRequestState"]) { if (caseState !== "RESOLVED") return "Resolve quality case before requesting a review"; if (reviewState === "REQUESTED") return "Review request already queued by the server"; if (reviewState === "ELIGIBLE") return "Optional review request available after server authorization"; return "Review request not eligible"; }
+function resolutionLabel(qualityCase: QualityCaseDTO) { if (qualityCase.state === "RESOLVED") return qualityCase.resolutionNote ? `Resolved · ${qualityCase.resolutionNote}` : "Resolved"; if (qualityCase.state === "IN_REVIEW") return "In review · owner action required"; return "Open · resolution required"; }
+function formatDeadline(dueAt?: string) { return dueAt ? new Date(dueAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }) : "No deadline"; }
+export function buildQualityCaseView(input: QualityCaseViewInput): QualityCaseView { const qualityCase = input.qualityCase; const actionAvailability = { ...defaultQualityActions, ...input.actionAvailability }; const relatedAttentionCount = input.attentionItems.filter((item) => item.resourceId === qualityCase.id || item.resourceId === qualityCase.visitId).length; return { caseId: qualityCase.id, visitId: qualityCase.visitId, visitStatus: input.visit.status, qualityState: qualityCase.state, feedbackLabel: typeof qualityCase.feedbackScore === "number" ? `${qualityCase.feedbackScore}/5 customer feedback` : "Feedback not recorded", issueSummary: qualityCase.summary, ownerLabel: qualityCase.ownerUserId ?? "Unassigned", deadlineLabel: formatDeadline(qualityCase.dueAt), resolutionLabel: resolutionLabel(qualityCase), canRequestReview: qualityCase.state === "RESOLVED" && qualityCase.reviewRequestState === "ELIGIBLE", reviewRequestLabel: reviewRequestLabel(qualityCase.state, qualityCase.reviewRequestState), relatedAttentionCount, dataSource: input.sourceLabel, actionAvailability }; }
+export function validQualityActions(qualityCase: QualityCaseDTO): QualityCaseAction[] { if (qualityCase.state === "OPEN") return ["START_REVIEW", "ASSIGN"]; if (qualityCase.state === "IN_REVIEW") return ["ASSIGN", "RESOLVE"]; return qualityCase.reviewRequestState === "ELIGIBLE" ? ["REQUEST_REVIEW"] : []; }
