@@ -107,14 +107,18 @@ export async function handleWhatsAppInboundWebhook(input: WhatsAppInboundWebhook
 
   const inboundMessages = parseInboundMessages(parsed, input.workspaceByPhoneNumberId);
 
+  const summary = { received: inboundMessages.length, inserted: 0, duplicate: 0 };
+
   try {
     for (const message of inboundMessages) {
-      await input.store.persistInboundMessage({
+      const result = await input.store.persistInboundMessage({
         ...message,
         provider: "WHATSAPP",
         providerAccountId: message.phoneNumberId,
         rawProviderEvent: input.rawBody,
       });
+      if (result === "INSERTED") summary.inserted += 1;
+      if (result === "DUPLICATE") summary.duplicate += 1;
     }
   } catch (error) {
     const detail = error instanceof Error ? error.message : "unknown persistence error";
@@ -128,7 +132,7 @@ export async function handleWhatsAppInboundWebhook(input: WhatsAppInboundWebhook
 
   return {
     statusCode: 200,
-    body: JSON.stringify({ persisted: inboundMessages.length }),
+    body: JSON.stringify(summary),
     acknowledged: true,
     retryable: false,
   };
