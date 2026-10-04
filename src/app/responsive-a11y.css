@@ -1,0 +1,197 @@
+/* Product-lane responsive and accessibility safeguards.
+   These rules are static fallbacks until browser evidence can be collected. */
+
+:target {
+  scroll-margin-top: 120px;
+}
+
+#main-content,
+main,
+section,
+article,
+aside,
+header,
+footer,
+nav,
+form,
+dl,
+ol,
+ul,
+li,
+div {
+  min-width: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+dt,
+dd,
+li,
+a,
+button,
+.status-pill {
+  overflow-wrap: anywhere;
+}
+
+h4 {
+  margin: 0 0 var(--space);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.skip-link {
+  position: fixed;
+  left: var(--space);
+  top: var(--space);
+  z-index: 999;
+  transform: translateY(-150%);
+  border-radius: 999px;
+  padding: var(--space) calc(var(--space) * 1.5);
+  background: var(--ink);
+  color: white;
+  font-weight: 900;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+.scenario-stack,
+.route-anchor-grid {
+  display: grid;
+  gap: calc(var(--space) * 2);
+}
+
+.scenario-card {
+  display: grid;
+  gap: calc(var(--space) * 2);
+}
+
+.scenario-links {
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.routed-steps {
+  gap: calc(var(--space) * 1.5);
+}
+
+.routed-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: calc(var(--space) * 1.5);
+  align-items: start;
+  padding: calc(var(--space) * 1.5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fbfcfc;
+}
+
+.routed-steps .status-pill {
+  white-space: normal;
+}
+
+.slide-index {
+  display: grid;
+  gap: calc(var(--space) * 1.5);
+  margin-top: calc(var(--space) * 3);
+  padding: calc(var(--space) * 2);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 8px);
+  background: var(--surface);
+}
+
+.slide-index nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+}
+
+.slide-index a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 calc(var(--space) * 1.5);
+  font-weight: 800;
+}
+
+.slide-card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presentation-shell {
+    scroll-snap-type: none;
+  }
+
+  .slide-card {
+    scroll-snap-align: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .scenario-links,
+  .slide-index nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: var(--space);
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .scenario-links > *,
+  .slide-index a {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 420px) {
+  :target {
+    scroll-margin-top: 96px;
+  }
+
+  h1 {
+    font-size: clamp(2.1rem, 15vw, 3.6rem);
+    letter-spacing: -0.06em;
+  }
+
+  h2 {
+    font-size: clamp(1.45rem, 10vw, 2.2rem);
+  }
+
+  .brand-lockup {
+    width: 100%;
+  }
+
+  .brand-lockup span:last-child {
+    min-width: 0;
+  }
+
+  .routed-steps li,
+  .summary-list div,
+  .metric-grid div {
+    grid-template-columns: 1fr;
+  }
+
+  .card-number {
+    width: 32px;
+    height: 32px;
+  }
+
+  .status-pill {
+    max-width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .slide-card {
+    min-height: auto;
+  }
+}
