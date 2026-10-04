@@ -8,10 +8,10 @@ Execution policy: GPT Runtime Machine only for development/checks. Connected Git
 
 | Task | Owner | State | Worker base/head observed | Evidence | Next dependency |
 | --- | --- | --- | --- | --- | --- |
-| `CYCLE-1-W1` Core verification + operations seam | Worker 1 | READY | `4704a48eadd912f38ce9c981b583c9924bb62c79` | Packet published; no Cycle 1 receipt yet; coordinator Runtime DNS prevents independent execution | Worker Runtime gate → owned repairs → operations seam receipt |
-| `CYCLE-1-W2` Connector Runtime gate + durable inbound processor | Worker 2 | READY | `3f1214cac4fdb4ebf0ac3128197d4e5c7d442a5a` | Current source preserves connector repairs; historical samvr PASS is not accepted under Runtime-only policy; no Cycle 1 receipt yet | GPT Runtime gate; if green, persist → idempotent processor → ACK |
-| `CYCLE-1-W3` Product verification + request-intake boundary | Worker 3 | READY | `1345ed36455e415cc4acc7a0c9fb145866dc95bc` | Props-only DTO/fixture split exists; tests/build/browser remain unverified; no Cycle 1 receipt yet | Worker Runtime gate → owned repairs → receipt |
-| Cycle 1 integration | Coordinator | BLOCKED | integration coordinator docs current | Coordinator GPT Runtime: `github.com` and `registry.npmjs.org` DNS resolution failed; no current typecheck/test/lint/build/browser gate executed | first worker receipt + reproducible GPT Runtime focused gate |
+| `CYCLE-1-W1` Core verification + operations seam | Worker 1 | BLOCKED | `971225ef8f6fb1b93e26139fb66259373c6557f2` | Receipt verified; receipt-only range; GPT Runtime DNS/package access blocked; no source/test delta | Cycle 2 Runtime recovery → deferred core gate/operations seam |
+| `CYCLE-1-W2` Connector Runtime gate + durable inbound processor | Worker 2 | BLOCKED | `a9fc2de46ce63b44b394718edc98e0dc07a4a354` | Receipt verified; receipt-only range; no WhatsApp processor source started; historical samvr PASS still not accepted | Cycle 2 Runtime recovery; if green, persist → idempotent processor → ACK |
+| `CYCLE-1-W3` Product verification + request-intake boundary | Worker 3 | BLOCKED | `7857818c57634bb925549ea52fd380b031d426e1` | Receipt verified; receipt-only range; static DTO/fixture audit complete; tests/build/browser still not executed | Cycle 2 Runtime recovery → Product verification |
+| Cycle 1 integration | Coordinator | BLOCKED | receipts centralized on integration branch | All 3 receipt ranges verified as documentation-only; coordinator independently reproduced GitHub/npm DNS failure and missing pnpm | Runtime source/package access recovery; then executable lane gates |
 
 Canonical packets:
 - Worker 1: `docs/execution/batches/cycle-1-worker-1.md`
@@ -42,3 +42,14 @@ Coordinator rule: review and integrate each completed worker batch independently
 - PostgreSQL remains business source of truth.
 - Provider fixture tests can support `CONTRACT_TESTED`; controlled real receipts are required for `PROVIDER_VERIFIED`.
 - Current coordinator Runtime limitation is explicitly recorded in `docs/execution/coordinator-ledger.md`; it must not be converted into PASS or bypassed with a local device.
+
+
+## Cycle 1 closeout
+
+- Worker 1 receipt: `971225ef8f6fb1b93e26139fb66259373c6557f2`
+- Worker 2 receipt: `a9fc2de46ce63b44b394718edc98e0dc07a4a354`
+- Worker 3 receipt: `7857818c57634bb925549ea52fd380b031d426e1`
+- All three ranges are receipt-only.
+- Shared blocker: `GPT_RUNTIME_GIT_DNS_AND_PACKAGE_MANAGER_BLOCKED`.
+- No Cycle 1 application code was accepted into integration.
+- Next execution is a Cycle 2 recovery continuation; substantive feature work resumes only after the relevant Runtime gate is executable.
