@@ -18,6 +18,10 @@ export type ProductActionStatus =
   | "visit_not_found"
   | "invalid_transition"
   | "review_required"
+  | "recurrence_rule_not_found"
+  | "invalid_recurrence_configuration"
+  | "completed_recurrence_rule"
+  | "skip_unavailable"
   | "not_found"
   | "server_error";
 
@@ -48,12 +52,14 @@ export function mapProductActionError(error: ProductActionError): ProductActionS
     case "VERSION_CONFLICT":
     case "STALE_VERSION":
     case "HANDOVER_VERSION_CONFLICT":
+    case "RECURRENCE_VERSION_CONFLICT":
       return stateFromError("version_conflict", error);
     case "SNAPSHOT_AUTHORIZATION_FAILED":
     case "SNAPSHOT_FORBIDDEN":
       return stateFromError("snapshot_auth_failed", error);
     case "UNAUTHORIZED_CREW":
     case "CREW_UNAUTHORIZED":
+    case "RECURRENCE_UNAUTHORIZED":
     case "AUTH_REQUIRED":
     case "AUTHORIZATION_FAILED":
     case "UNAUTHORIZED":
@@ -83,6 +89,18 @@ export function mapProductActionError(error: ProductActionError): ProductActionS
     case "REVIEW_REQUIRED":
     case "VISIT_REVIEW_REQUIRED":
       return stateFromError("review_required", error);
+    case "RECURRENCE_RULE_NOT_FOUND":
+    case "RECURRENCE_NOT_FOUND":
+      return stateFromError("recurrence_rule_not_found", error);
+    case "INVALID_RECURRENCE_CONFIGURATION":
+    case "RECURRENCE_INVALID_CONFIGURATION":
+      return stateFromError("invalid_recurrence_configuration", error);
+    case "COMPLETED_RECURRENCE_RULE":
+    case "RECURRENCE_RULE_COMPLETED":
+      return stateFromError("completed_recurrence_rule", error);
+    case "SKIP_UNAVAILABLE":
+    case "RECURRENCE_SKIP_UNAVAILABLE":
+      return stateFromError("skip_unavailable", error);
     case "CONVERSATION_NOT_FOUND":
     case "MESSAGE_CONVERSATION_MISMATCH":
       return stateFromError("conversation_not_found", error);
