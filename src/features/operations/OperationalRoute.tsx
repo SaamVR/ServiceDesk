@@ -1,4 +1,5 @@
 import { UIStateCard } from "@/components/shell/UIState";
+import { InboxPreview } from "@/features/inbox/InboxPreview";
 import {
   crewActions,
   integrationCards,
@@ -140,30 +141,33 @@ function StaffPanel() {
   });
 
   return (
-    <div className="tri-pane-preview" aria-label="Staff workspace preview">
-      <aside>
-        <p className="label">Attention queue</p>
-        {view.items.map((item, index) => (
-          <button className={`list-row${index === 0 ? " active" : ""}`} key={item.id}>
-            {item.severity} · {item.summary}
-          </button>
-        ))}
-      </aside>
-      <section>
-        <p className="label">Shared inbox</p>
-        <div className="message incoming">Customer changed date after quote was sent.</div>
-        <div className="message outgoing">{view.handoverLabel}. AI draft only.</div>
-        <p>{view.quoteLabel}</p>
-      </section>
-      <aside>
-        <p className="label">Context</p>
-        <ul className="check-list">
-          {view.items.map((item) => (
-            <li key={item.id}>{item.resourceLabel}: {item.integrationLabel ?? item.nextAction}</li>
+    <div className="staff-workspace-stack">
+      <div className="tri-pane-preview" aria-label="Staff attention queue preview">
+        <aside>
+          <p className="label">Attention queue</p>
+          {view.items.map((item, index) => (
+            <button className={`list-row${index === 0 ? " active" : ""}`} key={item.id}>
+              {item.severity} · {item.summary}
+            </button>
           ))}
-          {staffModules.slice(0, 3).map((module) => <li key={module}>{module}</li>)}
-        </ul>
-      </aside>
+        </aside>
+        <section>
+          <p className="label">Request context</p>
+          <h3>{view.requestLabel}</h3>
+          <p>{view.quoteLabel}</p>
+          <p>{view.handoverLabel}; AI draft only.</p>
+        </section>
+        <aside>
+          <p className="label">Context</p>
+          <ul className="check-list">
+            {view.items.map((item) => (
+              <li key={item.id}>{item.resourceLabel}: {item.integrationLabel ?? item.nextAction}</li>
+            ))}
+            {staffModules.slice(0, 3).map((module) => <li key={module}>{module}</li>)}
+          </ul>
+        </aside>
+      </div>
+      <InboxPreview />
     </div>
   );
 }
