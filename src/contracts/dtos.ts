@@ -87,3 +87,56 @@ export interface MessageDTO {
   deliveryState?: MessageDeliveryState;
   createdAt: ISODateTime;
 }
+
+
+export type VisitEvidenceKind =
+  | "BEFORE_PHOTO"
+  | "AFTER_PHOTO"
+  | "ISSUE_PHOTO"
+  | "TIME_MATERIAL_NOTE"
+  | "INCIDENT_NOTE";
+
+export interface VisitEvidenceDTO {
+  id: string;
+  workspaceId: string;
+  visitId: string;
+  kind: VisitEvidenceKind;
+  mediaReference?: { storageProvider: string; objectRef: string; mimeType?: string };
+  text?: string;
+  capturedAt: ISODateTime;
+  submittedByUserId: string;
+  createdAt: ISODateTime;
+}
+
+export interface VisitChecklistItemDTO {
+  id: string;
+  workspaceId: string;
+  visitId: string;
+  itemKey: string;
+  completed: boolean;
+  note?: string;
+  updatedByUserId: string;
+  updatedAt: ISODateTime;
+  version: number;
+}
+
+export type RecurrenceFrequency = "WEEKLY" | "FORTNIGHTLY" | "MONTHLY";
+
+export interface RecurrenceRuleDTO {
+  id: string;
+  workspaceId: string;
+  requestId: string;
+  propertyId: string;
+  frequency: RecurrenceFrequency;
+  timezone: string;
+  localStartTime: string;
+  startsOn: string;
+  endsOn?: string;
+  maxOccurrences?: number;
+  generatedOccurrences: number;
+  status: "ACTIVE" | "PAUSED" | "COMPLETED";
+  nextOccurrenceOn?: string;
+  version: number;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
