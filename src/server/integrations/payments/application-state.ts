@@ -1,4 +1,4 @@
-import type { PaymentWebhookApplicationResult } from "../../api-handlers/provider-stripe";
+import type { PaymentApplicationResult } from "./review";
 
 export interface PaymentApplicationSnapshot {
   providerEventId: string;
@@ -12,7 +12,7 @@ export interface PaymentApplicationSnapshot {
 }
 
 export interface PaymentApplicationDecision {
-  result: PaymentWebhookApplicationResult;
+  result: PaymentApplicationResult;
   next: PaymentApplicationSnapshot;
   reviewRequired: boolean;
 }
