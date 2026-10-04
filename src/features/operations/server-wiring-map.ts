@@ -1,58 +1,71 @@
-export type V1ProductRouteKey = "enquiry" | "quote" | "schedule" | "checkout" | "portal" | "crew";
+export type ProductRouteKey = "enquiry" | "quote" | "schedule" | "checkout" | "portal" | "crew";
 
-export type V1ProductDependencyState = "BLOCKED_PENDING_WORKER1_ENTRYPOINTS" | "BLOCKED_PENDING_E03_PAYMENT_BRIDGE" | "READY_FOR_FUTURE_WIRING";
-
-export interface V1ProductServerWiringDependency {
-  route: V1ProductRouteKey;
-  routePatterns: string[];
-  requiredServerBoundaries: string[];
-  state: V1ProductDependencyState;
-  notes: string;
+export interface ProductServerDependency {
+  command: string;
+  status: "ACCEPTED_E02" | "FUTURE_E03" | "FUTURE_E05" | "FUTURE_E06";
+  productAdapter: string;
+  enabledInProduct: boolean;
+  reason: string;
 }
 
-export const v1ProductServerWiringMap: Record<V1ProductRouteKey, V1ProductServerWiringDependency> = {
-  enquiry: {
-    route: "enquiry",
-    routePatterns: ["/b/[slug]/enquire"],
-    requiredServerBoundaries: ["createRequest", "updateRequest", "calculateQuote"],
-    state: "BLOCKED_PENDING_WORKER1_ENTRYPOINTS",
-    notes: "Public request intake must stay preview-only until Worker 1 exposes accepted request composition entrypoints.",
-  },
-  quote: {
-    route: "quote",
-    routePatterns: ["/portal/quote", "/app/[workspace]/quotes"],
-    requiredServerBoundaries: ["sendQuote"],
-    state: "BLOCKED_PENDING_WORKER1_ENTRYPOINTS",
-    notes: "Quote preview can render DTO props now; customer send remains staff/server-authorized.",
-  },
-  schedule: {
-    route: "schedule",
-    routePatterns: ["/app/[workspace]/schedule"],
-    requiredServerBoundaries: ["findSlots", "holdSlot"],
-    state: "BLOCKED_PENDING_WORKER1_ENTRYPOINTS",
-    notes: "Schedule UI can consume slot/integration/attention DTO props but cannot reserve capacity locally.",
-  },
-  checkout: {
-    route: "checkout",
-    routePatterns: ["/b/[slug]/book", "/portal/booking"],
-    requiredServerBoundaries: ["future E03 payment bridge"],
-    state: "BLOCKED_PENDING_E03_PAYMENT_BRIDGE",
-    notes: "Checkout UI stays receipt-fail-safe and disabled until the verified payment bridge is accepted.",
-  },
-  portal: {
-    route: "portal",
-    routePatterns: ["/portal", "/portal/properties", "/portal/preferences", "/portal/invoice"],
-    requiredServerBoundaries: ["future readWorkspaceSnapshot", "future property reads"],
-    state: "BLOCKED_PENDING_WORKER1_ENTRYPOINTS",
-    notes: "Portal surfaces need authoritative workspace/customer/property snapshots before replacing fixture wrappers.",
-  },
-  crew: {
-    route: "crew",
-    routePatterns: ["/crew/today", "/crew/job/[visitId]"],
-    requiredServerBoundaries: ["future transitionVisit"],
-    state: "BLOCKED_PENDING_WORKER1_ENTRYPOINTS",
-    notes: "Crew job UI can render request/visit/invoice DTO props, but transitions and evidence persistence remain server-owned.",
-  },
-};
+export interface ProductRouteServerBoundary {
+  route: ProductRouteKey;
+  routeFamily: string[];
+  dependencies: ProductServerDependency[];
+  fixtureWrapper: string;
+}
 
-export const v1ProductReadyNext = "wire enquiry/quote/schedule to accepted Worker 1 entrypoints" as const;
+export const productRouteServerBoundaries: ProductRouteServerBoundary[] = [
+  {
+    route: "enquiry",
+    routeFamily: ["/b/[slug]/enquire"],
+    fixtureWrapper: "OperationalFixtureRoute",
+    dependencies: [
+      { command: "createRequest", status: "ACCEPTED_E02", productAdapter: "createEnquiryServerActionFactory", enabledInProduct: false, reason: "Wired only through dependency injection after server entrypoint import is accepted." },
+      { command: "updateRequest", status: "ACCEPTED_E02", productAdapter: "createEnquiryServerActionFactory", enabledInProduct: false, reason: "Version conflict and workspace/auth failures must propagate from Core." },
+      { command: "calculateQuote", status: "ACCEPTED_E02", productAdapter: "createEnquiryServerActionFactory", enabledInProduct: false, reason: "Product must not calculate quote totals client-side." },
+    ],
+  },
+  {
+    route: "quote",
+    routeFamily: ["/app/[workspace]/quotes", "/portal/quotes/[id]"],
+    fixtureWrapper: "OperationalFixtureRoute",
+    dependencies: [
+      { command: "sendQuote", status: "ACCEPTED_E02", productAdapter: "createSendQuoteServerActionFactory", enabledInProduct: false, reason: "Outbound enqueue/provider delivery proof remains outside Product." },
+    ],
+  },
+  {
+    route: "schedule",
+    routeFamily: ["/app/[workspace]/schedule"],
+    fixtureWrapper: "OperationalFixtureRoute",
+    dependencies: [
+      { command: "findSlots", status: "ACCEPTED_E02", productAdapter: "createScheduleServerActionFactory.findSlots", enabledInProduct: false, reason: "Calendar/provider access is not called from Product." },
+      { command: "holdSlot", status: "ACCEPTED_E02", productAdapter: "createScheduleServerActionFactory.holdSlot", enabledInProduct: false, reason: "Slot/hold errors stay server authoritative." },
+    ],
+  },
+  {
+    route: "checkout",
+    routeFamily: ["/b/[slug]/book", "/portal/bookings/[id]"],
+    fixtureWrapper: "OperationalFixtureRoute",
+    dependencies: [
+      { command: "future E03 payment bridge", status: "FUTURE_E03", productAdapter: "not-created", enabledInProduct: false, reason: "Hosted checkout remains disabled until verified payment boundary exists." },
+    ],
+  },
+  {
+    route: "portal",
+    routeFamily: ["/portal", "/portal/properties", "/portal/preferences", "/portal/invoices/[id]"],
+    fixtureWrapper: "OperationalFixtureRoute",
+    dependencies: [
+      { command: "readWorkspaceSnapshot", status: "FUTURE_E05", productAdapter: "not-created", enabledInProduct: false, reason: "Durable inbox/snapshot read model is not complete." },
+      { command: "readPropertySnapshot", status: "ACCEPTED_E02", productAdapter: "not-created", enabledInProduct: false, reason: "Route composition waits for coordinator-approved server import boundary." },
+    ],
+  },
+  {
+    route: "crew",
+    routeFamily: ["/crew/today", "/crew/jobs/[id]"],
+    fixtureWrapper: "OperationalFixtureRoute",
+    dependencies: [
+      { command: "transitionVisit", status: "FUTURE_E06", productAdapter: "not-created", enabledInProduct: false, reason: "Crew mutation buttons stay disabled until authorized field transition persistence is accepted." },
+    ],
+  },
+];
