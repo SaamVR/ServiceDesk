@@ -1,0 +1,12 @@
+node_modules/
+.next/
+coverage/
+.env
+.env.*
+!.env.example
+.vercel/
+.superpowers/
+.worktrees/
+dist/
+*.log
+.DS_Store
