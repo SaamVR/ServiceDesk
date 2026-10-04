@@ -17,7 +17,15 @@ export function RequestSummaryPreview() {
         <div><dt>Deposit</dt><dd>{view.depositLabel}</dd></div>
         <div><dt>Duration</dt><dd>{view.durationLabel}</dd></div>
       </dl>
-      <button className="button-secondary full" type="button">{view.primaryAction}</button>
+      <button
+        className="button-secondary full"
+        type="button"
+        disabled
+        aria-disabled="true"
+        title="Fixture preview only; ServiceDeskFacade.updateRequest is not integrated on this branch."
+      >
+        {view.primaryAction} · preview
+      </button>
       <p>{view.boundaryNotice}</p>
     </aside>
   );
