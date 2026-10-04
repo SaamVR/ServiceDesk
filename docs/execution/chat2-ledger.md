@@ -17,7 +17,7 @@ No implementation was performed by this planning pass. No test command was execu
 
 | Batch | State | Dependency / next gate |
 |---|---|---|
-| E01 | BLOCKED | Runtime cannot install/execute pnpm gate; see E01 checkpoint below |
+| E01 | BLOCKED | Runtime cannot install/execute pnpm gate; see E01 checkpoints below |
 | E02 | BLOCKED | E01-T4 coherent executable checkpoint |
 | E03 | BLOCKED | E02-T4 + DEP-C1-MESSAGE-STORE |
 | E04 | BLOCKED | DEP-C1-INT-BASELINE + DEP-C1-CALENDAR-STORE |
@@ -137,3 +137,66 @@ pnpm vitest run tests/ai
 ```
 
 Do not start E02 until E01-T4 has an executable checkpoint or Chat 1/controller explicitly accepts a substitute verification path.
+
+## E01 environment recovery retry — 2026-10-04
+
+Start connector HEAD: `c4eb4cb887038b83efbec01f30526536603636c9`  
+Execution state: `BLOCKED_RUNTIME_PACKAGE_ACCESS`  
+Integration status: branch-only, not integrated.  
+No source implementation changes were made.
+
+### Requested verification commands
+
+```text
+pwd -> /
+git status --short -> not run inside a checkout because cwd is not a git repository
+git rev-parse HEAD -> not run inside a checkout because cwd is not a git repository
+node --version -> v22.16.0
+corepack --version -> 0.32.0
+pnpm --version || true -> Corepack attempted registry lookup and failed before returning a pnpm version
+df -h -> overlay 32G total, 7.5M used, 30G available, 1% used; not ENOSPC
+npm config get registry -> https://registry.npmjs.org/
+getent hosts registry.npmjs.org || nslookup registry.npmjs.org || true -> no host result; nslookup is not installed
+```
+
+### Corepack recovery attempt
+
+Command attempted:
+
+```bash
+corepack enable
+corepack prepare pnpm@10.17.1 --activate
+```
+
+Result: failed before pnpm activation.
+
+Key error:
+
+```text
+Preparing pnpm@10.17.1 for immediate activation...
+Internal Error: Error when performing the request to https://registry.npmjs.org/pnpm/-/pnpm-10.17.1.tgz
+```
+
+Because pnpm activation failed, these commands were **not executed**:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm vitest run tests/providers
+pnpm vitest run tests/ai
+```
+
+No tests passed in this runtime. No CONTRACT_TESTED claim is created by this retry.
+
+### Static fallback state
+
+The prior static barrel/ownership audit remains the only available fallback evidence in this runtime. It is not executable verification and does not satisfy E01-T4.
+
+### Next dependency
+
+E01 remains blocked until one of the following is available:
+
+1. a runtime with working DNS/package access to activate `pnpm@10.17.1` and install dependencies; or
+2. a controller-approved substitute verification path, explicitly documented by Chat 1.
+
+Do not start E02 until the executable gate runs or Chat 1/controller accepts a substitute path.
