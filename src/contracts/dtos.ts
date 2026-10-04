@@ -204,7 +204,6 @@ export interface ServiceSettingDTO {
   code: string;
   label: string;
   enabled: boolean;
-  rateVersion: string;
 }
 
 export interface TeamMemberDTO {
