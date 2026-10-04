@@ -7,6 +7,8 @@ export interface DurableWhatsAppInboxRecord extends NormalizedWhatsAppInboundEve
   rawProviderEventRef: string;
 }
 
+export type DurableWhatsAppInboxPersistenceResult = "INSERTED" | "DUPLICATE";
+
 export interface DurableWhatsAppInboundBatchSummary {
   received: number;
   inserted: number;
@@ -14,8 +16,18 @@ export interface DurableWhatsAppInboundBatchSummary {
   unsupported: number;
 }
 
+export interface DurableWhatsAppInboundRecordOutcome {
+  record: DurableWhatsAppInboxRecord;
+  persistenceResult: DurableWhatsAppInboxPersistenceResult;
+}
+
+export interface DurableWhatsAppInboundBatchWithRecords {
+  summary: DurableWhatsAppInboundBatchSummary;
+  records: DurableWhatsAppInboundRecordOutcome[];
+}
+
 export interface DurableWhatsAppInboxStore {
-  persist(record: DurableWhatsAppInboxRecord): Promise<"INSERTED" | "DUPLICATE">;
+  persist(record: DurableWhatsAppInboxRecord): Promise<DurableWhatsAppInboxPersistenceResult>;
 }
 
 export interface PersistDurableWhatsAppInboundBatchInput {
@@ -45,24 +57,26 @@ export function buildDurableWhatsAppInboxRecord(message: WhatsAppInboundMessage,
   };
 }
 
-export async function persistDurableWhatsAppInboundBatch(
+export async function persistDurableWhatsAppInboundBatchWithRecords(
   input: PersistDurableWhatsAppInboundBatchInput,
-): Promise<Result<DurableWhatsAppInboundBatchSummary>> {
+): Promise<Result<DurableWhatsAppInboundBatchWithRecords>> {
   const summary: DurableWhatsAppInboundBatchSummary = {
     received: input.messages.length,
     inserted: 0,
     duplicate: 0,
     unsupported: 0,
   };
+  const records: DurableWhatsAppInboundRecordOutcome[] = [];
 
   for (const message of input.messages) {
     const record = buildDurableWhatsAppInboxRecord(message, input.rawProviderEventRef);
     if (record.contentKind === "UNSUPPORTED") summary.unsupported += 1;
 
     try {
-      const result = await input.store.persist(record);
-      if (result === "INSERTED") summary.inserted += 1;
-      if (result === "DUPLICATE") summary.duplicate += 1;
+      const persistenceResult = await input.store.persist(record);
+      if (persistenceResult === "INSERTED") summary.inserted += 1;
+      if (persistenceResult === "DUPLICATE") summary.duplicate += 1;
+      records.push({ record, persistenceResult });
     } catch (error) {
       const detail = error instanceof Error ? error.message : "unknown inbox persistence error";
       return {
@@ -73,5 +87,13 @@ export async function persistDurableWhatsAppInboundBatch(
     }
   }
 
-  return { ok: true, value: summary };
+  return { ok: true, value: { summary, records } };
+}
+
+export async function persistDurableWhatsAppInboundBatch(
+  input: PersistDurableWhatsAppInboundBatchInput,
+): Promise<Result<DurableWhatsAppInboundBatchSummary>> {
+  const persisted = await persistDurableWhatsAppInboundBatchWithRecords(input);
+  if (!persisted.ok) return persisted;
+  return { ok: true, value: persisted.value.summary };
 }
