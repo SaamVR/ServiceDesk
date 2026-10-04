@@ -1,4 +1,5 @@
 import { UIStateCard } from "@/components/shell/UIState";
+import { CheckoutPreview } from "@/features/checkout/CheckoutPreview";
 import { InboxPreview } from "@/features/inbox/InboxPreview";
 import {
   crewActions,
@@ -110,24 +111,27 @@ function CustomerPanel() {
   });
 
   return (
-    <div className="card-grid three">
-      <article className="plain-card">
-        <span className="status-pill pending">Sample DTO data</span>
-        <h2>{view.serviceLabel}</h2>
-        <p>{view.quoteVersionLabel}</p>
-        <p>{view.handoverLabel}</p>
-      </article>
-      <article className="plain-card">
-        <span className="status-pill success">Current quote</span>
-        <h2>{view.totalLabel}</h2>
-        <p>Deposit {view.depositLabel}; balance {view.balanceLabel}</p>
-        <p>{view.visitStatusLabel}</p>
-      </article>
-      <article className="plain-card">
-        <span className="status-pill attention">{view.slotFreshness}</span>
-        <h2>Appointment slot</h2>
-        <p>Slot freshness must be checked by the facade before instant confirmation.</p>
-      </article>
+    <div className="customer-workspace-stack">
+      <div className="card-grid three">
+        <article className="plain-card">
+          <span className="status-pill pending">Sample DTO data</span>
+          <h2>{view.serviceLabel}</h2>
+          <p>{view.quoteVersionLabel}</p>
+          <p>{view.handoverLabel}</p>
+        </article>
+        <article className="plain-card">
+          <span className="status-pill success">Current quote</span>
+          <h2>{view.totalLabel}</h2>
+          <p>Deposit {view.depositLabel}; balance {view.balanceLabel}</p>
+          <p>{view.visitStatusLabel}</p>
+        </article>
+        <article className="plain-card">
+          <span className="status-pill attention">{view.slotFreshness}</span>
+          <h2>Appointment slot</h2>
+          <p>Slot freshness must be checked by the facade before instant confirmation.</p>
+        </article>
+      </div>
+      <CheckoutPreview />
     </div>
   );
 }
