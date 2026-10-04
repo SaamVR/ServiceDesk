@@ -4,9 +4,11 @@ export type PaymentApplicationResult = "APPLIED" | "DUPLICATE" | "OUT_OF_ORDER_I
 export type PaymentReviewReason =
   | "DUPLICATE_ACKNOWLEDGED"
   | "OUT_OF_ORDER_CALLBACK"
+  | "ACCOUNT_MISMATCH"
   | "AMOUNT_MISMATCH"
   | "CURRENCY_MISMATCH"
   | "WORKSPACE_MISMATCH"
+  | "PURPOSE_MISMATCH"
   | "LATE_EXPIRED_HOLD_PAYMENT"
   | "APPLICATION_REQUESTED_REVIEW";
 
@@ -18,18 +20,22 @@ export interface PaymentReviewClassificationInput {
   expectedWorkspaceId: string;
   expectedCurrency: string;
   expectedAmountMinor: number;
+  expectedProviderAccountId?: string;
+  expectedPurpose?: VerifiedPaymentWebhook["event"]["purpose"];
   holdExpiresAt?: string;
 }
 
 export interface PaymentReviewItem {
+  reviewKey: string;
   dedupeKey: string;
   workspaceId: string;
   provider: string;
   providerAccountId: string;
   providerEventId: string;
-  providerTransactionId: string;
+  providerTransactionRef: string;
   purpose: string;
   reason: PaymentReviewReason;
+  reasonCodes: PaymentReviewReason[];
   severity: PaymentReviewSeverity;
   requiresOperator: boolean;
   canMutateBusinessTruth: false;
@@ -44,6 +50,15 @@ export interface PaymentReviewStore {
 function dedupeKey(webhook: VerifiedPaymentWebhook): string {
   const event = webhook.event;
   return `${event.provider}:${event.providerAccountId}:${event.providerEventId}`;
+}
+
+function reviewKey(webhook: VerifiedPaymentWebhook, reason: PaymentReviewReason): string {
+  return `payment-review:${dedupeKey(webhook)}:${reason}`;
+}
+
+function redactedTransactionRef(value: string): string {
+  if (value.length <= 8) return "redacted";
+  return `${value.slice(0, 3)}…${value.slice(-4)}`;
 }
 
 function occurredAfter(occurredAt: string, boundary: string | undefined): boolean {
@@ -63,10 +78,18 @@ export function classifyPaymentReview(input: PaymentReviewClassificationInput): 
     severity = "INFO";
     requiresOperator = false;
     notes.push("Duplicate provider callback acknowledged without applying another business transaction.");
+  } else if (input.expectedProviderAccountId && event.providerAccountId !== input.expectedProviderAccountId) {
+    reason = "ACCOUNT_MISMATCH";
+    severity = "HIGH";
+    notes.push("Provider callback account does not match the expected payment account.");
   } else if (event.workspaceId !== input.expectedWorkspaceId) {
     reason = "WORKSPACE_MISMATCH";
     severity = "HIGH";
     notes.push("Provider callback workspace does not match the expected workspace context.");
+  } else if (input.expectedPurpose && event.purpose !== input.expectedPurpose) {
+    reason = "PURPOSE_MISMATCH";
+    severity = "HIGH";
+    notes.push("Provider callback purpose differs from the expected server-side payment purpose.");
   } else if (event.currency !== input.expectedCurrency) {
     reason = "CURRENCY_MISMATCH";
     severity = "HIGH";
@@ -88,14 +111,16 @@ export function classifyPaymentReview(input: PaymentReviewClassificationInput): 
   }
 
   return {
+    reviewKey: reviewKey(input.webhook, reason),
     dedupeKey: dedupeKey(input.webhook),
     workspaceId: event.workspaceId,
     provider: event.provider,
     providerAccountId: event.providerAccountId,
     providerEventId: event.providerEventId,
-    providerTransactionId: event.providerTransactionId,
+    providerTransactionRef: redactedTransactionRef(event.providerTransactionId),
     purpose: event.purpose,
     reason,
+    reasonCodes: [reason],
     severity,
     requiresOperator,
     canMutateBusinessTruth: false,
