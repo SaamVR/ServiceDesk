@@ -1,15 +1,7 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { StaffOverviewDashboard } from "@/features/operations/StaffOverviewDashboard";
 
 export default async function StaffOverviewPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
-  return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="overview"
-      workspaceLabel={workspace}
-      title="Staff attention overview."
-      description="Attention queue and next actions are derived from injected DTO snapshots."
-    />
-  );
+  return <StaffOverviewDashboard workspace={workspace} />;
 }
