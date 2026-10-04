@@ -1,4 +1,4 @@
-import type { ActorContext, CommandMeta, InvoiceDTO, QuoteDTO, RequestDTO, Result, SlotDTO, VisitDTO } from "../../contracts";
+import type { ActorContext, CommandMeta, ConversationDTO, InvoiceDTO, MessageDTO, QuoteDTO, RequestDTO, Result, SlotDTO, VisitDTO } from "../../contracts";
 export interface CreateRequestInput { customerId?: string; propertyId?: string; serviceCode?: string; }
 export interface FindSlotsInput { requestId: string; from: string; to: string; preferredCrewId?: string; }
 export interface VerifiedPaymentEvent {
