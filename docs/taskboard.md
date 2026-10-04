@@ -466,3 +466,32 @@ Current evidence:
 - canonical pnpm/Vitest/typecheck/build/browser remains CONFIGURATION_BLOCKED until executable runtime returns
 
 No provider-verification claim may be made without controlled receipts bound to the accepted release SHA.
+
+
+## V1 E10B — FINAL CODE CLOSURE
+
+Shared base:
+25e5770e96b250923c81254f0477461fc89feb4f
+
+Core:
+- feat/servicedesk-v1-core-e10b
+- concrete Supabase E01/E02 gateways, quote acceptance, early-flow DB proof
+- READY
+
+Connector:
+- feat/servicedesk-v1-connectors-e10b
+- SANDBOX checkout launch boundary using existing payment adapter
+- READY
+
+Product:
+- feat/servicedesk-v1-product-e10b
+- customer quote accept -> slot hold -> sandbox checkout wiring
+- READY
+
+Cleared:
+- customer own-record RLS acceptance now PASS with correctly populated auth.uid() session.
+
+Still external/configuration:
+- leaked-password protection in Supabase Auth
+- canonical package/build/browser execution
+- controlled provider receipts
