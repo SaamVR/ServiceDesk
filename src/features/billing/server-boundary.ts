@@ -1,0 +1,8 @@
+import type { ActorContext, PlatformBillingSnapshotDTO } from "@/contracts";
+import { productActionFailure, productActionSuccess, type ProductActionError, type ProductActionResult } from "@/features/operations/server-action-adapters";
+export interface CoreResultSuccess<T> { ok: true; value: T }
+export interface CoreResultFailure { ok: false; code: string; message: string; fieldErrors?: Record<string, string> }
+export type CoreResult<T> = CoreResultSuccess<T> | CoreResultFailure;
+export interface PlatformBillingReadPort { readPlatformBillingSnapshot(ctx: ActorContext): Promise<CoreResult<PlatformBillingSnapshotDTO>>; }
+const fail = (e: CoreResultFailure): ProductActionError => ({ code: e.code, message: e.message, fieldErrors: e.fieldErrors });
+export function createPlatformBillingReadFactory(port: PlatformBillingReadPort) { return async function readPlatformBilling(ctx: ActorContext): Promise<ProductActionResult<PlatformBillingSnapshotDTO>> { const steps = ["readPlatformBillingSnapshot"]; if (ctx.role !== "OWNER") return productActionFailure({ code: "AUTHORIZATION_FAILED", message: "Only an owner can read platform billing state." }, steps, "readPlatformBillingSnapshot"); const result = await port.readPlatformBillingSnapshot(ctx); if (!result.ok) return productActionFailure(fail(result), steps, "readPlatformBillingSnapshot"); if (result.value.workspaceId !== ctx.workspaceId) return productActionFailure({ code: "WORKSPACE_MISMATCH", message: "Platform billing snapshot belongs to a different workspace." }, steps, "readPlatformBillingSnapshot"); return productActionSuccess(result.value, steps, "Platform billing snapshot loaded from accepted server facade."); }; }
