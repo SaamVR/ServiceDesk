@@ -510,3 +510,73 @@ Packets:
 - `docs/execution/batches/v1-int2-worker-1.md`
 - `docs/execution/batches/v1-int2-worker-2.md`
 - `docs/execution/batches/v1-int2-worker-3.md`
+
+
+## V1-INT2 integration status
+
+Worker finals:
+- W1 Core: `dfc79f780dd6489346e91ab7cf18fc3b898ef454`
+- W2 Connector/payment bridge: `a6469074174b4a0dfef06f7fc5a510e86c8b1a61`
+- W3 Product: `dae3150f9145b3acd2f69c27ada1dab1ba30221f`
+
+W1 and W2 were reviewed and integrated into the combined RC:
+- W1 RC integration: `0cffd0367ef53088604e7c5b027643b4b3573d4a`
+- W2 RC integration: `4d5751d4b12bcd45719d7af0b660902cf5c759d6`
+
+Coordinator E03 DB-readiness repairs:
+- payment-review attention now links to persisted payment-application identity rather than a non-UUID composite string: `40c23c1bad3299444ab06bc8c4e8b8d0cf57cb19`
+- invoice/payment target composite foreign keys + customer invoice read RLS: `7a24a2549ce22520e21eb269ef6e0d2fd3a37cee`
+- migration regression coverage: `c67badf1bdca3e170724505e381390ba4f9f7fbb`
+- outage harness attention-link assertion: `5f0d075b3ff7743a224aaeb196c3d07ddd544187`
+
+W3 is NOT yet accepted/integrated.
+Reason:
+- no receipt;
+- only first structural half completed;
+- missing server action adapters/state mapping/harness/tests;
+- partial OperationalRoute refactor regressed existing route-module presentation.
+
+W3 recovery packet:
+- `docs/execution/batches/v1-int2-worker-3-recovery.md`
+- continue branch `feat/servicedesk-v1-product-sprint2`
+- expected current head `dae3150f9145b3acd2f69c27ada1dab1ba30221f`
+
+## Supabase staging gate reached
+
+W1 reported:
+`SUPABASE_STAGING_REQUIRED_FOR_E03_DB_PROOF`
+
+Connected Supabase currently exposes:
+- organization: `ECom CMS`
+- existing projects: `Booking agent` and `CMS Project`
+
+No ServiceDesk project exists.
+Existing projects must not be repurposed.
+
+A dedicated ServiceDesk staging project is now justified for:
+- migrations 0001–0006;
+- RLS;
+- E03 transactional rollback/idempotency;
+- E04 claim/lease/concurrency;
+- later server-backed runtime proof.
+
+Project creation requires explicit owner approval and cost confirmation before action.
+
+## V1-INT3 active
+
+Coordinator froze provider-neutral shared outbox execution contract:
+- `src/contracts/outbox.ts`
+- RC/shared base HEAD `b744bbba9c02904a5981e09c8d064face0de4a90`
+
+Fresh lanes:
+- Core: `feat/servicedesk-v1-core-sprint3`
+- Connectors: `feat/servicedesk-v1-connectors-sprint3`
+
+Packets:
+- `docs/execution/batches/v1-int3-worker-1.md`
+- `docs/execution/batches/v1-int3-worker-2.md`
+
+Missions:
+- W1 closes E04 durable outbox claim/lease/retry/terminal execution.
+- W2 implements Connector execution adapter against frozen outbox port.
+- W3 finishes INT2 Product server-boundary work and restores existing module coverage.
