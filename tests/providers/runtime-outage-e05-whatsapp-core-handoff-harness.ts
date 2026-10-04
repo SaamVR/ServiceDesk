@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { handleDurableWhatsAppInboundWebhook } from "../../src/server/api-handlers/provider-whatsapp-durable";
-import { createWhatsAppProviderReceiptStore, type WhatsAppProviderInboundReceiptGateway, type WhatsAppProviderInboundReceiptRow } from "../../src/server/integrations/whatsapp/provider-receipt-store";
+import {
+  createSupabaseWhatsAppProviderReceiptGateway,
+  createWhatsAppProviderReceiptStore,
+  type SupabaseProviderInboundReceiptClient,
+  type SupabaseProviderInboundReceiptRow,
+  type WhatsAppProviderInboundReceiptGateway,
+  type WhatsAppProviderInboundReceiptRow,
+} from "../../src/server/integrations/whatsapp/provider-receipt-store";
 import { createWhatsAppInboundCoreHandoffProcessor } from "../../src/server/integrations/whatsapp/inbound-core-handoff";
+import { normalizeProviderTimestampToIso } from "../../src/server/integrations/whatsapp/timestamp-normalization";
 import { resolveConversationReplyIntent, type ConversationReplyAuthoritativeSource } from "../../src/server/integrations/outbox/conversation-reply-intent";
 import { WhatsAppCommittedOutboxDispatcher } from "../../src/server/integrations/outbox/whatsapp-dispatcher";
 import { EmailCommittedOutboxDispatcher } from "../../src/server/integrations/outbox/email-dispatcher";
@@ -14,7 +22,8 @@ import type { InboundMessageApplicationOutcome } from "../../src/server/core/fac
 
 const now = "2026-10-04T14:40:00.000Z";
 const secret = "test-app-secret";
-const rawText = (id: string, type: "text" | "image" = "text") => JSON.stringify({
+
+const rawText = (id: string, type: "text" | "image" = "text", timestamp = "1791110400") => JSON.stringify({
   entry: [{
     changes: [{
       value: {
@@ -22,7 +31,7 @@ const rawText = (id: string, type: "text" | "image" = "text") => JSON.stringify(
         messages: [{
           id,
           from: "15551234567",
-          timestamp: "1791110400",
+          timestamp,
           type,
           text: type === "text" ? { body: "Need help with my booking" } : undefined,
           image: type === "image" ? { id: "media-1" } : undefined,
@@ -40,10 +49,54 @@ class ReceiptGateway implements WhatsAppProviderInboundReceiptGateway {
   readonly rows: WhatsAppProviderInboundReceiptRow[] = [];
   async insertReceipt(row: WhatsAppProviderInboundReceiptRow) {
     assert.equal("rawBody" in row, false);
+    assert.equal("text" in row, false);
+    assert.equal("mediaProvider" in row, false);
+    assert.equal("mediaProviderMediaId" in row, false);
+    assert.equal("rawPayloadIncluded" in row, false);
+    assert.equal("aiAuthoritative" in row, false);
     assert.equal(row.provider, "WHATSAPP");
+    assert.equal(row.providerOccurredAt, "2026-10-04T10:40:00.000Z");
     if (this.rows.some((existing) => existing.receiptKey === row.receiptKey)) return "DUPLICATE" as const;
     this.rows.push(row);
     return "INSERTED" as const;
+  }
+}
+
+class FakeSupabaseClient implements SupabaseProviderInboundReceiptClient {
+  rows: SupabaseProviderInboundReceiptRow[] = [];
+  duplicateOnInsert = false;
+  from() {
+    const client = this;
+    const filters: Record<string, string> = {};
+    return {
+      insert(row: SupabaseProviderInboundReceiptRow) {
+        return {
+          select() {
+            return {
+              async maybeSingle() {
+                if (client.duplicateOnInsert || client.rows.some((existing) => existing.receipt_key === row.receipt_key || (existing.provider === row.provider && existing.provider_account_id === row.provider_account_id && existing.provider_message_id === row.provider_message_id))) {
+                  return { data: null, error: { code: "23505", message: "duplicate key value violates unique constraint" } };
+                }
+                client.rows.push(row);
+                return { data: row, error: null };
+              },
+            };
+          },
+        };
+      },
+      select() {
+        return {
+          eq(column: string, value: string) {
+            filters[column] = value;
+            return this;
+          },
+          async maybeSingle() {
+            const row = client.rows.find((candidate) => Object.entries(filters).every(([key, value]) => (candidate as Record<string, unknown>)[key] === value));
+            return { data: row ?? null, error: null };
+          },
+        };
+      },
+    };
   }
 }
 
@@ -71,7 +124,7 @@ function event(id: string, conversationId = "conv-1", messageId = "msg-out-1"): 
     id,
     workspaceId: "ws-1",
     topic: "conversation.reply",
-    payload: { conversationId, messageId },
+    payload: { conversationId, messageId, body: "untrusted payload body", recipient: "attacker@example.com" },
     idempotencyKey: `idem-${id}`,
     attempt: 1,
     claimedAt: now,
@@ -96,6 +149,38 @@ function source(partial: Partial<ConversationReplyAuthoritativeSource> = {}): Co
 }
 
 async function run() {
+  assert.equal(normalizeProviderTimestampToIso("1791110400"), "2026-10-04T10:40:00.000Z");
+  assert.equal(normalizeProviderTimestampToIso("1791110400000"), "2026-10-04T10:40:00.000Z");
+  assert.equal(normalizeProviderTimestampToIso("2026-10-04T10:40:00Z"), "2026-10-04T10:40:00.000Z");
+  assert.throws(() => normalizeProviderTimestampToIso("not-a-timestamp"), /PROVIDER_TIMESTAMP_INVALID/);
+
+  const fakeSupabase = new FakeSupabaseClient();
+  const supabaseGateway = createSupabaseWhatsAppProviderReceiptGateway(fakeSupabase);
+  const receiptRow: WhatsAppProviderInboundReceiptRow = {
+    receiptKey: "ws-1:phone-1:wamid-supa-1",
+    workspaceId: "ws-1",
+    provider: "WHATSAPP",
+    providerAccountId: "phone-1",
+    providerMessageId: "wamid-supa-1",
+    senderRef: "15551234567",
+    providerOccurredAt: "2026-10-04T10:40:00.000Z",
+    rawProviderEventRef: "whatsapp_raw:ws-1:phone-1:abc",
+    contentKind: "TEXT",
+  };
+  assert.equal(await supabaseGateway.insertReceipt(receiptRow), "INSERTED");
+  assert.equal(await supabaseGateway.insertReceipt(receiptRow), "DUPLICATE");
+  assert.deepEqual(Object.keys(fakeSupabase.rows[0]).sort(), [
+    "content_kind",
+    "provider",
+    "provider_account_id",
+    "provider_message_id",
+    "provider_occurred_at",
+    "raw_provider_event_ref",
+    "receipt_key",
+    "sender_ref",
+    "workspace_id",
+  ].sort());
+
   const gateway = new ReceiptGateway();
   const store = createWhatsAppProviderReceiptStore(gateway);
   const core = new CorePort();
@@ -115,7 +200,21 @@ async function run() {
   assert.equal(JSON.parse(first.body ?? "{}").processed, 1);
   assert.equal(core.events.length, 1);
   assert.equal((core.events[0] as any).receiptKey, "ws-1:phone-1:wamid-in-1");
+  assert.equal((core.events[0] as any).occurredAt, "2026-10-04T10:40:00.000Z");
   assert.equal((core.events[0] as any).rawProviderEventRef.startsWith("whatsapp_raw:"), true);
+
+  const invalidTimestampRaw = rawText("bad-ts", "text", "bad-time");
+  const badTimestamp = await handleDurableWhatsAppInboundWebhook({
+    rawBody: invalidTimestampRaw,
+    headers: { "x-hub-signature-256": sig(invalidTimestampRaw) },
+    appSecret: secret,
+    workspaceByPhoneNumberId: { "phone-1": "ws-1" },
+    store,
+    processor,
+  });
+  assert.equal(badTimestamp.statusCode, 503);
+  assert.equal(core.events.length, 1);
+  assert.equal(gateway.rows.length, 1);
 
   const raw2 = rawText("wamid-in-2", "image");
   core.outcomes = [new Error("temporary db outage")];
@@ -173,6 +272,8 @@ async function run() {
 
   const whatsappIntent = await resolveConversationReplyIntent(event("outbox-1"), { async load() { return { ok: true, value: source() }; } });
   assert.equal(whatsappIntent.ok, true);
+  assert.equal(whatsappIntent.value.freeformText, "Thanks, I can help.");
+  assert.equal((whatsappIntent.value.payload as any).recipient, undefined);
   const waDispatcher = new WhatsAppCommittedOutboxDispatcher(new FixtureWhatsAppAdapter(() => now));
   const waSent = await waDispatcher.dispatch({ job: whatsappIntent.value, committedAt: now, attempt: 1, expectedChannel: "WHATSAPP" });
   assert.equal(waSent.ok, true);
@@ -234,9 +335,11 @@ async function run() {
   assert.equal(staleAfterFailed.decision.result, "STALE_REGRESSION");
   assert.equal(staleAfterFailed.command, undefined);
 
-  const combined = JSON.stringify({ first, failed, retry, duplicateCore, waSent, emailSent, optedOut, delivery });
+  const combined = JSON.stringify({ first, failed, retry, duplicateCore, waSent, emailSent, optedOut, delivery, rows: gateway.rows, supabaseRows: fakeSupabase.rows });
   assert.equal(combined.includes("test-app-secret"), false);
   assert.equal(combined.includes("Need help with my booking"), false);
+  assert.equal(combined.includes("untrusted payload body"), false);
+  assert.equal(combined.includes("attacker@example.com"), false);
   console.log("runtime-outage-e05-whatsapp-core-handoff-harness PASS");
 }
 
