@@ -14,7 +14,7 @@ function rawSucceededCheckout(overrides: Record<string, unknown> = {}): string {
         amount_total: 8500,
         currency: "usd",
         payment_intent: "pi_1234",
-        metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT" },
+        metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT", quoteId: "quote-1", holdId: "hold-1" },
       },
     },
     ...overrides,
@@ -80,7 +80,7 @@ describe("Stripe webhook cryptographic hardening", () => {
           amount_total: 0,
           currency: "usd",
           payment_intent: "pi_zero",
-          metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT" },
+          metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT", quoteId: "quote-1", holdId: "hold-1" },
         },
       },
     });
@@ -90,7 +90,7 @@ describe("Stripe webhook cryptographic hardening", () => {
           id: "cs_test_missing_pi",
           amount_total: 8500,
           currency: "usd",
-          metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT" },
+          metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT", quoteId: "quote-1", holdId: "hold-1" },
         },
       },
     });
@@ -120,6 +120,8 @@ describe("Stripe webhook cryptographic hardening", () => {
         amountMinor: 8500,
         currency: "USD",
         occurredAt: "2026-10-04T10:00:00.000Z",
+        quoteId: "quote-1",
+        holdId: "hold-1",
       });
       expect(result.value.evidence.verification).toBe("CONTRACT_TESTED");
       expect(JSON.stringify(result.value.evidence)).not.toContain("whsec_test");

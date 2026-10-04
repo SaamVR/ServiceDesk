@@ -13,7 +13,7 @@ function raw(payload: Record<string, unknown>): string {
         amount_total: 8500,
         currency: "usd",
         payment_intent: "pi_1234",
-        metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT" },
+        metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT", quoteId: "quote-1", holdId: "hold-1" },
       },
     },
     ...payload,
@@ -39,7 +39,7 @@ describe("payment webhook validation", () => {
     expect(await verify(raw({ data: { object: { id: "cs", amount_total: 8500, currency: "usd", payment_intent: "pi", metadata: { workspaceId: "ws-clearnest", purpose: "TIP" } } } }))).toMatchObject({ ok: false, code: "PAYMENT_PURPOSE_INVALID" });
     expect(await verify(raw({ data: { object: { id: "cs", amount_total: 0, currency: "usd", payment_intent: "pi", metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT" } } } }))).toMatchObject({ ok: false, code: "PAYMENT_AMOUNT_INVALID" });
     expect(await verify(raw({ data: { object: { id: "cs", amount_total: 8500, currency: "", payment_intent: "pi", metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT" } } } }))).toMatchObject({ ok: false, code: "PAYMENT_PAYLOAD_INVALID" });
-    expect(await verify(raw({ data: { object: { id: "cs", amount_total: 8500, currency: "usd", metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT" } } } }))).toMatchObject({ ok: false, code: "PAYMENT_TRANSACTION_MISSING" });
+    expect(await verify(raw({ data: { object: { id: "cs", amount_total: 8500, currency: "usd", metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT", quoteId: "quote-1", holdId: "hold-1" } } } }))).toMatchObject({ ok: false, code: "PAYMENT_TRANSACTION_MISSING" });
   });
 
   test("ignores failed payment events without converting them into payment truth", async () => {

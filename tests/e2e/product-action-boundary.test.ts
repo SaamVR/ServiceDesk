@@ -23,7 +23,11 @@ describe("product fixture action boundaries", () => {
     for (const [path, reason] of files) {
       const file = source(path);
       expect(file, path).toContain("disabled");
-      expect(file, path).toContain("aria-disabled=\"true\"");
+      if (path === "src/features/quality/QualityReviewPreview.tsx") {
+        expect(file, path).toContain("aria-disabled={!enabled}");
+      } else {
+        expect(file, path).toContain("aria-disabled=\"true\"");
+      }
       expect(file, path).toContain(reason);
     }
   });

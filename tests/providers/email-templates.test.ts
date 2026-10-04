@@ -5,6 +5,7 @@ describe("transactional email templates", () => {
   test("supports every V1 transactional purpose with deterministic subjects and idempotency", () => {
     expect(Object.keys(TRANSACTIONAL_EMAIL_TEMPLATES).sort()).toEqual([
       "BOOKING_CONFIRMED",
+      "CUSTOMER_REPLY",
       "INVOICE_ISSUED",
       "PAYMENT_RECEIPT",
       "PAYMENT_REMINDER",

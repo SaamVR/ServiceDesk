@@ -153,7 +153,7 @@ describe("Payment provider boundary", () => {
       account: "acct_123",
       type: "checkout.session.completed",
       created: 1791108000,
-      data: { object: { id: "cs_test_1234", amount_total: 8500, currency: "usd", payment_intent: "pi_1234", metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT" } } },
+      data: { object: { id: "cs_test_1234", amount_total: 8500, currency: "usd", payment_intent: "pi_1234", metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT", quoteId: "quote-1", holdId: "hold-1" } } },
     });
     const verified = await adapter.verifyWebhook(rawBody, { "stripe-signature": signStripeFixturePayload(rawBody, "whsec_test", 1791108000) });
     expect(verified.ok).toBe(true);
