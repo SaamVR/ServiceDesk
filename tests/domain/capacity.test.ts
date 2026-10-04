@@ -55,6 +55,7 @@ describe("capacity and slot holds", () => {
       now: "2026-10-04T06:10:00.000Z",
       holdMinutes: 15,
       existingHolds: [activeHold],
+      createId: () => "hold_unused",
     })).toEqual({
       ok: false,
       code: "SLOT_ALREADY_HELD",
