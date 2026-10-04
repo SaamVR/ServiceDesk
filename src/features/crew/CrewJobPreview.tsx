@@ -1,11 +1,37 @@
-import { sampleInvoice, sampleRequest, sampleVisit } from "@/features/operations/sample-data";
+import type { InvoiceDTO, RequestDTO, VisitDTO } from "@/contracts";
 import { buildCrewExecutionView } from "./view-models";
 
-export function CrewJobPreview() {
+interface CrewJobPreviewProps {
+  request: RequestDTO;
+  visit: VisitDTO;
+  invoice: InvoiceDTO;
+}
+
+export function CrewJobPreview(props?: CrewJobPreviewProps) {
+  if (!props) {
+    return (
+      <section className="two-column" aria-label="Crew job execution preview">
+        <div className="mobile-preview">
+          <p className="label">Crew mobile · server data required</p>
+          <h2>Visit snapshot required</h2>
+          <button
+            className="button-primary full"
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Server-backed preview only; visit transition command is not integrated on this branch."
+          >
+            Transition unavailable · preview
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   const view = buildCrewExecutionView({
-    request: sampleRequest,
-    visit: { ...sampleVisit, status: "IN_PROGRESS" },
-    invoice: sampleInvoice,
+    request: props.request,
+    visit: props.visit,
+    invoice: props.invoice,
   });
 
   return (

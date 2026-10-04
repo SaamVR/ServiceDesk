@@ -1,8 +1,24 @@
-import { sampleInvoice } from "@/features/operations/sample-data";
+import type { InvoiceDTO } from "@/contracts";
 import { buildInvoiceLedgerView } from "./view-models";
 
-export function InvoiceLedgerPreview() {
-  const view = buildInvoiceLedgerView(sampleInvoice);
+interface InvoiceLedgerPreviewProps {
+  invoice: InvoiceDTO;
+}
+
+export function InvoiceLedgerPreview(props?: InvoiceLedgerPreviewProps) {
+  if (!props) {
+    return (
+      <section className="plain-card" aria-label="Invoice allocation ledger preview">
+        <div className="section-heading compact">
+          <p className="eyebrow">Invoice ledger · server data required</p>
+          <h2>Invoice snapshot required</h2>
+          <p>Final receipt visibility waits for an authoritative invoice DTO and verified payment callback evidence.</p>
+        </div>
+      </section>
+    );
+  }
+
+  const view = buildInvoiceLedgerView(props.invoice);
 
   return (
     <section className="plain-card" aria-label="Invoice allocation ledger preview">
