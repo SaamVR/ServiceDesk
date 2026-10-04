@@ -14,7 +14,15 @@ export function CrewJobPreview() {
         <p className="label">Crew mobile · fixture UI</p>
         <h2>{view.requestLabel}</h2>
         <p>{view.currentStatus.replaceAll("_", " ").toLowerCase()}</p>
-        <button className="button-primary full" type="button">{view.primaryAction}</button>
+        <button
+          className="button-primary full"
+          type="button"
+          disabled
+          aria-disabled="true"
+          title="Fixture preview only; visit transition command is not integrated on this branch."
+        >
+          {view.primaryAction} · preview
+        </button>
         <ol className="timeline-list" aria-label="Visit status progression">
           {view.timeline.map((step, index) => (
             <li key={step.status}>
