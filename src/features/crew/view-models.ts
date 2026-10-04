@@ -1,7 +1,8 @@
 import type { InvoiceDTO, RequestDTO, VisitDTO } from "@/contracts";
+import { buildCrewFieldEvidenceBoundary } from "./field-evidence-boundary";
+import { buildCrewTransitionPresentation } from "./server-boundary";
 
 type CrewTimelineStatus = "ASSIGNED" | "EN_ROUTE" | "IN_PROGRESS" | "PENDING_REVIEW" | "COMPLETED";
-
 type CrewFixtureSource = "FIXTURE_UI_ONLY";
 
 interface BuildCrewExecutionViewInput {
@@ -12,7 +13,7 @@ interface BuildCrewExecutionViewInput {
 
 const crewTimeline: CrewTimelineStatus[] = ["ASSIGNED", "EN_ROUTE", "IN_PROGRESS", "PENDING_REVIEW", "COMPLETED"];
 
-const allowedCrewActionsByStatus: Record<VisitDTO["status"], string> = {
+const crewStatusLabels: Record<VisitDTO["status"], string> = {
   AWAITING_PAYMENT: "Wait for dispatch",
   CONFIRMED: "Wait for assignment",
   ASSIGNED: "Start travel",
@@ -44,12 +45,14 @@ function hasReached(current: VisitDTO["status"], step: CrewTimelineStatus) {
 
 export function buildCrewExecutionView({ request, visit, invoice }: BuildCrewExecutionViewInput) {
   const status = visit.status;
-  const primaryAction = allowedCrewActionsByStatus[status];
+  const transition = buildCrewTransitionPresentation(visit, false);
+  const fieldEvidence = buildCrewFieldEvidenceBoundary("FIXTURE_UI_ONLY");
 
   return {
     requestLabel: `${request.serviceCode ?? "SERVICE"} · ${request.bedrooms ?? "?"} bed / ${request.bathrooms ?? "?"} bath`,
     currentStatus: status,
-    primaryAction,
+    primaryAction: transition.action ? transition.label : crewStatusLabels[status],
+    transition,
     reviewRequired: status === "IN_PROGRESS" || status === "PENDING_REVIEW",
     timeline: crewTimeline.map((step) => ({
       status: step,
@@ -60,24 +63,28 @@ export function buildCrewExecutionView({ request, visit, invoice }: BuildCrewExe
     checklist: checklistFixtures.map((label, index) => ({
       id: `crew_check_${index + 1}`,
       label,
-      complete: status === "PENDING_REVIEW" || status === "COMPLETED" || (status === "IN_PROGRESS" && index < 2),
+      state: "NOT_PERSISTED" as const,
       source: "FIXTURE_UI_ONLY" as CrewFixtureSource,
     })),
-    evidenceSlots: [
-      { kind: "before_photo" as const, label: "Before photo", state: status === "ASSIGNED" || status === "EN_ROUTE" ? "Not started" : "Fixture placeholder" },
-      { kind: "after_photo" as const, label: "After photo", state: status === "PENDING_REVIEW" || status === "COMPLETED" ? "Fixture placeholder" : "Required later" },
-      { kind: "issue_photo" as const, label: "Issue photo", state: "Optional" },
-    ],
+    fieldEvidence,
+    evidenceSlots: fieldEvidence.photoSlots.map((slot) => ({
+      kind: slot.kind,
+      label: slot.label,
+      state: slot.state === "OPTIONAL" ? "Optional / NOT_PERSISTED" : "Required / NOT_PERSISTED",
+      persistence: slot.persistence,
+    })),
     timeNote: {
       label: "Time and materials note",
-      value: status === "PENDING_REVIEW" || status === "COMPLETED" ? "4h service, no extra materials recorded" : "Not submitted yet",
+      value: "NOT_PERSISTED — future E06 evidence command required",
+      persistence: "FUTURE_E06_CORE_EVIDENCE" as const,
     },
     incident: {
-      status: "No incident reported",
-      escalationLabel: "Incident creates staff review before final invoice",
+      status: "NOT_PERSISTED — incident note is presentation-only",
+      escalationLabel: "Incident persistence waits for a future Core E06 evidence command",
+      persistence: "FUTURE_E06_CORE_EVIDENCE" as const,
     },
     balanceLabel: `Balance remaining ${formatMinor(invoice.balanceMinor, invoice.currency)}`,
-    allowedCrewActions: [primaryAction, "Add photo evidence", "Record time/material note", "Report incident"],
-    businessBoundary: "Crew UI records field evidence only; payment allocation, invoice state and customer-visible completion remain facade-controlled.",
+    allowedCrewActions: transition.action ? [transition.label] : [],
+    businessBoundary: "Crew transition uses transitionVisit only; field evidence remains FIXTURE_UI_ONLY / NOT_PERSISTED until a Core evidence command exists.",
   };
 }
