@@ -1,4 +1,6 @@
 import type { Result } from "../../contracts";
+import { routePaymentWebhookToReview, type PaymentReviewRouteStore } from "../integrations/payments/review-bridge";
+import type { PaymentWebhookApplicationResult, PaymentWebhookApplicationStore } from "../integrations/payments/core-application-bridge";
 import type { PaymentAdapter, VerifiedPaymentWebhook } from "../integrations/types";
 
 export interface StripeProviderHandlerResult {
@@ -8,10 +10,16 @@ export interface StripeProviderHandlerResult {
   retryable: boolean;
 }
 
-export type PaymentWebhookApplicationResult = "APPLIED" | "DUPLICATE" | "OUT_OF_ORDER_IGNORED" | "PAYMENT_REVIEW";
+export type { PaymentWebhookApplicationResult, PaymentWebhookApplicationStore };
 
-export interface PaymentWebhookApplicationStore {
-  applyVerifiedPayment(input: VerifiedPaymentWebhook): Promise<PaymentWebhookApplicationResult>;
+export interface PaymentWebhookReviewRouteConfig {
+  store: PaymentReviewRouteStore;
+  expectedWorkspaceId?: string;
+  expectedCurrency?: string;
+  expectedAmountMinor?: number;
+  expectedProviderAccountId?: string;
+  expectedPurpose?: VerifiedPaymentWebhook["event"]["purpose"];
+  holdExpiresAt?: string;
 }
 
 export interface StripePaymentWebhookHandlerInput {
@@ -19,6 +27,7 @@ export interface StripePaymentWebhookHandlerInput {
   headers: Record<string, string | undefined>;
   adapter: PaymentAdapter;
   store: PaymentWebhookApplicationStore;
+  review?: PaymentWebhookReviewRouteConfig;
 }
 
 function resultToStatus(result: Exclude<Result<VerifiedPaymentWebhook>, { ok: true }>): StripeProviderHandlerResult {
@@ -36,6 +45,51 @@ function resultToStatus(result: Exclude<Result<VerifiedPaymentWebhook>, { ok: tr
   };
 }
 
+function retryableFailure(body: string): StripeProviderHandlerResult {
+  return {
+    statusCode: 503,
+    body,
+    acknowledged: false,
+    retryable: true,
+  };
+}
+
+async function routeReviewOrRetry(webhook: VerifiedPaymentWebhook, review: PaymentWebhookReviewRouteConfig | undefined): Promise<StripeProviderHandlerResult> {
+  if (!review) {
+    return retryableFailure("Verified payment requested review but no durable payment-review store was configured.");
+  }
+
+  const routed = await routePaymentWebhookToReview({
+    store: review.store,
+    webhook,
+    applicationResult: "PAYMENT_REVIEW",
+    expectedWorkspaceId: review.expectedWorkspaceId ?? webhook.event.workspaceId,
+    expectedCurrency: review.expectedCurrency ?? webhook.event.currency,
+    expectedAmountMinor: review.expectedAmountMinor ?? webhook.event.amountMinor,
+    expectedProviderAccountId: review.expectedProviderAccountId ?? webhook.event.providerAccountId,
+    expectedPurpose: review.expectedPurpose ?? webhook.event.purpose,
+    holdExpiresAt: review.holdExpiresAt,
+  });
+
+  if (!routed.ok) {
+    return retryableFailure(`${routed.code}: ${routed.message}`);
+  }
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      result: "PAYMENT_REVIEW",
+      providerEventId: webhook.event.providerEventId,
+      providerTransactionId: webhook.event.providerTransactionId,
+      reviewId: routed.value.reviewId,
+      reviewState: routed.value.state,
+      reviewReason: routed.value.reason,
+    }),
+    acknowledged: true,
+    retryable: false,
+  };
+}
+
 export async function handleStripePaymentWebhook(input: StripePaymentWebhookHandlerInput): Promise<StripeProviderHandlerResult> {
   const verified = await input.adapter.verifyWebhook(input.rawBody, input.headers);
   if (!verified.ok) return resultToStatus(verified);
@@ -43,6 +97,10 @@ export async function handleStripePaymentWebhook(input: StripePaymentWebhookHand
 
   try {
     const applicationResult = await input.store.applyVerifiedPayment(webhook);
+    if (applicationResult === "PAYMENT_REVIEW") {
+      return await routeReviewOrRetry(webhook, input.review);
+    }
+
     return {
       statusCode: 200,
       body: JSON.stringify({
@@ -55,11 +113,6 @@ export async function handleStripePaymentWebhook(input: StripePaymentWebhookHand
     };
   } catch (error) {
     const detail = error instanceof Error ? error.message : "unknown payment application error";
-    return {
-      statusCode: 503,
-      body: `Verified payment could not be durably applied: ${detail}`,
-      acknowledged: false,
-      retryable: true,
-    };
+    return retryableFailure(`Verified payment could not be durably applied: ${detail}`);
   }
 }
