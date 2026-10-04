@@ -797,3 +797,66 @@ Packets:
 - `docs/execution/batches/v1-int7-worker-1.md`
 - `docs/execution/batches/v1-int7-worker-2.md`
 - `docs/execution/batches/v1-int7-worker-3.md`
+
+
+## Sprint 7 integration status
+
+Worker finals:
+- W1 Core recurrence: `e7e0a10f97f8810b3e612a0022609a6096b3f8ee`
+- W2 Email/Webhook operational closure: `c682cbcd0ad6ea77766b6a1ec9171b072c9579c0`
+- W3 Product E08 partial: `daf62783d46b3a453206535cfbe6ab0d4b604416`
+
+Accepted RC integrations:
+- W1 INT7 recurrence Core: `25cacb28dfddd17231b4ddda0b7549e2fb5e3a3b`
+- W2 INT7 Email/Webhook: `a8711c1bffda3cd52cf9938f87ce8546ba7bef1d`
+
+W1 live staging validation:
+- `sd_0012_recurrence_runtime_int7` applied;
+- `sd_0012a_recurrence_search_path_hardening_int7` applied;
+- recurrence_occurrences exists;
+- recurrence/create/action/materialize/snapshot RPCs are SECURITY INVOKER;
+- anon/authenticated execute=false;
+- service_role execute=true;
+- receipt reports E07_DB_PROOF=PASS, RECURRENCE_CONCURRENCY=PASS, NO_PROVIDER_SCHEDULE_TRUTH=PASS, cleanup YES.
+
+W2:
+- authoritative Email intent/callback receipt bridge implemented;
+- authoritative Webhook/n8n destination + operational receipt implemented;
+- controlled proof gates reached:
+  - EMAIL_PROVIDER_ACCESS_REQUIRED
+  - N8N_WEBHOOK_ENDPOINT_REQUIRED
+- no live/provider verification claimed.
+
+W3 is NOT yet accepted as full E08 Product closure.
+Useful durable work exists:
+- invoice server boundary;
+- quality action server boundary;
+- expanded snapshot validator;
+- outage harness.
+Still incomplete:
+- reusable QualityReviewPreview remains fixture-owned;
+- reusable RecoveryActionsPreview remains fixture-owned;
+- explicit fixture wrappers missing;
+- route integration incomplete.
+Recovery packet:
+`docs/execution/batches/v1-int7-worker-3-recovery.md`
+
+## Sprint 8 active
+
+Shared accepted RC for W1/W2:
+`a8711c1bffda3cd52cf9938f87ce8546ba7bef1d`
+
+Branches:
+- Core: `feat/servicedesk-v1-core-sprint7`
+- Connectors: `feat/servicedesk-v1-connectors-sprint8`
+- Product recovery continues: `feat/servicedesk-v1-product-sprint6`
+
+Packets:
+- `docs/execution/batches/v1-int8-worker-1.md`
+- `docs/execution/batches/v1-int8-worker-2.md`
+- `docs/execution/batches/v1-int7-worker-3-recovery.md`
+
+Missions:
+- W1: E08 manual-payment audit/invoice mutation + quality/attention lifecycle with real ServiceDesk staging proof.
+- W2: E09 unified provider readiness/evidence closure; no new provider breadth.
+- W3: finish E08 Product fixture-to-server boundary without regressions.
