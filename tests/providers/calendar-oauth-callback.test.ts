@@ -1,9 +1,6 @@
 import { describe, expect, test } from "vitest";
-import {
-  GOOGLE_CALENDAR_EVENT_SCOPE,
-  GOOGLE_CALENDAR_FREEBUSY_SCOPE,
-  validateGoogleCalendarOAuthCallback,
-} from "../../src/server/integrations/google-calendar/oauth-callback";
+import { GOOGLE_CALENDAR_EVENT_SCOPE, GOOGLE_CALENDAR_FREEBUSY_SCOPE } from "../../src/server/integrations/google-calendar/oauth";
+import { validateGoogleCalendarOAuthCallback } from "../../src/server/integrations/google-calendar/oauth-callback";
 
 const expectedState = {
   workspaceId: "ws-clearnest",
