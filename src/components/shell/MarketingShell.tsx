@@ -74,7 +74,7 @@ export function MarketingShell({
       <footer className="site-footer">
         <div>
           <strong>ServiceDesk AI</strong>
-          <p>Working V1 product lane. Provider proof remains blocked until controlled receipts are verified.</p>
+          <p>Customer communication, scheduling, payments and service operations in one practical workspace.</p>
         </div>
         <nav aria-label="Legal">
           <Link href="/privacy">Privacy</Link>
