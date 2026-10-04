@@ -383,3 +383,30 @@ Evidence:
 - E06 field runtime DB proof PASS.
 - E07 Connector/Product implemented; Core recurrence authority remains the missing E07 center.
 - Canonical pnpm/Vitest/typecheck/build remains CONFIGURATION_BLOCKED under current Runtime outage.
+
+
+## V1 Integration Sprint 8 — ACTIVE
+
+Accepted RC/base for Core + Connector:
+`a8711c1bffda3cd52cf9938f87ce8546ba7bef1d`
+
+Core:
+- branch `feat/servicedesk-v1-core-sprint7`
+- E08 manual payment + quality/attention lifecycle + DB proof
+- READY
+
+Connectors:
+- branch `feat/servicedesk-v1-connectors-sprint8`
+- E09 unified provider readiness/evidence closure
+- READY
+
+Product:
+- branch `feat/servicedesk-v1-product-sprint6`
+- INT7 recovery to finish invoice/quality/recovery Product boundary
+- RECOVERY_REQUIRED
+
+Controlled proof gates are now ready for:
+- Email provider test/sandbox access with verified sender and callback authentication.
+- n8n controlled webhook endpoint/workflow plus completion callback mapping.
+
+Development continues without those credentials. Live/provider evidence remains blocked until supplied.
