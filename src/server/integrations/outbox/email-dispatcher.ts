@@ -9,9 +9,11 @@ const purposeMap: Record<OutboxJob["purpose"], TransactionalEmailPurpose> = {
   CONFIRMATION: "BOOKING_CONFIRMED",
   INVOICE: "INVOICE_ISSUED",
   REMINDER: "VISIT_REMINDER",
+  VISIT_REMINDER: "VISIT_REMINDER",
   FEEDBACK: "PAYMENT_RECEIPT",
   STAFF_ALERT: "QUOTE_READY",
   CUSTOMER_REPLY: "CUSTOMER_REPLY",
+  CALENDAR_VISIT: "VISIT_REMINDER",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -35,6 +37,9 @@ function policyFor(value: unknown, job: OutboxJob): TransactionalEmailPolicy {
 }
 
 export function buildTransactionalEmailJob(job: OutboxJob): Result<TransactionalEmailJob> {
+  if (job.purpose === "CALENDAR_VISIT") {
+    return { ok: false, code: "EMAIL_PAYLOAD_INVALID", message: "Calendar visit jobs must not be routed to email." };
+  }
   const payload = payloadFor(job);
   const to = stringField(payload, "to");
   const subject = stringField(payload, "subject");
