@@ -27,45 +27,53 @@ function webhook(overrides: Partial<VerifiedPaymentWebhook["event"]> = {}): Veri
   };
 }
 
+function review(overrides: Partial<Parameters<typeof classifyPaymentReview>[0]> = {}) {
+  return classifyPaymentReview({
+    webhook: webhook(),
+    applicationResult: "PAYMENT_REVIEW",
+    expectedWorkspaceId: "ws-clearnest",
+    expectedCurrency: "USD",
+    expectedAmountMinor: 8500,
+    expectedProviderAccountId: "acct_123",
+    expectedPurpose: "DEPOSIT",
+    ...overrides,
+  });
+}
+
 describe("payment review queue", () => {
   test("classifies out-of-order callback without applying payment truth", () => {
-    const review = classifyPaymentReview({
-      webhook: webhook(),
-      applicationResult: "OUT_OF_ORDER_IGNORED",
-      expectedWorkspaceId: "ws-clearnest",
-      expectedCurrency: "USD",
-      expectedAmountMinor: 8500,
-    });
+    const item = review({ applicationResult: "OUT_OF_ORDER_IGNORED" });
 
-    expect(review).toMatchObject({ severity: "MEDIUM", reason: "OUT_OF_ORDER_CALLBACK", requiresOperator: true });
-    expect(review.canMutateBusinessTruth).toBe(false);
+    expect(item).toMatchObject({ severity: "MEDIUM", reason: "OUT_OF_ORDER_CALLBACK", requiresOperator: true });
+    expect(item.canMutateBusinessTruth).toBe(false);
   });
 
-  test("classifies amount mismatch as high risk manual review", () => {
-    const review = classifyPaymentReview({
-      webhook: webhook({ amountMinor: 9000 }),
-      applicationResult: "PAYMENT_REVIEW",
-      expectedWorkspaceId: "ws-clearnest",
-      expectedCurrency: "USD",
-      expectedAmountMinor: 8500,
-    });
+  test("classifies duplicate as acknowledged without operator review", () => {
+    const item = review({ applicationResult: "DUPLICATE" });
 
-    expect(review).toMatchObject({ severity: "HIGH", reason: "AMOUNT_MISMATCH", requiresOperator: true });
+    expect(item).toMatchObject({ severity: "INFO", reason: "DUPLICATE_ACKNOWLEDGED", requiresOperator: false });
+    expect(item.reviewKey).toBe("payment-review:STRIPE:acct_123:evt_123:DUPLICATE_ACKNOWLEDGED");
   });
 
-  test("classifies duplicate as no review needed", () => {
-    const review = classifyPaymentReview({
-      webhook: webhook(),
-      applicationResult: "DUPLICATE",
-      expectedWorkspaceId: "ws-clearnest",
-      expectedCurrency: "USD",
-      expectedAmountMinor: 8500,
-    });
-
-    expect(review).toMatchObject({ severity: "INFO", reason: "DUPLICATE_ACKNOWLEDGED", requiresOperator: false });
+  test("classifies account, workspace, purpose, currency, amount, and hold-expiry mismatches", () => {
+    expect(review({ webhook: webhook({ providerAccountId: "acct_other" }) })).toMatchObject({ reason: "ACCOUNT_MISMATCH", severity: "HIGH" });
+    expect(review({ webhook: webhook({ workspaceId: "ws-other" }) })).toMatchObject({ reason: "WORKSPACE_MISMATCH", severity: "HIGH" });
+    expect(review({ webhook: webhook({ purpose: "BALANCE" }) })).toMatchObject({ reason: "PURPOSE_MISMATCH", severity: "HIGH" });
+    expect(review({ webhook: webhook({ currency: "EUR" }) })).toMatchObject({ reason: "CURRENCY_MISMATCH", severity: "HIGH" });
+    expect(review({ webhook: webhook({ amountMinor: 9000 }) })).toMatchObject({ reason: "AMOUNT_MISMATCH", severity: "HIGH" });
+    expect(review({ holdExpiresAt: "2026-10-04T11:00:00.000Z" })).toMatchObject({ reason: "LATE_EXPIRED_HOLD_PAYMENT", severity: "HIGH" });
   });
 
-  test("enqueue dedupes review items by provider event", async () => {
+  test("review item stays redacted and non-mutating", () => {
+    const item = review({ webhook: webhook({ providerTransactionId: "pi_secret_customer_reference" }) });
+
+    expect(item.canMutateBusinessTruth).toBe(false);
+    expect(item.reasonCodes).toEqual([item.reason]);
+    expect(JSON.stringify(item)).not.toContain("customer");
+    expect(JSON.stringify(item)).not.toContain("secret");
+  });
+
+  test("enqueue dedupes review items by provider event and reason", async () => {
     const calls: unknown[] = [];
     const store: PaymentReviewStore = {
       enqueuePaymentReview: async (item) => {
@@ -74,15 +82,9 @@ describe("payment review queue", () => {
       },
     };
 
-    const result = await enqueuePaymentReview(store, classifyPaymentReview({
-      webhook: webhook(),
-      applicationResult: "OUT_OF_ORDER_IGNORED",
-      expectedWorkspaceId: "ws-clearnest",
-      expectedCurrency: "USD",
-      expectedAmountMinor: 8500,
-    }));
+    const result = await enqueuePaymentReview(store, review({ applicationResult: "OUT_OF_ORDER_IGNORED" }));
 
     expect(result).toEqual({ reviewId: "review_1", state: "DUPLICATE" });
-    expect(calls[0]).toMatchObject({ dedupeKey: "STRIPE:acct_123:evt_123", canMutateBusinessTruth: false });
+    expect(calls[0]).toMatchObject({ dedupeKey: "STRIPE:acct_123:evt_123", reviewKey: "payment-review:STRIPE:acct_123:evt_123:OUT_OF_ORDER_CALLBACK", canMutateBusinessTruth: false });
   });
 });
