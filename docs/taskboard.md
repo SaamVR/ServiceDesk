@@ -410,3 +410,35 @@ Controlled proof gates are now ready for:
 - n8n controlled webhook endpoint/workflow plus completion callback mapping.
 
 Development continues without those credentials. Live/provider evidence remains blocked until supplied.
+
+
+## V1 Integration Sprint 9 — ACTIVE
+
+Shared base:
+cae7eb170b97208802065b76e20cbe9f9862c0cd
+
+Core:
+- feat/servicedesk-v1-core-sprint8
+- E09 reporting + platform billing separation + usage
+- READY
+
+Connectors:
+- feat/servicedesk-v1-connectors-sprint9
+- E10 cross-provider journey + proof packet
+- READY
+
+Product:
+- feat/servicedesk-v1-product-sprint7
+- E09 reports + platform billing + owner settings + onboarding
+- READY
+
+Evidence:
+- E03 payment DB proof PASS
+- E05 inbox DB proof PASS
+- E06 field runtime DB proof PASS
+- E07 recurrence DB proof PASS
+- E08 manual payment DB proof PASS
+- E08 quality DB proof PASS
+- canonical pnpm/Vitest/typecheck/build still CONFIGURATION_BLOCKED
+- controlled provider proof still pending for WhatsApp, Calendar, Email, n8n and AI
+- Stripe/payment remains SANDBOX only
