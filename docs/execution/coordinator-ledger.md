@@ -739,3 +739,61 @@ Packets:
 - `docs/execution/batches/v1-int6-worker-1.md`
 - `docs/execution/batches/v1-int6-worker-2.md`
 - `docs/execution/batches/v1-int6-worker-3.md`
+
+
+## Sprint 6 accepted and integrated
+
+Remote worker finals:
+- W1 Core: `2077a5adf9c3b61a4bc2630a8e09f853a4588f28`
+- W2 Connectors: `7c9342efd34f533ed37322e5d78d5d089376d95c`
+- W3 Product: `65879d27be13452d12d67d0ae8fd0877945d15da`
+
+RC integration:
+- W1 INT6 overlay: `a8265df51e0921fa11501ce513abeda04371dcb0`
+- W2 INT6 overlay: `d2c15790098aa88c2242f8f6825833a6dd02a730`
+- W3 INT6 overlay completed through `4f1cc3dd1c9ce2703918db32236a8d4f34614658`
+
+W1 staging evidence validated:
+- `sd_0010_e03_verified_payment_rpc_int6` applied;
+- `sd_0011_visit_field_runtime_int6` applied;
+- E03 payment RPC is SECURITY INVOKER, anon/authenticated execute false, service_role execute true;
+- E06 transition/evidence/checklist RPCs have the same restricted posture;
+- visit_evidence and visit_checklist_items exist;
+- worker receipt records E03_DB_PROOF=PASS and E06_DB_PROOF=PASS with fixture cleanup.
+
+W2:
+- E06 Calendar receipt restored;
+- E07 recurrence provider automation implemented;
+- no Google RRULE/series truth;
+- visit reminders bridge implemented;
+- live Google proof remains unclaimed/configuration-blocked.
+
+W3:
+- E07 recurrence Product boundary implemented;
+- no client schedule truth;
+- materialized occurrences remain VisitDTOs supplied by server;
+- E06 evidence/checklist DTO compatibility added.
+
+## Sprint 7 shared contract
+
+Coordinator froze:
+- `QualityCaseDTO`
+- `ManualPaymentInput`
+- `QualityCaseAction`
+- `QualityCaseActionInput`
+- `applyManualPayment`
+- `applyQualityCaseAction`
+- expanded `WorkspaceSnapshot` with recurrence/evidence/checklist/attention/quality arrays.
+
+Shared RC/base:
+`fa9568970c012550149a0093360e68bbdaa69e62`
+
+Sprint 7 branches:
+- `feat/servicedesk-v1-core-sprint6`
+- `feat/servicedesk-v1-connectors-sprint7`
+- `feat/servicedesk-v1-product-sprint6`
+
+Packets:
+- `docs/execution/batches/v1-int7-worker-1.md`
+- `docs/execution/batches/v1-int7-worker-2.md`
+- `docs/execution/batches/v1-int7-worker-3.md`
