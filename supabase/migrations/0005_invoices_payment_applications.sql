@@ -20,6 +20,8 @@ create table public.invoices (
   updated_at timestamptz not null default now(),
   unique (workspace_id, id),
   unique (workspace_id, quote_id),
+  foreign key (workspace_id, quote_id) references public.quotes(workspace_id, id) on delete restrict,
+  foreign key (workspace_id, visit_id) references public.visits(workspace_id, id) on delete restrict,
   check (allocated_minor >= refunded_minor),
   check ((allocated_minor - refunded_minor) + balance_minor = total_minor)
 );
@@ -44,7 +46,9 @@ create table public.verified_payment_applications (
   unique (provider, provider_account_id, provider_event_id),
   unique (workspace_id, provider_account_id, provider_transaction_id, purpose),
   unique (workspace_id, id),
-  foreign key (workspace_id, invoice_id) references public.invoices(workspace_id, id)
+  foreign key (workspace_id, quote_id) references public.quotes(workspace_id, id) on delete restrict,
+  foreign key (workspace_id, hold_id) references public.slot_holds(workspace_id, id) on delete restrict,
+  foreign key (workspace_id, invoice_id) references public.invoices(workspace_id, id) on delete restrict
 );
 
 create index invoices_workspace_status_idx on public.invoices(workspace_id, status, updated_at desc);
@@ -54,7 +58,20 @@ alter table public.invoices enable row level security;
 alter table public.verified_payment_applications enable row level security;
 
 create policy invoices_staff_read on public.invoices
-  for select using (public.has_active_membership(workspace_id, array['OWNER','DISPATCHER','CREW']::public.membership_role[]));
+  for select using (public.has_active_membership(workspace_id, array['OWNER','DISPATCHER']::public.membership_role[]));
+
+create policy invoices_customer_read on public.invoices
+  for select using (
+    exists (
+      select 1
+      from public.quotes q
+      join public.requests r on r.workspace_id = q.workspace_id and r.id = q.request_id
+      where q.workspace_id = invoices.workspace_id
+        and q.id = invoices.quote_id
+        and r.customer_id is not null
+        and public.is_customer_for_workspace(r.workspace_id, r.customer_id)
+    )
+  );
 
 create policy payment_applications_staff_read on public.verified_payment_applications
   for select using (public.has_active_membership(workspace_id, array['OWNER','DISPATCHER']::public.membership_role[]));
