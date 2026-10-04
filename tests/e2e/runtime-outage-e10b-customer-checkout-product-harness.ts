@@ -1,0 +1,24 @@
+import { ok as assert } from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+const root = process.cwd();
+const source = (path: string) => readFileSync(join(root, path), "utf8");
+const quote = source("src/features/quotes/server-boundary.ts");
+const schedule = source("src/features/schedule/customer-booking-boundary.ts");
+const checkout = source("src/features/checkout/sandbox-checkout-boundary.ts");
+const checkoutView = source("src/features/checkout/view-models.ts") + source("src/features/checkout/CheckoutPreview.tsx");
+const journey = source("src/features/product/final-journey-model.ts");
+assert(quote.includes("acceptQuote(ctx: ActorContext, quoteId: string, meta: CommandMeta)"), "acceptQuote exact Product port signature missing");
+assert(quote.includes("expectedVersion: input.quote.version"), "quote expectedVersion must propagate");
+assert(!quote.includes("status: \"ACCEPTED\""), "quote boundary must not optimistically mutate acceptance");
+assert(schedule.includes("findSlots(ctx: ActorContext, input: FindSlotsInput)") && schedule.includes("holdSlot(ctx: ActorContext, slotId: string, quoteId: string, meta: CommandMeta)"), "findSlots/holdSlot exact ports missing");
+assert(schedule.includes("expectedVersion: input.quote.version"), "holdSlot must preserve quote version");
+assert(checkout.includes("mode: \"SANDBOX\"") && checkout.includes("SafeSandboxCheckoutPort"), "safe sandbox checkout port missing");
+assert(checkout.includes("quote.status !== \"ACCEPTED\"") && checkout.includes("Date.parse(input.heldSlot.expiresAt)"), "checkout must require accepted quote and valid hold");
+assert(checkoutView.includes("SANDBOX CHECKOUT LAUNCHED / PAYMENT PENDING") && checkoutView.includes("canShowReceipt: false"), "sandbox checkout launch must not imply paid receipt");
+for (const path of ["src/features/quotes/server-boundary.ts", "src/features/schedule/customer-booking-boundary.ts", "src/features/checkout/sandbox-checkout-boundary.ts", "src/app/portal/booking/server-actions.ts", "src/app/portal/quotes/[id]/server-actions.ts"]) { const file = source(path); assert(!file.includes("Repository"), `${path} must not import Core repositories`); assert(!file.includes("@/server/integrations"), `${path} must not import provider clients`); assert(!file.toLowerCase().includes("stripe"), `${path} must not import Stripe/SDK/provider secrets`); }
+for (const id of ["customer-accept-quote", "find-slots", "hold-slot", "sandbox-checkout-launch", "verified-webhook", "invoice-visit-confirmation"]) assert(journey.includes(`id: "${id}"`), `journey missing ${id}`);
+for (const error of ["quote not found", "quote expired", "no slots", "hold conflict", "hold expired", "checkout configuration blocked", "checkout sandbox failure", "payment still pending"]) assert(journey.includes(error), `journey/error matrix missing ${error}`);
+const browserSpec = source("docs/execution/v1-e10-browser-acceptance.md");
+assert(browserSpec.includes("BROWSER_ACCEPTANCE=TO_RUN_CONFIGURATION_BLOCKED") && browserSpec.includes("SANDBOX CHECKOUT LAUNCHED / PAYMENT PENDING"), "browser spec must be updated and blocked");
+console.log("runtime-outage-e10b-customer-checkout-product-harness PASS");
