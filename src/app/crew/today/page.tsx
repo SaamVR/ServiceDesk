@@ -4,9 +4,10 @@ export default function CrewTodayPage() {
   return (
     <OperationalRoute
       surface="crew"
+      crewModule="today"
       workspaceLabel="Crew workspace"
       title="Today list for assigned cleaning visits."
-      description="Crew sees assigned jobs only, with a prominent next status action and grouped checklist, proof, time/material and incident controls."
+      description="Crew sees assigned jobs only, with network-required V1 status and a safe path into the job detail workflow."
     />
   );
 }
