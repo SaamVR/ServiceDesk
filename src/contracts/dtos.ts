@@ -140,3 +140,20 @@ export interface RecurrenceRuleDTO {
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
 }
+
+
+export interface QualityCaseDTO {
+  id: string;
+  workspaceId: string;
+  visitId: string;
+  state: "OPEN" | "IN_REVIEW" | "RESOLVED";
+  feedbackScore?: number;
+  summary: string;
+  ownerUserId?: string;
+  dueAt?: ISODateTime;
+  resolutionNote?: string;
+  reviewRequestState: "NOT_ELIGIBLE" | "ELIGIBLE" | "REQUESTED";
+  version: number;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
