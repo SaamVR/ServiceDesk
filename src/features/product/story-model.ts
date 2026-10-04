@@ -1,4 +1,12 @@
 export type ClaimLevel = "IMPLEMENTED_UI" | "CONFIGURATION_BLOCKED";
+export type UiStateScenario = {
+  state: "loading" | "empty" | "error";
+  tone: "pending" | "neutral" | "failure";
+  title: string;
+  detail: string;
+  actionLabel?: string;
+  ariaLive: "polite" | "assertive";
+};
 
 export const uiDesignTokens = {
   page: "#F6F7F7",
@@ -10,6 +18,32 @@ export const uiDesignTokens = {
   failure: "#A63A3A",
   pending: "#66736D",
 } as const;
+
+export const uiStateScenarios: UiStateScenario[] = [
+  {
+    state: "loading",
+    tone: "pending",
+    title: "Loading workspace records",
+    detail: "The route shell is waiting for facade/API data before showing operational records.",
+    ariaLive: "polite",
+  },
+  {
+    state: "empty",
+    tone: "neutral",
+    title: "No records yet",
+    detail: "Show a clear next action instead of filling the screen with fake business data.",
+    actionLabel: "Start first request",
+    ariaLive: "polite",
+  },
+  {
+    state: "error",
+    tone: "failure",
+    title: "Could not load this workspace",
+    detail: "Preserve the current route and let staff retry or contact support without losing context.",
+    actionLabel: "Retry loading",
+    ariaLive: "assertive",
+  },
+];
 
 export const productRoutes = [
   { href: "/", label: "Home", claimLevel: "IMPLEMENTED_UI" },
