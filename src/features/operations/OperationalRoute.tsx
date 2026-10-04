@@ -21,6 +21,12 @@ import { RequestSummaryPreview } from "@/features/request-intake/RequestSummaryP
 import { SchedulePreview } from "@/features/schedule/SchedulePreview";
 import { OwnerSettingsPreview } from "@/features/settings/OwnerSettingsPreview";
 import {
+  buildBusinessModuleHref,
+  businessModuleConfig,
+  businessNavigation,
+  type BusinessModule,
+} from "./business-modules";
+import {
   buildCustomerModuleHref,
   customerModuleConfig,
   customerNavigation,
@@ -55,12 +61,13 @@ interface OperationalRouteProps {
   description: string;
   workspaceLabel?: string;
   resourceLabel?: string;
+  businessModule?: BusinessModule;
+  businessSlug?: string;
   staffModule?: StaffModule;
   customerModule?: CustomerModule;
 }
 
-const surfaceNav: Record<Exclude<Surface, "staff" | "customer">, string[]> = {
-  business: ["Services", "Areas", "FAQs", "Enquire", "Book"],
+const surfaceNav: Record<Exclude<Surface, "business" | "staff" | "customer">, string[]> = {
   crew: ["Today", "Job detail", "Checklist", "Proof", "Incident", "Completion"],
   onboarding: ["Business", "Services", "Team", "Policies", "Integrations", "Readiness"],
   tour: ["Scenario", "Command", "Receipt label", "Recovery", "Presentation"],
@@ -72,6 +79,8 @@ export function OperationalRoute({
   description,
   workspaceLabel = "BrightRoom Services",
   resourceLabel,
+  businessModule = "home",
+  businessSlug = "brightroom",
   staffModule = "overview",
   customerModule = "overview",
 }: OperationalRouteProps) {
@@ -82,7 +91,19 @@ export function OperationalRoute({
           <span className="brand-mark" aria-hidden="true">SD</span>
           <span>{workspaceLabel}</span>
         </a>
-        {surface === "staff" ? (
+        {surface === "business" ? (
+          <nav className="site-nav" aria-label="Business site">
+            {businessNavigation.map((item) => (
+              <a
+                aria-current={businessModule === item.module ? "page" : undefined}
+                href={buildBusinessModuleHref(businessSlug, item.module)}
+                key={item.module}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        ) : surface === "staff" ? (
           <nav className="site-nav grouped" aria-label="Staff workspace">
             {staffNavigationGroups.map((group) => (
               <div className="nav-group" key={group.label}>
@@ -128,7 +149,7 @@ export function OperationalRoute({
           <h1>{title}</h1>
           <p className="lead">{description}</p>
         </div>
-        {surface === "business" && <BusinessPanel />}
+        {surface === "business" && <BusinessPanel module={businessModule} slug={businessSlug} />}
         {surface === "customer" && <CustomerPanel module={customerModule} />}
         {surface === "staff" && <StaffPanel module={staffModule} />}
         {surface === "crew" && <CrewPanel />}
@@ -140,26 +161,81 @@ export function OperationalRoute({
   );
 }
 
-function BusinessPanel() {
+function BusinessPanel({ module, slug }: { module: BusinessModule; slug: string }) {
+  const config = businessModuleConfig[module];
+  let moduleContent;
+
+  switch (module) {
+    case "home":
+      moduleContent = (
+        <div className="card-grid three">
+          <article className="plain-card">
+            <span className="status-pill success">Service catalog</span>
+            <h2>Move-out cleaning</h2>
+            <p>3 bedrooms, 2 bathrooms and oven cleaning map to the frozen $340 quote fixture.</p>
+          </article>
+          <article className="plain-card">
+            <span className="status-pill neutral">Operating area</span>
+            <h2>Residential cleaning</h2>
+            <p>Public copy stays generic until owner settings provide real service areas and policy data.</p>
+          </article>
+          <article className="plain-card">
+            <span className="status-pill pending">How it works</span>
+            <h2>Ask → quote → hold → pay deposit</h2>
+            <p>Every step is separated from provider proof so test payment and fixture Calendar states are visible.</p>
+          </article>
+        </div>
+      );
+      break;
+    case "enquire":
+      moduleContent = (
+        <div className="hero-grid">
+          <form className="plain-card" aria-label="Cleaning enquiry form">
+            <h2>Start a cleaning request</h2>
+            <label className="form-field">Service <input readOnly value="Move-out clean" /></label>
+            <label className="form-field">Bedrooms <input readOnly value="3" /></label>
+            <label className="form-field">Bathrooms <input readOnly value="2" /></label>
+            <label className="form-field">Preferred date <input readOnly value="Next Friday morning" /></label>
+            <button
+              className="button-primary full"
+              type="button"
+              disabled
+              aria-disabled="true"
+              title="Fixture preview only; create/update request command is not integrated on this branch."
+            >
+              Continue request · preview
+            </button>
+          </form>
+          <RequestSummaryPreview />
+        </div>
+      );
+      break;
+    case "book":
+      moduleContent = (
+        <div className="customer-workspace-stack">
+          <section className="plain-card" aria-label="Public booking boundary">
+            <span className="status-pill attention">Sandbox checkout boundary</span>
+            <h2>Booking waits for a fresh slot and verified payment evidence</h2>
+            <p>Public booking can preview the quote and hold state, but receipts stay hidden until provider callbacks are verified.</p>
+          </section>
+          <CheckoutPreview />
+        </div>
+      );
+      break;
+  }
+
   return (
-    <div className="hero-grid">
-      <form className="plain-card" aria-label="Cleaning enquiry form">
-        <h2>Start a cleaning request</h2>
-        <label className="form-field">Service <input readOnly value="Move-out clean" /></label>
-        <label className="form-field">Bedrooms <input readOnly value="3" /></label>
-        <label className="form-field">Bathrooms <input readOnly value="2" /></label>
-        <label className="form-field">Preferred date <input readOnly value="Next Friday morning" /></label>
-        <button
-          className="button-primary full"
-          type="button"
-          disabled
-          aria-disabled="true"
-          title="Fixture preview only; create/update request command is not integrated on this branch."
-        >
-          Continue request · preview
-        </button>
-      </form>
-      <RequestSummaryPreview />
+    <div className="customer-workspace-stack">
+      <section className="mini-panel" aria-label={`${config.label} business module context`}>
+        <span className="status-pill neutral">Business site</span>
+        <h2>{config.label}</h2>
+        <p>{config.description}</p>
+        <div className="action-row">
+          <a className="button-secondary" href={buildBusinessModuleHref(slug, "enquire")}>Start enquiry</a>
+          <a className="button-secondary" href={buildBusinessModuleHref(slug, "book")}>Preview booking</a>
+        </div>
+      </section>
+      {moduleContent}
     </div>
   );
 }
