@@ -6,6 +6,7 @@ export default async function StaffBillingPage({ params }: { params: Promise<{ w
   return (
     <OperationalRoute
       surface="staff"
+        staffModule="billing"
       workspaceLabel={workspace}
       title="Business billing and platform plan status."
       description="Platform subscription state stays separate from customer cleaning payments, invoices, refunds and receipts. Live payment mode requires eligibility proof."
