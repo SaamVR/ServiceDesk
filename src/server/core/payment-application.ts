@@ -26,11 +26,14 @@ async function existingOutcome(unit: PaymentApplicationUnitOfWork, event: Verifi
 
 async function review(unit: PaymentApplicationUnitOfWork, event: VerifiedPaymentFacts, reasonCode: PaymentReviewReasonCode): Promise<Result<VerifiedPaymentApplicationOutcome>> {
   const existing = await unit.findApplicationByProviderEvent(event.provider, event.providerAccountId, event.providerEventId) ?? await unit.findApplicationByTransaction(event.workspaceId, event.providerAccountId, event.providerTransactionId, event.purpose);
+  let applicationId = existing?.id;
   if (!existing) {
     const inserted = await unit.insertPaymentApplication({ id: unit.nextPaymentApplicationId(), ...event, state: "REVIEW", reasonCode, createdAt: event.occurredAt });
     if (inserted.ok === false) return inserted;
+    applicationId = inserted.value.id;
   }
-  const attention: AttentionItem = { id: unit.nextAttentionId(), workspaceId: event.workspaceId, type: "PAYMENT_REVIEW", resourceType: "PAYMENT_APPLICATION", resourceId: appKey(event), severity: "WARNING", status: "OPEN", summary: `Payment requires review: ${reasonCode}`, createdAt: event.occurredAt };
+  if (!applicationId) return fail("PAYMENT_REVIEW_APPLICATION_MISSING", "Payment review application identity was not persisted.");
+  const attention: AttentionItem = { id: unit.nextAttentionId(), workspaceId: event.workspaceId, type: "PAYMENT_REVIEW", resourceType: "PAYMENT_APPLICATION", resourceId: applicationId, severity: "WARNING", status: "OPEN", summary: `Payment requires review: ${reasonCode}`, createdAt: event.occurredAt };
   const raised = await unit.raiseAttentionItem(attention);
   if (raised.ok === false) return raised;
   return { ok: true, value: { state: "PAYMENT_REVIEW", attentionItemId: raised.value.id } };
