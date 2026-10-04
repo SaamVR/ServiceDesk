@@ -28,6 +28,21 @@ export interface SignedOutboundWebhook {
   headers: Record<string, string>;
 }
 
+export interface WebhookDeliveryInput {
+  statusCode?: number;
+  errorCode?: string;
+  attempt: number;
+  maxAttempts: number;
+}
+
+export interface WebhookDeliveryDecision {
+  outcome: "DELIVERED" | "RETRY" | "FAILED_FINAL";
+  retryable: boolean;
+  nextAttempt?: number;
+  reason?: "SUCCESS" | "TRANSIENT_HTTP" | "NETWORK_ERROR" | "DETERMINISTIC_HTTP_FAILURE" | "MAX_ATTEMPTS_EXHAUSTED";
+  businessMutationAllowed: false;
+}
+
 export function buildBookingConfirmedWebhook(input: BookingConfirmedWebhookInput): OutboundWebhookEnvelope {
   return {
     id: input.eventId,
@@ -110,4 +125,40 @@ export function verifyOutboundWebhookSignature(input: {
   }
 
   return { ok: true, value: true };
+}
+
+function canRetry(input: WebhookDeliveryInput): boolean {
+  return input.attempt < input.maxAttempts;
+}
+
+export function classifyWebhookDeliveryResult(input: WebhookDeliveryInput): WebhookDeliveryDecision {
+  const noBusinessMutation = { businessMutationAllowed: false as const };
+
+  if (input.statusCode && input.statusCode >= 200 && input.statusCode < 300) {
+    return { outcome: "DELIVERED", retryable: false, reason: "SUCCESS", ...noBusinessMutation };
+  }
+
+  const transientHttp = input.statusCode === 408 || input.statusCode === 409 || input.statusCode === 425 || input.statusCode === 429 || (input.statusCode !== undefined && input.statusCode >= 500);
+  const networkError = Boolean(input.errorCode);
+
+  if ((transientHttp || networkError) && canRetry(input)) {
+    return {
+      outcome: "RETRY",
+      retryable: true,
+      nextAttempt: input.attempt + 1,
+      reason: networkError ? "NETWORK_ERROR" : "TRANSIENT_HTTP",
+      ...noBusinessMutation,
+    };
+  }
+
+  if (transientHttp || networkError) {
+    return { outcome: "FAILED_FINAL", retryable: false, reason: "MAX_ATTEMPTS_EXHAUSTED", ...noBusinessMutation };
+  }
+
+  return { outcome: "FAILED_FINAL", retryable: false, reason: "DETERMINISTIC_HTTP_FAILURE", ...noBusinessMutation };
+}
+
+export function nextWebhookRetryAt(input: { now: string; attempt: number; maxDelayMinutes?: number }): string {
+  const delayMinutes = Math.min(2 ** Math.max(input.attempt - 1, 0), input.maxDelayMinutes ?? 30);
+  return new Date(new Date(input.now).getTime() + delayMinutes * 60_000).toISOString();
 }
