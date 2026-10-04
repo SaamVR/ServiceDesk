@@ -17,7 +17,8 @@ import { QualityReviewPreview } from "@/features/quality/QualityReviewPreview";
 import { QuoteApprovalPreview } from "@/features/quotes/QuoteApprovalPreview";
 import { RecoveryActionsPreview } from "@/features/recovery/RecoveryActionsPreview";
 import { ReportsPreview } from "@/features/reports/ReportsPreview";
-import { RequestSummaryPreview } from "@/features/request-intake/RequestSummaryPreview";
+import { EnquiryForm } from "@/features/request-intake/EnquiryForm";
+import { RequestSummaryFixturePreview } from "@/features/request-intake/RequestSummaryFixturePreview";
 import { SchedulePreview } from "@/features/schedule/SchedulePreview";
 import { OwnerSettingsPreview } from "@/features/settings/OwnerSettingsPreview";
 import {
@@ -209,23 +210,17 @@ function BusinessPanel({ module, slug }: { module: BusinessModule; slug: string 
     case "enquire":
       moduleContent = (
         <div className="hero-grid">
-          <form className="plain-card" aria-label="Cleaning enquiry form">
-            <h2>Start a cleaning request</h2>
-            <label className="form-field">Service <input readOnly value="Move-out clean" /></label>
-            <label className="form-field">Bedrooms <input readOnly value="3" /></label>
-            <label className="form-field">Bathrooms <input readOnly value="2" /></label>
-            <label className="form-field">Preferred date <input readOnly value="Next Friday morning" /></label>
-            <button
-              className="button-primary full"
-              type="button"
-              disabled
-              aria-disabled="true"
-              title="Fixture preview only; create/update request command is not integrated on this branch."
-            >
-              Continue request · preview
-            </button>
-          </form>
-          <RequestSummaryPreview />
+          <EnquiryForm
+            values={{
+              serviceLabel: sampleRequest.serviceCode ?? "Missing",
+              bedroomsLabel: sampleRequest.bedrooms?.toString() ?? "Missing",
+              bathroomsLabel: sampleRequest.bathrooms?.toString() ?? "Missing",
+              requestedStartLabel: sampleRequest.requestedStartAt ?? "Missing",
+            }}
+            modeLabel="Fixture intake"
+            boundaryNotice="No request is created from this UI until Chat 1 accepts the server create/update boundary."
+          />
+          <RequestSummaryFixturePreview />
         </div>
       );
       break;
@@ -353,7 +348,7 @@ function StaffPanel({ module }: { module: StaffModule }) {
       moduleContent = <CrmPreview />;
       break;
     case "requests":
-      moduleContent = <RequestSummaryPreview />;
+      moduleContent = <RequestSummaryFixturePreview />;
       break;
     case "quotes":
       moduleContent = <QuoteApprovalPreview />;
