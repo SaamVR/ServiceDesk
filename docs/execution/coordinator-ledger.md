@@ -180,3 +180,13 @@ Coordinator rulings:
 4. Historical samvr proof remains non-qualifying for the current Runtime-only gate.
 5. Cycle 2 is a recovery continuation: retry the Runtime gate from each latest worker head; only after it becomes executable may the deferred substantive slices continue.
 6. Do not burn repeated worker cycles on identical DNS-only checks if the Runtime environment is unchanged. A fresh worker run may proceed only when it can at least establish source/package access or when a new Runtime instance is being tested for recovery.
+
+
+## Cycle 2 recovery continuation packets
+
+Published after Cycle 1 closeout:
+- Worker 1 Core: `docs/execution/batches/cycle-2-worker-1.md` — publication commit `022316675987a2ee8c9c1ad5e745482c64755336`
+- Worker 2 Connectors/AI: `docs/execution/batches/cycle-2-worker-2.md` — publication commit `466f36da3a133353875875f184793ce00288f15b`
+- Worker 3 Product/UI: `docs/execution/batches/cycle-2-worker-3.md` — publication commit `7cfe0ae7d506d1c44a198cc0e1296682680a590a`
+
+Cycle 2 is intentionally recovery-gated. If a fresh GPT Runtime can establish GitHub and npm access, each worker continues immediately into its deferred substantive work. If the same infrastructure failure persists, workers must not create untestable application changes; they perform the packet's bounded static readiness fallback and publish a receipt.
