@@ -27,6 +27,12 @@ import {
   type BusinessModule,
 } from "./business-modules";
 import {
+  buildCrewModuleHref,
+  crewModuleConfig,
+  crewNavigation,
+  type CrewModule,
+} from "./crew-modules";
+import {
   buildCustomerModuleHref,
   customerModuleConfig,
   customerNavigation,
@@ -63,12 +69,12 @@ interface OperationalRouteProps {
   resourceLabel?: string;
   businessModule?: BusinessModule;
   businessSlug?: string;
-  staffModule?: StaffModule;
+  crewModule?: CrewModule;
   customerModule?: CustomerModule;
+  staffModule?: StaffModule;
 }
 
-const surfaceNav: Record<Exclude<Surface, "business" | "staff" | "customer">, string[]> = {
-  crew: ["Today", "Job detail", "Checklist", "Proof", "Incident", "Completion"],
+const surfaceNav: Record<Exclude<Surface, "business" | "crew" | "customer" | "staff">, string[]> = {
   onboarding: ["Business", "Services", "Team", "Policies", "Integrations", "Readiness"],
   tour: ["Scenario", "Command", "Receipt label", "Recovery", "Presentation"],
 };
@@ -81,8 +87,9 @@ export function OperationalRoute({
   resourceLabel,
   businessModule = "home",
   businessSlug = "brightroom",
-  staffModule = "overview",
+  crewModule = "today",
   customerModule = "overview",
+  staffModule = "overview",
 }: OperationalRouteProps) {
   return (
     <main className="site-shell">
@@ -97,6 +104,18 @@ export function OperationalRoute({
               <a
                 aria-current={businessModule === item.module ? "page" : undefined}
                 href={buildBusinessModuleHref(businessSlug, item.module)}
+                key={item.module}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        ) : surface === "crew" ? (
+          <nav className="site-nav" aria-label="Crew workspace">
+            {crewNavigation.map((item) => (
+              <a
+                aria-current={crewModule === item.module ? "page" : undefined}
+                href={buildCrewModuleHref(item.module, sampleVisit.id)}
                 key={item.module}
               >
                 {item.label}
@@ -152,7 +171,7 @@ export function OperationalRoute({
         {surface === "business" && <BusinessPanel module={businessModule} slug={businessSlug} />}
         {surface === "customer" && <CustomerPanel module={customerModule} />}
         {surface === "staff" && <StaffPanel module={staffModule} />}
-        {surface === "crew" && <CrewPanel />}
+        {surface === "crew" && <CrewPanel module={crewModule} />}
         {surface === "onboarding" && <OnboardingPanel />}
         {surface === "tour" && <TourPanel />}
         <RouteStatePreview />
@@ -423,8 +442,32 @@ function StaffAttentionOverview({
   );
 }
 
-function CrewPanel() {
-  return <CrewJobPreview />;
+function CrewPanel({ module }: { module: CrewModule }) {
+  const config = crewModuleConfig[module];
+  const moduleContent = module === "today" ? (
+    <div className="mobile-preview" aria-label="Crew assigned visits preview">
+      <p className="label">Crew mobile · today</p>
+      <h2>Assigned visits</h2>
+      <article className="mini-panel">
+        <span className="status-pill pending">{sampleVisit.status.replaceAll("_", " ")}</span>
+        <h3>{sampleRequest.serviceCode ?? "Cleaning visit"}</h3>
+        <p>{sampleVisit.startAt} · crew {sampleVisit.crewId ?? "unassigned"}</p>
+        <a className="button-primary full" href={buildCrewModuleHref("job", sampleVisit.id)}>Open job detail</a>
+      </article>
+      <p>V1 requires network access for authoritative field updates; offline sync is not claimed.</p>
+    </div>
+  ) : <CrewJobPreview />;
+
+  return (
+    <div className="customer-workspace-stack">
+      <section className="mini-panel" aria-label={`${config.label} crew module context`}>
+        <span className="status-pill neutral">Crew workspace</span>
+        <h2>{config.label}</h2>
+        <p>{config.description}</p>
+      </section>
+      {moduleContent}
+    </div>
+  );
 }
 
 function OnboardingPanel() {
