@@ -64,3 +64,26 @@ export interface AttentionItemDTO {
   status: "OPEN" | "ACKNOWLEDGED" | "RESOLVED"; resourceType: string; resourceId: string;
   ownerUserId?: string; dueAt?: ISODateTime; summary: string;
 }
+
+
+export type MessageDeliveryState =
+  | "QUEUED"
+  | "RUNNING"
+  | "PROVIDER_ACCEPTED"
+  | "DELIVERED"
+  | "READ"
+  | "FAILED"
+  | "SUPPRESSED";
+
+export interface MessageDTO {
+  id: string;
+  workspaceId: string;
+  conversationId: string;
+  direction: "INBOUND" | "OUTBOUND" | "INTERNAL";
+  senderKind: "CUSTOMER" | "STAFF" | "AI" | "SYSTEM";
+  providerMessageId?: string;
+  body?: string;
+  mediaReference?: { provider: "WHATSAPP"; providerMediaId: string };
+  deliveryState?: MessageDeliveryState;
+  createdAt: ISODateTime;
+}
