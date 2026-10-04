@@ -9,7 +9,7 @@ export interface WhatsAppDeliverySnapshot {
 export type WhatsAppStatusTransitionDecision =
   | { result: "APPLY"; nextState: WhatsAppDeliveryState; reason: "FIRST_STATUS" | "FORWARD_PROGRESS" | "FAILURE_BEFORE_CONFIRMED_DELIVERY" }
   | { result: "DUPLICATE"; nextState: WhatsAppDeliveryState; reason: "SAME_CALLBACK_KEY" | "SAME_STATE_AND_TIMESTAMP" }
-  | { result: "STALE_REGRESSION"; nextState: WhatsAppDeliveryState; reason: "OLDER_PROVIDER_TIMESTAMP" | "LOWER_ORDER_STATE" | "FAILED_AFTER_CONFIRMED_DELIVERY" };
+  | { result: "STALE_REGRESSION"; nextState: WhatsAppDeliveryState; reason: "OLDER_PROVIDER_TIMESTAMP" | "LOWER_ORDER_STATE" | "FAILED_AFTER_CONFIRMED_DELIVERY" | "STATUS_AFTER_TERMINAL_FAILURE" };
 
 const deliveryOrder: Record<WhatsAppDeliveryState, number> = {
   FAILED: 0,
@@ -43,6 +43,10 @@ export function decideWhatsAppStatusTransition(
   const incomingTimestamp = numericTimestamp(incoming.providerTimestamp);
   if (Number.isFinite(currentTimestamp) && Number.isFinite(incomingTimestamp) && incomingTimestamp < currentTimestamp) {
     return { result: "STALE_REGRESSION", nextState: current.deliveryState, reason: "OLDER_PROVIDER_TIMESTAMP" };
+  }
+
+  if (current.deliveryState === "FAILED" && incoming.deliveryState !== "FAILED") {
+    return { result: "STALE_REGRESSION", nextState: "FAILED", reason: "STATUS_AFTER_TERMINAL_FAILURE" };
   }
 
   if (incoming.deliveryState === "FAILED") {
