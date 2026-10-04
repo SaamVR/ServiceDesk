@@ -453,3 +453,60 @@ Sprint packets:
 - `docs/execution/batches/v1-int1-worker-3.md`
 
 This replaces Cycle 5 micro-hardening as the active path.
+
+
+## V1-INT1 integrated into combined RC
+
+Worker finals:
+- W1 Core: `9fe8a66711821dd124517aabd5a0e036edd07add`
+- W2 Provider/Core bridge: `1c9216201808b451495c91756b5d573a6655098f`
+- W3 Product preparation: `cef509347845bb530ac9a064198fed19d868f77f`
+
+Accepted RC integration commits:
+- W1: `053124a24ad55786a79b1502ffb143834629455c`
+- W2: `a760ba0c730241bc82d6bac0c82ecb8f02a5fc88`
+- W3: `027b422b9106119325b118c2147b9d7a994bc12c`
+
+Coordinator integration repairs:
+- Product fixture wrapper call-sites after props refactor: `c2db94b0127ab7fa2f25de805bd933684f654368`
+- visitor request lifecycle mutation blocked: `4630bd6330543c65e95257e3af70c40e183887d3`
+- visitor lifecycle regression authored: `188ea8430072c0d7a3a6c3ac138be97ce748e6e9`
+- provider failure detail redaction: `8a3cdadea354aa9c84c9cd49d62a68a8bd412baf`
+- redaction regression authored: `8a5d9c8311d6a187ddfa17a81b30df91d957da7b`
+- E03 verified-payment resource/outcome contract frozen: `35114c64b1400d9f68c49f5e0dbe98fefa167b0e`
+
+Current combined RC:
+- branch `rc/servicedesk-v1-unverified-20261004`
+- HEAD `35114c64b1400d9f68c49f5e0dbe98fefa167b0e`
+- evidence state remains UNVERIFIED_RC / outage-mode IMPLEMENTED slices.
+
+Important E03 finding:
+- Stripe-style checkout already emits workspaceId/quoteId/holdId/purpose metadata.
+- previous webhook normalization discarded quoteId/holdId.
+- Core cannot safely apply a booking payment without durable resource identity.
+- shared `VerifiedPaymentEvent` now carries optional quoteId/holdId/invoiceId.
+- shared Core application outcome is frozen as APPLIED | DUPLICATE | PAYMENT_REVIEW.
+- current DB migrations contain no invoices/payment-application persistence, so Sprint 2 Core must add it.
+
+Owner provider ruling:
+- Stripe V1 is SANDBOX/DEMO ONLY.
+- never wait for live Stripe credentials.
+- remaining provider/infrastructure access must be requested just-in-time when the relevant integration is implementation-ready.
+See `docs/execution/provider-access-policy-20261004.md`.
+
+## V1-INT2 active
+
+Fresh branches from RC `35114c64b1400d9f68c49f5e0dbe98fefa167b0e`:
+- `feat/servicedesk-v1-core-sprint2`
+- `feat/servicedesk-v1-connectors-sprint2`
+- `feat/servicedesk-v1-product-sprint2`
+
+Missions:
+- W1: authoritative invoices/payment applications + atomic E03 Core transaction.
+- W2: Stripe sandbox metadata/resource preservation + Core payment bridge.
+- W3: remove central OperationalRoute fixture ownership + dependency-injected E02 server-action adapters.
+
+Packets:
+- `docs/execution/batches/v1-int2-worker-1.md`
+- `docs/execution/batches/v1-int2-worker-2.md`
+- `docs/execution/batches/v1-int2-worker-3.md`
