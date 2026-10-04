@@ -14,6 +14,22 @@ const riskFlags = new Set<AiRiskFlag>([
   "PROVIDER_FAILURE",
 ]);
 
+const forbiddenBusinessTruthFields = new Set([
+  "totalMinor",
+  "subtotalMinor",
+  "taxMinor",
+  "depositMinor",
+  "balanceMinor",
+  "paymentStatus",
+  "paymentPaid",
+  "role",
+  "permission",
+  "availabilityConfirmed",
+  "capacityConfirmed",
+  "deliveryStatus",
+  "providerVerified",
+]);
+
 const allowedTools = new Set<AssistantToolCall["name"]>([
   "getServiceCatalog",
   "searchApprovedKnowledge",
@@ -55,11 +71,23 @@ function positiveInt(value: unknown, field: string): Result<number | undefined> 
   return { ok: true, value: value as number };
 }
 
+function forbiddenBusinessTruthField(raw: Record<string, unknown>): string | undefined {
+  return Object.keys(raw).find((key) => forbiddenBusinessTruthFields.has(key));
+}
+
 export function guardAiModelOutput(value: unknown): Result<CleaningRequestExtraction> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return { ok: false, code: "AI_OUTPUT_INVALID", message: "AI model output must be an object." };
   }
   const raw = value as Record<string, unknown>;
+  const forbiddenField = forbiddenBusinessTruthField(raw);
+  if (forbiddenField) {
+    return {
+      ok: false,
+      code: "AI_BUSINESS_TRUTH_FORBIDDEN",
+      message: `AI model output attempted to author protected business truth field ${forbiddenField}.`,
+    };
+  }
 
   if (raw.serviceCode !== undefined && (typeof raw.serviceCode !== "string" || !serviceCodes.has(raw.serviceCode))) {
     return { ok: false, code: "AI_OUTPUT_INVALID", message: "AI output serviceCode is outside the approved catalog." };
