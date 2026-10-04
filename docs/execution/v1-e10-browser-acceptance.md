@@ -13,17 +13,15 @@ This document defines the browser journey to run once the executable runtime, pa
 ## Journey
 
 1. Public business enquiry: open the business enquiry route, verify labels, required fields, accessible form names and no horizontal overflow.
-2. Request summary and quote: verify quote version, total/deposit/balance labels and no optimistic acceptance state.
-3. Slot/checkout: verify stale slot/hold/payment states are labelled; Stripe/payment remains `SANDBOX` unless a later controlled provider receipt proves otherwise.
-4. Customer overview/invoice/preferences: verify invoice is read-only for customer and staff manual payment is not exposed.
-5. Staff attention/inbox/CRM/quotes/schedule/jobs: verify navigation, typed server-boundary cards, pending/error/success states and no fixture/live mislabelling.
-6. Crew today/job: verify assigned visit flow, valid crew transition availability only, accessible focus, and no staff-only reporting/billing/inbox access.
-7. Field evidence: verify evidence/checklist render as DTO/read-compatible while submission remains disabled until Core evidence command acceptance.
-8. Recurrence: verify `nextOccurrenceOn` comes from DTO only; no generated future visits are synthesized in Product.
-9. Invoice/manual payment: verify staff-only manual payment boundary, idempotency/version conflict state, and no client-side balance mutation.
-10. Quality: verify START_REVIEW/ASSIGN/RESOLVE/REQUEST_REVIEW controls depend on injected accepted action availability; no optimistic mutation.
-11. Recovery/automations: verify known and unknown attention items remain human-owned/read-only.
-12. Reports/platform billing/settings/onboarding: verify `ReportingSnapshotDTO`, `PlatformBillingSnapshotDTO`, `OwnerSettingsSnapshotDTO`, and integrations reach the reusable previews; sandbox provider mode is never rendered as live; owner-input gaps are not misreported as provider failures.
+2. Request update and deterministic quote: verify request summary, quote version, total/deposit/balance labels and no optimistic acceptance state.
+3. Staff send/customer quote acceptance: open `/portal/quotes/[id]`, verify Accept quote is enabled only for eligible quote status plus injected handler, and that success uses the returned `QuoteDTO`.
+4. Availability and slot hold: verify `findSlots(ctx,input)` supplies authoritative slots; selected slot must be fresh; `holdSlot(ctx,slotId,quoteId,meta)` shows authoritative hold expiry.
+5. Sandbox checkout launch: verify button is enabled only for accepted quote + valid hold + injected sandbox checkout handler; launch state reads `SANDBOX CHECKOUT LAUNCHED / PAYMENT PENDING`.
+6. Payment truth boundary: verify checkout launch does not render paid, receipt verified, visit confirmed or live mode. Invoice/Visit state changes require later verified payment flow/webhook evidence.
+7. Customer overview/invoice/preferences: verify invoice is read-only for customer and staff manual payment is not exposed.
+8. Staff attention/inbox/CRM/quotes/schedule/jobs: verify navigation, typed server-boundary cards, pending/error/success states and no fixture/live mislabelling.
+9. Crew today/job: verify assigned visit flow, valid crew transition availability only, accessible focus, and no staff-only reporting/billing/inbox access.
+10. Quality/recovery/reporting/settings/onboarding: verify server DTOs reach reusable previews; sandbox provider mode is never rendered as live; owner-input gaps are not misreported as provider failures.
 
 ## Assertions per viewport
 
@@ -32,7 +30,7 @@ This document defines the browser journey to run once the executable runtime, pa
 - Pending/error/success state copy is visible where applicable.
 - No horizontal overflow.
 - Fixture wrappers show `FIXTURE_UI_ONLY`; server previews show server snapshot labels; provider modes show `FIXTURE`, `SANDBOX`, or `LIVE` truthfully.
-- The guided enquiry → paid job → crew → quality → invoice/reporting flow is coherent without claiming provider-live receipts.
+- The guided enquiry → quote acceptance → hold → sandbox checkout launch → verified webhook → paid job → crew → quality → invoice/reporting flow is coherent without claiming provider-live receipts.
 
 ## Release note
 
