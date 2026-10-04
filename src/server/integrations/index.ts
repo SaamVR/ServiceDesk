@@ -43,6 +43,7 @@ export * from "./configuration/readiness";
 export * from "./evidence/templates";
 export * from "./n8n/execution";
 export * from "./n8n/receipt";
+export * from "./n8n/recovery";
 export * from "./operations/snapshot";
 export * from "./recovery/policy";
 export * from "./recovery/queue";
