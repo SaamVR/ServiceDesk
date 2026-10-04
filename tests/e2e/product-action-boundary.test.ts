@@ -12,11 +12,11 @@ describe("product fixture action boundaries", () => {
   it("keeps command-looking fixture actions disabled and labelled", () => {
     const files = [
       ["src/features/request-intake/RequestSummaryPreview.tsx", "ServiceDeskFacade.updateRequest"],
+      ["src/features/request-intake/EnquiryForm.tsx", "create/update request command"],
       ["src/features/checkout/CheckoutPreview.tsx", "hosted checkout command"],
       ["src/features/crew/CrewJobPreview.tsx", "visit transition command"],
       ["src/features/quality/QualityReviewPreview.tsx", "review request command"],
       ["src/features/recovery/RecoveryActionsPreview.tsx", "recovery command"],
-      ["src/features/operations/OperationalRoute.tsx", "create/update request command"],
       ["src/features/inbox/InboxPreview.tsx", "thread selection command"],
     ] as const;
 
@@ -28,9 +28,24 @@ describe("product fixture action boundaries", () => {
     }
   });
 
+  it("keeps production-capable request intake components free of fixture imports", () => {
+    const productionFiles = [
+      "src/features/request-intake/RequestSummaryPreview.tsx",
+      "src/features/request-intake/EnquiryForm.tsx",
+    ];
+
+    for (const path of productionFiles) {
+      expect(source(path), path).not.toContain("sample-data");
+    }
+
+    expect(source("src/features/request-intake/RequestSummaryFixturePreview.tsx")).toContain("sample-data");
+  });
+
   it("does not allow provider-verified claims in product fixtures", () => {
     const files = [
       "src/features/request-intake/RequestSummaryPreview.tsx",
+      "src/features/request-intake/RequestSummaryFixturePreview.tsx",
+      "src/features/request-intake/EnquiryForm.tsx",
       "src/features/checkout/CheckoutPreview.tsx",
       "src/features/crew/CrewJobPreview.tsx",
       "src/features/inbox/InboxPreview.tsx",
