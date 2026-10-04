@@ -49,6 +49,20 @@ describe("provider recovery attempt transitions", () => {
     expect(result.record?.nextAttemptAt).not.toBe("2026-10-04T06:54:00.000Z");
   });
 
+  test("escalates when the current failed attempt reaches the retry budget", () => {
+    const result = applyRecoveryAttemptResult({
+      record: record({ attempts: 2, maxAttempts: 3 }),
+      outcome: "TRANSIENT_FAILURE",
+      attemptedAt: "2026-10-04T06:54:00.000Z",
+    });
+
+    expect(result).toMatchObject({
+      disposition: "OPERATOR_REVIEW",
+      enqueue: true,
+      record: { attempts: 3, queue: "provider-operator-review", operatorVisible: true },
+    });
+  });
+
   test("escalates exhausted retry budget to operator review", () => {
     const result = applyRecoveryAttemptResult({
       record: record({ attempts: 3, maxAttempts: 3 }),
