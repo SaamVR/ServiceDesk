@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./responsive-a11y.css";
 
 export const metadata: Metadata = {
   title: "ServiceDesk AI",
