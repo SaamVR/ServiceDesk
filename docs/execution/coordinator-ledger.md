@@ -580,3 +580,79 @@ Missions:
 - W1 closes E04 durable outbox claim/lease/retry/terminal execution.
 - W2 implements Connector execution adapter against frozen outbox port.
 - W3 finishes INT2 Product server-boundary work and restores existing module coverage.
+
+
+## V1-INT3 / Product recovery integration
+
+Worker finals:
+- W1 Core INT3: `2d6c52ad5ca988d68ec916635b91d7ef4d85226f`
+- W2 Connector INT3: `56311e64454fda0776d8d8de7ed445d9936213f8`
+- W3 Product INT2 recovery: `07c877e20f3f2181d2a107e2aa2a4faeeeac6674`
+
+Accepted RC integration:
+- W1 INT3 overlay: `bc09bf8b8c0295fbf92f6fc720dcfb5df178b8a0`
+- W2 INT3 overlay: `74940c45bfcf220c819573f6290aeaf5e60ffdc8`
+- W3 INT2 recovery overlay completed through `1e7b73fd6719a0e933021c465ade8351d049e396`
+
+Proof remains outage-mode `IMPLEMENTED`; canonical pnpm/Vitest/typecheck remains `CONFIGURATION_BLOCKED`.
+
+### E04 coordinator repairs
+
+Integration review found two issues before treating E04 as database-ready:
+
+1. Public-schema claim RPC used `SECURITY DEFINER`.
+   - changed to `SECURITY INVOKER`;
+   - execute revoked from public/anon/authenticated;
+   - execute granted only to `service_role`.
+   - repair: `3af954f4691505c99f2f4f864e160e5188b53cb1`
+
+2. Lease-owner completion existed only as an abstract gateway convention.
+   - added atomic `complete_outbox_event(...)` RPC guarded by `id + PENDING + locked_by`;
+   - service-role only;
+   - stale/non-owner worker updates zero rows;
+   - follow-up migration: `a163591829ccb4b8215f76f8c05a988a06ad359d`
+   - preserve attempt count on SENT: `1e722c06c8d628835612ef5088a6ff569c18cd81`
+   - trusted Postgres RPC gateway: `31a2708b9e0b5d5c70e6c2c0e6da0e1bb6872629`
+   - SENT gateway attempt preservation: `9134f37991c529a7d568ebedffc0d3691681a65d`
+   - gateway regression authored: `df4f6ced0068bce792066f0977db8f12041fe052`
+
+E04 source is now wireable; real Postgres claim/concurrency proof remains pending Supabase staging.
+
+## E05 shared contract frozen
+
+Coordinator added:
+- durable `MessageDTO`;
+- inbound provider message application input/outcome;
+- human handover command;
+- staff conversation reply command;
+- conversationId snapshot query;
+- conversations/messages in `WorkspaceSnapshot`.
+
+Contract commits:
+- MessageDTO: `cd3334d8a591e322db0675d03bcdc59766638146`
+- facade imports: `c9585c404a71c508a4447dd3df88aa2ba1ce40f5`
+- E05 command types: `d25a7b7ff41bf06a607799fa3d703320d57d8d9a`
+- E05 snapshot/facade methods: `602e581c1df860480c230da893128c0d1b8ca395`
+
+## V1-INT4 active
+
+Common base:
+`602e581c1df860480c230da893128c0d1b8ca395`
+
+Branches:
+- `feat/servicedesk-v1-core-sprint4`
+- `feat/servicedesk-v1-connectors-sprint4`
+- `feat/servicedesk-v1-product-sprint3`
+
+Packets:
+- `docs/execution/batches/v1-int4-worker-1.md`
+- `docs/execution/batches/v1-int4-worker-2.md`
+- `docs/execution/batches/v1-int4-worker-3.md`
+
+Missions:
+- W1: authoritative inbound conversation/message persistence, handover, staff reply enqueue, workspace/inbox snapshot.
+- W2: durable WhatsApp provider receipt store + Core inbound bridge + CUSTOMER_REPLY dispatch intent.
+- W3: props-driven inbox + snapshot/action adapters without losing existing Product route coverage.
+
+Next roadmap target after E05:
+E06 crew visit transitions + field evidence.
