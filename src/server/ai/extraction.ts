@@ -36,6 +36,11 @@ function requestedDateText(text: string): string | undefined {
   return datePhrase?.[0]?.trim();
 }
 
+function serviceArea(text: string): string | undefined {
+  const area = text.match(/\b(?:in|near|at)\s+([A-Z][A-Za-z ]{2,30}?)(?=\s+(?:today|tomorrow|next|this|on|with|for)|[.,;?]|$)/);
+  return area?.[1]?.trim();
+}
+
 export function extractCleaningRequest(text: string): CleaningRequestExtraction {
   const lower = text.toLowerCase();
   const bedrooms = intAfter(/\b(\d{1,2})\s*(?:bed|bedroom|br)\b/i, text);
@@ -55,7 +60,7 @@ export function extractCleaningRequest(text: string): CleaningRequestExtraction 
     bedrooms,
     bathrooms,
     hasOven: /\boven\b/i.test(text) ? true : undefined,
-    area: text.match(/\b(?:in|near|at)\s+([A-Z][A-Za-z ]{2,30})(?:[.,;]|$)/)?.[1]?.trim(),
+    area: serviceArea(text),
     requestedDateText: requestedDateText(text),
     customerName: text.match(/\b(?:i am|i'm|name is)\s+([A-Z][A-Za-z'-]{1,30})\b/)?.[1],
     propertyKind: propertyKind(text),
