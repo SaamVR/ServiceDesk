@@ -1,46 +1,9 @@
-import { sampleInvoice } from "@/features/operations/sample-data";
-import {
-  buildPlatformBillingView,
-  type PlatformPlanFixture,
-} from "./view-models";
+import type { InvoiceDTO, PlatformBillingSnapshotDTO } from "@/contracts";
+import { buildPlatformBillingView } from "./view-models";
 
-const samplePlan: PlatformPlanFixture = {
-  planCode: "V1_TRIAL",
-  state: "TRIAL",
-  renewalAt: "2026-11-01T00:00:00.000Z",
-  providerMode: "SANDBOX",
-};
-
-export function PlatformBillingPreview() {
-  const view = buildPlatformBillingView({
-    plan: samplePlan,
-    customerInvoice: sampleInvoice,
-  });
-
-  return (
-    <section className="plain-card" aria-label="Platform billing boundary preview">
-      <div className="section-heading compact">
-        <p className="eyebrow">Platform billing · fixture boundary</p>
-        <h2>Subscription status stays separate from customer cleaning payments</h2>
-        <p>{view.boundaryNotice}</p>
-        <span className="status-pill attention">{view.releaseLabel}</span>
-      </div>
-
-      <div className="card-grid two">
-        <article className="mini-panel">
-          <p className="label">Platform plan</p>
-          <h3>{view.platformPlanLabel}</h3>
-          <p>Renewal: {view.renewalLabel}</p>
-          <p>Data source: {view.dataSource}</p>
-        </article>
-
-        <article className="mini-panel">
-          <p className="label">Customer cleaning invoice</p>
-          <h3>{view.customerPaymentLabel}</h3>
-          <p>Outstanding customer balance: {view.customerBalanceLabel}</p>
-          <p>This balance does not affect the ServiceDesk platform-plan state.</p>
-        </article>
-      </div>
-    </section>
-  );
+interface PlatformBillingPreviewProps { snapshot?: PlatformBillingSnapshotDTO; customerInvoice?: InvoiceDTO }
+export function PlatformBillingPreview({ snapshot, customerInvoice }: PlatformBillingPreviewProps) {
+  if (!snapshot) return <section className="plain-card" aria-label="Platform billing boundary preview"><p className="eyebrow">Platform billing · server snapshot required</p><h2>Platform billing snapshot required</h2><p>Product cannot infer plan, status, usage or payment mode from local fixtures.</p></section>;
+  const view = buildPlatformBillingView(snapshot, customerInvoice);
+  return <section className="plain-card" aria-label="Platform billing boundary preview"><div className="section-heading compact"><p className="eyebrow">Platform billing · {view.modeLabel}</p><h2>Subscription status stays separate from customer cleaning payments</h2><p>{view.boundaryNotice}</p><span className="status-pill attention">{view.releaseLabel}</span></div><div className="card-grid two"><article className="mini-panel"><p className="label">Platform plan</p><h3>{view.planLabel} · {view.statusLabel}</h3><p>Provider mode: {view.modeLabel}</p>{view.modeLabel === "SANDBOX" && <p>Sandbox billing is never shown as live.</p>}</article><article className="mini-panel"><p className="label">Usage metrics</p>{view.usageRows.map((row) => <div key={row.label}><h3>{row.label}</h3><p>{row.value} · {row.state.replaceAll("_", " ")}</p></div>)}</article>{view.customerInvoiceLabel && <article className="mini-panel"><p className="label">Customer cleaning invoice</p><h3>{view.customerInvoiceLabel}</h3><p>This customer invoice does not affect the ServiceDesk platform plan.</p></article>}</div></section>;
 }

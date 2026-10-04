@@ -1,69 +1,8 @@
-import type { IntegrationStatusDTO } from "@/contracts";
+import type { IntegrationStatusDTO, OwnerSettingsSnapshotDTO, RecurrenceRuleDTO } from "@/contracts";
 
-export interface ServiceSettingFixture {
-  code: string;
-  label: string;
-  enabled: boolean;
-  rateVersion: string;
-}
-
-export interface TeamInviteFixture {
-  id: string;
-  role: "OWNER" | "DISPATCHER" | "CREW";
-  state: "PENDING" | "ACCEPTED" | "REVOKED";
-  label: string;
-}
-
-export interface OwnerSettingsView {
-  releaseLabel: "IMPLEMENTED" | "CONFIGURATION_BLOCKED";
-  dataSource: "FIXTURE_UI_ONLY";
-  exposesSecrets: false;
-  services: Array<ServiceSettingFixture & { stateLabel: string }>;
-  team: Array<TeamInviteFixture & { stateLabel: string }>;
-  integrationHealth: Array<{
-    provider: IntegrationStatusDTO["provider"];
-    ready: boolean;
-    stateLabel: string;
-    message: string;
-  }>;
-}
-
-export function buildOwnerSettingsView({
-  services,
-  invites,
-  integrations,
-}: {
-  services: readonly ServiceSettingFixture[];
-  invites: readonly TeamInviteFixture[];
-  integrations: readonly IntegrationStatusDTO[];
-}): OwnerSettingsView {
-  const integrationHealth = integrations.map((integration) => {
-    const ready =
-      integration.status === "CONNECTED" &&
-      integration.mode === "LIVE";
-
-    return {
-      provider: integration.provider,
-      ready,
-      stateLabel: `${integration.status.replaceAll("_", " ")}${integration.mode ? ` · ${integration.mode}` : ""}`,
-      message: integration.message ?? "No status message available.",
-    };
-  });
-
-  return {
-    releaseLabel: integrationHealth.every((item) => item.ready)
-      ? "IMPLEMENTED"
-      : "CONFIGURATION_BLOCKED",
-    dataSource: "FIXTURE_UI_ONLY",
-    exposesSecrets: false,
-    services: services.map((service) => ({
-      ...service,
-      stateLabel: service.enabled ? "Enabled" : "Draft / disabled",
-    })),
-    team: invites.map((invite) => ({
-      ...invite,
-      stateLabel: invite.state.replaceAll("_", " "),
-    })),
-    integrationHealth,
-  };
+export interface OwnerSettingsView { releaseLabel: "IMPLEMENTED" | "CONFIGURATION_BLOCKED"; dataSource: "SERVER_SNAPSHOT" | "FIXTURE_UI_ONLY"; exposesSecrets: false; services: Array<{ code: string; label: string; enabled: boolean; stateLabel: string }>; team: Array<{ id: string; role: string; stateLabel: string }>; integrationHealth: Array<{ provider: IntegrationStatusDTO["provider"]; ready: boolean; stateLabel: string; message: string }>; recurrence?: RecurrenceRuleDTO; }
+export function buildOwnerSettingsView({ snapshot, integrations, recurrence, sourceLabel = "SERVER_SNAPSHOT" }: { snapshot: OwnerSettingsSnapshotDTO; integrations: readonly IntegrationStatusDTO[]; recurrence?: RecurrenceRuleDTO; sourceLabel?: "SERVER_SNAPSHOT" | "FIXTURE_UI_ONLY" }): OwnerSettingsView {
+  const integrationHealth = integrations.map((integration) => ({ provider: integration.provider, ready: integration.status === "CONNECTED" && integration.mode === "LIVE", stateLabel: `${integration.status.replaceAll("_", " ")}${integration.mode ? ` · ${integration.mode}` : ""}`, message: integration.message ?? "No status message available." }));
+  const team = [...snapshot.members.map((member) => ({ id: member.userId, role: member.role, stateLabel: member.active ? "Active" : "Inactive" })), ...snapshot.invitations.map((invite) => ({ id: invite.id, role: invite.role, stateLabel: invite.state.replaceAll("_", " ") }))];
+  return { releaseLabel: integrationHealth.every((item) => item.ready) ? "IMPLEMENTED" : "CONFIGURATION_BLOCKED", dataSource: sourceLabel, exposesSecrets: false, services: snapshot.services.map((service) => ({ ...service, stateLabel: service.enabled ? "Enabled" : "Disabled" })), team, integrationHealth, recurrence };
 }
