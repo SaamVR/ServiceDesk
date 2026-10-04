@@ -1,20 +1,35 @@
-export type WhatsAppDeliveryLifecycleState = "PENDING" | "PROVIDER_ACCEPTED" | "DELIVERED" | "READ" | "FAILED";
+import { decideWhatsAppStatusTransition, type WhatsAppDeliverySnapshot, type WhatsAppDeliveryState } from "./status-transition";
+
+export type WhatsAppDeliveryLifecycleState = "PENDING" | WhatsAppDeliveryState;
 export type WhatsAppDeliveryTransitionResult = "APPLIED" | "DUPLICATE" | "STALE_REGRESSION";
+
+export type WhatsAppDeliveryTransitionReason =
+  | "FIRST_STATUS"
+  | "FORWARD_PROGRESS"
+  | "FAILURE_BEFORE_CONFIRMED_DELIVERY"
+  | "SAME_STATE"
+  | "SAME_CALLBACK_KEY"
+  | "SAME_STATE_AND_TIMESTAMP"
+  | "OLDER_PROVIDER_TIMESTAMP"
+  | "LOWER_ORDER_STATE"
+  | "FAILED_AFTER_CONFIRMED_DELIVERY";
 
 export interface WhatsAppDeliveryTransition {
   result: WhatsAppDeliveryTransitionResult;
   state: WhatsAppDeliveryLifecycleState;
+  reason: WhatsAppDeliveryTransitionReason;
 }
 
-const PROGRESS_RANK: Record<Exclude<WhatsAppDeliveryLifecycleState, "FAILED">, number> = {
-  PENDING: 0,
-  PROVIDER_ACCEPTED: 1,
-  DELIVERED: 2,
-  READ: 3,
-};
+function snapshotFor(state: Exclude<WhatsAppDeliveryLifecycleState, "PENDING">): WhatsAppDeliverySnapshot {
+  return {
+    deliveryState: state,
+    providerTimestamp: "0",
+    callbackKey: `canonical:${state}:0`,
+  };
+}
 
-function isProgressState(state: WhatsAppDeliveryLifecycleState): state is Exclude<WhatsAppDeliveryLifecycleState, "FAILED"> {
-  return state !== "FAILED";
+function resultName(result: ReturnType<typeof decideWhatsAppStatusTransition>["result"]): WhatsAppDeliveryTransitionResult {
+  return result === "APPLY" ? "APPLIED" : result;
 }
 
 export function applyWhatsAppDeliveryTransition(
@@ -22,23 +37,20 @@ export function applyWhatsAppDeliveryTransition(
   next: WhatsAppDeliveryLifecycleState,
 ): WhatsAppDeliveryTransition {
   if (current === next) {
-    return { result: "DUPLICATE", state: current };
+    return { result: "DUPLICATE", state: current, reason: "SAME_STATE" };
   }
 
-  if (next === "FAILED") {
-    if (current === "PENDING" || current === "PROVIDER_ACCEPTED") {
-      return { result: "APPLIED", state: "FAILED" };
-    }
-    return { result: "STALE_REGRESSION", state: current };
+  if (next === "PENDING") {
+    return { result: "STALE_REGRESSION", state: current, reason: "LOWER_ORDER_STATE" };
   }
 
-  if (current === "FAILED") {
-    return { result: "STALE_REGRESSION", state: current };
-  }
+  const decision = decideWhatsAppStatusTransition(current === "PENDING" ? undefined : snapshotFor(current), snapshotFor(next));
 
-  if (isProgressState(current) && PROGRESS_RANK[next] > PROGRESS_RANK[current]) {
-    return { result: "APPLIED", state: next };
-  }
-
-  return { result: "STALE_REGRESSION", state: current };
+  return {
+    result: resultName(decision.result),
+    state: decision.nextState,
+    reason: decision.reason,
+  };
 }
+
+export { decideWhatsAppStatusTransition, type WhatsAppDeliverySnapshot, type WhatsAppDeliveryState } from "./status-transition";
