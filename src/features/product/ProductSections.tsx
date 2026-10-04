@@ -160,6 +160,33 @@ export function CrewWorkspacePreview() {
   );
 }
 
+function TourStaticAnchors() {
+  return (
+    <div className="card-grid two" aria-label="Static tour proof anchors">
+      <article className="plain-card" id="pain">
+        <span className="status-pill neutral">Problem</span>
+        <h3>Cleaning teams lose work in handoffs</h3>
+        <p>Messages, quote decisions, calendars, crews and invoices become separate records unless the app makes ownership visible.</p>
+      </article>
+      <article className="plain-card" id="promise">
+        <span className="status-pill success">Promise</span>
+        <h3>One operational record</h3>
+        <p>The tour shows request, quote, visit, invoice, delivery and attention states without making provider claims from sample data.</p>
+      </article>
+      <article className="plain-card" id="pricing">
+        <span className="status-pill pending">Pricing fixture</span>
+        <h3>$340 move-out clean</h3>
+        <p>The deterministic fixture remains $340 total, $85 deposit, $255 balance, 240 minutes plus 30-minute buffer.</p>
+      </article>
+      <article className="plain-card" id="contact">
+        <span className="status-pill attention">Next step</span>
+        <h3>Integration review required</h3>
+        <p>Final publishing waits for Chat 1 integration and Chat 2 provider receipts; this tour is product/UI evidence only.</p>
+      </article>
+    </div>
+  );
+}
+
 export function TourScenarioList() {
   return (
     <section className="grid-section" aria-labelledby="tour-heading">
@@ -168,6 +195,7 @@ export function TourScenarioList() {
         <h2 id="tour-heading">Three reviewable scenarios mapped to real routes.</h2>
         <p>Sample history is synthetic until Chat 2 supplies redacted provider receipts. Each card links only to implemented route surfaces.</p>
       </div>
+      <TourStaticAnchors />
       <div className="scenario-stack">
         {tourScenarios.map((scenario) => (
           <article className="plain-card scenario-card" id={scenario.id} key={scenario.id}>
