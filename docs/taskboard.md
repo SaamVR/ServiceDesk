@@ -77,3 +77,20 @@ Normal pnpm/Vitest/build execution remains `CONFIGURATION_BLOCKED`, but bounded 
 | `CYCLE-3-W3` Product pure view-model hardening | Worker 3 | READY | `739a60b9c170f97cc67137744e9aaf0927c2852d` | package-free Product harness + reporting conversion truth-boundary fix/regression | `CONFIGURATION_BLOCKED`; React/build/browser remain frozen |
 
 Cycle 2 is closed as a shared Runtime infrastructure incident. Workers must make at most one quick network-recovery probe, then use outage mode rather than spend another run retrying DNS.
+
+
+## Cycle 3 partial results
+
+| Worker | Lane result | Final SHA | Coordinator outage recheck | Canonical integration |
+| --- | --- | --- | --- | --- |
+| Worker 1 Core | `IMPLEMENTED` | `ef19a54e325d4e9ed9baa390a4316e097dbba923` | PASS — operations ts-node semantics independently reproduced | staged on outage candidate; canonical package gate still blocked |
+| Worker 3 Product/UI | `IMPLEMENTED` | `caea4ba4bc7e7a3ebb1cedd30e25de044179542d` | PASS — reporting truth-boundary independently reproduced | staged on outage candidate; canonical package/build/browser gate still blocked |
+| Worker 2 Connectors/AI | IN PROGRESS / not reconciled in this partial closeout | current branch must be refreshed on receipt | not yet reviewed as completed Cycle 3 | independent |
+
+Provisional integration branch:
+`feat/servicedesk-v1-outage-candidate`
+
+Checkpoint:
+`6d74ea7d74f87525df73bc72367c7084b77e86b3`
+
+Do not promote this candidate to canonical acceptance until catch-up testing is available.
