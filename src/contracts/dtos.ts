@@ -8,6 +8,23 @@ export interface RequestDTO {
   version: number; createdAt: ISODateTime; updatedAt: ISODateTime;
 }
 
+
+export interface PropertyDTO {
+  id: string;
+  workspaceId: string;
+  customerId: string;
+  label?: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  region?: string;
+  postalCode: string;
+  countryCode: string;
+  serviceNotes?: string;
+  accessNotes?: string;
+  version: number;
+}
+
 export interface QuoteDTO {
   id: string; workspaceId: string; requestId: string; version: number;
   status: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "SENT" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "SUPERSEDED";
