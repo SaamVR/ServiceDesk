@@ -35,8 +35,8 @@ export interface ConversationHandoverInput { active: boolean; assignedUserId?: s
 export interface ConversationReplyInput { body: string; channel: "WHATSAPP" | "EMAIL"; }
 export interface ConversationReplyOutcome { message: MessageDTO; outboxEventId: string; }
 export type VisitAction = "CONFIRM" | "ASSIGN" | "EN_ROUTE" | "START" | "SUBMIT_REVIEW" | "COMPLETE" | "CANCEL";
-export interface WorkspaceSnapshotQuery { customerId?: string; requestId?: string; visitId?: string; invoiceId?: string; }
-export interface WorkspaceSnapshot { requests: RequestDTO[]; quotes: QuoteDTO[]; visits: VisitDTO[]; invoices: InvoiceDTO[]; }
+export interface WorkspaceSnapshotQuery { customerId?: string; requestId?: string; visitId?: string; invoiceId?: string; conversationId?: string; }
+export interface WorkspaceSnapshot { requests: RequestDTO[]; quotes: QuoteDTO[]; visits: VisitDTO[]; invoices: InvoiceDTO[]; conversations: ConversationDTO[]; messages: MessageDTO[]; }
 export interface ServiceDeskFacade {
   createRequest(ctx: ActorContext, input: CreateRequestInput, meta: CommandMeta): Promise<Result<RequestDTO>>;
   updateRequest(ctx: ActorContext, id: string, patch: Partial<RequestDTO>, meta: CommandMeta): Promise<Result<RequestDTO>>;
@@ -45,6 +45,9 @@ export interface ServiceDeskFacade {
   findSlots(ctx: ActorContext, input: FindSlotsInput): Promise<SlotDTO[]>;
   holdSlot(ctx: ActorContext, slotId: string, quoteId: string, meta: CommandMeta): Promise<Result<{holdId:string;expiresAt:string}>>;
   applyVerifiedPayment(event: VerifiedPaymentEvent): Promise<Result<VerifiedPaymentApplicationOutcome>>;
+  applyInboundMessage(event: InboundMessageEvent): Promise<Result<InboundMessageApplicationOutcome>>;
+  setConversationHandover(ctx: ActorContext, id: string, input: ConversationHandoverInput, meta: CommandMeta): Promise<Result<ConversationDTO>>;
+  enqueueConversationReply(ctx: ActorContext, id: string, input: ConversationReplyInput, meta: CommandMeta): Promise<Result<ConversationReplyOutcome>>;
   transitionVisit(ctx: ActorContext, id: string, action: VisitAction, meta: CommandMeta): Promise<Result<VisitDTO>>;
   readWorkspaceSnapshot(ctx: ActorContext, query: WorkspaceSnapshotQuery): Promise<Result<WorkspaceSnapshot>>;
 }
