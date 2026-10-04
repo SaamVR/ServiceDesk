@@ -15,49 +15,55 @@ const sampleQualityCase: QualityCaseFixture = {
   reviewRequestState: "NOT_ELIGIBLE",
 };
 
-export function QualityReviewPreview() {
+export function QualityReviewPreview({ embedded = false }: { embedded?: boolean }) {
   const view = buildQualityCaseView({
     visit: { ...sampleVisit, status: "PENDING_REVIEW" },
     qualityCase: sampleQualityCase,
     attentionItems: sampleAttentionItems,
   });
 
-  return (
-    <div className="site-shell">
-      <section className="plain-card" aria-label="Quality case preview">
-        <div className="section-heading compact">
-          <p className="eyebrow">Quality case · fixture UI</p>
-          <h2>Feedback becomes owned operational work</h2>
-          <p>
-            V1 tracks feedback, owner, deadline and resolution. Supervisor inspection workflows are not
-            represented because they belong to V2.
-          </p>
-          <span className="status-pill attention">{view.dataSource}</span>
-        </div>
+  const content = (
+    <section className="plain-card" aria-label="Quality case preview">
+      <div className="section-heading compact">
+        <p className="eyebrow">Quality case · fixture UI</p>
+        <h2>Feedback becomes owned operational work</h2>
+        <p>
+          V1 tracks feedback, owner, deadline and resolution. Supervisor inspection workflows are not
+          represented because they belong to V2.
+        </p>
+        <span className="status-pill attention">{view.dataSource}</span>
+      </div>
 
-        <div className="card-grid two">
-          <article className="mini-panel">
-            <p className="label">Issue</p>
-            <h3>{view.feedbackLabel}</h3>
-            <p>{view.issueSummary}</p>
-            <dl className="summary-list">
-              <div><dt>Owner</dt><dd>{view.ownerLabel}</dd></div>
-              <div><dt>Deadline</dt><dd>{view.deadlineLabel}</dd></div>
-              <div><dt>Visit</dt><dd>{view.visitStatus.replaceAll("_", " ")}</dd></div>
-            </dl>
-          </article>
+      <div className="card-grid two">
+        <article className="mini-panel">
+          <p className="label">Issue</p>
+          <h3>{view.feedbackLabel}</h3>
+          <p>{view.issueSummary}</p>
+          <dl className="summary-list">
+            <div><dt>Owner</dt><dd>{view.ownerLabel}</dd></div>
+            <div><dt>Deadline</dt><dd>{view.deadlineLabel}</dd></div>
+            <div><dt>Visit</dt><dd>{view.visitStatus.replaceAll("_", " ")}</dd></div>
+          </dl>
+        </article>
 
-          <article className="mini-panel">
-            <p className="label">Resolution + review request</p>
-            <h3>{view.resolutionLabel}</h3>
-            <p>{view.reviewRequestLabel}</p>
-            <p>{view.relatedAttentionCount} linked attention item(s) in the current fixture.</p>
-            <button className="button-secondary" type="button" disabled={!view.canRequestReview}>
-              Request customer review
-            </button>
-          </article>
-        </div>
-      </section>
-    </div>
+        <article className="mini-panel">
+          <p className="label">Resolution + review request</p>
+          <h3>{view.resolutionLabel}</h3>
+          <p>{view.reviewRequestLabel}</p>
+          <p>{view.relatedAttentionCount} linked attention item(s) in the current fixture.</p>
+          <button
+            className="button-secondary"
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Fixture preview only; review request command is not integrated on this branch."
+          >
+            Request customer review · preview
+          </button>
+        </article>
+      </div>
+    </section>
   );
+
+  return embedded ? content : <div className="site-shell">{content}</div>;
 }
