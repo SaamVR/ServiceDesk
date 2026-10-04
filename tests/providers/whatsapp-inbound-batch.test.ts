@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { WhatsAppInboundMessage } from "../../src/server/integrations/whatsapp/adapter";
 import {
   buildDurableWhatsAppInboxRecord,
+  rawWhatsAppProviderEventRef,
   persistDurableWhatsAppInboundBatch,
   type DurableWhatsAppInboxStore,
 } from "../../src/server/integrations/whatsapp/inbox-persistence";
@@ -34,6 +35,17 @@ class RecordingInboxStore implements DurableWhatsAppInboxStore {
 }
 
 describe("durable WhatsApp inbound batch persistence", () => {
+  test("builds a deterministic redacted raw event reference", () => {
+    const rawBody = JSON.stringify({ secret: "must-not-appear", entry: [] });
+    const first = rawWhatsAppProviderEventRef({ workspaceId: "ws-clearnest", providerAccountId: "phone-1", rawBody });
+    const second = rawWhatsAppProviderEventRef({ workspaceId: "ws-clearnest", providerAccountId: "phone-1", rawBody });
+
+    expect(first).toBe(second);
+    expect(first).toMatch(/^whatsapp_raw:ws-clearnest:phone-1:[a-f0-9]{16}$/);
+    expect(first).not.toContain("secret");
+    expect(first).not.toContain(rawBody);
+  });
+
   test("builds a durable record without raw provider payload authority", () => {
     const record = buildDurableWhatsAppInboxRecord(message(), "raw-ref-1");
 
