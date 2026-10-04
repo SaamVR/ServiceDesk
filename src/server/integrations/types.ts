@@ -86,6 +86,7 @@ export interface CheckoutInput {
   purpose: "DEPOSIT" | "BALANCE" | "PLATFORM_SUBSCRIPTION";
   successUrl: string;
   cancelUrl: string;
+  invoiceId?: string;
 }
 
 export interface CheckoutSession {
@@ -95,6 +96,7 @@ export interface CheckoutSession {
   amountMinor: number;
   currency: string;
   mode: ProviderMode;
+  metadata?: Record<string, string>;
   evidence: RedactedProviderEvidence;
 }
 
