@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Result } from "../../../contracts";
 import type { WhatsAppInboundMessage } from "./adapter";
 import { normalizeWhatsAppInboundMessage, type NormalizedWhatsAppInboundEvent } from "./inbound-normalization";
@@ -21,6 +22,20 @@ export interface PersistDurableWhatsAppInboundBatchInput {
   messages: WhatsAppInboundMessage[];
   rawProviderEventRef: string;
   store: DurableWhatsAppInboxStore;
+}
+
+export interface RawWhatsAppProviderEventRefInput {
+  workspaceId: string;
+  providerAccountId: string;
+  rawBody: string;
+}
+
+export function rawWhatsAppProviderEventRef(input: RawWhatsAppProviderEventRefInput): string {
+  const digest = createHash("sha256")
+    .update(`${input.workspaceId}:${input.providerAccountId}:${input.rawBody}`)
+    .digest("hex")
+    .slice(0, 16);
+  return `whatsapp_raw:${input.workspaceId}:${input.providerAccountId}:${digest}`;
 }
 
 export function buildDurableWhatsAppInboxRecord(message: WhatsAppInboundMessage, rawProviderEventRef: string): DurableWhatsAppInboxRecord {
