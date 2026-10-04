@@ -6,6 +6,7 @@ export default async function PortalInvoicePage({ params }: { params: Promise<{ 
   return (
     <OperationalRoute
       surface="customer"
+      customerModule="invoice"
       resourceLabel={`invoice ${id}`}
       title="See balance, allocations and next payment action."
       description="Invoice UI separates total, allocated payments, refunds and remaining balance. Payment receipts require verified callback evidence."
