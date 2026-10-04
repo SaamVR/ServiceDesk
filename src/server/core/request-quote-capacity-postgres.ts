@@ -197,3 +197,17 @@ export function createPostgresRequestQuoteCapacityInternalCommands(client: Supab
     },
   };
 }
+
+
+export function createPostgresRequestQuoteCapacityCommandEntrypoints(client: SupabaseRpcClient) {
+  const facade = createPostgresRequestQuoteCapacityFacadeMethods(client);
+  return {
+    createRequestCommand: (ctx: ActorContext, input: CreateRequestInput, meta: CommandMeta) => facade.createRequest(ctx, input, meta),
+    updateRequestCommand: (ctx: ActorContext, requestId: string, patch: Partial<RequestDTO>, meta: CommandMeta) => facade.updateRequest(ctx, requestId, patch, meta),
+    calculateQuoteCommand: (ctx: ActorContext, requestId: string) => facade.calculateQuote(ctx, requestId),
+    sendQuoteCommand: (ctx: ActorContext, quoteId: string, meta: CommandMeta) => facade.sendQuote(ctx, quoteId, meta),
+    acceptQuoteCommand: (ctx: ActorContext, quoteId: string, meta: CommandMeta) => facade.acceptQuote(ctx, quoteId, meta),
+    findSlotsCommand: (ctx: ActorContext, input: FindSlotsInput) => facade.findSlots(ctx, input),
+    holdSlotCommand: (ctx: ActorContext, slotId: string, quoteId: string, meta: CommandMeta) => facade.holdSlot(ctx, slotId, quoteId, meta),
+  };
+}
