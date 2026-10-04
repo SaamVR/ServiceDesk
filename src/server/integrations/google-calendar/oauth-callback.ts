@@ -1,8 +1,6 @@
 import type { Result } from "../../../contracts";
 import { GOOGLE_CALENDAR_EVENT_SCOPE, GOOGLE_CALENDAR_FREEBUSY_SCOPE, normalizeGoogleCalendarScopes } from "./oauth";
 
-export { GOOGLE_CALENDAR_EVENT_SCOPE, GOOGLE_CALENDAR_FREEBUSY_SCOPE };
-
 export interface GoogleCalendarOAuthExpectedState {
   workspaceId: string;
   crewId: string;
