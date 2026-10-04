@@ -32,6 +32,7 @@ export interface QuoteTableResult<T> {
 
 export interface QuoteTableGateway {
   nextQuoteId(): string;
+  findById(quoteId: string): Promise<QuoteTableResult<QuoteRow | null>>;
   findLatestByRequest(requestId: string): Promise<QuoteTableResult<QuoteRow | null>>;
   saveQuote(row: QuoteRow): Promise<QuoteTableResult<QuoteRow>>;
   supersedeQuote(quoteId: string): Promise<QuoteTableResult<null>>;
@@ -85,6 +86,12 @@ export function mapQuoteRowToSnapshot(row: QuoteRow): QuoteSnapshot {
 export function createPostgresQuoteRepository(gateway: QuoteTableGateway) {
   return {
     nextQuoteId: () => gateway.nextQuoteId(),
+
+    async findById(quoteId: string): Promise<QuoteSnapshot | undefined> {
+      const result = await gateway.findById(quoteId);
+      if (result.error) throw new Error(result.error.message);
+      return result.data ? mapQuoteRowToSnapshot(result.data) : undefined;
+    },
 
     async findLatestByRequest(requestId: string): Promise<QuoteSnapshot | undefined> {
       const result = await gateway.findLatestByRequest(requestId);
