@@ -92,7 +92,7 @@ function createInMemoryDeps() {
 
 async function main() {
   const deps = createInMemoryDeps();
-  const commands = createServerCommandEntrypoints(deps);
+  const commands = createServerCommandEntrypoints(deps as never);
   const createMeta: CommandMeta = { idempotencyKey: "create", now };
 
   const created = await commands.createRequestCommand(visitor, { customerId: "cust_1", propertyId: "prop_1", serviceCode: "STANDARD" }, createMeta);

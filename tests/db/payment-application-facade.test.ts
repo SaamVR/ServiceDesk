@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Result } from "../../src/contracts";
 import { createPaymentApplicationFacadeMethods } from "../../src/server/core/payment-application-facade";
 import type { PaymentApplicationRepository } from "../../src/server/core/payment-application-repository";
 
@@ -6,9 +7,9 @@ describe("payment application facade", () => {
   it("delegates verified payment events through the injected transaction repository", async () => {
     const seen: string[] = [];
     const paymentApplicationRepository: PaymentApplicationRepository = {
-      transaction: async () => {
+      transaction: async <T>() => {
         seen.push("transaction");
-        return { ok: true, value: { state: "DUPLICATE" as const } };
+        return { ok: true, value: { state: "DUPLICATE" as const } } as unknown as Result<T>;
       },
     };
     const facade = createPaymentApplicationFacadeMethods({ paymentApplicationRepository });

@@ -105,7 +105,7 @@ async function main() {
   const commands = createServerCommandEntrypoints({ conversationRepository: repo } as any);
 
   const first = await commands.applyInboundMessageCommand(inbound());
-  assert.equal(first.ok, true); if (!first.ok) throw new Error(first.message);
+  if (!first.ok) throw new Error(first.message); assert.equal(first.ok, true);
   assert.equal(first.value.state, "APPLIED");
   assert.equal(first.value.conversation.customerId, "cust_1");
   assert.equal(first.value.conversation.requestId, "req_1");
@@ -113,18 +113,18 @@ async function main() {
   const versionAfterFirst = first.value.conversation.version;
 
   const dupe = await commands.applyInboundMessageCommand(inbound());
-  assert.equal(dupe.ok, true); if (!dupe.ok) throw new Error(dupe.message);
+  if (!dupe.ok) throw new Error(dupe.message); assert.equal(dupe.ok, true);
   assert.equal(dupe.value.state, "DUPLICATE");
   assert.equal(repo.messages.length, 1);
   assert.equal(repo.conversations[0].version, versionAfterFirst);
 
   const unknown = await commands.applyInboundMessageCommand(inbound({ receiptKey: "receipt_unknown", providerMessageId: "wamid_unknown", senderRef: "+15559999999" }));
-  assert.equal(unknown.ok, true); if (!unknown.ok) throw new Error(unknown.message);
+  if (!unknown.ok) throw new Error(unknown.message); assert.equal(unknown.ok, true);
   assert.equal(unknown.value.conversation.customerId, undefined);
 
   const convId = first.value.conversation.id;
   const handover = await commands.setConversationHandoverCommand(owner, convId, { active: true }, { idempotencyKey: "handover-1", now, expectedVersion: repo.conversations[0].version });
-  assert.equal(handover.ok, true); if (!handover.ok) throw new Error(handover.message);
+  if (!handover.ok) throw new Error(handover.message); assert.equal(handover.ok, true);
   assert.equal(handover.value.handoverActive, true);
   assert.equal(handover.value.assignedUserId, "owner_1");
 
@@ -136,7 +136,7 @@ async function main() {
   assert.equal(cross.ok, false);
 
   const reply = await commands.enqueueConversationReplyCommand(dispatcher, convId, { body: "We can help today.", channel: "WHATSAPP" }, { idempotencyKey: "reply-1", now, expectedVersion: repo.conversations[0].version });
-  assert.equal(reply.ok, true); if (!reply.ok) throw new Error(reply.message);
+  if (!reply.ok) throw new Error(reply.message); assert.equal(reply.ok, true);
   assert.equal(reply.value.message.deliveryState, "QUEUED");
   assert.equal(repo.outbox.length, 1);
 
@@ -160,16 +160,16 @@ async function main() {
   assert.equal(repo.outbox.length, beforeOutbox);
 
   const staffSnapshot = await commands.readWorkspaceSnapshotCommand(owner, { conversationId: convId });
-  assert.equal(staffSnapshot.ok, true); if (!staffSnapshot.ok) throw new Error(staffSnapshot.message);
+  if (!staffSnapshot.ok) throw new Error(staffSnapshot.message); assert.equal(staffSnapshot.ok, true);
   assert.equal(staffSnapshot.value.conversations.length, 1);
   assert.ok(staffSnapshot.value.messages.length >= 2);
 
   const customerSnapshot = await commands.readWorkspaceSnapshotCommand(customer, {});
-  assert.equal(customerSnapshot.ok, true); if (!customerSnapshot.ok) throw new Error(customerSnapshot.message);
+  if (!customerSnapshot.ok) throw new Error(customerSnapshot.message); assert.equal(customerSnapshot.ok, true);
   assert.equal(customerSnapshot.value.conversations.every((c) => c.customerId === "cust_1"), true);
 
   const otherCustomerSnapshot = await commands.readWorkspaceSnapshotCommand(otherCustomer, {});
-  assert.equal(otherCustomerSnapshot.ok, true); if (!otherCustomerSnapshot.ok) throw new Error(otherCustomerSnapshot.message);
+  if (!otherCustomerSnapshot.ok) throw new Error(otherCustomerSnapshot.message); assert.equal(otherCustomerSnapshot.ok, true);
   assert.equal(otherCustomerSnapshot.value.conversations.length, 0);
 
   const visitorSnapshot = await commands.readWorkspaceSnapshotCommand(visitor, {});
@@ -177,7 +177,7 @@ async function main() {
   assert.equal(visitorSnapshot.code, "FORBIDDEN");
 
   const deactivated = await commands.setConversationHandoverCommand(owner, convId, { active: false }, { idempotencyKey: "handover-off", now, expectedVersion: repo.conversations[0].version });
-  assert.equal(deactivated.ok, true); if (!deactivated.ok) throw new Error(deactivated.message);
+  if (!deactivated.ok) throw new Error(deactivated.message); assert.equal(deactivated.ok, true);
   assert.equal(deactivated.value.handoverActive, false);
 
   console.log("runtime-outage e05 inbox handover harness PASS");

@@ -190,7 +190,7 @@ async function main() {
 
   assert(wiring.includes('command: "future E03 payment bridge"'), "checkout mutation must remain future-gated");
   assert(wiring.includes('command: "transitionVisit"'), "crew mutation must remain future-gated");
-  assert(wiring.match(/enabledInProduct: false/g)?.length >= 6, "unsupported or unwired commands must remain disabled in Product");
+  assert((wiring.match(/enabledInProduct: false/g)?.length ?? 0) >= 6, "unsupported or unwired commands must remain disabled in Product");
 
   console.log("runtime-outage-product-server-boundary-harness PASS");
 }

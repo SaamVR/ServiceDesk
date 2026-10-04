@@ -71,49 +71,38 @@ const healthySchedule = buildScheduleLaneView({
 assert.equal(healthySchedule.canInstantConfirm, true);
 
 const baseReport = buildReportingView({
-  requests: [sampleRequest, { ...sampleRequest, id: "req_lost", status: "LOST" }],
-  quotes: [sampleQuote],
-  visits: [sampleVisit],
-  invoices: [sampleInvoice],
+  workspaceId: sampleRequest.workspaceId,
+  requestCount: 2,
+  bookedRequestCount: 1,
+  conversionRateBps: 5000,
+  collectedMinor: 8500,
+  outstandingMinor: 25500,
+  currency: "USD",
+  scheduledServiceMinutes: 240,
+  scheduledBufferMinutes: 30,
+  openAttentionCount: sampleAttentionItems.length,
+  unresolvedQualityCount: 1,
+  generatedAt: "2026-10-04T06:30:00.000Z",
 });
-assert.equal(cardValue(baseReport, "Conversion").value, "50%");
+assert.equal(cardValue(baseReport, "Conversion").value, "50.0%");
 assert.equal(cardValue(baseReport, "Collected").value, "$85");
-assert.equal(cardValue(baseReport, "Scheduled capacity").value, "4h 30m");
-
-const orphanVisitReport = buildReportingView({
-  requests: [{ ...sampleRequest, id: "req_supplied", status: "NEW" }],
-  quotes: [],
-  visits: [
-    { ...sampleVisit, id: "visit_orphan_1", requestId: "missing_req_1" },
-    { ...sampleVisit, id: "visit_orphan_2", requestId: "missing_req_2" },
-  ],
-  invoices: [],
-});
-assert.equal(cardValue(orphanVisitReport, "Conversion").value, "0%");
-assert.equal(cardValue(orphanVisitReport, "Conversion").evidence, "0 booked / 1 requests");
-assert.equal(cardValue(orphanVisitReport, "Scheduled capacity").value, "9h");
-
-const duplicateVisitReport = buildReportingView({
-  requests: [{ ...sampleRequest, id: "req_bookable", status: "NEW" }],
-  quotes: [],
-  visits: [
-    { ...sampleVisit, id: "visit_duplicate_1", requestId: "req_bookable" },
-    { ...sampleVisit, id: "visit_duplicate_2", requestId: "req_bookable" },
-  ],
-  invoices: [],
-});
-assert.equal(cardValue(duplicateVisitReport, "Conversion").value, "100%");
-assert.equal(cardValue(duplicateVisitReport, "Conversion").evidence, "1 booked / 1 requests");
-assert.equal(cardValue(duplicateVisitReport, "Scheduled capacity").value, "9h");
+assert.equal(cardValue(baseReport, "Scheduled service").value, "4h");
+assert.equal(cardValue(baseReport, "Scheduled buffer").value, "0h 30m");
 
 const noRequestReport = buildReportingView({
-  requests: [],
-  quotes: [],
-  visits: [{ ...sampleVisit, id: "visit_no_request", requestId: "missing_req" }],
-  invoices: [],
+  workspaceId: sampleRequest.workspaceId,
+  requestCount: 0,
+  bookedRequestCount: 0,
+  conversionRateBps: undefined,
+  collectedMinor: 0,
+  outstandingMinor: 0,
+  currency: "USD",
+  scheduledServiceMinutes: 0,
+  scheduledBufferMinutes: 0,
+  openAttentionCount: 0,
+  unresolvedQualityCount: 0,
+  generatedAt: "2026-10-04T06:30:00.000Z",
 });
 assert.equal(cardValue(noRequestReport, "Conversion").value, "No data");
-assert.equal(cardValue(noRequestReport, "Conversion").evidence, "No request records supplied");
-assert.equal(cardValue(noRequestReport, "Scheduled capacity").value, "4h 30m");
 
 console.log("runtime-outage-product-view-model-harness: PASS");

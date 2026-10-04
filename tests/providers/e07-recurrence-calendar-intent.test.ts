@@ -49,7 +49,7 @@ describe("E07 recurrence calendar intent", () => {
     expect(result.value.purpose).toBe("CALENDAR_VISIT");
     expect(result.value.idempotencyKey).toBe("recurrence:rrule-1:3:visit-1");
     expect(result.value.payload).toMatchObject({ recurrence: { recurrenceRuleId: "rrule-1", occurrenceSequence: 3, canMutateRecurrenceTruth: false, googleCalendarSeriesMode: "NO_RRULE_SERIES" } });
-    expect(JSON.stringify(result.value)).not.toContain("RRULE");
+    expect(JSON.stringify(result.value)).not.toContain("RRULE:");
   });
 
   test("dispatches idempotently through existing calendar visit dispatcher", async () => {
@@ -61,7 +61,8 @@ describe("E07 recurrence calendar intent", () => {
     const second = await dispatcher.dispatch({ job: resolved.value, committedAt: now, attempt: 2, expectedChannel: "GOOGLE_CALENDAR" });
     expect(first.ok && first.value.outcome).toBe("ACCEPTED");
     expect(second.ok && second.value.outcome).toBe("ACCEPTED");
-    expect(first.ok && second.ok && first.value.providerMessageId).toBe(second.ok && second.value.providerMessageId);
+    if (!first.ok || first.value.outcome !== "ACCEPTED" || !second.ok || second.value.outcome !== "ACCEPTED") throw new Error("calendar dispatch was not accepted");
+    expect(first.value.providerMessageId).toBe(second.value.providerMessageId);
   });
 
   test("pause/SKIP_NEXT never directly mutates arbitrary provider events", () => {

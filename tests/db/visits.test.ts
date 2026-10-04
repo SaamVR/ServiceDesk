@@ -43,7 +43,7 @@ function repo(holdFixture: SlotHold = hold) {
       ),
       confirmHold: async (workspaceId: string, holdId: string) => {
         confirmedHolds.push(`${workspaceId}:${holdId}`);
-        return { ok: true as const, value: true };
+        return { ok: true as const, value: true as const };
       },
       insertVisit: async (visit: VisitRecord) => {
         inserted.push(visit);

@@ -56,7 +56,7 @@ class FakeSupabaseClient implements SupabaseProviderInboundReceiptClient {
             return this;
           },
           async maybeSingle() {
-            const row = client.rows.find((candidate) => Object.entries(filters).every(([key, value]) => (candidate as Record<string, unknown>)[key] === value));
+            const row = client.rows.find((candidate) => Object.entries(filters).every(([key, value]) => (candidate as unknown as Record<string, unknown>)[key] === value));
             return { data: row ?? null, error: null };
           },
         };
