@@ -31,8 +31,14 @@ export interface CalendarReconciliationSummary {
   actions: Partial<Record<CalendarReconciliationAction, number>>;
 }
 
-function minutesBetween(left: string, right: string): number {
-  return Math.abs(new Date(right).getTime() - new Date(left).getTime()) / 60_000;
+function ageMinutes(lastSyncedAt: string, now: string): number {
+  const lastSyncedMs = new Date(lastSyncedAt).getTime();
+  const nowMs = new Date(now).getTime();
+  if (!Number.isFinite(lastSyncedMs) || !Number.isFinite(nowMs)) return Number.POSITIVE_INFINITY;
+
+  const elapsedMs = nowMs - lastSyncedMs;
+  if (elapsedMs < 0) return Number.POSITIVE_INFINITY;
+  return elapsedMs / 60_000;
 }
 
 function plan(input: CalendarReconciliationInput, action: CalendarReconciliationAction, reason: CalendarReconciliationReason, canInstantConfirm: boolean, blocksAvailability: boolean, notes: string[]): CalendarReconciliationPlan {
@@ -67,7 +73,7 @@ export function planCalendarReconciliation(input: CalendarReconciliationInput): 
   }
 
   const threshold = input.freshnessThresholdMinutes ?? 15;
-  if (!input.lastSyncedAt || minutesBetween(input.lastSyncedAt, input.now) > threshold) {
+  if (!input.lastSyncedAt || ageMinutes(input.lastSyncedAt, input.now) > threshold) {
     return plan(input, "INCREMENTAL_SYNC_REQUIRED", "STALE_LAST_SYNC", false, true, ["Calendar last-sync timestamp is outside freshness threshold; run incremental sync first."]);
   }
 
