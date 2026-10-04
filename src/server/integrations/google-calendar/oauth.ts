@@ -45,6 +45,46 @@ export interface GoogleCalendarRefreshSuccess {
   refreshedAt: string;
 }
 
+export interface GoogleCalendarOAuthConfig {
+  tokenUrl: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  now: string;
+  timeoutMs?: number;
+}
+
+export interface GoogleCalendarOAuthHttpRequest {
+  url: string;
+  method: "POST";
+  headers: Record<string, string>;
+  body: string;
+  signal: AbortSignal;
+}
+
+export interface GoogleCalendarOAuthHttpResponse {
+  status: number;
+  body: string;
+}
+
+export type GoogleCalendarOAuthHttpTransport = (request: GoogleCalendarOAuthHttpRequest) => Promise<GoogleCalendarOAuthHttpResponse>;
+
+export interface GoogleCalendarAuthorizationCodeInput {
+  code: string;
+}
+
+export interface GoogleCalendarRefreshTokenExchangeInput {
+  refreshTokenRef: string;
+}
+
+export interface GoogleCalendarTokenExchangeSuccess {
+  accessTokenRef: string;
+  refreshTokenRef?: string;
+  expiresAt: string;
+  scopes: string[];
+  exchangedAt: string;
+}
+
 export function buildGoogleCalendarAuthorizationUrl(input: GoogleCalendarAuthorizationUrlInput): URL {
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.set("client_id", input.clientId);
@@ -157,4 +197,128 @@ export async function refreshGoogleCalendarAccessToken(input: GoogleCalendarRefr
       refreshedAt: input.now,
     },
   };
+}
+
+export function normalizeGoogleCalendarScopes(scopes: string | string[] | undefined): string[] {
+  if (!scopes) return [];
+  const parts = Array.isArray(scopes) ? scopes : scopes.split(/\s+/g);
+  return Array.from(new Set(parts.map((scope) => scope.trim()).filter(Boolean))).sort();
+}
+
+function expiresAt(now: string, expiresIn: unknown): Result<string> {
+  if (typeof expiresIn !== "number" || !Number.isFinite(expiresIn) || expiresIn <= 0) {
+    return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_INVALID_RESPONSE", message: "Google Calendar OAuth response is missing a valid expires_in value." };
+  }
+  return { ok: true, value: new Date(new Date(now).getTime() + expiresIn * 1000).toISOString() };
+}
+
+function normalizedOAuthFailure(status: number, body: string): Result<never> {
+  let parsed: { error?: unknown; error_description?: unknown } = {};
+  try {
+    parsed = JSON.parse(body) as { error?: unknown; error_description?: unknown };
+  } catch {
+    parsed = {};
+  }
+  const error = typeof parsed.error === "string" ? parsed.error : "";
+  if (status === 400 && error === "invalid_grant") {
+    return { ok: false, code: "GOOGLE_CALENDAR_RECONNECT_REQUIRED", message: "Google Calendar refresh or authorization grant is invalid; reconnect is required." };
+  }
+  if (status === 401 || status === 403) {
+    return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_CONFIGURATION_BLOCKED", message: "Google Calendar OAuth client authentication failed." };
+  }
+  if (status === 429) {
+    return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_RATE_LIMITED", message: "Google Calendar OAuth rate limit reached." };
+  }
+  if (status >= 500) {
+    return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_TRANSIENT_FAILURE", message: "Google Calendar OAuth endpoint returned a transient failure." };
+  }
+  return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_REJECTED", message: "Google Calendar OAuth exchange was rejected." };
+}
+
+async function callOAuth(config: GoogleCalendarOAuthConfig, body: URLSearchParams, http: GoogleCalendarOAuthHttpTransport): Promise<Result<unknown>> {
+  if (!config.tokenUrl || !config.clientId || !config.clientSecret) {
+    return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_CONFIGURATION_BLOCKED", message: "Google Calendar OAuth configuration is incomplete." };
+  }
+
+  const controller = new AbortController();
+  const timeoutMs = Math.max(250, Math.min(config.timeoutMs ?? 10_000, 30_000));
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await http({
+      url: config.tokenUrl,
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+      signal: controller.signal,
+    });
+    if (response.status < 200 || response.status >= 300) return normalizedOAuthFailure(response.status, response.body);
+    try {
+      return { ok: true, value: JSON.parse(response.body) };
+    } catch {
+      return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_INVALID_RESPONSE", message: "Google Calendar OAuth endpoint returned malformed JSON." };
+    }
+  } catch (error) {
+    if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
+      return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_TIMEOUT", message: "Google Calendar OAuth exchange timed out." };
+    }
+    return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_NETWORK_FAILURE", message: "Google Calendar OAuth exchange failed before a valid response was received." };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function tokenResult(config: GoogleCalendarOAuthConfig, parsed: unknown, refreshTokenRef?: string): Result<GoogleCalendarTokenExchangeSuccess> {
+  const token = (parsed as { access_token?: unknown }).access_token;
+  if (typeof token !== "string" || !token.trim()) {
+    return { ok: false, code: "GOOGLE_CALENDAR_OAUTH_INVALID_RESPONSE", message: "Google Calendar OAuth response is missing an access token." };
+  }
+
+  const expires = expiresAt(config.now, (parsed as { expires_in?: unknown }).expires_in);
+  if (!expires.ok) return expires;
+
+  const providerRefresh = (parsed as { refresh_token?: unknown }).refresh_token;
+  return {
+    ok: true,
+    value: {
+      accessTokenRef: "provider-access-token-captured",
+      refreshTokenRef: typeof providerRefresh === "string" && providerRefresh.trim() ? "provider-refresh-token-captured" : refreshTokenRef,
+      expiresAt: expires.value,
+      scopes: normalizeGoogleCalendarScopes((parsed as { scope?: unknown }).scope as string | string[] | undefined),
+      exchangedAt: config.now,
+    },
+  };
+}
+
+export async function exchangeGoogleCalendarAuthorizationCode(
+  config: GoogleCalendarOAuthConfig,
+  input: GoogleCalendarAuthorizationCodeInput,
+  http: GoogleCalendarOAuthHttpTransport,
+): Promise<Result<GoogleCalendarTokenExchangeSuccess>> {
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: input.code,
+    redirect_uri: config.redirectUri,
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+  });
+  const response = await callOAuth(config, body, http);
+  if (!response.ok) return response;
+  return tokenResult(config, response.value);
+}
+
+export async function exchangeGoogleCalendarRefreshToken(
+  config: GoogleCalendarOAuthConfig,
+  input: GoogleCalendarRefreshTokenExchangeInput,
+  http: GoogleCalendarOAuthHttpTransport,
+): Promise<Result<GoogleCalendarTokenExchangeSuccess>> {
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: input.refreshTokenRef,
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+  });
+  const response = await callOAuth(config, body, http);
+  if (!response.ok) return response;
+  return tokenResult(config, response.value, input.refreshTokenRef);
 }
