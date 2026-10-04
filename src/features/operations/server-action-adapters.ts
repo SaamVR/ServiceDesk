@@ -86,74 +86,45 @@ export interface EnquiryServerActionInput {
 
 export type DisabledProductMutation = "checkout" | "crewTransition";
 
-function isCommandSuccess<T>(result: ProductCommandResult<T>): result is CommandSuccess<T> {
+export function isCommandSuccess<T>(result: ProductCommandResult<T>): result is CommandSuccess<T> {
   return result.ok === true;
 }
 
-function success<T>(value: T, steps: string[], message?: string): ProductActionResult<T> {
+export function productActionSuccess<T>(value: T, steps: string[], message?: string): ProductActionResult<T> {
   return { ok: true, value, steps, state: successProductActionState(message) };
 }
 
-function failure<T>(error: ProductActionError, steps: string[], failedStep: string): ProductActionResult<T> {
+export function productActionFailure<T>(error: ProductActionError, steps: string[], failedStep: string): ProductActionResult<T> {
   return { ok: false, error, steps, failedStep, state: mapProductActionError(error) };
 }
 
 export function disabledProductMutationResult(mutation: DisabledProductMutation): ProductActionResult<never> {
-  const error: ProductActionError =
-    mutation === "checkout"
-      ? {
-          code: "CHECKOUT_MUTATION_DISABLED",
-          message: "Hosted checkout remains disabled until the E03 verified payment bridge is accepted.",
-        }
-      : {
-          code: "CREW_MUTATION_DISABLED",
-          message: "Crew visit mutations remain disabled until accepted E06 commands exist.",
-        };
-
-  return failure(error, [mutation], mutation);
+  const error: ProductActionError = mutation === "checkout"
+    ? { code: "CHECKOUT_MUTATION_DISABLED", message: "Hosted checkout remains disabled until the E03 verified payment bridge is accepted." }
+    : { code: "CREW_MUTATION_DISABLED", message: "Crew visit mutations remain disabled until accepted E06 commands exist." };
+  return productActionFailure(error, [mutation], mutation);
 }
 
 export function createEnquiryServerActionFactory(commands: EnquiryCommandPort) {
-  return async function submitEnquiry(
-    input: EnquiryServerActionInput,
-  ): Promise<ProductActionResult<{ request: RequestDTO; quote: QuoteDTO }>> {
+  return async function submitEnquiry(input: EnquiryServerActionInput): Promise<ProductActionResult<{ request: RequestDTO; quote: QuoteDTO }>> {
     const steps: string[] = [];
-
     steps.push("createRequest");
     const created = await commands.createRequest({ context: input.context, request: input.request });
-    if (!isCommandSuccess(created)) return failure(created.error, steps, "createRequest");
-
+    if (!isCommandSuccess(created)) return productActionFailure(created.error, steps, "createRequest");
     steps.push("updateRequest");
-    const updated = await commands.updateRequest({
-      context: input.context,
-      requestId: created.value.id,
-      expectedVersion: created.value.version,
-      patch: input.patch,
-    });
-    if (!isCommandSuccess(updated)) return failure(updated.error, steps, "updateRequest");
-
+    const updated = await commands.updateRequest({ context: input.context, requestId: created.value.id, expectedVersion: created.value.version, patch: input.patch });
+    if (!isCommandSuccess(updated)) return productActionFailure(updated.error, steps, "updateRequest");
     steps.push("calculateQuote");
-    const quoted = await commands.calculateQuote({
-      context: input.context,
-      requestId: updated.value.id,
-      requestVersion: updated.value.version,
-    });
-    if (!isCommandSuccess(quoted)) return failure(quoted.error, steps, "calculateQuote");
-
-    return success(
-      { request: updated.value, quote: quoted.value },
-      steps,
-      "Request and quote are ready from accepted server commands.",
-    );
+    const quoted = await commands.calculateQuote({ context: input.context, requestId: updated.value.id, requestVersion: updated.value.version });
+    if (!isCommandSuccess(quoted)) return productActionFailure(quoted.error, steps, "calculateQuote");
+    return productActionSuccess({ request: updated.value, quote: quoted.value }, steps, "Request and quote are ready from accepted server commands.");
   };
 }
 
 export function createSendQuoteServerActionFactory(commands: QuoteCommandPort) {
   return async function submitSendQuote(input: SendQuoteCommandInput): Promise<ProductActionResult<QuoteDTO>> {
     const result = await commands.sendQuote(input);
-    return isCommandSuccess(result)
-      ? success(result.value, ["sendQuote"], "Quote send command accepted.")
-      : failure(result.error, ["sendQuote"], "sendQuote");
+    return isCommandSuccess(result) ? productActionSuccess(result.value, ["sendQuote"], "Quote send command accepted.") : productActionFailure(result.error, ["sendQuote"], "sendQuote");
   };
 }
 
@@ -161,15 +132,11 @@ export function createScheduleServerActionFactory(commands: ScheduleCommandPort)
   return {
     async findSlots(input: FindSlotsCommandInput): Promise<ProductActionResult<SlotDTO[]>> {
       const result = await commands.findSlots(input);
-      return isCommandSuccess(result)
-        ? success(result.value, ["findSlots"], "Slots loaded from accepted server command.")
-        : failure(result.error, ["findSlots"], "findSlots");
+      return isCommandSuccess(result) ? productActionSuccess(result.value, ["findSlots"], "Slots loaded from accepted server command.") : productActionFailure(result.error, ["findSlots"], "findSlots");
     },
     async holdSlot(input: HoldSlotCommandInput): Promise<ProductActionResult<SlotDTO>> {
       const result = await commands.holdSlot(input);
-      return isCommandSuccess(result)
-        ? success(result.value, ["holdSlot"], "Slot hold command accepted.")
-        : failure(result.error, ["holdSlot"], "holdSlot");
+      return isCommandSuccess(result) ? productActionSuccess(result.value, ["holdSlot"], "Slot hold command accepted.") : productActionFailure(result.error, ["holdSlot"], "holdSlot");
     },
   };
 }
