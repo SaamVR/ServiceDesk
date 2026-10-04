@@ -4,10 +4,10 @@
 The approved Product Specification V2.0 and V1 Implementation Plan govern scope. PostgreSQL is the business source of truth. UI state, AI output, provider responses and model arguments never grant authorization or mutate authoritative state directly.
 
 ## Lane ownership
-- Chat 1 Core/controller: `supabase/migrations/**`, `src/contracts/**`, `src/domain/**`, `src/server/core/**`, `src/server/jobs/**`, `tests/domain/**`, `tests/db/**`.
+- Worker 1 Core: `supabase/migrations/**`, `src/domain/**`, `src/server/core/**`, `src/server/jobs/**`, `tests/domain/**`, `tests/db/**`.
 - Chat 2 Connectors/AI: `src/server/ai/**`, `src/server/integrations/**`, provider API handlers, `tests/ai/**`, `tests/providers/**`, `examples/n8n/**`.
 - Chat 3 Product/UI: `src/app/**`, `src/features/**`, `src/components/**`, `src/styles/**`, `tests/e2e/**`, `public/**`, presentation docs.
-- Integrator only: package/lockfile, shared barrel exports, API-handler barrel, deployment config, `docs/operations.md`.
+- Dedicated GPT-5.6 Sol coordinator only: `src/contracts/**`, package/lockfile, shared barrel exports, API-handler barrel, deployment config, global taskboard/batch plans, `docs/operations.md` and integration branch. Worker 1 is no longer controller.
 
 ## Engineering discipline
 1. Work from an observed commit SHA in an isolated branch/worktree.
@@ -24,5 +24,5 @@ The approved Product Specification V2.0 and V1 Implementation Plan govern scope.
 ## Completion labels
 Use only: IMPLEMENTED, CONTRACT_TESTED, PROVIDER_VERIFIED, OPERATIONS_VERIFIED, CONFIGURATION_BLOCKED.
 
-## Sustained execution and integration recovery
-Before the next planning or implementation cycle, read `docs/execution/throughput-recovery-20261004.md`. Its E01–E10 batch identifiers govern the next cycle; reconcile existing run progress rather than redoing it. Chat 1 prioritizes an executable tested integration baseline and shared-interface decisions. Workers execute source-derived batches, not isolated fixture expansion. Commit coherent green behavior with its tests; authored but unexecuted tests do not earn CONTRACT_TESTED. Runtime duration is a target, never a reason to idle or manufacture work. Preserve current ownership and all newer commits.
+## Coordinator-led sustained execution
+Read `docs/execution/coordinator-four-chat-20261004.md` before every new assignment. It supersedes conflicting ownership, per-lane planning and local-device fallback rules in historical packets. A dedicated GPT-5.6 Sol coordinator plans/reviews/integrates; three GPT-5.5 High workers execute concrete rolling batches targeting 20–30 minutes active work. GPT Runtime Machine is mandatory for development/checks. Save durable progress to GitHub. Never use samai, samvr, SSH/local devices or self-hosted runners. Runtime limitations must be recorded and repaired in Runtime, never converted into PASS. Coordinator owns global taskboard/contracts/integration; workers own lane receipts and assigned code. Preserve all newer progress and actual evidence.
