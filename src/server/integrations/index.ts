@@ -21,6 +21,7 @@ export * from "./google-calendar/rest-sync";
 export * from "./google-calendar/configured-adapter";
 export * from "./google-calendar/reconciliation";
 export * from "./google-calendar/external-conflict";
+export * from "./google-calendar/sync-token-rebuild";
 export * from "./google-calendar/sync";
 export * from "./google-calendar/availability";
 export * from "./payments/adapter";
