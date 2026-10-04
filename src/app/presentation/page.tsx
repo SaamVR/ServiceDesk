@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PresentationSlidesPreview } from "@/features/product/ProductSections";
 import { presentationSlides } from "@/features/product/story-model";
 
@@ -5,14 +6,14 @@ export default function PresentationPage() {
   return (
     <main className="site-shell">
       <header className="site-header" aria-label="Presentation navigation">
-        <a className="brand-lockup" href="/">
+        <Link className="brand-lockup" href="/">
           <span className="brand-mark" aria-hidden="true">SD</span>
           <span>ServiceDesk AI presentation</span>
-        </a>
+        </Link>
         <nav className="site-nav" aria-label="Presentation links">
           <a href="#slide-1">Start</a>
-          <a href="/tour">Tour</a>
-          <a href="/contact">Contact</a>
+          <Link href="/tour">Tour</Link>
+          <Link href="/contact">Contact</Link>
         </nav>
       </header>
 

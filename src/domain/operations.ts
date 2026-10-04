@@ -107,7 +107,9 @@ export function enqueueOutboxEvent(
 export function recordOutboxFailure(event: OutboxEvent, failedAt: string, maxAttempts: number): OutboxEvent {
   const attempts = event.attempts + 1;
   if (attempts >= maxAttempts) {
-    return { ...event, attempts, status: "FAILED", nextAttemptAt: undefined };
+    const terminal: OutboxEvent = { ...event, attempts, status: "FAILED" };
+    delete terminal.nextAttemptAt;
+    return terminal;
   }
 
   const delayMinutes = 2 ** attempts;

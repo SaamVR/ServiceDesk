@@ -162,6 +162,7 @@ export const tourScenarios = [
       { href: "/portal/quotes/quote_moveout_001", label: "Customer quote" },
       { href: "/portal/bookings/visit_showcase_001", label: "Booking state" },
       { href: "/crew/jobs/visit_showcase_001", label: "Crew job" },
+      { href: "/portal/invoices/invoice_showcase_001", label: "Invoice" },
     ],
     steps: [
       {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { productRoutes } from "@/features/product/story-model";
 
@@ -25,13 +26,13 @@ export function MarketingShell({
   return (
     <main className="site-shell">
       <header className="site-header" aria-label="Product navigation">
-        <a className="brand-lockup" href="/" aria-label="ServiceDesk AI home">
+        <Link className="brand-lockup" href="/" aria-label="ServiceDesk AI home">
           <span className="brand-mark" aria-hidden="true">SD</span>
           <span>ServiceDesk AI</span>
-        </a>
+        </Link>
         <nav className="site-nav" aria-label="Primary">
           {productRoutes.slice(1, 6).map((route) => (
-            <a key={route.href} href={route.href}>{route.label}</a>
+            <Link key={route.href} href={route.href}>{route.label}</Link>
           ))}
         </nav>
       </header>
@@ -42,8 +43,8 @@ export function MarketingShell({
           <h1>{title}</h1>
           <p className="lead">{description}</p>
           <div className="action-row">
-            <a className="button-primary" href={primaryHref}>{primaryLabel}</a>
-            <a className="button-secondary" href={secondaryHref}>{secondaryLabel}</a>
+            <Link className="button-primary" href={primaryHref}>{primaryLabel}</Link>
+            <Link className="button-secondary" href={secondaryHref}>{secondaryLabel}</Link>
           </div>
         </div>
         <div className="interface-card" aria-label="Operational interface preview">
@@ -76,9 +77,9 @@ export function MarketingShell({
           <p>Working V1 product lane. Provider proof remains blocked until controlled receipts are verified.</p>
         </div>
         <nav aria-label="Legal">
-          <a href="/privacy">Privacy</a>
-          <a href="/terms">Terms</a>
-          <a href="/help">Help</a>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+          <Link href="/help">Help</Link>
         </nav>
       </footer>
     </main>

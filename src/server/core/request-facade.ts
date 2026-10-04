@@ -31,14 +31,14 @@ export function requestRecordToDTO(record: RequestRecord): RequestDTO {
 }
 
 function requestPatchFromDTO(patch: Partial<RequestDTO>): RequestPatch {
-  return {
-    propertyId: patch.propertyId,
-    serviceCode: patch.serviceCode,
-    bedrooms: patch.bedrooms,
-    bathrooms: patch.bathrooms,
-    requestedStartAt: patch.requestedStartAt,
-    status: patch.status,
-  };
+  const normalized: RequestPatch = {};
+  if (patch.propertyId !== undefined) normalized.propertyId = patch.propertyId;
+  if (patch.serviceCode !== undefined) normalized.serviceCode = patch.serviceCode;
+  if (patch.bedrooms !== undefined) normalized.bedrooms = patch.bedrooms;
+  if (patch.bathrooms !== undefined) normalized.bathrooms = patch.bathrooms;
+  if (patch.requestedStartAt !== undefined) normalized.requestedStartAt = patch.requestedStartAt;
+  if (patch.status !== undefined) normalized.status = patch.status;
+  return normalized;
 }
 
 export function createRequestFacadeMethods(deps: RequestFacadeDependencies): Pick<ServiceDeskFacade, "createRequest" | "updateRequest"> {
