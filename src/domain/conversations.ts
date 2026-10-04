@@ -34,6 +34,7 @@ export interface MessageRecord {
   mediaReference?: { provider: "WHATSAPP"; providerMediaId: string };
   contentKind?: InboundContentKind;
   providerAccountId?: string;
+  providerOccurredAt?: string;
   senderRef?: string;
   rawProviderEventRef?: string;
   outboundIdempotencyKey?: string;
@@ -49,6 +50,8 @@ export interface ProviderInboundReceiptRecord {
   providerAccountId: string;
   providerMessageId: string;
   providerReceiptKey: string;
+  senderRef: string;
+  providerOccurredAt: string;
   rawProviderEventRef: string;
   contentKind: InboundContentKind;
   conversationId?: string;
