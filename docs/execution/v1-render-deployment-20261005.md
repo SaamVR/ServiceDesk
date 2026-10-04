@@ -1,17 +1,19 @@
 # ServiceDesk AI V1 — Render Deployment (2026-10-05)
 
-Status: DEPLOYMENT_INFRA_BLOCKED
+Status: DEPLOYED_LIVE
 
 ## Deployment target
 
-- User-specified Render project: `prj-db1bllqd0e5s73f0m03g`
 - Render workspace: `tea-d1ihdsbipnbc73bpc8f0`
 - Repository: `SaamVR/ServiceDesk`
-- Pinned candidate branch: `rc/servicedesk-v1-release-candidate-20261005`
-- Exact candidate SHA: `b966bb685729a2e8e19b7c46d764d871672a1636`
-- Auto-deploy intent: OFF
-
-The candidate was produced after mandatory reconciliation found legitimate release fixes after the original source freeze. No legitimate newer work was discarded.
+- Candidate branch: `rc/servicedesk-v1-release-candidate-20261005`
+- Exact deployed SHA: `b966bb685729a2e8e19b7c46d764d871672a1636`
+- Service: `servicedesk-ai-v1-rc`
+- Service ID: `srv-db1e069srm7s73b8fr30`
+- Deploy ID: `dep-db1e06psrm7s73b8fufg`
+- Public URL: `https://servicedesk-ai-v1-rc.onrender.com`
+- Region: Virginia
+- Auto-deploy: OFF
 
 ## Predeploy gates
 
@@ -22,60 +24,48 @@ The candidate was produced after mandatory reconciliation found legitimate relea
 - Supabase migration parity through `0015a`: PASS
 - proof fixture cleanup: PASS
 
-## Planned Render service
-
-Single Node Web Service using existing Supabase; no duplicate Render Postgres.
+## Render build
 
 Runtime:
-- Next.js 16
+- Next.js 16.3.8
 - Node `22.23.2`
 - pnpm `10.17.1`
-- region intended: Virginia, close to Supabase `us-east-1`
-- plan intended: Free / Hobby-compatible
-- no dedicated health API route in source; use root/public route for initial HTTP health smoke
 
-Pinned build command prepared:
+Pinned build command asserted exact SHA `b966bb685729a2e8e19b7c46d764d871672a1636`.
 
-`corepack pnpm install --frozen-lockfile && test "$(git rev-parse HEAD)" = "b966bb685729a2e8e19b7c46d764d871672a1636" && corepack pnpm build`
+Render evidence:
+- checkout exact candidate SHA: PASS
+- production compilation: PASS
+- TypeScript build phase: PASS
+- static generation: PASS
+- build upload: PASS
+- Render status: `Build successful 🎉`
+- runtime start: `pnpm start`
+- Next.js ready on port 10000
+- Render status: `Your service is live 🎉`
 
-Start command prepared:
+Deploy final status: `live`
 
-`corepack pnpm start`
+## Public HTTP smoke
 
-Non-secret Render runtime pin:
-- `NODE_VERSION=22.23.2`
+Executed from `samvr` against the Render URL after the deploy reached live.
 
-Provider credentials were not printed or committed.
-Stripe/payment remains SANDBOX / DEMO ONLY.
+HTTP 200:
+- `/`
+- `/b/brightroom`
+- `/b/brightroom/enquire`
+- `/portal`
+- `/crew/today`
+- `/onboarding`
+- `/presentation`
+- `/app/demo/overview`
+- `/app/demo/inbox`
+- `/app/demo/settings`
 
-## Render account blocker
+Verdict: `RENDER_HTTP_SMOKE=PASS`
 
-Direct Web Service creation was attempted through connected Render tooling.
+## Current deployment state
 
-Render rejected the create request with:
+`DEPLOYED_NOT_RELEASE_VERIFIED`
 
-`Hobby Tier is limited to 25 services`
-
-The connected workspace currently has no ServiceDesk web service available to reuse through the connector, and the connector does not expose a safe delete/retarget operation for an existing service.
-
-Therefore:
-- no ServiceDesk Render service ID exists yet
-- no deploy ID exists yet
-- no public ServiceDesk Render URL exists yet
-- no post-deploy HTTP/browser smoke can execute yet
-
-Verdict:
-
-`RENDER_DEPLOYMENT=BLOCKED_ACCOUNT_SERVICE_LIMIT`
-
-No unrelated Render service was deleted or repurposed without owner authorization.
-
-## Immediate continuation after capacity is available
-
-1. create one ServiceDesk Web Service from the pinned RC branch;
-2. verify Render cloned exact SHA `b966bb685729...`;
-3. inspect build and boot logs;
-4. verify root/public HTTP response;
-5. run route smoke;
-6. execute desktop/tablet/mobile browser acceptance;
-7. update final release decision.
+The application is live on Render. Remaining production-release gates are browser acceptance, Supabase production security configuration, and controlled provider evidence where required. Stripe/payment remains SANDBOX-only by owner policy.
