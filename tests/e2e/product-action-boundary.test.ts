@@ -15,7 +15,7 @@ describe("product fixture action boundaries", () => {
       ["src/features/request-intake/EnquiryForm.tsx", "create/update request command"],
       ["src/features/checkout/CheckoutPreview.tsx", "hosted checkout command"],
       ["src/features/crew/CrewJobPreview.tsx", "visit transition command"],
-      ["src/features/quality/QualityReviewPreview.tsx", "review request command"],
+      ["src/features/quality/QualityReviewPreview.tsx", "Accepted server action is available"],
       ["src/features/recovery/RecoveryActionsPreview.tsx", "recovery command"],
       ["src/features/inbox/InboxPreview.tsx", "thread selection command"],
     ] as const;
