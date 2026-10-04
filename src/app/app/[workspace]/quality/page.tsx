@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffQualityPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
       staffModule="quality"
       workspaceLabel={workspace}
-      title="Quality cases and recovery ownership."
-      description="Feedback, issue owner, deadline, resolution state and optional review request are shown without pretending supervisor inspections exist in V1."
+      title="Quality review workspace."
+      description="Customer reviews and quality actions remain disabled until accepted server commands exist."
     />
   );
 }
