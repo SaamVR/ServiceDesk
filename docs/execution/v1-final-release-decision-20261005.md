@@ -19,6 +19,7 @@ Release gates:
 - lint: PASS — 0 errors, 6 warnings
 - production build: PASS
 - Gitleaks: PASS — 0 findings
+- local production HTTP route smoke: PASS — 10/10 checked routes returned 200
 - dedicated Supabase staging: ACTIVE_HEALTHY
 - migration parity through 0015a: PASS
 - proof fixture cleanup: PASS
@@ -36,7 +37,7 @@ Render returned:
 
 No unrelated Render service was deleted or repurposed.
 
-Therefore Render deployment, boot verification, HTTP smoke, and browser acceptance cannot yet execute.
+Therefore Render deployment, deployed-SHA verification, post-deploy smoke, and browser acceptance cannot yet execute.
 
 ## Remaining production gates
 
@@ -54,6 +55,6 @@ Correct release state:
 
 `PRODUCTION_RELEASE_BLOCKED`
 
-The blocker is currently Render account capacity, not source quality.
+The current blocker is Render account capacity, not source quality or local runtime health.
 
 Do not label `PRODUCTION_RELEASE_READY` until deployment, browser, security, and required provider gates are satisfied.
