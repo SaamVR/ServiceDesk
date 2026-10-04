@@ -64,3 +64,16 @@ Coordinator rule: review and integrate each completed worker batch independently
 | `CYCLE-2-W3` Product recovery + executable/browser proof | Worker 3 | READY_RECOVERY | `7857818c57634bb925549ea52fd380b031d426e1` | `docs/execution/batches/cycle-2-worker-3.md` | Runtime gate first; if green test/typecheck/lint/build/browser; if blocked static receipt only |
 
 Do not interpret `READY_RECOVERY` as executable proof. The last coordinator recheck still reproduced GitHub/npm DNS failure and unavailable pnpm. A fresh Runtime instance may retry; application edits remain gated by executable source/package access.
+
+
+## Coordinator Cycle 3 — executable outage mode
+
+Normal pnpm/Vitest/build execution remains `CONFIGURATION_BLOCKED`, but bounded package-free TypeScript implementation is now authorized under `docs/execution/runtime-outage-mode-20261004.md`.
+
+| Task | Owner | State | Start SHA | Substantive target | Canonical gate |
+| --- | --- | --- | --- | --- | --- |
+| `CYCLE-3-W1` operations regression hardening | Worker 1 | READY | `c8f6239db5062a6e7306de1c70686b3e0ac7dfd0` | real ts-node harness + missing ledger/outbox/attention/error Vitest cases | `CONFIGURATION_BLOCKED` until pnpm returns |
+| `CYCLE-3-W2` durable WhatsApp process/ACK seam | Worker 2 | READY | `a43840d8e1f3d3da6ab0c212966bb2064de837a1` | idempotent receipt-key processor, persistence record outcomes, retry-safe persist → process → ACK, tests + outage harness | `CONFIGURATION_BLOCKED`; no provider verification claim |
+| `CYCLE-3-W3` Product pure view-model hardening | Worker 3 | READY | `739a60b9c170f97cc67137744e9aaf0927c2852d` | package-free Product harness + reporting conversion truth-boundary fix/regression | `CONFIGURATION_BLOCKED`; React/build/browser remain frozen |
+
+Cycle 2 is closed as a shared Runtime infrastructure incident. Workers must make at most one quick network-recovery probe, then use outage mode rather than spend another run retrying DNS.
