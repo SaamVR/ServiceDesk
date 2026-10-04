@@ -29,8 +29,17 @@ const money = (minor: number, currency: string) =>
 
 export function buildCheckoutView({ quote, slot, visit, invoice, paymentMode, holdExpiresAt }: CheckoutViewInput): CheckoutView {
   const isSandbox = paymentMode !== "LIVE";
-  const depositRecorded = invoice.allocatedMinor >= quote.depositMinor;
+  const netPaidMinor = Math.max(invoice.allocatedMinor - invoice.refundedMinor, 0);
+  const depositRecorded = netPaidMinor >= quote.depositMinor;
   const hasReview = visit.status === "PAYMENT_REVIEW";
+  const quoteAccepted = quote.status === "ACCEPTED";
+  const visitCanReceiveReceipt = visit.status === "CONFIRMED" || visit.status === "ASSIGNED";
+  const canShowReceipt = paymentMode === "LIVE"
+    && depositRecorded
+    && quoteAccepted
+    && slot.availabilityFresh
+    && visitCanReceiveReceipt
+    && !hasReview;
 
   const quoteState = quote.status === "ACCEPTED"
     ? `Quote accepted · version ${quote.version}`
@@ -73,7 +82,7 @@ export function buildCheckoutView({ quote, slot, visit, invoice, paymentMode, ho
     depositLabel: money(quote.depositMinor, quote.currency),
     balanceLabel: money(quote.balanceMinor, quote.currency),
     primaryAction,
-    canShowReceipt: paymentMode === "LIVE" && depositRecorded && !hasReview,
+    canShowReceipt,
     warning,
   };
 }
