@@ -3,6 +3,8 @@ export * from "./whatsapp/adapter";
 export * from "./whatsapp/outbound-policy";
 export * from "./whatsapp/cloud-api";
 export * from "./whatsapp/configured-adapter";
+export * from "./whatsapp/media";
+export * from "./whatsapp/status-transition";
 export * from "./google-calendar/adapter";
 export * from "./google-calendar/oauth";
 export * from "./google-calendar/reconciliation";
