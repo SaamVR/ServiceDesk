@@ -94,3 +94,15 @@ No live controlled provider receipts were supplied in this run, so the controlle
 - No false provider claims: `PASS`.
 - Canonical gate: `CONFIGURATION_BLOCKED` until package/Vitest/typecheck and controlled provider receipts are available.
 - Controlled provider proof: `CONFIGURATION_BLOCKED` until provider access and controlled receipts are supplied.
+
+## Coordinator source-freeze note
+
+The E10B worker packet above records contract evidence produced from the E10B base/worker branch.
+After worker integration, the coordinator applied final source-integration corrections:
+- customer quote acceptance is enabled only from SENT state, matching Core acceptance semantics;
+- Product sandbox-checkout input no longer supplies caller-selected amount/currency;
+- concrete early-flow Postgres command entrypoints now explicitly expose acceptQuote.
+
+No controlled provider receipts exist yet, so none of the older build-SHA references are release provider proof.
+Any future controlled-provider receipt must bind to the final source-freeze branch SHA recorded by the coordinator after this document was committed.
+Stripe/payment remains SANDBOX-only.
