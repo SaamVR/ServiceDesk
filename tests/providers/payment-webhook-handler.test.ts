@@ -83,6 +83,29 @@ describe("Stripe payment webhook handler", () => {
     expect(state.calls).toHaveLength(0);
   });
 
+  test("rejects signed webhook JSON with an invalid payment object shape", async () => {
+    const adapter = new FixtureStripePaymentAdapter("whsec_test", "acct_123", () => "2026-10-04T10:00:00.000Z");
+    const rawBody = JSON.stringify({
+      id: "evt_bad_shape",
+      account: "acct_123",
+      type: "checkout.session.completed",
+      created: 1791108000,
+      data: {},
+    });
+    const state = store("APPLIED");
+
+    const result = await handleStripePaymentWebhook({
+      rawBody,
+      headers: { "stripe-signature": signStripeFixturePayload(rawBody, "whsec_test", 1791108000) },
+      adapter,
+      store: state.applicationStore,
+    });
+
+    expect(result).toMatchObject({ statusCode: 422, acknowledged: false, retryable: false });
+    expect(result.body).toContain("shape");
+    expect(state.calls).toHaveLength(0);
+  });
+
   test("applies a verified payment event exactly once through the store boundary", async () => {
     const adapter = new FixtureStripePaymentAdapter("whsec_test", "acct_123", () => "2026-10-04T10:00:00.000Z");
     const rawBody = succeededCheckoutRaw();
