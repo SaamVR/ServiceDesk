@@ -38,10 +38,34 @@ export function InboxPreview() {
   return (
     <div className="inbox-preview" aria-label="Shared inbox delivery state preview">
       <div className="inbox-thread-list">
-        <p className="label">Threads</p>
-        <button className="list-row active">{sampleThread.customerLabel}</button>
-        <button className="list-row">Delivery uncertain</button>
-        <button className="list-row">Crew absence</button>
+        <p className="label">Threads · fixture preview</p>
+        <button
+          className="list-row active"
+          type="button"
+          disabled
+          aria-disabled="true"
+          title="Fixture preview only; thread selection command is not integrated on this branch."
+        >
+          {sampleThread.customerLabel}
+        </button>
+        <button
+          className="list-row"
+          type="button"
+          disabled
+          aria-disabled="true"
+          title="Fixture preview only; thread selection command is not integrated on this branch."
+        >
+          Delivery uncertain
+        </button>
+        <button
+          className="list-row"
+          type="button"
+          disabled
+          aria-disabled="true"
+          title="Fixture preview only; thread selection command is not integrated on this branch."
+        >
+          Crew absence
+        </button>
       </div>
       <section className="inbox-conversation" aria-labelledby="inbox-preview-heading">
         <p className="label">Shared inbox</p>
