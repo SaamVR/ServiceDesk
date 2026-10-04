@@ -368,3 +368,69 @@ Published:
 - `docs/execution/batches/cycle-4-worker-3.md` — Product checkout/invoice receipt truth boundaries.
 
 Workers make one quick normal recovery probe and then use Runtime Outage Mode if the same infrastructure condition remains. Cycle 4 is substantive implementation work, not another DNS-only cycle.
+
+
+## Cycle 4 integration and High-Throughput Mode v2
+
+Cycle 4 worker finals:
+- W1 Core: `6c062755a8d5f5e75051527a71687b98fa3070d7`
+- W2 Connectors/AI: `cd702409b15ac659d2296aa3c5e00bdbacfe5f93`
+- W3 Product/UI: `eeed52256937d520c37921228402e287b31e1c8e`
+
+All three reported:
+- `STATE=IMPLEMENTED`
+- `CANONICAL_GATE=CONFIGURATION_BLOCKED`
+
+Accepted integration commits:
+- W1 Cycle 4 capacity temporal safety: `d3dac8e65366e491f5358eec5017fb5872ebf4b1`
+- W2 Cycle 4 WhatsApp delivery-state monotonicity: `e73ea0778142d9fbe326fe1a5de68a2a1b79460c`
+- W3 Cycle 4 payment receipt truth boundaries: `9154e5a0778c78480cabb81871c7f5ac773d0d88`
+
+Tree-level blob verification after integration:
+- W1 Cycle 4 accepted closure: MATCH
+- W2 Cycle 4 accepted closure: MATCH
+- W3 Cycle 4 accepted closure: MATCH
+
+Proof remains `IMPLEMENTED`; no Cycle 4 slice is promoted beyond the outage-mode evidence level while the canonical package gate is unavailable.
+
+### Throughput diagnosis
+
+Cycles 3–4 proved the outage execution mechanism works, but throughput remained inefficient because each run carried only one narrow behavior cluster and repeated too much startup/receipt overhead.
+
+Effective from Cycle 5:
+- `docs/execution/high-throughput-mode-v2-20261004.md`
+- `docs/execution/ten-run-horizon-cycle5-14.md`
+
+New worker policy:
+- workload sized for ~20–30 minutes active implementation when runtime/model permits;
+- >=5 substantive slices before normal return;
+- 5–8 READY slices + 2–4 FALLBACK slices;
+- one recovery probe only;
+- fast-start document set rather than rereading long coordinator packet;
+- 2–3 grouped implementation commits + compact receipt;
+- continue automatically into FALLBACK if READY finishes;
+- receipt-only runs are not acceptable while owned package-free work exists.
+
+New coordinator policy:
+- no all-workers barrier;
+- integrate any returned lane immediately;
+- immediately promote that lane's preplanned backup;
+- refresh and prepare the next backup from the 10-run horizon;
+- use range compare + blob/tree integration rather than whole divergent branch merge.
+
+### Active Cycle 5
+
+- W1: `docs/execution/batches/cycle-5-worker-1.md`
+  - request validation, visitor lifecycle authority, quote identity/expiry, visit scope/time integrity, combined harness.
+- W2: `docs/execution/batches/cycle-5-worker-2.md`
+  - acceptance conflict, outbound identity/content, template validation, media safety, queued/latest identity, combined harness.
+- W3: `docs/execution/batches/cycle-5-worker-3.md`
+  - quote approval truth, onboarding completeness, recovery readiness, connector proof, quality eligibility, communication provider truth, combined harness.
+
+### Prepared Cycle 6 backup
+
+- W1: `docs/execution/batches/cycle-6-worker-1.md` — repository trust boundaries.
+- W2: `docs/execution/batches/cycle-6-worker-2.md` — WhatsApp transport/recovery hygiene.
+- W3: `docs/execution/batches/cycle-6-worker-3.md` — Product cross-record/live-provider consistency.
+
+Cycles 7–14 are queued thematically in the ten-run horizon and will be source-refreshed as each lane advances.
