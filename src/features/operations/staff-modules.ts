@@ -87,3 +87,34 @@ export const staffModuleConfig: Record<
     description: "Platform billing boundary separate from customer payments.",
   },
 };
+
+export const staffNavigationGroups: Array<{
+  label: string;
+  modules: StaffModule[];
+}> = [
+  {
+    label: "Core",
+    modules: [
+      "overview",
+      "inbox",
+      "customers",
+      "requests",
+      "quotes",
+      "schedule",
+      "jobs",
+      "invoices",
+    ],
+  },
+  {
+    label: "Operations",
+    modules: ["quality", "automations", "reports"],
+  },
+  {
+    label: "Settings",
+    modules: ["settings", "billing"],
+  },
+];
+
+export function buildStaffModuleHref(workspaceSlug: string, module: StaffModule) {
+  return `/app/${encodeURIComponent(workspaceSlug)}/${module}`;
+}
