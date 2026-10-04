@@ -23,6 +23,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function stringField(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
 export class InMemoryInboundDedupe {
   private readonly seen = new Set<string>();
 
@@ -61,33 +65,36 @@ export function verifyMetaSignature(rawBody: string, signatureHeader: string | u
 }
 
 export function parseInboundMessages(raw: unknown, workspaceByPhoneNumberId: Record<string, string>): WhatsAppInboundMessage[] {
-  const payload = raw as {
-    entry?: Array<{ changes?: Array<{ value?: { metadata?: { phone_number_id?: string }; messages?: Array<Record<string, unknown>> } }> }>;
-  };
+  if (!isRecord(raw)) return [];
 
   const messages: WhatsAppInboundMessage[] = [];
-  const entries = Array.isArray(payload.entry) ? payload.entry : [];
+  const entries = Array.isArray(raw.entry) ? raw.entry : [];
   for (const entry of entries) {
+    if (!isRecord(entry)) continue;
     const changes = Array.isArray(entry.changes) ? entry.changes : [];
     for (const change of changes) {
-      const phoneNumberId = change.value?.metadata?.phone_number_id;
+      if (!isRecord(change) || !isRecord(change.value)) continue;
+      const value = change.value;
+      const metadata = isRecord(value.metadata) ? value.metadata : undefined;
+      const phoneNumberId = stringField(metadata?.phone_number_id);
       if (!phoneNumberId) continue;
       const workspaceId = workspaceByPhoneNumberId[phoneNumberId];
       if (!workspaceId) continue;
 
-      const providerMessages = Array.isArray(change.value?.messages) ? change.value.messages : [];
+      const providerMessages = Array.isArray(value.messages) ? value.messages : [];
       for (const message of providerMessages) {
         if (!isRecord(message)) continue;
 
-        const id = String(message.id ?? "");
-        const from = String(message.from ?? "");
-        const timestamp = String(message.timestamp ?? "");
+        const id = stringField(message.id);
+        const from = stringField(message.from);
+        const timestamp = typeof message.timestamp === "string" ? message.timestamp : "";
+        if (!id || !from) continue;
+
         const type = message.type === "text" || message.type === "image" ? message.type : "unsupported";
         const text = isRecord(message.text) ? message.text : undefined;
         const image = isRecord(message.image) ? message.image : undefined;
         const textBody = typeof text?.body === "string" ? text.body : undefined;
         const mediaId = typeof image?.id === "string" ? image.id : undefined;
-        if (!id || !from) continue;
         messages.push({ workspaceId, phoneNumberId, providerMessageId: id, from, timestamp, type, text: textBody, mediaId });
       }
     }
