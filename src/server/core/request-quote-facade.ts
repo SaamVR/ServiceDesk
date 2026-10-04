@@ -8,7 +8,7 @@ export type RequestQuoteCapacityFacade = Pick<
   "createRequest" | "updateRequest" | "calculateQuote" | "sendQuote" | "findSlots" | "holdSlot"
 >;
 
-export interface RequestQuoteFacadeDependencies extends RequestFacadeDependencies, QuoteFacadeDependencies, CapacityFacadeDependencies {}
+export type RequestQuoteFacadeDependencies = RequestFacadeDependencies & QuoteFacadeDependencies & CapacityFacadeDependencies;
 
 export function createRequestQuoteFacadeMethods(deps: RequestQuoteFacadeDependencies): RequestQuoteCapacityFacade {
   return {

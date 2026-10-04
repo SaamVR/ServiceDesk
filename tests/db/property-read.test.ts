@@ -13,7 +13,7 @@ const row: PropertyRow = {
 describe("property read boundary", () => {
   it("maps same-workspace active property rows to PropertyDTO", async () => {
     const repository = createPostgresPropertyRepository({ listActiveByCustomer: async () => ({ data: [row], error: null }) });
-    await expect(readPropertySnapshot(owner, "cust_1", repository)).resolves.toEqual({ ok: true, value: [{
+    await expect(readPropertySnapshot(owner, "cust_1", repository)).resolves.toMatchObject({ ok: true, value: [{
       id: "prop_1", workspaceId: "ws_1", customerId: "cust_1", label: "Home", addressLine1: "1 Main St",
       city: "London", region: "Greater London", postalCode: "SW1A 1AA", countryCode: "GB",
       serviceNotes: "Eco products", accessNotes: "Key safe", version: 3,

@@ -3,9 +3,9 @@ import type { CreateRequestInput, FindSlotsInput } from "./facade";
 import { readPropertySnapshot, type PropertyReadRepository } from "./property-read";
 import { createRequestQuoteFacadeMethods, type RequestQuoteFacadeDependencies } from "./request-quote-facade";
 
-export interface ServerEntrypointDependencies extends RequestQuoteFacadeDependencies {
+export type ServerEntrypointDependencies = RequestQuoteFacadeDependencies & {
   propertyRepository: PropertyReadRepository;
-}
+};
 
 export function createServerCommandEntrypoints(deps: ServerEntrypointDependencies) {
   const facade = createRequestQuoteFacadeMethods(deps);
