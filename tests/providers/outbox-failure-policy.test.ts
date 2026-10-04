@@ -14,6 +14,21 @@ const job: OutboxJob = {
 };
 
 describe("outbox provider failure policy", () => {
+  test("redacts secret-bearing provider failure messages", () => {
+    const result = classifyProviderFailure({
+      job,
+      code: "TIMEOUT",
+      message: "Bearer super-secret access_token=abc123 token=xyz customer@example.com +15551234567",
+    });
+
+    expect(result.message).not.toContain("super-secret");
+    expect(result.message).not.toContain("abc123");
+    expect(result.message).not.toContain("xyz");
+    expect(result.message).not.toContain("customer@example.com");
+    expect(result.message).not.toContain("+15551234567");
+    expect(result.message).toContain("[redacted]");
+  });
+
   test("classifies retryable, terminal, suppressed, and unknown failures", () => {
     expect(classifyProviderFailure({ job, code: "TIMEOUT" })).toMatchObject({ outcome: "RETRYABLE_FAILURE" });
     expect(classifyProviderFailure({ job, code: "RATE_LIMITED" })).toMatchObject({ outcome: "RETRYABLE_FAILURE" });
