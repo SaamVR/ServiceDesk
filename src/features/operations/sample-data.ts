@@ -1,0 +1,136 @@
+import type {
+  AttentionItemDTO,
+  ConversationDTO,
+  IntegrationStatusDTO,
+  InvoiceDTO,
+  QuoteDTO,
+  RequestDTO,
+  SlotDTO,
+  VisitDTO,
+} from "@/contracts";
+
+export const sampleRequest: RequestDTO = {
+  id: "req_moveout_001",
+  workspaceId: "ws_showcase",
+  customerId: "cust_sample",
+  propertyId: "prop_sample",
+  serviceCode: "MOVE_OUT",
+  status: "QUOTED",
+  bedrooms: 3,
+  bathrooms: 2,
+  requestedStartAt: "2026-10-09T09:00:00.000Z",
+  version: 4,
+  createdAt: "2026-10-04T06:00:00.000Z",
+  updatedAt: "2026-10-04T06:15:00.000Z",
+};
+
+export const sampleQuote: QuoteDTO = {
+  id: "quote_moveout_001",
+  workspaceId: sampleRequest.workspaceId,
+  requestId: sampleRequest.id,
+  version: 2,
+  status: "SENT",
+  currency: "USD",
+  subtotalMinor: 34_000,
+  taxMinor: 0,
+  totalMinor: 34_000,
+  depositMinor: 8_500,
+  balanceMinor: 25_500,
+  durationMinutes: 240,
+  bufferMinutes: 30,
+  rateVersion: "move-out-v1",
+  validUntil: "2026-10-06T06:15:00.000Z",
+};
+
+export const sampleSlot: SlotDTO = {
+  id: "slot_showcase_001",
+  workspaceId: sampleRequest.workspaceId,
+  crewId: "crew_alpha",
+  startAt: "2026-10-09T09:00:00.000Z",
+  endAt: "2026-10-09T13:30:00.000Z",
+  serviceMinutes: 240,
+  bufferMinutes: 30,
+  availabilityFresh: false,
+};
+
+export const sampleVisit: VisitDTO = {
+  id: "visit_showcase_001",
+  workspaceId: sampleRequest.workspaceId,
+  requestId: sampleRequest.id,
+  quoteId: sampleQuote.id,
+  crewId: sampleSlot.crewId,
+  status: "ASSIGNED",
+  startAt: sampleSlot.startAt,
+  serviceMinutes: 240,
+  bufferMinutes: 30,
+  version: 1,
+};
+
+export const sampleInvoice: InvoiceDTO = {
+  id: "invoice_showcase_001",
+  workspaceId: sampleRequest.workspaceId,
+  visitId: sampleVisit.id,
+  status: "PARTIALLY_PAID",
+  currency: "USD",
+  totalMinor: 34_000,
+  allocatedMinor: 8_500,
+  refundedMinor: 0,
+  balanceMinor: 25_500,
+};
+
+export const sampleConversation: ConversationDTO = {
+  id: "conv_showcase_001",
+  workspaceId: sampleRequest.workspaceId,
+  requestId: sampleRequest.id,
+  customerId: sampleRequest.customerId,
+  channel: "WHATSAPP",
+  assignedUserId: "dispatcher_1",
+  handoverActive: true,
+  version: 8,
+  lastMessageAt: "2026-10-04T06:12:00.000Z",
+};
+
+export const sampleAttentionItems: AttentionItemDTO[] = [
+  {
+    id: "attention_calendar_001",
+    workspaceId: sampleRequest.workspaceId,
+    type: "CALENDAR_STALE",
+    severity: "WARNING",
+    status: "OPEN",
+    resourceType: "slot",
+    resourceId: sampleSlot.id,
+    ownerUserId: "dispatcher_1",
+    dueAt: "2026-10-04T07:00:00.000Z",
+    summary: "Calendar freshness is stale before the customer can confirm instantly.",
+  },
+  {
+    id: "attention_delivery_001",
+    workspaceId: sampleRequest.workspaceId,
+    type: "DELIVERY_UNCERTAIN",
+    severity: "CRITICAL",
+    status: "OPEN",
+    resourceType: "conversation",
+    resourceId: sampleConversation.id,
+    ownerUserId: "dispatcher_1",
+    dueAt: "2026-10-04T07:15:00.000Z",
+    summary: "Message accepted by fixture queue only; no provider-delivered proof exists.",
+  },
+];
+
+export const sampleIntegrations: IntegrationStatusDTO[] = [
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "GOOGLE_CALENDAR",
+    status: "DEGRADED",
+    mode: "FIXTURE",
+    lastErrorAt: "2026-10-04T06:12:00.000Z",
+    message: "Calendar availability is stale; staff review required.",
+  },
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "WHATSAPP",
+    status: "NOT_CONFIGURED",
+    mode: "FIXTURE",
+    message: "No controlled provider receipt verified yet.",
+  },
+];
