@@ -3,3 +3,7 @@ export * from "./extraction";
 export * from "./knowledge";
 export * from "./orchestrator";
 export * from "./provider-gate";
+export * from "./model-transport";
+export * from "./output-guard";
+export * from "./citation-guard";
+export * from "./guarded-orchestrator";
