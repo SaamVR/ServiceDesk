@@ -49,6 +49,23 @@ describe("Stripe payment webhook handler", () => {
     expect(state.calls).toHaveLength(0);
   });
 
+  test("rejects signed webhook replays outside the signature tolerance", async () => {
+    const adapter = new FixtureStripePaymentAdapter("whsec_test", "acct_123", () => "2026-10-04T10:10:01.000Z");
+    const rawBody = succeededCheckoutRaw();
+    const state = store("APPLIED");
+
+    const result = await handleStripePaymentWebhook({
+      rawBody,
+      headers: { "stripe-signature": signStripeFixturePayload(rawBody, "whsec_test", 1791108000) },
+      adapter,
+      store: state.applicationStore,
+    });
+
+    expect(result).toMatchObject({ statusCode: 400, acknowledged: false, retryable: false });
+    expect(result.body).toContain("tolerance");
+    expect(state.calls).toHaveLength(0);
+  });
+
   test("rejects signed malformed JSON without throwing or touching payment truth", async () => {
     const adapter = new FixtureStripePaymentAdapter("whsec_test", "acct_123", () => "2026-10-04T10:00:00.000Z");
     const rawBody = "{not-json";
