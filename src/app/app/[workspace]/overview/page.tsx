@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffOverviewPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
-        staffModule="overview"
+      staffModule="overview"
       workspaceLabel={workspace}
-      title="Overview starts with attention, not charts."
-      description="Open approvals, stale calendar state, uncertain delivery and payment review are shown before metrics so dispatchers know the next action."
+      title="Staff attention overview."
+      description="Attention queue and next actions are derived from injected DTO snapshots."
     />
   );
 }
