@@ -1,4 +1,4 @@
-import type { ActorContext, CommandMeta, ConversationDTO, InvoiceDTO, MessageDTO, QuoteDTO, RequestDTO, Result, SlotDTO, VisitDTO } from "../../contracts";
+import type { ActorContext, CommandMeta, ConversationDTO, InvoiceDTO, MessageDTO, QuoteDTO, RecurrenceFrequency, RecurrenceRuleDTO, RequestDTO, Result, SlotDTO, VisitChecklistItemDTO, VisitDTO, VisitEvidenceDTO, VisitEvidenceKind } from "../../contracts";
 export interface CreateRequestInput { customerId?: string; propertyId?: string; serviceCode?: string; }
 export interface FindSlotsInput { requestId: string; from: string; to: string; preferredCrewId?: string; }
 export interface VerifiedPaymentEvent {
@@ -34,6 +34,24 @@ export interface InboundMessageApplicationOutcome {
 export interface ConversationHandoverInput { active: boolean; assignedUserId?: string; }
 export interface ConversationReplyInput { body: string; channel: "WHATSAPP" | "EMAIL"; }
 export interface ConversationReplyOutcome { message: MessageDTO; outboxEventId: string; }
+export interface AddVisitEvidenceInput {
+  kind: VisitEvidenceKind;
+  mediaReference?: { storageProvider: string; objectRef: string; mimeType?: string };
+  text?: string;
+  capturedAt: string;
+}
+export interface SetVisitChecklistItemInput { itemKey: string; completed: boolean; note?: string; }
+export interface CreateRecurrenceRuleInput {
+  requestId: string;
+  propertyId: string;
+  frequency: RecurrenceFrequency;
+  timezone: string;
+  localStartTime: string;
+  startsOn: string;
+  endsOn?: string;
+  maxOccurrences?: number;
+}
+export type RecurrenceRuleAction = "PAUSE" | "RESUME" | "SKIP_NEXT";
 export type VisitAction = "CONFIRM" | "ASSIGN" | "EN_ROUTE" | "START" | "SUBMIT_REVIEW" | "COMPLETE" | "CANCEL";
 export interface WorkspaceSnapshotQuery { customerId?: string; requestId?: string; visitId?: string; invoiceId?: string; conversationId?: string; }
 export interface WorkspaceSnapshot { requests: RequestDTO[]; quotes: QuoteDTO[]; visits: VisitDTO[]; invoices: InvoiceDTO[]; conversations: ConversationDTO[]; messages: MessageDTO[]; }
@@ -49,5 +67,9 @@ export interface ServiceDeskFacade {
   setConversationHandover(ctx: ActorContext, id: string, input: ConversationHandoverInput, meta: CommandMeta): Promise<Result<ConversationDTO>>;
   enqueueConversationReply(ctx: ActorContext, id: string, input: ConversationReplyInput, meta: CommandMeta): Promise<Result<ConversationReplyOutcome>>;
   transitionVisit(ctx: ActorContext, id: string, action: VisitAction, meta: CommandMeta): Promise<Result<VisitDTO>>;
+  addVisitEvidence(ctx: ActorContext, visitId: string, input: AddVisitEvidenceInput, meta: CommandMeta): Promise<Result<VisitEvidenceDTO>>;
+  setVisitChecklistItem(ctx: ActorContext, visitId: string, input: SetVisitChecklistItemInput, meta: CommandMeta): Promise<Result<VisitChecklistItemDTO>>;
+  createRecurrenceRule(ctx: ActorContext, input: CreateRecurrenceRuleInput, meta: CommandMeta): Promise<Result<RecurrenceRuleDTO>>;
+  applyRecurrenceRuleAction(ctx: ActorContext, id: string, action: RecurrenceRuleAction, meta: CommandMeta): Promise<Result<RecurrenceRuleDTO>>;
   readWorkspaceSnapshot(ctx: ActorContext, query: WorkspaceSnapshotQuery): Promise<Result<WorkspaceSnapshot>>;
 }
