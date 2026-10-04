@@ -18,6 +18,17 @@ Implemented on `feat/servicedesk-v1-product`:
 - UI state cards use `role="status"`, `aria-live`, and `aria-atomic`.
 - Fixture-only state actions are disabled and labeled as preview.
 
+## Fixture IDs used for inspection
+
+Use the actual seeded UI fixture IDs:
+
+- request: `req_moveout_001`
+- quote: `quote_moveout_001`
+- slot: `slot_showcase_001`
+- visit: `visit_showcase_001`
+- invoice: `invoice_showcase_001`
+- conversation: `conv_showcase_001`
+
 ## Routes requiring browser inspection
 
 Inspect these after Runtime checkout or deployment is available:
@@ -36,9 +47,9 @@ Inspect these after Runtime checkout or deployment is available:
 
 - `/portal`
 - `/portal/properties`
-- `/portal/quotes/quote_sample_001`
-- `/portal/bookings/visit_sample_001`
-- `/portal/invoices/invoice_sample_001`
+- `/portal/quotes/quote_moveout_001`
+- `/portal/bookings/visit_showcase_001`
+- `/portal/invoices/invoice_showcase_001`
 - `/portal/preferences`
 
 ### Staff
@@ -59,7 +70,7 @@ Inspect these after Runtime checkout or deployment is available:
 ### Crew
 
 - `/crew/today`
-- `/crew/jobs/visit_sample_001`
+- `/crew/jobs/visit_showcase_001`
 
 ### Showcase
 
