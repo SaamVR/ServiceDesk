@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { QuoteDTO } from "../../src/contracts";
 import type { CheckoutInput } from "../../src/server/integrations/types";
-import { createStripeCheckoutSession, type StripeCheckoutHttpTransport } from "../../src/server/integrations/payments/stripe-checkout";
+import { createStripeCheckoutSession, redactedStripeCheckoutRequestSummary, type StripeCheckoutHttpTransport } from "../../src/server/integrations/payments/stripe-checkout";
 
 const quote: QuoteDTO = {
   id: "quote-1",
@@ -108,5 +108,39 @@ describe("Stripe checkout transport", () => {
     expect(rate).toMatchObject({ ok: false, code: "PAYMENT_RATE_LIMITED" });
     expect(server).toMatchObject({ ok: false, code: "PAYMENT_TRANSIENT_FAILURE" });
     expect(JSON.stringify([auth, rate, server])).not.toContain("sk_test_secret");
+  });
+
+  test("redacts checkout request summaries for operator/debug evidence", () => {
+    const request = {
+      url: "https://api.stripe.com/v1/checkout/sessions",
+      method: "POST" as const,
+      headers: { authorization: "Bearer sk_test_secret", "idempotency-key": "checkout:ws-clearnest:hold-1:DEPOSIT", "stripe-account": "acct_connected" },
+      body: new URLSearchParams({
+        mode: "payment",
+        success_url: "https://servicedesk.test/payments/success",
+        cancel_url: "https://servicedesk.test/payments/cancel",
+        "metadata[workspaceId]": "ws-clearnest",
+        "metadata[quoteId]": "quote-1",
+        "metadata[holdId]": "hold-1",
+        "metadata[purpose]": "DEPOSIT",
+      }).toString(),
+      signal: new AbortController().signal,
+    };
+
+    const summary = redactedStripeCheckoutRequestSummary(request);
+
+    expect(summary).toEqual({
+      method: "POST",
+      host: "api.stripe.com",
+      endpoint: "/v1/checkout/sessions",
+      hasBearerAuthorization: true,
+      hasConnectedAccount: true,
+      hasIdempotencyKey: true,
+      bodyKeys: ["cancel_url", "metadata[holdId]", "metadata[purpose]", "metadata[quoteId]", "metadata[workspaceId]", "mode", "success_url"],
+    });
+    expect(JSON.stringify(summary)).not.toContain("sk_test_secret");
+    expect(JSON.stringify(summary)).not.toContain("ws-clearnest");
+    expect(JSON.stringify(summary)).not.toContain("quote-1");
+    expect(JSON.stringify(summary)).not.toContain("hold-1");
   });
 });
