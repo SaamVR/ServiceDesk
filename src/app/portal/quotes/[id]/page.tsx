@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function PortalQuotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="customer"
       customerModule="quote"
       resourceLabel={`quote ${id}`}
-      title="Review the current quote version before accepting."
-      description="Quote acceptance targets the exact current version. Superseded or expired quote states must ask for a new version instead of silently accepting."
+      title="Quote detail and acceptance boundary."
+      description="Quote acceptance must target the exact server version and remains disabled in fixture mode."
     />
   );
 }
