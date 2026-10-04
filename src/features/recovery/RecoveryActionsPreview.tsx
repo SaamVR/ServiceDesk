@@ -66,8 +66,14 @@ export function RecoveryActionsPreview() {
                 <div><dt>Linked attention</dt><dd>{item.linkedAttentionCount}</dd></div>
                 <div><dt>Provider</dt><dd>{item.providerStatus ?? "No configured status"}</dd></div>
               </dl>
-              <button className="button-secondary full" type="button">
-                {item.action}
+              <button
+                className="button-secondary full"
+                type="button"
+                disabled
+                aria-disabled="true"
+                title="Fixture preview only; recovery command is not integrated on this branch."
+              >
+                {item.action} · preview
               </button>
             </article>
           ))}
