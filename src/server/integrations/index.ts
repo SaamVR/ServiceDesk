@@ -45,6 +45,7 @@ export * from "./recovery/policy";
 export * from "./recovery/queue";
 export * from "./recovery/executor";
 export * from "./recovery/lease";
+export * from "./recovery/scheduler";
 export * from "./recovery/serialization";
 export * from "./subscription/adapter";
 export * from "./webhook/signed";
