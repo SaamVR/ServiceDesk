@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { listGoogleCalendarEventsPage, type GoogleCalendarHttpTransport } from "../../src/server/integrations/google-calendar/rest-client";
+import { listGoogleCalendarEventsPage } from "../../src/server/integrations/google-calendar/rest-sync";
+import type { GoogleCalendarHttpTransport } from "../../src/server/integrations/google-calendar/rest-client";
 
 const config = {
   calendarApiBaseUrl: "https://www.googleapis.com/calendar/v3",
@@ -8,7 +9,7 @@ const config = {
 };
 
 describe("Google Calendar REST event list sync", () => {
-  test("lists initial sync page with time bounds and redacts private event text from normalized output", async () => {
+  test("lists initial sync page with time bounds and preserves raw event only for sync normalization", async () => {
     let captured: Parameters<GoogleCalendarHttpTransport>[0] | undefined;
     const http: GoogleCalendarHttpTransport = async (request) => {
       captured = request;
@@ -45,7 +46,9 @@ describe("Google Calendar REST event list sync", () => {
     if (result.ok) {
       expect(result.value.nextPageToken).toBe("page-2");
       expect(result.value.events[0]).toMatchObject({ id: "evt-1", status: "confirmed" });
-      expect(JSON.stringify(result.value.events)).toContain("Customer dentist appointment");
+      expect(JSON.stringify(result.value.redactedSummary)).not.toContain("Customer dentist appointment");
+      expect(JSON.stringify(result.value.redactedSummary)).not.toContain("Private description");
+      expect(JSON.stringify(result.value.redactedSummary)).not.toContain("calendar-secret-token");
     }
   });
 
