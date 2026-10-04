@@ -28,7 +28,10 @@ function hasFixtureStripePayloadShape(value: unknown): value is FixtureStripeWeb
     return false;
   }
   if (!isRecord(value.data) || !isRecord(value.data.object)) return false;
-  return typeof value.data.object.id === "string" && typeof value.data.object.currency === "string";
+  return typeof value.data.object.id === "string"
+    && value.data.object.id.trim().length > 0
+    && typeof value.data.object.currency === "string"
+    && /^[a-z]{3}$/i.test(value.data.object.currency);
 }
 
 function isAllowedPaymentPurpose(value: unknown): value is "DEPOSIT" | "BALANCE" | "PLATFORM_SUBSCRIPTION" {
