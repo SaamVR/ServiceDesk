@@ -3,6 +3,7 @@ import { CheckoutPreview } from "@/features/checkout/CheckoutPreview";
 import { CrewJobPreview } from "@/features/crew/CrewJobPreview";
 import { CrmPreview } from "@/features/crm/CrmPreview";
 import { InboxPreview } from "@/features/inbox/InboxPreview";
+import { ConnectorOperationsPreview } from "@/features/integrations/ConnectorOperationsPreview";
 import { InvoiceLedgerPreview } from "@/features/invoices/InvoiceLedgerPreview";
 import { OnboardingReadiness } from "@/features/onboarding/OnboardingReadiness";
 import { CommunicationPreferences } from "@/features/preferences/CommunicationPreferences";
@@ -190,6 +191,7 @@ function OnboardingPanel() {
   return (
     <div className="staff-workspace-stack">
       <OnboardingReadiness />
+      <ConnectorOperationsPreview />
       <div className="card-grid two">
         {integrationCards.map((integration) => (
           <article className="plain-card" key={integration.title}>
