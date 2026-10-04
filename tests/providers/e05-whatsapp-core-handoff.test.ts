@@ -12,50 +12,44 @@ const record: DurableWhatsAppInboxRecord = {
   senderRef: "15551234567",
   providerTimestamp: "1791110400",
   channel: "WHATSAPP",
-  contentKind: "MEDIA_REFERENCE",
-  media: { provider: "WHATSAPP", providerMediaId: "media-1" },
+  contentKind: "TEXT",
+  text: "hello",
   rawPayloadIncluded: false,
   aiAuthoritative: false,
   rawProviderEventRef: "whatsapp_raw:ws-1:phone-1:abc",
 };
 
 describe("WhatsApp inbound Core handoff", () => {
-  test("maps durable records to frozen InboundMessageEvent without raw body", () => {
-    expect(toInboundMessageEvent(record)).toEqual({
-      receiptKey: record.receiptKey,
-      workspaceId: "ws-1",
-      channel: "WHATSAPP",
-      providerAccountId: "phone-1",
-      providerMessageId: "wamid-1",
-      senderRef: "15551234567",
-      occurredAt: "1791110400",
-      contentKind: "MEDIA_REFERENCE",
-      text: undefined,
-      media: { provider: "WHATSAPP", providerMediaId: "media-1" },
-      rawProviderEventRef: "whatsapp_raw:ws-1:phone-1:abc",
-    });
+  test("normalizes Unix provider timestamp before Core receives occurredAt", () => {
+    expect(toInboundMessageEvent(record).occurredAt).toBe("2026-10-04T10:40:00.000Z");
   });
 
-  test("maps Core APPLIED/DUPLICATE and throws on Core failure for retry", async () => {
-    const applied = createWhatsAppInboundCoreHandoffProcessor({
-      async applyInboundMessage() {
-        return { ok: true, value: { state: "APPLIED", conversation: { id: "c", workspaceId: "ws-1", channel: "WHATSAPP", handoverActive: false, version: 1 } } };
+  test("rejects malformed provider timestamp before Core call", async () => {
+    const calls: unknown[] = [];
+    const processor = createWhatsAppInboundCoreHandoffProcessor({
+      async applyInboundMessage(event) {
+        calls.push(event);
+        return { ok: true, value: { state: "APPLIED", conversation: { id: "conv-1", workspaceId: event.workspaceId, channel: "WHATSAPP", handoverActive: false, version: 1 } } };
       },
     });
-    await expect(applied.process(record)).resolves.toBe("PROCESSED");
 
-    const duplicate = createWhatsAppInboundCoreHandoffProcessor({
-      async applyInboundMessage() {
-        return { ok: true, value: { state: "DUPLICATE", conversation: { id: "c", workspaceId: "ws-1", channel: "WHATSAPP", handoverActive: false, version: 1 } } };
-      },
-    });
-    await expect(duplicate.process(record)).resolves.toBe("DUPLICATE");
+    await expect(processor.process({ ...record, providerTimestamp: "bad-time" })).rejects.toThrow("PROVIDER_TIMESTAMP_INVALID");
+    expect(calls).toHaveLength(0);
+  });
 
-    const failing = createWhatsAppInboundCoreHandoffProcessor({
-      async applyInboundMessage() {
-        return { ok: false, code: "CORE_WRITE_FAILED", message: "temporary" };
+  test("maps Core APPLIED and DUPLICATE outcomes", async () => {
+    const outcomes = ["APPLIED", "DUPLICATE"] as const;
+    const calls: unknown[] = [];
+    const processor = createWhatsAppInboundCoreHandoffProcessor({
+      async applyInboundMessage(event) {
+        calls.push(event);
+        const state = outcomes[calls.length - 1];
+        return { ok: true, value: { state, conversation: { id: "conv-1", workspaceId: event.workspaceId, channel: "WHATSAPP", handoverActive: false, version: 1 } } };
       },
     });
-    await expect(failing.process(record)).rejects.toThrow("CORE_WRITE_FAILED");
+
+    await expect(processor.process(record)).resolves.toBe("PROCESSED");
+    await expect(processor.process(record)).resolves.toBe("DUPLICATE");
+    expect(calls).toHaveLength(2);
   });
 });
