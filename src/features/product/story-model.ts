@@ -8,20 +8,6 @@ export type UiStateScenario = {
   ariaLive: "polite" | "assertive";
 };
 
-export type TourScenario = {
-  id: string;
-  title: string;
-  summary: string;
-  providerEvidence: "SYNTHETIC_UNTIL_CHAT_2_VERIFIED";
-  routeLinks: Array<{ href: string; label: string }>;
-  steps: Array<{
-    label: string;
-    detail: string;
-    routeHref: string;
-    proofBoundary: "FIXTURE_UI_ONLY" | "SANDBOX" | "CONFIGURATION_BLOCKED";
-  }>;
-};
-
 export const uiDesignTokens = {
   page: "#F6F7F7",
   section: "#EEF0F0",
@@ -165,48 +151,41 @@ export const crewActions = [
   "Submit completion review",
 ] as const;
 
-export const tourScenarios: TourScenario[] = [
+export const tourScenarios = [
   {
     id: "enquiry-to-paid-job",
     title: "WhatsApp enquiry to paid job",
-    summary: "A customer moves from public enquiry to quote, booking, crew completion and invoice balance without pretending fixture provider states are production evidence.",
+    summary: "A synthetic WhatsApp-style enquiry becomes a structured request, deterministic quote, sandbox deposit, crew visit and invoice balance.",
     providerEvidence: "SYNTHETIC_UNTIL_CHAT_2_VERIFIED",
     routeLinks: [
-      { href: "/b/brightroom/enquire", label: "Public enquiry" },
+      { href: "/b/brightroom/enquire", label: "Business enquiry" },
       { href: "/portal/quotes/quote_moveout_001", label: "Customer quote" },
-      { href: "/portal/bookings/visit_showcase_001", label: "Booking / checkout" },
+      { href: "/portal/bookings/visit_showcase_001", label: "Booking state" },
       { href: "/crew/jobs/visit_showcase_001", label: "Crew job" },
-      { href: "/portal/invoices/invoice_showcase_001", label: "Invoice balance" },
     ],
     steps: [
       {
-        label: "Enquiry",
-        detail: "The public enquiry route collects structured request details and displays the editable summary.",
+        label: "Enquiry capture",
+        detail: "The public enquiry route shows request fields beside an editable structured summary.",
         routeHref: "/b/brightroom/enquire",
         proofBoundary: "FIXTURE_UI_ONLY",
       },
       {
-        label: "Quote",
-        detail: "The current quote shows $340 total, $85 deposit and $255 balance from the frozen fixture.",
+        label: "Deterministic quote",
+        detail: "The customer quote route uses the frozen $340/$85/$255 move-out fixture and version label.",
         routeHref: "/portal/quotes/quote_moveout_001",
         proofBoundary: "FIXTURE_UI_ONLY",
       },
       {
-        label: "Deposit and hold",
-        detail: "Checkout stays sandbox-labelled and hides receipts until provider callback evidence exists.",
+        label: "Sandbox deposit",
+        detail: "Checkout displays hold, sandbox payment state and hidden receipt until callback evidence exists.",
         routeHref: "/portal/bookings/visit_showcase_001",
         proofBoundary: "SANDBOX",
       },
       {
-        label: "Crew completion",
-        detail: "Crew detail shows checklist, evidence slots, time/material notes, incident and completion review.",
+        label: "Crew execution",
+        detail: "The crew route shows status, checklist, field proof placeholders, notes and completion boundary.",
         routeHref: "/crew/jobs/visit_showcase_001",
-        proofBoundary: "FIXTURE_UI_ONLY",
-      },
-      {
-        label: "Balance invoice",
-        detail: "Invoice allocation separates total, deposit allocation, refund and remaining balance.",
-        routeHref: "/portal/invoices/invoice_showcase_001",
         proofBoundary: "FIXTURE_UI_ONLY",
       },
     ],
@@ -214,11 +193,11 @@ export const tourScenarios: TourScenario[] = [
   {
     id: "unusual-work-approval",
     title: "Unusual work needs staff approval",
-    summary: "A request requiring review becomes an owned staff task, then moves through quote comparison and current-version approval boundaries.",
+    summary: "An exception path moves from attention ownership to request review, quote comparison and customer conversation handover.",
     providerEvidence: "SYNTHETIC_UNTIL_CHAT_2_VERIFIED",
     routeLinks: [
-      { href: "/app/brightroom/overview", label: "Attention overview" },
-      { href: "/app/brightroom/requests", label: "Request summary" },
+      { href: "/app/brightroom/overview", label: "Attention queue" },
+      { href: "/app/brightroom/requests", label: "Request review" },
       { href: "/app/brightroom/quotes", label: "Quote approval" },
       { href: "/app/brightroom/inbox", label: "Customer conversation" },
     ],
@@ -287,7 +266,7 @@ export const tourScenarios: TourScenario[] = [
       },
     ],
   },
-];
+] as const;
 
 export const presentationSlides = [
   { order: 1, title: "Cleaning businesses lose work in handoffs", body: "Messages, quote math, calendars, crews and invoices live in separate tools.", tourHref: "/tour#pain" },
@@ -305,6 +284,6 @@ export const presentationSlides = [
 export const routeFamilies = {
   business: ["/b/[slug]", "/b/[slug]/enquire", "/b/[slug]/book"],
   customer: ["/portal", "/portal/properties", "/portal/quotes/[id]", "/portal/bookings/[id]", "/portal/invoices/[id]", "/portal/preferences"],
-  staff: ["/app/[workspace]/overview", "/app/[workspace]/inbox", "/app/[workspace]/customers", "/app/[workspace]/quotes", "/app/[workspace]/schedule", "/app/[workspace]/jobs", "/app/[workspace]/invoices", "/app/[workspace]/quality", "/app/[workspace]/automations", "/app/[workspace]/reports", "/app/[workspace]/settings", "/app/[workspace]/billing"],
+  staff: ["/app/[workspace]/overview", "/app/[workspace]/inbox", "/app/[workspace]/customers", "/app/[workspace]/requests", "/app/[workspace]/quotes", "/app/[workspace]/schedule", "/app/[workspace]/jobs", "/app/[workspace]/invoices", "/app/[workspace]/quality", "/app/[workspace]/automations", "/app/[workspace]/reports", "/app/[workspace]/settings", "/app/[workspace]/billing"],
   crew: ["/crew/today", "/crew/jobs/[id]"],
 } as const;
