@@ -1,5 +1,5 @@
 import type { CommandMeta, Result, VisitDTO } from "../../../contracts";
-import type { CalendarAdapter, CalendarBusyRange, ProviderMode, RedactedProviderEvidence } from "../types";
+import type { CalendarAdapter, CalendarBusyRange, CalendarSyncState, ProviderMode, RedactedProviderEvidence } from "../types";
 import { evaluateGoogleCalendarConnection, type GoogleCalendarConnectionPolicyInput } from "./oauth";
 import {
   deleteGoogleCalendarEvent,
@@ -196,7 +196,14 @@ export class ConfiguredGoogleCalendarAdapter implements CalendarAdapter {
     );
   }
 
-  async recoverSync(): Promise<Result<never>> {
-    return { ok: false, code: "CALENDAR_SYNC_RECONCILIATION_REQUIRED", message: "Configured Google Calendar sync recovery is handled by the reconciliation/sync modules, not by this adapter." };
+  async recoverSync(state: CalendarSyncState): Promise<Result<CalendarSyncState>> {
+    return {
+      ok: true,
+      value: {
+        ...state,
+        stale: true,
+        lastSyncedAt: this.options.now(),
+      },
+    };
   }
 }
