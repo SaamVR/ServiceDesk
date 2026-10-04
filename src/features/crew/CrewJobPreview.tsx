@@ -9,23 +9,23 @@ export function CrewJobPreview() {
   });
 
   return (
-    <section className="crew-job-panel" aria-label="Crew job execution preview">
-      <div className="mobile-preview crew-phone">
+    <section className="two-column" aria-label="Crew job execution preview">
+      <div className="mobile-preview">
         <p className="label">Crew mobile · fixture UI</p>
         <h2>{view.requestLabel}</h2>
         <p>{view.currentStatus.replaceAll("_", " ").toLowerCase()}</p>
         <button className="button-primary full" type="button">{view.primaryAction}</button>
-        <ol className="crew-timeline" aria-label="Visit status progression">
-          {view.timeline.map((step) => (
-            <li className={step.current ? "current" : step.reached ? "reached" : undefined} key={step.status}>
-              <span aria-hidden="true" />
-              {step.label}
+        <ol className="timeline-list" aria-label="Visit status progression">
+          {view.timeline.map((step, index) => (
+            <li key={step.status}>
+              <span aria-hidden="true">{index + 1}</span>
+              <p>{step.current ? "Current: " : step.reached ? "Done: " : "Next: "}{step.label}</p>
             </li>
           ))}
         </ol>
       </div>
 
-      <div className="crew-workspace">
+      <div className="card-grid two">
         <article className="plain-card">
           <span className="status-pill attention">Review required before customer completion</span>
           <h3>Checklist</h3>
