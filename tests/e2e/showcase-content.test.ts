@@ -5,6 +5,7 @@ import {
   productRoutes,
   tourScenarios,
   uiDesignTokens,
+  uiStateScenarios,
 } from "../../src/features/product/story-model";
 
 describe("ServiceDesk product showcase content contract", () => {
@@ -54,5 +55,11 @@ describe("ServiceDesk product showcase content contract", () => {
     expect(uiDesignTokens.surface).toBe("#FFFFFF");
     expect(uiDesignTokens.text).toBe("#17211D");
     expect(uiDesignTokens.action).toBe("#14634A");
+  });
+
+  it("provides reusable loading, empty and error state scenarios for route shells", () => {
+    expect(uiStateScenarios.map((scenario) => scenario.state)).toEqual(["loading", "empty", "error"]);
+    expect(uiStateScenarios.every((scenario) => scenario.ariaLive === "polite" || scenario.ariaLive === "assertive")).toBe(true);
+    expect(uiStateScenarios.find((scenario) => scenario.state === "error")?.tone).toBe("failure");
   });
 });
