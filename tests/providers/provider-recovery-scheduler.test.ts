@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { planProviderRecoveryBatch } from "../../src/server/integrations/recovery/scheduler";
+import { planLeasedProviderRecoveryBatch, planProviderRecoveryBatch } from "../../src/server/integrations/recovery/scheduler";
 import type { ProviderRecoveryQueueRecord } from "../../src/server/integrations/recovery/queue";
 
 function record(overrides: Partial<ProviderRecoveryQueueRecord> = {}): ProviderRecoveryQueueRecord {
@@ -66,5 +66,22 @@ describe("provider recovery scheduler", () => {
     expect(batch.ready[0].idempotencyKey).toBe("a");
     expect(batch.ready[0].mutatesBusinessTruth).toBe(false);
     expect(batch.deferred).toBe(1);
+  });
+
+  test("returns leased records and skips actively leased rows", () => {
+    const batch = planLeasedProviderRecoveryBatch({
+      now: "2026-10-04T07:15:00.000Z",
+      workerId: "worker-a",
+      maxItems: 2,
+      records: [
+        record({ idempotencyKey: "held", leasedBy: "worker-b", leaseExpiresAt: "2026-10-04T07:16:00.000Z" }),
+        record({ idempotencyKey: "due-1" }),
+        record({ idempotencyKey: "due-2" }),
+      ],
+    });
+
+    expect(batch.ready.map((item) => item.idempotencyKey)).toEqual(["due-1", "due-2"]);
+    expect(batch.ready.every((item) => item.leasedBy === "worker-a" && item.mutatesBusinessTruth === false)).toBe(true);
+    expect(batch.skipped).toContainEqual({ idempotencyKey: "held", reason: "LEASED" });
   });
 });
