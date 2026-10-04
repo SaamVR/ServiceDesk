@@ -32,6 +32,12 @@ export interface CreateRequestRecordInput {
 
 export type RequestPatch = Partial<Pick<RequestRecord, "propertyId" | "serviceCode" | "bedrooms" | "bathrooms" | "requestedStartAt" | "status">>;
 
+export interface RequestRepository {
+  insert(request: RequestRecord, meta: CommandMeta): Promise<Result<RequestRecord>>;
+  findById(workspaceId: string, id: string): Promise<Result<RequestRecord>>;
+  update(request: RequestRecord, meta: CommandMeta): Promise<Result<RequestRecord>>;
+}
+
 function authorizeRequestMutation(ctx: ActorContext, request: Pick<RequestRecord, "workspaceId" | "visitorSessionId">): Result<true> {
   const workspace = requireWorkspace(ctx, request.workspaceId);
   if (workspace.ok === false) return { ok: false, code: workspace.code, message: workspace.message };
@@ -110,4 +116,32 @@ export function updateRequestRecord(
       updatedAt: meta.now,
     },
   };
+}
+
+export async function createRequestWithRepository(
+  ctx: ActorContext,
+  input: CreateRequestRecordInput,
+  meta: CommandMeta,
+  repository: RequestRepository,
+  createId: () => string,
+): Promise<Result<RequestRecord>> {
+  const created = createRequestRecord(ctx, input, meta, createId);
+  if (created.ok === false) return created;
+  return repository.insert(created.value, meta);
+}
+
+export async function updateRequestWithRepository(
+  ctx: ActorContext,
+  requestId: string,
+  patch: RequestPatch,
+  meta: CommandMeta,
+  repository: RequestRepository,
+): Promise<Result<RequestRecord>> {
+  const existing = await repository.findById(ctx.workspaceId, requestId);
+  if (existing.ok === false) return existing;
+
+  const updated = updateRequestRecord(ctx, existing.value, patch, meta);
+  if (updated.ok === false) return updated;
+
+  return repository.update(updated.value, meta);
 }
