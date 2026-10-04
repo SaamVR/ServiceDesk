@@ -115,9 +115,40 @@ export const sampleAttentionItems: AttentionItemDTO[] = [
     dueAt: "2026-10-04T07:15:00.000Z",
     summary: "Message accepted by fixture queue only; no provider-delivered proof exists.",
   },
+  {
+    id: "attention_payment_001",
+    workspaceId: sampleRequest.workspaceId,
+    type: "PAYMENT_REVIEW",
+    severity: "WARNING",
+    status: "OPEN",
+    resourceType: "visit",
+    resourceId: sampleVisit.id,
+    ownerUserId: "dispatcher_1",
+    dueAt: "2026-10-04T07:30:00.000Z",
+    summary: "Late or uncertain payment requires capacity review before visit confirmation.",
+  },
+  {
+    id: "attention_invoice_001",
+    workspaceId: sampleRequest.workspaceId,
+    type: "BALANCE_COLLECTION",
+    severity: "INFO",
+    status: "OPEN",
+    resourceType: "invoice",
+    resourceId: sampleInvoice.id,
+    ownerUserId: "dispatcher_1",
+    dueAt: "2026-10-09T18:00:00.000Z",
+    summary: "Balance collection waits for reviewed completion and verified payment callback.",
+  },
 ];
 
 export const sampleIntegrations: IntegrationStatusDTO[] = [
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "WHATSAPP",
+    status: "NOT_CONFIGURED",
+    mode: "FIXTURE",
+    message: "No controlled provider receipt verified yet.",
+  },
   {
     workspaceId: sampleRequest.workspaceId,
     provider: "GOOGLE_CALENDAR",
@@ -128,9 +159,30 @@ export const sampleIntegrations: IntegrationStatusDTO[] = [
   },
   {
     workspaceId: sampleRequest.workspaceId,
-    provider: "WHATSAPP",
+    provider: "PAYMENT",
+    status: "BLOCKED",
+    mode: "SANDBOX",
+    message: "Hosted checkout and verified webhook evidence are not connected in this lane.",
+  },
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "EMAIL",
     status: "NOT_CONFIGURED",
     mode: "FIXTURE",
-    message: "No controlled provider receipt verified yet.",
+    message: "Email delivery evidence belongs to the connectors lane.",
+  },
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "WEBHOOK",
+    status: "NOT_CONFIGURED",
+    mode: "FIXTURE",
+    message: "Signed webhook/n8n proof is pending connector implementation.",
+  },
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "AI",
+    status: "DEGRADED",
+    mode: "FIXTURE",
+    message: "AI responses are represented as product fixtures until adapter evidence is available.",
   },
 ];
