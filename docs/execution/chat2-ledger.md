@@ -216,3 +216,93 @@ pnpm vitest run tests/ai
 ```
 
 Do not start E02 until E01-T4 has an executable checkpoint or Chat 1/controller explicitly accepts a substitute path.
+
+
+## E01 executable checkpoint — samvr — 2026-10-04
+
+Start connector HEAD for repair cycle: `b1b307c6209e8daaa74e1f511eb00267a0a91de8`  
+Repair commit: `38b7123ecbf16a17b20b877947e34f90988f27ec`  
+Rebased over connector commits through `30313d3e5485e157cea8d1b86a87bdccf879537c`; final ledger commit follows this section.  
+Runtime: `samvr` via Desktop Commander  
+Node: `v24.21.0` from `/home/ubuntu/.booking-agent-ci/node-v24.21.0-linux-arm64/bin/node`  
+PNPM: `10.17.1` via `node /dev/shm/pnpm-10.17.1/package/bin/pnpm.cjs`  
+Integration status: branch-only, not integrated.  
+Provider proof status: no live provider proof claimed; all provider tests remain fixture/contract-level.
+
+### Root-cause repair summary
+
+Initial executable run exposed TypeScript failures in Chat 2-owned exports/types and stale provider/AI test assumptions. Repairs were limited to Chat 2-owned files:
+
+- resolved AI `AiService` value/type declaration collision by exporting `fixtureAiService` instead of a value named `AiService`;
+- resolved provider handler barrel ambiguity by renaming the Stripe handler result type;
+- fixed Stripe/payment lifecycle amount narrowing after positive integer validation;
+- fixed WhatsApp template registry `Result` import and dispatcher false-result typing;
+- removed `ProviderRecoveryAction` export collision from operations snapshot by renaming the snapshot-local action type;
+- corrected stale provider/AI tests for current contracts and redaction labels;
+- fixed webhook retry receipt insertion, first retry timing, WhatsApp media observed size, provider-configuration evidence wording, and customer-name extraction casing.
+
+### Commands executed after environment recovery
+
+Command:
+
+```bash
+CI=true node /dev/shm/pnpm-10.17.1/package/bin/pnpm.cjs install --frozen-lockfile
+```
+
+Result: PASS
+
+```text
+Lockfile is up to date, resolution step is skipped
+Packages: +409
+Done in 56.9s using pnpm v10.17.1
+```
+
+Command:
+
+```bash
+node /dev/shm/pnpm-10.17.1/package/bin/pnpm.cjs typecheck
+```
+
+Result: PASS
+
+```text
+> servicedesk-ai@0.1.0 typecheck
+> tsc --noEmit
+exit code 0
+```
+
+Command:
+
+```bash
+node /dev/shm/pnpm-10.17.1/package/bin/pnpm.cjs vitest run tests/providers
+```
+
+Result: PASS
+
+```text
+Test Files  91 passed (91)
+Tests       354 passed (354)
+Duration    19.68s
+exit code   0
+```
+
+Command:
+
+```bash
+node /dev/shm/pnpm-10.17.1/package/bin/pnpm.cjs vitest run tests/ai
+```
+
+Result: PASS
+
+```text
+Test Files  7 passed (7)
+Tests       64 passed (64)
+Duration    1.96s
+exit code   0
+```
+
+### E01 result
+
+E01-T1/T2/T3/T4 are satisfied for the Chat 2 connector branch. Chat 1 can now review/integrate the pinned connector range and reproduce the provider/AI gate.
+
+Next available task, if operator approves continuing in this lane: `E02-T1 — Add explicit idempotent WhatsApp inbound processor port`.
