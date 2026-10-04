@@ -5,87 +5,142 @@ Coordinator branch: `feat/servicedesk-v1-integrate`
 Coordinator role: dedicated GPT-5.6 Sol planning/integration controller.  
 Execution rule: GPT Runtime Machine only; no samai, samvr, SSH/local devices, self-hosted runners, or GitHub Actions without separate owner authorization.
 
-## Governing files read
+## Governing sources read
+Repository:
 - `AGENTS.md`
 - `docs/execution/coordinator-four-chat-20261004.md`
 - `docs/execution/throughput-recovery-20261004.md`
 - `docs/taskboard.md`
 - `docs/contracts-v1.md`
-- Current lane ledgers/plans where present.
+- current lane ledgers/plans and current source needed for Cycle 1
 
-## Fresh branch heads observed before Cycle 1 packets
-| Ref | SHA | Notes |
+Approved project artifacts:
+- ServiceDesk AI Product Specification V2.0
+- ServiceDesk AI V1 Implementation Plan
+
+The approved scope remains a real V1 cleaning-operations product from enquiry through quote, scheduling, crew execution, payment and recurrence. PostgreSQL is business authority; provider/AI/UI layers do not grant authorization or mutate business truth directly.
+
+## Latest reconciled branch heads before final Cycle 1 pin
+| Ref | SHA | Coordinator ruling |
 | --- | --- | --- |
-| `feat/servicedesk-v1-integrate` | `a50c7c6adcc8bdc4d50b5b706045a76b71a86a4f` | integration head before new coordinator packets |
-| `feat/servicedesk-v1-core` | `4704a48eadd912f38ce9c981b583c9924bb62c79` | current Worker 1 branch; includes GPT Runtime-only doc update above prior core implementation |
-| `feat/servicedesk-v1-connectors` | `30313d3e5485e157cea8d1b86a87bdccf879537c` | current Worker 2 branch; includes coordinator workflow docs above prior E01 blocker notes |
-| `feat/servicedesk-v1-product` | `1345ed36455e415cc4acc7a0c9fb145866dc95bc` | current Worker 3 branch; includes coordinator workflow docs above prior props-only work |
+| `feat/servicedesk-v1-integrate` | `71e0579869694bf6db8de5660e16f21df390a3e3` before Worker-2 packet revision | coordinator docs only beyond prior application state |
+| `feat/servicedesk-v1-core` | `4704a48eadd912f38ce9c981b583c9924bb62c79` | no Cycle 1 receipt yet |
+| `feat/servicedesk-v1-connectors` | `3f1214cac4fdb4ebf0ac3128197d4e5c7d442a5a` | legitimate newer connector repair/source must be preserved; historical samvr PASS is not accepted for current Runtime gate |
+| `feat/servicedesk-v1-product` | `1345ed36455e415cc4acc7a0c9fb145866dc95bc` | no Cycle 1 receipt yet; current props-only work remains unverified |
 
-## Runtime check performed by coordinator
-Attempted in GPT Runtime:
+No `docs/execution/receipts/` directory was present on any of the three worker branches at this reconciliation point.
 
-```bash
-rm -rf /mnt/data/servicedesk && git clone --no-tags --branch feat/servicedesk-v1-integrate https://github.com/SaamVR/ServiceDesk.git /mnt/data/servicedesk
-```
-
-Result:
+## GPT Runtime failure observed by coordinator
+The coordinator attempted a fresh Runtime checkout and package-manager recovery. Observed failures include:
 
 ```text
-fatal: unable to access 'https://github.com/SaamVR/ServiceDesk.git/': Could not resolve host: github.com
+git clone / git ls-remote:
+Could not resolve host: github.com
+
+getent hosts github.com:
+no result
+
+getent hosts registry.npmjs.org:
+no result
+
+corepack prepare pnpm@10.17.1 --activate:
+failed while requesting https://registry.npmjs.org/pnpm/-/pnpm-10.17.1.tgz
+
+curl https://registry.npmjs.org/pnpm:
+Could not resolve host: registry.npmjs.org
 ```
 
-No package install, typecheck, Vitest, lint, build, database proof, or browser proof was executed by this coordinator pass. This is a Runtime blocker, not a passing check.
+Runtime toolchain observed:
+- Node `v22.16.0`
+- npm `10.9.2`
+- Corepack `0.32.0`
+- global TypeScript available, but no usable project checkout/dependency tree/test runner
 
-## Existing failure/evidence inventory
+Therefore this coordinator pass executed no project typecheck, Vitest, lint, build, database reset, or browser proof. This is `CONFIGURATION_BLOCKED` execution evidence, not PASS.
+
+## Fresh lane evidence inventory
 
 ### Worker 1 / Core
-- Core taskboard records implementations through request, quote, capacity, visit, and ledger/outbox/attention repository-command seams.
-- Full package suite and database reset proof were not rerun in the constrained Runtime.
-- `tests/db/operations-commands.test.ts` exists and exercises the current operations repository seam, but the current coordinator pass did not execute it.
-- Next useful core gate is exact GPT Runtime execution of `pnpm typecheck`, `pnpm test:domain`, `pnpm test:db`, and focused operations seam tests.
+Current core work includes request/quote/capacity/visit/ledger-outbox-attention implementation and tests. The global/core historical taskboard records those features as implementation-rich but missing a current full Runtime gate and real DB reset proof.
+
+Cycle 1 therefore prioritizes:
+1. Runtime install/typecheck/domain/db verification;
+2. repair only reproduced Core-owned failures;
+3. operations repository idempotency/retry/attention seam hardening;
+4. an exact receipt.
+
+No later field/quality/subscription expansion is authorized in Cycle 1.
 
 ### Worker 2 / Connectors/AI
-- Connector ledger says E01 remains blocked. Earlier GPT Runtime failed package-manager bootstrap because registry DNS failed; later non-GPT local-device report changed the blocker to real compile/test failures but did not provide exact failure transcript in the files read here.
-- Current connector HEAD has no attached GitHub status checks (`total_count: 0` observed for commit `30313d3e5485e157cea8d1b86a87bdccf879537c`).
-- Current connector index exports many provider/recovery/closure modules; exact typecheck/provider/AI failure transcript must be captured in GPT Runtime before E02 starts.
+The connector branch moved after the initial packet draft to `3f1214cac4fdb4ebf0ac3128197d4e5c7d442a5a`.
+
+Its lane ledger records a historical `samvr` run reporting:
+- typecheck PASS;
+- provider fixture suite PASS;
+- AI fixture suite PASS;
+after connector-owned repairs.
+
+Because `docs/execution/coordinator-four-chat-20261004.md` now mandates GPT Runtime only, that local-device execution is not accepted as the current integration gate. The repaired source itself is legitimate and must not be discarded.
+
+Current WhatsApp source inspection confirms:
+- stable inbound `receiptKey`;
+- normalization for text/media/unsupported;
+- durable inbox store/persistence batch;
+- durable provider handler that verifies, parses, persists and ACKs;
+- no explicit idempotent processor handoff after persistence.
+
+Worker-2 Cycle 1 was revised at integration commit `c5acbb9270a0a8cb6d0a3f466479d990eb087cb7` to:
+1. re-prove current head in GPT Runtime;
+2. repair only reproduced Worker-2 failures;
+3. if green, add the idempotent inbound processor port;
+4. compose persistence → processor → ACK;
+5. run provider/AI regression and publish a receipt.
 
 ### Worker 3 / Product/UI
-- Product ledger records E01 and props-only E02 as authored but unverified because Runtime checkout/DNS/pnpm blocked execution.
-- Current `RequestSummaryPreview.tsx` accepts `RequestDTO` and `QuoteDTO` props and no longer owns sample data.
-- Server wiring remains blocked on coordinator/core accepted facade/read contracts. Fixture actions must remain disabled/preview-only until then.
+Product ledger records E01 and props-only E02 as authored but unverified:
+- `RequestSummaryPreview` is DTO-driven;
+- fixture ownership is isolated in the fixture wrapper;
+- enquiry/request actions remain disabled preview state;
+- no server wiring has been introduced;
+- tests/build/browser proof were not executed because the prior Runtime had no checkout/pnpm/DNS.
 
-## Cycle 1 packets published on integration
-| Worker | Packet path | Commit SHA | First task |
+Cycle 1 keeps server actions blocked until exact shared facade/read signatures are accepted.
+
+## Cycle 1 canonical packets
+| Worker | Packet path | Packet publication/revision commit | First task |
 | --- | --- | --- | --- |
 | Worker 1 Core | `docs/execution/batches/cycle-1-worker-1.md` | `ec8ca692b5cde4e535cb9e18a9f139660a73abc8` | `CYCLE-1-W1-T1` |
-| Worker 2 Connectors/AI | `docs/execution/batches/cycle-1-worker-2.md` | `3d1baa3636f33770d693d90b1e291da7ae857337` | `CYCLE-1-W2-T1` |
+| Worker 2 Connectors/AI | `docs/execution/batches/cycle-1-worker-2.md` | `c5acbb9270a0a8cb6d0a3f466479d990eb087cb7` | `CYCLE-1-W2-T1` |
 | Worker 3 Product/UI | `docs/execution/batches/cycle-1-worker-3.md` | `8cab090347c011845154287fd714d6892f5ab0d7` | `CYCLE-1-W3-T1` |
 
-This ledger was created after those three packet commits.
+Workers must retrieve the packet at the final pinned integration ref supplied by the coordinator, not from an earlier moving branch snapshot.
 
 ## Coordinator decisions
-1. Do not integrate any lane yet. There are no new Cycle 1 receipts, and executable checks have not run under the dedicated coordinator model.
-2. Worker 2 must not start E02 or new provider expansion. Its first job is exact GPT Runtime verification failure capture and Worker-2-owned repair only.
-3. Worker 3 must not add live-looking server actions or checkout wiring. Its first job is product verification/build/browser evidence or exact blocker capture.
-4. Worker 1 must prioritize core executable checks and operations seam hardening; do not start later field/quality/subscription scope in Cycle 1.
-5. Missing live provider credentials do not block compile/unit/provider-mock integration; missing compile/test proof does block accepted integration.
-6. If GPT Runtime network/package access remains blocked, each worker must publish a receipt with exact blocker and no PASS claims.
+1. No application lane is integrated yet. No Cycle 1 worker receipt exists, and this coordinator Runtime cannot execute the required review tests.
+2. Existing worker source is preserved. No reset/rebase/force-push.
+3. Worker 2 historical samvr evidence remains historical only and cannot satisfy the Runtime-only gate.
+4. Missing live provider credentials do not block compilation/unit/provider-contract review. Missing executable compile/test proof does block accepted integration.
+5. Worker 3 must keep fixture actions visibly disabled until accepted server signatures exist.
+6. Worker 1 must finish the core verification/operations seam batch before later scope.
+7. When any receipt arrives, review/integrate that worker immediately and issue its next batch without waiting for the other two.
 
 ## Ten-batch horizon candidates
-Only Cycle 1 is frozen. Later batches remain dependency-gated candidates:
+Only Cycle 1 is frozen. Later candidates remain dependency-gated:
 - Worker 1: C2 shared read/facade decisions; C3 payment ledger/outbox integration; C4 jobs/retry; C5 inbox/takeover storage; C6 field/crew; C7 recurrence; C8 invoice/quality/attention; C9 reports/billing; C10 release regression.
-- Worker 2: C2 durable inbound parser/store; C3 outbound/status composition; C4 Google Calendar store/reconcile; C5 payment bridge; C6 email receipts; C7 AI guarded facade; C8 webhook/n8n retries; C9 controlled provider proof; C10 cross-provider closure.
-- Worker 3: C2 server-backed request/quote once accepted; C3 inbox/takeover UI; C4 quote approval/checkout UI; C5 portal/calendar; C6 crew checklist/evidence; C7 CRM/recurrence/preferences; C8 invoice/recovery/quality; C9 reports/settings/mobile; C10 tour/presentation/browser evidence.
+- Worker 2: C2 durable inbound completion; C3 outbound/status composition; C4 Google Calendar store/reconcile; C5 payment bridge; C6 email receipts; C7 AI guarded facade; C8 webhook/n8n retries; C9 controlled provider proof; C10 cross-provider closure.
+- Worker 3: C2 server-backed request/quote after accepted signatures; C3 inbox/takeover UI; C4 quote approval/checkout UI; C5 portal/calendar; C6 crew checklist/evidence; C7 CRM/recurrence/preferences; C8 invoice/recovery/quality; C9 reports/settings/mobile; C10 tour/presentation/browser evidence.
 
 ## Receipt handling protocol
 When a worker receipt arrives:
-1. Refresh that worker branch head and compare to the receipt final SHA.
-2. Verify changed paths match ownership.
-3. Attempt GPT Runtime checkout/tests again. If clone/install still fails, use GitHub reads for semantic review only and keep integration unaccepted.
-4. Merge or patch into integration only after executable proof is adequate for the claimed state.
-5. Immediately issue the next source-derived packet for that worker without waiting for the other two, unless a real shared dependency blocks it.
+1. Refresh worker branch head and compare it to receipt final SHA.
+2. Verify range and owned paths.
+3. Review risky semantics from actual source.
+4. Execute the focused gate in GPT Runtime.
+5. If Runtime remains blocked, keep the candidate unaccepted and record exact failure.
+6. If adequate executable proof exists, merge sequentially into integration, run combined checks as needed, record worker SHA → integration SHA, and push.
+7. Immediately publish that worker's next source-derived packet; do not wait for the other workers unless a real shared dependency requires it.
 
 ## Current integration state
-- Integration branch contains coordinator packet files only beyond the observed `a50c7c6...` application state.
-- No application code integration was performed in this coordinator pass.
-- No Runtime PASS, provider proof, DB proof, build proof, or browser proof is claimed.
+- Coordinator planning packets are durable on GitHub.
+- No worker application range has been accepted or integrated in this Cycle 1 coordinator pass.
+- No current Runtime PASS, provider proof, DB proof, build proof, or browser proof is claimed.
