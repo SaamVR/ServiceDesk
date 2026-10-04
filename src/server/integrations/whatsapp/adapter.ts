@@ -62,14 +62,17 @@ export function parseInboundMessages(raw: unknown, workspaceByPhoneNumberId: Rec
   };
 
   const messages: WhatsAppInboundMessage[] = [];
-  for (const entry of payload.entry ?? []) {
-    for (const change of entry.changes ?? []) {
+  const entries = Array.isArray(payload.entry) ? payload.entry : [];
+  for (const entry of entries) {
+    const changes = Array.isArray(entry.changes) ? entry.changes : [];
+    for (const change of changes) {
       const phoneNumberId = change.value?.metadata?.phone_number_id;
       if (!phoneNumberId) continue;
       const workspaceId = workspaceByPhoneNumberId[phoneNumberId];
       if (!workspaceId) continue;
 
-      for (const message of change.value?.messages ?? []) {
+      const providerMessages = Array.isArray(change.value?.messages) ? change.value.messages : [];
+      for (const message of providerMessages) {
         const id = String(message.id ?? "");
         const from = String(message.from ?? "");
         const timestamp = String(message.timestamp ?? "");
