@@ -3,6 +3,7 @@ import { CheckoutPreview } from "@/features/checkout/CheckoutPreview";
 import { CrewJobPreview } from "@/features/crew/CrewJobPreview";
 import { InboxPreview } from "@/features/inbox/InboxPreview";
 import { OnboardingReadiness } from "@/features/onboarding/OnboardingReadiness";
+import { CommunicationPreferences } from "@/features/preferences/CommunicationPreferences";
 import {
   integrationCards,
   moveOutFixture,
@@ -133,6 +134,7 @@ function CustomerPanel() {
         </article>
       </div>
       <CheckoutPreview />
+      <CommunicationPreferences />
     </div>
   );
 }
