@@ -1,83 +1,78 @@
-# ServiceDesk AI — Cycle 4 Worker 2 / Connectors & AI — webhook error redaction hardening
+# ServiceDesk AI — Cycle 4 Worker 2 / Connectors & AI — Delivery State Monotonicity
 
 Branch: `feat/servicedesk-v1-connectors`
 Expected previous HEAD: `af47a5623232c96062a06323b884b35801f41f0b`
 
-Read in full from the exact coordinator ref supplied in dispatch:
+Read in full from the coordinator pin supplied in dispatch:
 - `AGENTS.md`
 - `docs/execution/coordinator-four-chat-20261004.md`
 - `docs/execution/runtime-outage-mode-20261004.md`
 - this packet
 
-## First action
-Verify the remote branch HEAD and preserve every legitimate newer Connector/AI commit.
+Make one quick normal Runtime recovery probe only. If pnpm/Git DNS is still blocked, immediately use Runtime Outage Mode.
 
-Make only one quick normal Runtime recovery probe. If Git/npm/pnpm remain blocked, immediately use Runtime Outage Mode.
+## Objective
+Harden WhatsApp delivery-status monotonicity so a terminal FAILED callback for one provider message cannot later be overwritten by delayed/reordered status callbacks.
 
-## Source-derived defect
+Source-derived current files:
+- `src/server/integrations/whatsapp/status-transition.ts`
+- `src/server/integrations/whatsapp/status-batch.ts`
+- `tests/providers/whatsapp-status-transition.test.ts`
+- `tests/providers/whatsapp-status-batch.test.ts`
 
-Current durable WhatsApp inbound failure paths include arbitrary underlying exception messages in returned failure text.
+Current behavior allows a later PROVIDER_ACCEPTED/DELIVERED/READ callback to move state forward after current FAILED because FAILED has the lowest numeric order. For the same provider message identity this can erase terminal failure state after an out-of-order callback.
 
-Examples:
-- `processDurableWhatsAppInboundBatch(...)` catches a processor exception and embeds `error.message`.
-- `persistDurableWhatsAppInboundBatchWithRecords(...)` catches a store exception and embeds `error.message`.
-- `handleDurableWhatsAppInboundWebhook(...)` returns those messages in the HTTP 503 body.
-
-A downstream store/processor exception may contain internal database, infrastructure, tenant, token, or PII detail. Provider-facing webhook responses must not echo arbitrary backend exception text.
-
-## CYCLE-4-W2-T1 — Redact processing error detail
-Modify Worker-2-owned WhatsApp inbound code so:
-1. failure code remains `WHATSAPP_INBOUND_PROCESSING_FAILED`;
-2. message may retain the stable durable `receiptKey` for correlation;
-3. arbitrary thrown exception text is NOT included in the returned Result message;
-4. retry semantics remain unchanged.
-
-Suggested public-safe shape:
-`WhatsApp inbound processing failed for <receiptKey>.`
-
-Do not add logging of secrets.
-
-## CYCLE-4-W2-T2 — Redact persistence error detail
-Apply the same rule to durable inbox persistence:
-1. keep `WHATSAPP_INBOUND_BATCH_PERSISTENCE_FAILED`;
-2. keep the stable `receiptKey` if useful;
-3. do not include arbitrary store exception text in the Result or provider-facing body;
-4. preserve retryable 503 behavior.
-
-## CYCLE-4-W2-T3 — Regression tests
-Update canonical provider tests with sentinel secret-like backend errors, for example:
-- processor throws `postgres://user:secret@internal-db/customer-email@example.com`;
-- store throws `redis password=top-secret tenant=customer-123`.
-
-Assert:
-- 503 remains retryable and unacknowledged;
-- response contains the typed error code;
-- response can contain the durable receiptKey;
-- response does NOT contain `secret`, internal URL, email, password, or tenant diagnostic text;
-- retry-safe persist → process → ACK semantics from Cycle 3 remain unchanged.
-
-## CYCLE-4-W2-T4 — Outage harness
+## CYCLE-4-W2-T1 — Package-free status harness
 Add:
-`tests/providers/runtime-outage-whatsapp-error-redaction-harness.ts`
+- `tests/providers/runtime-outage-whatsapp-status-harness.ts`
 
-Use Node `assert` against the real changed inbound persistence/processor/handler code under global `ts-node --transpile-only`.
+Use Node assert with the real status-transition/status-batch modules and execute via global `ts-node --transpile-only`.
 
-If pnpm recovers, run:
-- focused WhatsApp inbound processor/durable handler tests;
-- `pnpm vitest run tests/providers`;
-- `pnpm vitest run tests/ai`;
-- `pnpm typecheck`.
+Reproduce:
+- normal PROVIDER_ACCEPTED → DELIVERED → READ;
+- duplicate callback remains duplicate;
+- older timestamp remains stale;
+- current FAILED currently accepts a later non-failed callback.
 
-## Restrictions
-- Worker-2-owned Connector/AI and provider-handler files only.
-- Do not edit shared contracts, package files, API handler barrel, integrations barrel, Core, Product/UI, or coordinator docs.
-- No live provider verification claim.
+## CYCLE-4-W2-T2 — Terminal FAILED policy
+Harden `decideWhatsAppStatusTransition(...)` so once the current state for the same provider message is FAILED:
+- exact callback duplicate remains DUPLICATE;
+- equivalent same-state duplicate remains DUPLICATE where existing rules already apply;
+- any later non-FAILED state is rejected as `STALE_REGRESSION`;
+- use an explicit source-derived reason such as `STATUS_AFTER_TERMINAL_FAILURE` rather than overloading LOWER_ORDER_STATE.
+
+Preserve:
+- failure before confirmed delivery may transition PROVIDER_ACCEPTED → FAILED;
+- FAILED received after DELIVERED/READ remains stale;
+- normal forward progress before any terminal failure remains unchanged.
+
+Do not create a new provider-message identity or retry-send behavior here. A new outbound provider message is a separate lifecycle.
+
+## CYCLE-4-W2-T3 — Batch behavior
+Verify `applyWhatsAppStatusBatch(...)`:
+- never calls store.apply for status callbacks rejected after terminal FAILED;
+- counts them as stale;
+- still counts a first valid FAILED callback as applied+failed;
+- preserves duplicate/stale counters across mixed batches.
+
+Do not touch shared contracts, package files, API barrels, Core, Product/UI, or provider credentials.
+
+## CYCLE-4-W2-T4 — Canonical tests
+Extend canonical status transition/batch tests for:
+- FAILED → PROVIDER_ACCEPTED rejected;
+- FAILED → DELIVERED rejected;
+- FAILED → READ rejected;
+- repeated identical FAILED callback stays duplicate;
+- mixed batch after terminal failure performs zero extra applies.
+
+Run outage harness. If pnpm recovers, run focused WhatsApp status tests, full providers/AI suites and typecheck.
 
 ## Proof
-Outage harness PASS permits `IMPLEMENTED`.
-Canonical provider/AI/typecheck gate remains `CONFIGURATION_BLOCKED` until pnpm returns.
-Do not claim `CONTRACT_TESTED` or `PROVIDER_VERIFIED`.
+Outage harness PASS supports `IMPLEMENTED`.
+Without canonical Vitest/typecheck: `CANONICAL_GATE=CONFIGURATION_BLOCKED`.
+No PROVIDER_VERIFIED claim.
 
 ## Receipt
-Write:
-`docs/execution/receipts/worker-2-cycle-4.md`
+Write `docs/execution/receipts/worker-2-cycle-4.md`.
+
+Return worker/cycle/final SHA/receipt/state/canonical gate.
