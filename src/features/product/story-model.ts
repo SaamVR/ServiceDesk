@@ -8,6 +8,20 @@ export type UiStateScenario = {
   ariaLive: "polite" | "assertive";
 };
 
+export type TourScenario = {
+  id: string;
+  title: string;
+  summary: string;
+  providerEvidence: "SYNTHETIC_UNTIL_CHAT_2_VERIFIED";
+  routeLinks: Array<{ href: string; label: string }>;
+  steps: Array<{
+    label: string;
+    detail: string;
+    routeHref: string;
+    proofBoundary: "FIXTURE_UI_ONLY" | "SANDBOX" | "CONFIGURATION_BLOCKED";
+  }>;
+};
+
 export const uiDesignTokens = {
   page: "#F6F7F7",
   section: "#EEF0F0",
@@ -151,43 +165,146 @@ export const crewActions = [
   "Submit completion review",
 ] as const;
 
-export const tourScenarios = [
+export const tourScenarios: TourScenario[] = [
   {
     id: "enquiry-to-paid-job",
     title: "WhatsApp enquiry to paid job",
+    summary: "A customer moves from public enquiry to quote, booking, crew completion and invoice balance without pretending fixture provider states are production evidence.",
     providerEvidence: "SYNTHETIC_UNTIL_CHAT_2_VERIFIED",
-    steps: ["Enquiry", "Quote", "Deposit", "Calendar", "Crew completion", "Balance invoice"],
+    routeLinks: [
+      { href: "/b/brightroom/enquire", label: "Public enquiry" },
+      { href: "/portal/quotes/quote_moveout_001", label: "Customer quote" },
+      { href: "/portal/bookings/visit_showcase_001", label: "Booking / checkout" },
+      { href: "/crew/jobs/visit_showcase_001", label: "Crew job" },
+      { href: "/portal/invoices/invoice_showcase_001", label: "Invoice balance" },
+    ],
+    steps: [
+      {
+        label: "Enquiry",
+        detail: "The public enquiry route collects structured request details and displays the editable summary.",
+        routeHref: "/b/brightroom/enquire",
+        proofBoundary: "FIXTURE_UI_ONLY",
+      },
+      {
+        label: "Quote",
+        detail: "The current quote shows $340 total, $85 deposit and $255 balance from the frozen fixture.",
+        routeHref: "/portal/quotes/quote_moveout_001",
+        proofBoundary: "FIXTURE_UI_ONLY",
+      },
+      {
+        label: "Deposit and hold",
+        detail: "Checkout stays sandbox-labelled and hides receipts until provider callback evidence exists.",
+        routeHref: "/portal/bookings/visit_showcase_001",
+        proofBoundary: "SANDBOX",
+      },
+      {
+        label: "Crew completion",
+        detail: "Crew detail shows checklist, evidence slots, time/material notes, incident and completion review.",
+        routeHref: "/crew/jobs/visit_showcase_001",
+        proofBoundary: "FIXTURE_UI_ONLY",
+      },
+      {
+        label: "Balance invoice",
+        detail: "Invoice allocation separates total, deposit allocation, refund and remaining balance.",
+        routeHref: "/portal/invoices/invoice_showcase_001",
+        proofBoundary: "FIXTURE_UI_ONLY",
+      },
+    ],
   },
   {
     id: "unusual-work-approval",
     title: "Unusual work needs staff approval",
+    summary: "A request requiring review becomes an owned staff task, then moves through quote comparison and current-version approval boundaries.",
     providerEvidence: "SYNTHETIC_UNTIL_CHAT_2_VERIFIED",
-    steps: ["Oversized job", "Needs review", "Owned task", "Approved quote", "Customer reply"],
+    routeLinks: [
+      { href: "/app/brightroom/overview", label: "Attention overview" },
+      { href: "/app/brightroom/requests", label: "Request summary" },
+      { href: "/app/brightroom/quotes", label: "Quote approval" },
+      { href: "/app/brightroom/inbox", label: "Customer conversation" },
+    ],
+    steps: [
+      {
+        label: "Needs review",
+        detail: "The attention-first staff overview exposes owner, severity and next action.",
+        routeHref: "/app/brightroom/overview",
+        proofBoundary: "FIXTURE_UI_ONLY",
+      },
+      {
+        label: "Structured request",
+        detail: "The request summary keeps editable fields and quote readiness visible without mutating core state.",
+        routeHref: "/app/brightroom/requests",
+        proofBoundary: "FIXTURE_UI_ONLY",
+      },
+      {
+        label: "Quote comparison",
+        detail: "The quote route shows current version and approval boundary instead of silently accepting stale versions.",
+        routeHref: "/app/brightroom/quotes",
+        proofBoundary: "FIXTURE_UI_ONLY",
+      },
+      {
+        label: "Customer reply",
+        detail: "Inbox context stays separate from provider delivery proof and handover authority.",
+        routeHref: "/app/brightroom/inbox",
+        proofBoundary: "CONFIGURATION_BLOCKED",
+      },
+    ],
   },
   {
     id: "failed-send-recovery",
-    title: "Failed send and crew absence recovery",
+    title: "Failed send and stale Calendar recovery",
+    summary: "Provider uncertainty, stale Calendar state and late payment become owned recovery actions instead of automatic retries.",
     providerEvidence: "SYNTHETIC_UNTIL_CHAT_2_VERIFIED",
-    steps: ["Provider failure", "Attention queue", "Dispatcher recovery", "Message resend", "Crew reassignment"],
+    routeLinks: [
+      { href: "/onboarding", label: "Provider readiness" },
+      { href: "/app/brightroom/automations", label: "Recovery queue" },
+      { href: "/app/brightroom/schedule", label: "Schedule freshness" },
+      { href: "/app/brightroom/reports", label: "Reporting boundary" },
+    ],
+    steps: [
+      {
+        label: "Readiness blocked",
+        detail: "Onboarding keeps setup status separate from provider proof and launch readiness.",
+        routeHref: "/onboarding",
+        proofBoundary: "CONFIGURATION_BLOCKED",
+      },
+      {
+        label: "Owned recovery",
+        detail: "Recovery actions require reconciliation before retries, reconnects or payment/capacity decisions.",
+        routeHref: "/app/brightroom/automations",
+        proofBoundary: "CONFIGURATION_BLOCKED",
+      },
+      {
+        label: "Calendar freshness",
+        detail: "Schedule view blocks instant confirmation when freshness or external-busy state is uncertain.",
+        routeHref: "/app/brightroom/schedule",
+        proofBoundary: "CONFIGURATION_BLOCKED",
+      },
+      {
+        label: "Scoped reporting",
+        detail: "Reports stay derived from stored sample records and avoid invented performance metrics.",
+        routeHref: "/app/brightroom/reports",
+        proofBoundary: "FIXTURE_UI_ONLY",
+      },
+    ],
   },
-] as const;
+];
 
 export const presentationSlides = [
   { order: 1, title: "Cleaning businesses lose work in handoffs", body: "Messages, quote math, calendars, crews and invoices live in separate tools.", tourHref: "/tour#pain" },
   { order: 2, title: "ServiceDesk AI creates one operational record", body: "Every request has a status, owner, quote, slot, payment state and communication history.", tourHref: "/tour#promise" },
-  { order: 3, title: "Customer journey", body: "The customer sees a clear enquiry, editable summary, quote, slot, invoices and preferences.", tourHref: "/tour#customer" },
-  { order: 4, title: "Staff inbox", body: "Dispatchers work from attention first, then inbox, customer context and approvals.", tourHref: "/tour#inbox" },
+  { order: 3, title: "Customer journey", body: "The customer sees a clear enquiry, editable summary, quote, slot, invoices and preferences.", tourHref: "/tour#enquiry-to-paid-job" },
+  { order: 4, title: "Staff inbox", body: "Dispatchers work from attention first, then inbox, customer context and approvals.", tourHref: "/tour#unusual-work-approval" },
   { order: 5, title: "Pricing fixture", body: "The move-out fixture is deterministic: $340 total, $85 deposit, $255 balance.", tourHref: "/tour#pricing" },
-  { order: 6, title: "Scheduling and Calendar", body: "Availability freshness, holds, conflicts and provider sync states are visible.", tourHref: "/tour#schedule" },
-  { order: 7, title: "Crew execution", body: "Crew members get a mobile workspace for status, checklist, proof, time and incidents.", tourHref: "/tour#crew" },
-  { order: 8, title: "Collections and recurrence", body: "Deposit, balance, invoice allocation and repeat visits remain tied to stored records.", tourHref: "/tour#collections" },
-  { order: 9, title: "Recovery and AI boundaries", body: "The system shows failed delivery, handover and recovery without letting AI invent authority.", tourHref: "/tour#recovery" },
+  { order: 6, title: "Scheduling and Calendar", body: "Availability freshness, holds, conflicts and provider sync states are visible.", tourHref: "/tour#failed-send-recovery" },
+  { order: 7, title: "Crew execution", body: "Crew members get a mobile workspace for status, checklist, proof, time and incidents.", tourHref: "/tour#enquiry-to-paid-job" },
+  { order: 8, title: "Collections and recurrence", body: "Deposit, balance, invoice allocation and repeat visits remain tied to stored records.", tourHref: "/tour#enquiry-to-paid-job" },
+  { order: 9, title: "Recovery and AI boundaries", body: "The system shows failed delivery, handover and recovery without letting AI invent authority.", tourHref: "/tour#failed-send-recovery" },
   { order: 10, title: "Actual capabilities and walkthrough", body: "The presentation links to app routes and marks test history until provider receipts exist.", tourHref: "/tour#contact" },
 ] as const;
 
 export const routeFamilies = {
   business: ["/b/[slug]", "/b/[slug]/enquire", "/b/[slug]/book"],
-  customer: ["/portal", "/portal/properties", "/portal/quotes/[id]", "/portal/bookings/[id]", "/portal/invoices/[id]"],
+  customer: ["/portal", "/portal/properties", "/portal/quotes/[id]", "/portal/bookings/[id]", "/portal/invoices/[id]", "/portal/preferences"],
   staff: ["/app/[workspace]/overview", "/app/[workspace]/inbox", "/app/[workspace]/customers", "/app/[workspace]/quotes", "/app/[workspace]/schedule", "/app/[workspace]/jobs", "/app/[workspace]/invoices", "/app/[workspace]/quality", "/app/[workspace]/automations", "/app/[workspace]/reports", "/app/[workspace]/settings", "/app/[workspace]/billing"],
   crew: ["/crew/today", "/crew/jobs/[id]"],
 } as const;
