@@ -1,0 +1,139 @@
+{
+  "name": "ServiceDesk booking.confirmed internal alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "servicedesk-booking-confirmed",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "servicedesk-webhook",
+      "name": "ServiceDesk signed webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst headers = $json.headers ?? {};\nconst rawBody = $json.rawBody ?? JSON.stringify($json.body ?? $json);\nconst timestamp = headers['x-servicedesk-timestamp'];\nconst signature = headers['x-servicedesk-signature'];\nconst secret = $env.SERVICEDESK_WEBHOOK_SECRET;\nif (!timestamp || !signature || !signature.startsWith('sha256=') || !secret) { throw new Error('missing-signature'); }\nconst ageMs = Math.abs(Date.now() - Date.parse(timestamp));\nif (ageMs > 300000) { throw new Error('stale-signature'); }\nconst expected = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');\nif (signature.slice('sha256='.length) !== expected) { throw new Error('signature-mismatch'); }\nreturn [{ json: JSON.parse(rawBody) }];"
+      },
+      "id": "verify-signature",
+      "name": "Verify ServiceDesk signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.type}}",
+              "operation": "equals",
+              "value2": "booking.confirmed"
+            },
+            {
+              "value1": "={{$json.id}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "event-filter",
+      "name": "Only booking.confirmed with event id",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Use event id as the dedupe key in a real n8n datastore before notifying staff.\n// ServiceDesk remains source of truth; this workflow must not mutate booking/payment state.\nreturn [{ json: { eventId: $json.id, bookingId: $json.payload?.bookingId, received: true, sourceOfTruth: 'servicedesk' } }];"
+      },
+      "id": "dedupe-note",
+      "name": "Prepare internal notification only",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"received\":true,\"eventId\":$json.eventId,\"sourceOfTruth\":\"servicedesk\"}"
+      },
+      "id": "acknowledge",
+      "name": "Acknowledge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 202,
+        "responseBody": "={\"ignored\":true}"
+      },
+      "id": "ignore",
+      "name": "Ignore other events",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [780, 120]
+    }
+  ],
+  "connections": {
+    "ServiceDesk signed webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify ServiceDesk signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify ServiceDesk signature": {
+      "main": [
+        [
+          {
+            "node": "Only booking.confirmed with event id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only booking.confirmed with event id": {
+      "main": [
+        [
+          {
+            "node": "Prepare internal notification only",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore other events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare internal notification only": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "notes": "Example only. Verify x-servicedesk-signature and timestamp before trusting payloads. Use event id as dedupe key. ServiceDesk remains source of truth; n8n may notify staff but must not mutate booking/payment truth independently."
+}
