@@ -37,6 +37,9 @@ export async function holdSlotWithRepository(
 
   const slot = await repository.findSlotById(ctx.workspaceId, input.slotId);
   if (slot.ok === false) return slot;
+  if (slot.value.workspaceId !== ctx.workspaceId) {
+    return { ok: false, code: "SLOT_WORKSPACE_MISMATCH", message: "Slot does not belong to this workspace." };
+  }
 
   const available = findAvailableSlots({
     workspaceId: ctx.workspaceId,
