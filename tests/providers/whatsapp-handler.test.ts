@@ -99,6 +99,8 @@ describe("provider-whatsapp API handler", () => {
 
     expect(first).toMatchObject({ statusCode: 200, acknowledged: true });
     expect(second).toMatchObject({ statusCode: 200, acknowledged: true });
+    expect(JSON.parse(first.body ?? "{}")).toEqual({ received: 1, inserted: 1, duplicate: 0 });
+    expect(JSON.parse(second.body ?? "{}")).toEqual({ received: 1, inserted: 0, duplicate: 1 });
     expect(store.persisted).toEqual(["wamid-duplicate"]);
   });
 
