@@ -684,3 +684,58 @@ E03 remaining critical gap:
 - next Core batch after active E05 should close this before E06 if E05 does not already consume the lane.
 
 E04 source/DB semantics are staging-backed, but canonical app typecheck/Vitest/runtime Supabase client execution remains blocked by Runtime package access.
+
+
+## E05 / E06 acceptance and Sprint 6 activation
+
+Accepted worker finals:
+- W1 Core E05 closure: `adc0384dfc751563dd89cd4ab05cf60408389b0b`
+- W2 Connector E06 calendar bridge: `a2cf33cb0215cafe022757cde8924d0c6e8e7893`
+- W3 Product E06 crew wiring: `e83ca9104f339c737ade47a099b8cd88e8e4b4c6`
+
+Shared RC integrations:
+- Core E05 overlay: `63dedfaa838bea1615d7c9f3171eaf608d5fd433`
+- Connector E05/E06 overlay: `e185b6f9672c768aa6e6b056ebe76e871f49bd27`
+- Product E05/E06 overlay: `6762d39de3c50db9ee8152ea2cb2a32618500621`
+
+E05 real staging verification:
+- migrations `sd_0008_conversation_inbox_runtime_int4b` and `sd_0009_e05_postgres_rpc_closure` applied to ServiceDesk staging `cpmmgivhlkfbiwzhlcey`;
+- command RPCs exist as SECURITY INVOKER;
+- anon/authenticated execute=false;
+- service_role execute=true;
+- W1 receipt records `E05_DB_PROOF=PASS` and fixture cleanup YES.
+
+E06 Connector/Product:
+- Calendar bridge implemented with ServiceDesk visit authority preserved;
+- external provider edits remain review-only;
+- crew Product transition wiring implemented for ASSIGNED->EN_ROUTE, EN_ROUTE->START, IN_PROGRESS->SUBMIT_REVIEW;
+- persisted field evidence remains Core-owned and was not fabricated in Product.
+
+E03 remaining durability issue:
+- `public.servicedesk_apply_verified_payment(jsonb)` exists in staging;
+- `src/server/core/payment-application-postgres.ts` exists;
+- no repository migration currently defines that payment RPC;
+- staging function is SECURITY DEFINER;
+- Sprint 6 Core must capture/harden it as reproducible repository source before E03 is considered durable.
+
+Coordinator froze E06/E07 shared contracts on RC:
+- `VisitEvidenceDTO`
+- `VisitChecklistItemDTO`
+- `RecurrenceRuleDTO`
+- `addVisitEvidence`
+- `setVisitChecklistItem`
+- `createRecurrenceRule`
+- `applyRecurrenceRuleAction`
+
+Current RC/shared base:
+`612cd9ec1b2bbb0f8fc1d139989390e06dd543cf`
+
+Sprint 6 branches:
+- `feat/servicedesk-v1-core-sprint5`
+- `feat/servicedesk-v1-connectors-sprint6`
+- `feat/servicedesk-v1-product-sprint5`
+
+Packets:
+- `docs/execution/batches/v1-int6-worker-1.md`
+- `docs/execution/batches/v1-int6-worker-2.md`
+- `docs/execution/batches/v1-int6-worker-3.md`
