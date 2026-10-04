@@ -52,3 +52,6 @@ export * from "./webhook/signed";
 export * from "./webhook/executor";
 export * from "./webhook/n8n-linkage";
 export * from "./webhook/recovery";
+export * from "./closure/cross-provider-regression";
+export * from "./closure/redaction-audit";
+export * from "./closure/report";
