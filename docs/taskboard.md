@@ -364,3 +364,22 @@ Recovery requirement for all three lanes:
 - remote branch HEAD must advance;
 - required receipt must exist remotely;
 - only then may coordinator accept/integrate Sprint 6.
+
+
+## V1 Integration Sprint 7 — ACTIVE
+
+Shared base:
+`fa9568970c012550149a0093360e68bbdaa69e62`
+
+| Lane | Branch | Mission | State |
+| --- | --- | --- | --- |
+| Core | `feat/servicedesk-v1-core-sprint6` | E07 authoritative recurrence persistence/generation/concurrency | READY |
+| Connectors/AI | `feat/servicedesk-v1-connectors-sprint7` | E08 Email + Webhook/n8n operational closure | READY |
+| Product/UI | `feat/servicedesk-v1-product-sprint6` | E08 invoice/manual-payment/quality/recovery server boundary | READY |
+
+Evidence:
+- E03 durable payment DB proof PASS.
+- E05 inbox DB proof PASS.
+- E06 field runtime DB proof PASS.
+- E07 Connector/Product implemented; Core recurrence authority remains the missing E07 center.
+- Canonical pnpm/Vitest/typecheck/build remains CONFIGURATION_BLOCKED under current Runtime outage.
