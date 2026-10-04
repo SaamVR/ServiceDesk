@@ -38,6 +38,27 @@ function isAllowedPaymentPurpose(value: unknown): value is "DEPOSIT" | "BALANCE"
   return value === "DEPOSIT" || value === "BALANCE" || value === "PLATFORM_SUBSCRIPTION";
 }
 
+function amountForPurpose(input: CheckoutInput): Result<number> {
+  if (!isAllowedPaymentPurpose(input.purpose)) {
+    return { ok: false, code: "PAYMENT_PURPOSE_INVALID", message: "Checkout purpose is not supported by the payment connector." };
+  }
+  if (input.purpose === "DEPOSIT") return { ok: true, value: input.quote.depositMinor };
+  if (input.purpose === "BALANCE") return { ok: true, value: input.quote.balanceMinor };
+  return { ok: true, value: input.quote.totalMinor };
+}
+
+function rejectExpiredHold(input: CheckoutInput, now: string): Result<true> {
+  const holdExpiresAtMs = new Date(input.hold.expiresAt).getTime();
+  const nowMs = new Date(now).getTime();
+  if (!Number.isFinite(holdExpiresAtMs) || !Number.isFinite(nowMs)) {
+    return { ok: false, code: "PAYMENT_HOLD_EXPIRY_INVALID", message: "Checkout hold expiry timestamp is invalid." };
+  }
+  if (holdExpiresAtMs <= nowMs) {
+    return { ok: false, code: "PAYMENT_HOLD_EXPIRED", message: "Checkout hold has expired before provider session creation." };
+  }
+  return { ok: true, value: true };
+}
+
 function hexBuffer(value: string): Result<Buffer> {
   if (!/^[0-9a-f]+$/i.test(value) || value.length % 2 !== 0) {
     return { ok: false, code: "MALFORMED_SIGNATURE", message: "Stripe signature contains a malformed v1 digest." };
@@ -187,11 +208,17 @@ export class FixtureStripePaymentAdapter implements PaymentAdapter {
   ) {}
 
   async createCheckout(input: CheckoutInput): Promise<Result<CheckoutSession>> {
-    const amountMinor = input.purpose === "DEPOSIT" ? input.quote.depositMinor : input.quote.balanceMinor;
-    if (amountMinor <= 0) return { ok: false, code: "INVALID_CHECKOUT_AMOUNT", message: "Checkout amount must be positive." };
     if (input.hold.workspaceId !== input.quote.workspaceId || input.hold.quoteId !== input.quote.id) {
       return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Hold and quote do not share workspace/quote scope." };
     }
+
+    const expiry = rejectExpiredHold(input, this.now());
+    if (!expiry.ok) return expiry;
+
+    const amount = amountForPurpose(input);
+    if (!amount.ok) return amount;
+    const amountMinor = amount.value;
+    if (amountMinor <= 0) return { ok: false, code: "INVALID_CHECKOUT_AMOUNT", message: "Checkout amount must be positive." };
 
     const providerSessionId = `cs_fixture_${input.hold.holdId}_${input.purpose.toLowerCase()}`;
     return {
