@@ -3,10 +3,11 @@ import { createQuoteSnapshot, defaultRateCard, type QuoteServiceCode, type Quote
 
 export interface QuoteRepository {
   nextQuoteId(): string;
-  findLatestByRequest(requestId: string): QuoteSnapshot | undefined;
-  saveQuote(quote: QuoteSnapshot): void;
-  supersedeQuote(quoteId: string): void;
-  updateQuoteStatus(quoteId: string, status: QuoteSnapshot["status"]): void;
+  findById(quoteId: string): Promise<QuoteSnapshot | undefined>;
+  findLatestByRequest(requestId: string): Promise<QuoteSnapshot | undefined>;
+  saveQuote(quote: QuoteSnapshot): Promise<void>;
+  supersedeQuote(quoteId: string): Promise<void>;
+  updateQuoteStatus(quoteId: string, status: QuoteSnapshot["status"]): Promise<void>;
 }
 
 export interface CreateQuoteDraftCommandInput {
@@ -23,11 +24,11 @@ export interface SendQuoteCommandMeta {
   expectedVersion?: number;
 }
 
-export function createQuoteDraftWithRepository(
+export async function createQuoteDraftWithRepository(
   repository: QuoteRepository,
   input: CreateQuoteDraftCommandInput,
-): Result<QuoteSnapshot> {
-  const previous = repository.findLatestByRequest(input.requestId);
+): Promise<Result<QuoteSnapshot>> {
+  const previous = await repository.findLatestByRequest(input.requestId);
   const quote = createQuoteSnapshot({
     id: repository.nextQuoteId(),
     workspaceId: input.workspaceId,
@@ -44,19 +45,36 @@ export function createQuoteDraftWithRepository(
     version: previous ? previous.version + 1 : 1,
   };
 
-  if (previous) repository.supersedeQuote(previous.id);
-  repository.saveQuote(versionedQuote);
+  if (previous) await repository.supersedeQuote(previous.id);
+  await repository.saveQuote(versionedQuote);
 
   return { ok: true, value: versionedQuote };
 }
 
-export function sendQuoteWithRepository(
+export async function sendQuoteWithRepository(
   repository: QuoteRepository,
   requestId: string,
   meta: SendQuoteCommandMeta,
-): Result<QuoteSnapshot> {
-  const quote = repository.findLatestByRequest(requestId);
-  if (!quote) return { ok: false, code: "QUOTE_NOT_FOUND", message: "No quote exists for this request." };
+): Promise<Result<QuoteSnapshot>> {
+  const quote = await repository.findLatestByRequest(requestId);
+  return sendQuoteSnapshot(repository, quote, meta);
+}
+
+export async function sendQuoteByIdWithRepository(
+  repository: QuoteRepository,
+  quoteId: string,
+  meta: SendQuoteCommandMeta,
+): Promise<Result<QuoteSnapshot>> {
+  const quote = await repository.findById(quoteId);
+  return sendQuoteSnapshot(repository, quote, meta);
+}
+
+async function sendQuoteSnapshot(
+  repository: QuoteRepository,
+  quote: QuoteSnapshot | undefined,
+  meta: SendQuoteCommandMeta,
+): Promise<Result<QuoteSnapshot>> {
+  if (!quote) return { ok: false, code: "QUOTE_NOT_FOUND", message: "No quote exists for this identifier." };
 
   if (meta.expectedVersion !== undefined && meta.expectedVersion !== quote.version) {
     return { ok: false, code: "VERSION_CONFLICT", message: "Quote version changed before send." };
@@ -67,6 +85,6 @@ export function sendQuoteWithRepository(
   }
 
   const sent: QuoteSnapshot = { ...quote, status: "SENT" };
-  repository.updateQuoteStatus(quote.id, "SENT");
+  await repository.updateQuoteStatus(quote.id, "SENT");
   return { ok: true, value: sent };
 }
