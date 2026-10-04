@@ -10,9 +10,9 @@ export default function TourPage() {
         title="Controlled tour in an isolated showcase workspace."
         description="The tour uses seeded sample records and labels synthetic history. Real-send mode requires a consenting recipient and Chat 2 provider verification."
       />
-      <main className="site-shell">
+      <div className="site-shell">
         <TourScenarioList />
-      </main>
+      </div>
     </>
   );
 }
