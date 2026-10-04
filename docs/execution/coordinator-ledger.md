@@ -235,3 +235,45 @@ Outage-mode Runtime harness proof may support `IMPLEMENTED` for bounded pure Typ
 - Worker 3 Product/UI: `docs/execution/batches/cycle-3-worker-3.md`
 
 Cycle 3 is substantive outage-mode work, not another DNS-only recovery cycle.
+
+
+## Cycle 3 partial reconciliation — Workers 1 and 3
+
+Received and reviewed:
+- Worker 1 Core final SHA `ef19a54e325d4e9ed9baa390a4316e097dbba923`
+- Worker 3 Product/UI final SHA `caea4ba4bc7e7a3ebb1cedd30e25de044179542d`
+
+Both reported `IMPLEMENTED` with canonical gate `CONFIGURATION_BLOCKED`.
+
+Coordinator review:
+- Worker 1 range is ownership-clean: only `tests/db/operations-commands.test.ts`, `tests/db/runtime-outage-operations-harness.ts`, and its receipt changed.
+- Worker 3 range is ownership-clean: `src/features/reports/view-models.ts`, reporting canonical tests, Product outage harness, and its receipt changed.
+- Coordinator independently executed Worker 1 operations semantics under Runtime ts-node: PASS.
+- Coordinator independently executed the Worker 3 reporting truth-boundary behavior under Runtime ts-node: PASS.
+- Canonical pnpm/Vitest/typecheck/lint/build/browser proof remains unavailable and therefore no `CONTRACT_TESTED`, `OPERATIONS_VERIFIED`, or browser/build claim is promoted.
+
+### Canonical integration prerequisite finding
+
+The canonical integration branch does not yet contain the historical Core/Product lane baseline files required by these Cycle 3 deltas. Copying only the Cycle 3 files would create incomplete/dangling source and test dependencies.
+
+Therefore the bounded Cycle 3 implementations are accepted at lane proof level `IMPLEMENTED`, but are not copied piecemeal into canonical integration.
+
+### Outage integration candidate
+
+Created provisional branch:
+`feat/servicedesk-v1-outage-candidate`
+
+Candidate checkpoint:
+`6d74ea7d74f87525df73bc72367c7084b77e86b3`
+
+Construction:
+- based on coordinator integration checkpoint `df20d4c0fb17b5e5ab7df59b6bd25bf7f7ce8d58`;
+- overlays only Worker 1-owned Core paths from `ef19a54e325d4e9ed9baa390a4316e097dbba923`;
+- overlays only Worker 3-owned Product/UI paths from `caea4ba4bc7e7a3ebb1cedd30e25de044179542d`;
+- coordinator/shared contracts/package/deployment/docs paths are not taken from worker branches.
+
+Key Cycle 3 blobs on the candidate were compared to worker final heads and match exactly.
+
+This candidate is explicitly provisional/unverified. It is the place to reconcile lane baselines during the Runtime outage without falsely marking canonical integration as fully tested.
+
+Worker 2 remains independent and was not blocked or rewritten by this reconciliation.
