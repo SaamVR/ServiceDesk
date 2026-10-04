@@ -1,13 +1,12 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default function PortalPropertiesPage() {
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="customer"
       customerModule="properties"
-      resourceLabel="properties"
-      title="Manage cleaning properties and access notes."
-      description="Property records, contacts and preferences remain customer-scoped and require verified identity before sensitive account actions."
+      title="Property and recurring service context."
+      description="Property reads wait for accepted server snapshots before replacing fixture presentation data."
     />
   );
 }
