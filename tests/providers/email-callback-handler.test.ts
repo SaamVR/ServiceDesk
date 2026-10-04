@@ -65,6 +65,34 @@ describe("email provider callback handler", () => {
     });
   });
 
+  test("soft bounce does not permanently suppress recipient", async () => {
+    const observed = store();
+    const rawBody = JSON.stringify({
+      id: "evt_email_soft",
+      type: "bounce",
+      workspaceId: "ws-clearnest",
+      providerMessageId: "msg_soft",
+      recipientRef: "customer_soft",
+      occurredAt: "2026-10-04T12:02:00.000Z",
+      bounceType: "soft",
+      reason: "mailbox full",
+    });
+
+    const result = await handleEmailProviderCallback({
+      rawBody,
+      headers: { "x-servicedesk-email-signature": signature(rawBody, "secret") },
+      webhookSecret: "secret",
+      store: observed.store,
+    });
+
+    expect(result).toMatchObject({ statusCode: 200, acknowledged: true, retryable: false });
+    expect(observed.calls[0]).toMatchObject({
+      eventType: "BOUNCE",
+      suppressionAction: "NONE",
+      bounceType: "soft",
+    });
+  });
+
   test("complaint suppresses recipient and duplicates acknowledge without mutation", async () => {
     const calls: unknown[] = [];
     const duplicateStore: EmailCallbackStore = {
