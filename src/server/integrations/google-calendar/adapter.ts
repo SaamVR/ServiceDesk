@@ -1,6 +1,21 @@
 import type { Result, VisitDTO } from "../../../contracts";
 import type { CommandMeta } from "../../../contracts";
 import type { CalendarAdapter, CalendarBusyRange, CalendarSyncState, RedactedProviderEvidence } from "../types";
+import type { GoogleCalendarConnectionPolicy } from "./oauth";
+
+export type CalendarFreshnessReason =
+  | "CALENDAR_NOT_CONFIGURED"
+  | "CALENDAR_RECONNECT_REQUIRED"
+  | "CALENDAR_STALE_REQUIRES_REFRESH"
+  | "CALENDAR_EVENT_WRITE_UNAVAILABLE"
+  | "CALENDAR_BUSY_LOOKUP_FAILED";
+
+export interface CalendarBusyFreshnessResult {
+  busy: CalendarBusyRange[];
+  availabilityFresh: boolean;
+  instantConfirmationAllowed: boolean;
+  reason?: CalendarFreshnessReason;
+}
 
 function evidence(notes: string[], controlledId?: string): RedactedProviderEvidence {
   return {
@@ -15,6 +30,81 @@ function evidence(notes: string[], controlledId?: string): RedactedProviderEvide
 
 function visitEnd(visit: VisitDTO): string {
   return new Date(new Date(visit.startAt).getTime() + (visit.serviceMinutes + visit.bufferMinutes) * 60_000).toISOString();
+}
+
+function unavailableReason(policy: GoogleCalendarConnectionPolicy): CalendarFreshnessReason | null {
+  if (policy.status === "NOT_CONFIGURED") return "CALENDAR_NOT_CONFIGURED";
+  if (policy.status === "REAUTH_REQUIRED") return "CALENDAR_RECONNECT_REQUIRED";
+  if (policy.reason === "ACCESS_TOKEN_EXPIRED") return "CALENDAR_STALE_REQUIRES_REFRESH";
+  if (!policy.canReadBusy) return "CALENDAR_RECONNECT_REQUIRED";
+  return null;
+}
+
+export async function listCalendarBusyWithFreshness(
+  adapter: CalendarAdapter,
+  policy: GoogleCalendarConnectionPolicy,
+  range: { from: string; to: string },
+  crewId: string,
+): Promise<Result<CalendarBusyFreshnessResult>> {
+  const blockedReason = unavailableReason(policy);
+  if (blockedReason) {
+    return {
+      ok: true,
+      value: {
+        busy: [],
+        availabilityFresh: false,
+        instantConfirmationAllowed: false,
+        reason: blockedReason,
+      },
+    };
+  }
+
+  const busy = await adapter.listBusy(range, crewId);
+  if (!busy.ok) {
+    return {
+      ok: true,
+      value: {
+        busy: [],
+        availabilityFresh: false,
+        instantConfirmationAllowed: false,
+        reason: "CALENDAR_BUSY_LOOKUP_FAILED",
+      },
+    };
+  }
+
+  const hasStaleBlock = busy.value.some((block) => block.freshness === "STALE");
+  if (hasStaleBlock) {
+    return {
+      ok: true,
+      value: {
+        busy: busy.value,
+        availabilityFresh: false,
+        instantConfirmationAllowed: false,
+        reason: "CALENDAR_STALE_REQUIRES_REFRESH",
+      },
+    };
+  }
+
+  if (!policy.canCreateEvents) {
+    return {
+      ok: true,
+      value: {
+        busy: busy.value,
+        availabilityFresh: true,
+        instantConfirmationAllowed: false,
+        reason: "CALENDAR_EVENT_WRITE_UNAVAILABLE",
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      busy: busy.value,
+      availabilityFresh: true,
+      instantConfirmationAllowed: true,
+    },
+  };
 }
 
 export class FixtureCalendarAdapter implements CalendarAdapter {
