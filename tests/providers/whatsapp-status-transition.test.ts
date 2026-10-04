@@ -13,6 +13,12 @@ const read: WhatsAppDeliverySnapshot = {
   callbackKey: "phone-1:wamid-1:read:1791108200",
 };
 
+const failed: WhatsAppDeliverySnapshot = {
+  deliveryState: "FAILED",
+  providerTimestamp: "1791108300",
+  callbackKey: "phone-1:wamid-1:failed:1791108300",
+};
+
 describe("WhatsApp delivery status transition policy", () => {
   test("applies first provider accepted callback when no current state exists", () => {
     expect(
@@ -40,12 +46,6 @@ describe("WhatsApp delivery status transition policy", () => {
   });
 
   test("does not regress delivered or read messages to failed", () => {
-    const failed = {
-      deliveryState: "FAILED" as const,
-      providerTimestamp: "1791108300",
-      callbackKey: "phone-1:wamid-1:failed:1791108300",
-    };
-
     expect(decideWhatsAppStatusTransition(delivered, failed)).toEqual({ result: "STALE_REGRESSION", nextState: "DELIVERED", reason: "FAILED_AFTER_CONFIRMED_DELIVERY" });
     expect(decideWhatsAppStatusTransition(read, failed)).toEqual({ result: "STALE_REGRESSION", nextState: "READ", reason: "FAILED_AFTER_CONFIRMED_DELIVERY" });
   });
@@ -77,12 +77,34 @@ describe("WhatsApp delivery status transition policy", () => {
       callbackKey: "phone-1:wamid-1:sent:1791108000",
     };
 
+    expect(decideWhatsAppStatusTransition(accepted, failed)).toEqual({ result: "APPLY", nextState: "FAILED", reason: "FAILURE_BEFORE_CONFIRMED_DELIVERY" });
+  });
+
+  test("treats failed as terminal for later non-failed callbacks", () => {
     expect(
-      decideWhatsAppStatusTransition(accepted, {
-        deliveryState: "FAILED",
-        providerTimestamp: "1791108100",
-        callbackKey: "phone-1:wamid-1:failed:1791108100",
+      decideWhatsAppStatusTransition(failed, {
+        deliveryState: "PROVIDER_ACCEPTED",
+        providerTimestamp: "1791108400",
+        callbackKey: "phone-1:wamid-1:sent:1791108400",
       }),
-    ).toEqual({ result: "APPLY", nextState: "FAILED", reason: "FAILURE_BEFORE_CONFIRMED_DELIVERY" });
+    ).toEqual({ result: "STALE_REGRESSION", nextState: "FAILED", reason: "STATUS_AFTER_TERMINAL_FAILURE" });
+    expect(
+      decideWhatsAppStatusTransition(failed, {
+        deliveryState: "DELIVERED",
+        providerTimestamp: "1791108500",
+        callbackKey: "phone-1:wamid-1:delivered:1791108500",
+      }),
+    ).toEqual({ result: "STALE_REGRESSION", nextState: "FAILED", reason: "STATUS_AFTER_TERMINAL_FAILURE" });
+    expect(
+      decideWhatsAppStatusTransition(failed, {
+        deliveryState: "READ",
+        providerTimestamp: "1791108600",
+        callbackKey: "phone-1:wamid-1:read:1791108600",
+      }),
+    ).toEqual({ result: "STALE_REGRESSION", nextState: "FAILED", reason: "STATUS_AFTER_TERMINAL_FAILURE" });
+  });
+
+  test("keeps repeated identical failed callback as duplicate", () => {
+    expect(decideWhatsAppStatusTransition(failed, failed)).toEqual({ result: "DUPLICATE", nextState: "FAILED", reason: "SAME_CALLBACK_KEY" });
   });
 });
