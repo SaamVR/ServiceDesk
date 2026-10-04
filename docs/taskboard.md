@@ -119,3 +119,29 @@ Canonical catch-up gate remains `CONFIGURATION_BLOCKED`.
 | `CYCLE-4-W3` invoice truth hardening | Worker 3 | READY | `caea4ba4bc7e7a3ebb1cedd30e25de044179542d` | clamp collection progress and guard final-receipt state |
 
 All Cycle 4 tasks use the Runtime Outage Mode contract until normal pnpm/Git transport returns.
+
+
+## Cycle 3 integration result
+
+| Worker | Worker final | Integration completion | State | Canonical gate |
+| --- | --- | --- | --- | --- |
+| Worker 1 Core | `ef19a54e325d4e9ed9baa390a4316e097dbba923` | `431abc17dfebdf3e5685f6f3acf84f6551de6dfa` | `IMPLEMENTED` | `CONFIGURATION_BLOCKED` |
+| Worker 2 Connectors/AI | `af47a5623232c96062a06323b884b35801f41f0b` | `33fc991c095871dc935a821fee2cb90b03136001` | `IMPLEMENTED` | `CONFIGURATION_BLOCKED` |
+| Worker 3 Product/UI | `caea4ba4bc7e7a3ebb1cedd30e25de044179542d` | `b585ad94d73c0ac43a95edf8369bcf7e4c618d5c` | `IMPLEMENTED` | `CONFIGURATION_BLOCKED` |
+
+Coordinator integrated only evidence-backed minimal closures. No whole worker branch was merged.
+
+## Coordinator Cycle 4 — substantive outage-mode continuation
+
+| Task | Owner | State | Start SHA | Target |
+| --- | --- | --- | --- | --- |
+| `CYCLE-4-W1` capacity temporal/hold safety | Worker 1 | READY | `ef19a54e325d4e9ed9baa390a4316e097dbba923` | exclude past/invalid capacity, reject invalid hold duration, fail closed on repository workspace mismatch, outage harness + regressions |
+| `CYCLE-4-W2` WhatsApp delivery terminal failure | Worker 2 | READY | `af47a5623232c96062a06323b884b35801f41f0b` | make current FAILED terminal for same provider message, preserve duplicate/forward rules, batch/harness regressions |
+| `CYCLE-4-W3` payment receipt truth boundaries | Worker 3 | READY | `caea4ba4bc7e7a3ebb1cedd30e25de044179542d` | fail-safe checkout receipt eligibility, clamp invoice progress, require coherent fully-paid final receipt, outage harness + regressions |
+
+Packets:
+- `docs/execution/batches/cycle-4-worker-1.md`
+- `docs/execution/batches/cycle-4-worker-2.md`
+- `docs/execution/batches/cycle-4-worker-3.md`
+
+Canonical pnpm/Vitest/typecheck/build/browser proof remains `CONFIGURATION_BLOCKED`. Workers perform one quick recovery probe only, then continue under `docs/execution/runtime-outage-mode-20261004.md` when normal package access remains unavailable.
