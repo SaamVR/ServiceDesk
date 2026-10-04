@@ -64,6 +64,26 @@ Verdicts:
 
 GitHub Actions were not used.
 
+## Production-build HTTP smoke on samvr
+
+A self-contained frozen-lockfile install, production build, `next start`, and HTTP route smoke executed successfully on the exact candidate.
+
+All checked routes returned HTTP 200:
+- `/`
+- `/b/brightroom`
+- `/b/brightroom/enquire`
+- `/portal`
+- `/crew/today`
+- `/onboarding`
+- `/presentation`
+- `/app/demo/overview`
+- `/app/demo/inbox`
+- `/app/demo/settings`
+
+Verdict: `LOCAL_PRODUCTION_HTTP_SMOKE=PASS`
+
+This does not substitute for post-Render smoke or browser acceptance.
+
 ## Database release checks
 
 Dedicated Supabase:
@@ -94,7 +114,7 @@ Known security advisor state remains:
 
 ## Release gate
 
-Source/quality/secret/database predeploy gates are now complete enough to attempt Render deployment.
+Source/quality/secret/database/local-smoke predeploy gates are PASS.
 
 Render infrastructure currently blocks service creation because the Hobby workspace is at its 25-service limit.
 
