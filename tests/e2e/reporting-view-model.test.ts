@@ -19,6 +19,55 @@ describe("reporting view model", () => {
     ]));
   });
 
+  it("bounds conversion by supplied requests and ignores orphan visit request IDs", () => {
+    const view = buildReportingView({
+      requests: [{ ...sampleRequest, id: "req_supplied", status: "NEW" }],
+      quotes: [],
+      visits: [
+        { ...sampleVisit, id: "visit_orphan_1", requestId: "missing_req_1" },
+        { ...sampleVisit, id: "visit_orphan_2", requestId: "missing_req_2" },
+      ],
+      invoices: [],
+    });
+
+    expect(view.cards).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Conversion", value: "0%", evidence: "0 booked / 1 requests" }),
+      expect.objectContaining({ label: "Scheduled capacity", value: "9h", evidence: "480m service + 60m buffer" }),
+    ]));
+  });
+
+  it("deduplicates visits for the same supplied request before conversion", () => {
+    const view = buildReportingView({
+      requests: [{ ...sampleRequest, id: "req_bookable", status: "NEW" }],
+      quotes: [],
+      visits: [
+        { ...sampleVisit, id: "visit_duplicate_1", requestId: "req_bookable" },
+        { ...sampleVisit, id: "visit_duplicate_2", requestId: "req_bookable" },
+      ],
+      invoices: [],
+    });
+
+    expect(view.cards).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Conversion", value: "100%", evidence: "1 booked / 1 requests" }),
+      expect.objectContaining({ label: "Scheduled capacity", value: "9h", evidence: "480m service + 60m buffer" }),
+    ]));
+  });
+
+  it("keeps conversion at no data when no requests are supplied even if visits exist", () => {
+    const view = buildReportingView({
+      requests: [],
+      quotes: [],
+      visits: [{ ...sampleVisit, id: "visit_no_request", requestId: "missing_req" }],
+      invoices: [],
+    });
+
+    expect(view.cards).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Conversion", value: "No data", evidence: "No request records supplied" }),
+      expect.objectContaining({ label: "Scheduled capacity", value: "4h 30m", evidence: "240m service + 30m buffer" }),
+    ]));
+    expect(view.warning).toContain("stored records");
+  });
+
   it("labels no-data reports instead of inventing metrics", () => {
     const view = buildReportingView({ requests: [], quotes: [], visits: [], invoices: [] });
 
