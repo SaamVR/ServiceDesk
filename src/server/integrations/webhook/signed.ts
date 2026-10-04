@@ -39,7 +39,7 @@ export interface WebhookDeliveryDecision {
   outcome: "DELIVERED" | "RETRY" | "FAILED_FINAL";
   retryable: boolean;
   nextAttempt?: number;
-  reason?: "SUCCESS" | "TRANSIENT_HTTP" | "NETWORK_ERROR" | "DETERMINISTIC_HTTP_FAILURE" | "MAX_ATTEMPTS_EXHAUSTED";
+  reason?: "SUCCESS" | "TRANSIENT_HTTP" | "NETWORK_ERROR" | "DETERMINISTIC_HTTP_FAILURE" | "MAX_ATTEMPTS_EXHAUSTED" | "DESTINATION_NOT_ALLOWED";
   businessMutationAllowed: false;
 }
 
