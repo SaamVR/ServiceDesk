@@ -1,3 +1,7 @@
+create index if not exists outbox_terminal_idx
+on public.outbox_events(workspace_id, status, updated_at desc)
+where status in ('SENT', 'FAILED', 'SUPPRESSED');
+
 -- ServiceDesk AI V1 E04 follow-up: lease-owner guarded outbox completion RPC
 
 create or replace function public.complete_outbox_event(
