@@ -194,3 +194,49 @@ Only durable migration state remains.
 2. RLS matrix is `FAIL` because customer direct table/RPC visibility of own authorized business records is not acceptance-complete; current behavior is fail-closed for customer invoice/conversation rows.
 3. Supabase Auth leaked-password protection is disabled.
 4. Canonical package install/typecheck/Vitest execution did not run in this tool surface; coordinator policy forbids local-device fallback.
+
+## E10B final closure addendum
+
+Status after the dedicated E10B closure:
+
+- EARLY_COMMAND_BOUNDARY=PASS
+- QUOTE_ACCEPTANCE=PASS
+- REQUEST_QUOTE_CAPACITY_COMPOSITION=PASS
+- INTEGRATED_DB_JOURNEY=PASS
+- RLS_MATRIX=PASS
+- CONCURRENCY_MATRIX=PASS
+- PROOF_FIXTURES_CLEANED=YES
+
+Repository/staging migration parity now extends through:
+
+- 0015_e01_e02_command_closure.sql -> sd_0015_e01_e02_command_closure
+- 0015a_e10b_read_helpers.sql -> sd_0015a_e10b_read_helpers
+
+The early authoritative flow is now executable through trusted service-role-only Postgres/Supabase command boundaries:
+
+customer/property bootstrap
+-> request create/update
+-> deterministic TypeScript quote calculation
+-> atomic quote persistence
+-> send quote
+-> customer/visitor quote acceptance
+-> capacity slot read/seed
+-> atomic 15-minute slot hold
+-> existing E03 verified sandbox deposit
+-> invoice/visit.
+
+The earlier customer RLS failure was a test-session setup error. A corrected authenticated JWT-session proof returned own customer rows=1, own invoice rows=1, own conversation rows=1, with cross-workspace/staff-role isolation remaining fail-closed. No customer RLS migration was required.
+
+New E10B RPCs were independently rechecked by the coordinator:
+- SECURITY INVOKER
+- anon_execute=false
+- authenticated_execute=false
+- service_role_execute=true
+
+### Remaining non-source release gates
+
+1. Canonical package install/typecheck/Vitest/build is still CONFIGURATION_BLOCKED in the current GPT Runtime.
+2. Browser acceptance remains TO_RUN_CONFIGURATION_BLOCKED.
+3. Controlled provider proof remains missing for WhatsApp, Google Calendar, Email, n8n and AI; Stripe/payment intentionally remains SANDBOX-only.
+4. Supabase Auth leaked-password protection was reported disabled during acceptance and must be enabled before production if the project plan exposes that setting.
+5. Existing accepted security-advisor warnings remain: public citext, authenticated-executable RLS helper functions, and intentional deny-all RLS/no-policy tables.
