@@ -120,9 +120,9 @@ export function StaffWorkspacePreview() {
       <div className="tri-pane-preview" aria-label="Staff inbox tri-pane preview">
         <aside>
           <p className="label">Inbox</p>
-          <button className="list-row active">Move-out clean · Needs quote</button>
-          <button className="list-row">Failed delivery · Recovery</button>
-          <button className="list-row">Crew absence · Reassign</button>
+          <button className="list-row active" disabled type="button">Move-out clean · Needs quote</button>
+          <button className="list-row" disabled type="button">Failed delivery · Recovery</button>
+          <button className="list-row" disabled type="button">Crew absence · Reassign</button>
         </aside>
         <section>
           <p className="label">Conversation</p>
@@ -151,7 +151,7 @@ export function CrewWorkspacePreview() {
       <div className="mobile-preview" aria-label="Crew mobile job preview">
         <p className="label">Today · 09:00</p>
         <h3>Move-out clean · SW11</h3>
-        <button className="button-primary full">Start travel</button>
+        <button className="button-primary full" disabled type="button">Start travel · preview</button>
         <ul className="check-list">
           {crewActions.slice(2).map((action) => <li key={action}>{action}</li>)}
         </ul>
@@ -165,16 +165,34 @@ export function TourScenarioList() {
     <section className="grid-section" aria-labelledby="tour-heading">
       <div className="section-heading">
         <p className="eyebrow">Controlled tour</p>
-        <h2 id="tour-heading">Three reviewable scenarios.</h2>
-        <p>Sample history is synthetic until Chat 2 supplies redacted provider receipts.</p>
+        <h2 id="tour-heading">Three reviewable scenarios mapped to real routes.</h2>
+        <p>Sample history is synthetic until Chat 2 supplies redacted provider receipts. Each card links only to implemented route surfaces.</p>
       </div>
-      <div className="card-grid three">
+      <div className="scenario-stack">
         {tourScenarios.map((scenario) => (
-          <article className="plain-card" id={scenario.id} key={scenario.id}>
-            <span className="status-pill pending">Synthetic history</span>
-            <h3>{scenario.title}</h3>
-            <ol className="mini-steps">
-              {scenario.steps.map((step) => <li key={step}>{step}</li>)}
+          <article className="plain-card scenario-card" id={scenario.id} key={scenario.id}>
+            <div className="section-heading compact">
+              <span className="status-pill pending">Synthetic history</span>
+              <h3>{scenario.title}</h3>
+              <p>{scenario.summary}</p>
+            </div>
+            <div className="action-row scenario-links" aria-label={`${scenario.title} route links`}>
+              {scenario.routeLinks.map((link) => (
+                <a className="button-secondary" href={link.href} key={link.href}>{link.label}</a>
+              ))}
+            </div>
+            <ol className="mini-steps routed-steps">
+              {scenario.steps.map((step, index) => (
+                <li key={`${scenario.id}-${step.label}`}>
+                  <span className="card-number" aria-hidden="true">{index + 1}</span>
+                  <div>
+                    <h4>{step.label}</h4>
+                    <p>{step.detail}</p>
+                    <p><span className="status-pill attention">{step.proofBoundary}</span></p>
+                    <a href={step.routeHref}>Open route</a>
+                  </div>
+                </li>
+              ))}
             </ol>
           </article>
         ))}
