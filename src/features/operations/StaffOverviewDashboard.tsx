@@ -32,7 +32,7 @@ export function StaffOverviewDashboard({
         <Panel>
           <EmptyState
             title="Workspace activity is unavailable"
-            description="This page only shows authoritative workspace records. No placeholder metrics or sample jobs are shown here."
+            description="We could not load workspace activity for this view. Try again after the operational data connection is available."
           />
         </Panel>
       </>
@@ -136,7 +136,7 @@ export function StaffOverviewDashboard({
                 <article className="app-row" key={visit.id}>
                   <div>
                     <h3>Visit {visit.id}</h3>
-                    <p>{new Date(visit.startAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</p>
+                    <p>{formatVisitStart(visit.startAt)}</p>
                   </div>
                   <div className="app-row-meta">
                     <StatusBadge tone={visit.status === "PAYMENT_REVIEW" || visit.status === "PENDING_REVIEW" ? "warning" : "neutral"}>{readable(visit.status)}</StatusBadge>
