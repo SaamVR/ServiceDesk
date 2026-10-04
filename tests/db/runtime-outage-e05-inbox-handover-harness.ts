@@ -125,8 +125,9 @@ async function main() {
   const convId = first.value.conversation.id;
   const handover = await commands.setConversationHandoverCommand(owner, convId, { active: true }, { idempotencyKey: "handover-1", now, expectedVersion: repo.conversations[0].version });
   if (!handover.ok) throw new Error(handover.message); assert.equal(handover.ok, true);
-  assert.equal(handover.value.handoverActive, true);
-  assert.equal(handover.value.assignedUserId, "owner_1");
+  const handoverValue = handover.value as { handoverActive: boolean; assignedUserId?: string };
+  assert.equal(handoverValue.handoverActive, true);
+  assert.equal(handoverValue.assignedUserId, "owner_1");
 
   const stale = await commands.setConversationHandoverCommand(owner, convId, { active: false }, { idempotencyKey: "handover-stale", now, expectedVersion: 1 });
   assert.equal(stale.ok, false); if (stale.ok) throw new Error("expected stale failure");
@@ -178,7 +179,8 @@ async function main() {
 
   const deactivated = await commands.setConversationHandoverCommand(owner, convId, { active: false }, { idempotencyKey: "handover-off", now, expectedVersion: repo.conversations[0].version });
   if (!deactivated.ok) throw new Error(deactivated.message); assert.equal(deactivated.ok, true);
-  assert.equal(deactivated.value.handoverActive, false);
+  const deactivatedValue = deactivated.value as { handoverActive: boolean };
+  assert.equal(deactivatedValue.handoverActive, false);
 
   console.log("runtime-outage e05 inbox handover harness PASS");
 }
