@@ -19,6 +19,18 @@ export interface FixtureStripeWebhookPayload {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasFixtureStripePayloadShape(value: unknown): value is FixtureStripeWebhookPayload {
+  if (!isRecord(value) || typeof value.id !== "string" || typeof value.account !== "string" || typeof value.type !== "string" || typeof value.created !== "number") {
+    return false;
+  }
+  if (!isRecord(value.data) || !isRecord(value.data.object)) return false;
+  return typeof value.data.object.id === "string" && typeof value.data.object.currency === "string";
+}
+
 function safeCompare(left: string, right: string): boolean {
   const leftBuffer = Buffer.from(left, "hex");
   const rightBuffer = Buffer.from(right, "hex");
@@ -110,12 +122,17 @@ export class FixtureStripePaymentAdapter implements PaymentAdapter {
     );
     if (!verified.ok) return verified;
 
-    let payload: FixtureStripeWebhookPayload;
+    let parsedPayload: unknown;
     try {
-      payload = JSON.parse(rawBody) as FixtureStripeWebhookPayload;
+      parsedPayload = JSON.parse(rawBody) as unknown;
     } catch {
       return { ok: false, code: "PAYMENT_PAYLOAD_MALFORMED", message: "Verified payment webhook payload is malformed JSON." };
     }
+
+    if (!hasFixtureStripePayloadShape(parsedPayload)) {
+      return { ok: false, code: "PAYMENT_PAYLOAD_INVALID", message: "Verified payment webhook payload has an invalid object shape." };
+    }
+    const payload = parsedPayload;
 
     if (payload.account !== this.providerAccountId) return { ok: false, code: "PAYMENT_ACCOUNT_MISMATCH", message: "Webhook account does not match configured payment account." };
     if (payload.type !== "checkout.session.completed" && payload.type !== "payment_intent.succeeded") {
