@@ -157,3 +157,72 @@ export interface QualityCaseDTO {
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
 }
+
+
+export interface ReportingSnapshotDTO {
+  workspaceId: string;
+  from?: ISODateTime;
+  to?: ISODateTime;
+  requestCount: number;
+  bookedRequestCount: number;
+  conversionRateBps?: number;
+  collectedMinor: number;
+  outstandingMinor: number;
+  currency?: CurrencyCode;
+  scheduledServiceMinutes: number;
+  scheduledBufferMinutes: number;
+  openAttentionCount: number;
+  unresolvedQualityCount: number;
+  generatedAt: ISODateTime;
+}
+
+export interface PlatformSubscriptionDTO {
+  workspaceId: string;
+  plan: "TRIAL" | "STARTER" | "GROWTH";
+  status: "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELLED";
+  providerMode: "SANDBOX" | "LIVE";
+  trialEndsAt?: ISODateTime;
+  currentPeriodEndsAt?: ISODateTime;
+  version: number;
+  updatedAt: ISODateTime;
+}
+
+export interface UsageMetricDTO {
+  metric: "AI_ACTIONS" | "OUTBOUND_MESSAGES" | "TEAM_MEMBERS" | "CONNECTED_INTEGRATIONS";
+  used: number;
+  limit?: number;
+  state: "WITHIN_LIMIT" | "LIMIT_REACHED" | "UNLIMITED";
+}
+
+export interface PlatformBillingSnapshotDTO {
+  workspaceId: string;
+  subscription: PlatformSubscriptionDTO;
+  usage: UsageMetricDTO[];
+}
+
+export interface ServiceSettingDTO {
+  code: string;
+  label: string;
+  enabled: boolean;
+  rateVersion: string;
+}
+
+export interface TeamMemberDTO {
+  userId: string;
+  role: "OWNER" | "DISPATCHER" | "CREW";
+  active: boolean;
+}
+
+export interface TeamInvitationDTO {
+  id: string;
+  role: "OWNER" | "DISPATCHER" | "CREW";
+  state: "PENDING" | "ACCEPTED" | "REVOKED";
+  createdAt: ISODateTime;
+}
+
+export interface OwnerSettingsSnapshotDTO {
+  workspaceId: string;
+  services: ServiceSettingDTO[];
+  members: TeamMemberDTO[];
+  invitations: TeamInvitationDTO[];
+}
