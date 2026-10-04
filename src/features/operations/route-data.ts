@@ -11,6 +11,7 @@ import type {
 } from "@/contracts";
 import type { CheckoutProviderMode } from "@/features/checkout/view-models";
 import type { InboxActionAvailability } from "@/features/inbox/view-models";
+import type { CrewTransitionPresentation } from "@/features/crew/server-boundary";
 import type { BusinessModule } from "./business-modules";
 import type { CrewModule } from "./crew-modules";
 import type { CustomerModule } from "./customer-modules";
@@ -96,6 +97,7 @@ export interface CrewJobSnapshot {
   request: RequestDTO;
   visit: VisitDTO;
   invoice: InvoiceDTO;
+  transition?: CrewTransitionPresentation;
 }
 
 export interface OperationalRouteData {
