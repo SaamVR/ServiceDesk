@@ -52,8 +52,16 @@ export interface RecurringVisitOccurrence {
   timezone: string;
 }
 
+function parseTime(iso: string): number | undefined {
+  const time = new Date(iso).getTime();
+  return Number.isFinite(time) ? time : undefined;
+}
+
 function minutesBetween(startsAt: string, endsAt: string): number {
-  return Math.floor((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60_000);
+  const start = parseTime(startsAt);
+  const end = parseTime(endsAt);
+  if (start === undefined || end === undefined) return Number.NaN;
+  return Math.floor((end - start) / 60_000);
 }
 
 function addMinutes(iso: string, minutes: number): string {
@@ -87,12 +95,28 @@ export function findAvailableSlots(input: FindAvailableSlotsInput): CapacitySlot
   return input.slots.filter((slot) => {
     if (slot.workspaceId !== input.workspaceId) return false;
     if (activeHeldSlotIds.has(slot.id)) return false;
+
+    const now = parseTime(input.now);
+    const startsAt = parseTime(slot.startsAt);
+    const endsAt = parseTime(slot.endsAt);
+    if (now === undefined || startsAt === undefined || endsAt === undefined) return false;
+    if (startsAt <= now || endsAt <= now) return false;
+    if (endsAt <= startsAt) return false;
+
     const windowMinutes = minutesBetween(slot.startsAt, slot.endsAt);
-    return slot.capacityMinutes >= requiredMinutes && windowMinutes >= requiredMinutes;
+    return Number.isFinite(windowMinutes) && slot.capacityMinutes >= requiredMinutes && windowMinutes >= requiredMinutes;
   });
 }
 
 export function createSlotHold(input: CreateSlotHoldInput): Result<SlotHold> {
+  if (!Number.isInteger(input.holdMinutes) || input.holdMinutes <= 0) {
+    return {
+      ok: false,
+      code: "HOLD_DURATION_INVALID",
+      message: "Hold duration must be a positive integer number of minutes.",
+    };
+  }
+
   const activeConflict = input.existingHolds.some((hold) => (
     hold.workspaceId === input.workspaceId
     && hold.slotId === input.slotId
