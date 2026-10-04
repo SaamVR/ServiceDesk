@@ -1,4 +1,4 @@
-import type { ActorContext, AttentionItemDTO, CommandMeta, ConversationDTO, InvoiceDTO, MessageDTO, QualityCaseDTO, QuoteDTO, RecurrenceFrequency, RecurrenceRuleDTO, RequestDTO, Result, SlotDTO, VisitChecklistItemDTO, VisitDTO, VisitEvidenceDTO, VisitEvidenceKind } from "../../contracts";
+import type { ActorContext, AttentionItemDTO, CommandMeta, ConversationDTO, InvoiceDTO, MessageDTO, OwnerSettingsSnapshotDTO, PlatformBillingSnapshotDTO, QualityCaseDTO, QuoteDTO, RecurrenceFrequency, RecurrenceRuleDTO, ReportingSnapshotDTO, RequestDTO, Result, SlotDTO, VisitChecklistItemDTO, VisitDTO, VisitEvidenceDTO, VisitEvidenceKind } from "../../contracts";
 export interface CreateRequestInput { customerId?: string; propertyId?: string; serviceCode?: string; }
 export interface FindSlotsInput { requestId: string; from: string; to: string; preferredCrewId?: string; }
 export interface VerifiedPaymentEvent {
@@ -66,6 +66,7 @@ export interface QualityCaseActionInput {
 }
 export type VisitAction = "CONFIRM" | "ASSIGN" | "EN_ROUTE" | "START" | "SUBMIT_REVIEW" | "COMPLETE" | "CANCEL";
 export interface WorkspaceSnapshotQuery { customerId?: string; requestId?: string; visitId?: string; invoiceId?: string; conversationId?: string; }
+export interface ReportingSnapshotQuery { from?: string; to?: string; }
 export interface WorkspaceSnapshot { requests: RequestDTO[]; quotes: QuoteDTO[]; visits: VisitDTO[]; invoices: InvoiceDTO[]; conversations: ConversationDTO[]; messages: MessageDTO[]; recurrenceRules: RecurrenceRuleDTO[]; visitEvidence: VisitEvidenceDTO[]; visitChecklistItems: VisitChecklistItemDTO[]; attentionItems: AttentionItemDTO[]; qualityCases: QualityCaseDTO[]; }
 export interface ServiceDeskFacade {
   createRequest(ctx: ActorContext, input: CreateRequestInput, meta: CommandMeta): Promise<Result<RequestDTO>>;
@@ -86,4 +87,7 @@ export interface ServiceDeskFacade {
   applyManualPayment(ctx: ActorContext, invoiceId: string, input: ManualPaymentInput, meta: CommandMeta): Promise<Result<InvoiceDTO>>;
   applyQualityCaseAction(ctx: ActorContext, id: string, action: QualityCaseAction, input: QualityCaseActionInput, meta: CommandMeta): Promise<Result<QualityCaseDTO>>;
   readWorkspaceSnapshot(ctx: ActorContext, query: WorkspaceSnapshotQuery): Promise<Result<WorkspaceSnapshot>>;
+  readReportingSnapshot(ctx: ActorContext, query: ReportingSnapshotQuery): Promise<Result<ReportingSnapshotDTO>>;
+  readPlatformBillingSnapshot(ctx: ActorContext): Promise<Result<PlatformBillingSnapshotDTO>>;
+  readOwnerSettingsSnapshot(ctx: ActorContext): Promise<Result<OwnerSettingsSnapshotDTO>>;
 }
