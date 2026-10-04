@@ -3,6 +3,8 @@ import type { InvoiceDTO, QuoteDTO, SlotDTO, VisitDTO } from "../../src/contract
 import { buildCheckoutView } from "../../src/features/checkout/view-models";
 import { sampleInvoice, sampleQuote, sampleSlot, sampleVisit } from "../../src/features/operations/sample-data";
 
+const holdExpiresAt = "2026-10-04T06:30:00.000Z";
+
 describe("checkout view model", () => {
   it("separates quote, slot hold, sandbox payment and confirmed visit states", () => {
     const view = buildCheckoutView({
@@ -11,7 +13,7 @@ describe("checkout view model", () => {
       visit: { ...sampleVisit, status: "AWAITING_PAYMENT" },
       invoice: { ...sampleInvoice, status: "PARTIALLY_PAID", allocatedMinor: sampleQuote.depositMinor },
       paymentMode: "SANDBOX",
-      holdExpiresAt: "2026-10-04T06:30:00.000Z",
+      holdExpiresAt,
     });
 
     expect(view.quoteState).toBe("Quote accepted · version 2");
@@ -29,7 +31,7 @@ describe("checkout view model", () => {
       visit: sampleVisit,
       invoice: sampleInvoice,
       paymentMode: "FIXTURE",
-      holdExpiresAt: "2026-10-04T06:30:00.000Z",
+      holdExpiresAt,
     });
 
     expect(view.slotState).toBe("Calendar stale · staff review required");
@@ -48,11 +50,53 @@ describe("checkout view model", () => {
       visit: lateVisit,
       invoice: paidInvoice,
       paymentMode: "SANDBOX",
-      holdExpiresAt: "2026-10-04T06:30:00.000Z",
+      holdExpiresAt,
     });
 
     expect(view.visitState).toBe("Payment review required");
     expect(view.primaryAction).toBe("Open payment review");
     expect(view.canShowReceipt).toBe(false);
+  });
+
+  it("does not expose a receipt for live mode alone when the visit still awaits payment", () => {
+    const view = buildCheckoutView({
+      quote: { ...sampleQuote, status: "ACCEPTED" },
+      slot: { ...sampleSlot, availabilityFresh: true },
+      visit: { ...sampleVisit, status: "AWAITING_PAYMENT" },
+      invoice: { ...sampleInvoice, allocatedMinor: sampleQuote.depositMinor },
+      paymentMode: "LIVE",
+      holdExpiresAt,
+    });
+
+    expect(view.canShowReceipt).toBe(false);
+    expect(view.warning).toContain("provider callback");
+  });
+
+  it("does not expose a receipt when live payment has an accepted quote but stale slot", () => {
+    const view = buildCheckoutView({
+      quote: { ...sampleQuote, status: "ACCEPTED" },
+      slot: { ...sampleSlot, availabilityFresh: false },
+      visit: { ...sampleVisit, status: "CONFIRMED" },
+      invoice: { ...sampleInvoice, allocatedMinor: sampleQuote.depositMinor },
+      paymentMode: "LIVE",
+      holdExpiresAt,
+    });
+
+    expect(view.canShowReceipt).toBe(false);
+    expect(view.primaryAction).toBe("Ask staff to refresh availability");
+  });
+
+  it("keeps live receipt eligible only for coherent accepted quote, fresh slot, confirmed visit and recorded deposit", () => {
+    const view = buildCheckoutView({
+      quote: { ...sampleQuote, status: "ACCEPTED" },
+      slot: { ...sampleSlot, availabilityFresh: true },
+      visit: { ...sampleVisit, status: "CONFIRMED" },
+      invoice: { ...sampleInvoice, allocatedMinor: sampleQuote.depositMinor, refundedMinor: 0 },
+      paymentMode: "LIVE",
+      holdExpiresAt,
+    });
+
+    expect(view.canShowReceipt).toBe(true);
+    expect(view.warning).toContain("provider callback");
   });
 });
