@@ -1,69 +1,7 @@
-import { sampleAttentionItems, sampleVisit } from "@/features/operations/sample-data";
-import {
-  buildQualityCaseView,
-  type QualityCaseFixture,
-} from "./view-models";
+import type { AttentionItemDTO, QualityCaseDTO, VisitDTO } from "@/contracts";
+import type { QualityCaseAction } from "@/server/core/facade";
+import { buildQualityCaseView, validQualityActions, type QualityActionAvailability } from "./view-models";
 
-const sampleQualityCase: QualityCaseFixture = {
-  id: "quality_sample_001",
-  visitId: sampleVisit.id,
-  state: "OPEN",
-  feedbackScore: 2,
-  summary: "Customer reported missed skirting boards after completion review.",
-  ownerUserId: "dispatcher_1",
-  dueAt: "2026-10-05T12:00:00.000Z",
-  reviewRequestState: "NOT_ELIGIBLE",
-};
-
-export function QualityReviewPreview({ embedded = false }: { embedded?: boolean }) {
-  const view = buildQualityCaseView({
-    visit: { ...sampleVisit, status: "PENDING_REVIEW" },
-    qualityCase: sampleQualityCase,
-    attentionItems: sampleAttentionItems,
-  });
-
-  const content = (
-    <section className="plain-card" aria-label="Quality case preview">
-      <div className="section-heading compact">
-        <p className="eyebrow">Quality case · fixture UI</p>
-        <h2>Feedback becomes owned operational work</h2>
-        <p>
-          V1 tracks feedback, owner, deadline and resolution. Supervisor inspection workflows are not
-          represented because they belong to V2.
-        </p>
-        <span className="status-pill attention">{view.dataSource}</span>
-      </div>
-
-      <div className="card-grid two">
-        <article className="mini-panel">
-          <p className="label">Issue</p>
-          <h3>{view.feedbackLabel}</h3>
-          <p>{view.issueSummary}</p>
-          <dl className="summary-list">
-            <div><dt>Owner</dt><dd>{view.ownerLabel}</dd></div>
-            <div><dt>Deadline</dt><dd>{view.deadlineLabel}</dd></div>
-            <div><dt>Visit</dt><dd>{view.visitStatus.replaceAll("_", " ")}</dd></div>
-          </dl>
-        </article>
-
-        <article className="mini-panel">
-          <p className="label">Resolution + review request</p>
-          <h3>{view.resolutionLabel}</h3>
-          <p>{view.reviewRequestLabel}</p>
-          <p>{view.relatedAttentionCount} linked attention item(s) in the current fixture.</p>
-          <button
-            className="button-secondary"
-            type="button"
-            disabled
-            aria-disabled="true"
-            title="Fixture preview only; review request command is not integrated on this branch."
-          >
-            Request customer review · preview
-          </button>
-        </article>
-      </div>
-    </section>
-  );
-
-  return embedded ? content : <div className="site-shell">{content}</div>;
-}
+interface QualityReviewPreviewProps { qualityCase: QualityCaseDTO; visit: VisitDTO; attentionItems: AttentionItemDTO[]; actionAvailability?: QualityActionAvailability; sourceLabel?: "SERVER_SNAPSHOT" | "FIXTURE_UI_ONLY"; acceptedActionHandler?: (action: QualityCaseAction) => Promise<void> | void; embedded?: boolean; }
+const actionOrder: QualityCaseAction[] = ["START_REVIEW", "ASSIGN", "RESOLVE", "REQUEST_REVIEW"];
+export function QualityReviewPreview({ qualityCase, visit, attentionItems, actionAvailability, acceptedActionHandler, sourceLabel = "SERVER_SNAPSHOT", embedded = false }: QualityReviewPreviewProps) { const validActions = validQualityActions(qualityCase); const handlerReady = Boolean(acceptedActionHandler) && Boolean(actionAvailability?.acceptedActionHandlerSupplied); const view = buildQualityCaseView({ qualityCase, visit, attentionItems, sourceLabel, actionAvailability: { ...actionAvailability, acceptedActionHandlerSupplied: handlerReady, enabledActions: handlerReady ? (actionAvailability?.enabledActions ?? []).filter((action) => validActions.includes(action)) : [] } }); const content = <section className="plain-card" aria-label="Quality case preview"><div className="section-heading compact"><p className="eyebrow">Quality case · {view.dataSource}</p><h2>Feedback becomes owned operational work</h2><p>V1 tracks feedback, owner, deadline and resolution from QualityCaseDTO. UI state never mutates quality state before the authoritative server result.</p><span className="status-pill attention">{view.qualityState.replaceAll("_", " ")}</span></div><div className="card-grid two"><article className="mini-panel"><p className="label">Issue</p><h3>{view.feedbackLabel}</h3><p>{view.issueSummary}</p><dl className="summary-list"><div><dt>Owner</dt><dd>{view.ownerLabel}</dd></div><div><dt>Deadline</dt><dd>{view.deadlineLabel}</dd></div><div><dt>Visit</dt><dd>{view.visitStatus.replaceAll("_", " ")}</dd></div></dl></article><article className="mini-panel"><p className="label">Resolution + review request</p><h3>{view.resolutionLabel}</h3><p>{view.reviewRequestLabel}</p><p>{view.relatedAttentionCount} linked attention item(s) in the authoritative snapshot.</p><div className="action-row" aria-label="Quality case actions">{actionOrder.map((action) => { const enabled = handlerReady && view.actionAvailability.enabledActions.includes(action); return <button className="button-secondary" type="button" key={action} disabled={!enabled} aria-disabled={!enabled} data-quality-action={action} title={enabled ? "Accepted server action is available; route action must submit it." : view.actionAvailability.disabledReason ?? "Action unavailable for the current quality case."}>{view.actionAvailability.actionLabels?.[action] ?? action.replaceAll("_", " ").toLowerCase()}</button>; })}</div>{view.actionAvailability.actionState ? <p>{view.actionAvailability.actionState.message}</p> : null}</article></div></section>; return embedded ? content : <div className="site-shell">{content}</div>; }
