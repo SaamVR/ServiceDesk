@@ -9,9 +9,22 @@ import {
   sampleRequest,
   sampleSlot,
   sampleVisit,
+  showcaseIds,
 } from "../../src/features/operations/sample-data";
 
 describe("showcase sample data integrity", () => {
+  it("keeps canonical showcase IDs centralized", () => {
+    expect(showcaseIds).toMatchObject({
+      workspace: "ws_showcase",
+      request: "req_moveout_001",
+      quote: "quote_moveout_001",
+      slot: "slot_showcase_001",
+      visit: "visit_showcase_001",
+      invoice: "invoice_showcase_001",
+      conversation: "conv_showcase_001",
+    });
+  });
+
   it("keeps linked sample records in one explicit workspace", () => {
     const workspaceIds = [
       sampleRequest.workspaceId,
@@ -24,10 +37,16 @@ describe("showcase sample data integrity", () => {
       ...sampleIntegrations.map((integration) => integration.workspaceId),
     ];
 
-    expect(new Set(workspaceIds)).toEqual(new Set(["ws_showcase"]));
+    expect(new Set(workspaceIds)).toEqual(new Set([showcaseIds.workspace]));
   });
 
   it("keeps sample request, quote, visit, invoice and conversation references consistent", () => {
+    expect(sampleRequest.id).toBe(showcaseIds.request);
+    expect(sampleQuote.id).toBe(showcaseIds.quote);
+    expect(sampleSlot.id).toBe(showcaseIds.slot);
+    expect(sampleVisit.id).toBe(showcaseIds.visit);
+    expect(sampleInvoice.id).toBe(showcaseIds.invoice);
+    expect(sampleConversation.id).toBe(showcaseIds.conversation);
     expect(sampleQuote.requestId).toBe(sampleRequest.id);
     expect(sampleVisit.requestId).toBe(sampleRequest.id);
     expect(sampleVisit.quoteId).toBe(sampleQuote.id);
