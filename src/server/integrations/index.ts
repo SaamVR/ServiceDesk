@@ -10,6 +10,7 @@ export * from "./whatsapp/media";
 export * from "./whatsapp/status-transition";
 export * from "./whatsapp/status-batch";
 export * from "./whatsapp/status-failure";
+export * from "./whatsapp/status-recovery";
 export * from "./whatsapp/inbound-normalization";
 export * from "./whatsapp/inbox-persistence";
 export * from "./google-calendar/adapter";
