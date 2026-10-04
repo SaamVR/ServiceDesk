@@ -20,4 +20,44 @@ describe("invoice allocation ledger model", () => {
     expect(view.canShowFinalReceipt).toBe(false);
     expect(view.nextAction).toBe("Collect remaining balance after reviewed completion");
   });
+
+  it("does not show a final receipt for inconsistent paid invoice with insufficient net payment", () => {
+    const view = buildInvoiceLedgerView({
+      ...sampleInvoice,
+      status: "PAID",
+      allocatedMinor: sampleInvoice.totalMinor - 100,
+      refundedMinor: 0,
+      balanceMinor: 0,
+    });
+
+    expect(view.progressLabel).toBe("100% collected");
+    expect(view.canShowFinalReceipt).toBe(false);
+    expect(view.nextAction).toBe("Collect remaining balance after reviewed completion");
+  });
+
+  it("clamps over-allocation and refund combinations to 100 percent collected", () => {
+    const view = buildInvoiceLedgerView({
+      ...sampleInvoice,
+      status: "PAID",
+      allocatedMinor: sampleInvoice.totalMinor * 2,
+      refundedMinor: sampleInvoice.totalMinor / 2,
+      balanceMinor: 0,
+    });
+
+    expect(view.progressLabel).toBe("100% collected");
+  });
+
+  it("keeps coherent fully paid invoices eligible for final receipt", () => {
+    const view = buildInvoiceLedgerView({
+      ...sampleInvoice,
+      status: "PAID",
+      allocatedMinor: sampleInvoice.totalMinor,
+      refundedMinor: 0,
+      balanceMinor: 0,
+    });
+
+    expect(view.progressLabel).toBe("100% collected");
+    expect(view.canShowFinalReceipt).toBe(true);
+    expect(view.nextAction).toBe("Final receipt can be shown");
+  });
 });
