@@ -434,3 +434,22 @@ New coordinator policy:
 - W3: `docs/execution/batches/cycle-6-worker-3.md` — Product cross-record/live-provider consistency.
 
 Cycles 7–14 are queued thematically in the ten-run horizon and will be source-refreshed as each lane advances.
+
+
+## V1 Integration Sprint 1 branch reset
+
+To eliminate historical worker-branch divergence, three fresh worker branches were created from one combined RC base:
+
+- base RC SHA: `714f24edfe7c6124237c7259a00ede7b288b68fb`
+- Core: `feat/servicedesk-v1-core-sprint1`
+- Connectors/AI: `feat/servicedesk-v1-connectors-sprint1`
+- Product/UI: `feat/servicedesk-v1-product-sprint1`
+
+This means each worker now sees the same current Core + Connector + Product source snapshot while ownership rules still restrict writes.
+
+Sprint packets:
+- `docs/execution/batches/v1-int1-worker-1.md`
+- `docs/execution/batches/v1-int1-worker-2.md`
+- `docs/execution/batches/v1-int1-worker-3.md`
+
+This replaces Cycle 5 micro-hardening as the active path.
