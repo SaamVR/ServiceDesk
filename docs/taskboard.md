@@ -288,3 +288,24 @@ E03 source:
 Supabase approval needed from owner before project creation:
 - organization currently available: `ECom CMS`
 - do not reuse `Booking agent` or `CMS Project`.
+
+
+## V1 Integration Sprint 4 — ACTIVE
+
+Common accepted RC/base:
+`602e581c1df860480c230da893128c0d1b8ca395`
+
+| Lane | Branch | Mission | State |
+| --- | --- | --- | --- |
+| Core | `feat/servicedesk-v1-core-sprint4` | E05 durable inbox/conversation truth + handover + staff reply + snapshot | READY |
+| Connectors/AI | `feat/servicedesk-v1-connectors-sprint4` | E05 WhatsApp receipt/Core handoff + CUSTOMER_REPLY dispatch | READY |
+| Product/UI | `feat/servicedesk-v1-product-sprint3` | E05 props-driven shared inbox + snapshot/action boundary | READY |
+
+E03/E04 real database proof:
+- source implementation is ready;
+- dedicated ServiceDesk Supabase staging is still required for PostgreSQL/RLS/transaction/concurrency proof;
+- existing Booking agent / CMS Project databases must not be reused.
+
+Provider policy:
+- Stripe remains SANDBOX/DEMO only.
+- other provider credentials requested only when their exact gate is ready.
