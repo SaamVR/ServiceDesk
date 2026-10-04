@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import type { CheckoutInput, QuoteDTO } from "../../src/contracts";
+import type { QuoteDTO } from "../../src/contracts";
+import type { CheckoutInput } from "../../src/server/integrations/types";
 import { createStripeCheckoutSession, type StripeCheckoutHttpTransport } from "../../src/server/integrations/payments/stripe-checkout";
 
 const quote: QuoteDTO = {
