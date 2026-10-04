@@ -12,6 +12,7 @@ import {
   staffModules,
   uiStateScenarios,
 } from "@/features/product/story-model";
+import { QuoteApprovalPreview } from "@/features/quotes/QuoteApprovalPreview";
 import { ReportsPreview } from "@/features/reports/ReportsPreview";
 import { RequestSummaryPreview } from "@/features/request-intake/RequestSummaryPreview";
 import { SchedulePreview } from "@/features/schedule/SchedulePreview";
@@ -171,6 +172,7 @@ function StaffPanel() {
         </aside>
       </div>
       <CrmPreview />
+      <QuoteApprovalPreview />
       <InboxPreview />
       <SchedulePreview />
       <ReportsPreview />
