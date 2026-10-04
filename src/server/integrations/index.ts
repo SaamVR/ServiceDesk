@@ -27,6 +27,7 @@ export * from "./google-calendar/sync";
 export * from "./google-calendar/availability";
 export * from "./payments/adapter";
 export * from "./payments/stripe-checkout";
+export * from "./payments/sandbox-checkout-command";
 export * from "./payments/lifecycle";
 export * from "./payments/application-state";
 export * from "./payments/review";
