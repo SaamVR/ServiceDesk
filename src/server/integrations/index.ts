@@ -29,6 +29,7 @@ export * from "./payments/stripe-checkout";
 export * from "./payments/lifecycle";
 export * from "./payments/application-state";
 export * from "./payments/review";
+export * from "./payments/review-bridge";
 export * from "./payments/recovery";
 export * from "./payments/proof";
 export * from "./email/adapter";
