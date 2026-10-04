@@ -73,6 +73,27 @@ describe("Google Calendar reconciliation", () => {
     expect(plan).toMatchObject({ action: "RECONNECT_REQUIRED", reason: "MISSING_CALENDAR", blocksAvailability: true });
   });
 
+  test("future or invalid last-sync timestamps cannot authorize instant confirmation", () => {
+    for (const lastSyncedAt of ["2026-10-04T12:05:00.000Z", "not-a-date"]) {
+      const plan = planCalendarReconciliation({
+        workspaceId: "ws-clearnest",
+        crewId: "crew-1",
+        calendarId: "cal-1",
+        syncToken: "sync_123",
+        stale: false,
+        lastSyncedAt,
+        now: "2026-10-04T12:00:00.000Z",
+      });
+
+      expect(plan).toMatchObject({
+        action: "INCREMENTAL_SYNC_REQUIRED",
+        reason: "STALE_LAST_SYNC",
+        canInstantConfirm: false,
+        blocksAvailability: true,
+      });
+    }
+  });
+
   test("summary is redacted and grouped for operator view", () => {
     const summary = summarizeCalendarReconciliation([
       planCalendarReconciliation({ workspaceId: "ws-1", crewId: "crew-1", calendarId: "cal-1", syncToken: "expired", stale: true, now: "2026-10-04T12:00:00.000Z" }),
