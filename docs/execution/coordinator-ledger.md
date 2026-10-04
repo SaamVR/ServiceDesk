@@ -860,3 +860,46 @@ Missions:
 - W1: E08 manual-payment audit/invoice mutation + quality/attention lifecycle with real ServiceDesk staging proof.
 - W2: E09 unified provider readiness/evidence closure; no new provider breadth.
 - W3: finish E08 Product fixture-to-server boundary without regressions.
+
+
+## Sprint 8 accepted / Sprint 9 active
+
+Accepted worker finals:
+- W1 Core E08: cceb81c0ed6d10590f987e9718e207f9ecdcc688
+- W2 Provider readiness: 38b67acb3c70397e754877d251a60ae8f75b036a
+- W3 Product E08 recovery: 54113ab8e0c693f3407b38c21047f9f6b19b7f3a
+
+Live ServiceDesk staging validation:
+- sd_0013_manual_payment_quality_runtime applied
+- sd_0013a_quality_attention_fk_hardening applied
+- manual payment / quality / snapshot RPCs are SECURITY INVOKER
+- anon/authenticated execute false
+- service_role execute true
+- manual_payment_records and quality_cases exist
+- W1 receipt reports MANUAL_PAYMENT_DB_PROOF=PASS, QUALITY_DB_PROOF=PASS, cleanup YES
+
+W2:
+- unified provider readiness/evidence model implemented
+- controlled-proof manifest/rules implemented
+- Stripe/payment remains sandbox-only by owner policy
+- live provider evidence remains configuration-blocked
+
+W3:
+- E08 Product recovery accepted after source review
+- reusable quality/recovery views no longer own fixture truth
+- explicit fixture wrappers exist
+- invoice/manual-payment/quality boundaries and route coverage preserved
+
+Current combined RC:
+cae7eb170b97208802065b76e20cbe9f9862c0cd
+
+Coordinator-frozen E09 reads:
+- ReportingSnapshotDTO / readReportingSnapshot
+- PlatformBillingSnapshotDTO / readPlatformBillingSnapshot
+- OwnerSettingsSnapshotDTO / readOwnerSettingsSnapshot
+- ServiceSettingDTO aligned to persisted service_catalog (no invented rateVersion)
+
+Sprint 9 branches:
+- feat/servicedesk-v1-core-sprint8
+- feat/servicedesk-v1-connectors-sprint9
+- feat/servicedesk-v1-product-sprint7
