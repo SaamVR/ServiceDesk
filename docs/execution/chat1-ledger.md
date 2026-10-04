@@ -84,3 +84,68 @@ Required first actions:
 6. continue all executable E01 slices before returning.
 
 If checks cannot execute, record exact command/error and preserve an UNVERIFIED candidate; do not mark integration PASS.
+
+---
+
+## Chat3-E01 Product/UI integration attempt — 2026-10-04
+
+STARTING_INTEGRATION_HEAD: `df9c25c117ae62bc840e246cbf9b139140e1313d`
+PRODUCT_RANGE_REQUESTED: `cc9fac1b4d6bef8162706b7749281606fdab07b4..1f2a5384cd6d062235f8441802a1632ea4cfc476`
+PRODUCT_HEAD_OBSERVED: `1f2a5384cd6d062235f8441802a1632ea4cfc476`
+CORE_HEAD_OBSERVED: `c0b6c2c7d92250398e637c30edfe12e93efc0b1a`
+CONNECTOR_HEAD_OBSERVED: `0a39772690625b432440c42d01b9afb0f7f83bb6`
+INTEGRATION_HEAD_OBSERVED: `df9c25c117ae62bc840e246cbf9b139140e1313d`
+
+Required docs read:
+
+- `AGENTS.md` from integration candidate.
+- `docs/execution/throughput-recovery-20261004.md` from integration candidate.
+- `docs/execution/chat3-plan-e01-e10.md` from `origin/feat/servicedesk-v1-product` because it was not present on integration before merge.
+- `docs/execution/chat3-ledger.md` from `origin/feat/servicedesk-v1-product` because it was not present on integration before merge.
+- `docs/contracts-v1.md` from integration candidate.
+- `docs/presentation/shared-interface-requests-20261004.md` from `origin/feat/servicedesk-v1-product` because it was not present on integration before merge.
+
+Merge result:
+
+- Product branch merge into isolated candidate: `23a4c298a0ccb50c6b9627dd40b572e541046d63`.
+- Merge status: source merge clean, but candidate is UNVERIFIED.
+- Note: integration did not already contain `cc9fac1b4d6bef8162706b7749281606fdab07b4`; merge-base with Product/UI was `dbf1f756d588925a694a4131672248ddb21a14e3`, so merging product head brought the broader Product/UI scaffold plus the requested E01 range.
+
+Verification attempted:
+
+| Command | Result |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | BLOCKED / terminated; command reached `Packages: +409` then root filesystem dropped to 28 KB free; process was terminated to avoid unsafe runtime writes; exit code `143`. |
+| `pnpm test tests/e2e/product-action-boundary.test.ts` | NOT EXECUTED; dependency install did not complete. |
+| `pnpm test tests/e2e/view-model-boundary.test.ts tests/e2e/sample-data-integrity.test.ts tests/e2e/accessibility-contract.test.ts tests/e2e/route-family-contract.test.ts tests/e2e/presentation-tour-contract.test.ts` | NOT EXECUTED; dependency install did not complete. |
+| `pnpm typecheck` | NOT EXECUTED; dependency install did not complete. |
+| `pnpm lint` | NOT EXECUTED; dependency install did not complete. |
+| `pnpm build` | NOT EXECUTED; dependency install did not complete. |
+
+Runtime blocker:
+
+- Device: `samai`.
+- Root filesystem before attempt: `/dev/sda1` 45G total, 44G used, 289M free, 100% use.
+- Worktree and configured pnpm store were under `/dev/shm`, but root filesystem still dropped to 28 KB free while `pnpm install --frozen-lockfile` was in progress.
+- Do not mark the product integration as accepted until the requested install/test/typecheck/lint/build gate executes on a runtime with working disk.
+
+Chat 1 contract decisions for Chat 3 shared-interface requests:
+
+| Request | Decision | Reason / next owner |
+| --- | --- | --- |
+| `MessageDTO` | DEFER | Requires durable message delivery lifecycle read model and Chat 2 status bridge; target E03/E05. |
+| `PropertyDTO` | ACCEPT | Accept as DB-aligned customer/property read DTO; target E02 with workspace/customer scoping. |
+| `RecurringSeriesDTO` | DEFER | Accept only later as narrowed V1 recurrence contract after persistence decisions; target E07. |
+| `CommunicationPreferenceDTO` | DEFER | Needs persisted preferred channel, quiet hours, consent/opt-in fields and outbound-policy alignment; target E05/E07. |
+| `QualityCaseDTO` | DEFER | No quality-case persistence accepted yet; target E08. |
+| `FieldEvidenceDTO` | DEFER | No field-evidence persistence/upload authorization accepted yet; target E06. |
+| `readInboxSnapshot` | DEFER | Depends on `MessageDTO`, durable message state, handover/reply authority; target E03/E05. |
+| `readCustomerPortalSnapshot` | DEFER | Composition boundary depends on accepted portal/property/preference/message reads; later composition task. |
+| `readPropertySnapshot` | ACCEPT | Accept as `Result<PropertyDTO[]>`, scoped by workspace/customer; target E02. |
+| `readRecurringSeries` | DEFER | Depends on narrowed `RecurringSeriesDTO` and recurrence persistence; target E07. |
+| `readCommunicationPreference` | DEFER | Depends on accepted preference persistence; target E05/E07. |
+| `readQualityCaseSnapshot` | DEFER | Depends on `QualityCaseDTO` persistence; target E08. |
+| `readCrewJobSnapshot` | DEFER | Depends on visit authorization plus `FieldEvidenceDTO`; target E06. |
+| `readTourSnapshot` | DEFER | Must derive from integrated server truth after E03/E09, not Product/UI fixture state; target E10. |
+
+Ruling: Product/UI E01 merge is source-clean but verification-blocked — runtime disk exhaustion prevents dependency install and therefore prevents accepting or pushing to the integration branch — cost if wrong: product UI could compile-fail after merge, so accepted integration branch remains unchanged.
