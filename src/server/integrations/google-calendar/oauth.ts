@@ -102,7 +102,7 @@ export function evaluateGoogleCalendarConnection(input: GoogleCalendarConnection
       workspaceId: input.workspaceId,
       crewId: input.crewId,
       calendarId: input.calendarId,
-      status: "REAUTH_REQUIRED",
+      status: "DEGRADED",
       reason: "ACCESS_TOKEN_EXPIRED",
       canReadBusy: false,
       canCreateEvents: false,
