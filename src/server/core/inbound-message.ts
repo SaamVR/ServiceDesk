@@ -56,7 +56,8 @@ export function createConversationFacadeMethods(deps: ConversationFacadeDependen
         if (duplicate) return loadDuplicateOutcome(tx, duplicate);
         const receipt: ProviderInboundReceiptRecord = {
           id: tx.nextReceiptId(), workspaceId: event.workspaceId, provider: event.channel, providerAccountId: event.providerAccountId,
-          providerMessageId: event.providerMessageId, providerReceiptKey: event.receiptKey, rawProviderEventRef: event.rawProviderEventRef,
+          providerMessageId: event.providerMessageId, providerReceiptKey: event.receiptKey, senderRef: event.senderRef,
+          providerOccurredAt: event.occurredAt, rawProviderEventRef: event.rawProviderEventRef,
           contentKind: event.contentKind, receivedAt: event.occurredAt, state: "RECEIVED",
         };
         const savedReceipt = await tx.insertInboundReceipt(receipt);
@@ -68,7 +69,7 @@ export function createConversationFacadeMethods(deps: ConversationFacadeDependen
           providerMessageId: event.providerMessageId, providerReceiptKey: event.receiptKey,
           body: event.contentKind === "TEXT" ? event.text?.trim() : undefined,
           mediaReference: event.contentKind === "MEDIA_REFERENCE" ? event.media : undefined,
-          contentKind: event.contentKind, providerAccountId: event.providerAccountId, senderRef: event.senderRef,
+          contentKind: event.contentKind, providerAccountId: event.providerAccountId, providerOccurredAt: event.occurredAt, senderRef: event.senderRef,
           rawProviderEventRef: event.rawProviderEventRef, deliveryState: "DELIVERED", createdAt: event.occurredAt,
         };
         const insertedMessage = await tx.insertMessage(message);
