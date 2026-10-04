@@ -1,9 +1,14 @@
 import type { QuoteDTO, RequestDTO, SlotDTO } from "@/contracts";
-import { mapProductActionError, successProductActionState, type ProductActionError, type ProductActionState } from "./action-state";
+import {
+  mapProductActionError,
+  successProductActionState,
+  type ProductActionError,
+  type ProductActionState,
+} from "./action-state";
 
-type CommandSuccess<T> = { ok: true; value: T };
-type CommandFailure = { ok: false; error: ProductActionError };
-type Result<T> = CommandSuccess<T> | CommandFailure;
+export type CommandSuccess<T> = { ok: true; value: T };
+export type CommandFailure = { ok: false; error: ProductActionError };
+export type ProductCommandResult<T> = CommandSuccess<T> | CommandFailure;
 
 export interface ProductActionContext {
   workspaceId: string;
@@ -59,18 +64,18 @@ export interface HoldSlotCommandInput {
 }
 
 export interface EnquiryCommandPort {
-  createRequest(input: CreateRequestCommandInput): Promise<Result<RequestDTO>>;
-  updateRequest(input: UpdateRequestCommandInput): Promise<Result<RequestDTO>>;
-  calculateQuote(input: CalculateQuoteCommandInput): Promise<Result<QuoteDTO>>;
+  createRequest(input: CreateRequestCommandInput): Promise<ProductCommandResult<RequestDTO>>;
+  updateRequest(input: UpdateRequestCommandInput): Promise<ProductCommandResult<RequestDTO>>;
+  calculateQuote(input: CalculateQuoteCommandInput): Promise<ProductCommandResult<QuoteDTO>>;
 }
 
 export interface QuoteCommandPort {
-  sendQuote(input: SendQuoteCommandInput): Promise<Result<QuoteDTO>>;
+  sendQuote(input: SendQuoteCommandInput): Promise<ProductCommandResult<QuoteDTO>>;
 }
 
 export interface ScheduleCommandPort {
-  findSlots(input: FindSlotsCommandInput): Promise<Result<SlotDTO[]>>;
-  holdSlot(input: HoldSlotCommandInput): Promise<Result<SlotDTO>>;
+  findSlots(input: FindSlotsCommandInput): Promise<ProductCommandResult<SlotDTO[]>>;
+  holdSlot(input: HoldSlotCommandInput): Promise<ProductCommandResult<SlotDTO>>;
 }
 
 export interface EnquiryServerActionInput {
@@ -79,7 +84,9 @@ export interface EnquiryServerActionInput {
   patch: Record<string, unknown>;
 }
 
-function isCommandSuccess<T>(result: Result<T>): result is CommandSuccess<T> {
+export type DisabledProductMutation = "checkout" | "crewTransition";
+
+function isCommandSuccess<T>(result: ProductCommandResult<T>): result is CommandSuccess<T> {
   return result.ok === true;
 }
 
@@ -91,8 +98,25 @@ function failure<T>(error: ProductActionError, steps: string[], failedStep: stri
   return { ok: false, error, steps, failedStep, state: mapProductActionError(error) };
 }
 
+export function disabledProductMutationResult(mutation: DisabledProductMutation): ProductActionResult<never> {
+  const error: ProductActionError =
+    mutation === "checkout"
+      ? {
+          code: "CHECKOUT_MUTATION_DISABLED",
+          message: "Hosted checkout remains disabled until the E03 verified payment bridge is accepted.",
+        }
+      : {
+          code: "CREW_MUTATION_DISABLED",
+          message: "Crew visit mutations remain disabled until accepted E06 commands exist.",
+        };
+
+  return failure(error, [mutation], mutation);
+}
+
 export function createEnquiryServerActionFactory(commands: EnquiryCommandPort) {
-  return async function submitEnquiry(input: EnquiryServerActionInput): Promise<ProductActionResult<{ request: RequestDTO; quote: QuoteDTO }>> {
+  return async function submitEnquiry(
+    input: EnquiryServerActionInput,
+  ): Promise<ProductActionResult<{ request: RequestDTO; quote: QuoteDTO }>> {
     const steps: string[] = [];
 
     steps.push("createRequest");
@@ -116,7 +140,11 @@ export function createEnquiryServerActionFactory(commands: EnquiryCommandPort) {
     });
     if (!isCommandSuccess(quoted)) return failure(quoted.error, steps, "calculateQuote");
 
-    return success({ request: updated.value, quote: quoted.value }, steps, "Request and quote are ready from accepted server commands.");
+    return success(
+      { request: updated.value, quote: quoted.value },
+      steps,
+      "Request and quote are ready from accepted server commands.",
+    );
   };
 }
 

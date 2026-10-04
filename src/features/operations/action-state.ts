@@ -5,9 +5,11 @@ export type ProductActionStatus =
   | "version_conflict"
   | "auth_required"
   | "workspace_denied"
+  | "visitor_failure"
   | "slot_unavailable"
   | "hold_failed"
   | "validation_error"
+  | "quote_not_found"
   | "not_found"
   | "server_error";
 
@@ -29,31 +31,50 @@ export const idleProductActionState: ProductActionState = {
   message: "Ready for an accepted server command.",
 };
 
+function stateFromError(status: ProductActionStatus, error: ProductActionError): ProductActionState {
+  return {
+    status,
+    message: error.message,
+    code: error.code,
+    fieldErrors: error.fieldErrors,
+  };
+}
+
 export function mapProductActionError(error: ProductActionError): ProductActionState {
   switch (error.code) {
     case "VERSION_CONFLICT":
     case "STALE_VERSION":
-      return { status: "version_conflict", message: error.message, code: error.code, fieldErrors: error.fieldErrors };
+      return stateFromError("version_conflict", error);
     case "AUTH_REQUIRED":
+    case "AUTHORIZATION_FAILED":
     case "UNAUTHORIZED":
-      return { status: "auth_required", message: error.message, code: error.code, fieldErrors: error.fieldErrors };
+      return stateFromError("auth_required", error);
     case "WORKSPACE_DENIED":
     case "WORKSPACE_MISMATCH":
     case "FORBIDDEN":
-      return { status: "workspace_denied", message: error.message, code: error.code, fieldErrors: error.fieldErrors };
+      return stateFromError("workspace_denied", error);
+    case "VISITOR_FAILED":
+    case "VISITOR_NOT_FOUND":
+    case "VISITOR_ACCESS_DENIED":
+    case "VISITOR_SESSION_EXPIRED":
+      return stateFromError("visitor_failure", error);
+    case "QUOTE_NOT_FOUND":
+      return stateFromError("quote_not_found", error);
     case "SLOT_UNAVAILABLE":
     case "SLOT_STALE":
-      return { status: "slot_unavailable", message: error.message, code: error.code, fieldErrors: error.fieldErrors };
+    case "FIND_SLOTS_FAILED":
+      return stateFromError("slot_unavailable", error);
     case "HOLD_FAILED":
     case "HOLD_EXPIRED":
-      return { status: "hold_failed", message: error.message, code: error.code, fieldErrors: error.fieldErrors };
+    case "HOLD_SLOT_FAILED":
+      return stateFromError("hold_failed", error);
     case "VALIDATION_ERROR":
     case "INVALID_INPUT":
-      return { status: "validation_error", message: error.message, code: error.code, fieldErrors: error.fieldErrors };
+      return stateFromError("validation_error", error);
     case "NOT_FOUND":
-      return { status: "not_found", message: error.message, code: error.code, fieldErrors: error.fieldErrors };
+      return stateFromError("not_found", error);
     default:
-      return { status: "server_error", message: error.message, code: error.code, fieldErrors: error.fieldErrors };
+      return stateFromError("server_error", error);
   }
 }
 

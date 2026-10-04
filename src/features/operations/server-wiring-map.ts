@@ -1,4 +1,4 @@
-export type ProductRouteKey = "enquiry" | "quote" | "schedule" | "checkout" | "portal" | "crew";
+export type ProductRouteKey = "enquiry" | "quote" | "schedule" | "checkout" | "portal" | "staff" | "crew";
 
 export interface ProductServerDependency {
   command: string;
@@ -21,9 +21,9 @@ export const productRouteServerBoundaries: ProductRouteServerBoundary[] = [
     routeFamily: ["/b/[slug]/enquire"],
     fixtureWrapper: "OperationalFixtureRoute",
     dependencies: [
-      { command: "createRequest", status: "ACCEPTED_E02", productAdapter: "createEnquiryServerActionFactory", enabledInProduct: false, reason: "Wired only through dependency injection after server entrypoint import is accepted." },
-      { command: "updateRequest", status: "ACCEPTED_E02", productAdapter: "createEnquiryServerActionFactory", enabledInProduct: false, reason: "Version conflict and workspace/auth failures must propagate from Core." },
-      { command: "calculateQuote", status: "ACCEPTED_E02", productAdapter: "createEnquiryServerActionFactory", enabledInProduct: false, reason: "Product must not calculate quote totals client-side." },
+      { command: "createRequest", status: "ACCEPTED_E02", productAdapter: "createBusinessEnquiryServerActionFactory", enabledInProduct: false, reason: "Wired only through dependency injection after server entrypoint import is accepted." },
+      { command: "updateRequest", status: "ACCEPTED_E02", productAdapter: "createBusinessEnquiryServerActionFactory", enabledInProduct: false, reason: "Version conflict and workspace/auth failures must propagate from Core." },
+      { command: "calculateQuote", status: "ACCEPTED_E02", productAdapter: "createBusinessEnquiryServerActionFactory", enabledInProduct: false, reason: "Product must not calculate quote totals client-side." },
     ],
   },
   {
@@ -58,6 +58,28 @@ export const productRouteServerBoundaries: ProductRouteServerBoundary[] = [
     dependencies: [
       { command: "readWorkspaceSnapshot", status: "FUTURE_E05", productAdapter: "not-created", enabledInProduct: false, reason: "Durable inbox/snapshot read model is not complete." },
       { command: "readPropertySnapshot", status: "ACCEPTED_E02", productAdapter: "not-created", enabledInProduct: false, reason: "Route composition waits for coordinator-approved server import boundary." },
+    ],
+  },
+  {
+    route: "staff",
+    routeFamily: [
+      "/app/[workspace]/overview",
+      "/app/[workspace]/inbox",
+      "/app/[workspace]/customers",
+      "/app/[workspace]/requests",
+      "/app/[workspace]/quotes",
+      "/app/[workspace]/schedule",
+      "/app/[workspace]/jobs",
+      "/app/[workspace]/invoices",
+      "/app/[workspace]/reports",
+      "/app/[workspace]/billing",
+      "/app/[workspace]/quality",
+      "/app/[workspace]/automations",
+      "/app/[workspace]/settings",
+    ],
+    fixtureWrapper: "OperationalFixtureRoute",
+    dependencies: [
+      { command: "readStaffWorkspaceSnapshot", status: "FUTURE_E05", productAdapter: "not-created", enabledInProduct: false, reason: "Staff dashboard modules remain fixture-labelled until the durable read model exists." },
     ],
   },
   {
