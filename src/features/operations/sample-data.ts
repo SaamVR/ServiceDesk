@@ -1,0 +1,202 @@
+import type {
+  AttentionItemDTO,
+  ConversationDTO,
+  IntegrationStatusDTO,
+  InvoiceDTO,
+  QuoteDTO,
+  RequestDTO,
+  SlotDTO,
+  VisitDTO,
+} from "@/contracts";
+
+export const showcaseIds = {
+  workspace: "ws_showcase",
+  customer: "cust_sample",
+  property: "prop_sample",
+  request: "req_moveout_001",
+  quote: "quote_moveout_001",
+  slot: "slot_showcase_001",
+  visit: "visit_showcase_001",
+  invoice: "invoice_showcase_001",
+  conversation: "conv_showcase_001",
+  crew: "crew_alpha",
+  dispatcher: "dispatcher_1",
+} as const;
+
+export const sampleRequest: RequestDTO = {
+  id: showcaseIds.request,
+  workspaceId: showcaseIds.workspace,
+  customerId: showcaseIds.customer,
+  propertyId: showcaseIds.property,
+  serviceCode: "MOVE_OUT",
+  status: "QUOTED",
+  bedrooms: 3,
+  bathrooms: 2,
+  requestedStartAt: "2026-10-09T09:00:00.000Z",
+  version: 4,
+  createdAt: "2026-10-04T06:00:00.000Z",
+  updatedAt: "2026-10-04T06:15:00.000Z",
+};
+
+export const sampleQuote: QuoteDTO = {
+  id: showcaseIds.quote,
+  workspaceId: sampleRequest.workspaceId,
+  requestId: sampleRequest.id,
+  version: 2,
+  status: "SENT",
+  currency: "USD",
+  subtotalMinor: 34_000,
+  taxMinor: 0,
+  totalMinor: 34_000,
+  depositMinor: 8_500,
+  balanceMinor: 25_500,
+  durationMinutes: 240,
+  bufferMinutes: 30,
+  rateVersion: "move-out-v1",
+  validUntil: "2026-10-06T06:15:00.000Z",
+};
+
+export const sampleSlot: SlotDTO = {
+  id: showcaseIds.slot,
+  workspaceId: sampleRequest.workspaceId,
+  crewId: showcaseIds.crew,
+  startAt: "2026-10-09T09:00:00.000Z",
+  endAt: "2026-10-09T13:30:00.000Z",
+  serviceMinutes: 240,
+  bufferMinutes: 30,
+  availabilityFresh: false,
+};
+
+export const sampleVisit: VisitDTO = {
+  id: showcaseIds.visit,
+  workspaceId: sampleRequest.workspaceId,
+  requestId: sampleRequest.id,
+  quoteId: sampleQuote.id,
+  crewId: sampleSlot.crewId,
+  status: "ASSIGNED",
+  startAt: sampleSlot.startAt,
+  serviceMinutes: 240,
+  bufferMinutes: 30,
+  version: 1,
+};
+
+export const sampleInvoice: InvoiceDTO = {
+  id: showcaseIds.invoice,
+  workspaceId: sampleRequest.workspaceId,
+  visitId: sampleVisit.id,
+  status: "PARTIALLY_PAID",
+  currency: "USD",
+  totalMinor: 34_000,
+  allocatedMinor: 8_500,
+  refundedMinor: 0,
+  balanceMinor: 25_500,
+};
+
+export const sampleConversation: ConversationDTO = {
+  id: showcaseIds.conversation,
+  workspaceId: sampleRequest.workspaceId,
+  requestId: sampleRequest.id,
+  customerId: sampleRequest.customerId,
+  channel: "WHATSAPP",
+  assignedUserId: showcaseIds.dispatcher,
+  handoverActive: true,
+  version: 8,
+  lastMessageAt: "2026-10-04T06:12:00.000Z",
+};
+
+export const sampleAttentionItems: AttentionItemDTO[] = [
+  {
+    id: "attention_calendar_001",
+    workspaceId: sampleRequest.workspaceId,
+    type: "CALENDAR_STALE",
+    severity: "WARNING",
+    status: "OPEN",
+    resourceType: "slot",
+    resourceId: sampleSlot.id,
+    ownerUserId: showcaseIds.dispatcher,
+    dueAt: "2026-10-04T07:00:00.000Z",
+    summary: "Calendar freshness is stale before the customer can confirm instantly.",
+  },
+  {
+    id: "attention_delivery_001",
+    workspaceId: sampleRequest.workspaceId,
+    type: "DELIVERY_UNCERTAIN",
+    severity: "CRITICAL",
+    status: "OPEN",
+    resourceType: "conversation",
+    resourceId: sampleConversation.id,
+    ownerUserId: showcaseIds.dispatcher,
+    dueAt: "2026-10-04T07:15:00.000Z",
+    summary: "Message accepted by fixture queue only; no provider-delivered proof exists.",
+  },
+  {
+    id: "attention_payment_001",
+    workspaceId: sampleRequest.workspaceId,
+    type: "PAYMENT_REVIEW",
+    severity: "WARNING",
+    status: "OPEN",
+    resourceType: "visit",
+    resourceId: sampleVisit.id,
+    ownerUserId: showcaseIds.dispatcher,
+    dueAt: "2026-10-04T07:30:00.000Z",
+    summary: "Late or uncertain payment requires capacity review before visit confirmation.",
+  },
+  {
+    id: "attention_invoice_001",
+    workspaceId: sampleRequest.workspaceId,
+    type: "BALANCE_COLLECTION",
+    severity: "INFO",
+    status: "OPEN",
+    resourceType: "invoice",
+    resourceId: sampleInvoice.id,
+    ownerUserId: showcaseIds.dispatcher,
+    dueAt: "2026-10-09T18:00:00.000Z",
+    summary: "Balance collection waits for reviewed completion and verified payment callback.",
+  },
+];
+
+export const sampleIntegrations: IntegrationStatusDTO[] = [
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "WHATSAPP",
+    status: "NOT_CONFIGURED",
+    mode: "FIXTURE",
+    message: "No controlled provider receipt verified yet.",
+  },
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "GOOGLE_CALENDAR",
+    status: "DEGRADED",
+    mode: "FIXTURE",
+    lastErrorAt: "2026-10-04T06:12:00.000Z",
+    message: "Calendar availability is stale; staff review required.",
+  },
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "PAYMENT",
+    status: "BLOCKED",
+    mode: "SANDBOX",
+    message: "Hosted checkout and verified webhook evidence are not connected in this lane.",
+  },
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "EMAIL",
+    status: "NOT_CONFIGURED",
+    mode: "FIXTURE",
+    message: "Email delivery evidence belongs to the connectors lane.",
+  },
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "WEBHOOK",
+    status: "NOT_CONFIGURED",
+    mode: "FIXTURE",
+    message: "Signed webhook/n8n proof is pending connector implementation.",
+  },
+  {
+    workspaceId: sampleRequest.workspaceId,
+    provider: "AI",
+    status: "DEGRADED",
+    mode: "FIXTURE",
+    message: "AI responses are represented as product fixtures until adapter evidence is available.",
+  },
+];
