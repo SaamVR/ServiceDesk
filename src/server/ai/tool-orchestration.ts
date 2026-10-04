@@ -112,7 +112,7 @@ export function planAiToolOrchestration(input: {
   const rejected: RejectedAiToolCall[] = [];
 
   for (const raw of input.requestedToolCalls) {
-    if (!isRecord(raw) || typeof raw.name !== "string" || !isRecord(raw.arguments ?? {})) {
+    if (!isRecord(raw) || typeof raw.name !== "string" || (raw.arguments !== undefined && !isRecord(raw.arguments))) {
       rejected.push(reject(isRecord(raw) && typeof raw.name === "string" ? raw.name : "unknown", "SCHEMA_VIOLATION"));
       continue;
     }
