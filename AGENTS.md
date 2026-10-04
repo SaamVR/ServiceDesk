@@ -23,3 +23,6 @@ The approved Product Specification V2.0 and V1 Implementation Plan govern scope.
 
 ## Completion labels
 Use only: IMPLEMENTED, CONTRACT_TESTED, PROVIDER_VERIFIED, OPERATIONS_VERIFIED, CONFIGURATION_BLOCKED.
+
+## Sustained execution and integration recovery
+Before the next planning or implementation cycle, read `docs/execution/throughput-recovery-20261004.md`. Its E01–E10 batch identifiers govern the next cycle; reconcile existing run progress rather than redoing it. Chat 1 prioritizes an executable tested integration baseline and shared-interface decisions. Workers execute source-derived batches, not isolated fixture expansion. Commit coherent green behavior with its tests; authored but unexecuted tests do not earn CONTRACT_TESTED. Runtime duration is a target, never a reason to idle or manufacture work. Preserve current ownership and all newer commits.
