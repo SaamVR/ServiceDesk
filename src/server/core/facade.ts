@@ -73,6 +73,7 @@ export interface ServiceDeskFacade {
   updateRequest(ctx: ActorContext, id: string, patch: Partial<RequestDTO>, meta: CommandMeta): Promise<Result<RequestDTO>>;
   calculateQuote(ctx: ActorContext, id: string): Promise<Result<QuoteDTO>>;
   sendQuote(ctx: ActorContext, id: string, meta: CommandMeta): Promise<Result<QuoteDTO>>;
+  acceptQuote(ctx: ActorContext, id: string, meta: CommandMeta): Promise<Result<QuoteDTO>>;
   findSlots(ctx: ActorContext, input: FindSlotsInput): Promise<SlotDTO[]>;
   holdSlot(ctx: ActorContext, slotId: string, quoteId: string, meta: CommandMeta): Promise<Result<{holdId:string;expiresAt:string}>>;
   applyVerifiedPayment(event: VerifiedPaymentEvent): Promise<Result<VerifiedPaymentApplicationOutcome>>;
