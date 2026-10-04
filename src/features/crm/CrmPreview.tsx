@@ -1,19 +1,31 @@
-import {
-  sampleConversation,
-  sampleInvoice,
-  sampleQuote,
-  sampleRequest,
-  sampleVisit,
-} from "@/features/operations/sample-data";
+import type { ConversationDTO, InvoiceDTO, QuoteDTO, RequestDTO, VisitDTO } from "@/contracts";
 import { buildCrmCustomerView } from "./view-models";
 
-export function CrmPreview() {
+interface CrmPreviewProps {
+  request: RequestDTO;
+  quote: QuoteDTO;
+  visit: VisitDTO;
+  invoice: InvoiceDTO;
+  conversation: ConversationDTO;
+}
+
+export function CrmPreview(props?: CrmPreviewProps) {
+  if (!props) {
+    return (
+      <section className="plain-card" aria-label="Staff CRM customer context preview">
+        <span className="status-pill pending">server data required</span>
+        <h2>Customer context waits for an authoritative snapshot.</h2>
+        <p>CRM panels must be populated by future readWorkspaceSnapshot/property reads before production use.</p>
+      </section>
+    );
+  }
+
   const view = buildCrmCustomerView({
-    request: sampleRequest,
-    quote: sampleQuote,
-    visit: sampleVisit,
-    invoice: sampleInvoice,
-    conversation: sampleConversation,
+    request: props.request,
+    quote: props.quote,
+    visit: props.visit,
+    invoice: props.invoice,
+    conversation: props.conversation,
   });
 
   return (
