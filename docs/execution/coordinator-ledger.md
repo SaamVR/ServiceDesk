@@ -277,3 +277,42 @@ Key Cycle 3 blobs on the candidate were compared to worker final heads and match
 This candidate is explicitly provisional/unverified. It is the place to reconcile lane baselines during the Runtime outage without falsely marking canonical integration as fully tested.
 
 Worker 2 remains independent and was not blocked or rewritten by this reconciliation.
+
+
+## Cycle 3 complete reconciliation
+
+Worker 2 final receipt was subsequently published at:
+`af47a5623232c96062a06323b884b35801f41f0b`
+
+Coordinator ownership review from `a43840d8e1f3d3da6ab0c212966bb2064de837a1` to Worker 2 final head:
+- only Worker-2-owned durable WhatsApp source, provider tests, outage harness, and receipt changed;
+- no shared contracts, package files, shared barrels, Core, Product/UI, or coordinator docs changed.
+
+Coordinator independently executed the retry-safe durable inbound semantics in GPT Runtime with ts-node:
+`coordinator whatsapp retry-safe harness PASS`.
+
+Worker 2 is accepted at outage proof level `IMPLEMENTED`.
+Canonical provider/AI/typecheck gate remains `CONFIGURATION_BLOCKED`.
+No `CONTRACT_TESTED` or `PROVIDER_VERIFIED` claim is made.
+
+The provisional outage candidate was extended with the complete Worker-2-owned Connector/AI snapshot.
+
+Current outage candidate checkpoint:
+`f77f18ca2fe06a744398bcc4ba5dd6804d06b1e5`
+
+The candidate now carries complete owned snapshots for:
+- Worker 1 Core at Cycle 3 final;
+- Worker 2 Connectors/AI at Cycle 3 final;
+- Worker 3 Product/UI at Cycle 3 final;
+while retaining coordinator-owned shared files from the integration branch.
+
+This branch remains provisional and must pass the canonical catch-up gate before promotion.
+
+## Cycle 4 dispatch
+
+Published:
+- Worker 1: `docs/execution/batches/cycle-4-worker-1.md` — DST-safe weekly recurrence.
+- Worker 2: `docs/execution/batches/cycle-4-worker-2.md` — durable WhatsApp backend error-detail redaction.
+- Worker 3: `docs/execution/batches/cycle-4-worker-3.md` — invoice progress/final-receipt truth hardening.
+
+All three remain bounded Runtime Outage Mode slices and require only one quick normal network recovery probe before package-free execution.
