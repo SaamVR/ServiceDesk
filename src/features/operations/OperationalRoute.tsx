@@ -1,9 +1,9 @@
 import { UIStateCard } from "@/components/shell/UIState";
 import { CheckoutPreview } from "@/features/checkout/CheckoutPreview";
+import { CrewJobPreview } from "@/features/crew/CrewJobPreview";
 import { InboxPreview } from "@/features/inbox/InboxPreview";
 import { OnboardingReadiness } from "@/features/onboarding/OnboardingReadiness";
 import {
-  crewActions,
   integrationCards,
   moveOutFixture,
   staffModules,
@@ -22,7 +22,6 @@ import {
   sampleVisit,
 } from "./sample-data";
 import {
-  buildCrewJobView,
   buildCustomerPortalView,
   buildStaffQueueView,
 } from "./view-models";
@@ -182,25 +181,7 @@ function StaffPanel() {
 }
 
 function CrewPanel() {
-  const view = buildCrewJobView({ request: sampleRequest, visit: sampleVisit, invoice: sampleInvoice });
-
-  return (
-    <div className="two-column">
-      <div className="mobile-preview">
-        <p className="label">Today · sample assigned job</p>
-        <h2>{view.requestLabel}</h2>
-        <p>{view.statusLabel} · {view.durationLabel}</p>
-        <button className="button-primary full" type="button">{view.nextAction}</button>
-        <ul className="check-list">{crewActions.slice(2).map((action) => <li key={action}>{action}</li>)}</ul>
-      </div>
-      <aside className="plain-card">
-        <p className="label">Completion review</p>
-        <p>{view.balanceLabel}</p>
-        <p>Checklist, photo evidence, time/material note and incident state are separate. Completion requires review before balance invoice.</p>
-        <span className="status-pill attention">Pending review</span>
-      </aside>
-    </div>
-  );
+  return <CrewJobPreview />;
 }
 
 function OnboardingPanel() {
