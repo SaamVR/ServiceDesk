@@ -36,7 +36,7 @@ export interface CreateSlotHoldInput {
   now: string;
   holdMinutes: number;
   existingHolds: readonly SlotHold[];
-  createId?: () => string;
+  createId: () => string;
 }
 
 export interface WeeklyRecurrenceInput {
@@ -106,7 +106,7 @@ export function createSlotHold(input: CreateSlotHoldInput): Result<SlotHold> {
   return {
     ok: true,
     value: {
-      id: input.createId?.() ?? crypto.randomUUID(),
+      id: input.createId(),
       workspaceId: input.workspaceId,
       slotId: input.slotId,
       quoteId: input.quoteId,
