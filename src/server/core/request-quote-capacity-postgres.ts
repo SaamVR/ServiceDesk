@@ -104,6 +104,11 @@ async function readQuote(client: SupabaseRpcClient, ctx: ActorContext, quoteId: 
   return rpcResult(data, error, "QUOTE_RPC_ERROR", (row) => quoteFromRpc(row.quote));
 }
 
+async function readLatestQuoteForRequest(client: SupabaseRpcClient, ctx: ActorContext, requestId: string): Promise<Result<QuoteDTO>> {
+  const { data, error } = await client.rpc<RpcRow>("servicedesk_get_latest_quote_for_request", { p_input: { ...actor(ctx), requestId } });
+  return rpcResult(data, error, "QUOTE_RPC_ERROR", (row) => quoteFromRpc(row.quote));
+}
+
 function supportedService(value: string | undefined): value is QuoteServiceCode {
   return value === "MOVE_OUT" || value === "STANDARD" || value === "DEEP";
 }
@@ -162,7 +167,7 @@ export function createPostgresRequestQuoteCapacityFacadeMethods(client: Supabase
     },
 
     async findSlots(ctx: ActorContext, input: FindSlotsInput): Promise<SlotDTO[]> {
-      const quote = await readQuote(client, ctx, input.requestId);
+      const quote = await readLatestQuoteForRequest(client, ctx, input.requestId);
       if (quote.ok === false) return [];
       const { data, error } = await client.rpc<RpcRow>("servicedesk_find_capacity_slots", { p_input: { ...actor(ctx), ...input } });
       if (error || !data || data.ok === false || !Array.isArray(data.slots)) return [];
