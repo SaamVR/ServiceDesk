@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { sendWhatsAppCloudMessage, type WhatsAppCloudHttpTransport } from "../../src/server/integrations/whatsapp/cloud-api";
+import { redactWhatsAppCloudRequestForEvidence, sendWhatsAppCloudMessage, type WhatsAppCloudHttpTransport } from "../../src/server/integrations/whatsapp/cloud-api";
 
 function transport(status: number, body: unknown, capture?: (input: Parameters<WhatsAppCloudHttpTransport>[0]) => void): WhatsAppCloudHttpTransport {
   return async (input) => {
@@ -78,5 +78,30 @@ describe("WhatsApp Cloud API transport", () => {
 
     expect(result).toMatchObject({ ok: false, code: "WHATSAPP_TIMEOUT" });
     expect(JSON.stringify(result)).not.toContain("top-secret-token");
+  });
+
+  test("redacts request audit output before evidence logging", () => {
+    const request = {
+      url: "https://graph.facebook.com/v23.0/123456789/messages",
+      method: "POST" as const,
+      headers: { authorization: "Bearer top-secret-token", "content-type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", to: "15551234567", type: "text", text: { body: "private customer message" } }),
+      signal: new AbortController().signal,
+    };
+
+    const summary = redactWhatsAppCloudRequestForEvidence(request);
+
+    expect(summary).toEqual({
+      method: "POST",
+      graphHost: "graph.facebook.com",
+      apiVersion: "v23.0",
+      endpoint: "messages",
+      hasBearerAuthorization: true,
+      bodyType: "text",
+    });
+    expect(JSON.stringify(summary)).not.toContain("top-secret-token");
+    expect(JSON.stringify(summary)).not.toContain("15551234567");
+    expect(JSON.stringify(summary)).not.toContain("private customer message");
+    expect(JSON.stringify(summary)).not.toContain("123456789");
   });
 });
