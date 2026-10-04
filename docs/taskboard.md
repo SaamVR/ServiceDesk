@@ -220,3 +220,30 @@ Critical path now:
 
 Primary efficiency rule:
 Existing broad provider/UI source should be integrated/wired before more feature-family expansion or isolated edge-case hardening.
+
+
+## V1 Integration Sprint 1 — active
+
+Combined RC base:
+- `rc/servicedesk-v1-unverified-20261004`
+- coordinator-approved base SHA: `714f24edfe7c6124237c7259a00ede7b288b68fb`
+- includes approved `PropertyDTO`.
+
+Fresh sprint branches created from the exact same RC base:
+- Worker 1 Core: `feat/servicedesk-v1-core-sprint1`
+- Worker 2 Connectors/AI: `feat/servicedesk-v1-connectors-sprint1`
+- Worker 3 Product/UI: `feat/servicedesk-v1-product-sprint1`
+
+Active packets:
+- `docs/execution/batches/v1-int1-worker-1.md`
+- `docs/execution/batches/v1-int1-worker-2.md`
+- `docs/execution/batches/v1-int1-worker-3.md`
+
+Primary goals:
+- W1 closes E02 authoritative request/property/quote/capacity server composition.
+- W2 prepares provider-neutral Core bridge surfaces for E03/E04/E05 instead of expanding provider breadth.
+- W3 removes fixture ownership from existing reusable Product surfaces and prepares exact server wiring boundaries.
+
+Old Cycle 5 micro-hardening remains backlog only and is not the critical path.
+
+No all-workers barrier: integrate each sprint branch immediately on return and issue its next capability batch independently.
