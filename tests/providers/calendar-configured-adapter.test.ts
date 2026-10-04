@@ -92,4 +92,12 @@ describe("ConfiguredGoogleCalendarAdapter", () => {
     expect(calls.map((call) => call.method)).toEqual(["POST", "PATCH", "DELETE"]);
     expect(JSON.stringify(created)).not.toContain("access-token");
   });
+
+  test("returns a typed error without provider call when cancelling without a mapped event", async () => {
+    const calls: Array<Parameters<GoogleCalendarHttpTransport>[0]> = [];
+    const result = await adapter({}, calls).cancel(visit, { idempotencyKey: "cmd-1", now: "2026-10-04T09:00:00.000Z" });
+
+    expect(result).toMatchObject({ ok: false, code: "CALENDAR_EVENT_NOT_FOUND" });
+    expect(calls).toHaveLength(0);
+  });
 });
