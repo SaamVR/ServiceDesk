@@ -91,7 +91,7 @@ export function createPostgresOutboxTableGateway(client: TrustedOutboxRpcClient)
         p_worker_id: workerId,
         p_status: "SENT",
         p_at: completedAt,
-        p_attempts: 1,
+        p_attempts: null,
         p_error_code: null,
         p_next_attempt_at: null,
         p_provider_reference: providerReference ?? null,
