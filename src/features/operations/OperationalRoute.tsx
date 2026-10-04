@@ -8,6 +8,7 @@ import {
   staffModules,
   uiStateScenarios,
 } from "@/features/product/story-model";
+import { ReportsPreview } from "@/features/reports/ReportsPreview";
 import { SchedulePreview } from "@/features/schedule/SchedulePreview";
 import {
   sampleAttentionItems,
@@ -174,6 +175,7 @@ function StaffPanel() {
       </div>
       <InboxPreview />
       <SchedulePreview />
+      <ReportsPreview />
     </div>
   );
 }
