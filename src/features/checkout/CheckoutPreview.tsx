@@ -37,7 +37,15 @@ export function CheckoutPreview() {
         <article role="listitem" className="plain-card">
           <span className="status-pill pending">Visit</span>
           <h3>{view.visitState}</h3>
-          <button className="button-primary full" type="button">{view.primaryAction}</button>
+          <button
+            className="button-primary full"
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Sandbox preview only; hosted checkout command is not integrated on this branch."
+          >
+            {view.primaryAction} · sandbox preview
+          </button>
         </article>
       </div>
     </section>
