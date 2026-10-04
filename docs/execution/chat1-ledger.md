@@ -84,3 +84,43 @@ Required first actions:
 6. continue all executable E01 slices before returning.
 
 If checks cannot execute, record exact command/error and preserve an UNVERIFIED candidate; do not mark integration PASS.
+
+## E01 execution checkpoint — 2026-10-04
+
+Status: `UNVERIFIED_CANDIDATE_PRESERVED`
+
+Execution branch/worktree:
+- local branch: `e01-integration-candidate-persistent`
+- publish target: `e01-integration-candidate-unverified-20261004`
+- start integration head: `df9c25c117ae62bc840e246cbf9b139140e1313d`
+- core pin merged: `c0b6c2c7d92250398e637c30edfe12e93efc0b1a`
+- connector pin merged: `51fd14c10d488932a54d9524f1b57f89359ec809`
+- product pin merged: NO, not reached
+
+Newer worker refs observed and preserved but not substituted for the pinned E01 implementation review:
+- `NEWER_CONNECTOR_HEAD=0a39772690625b432440c42d01b9afb0f7f83bb6`
+- `NEWER_PRODUCT_HEAD=1f2a5384cd6d062235f8441802a1632ea4cfc476`
+
+Commands/results executed on persistent candidate:
+- `pnpm install --frozen-lockfile`: PASS; warning that esbuild build scripts were ignored by pnpm policy.
+- after core merge, `pnpm typecheck`: PASS.
+- after core merge, `pnpm vitest run tests/domain tests/db`: PASS, 19 files / 51 tests.
+- after connector merge/fixes, `pnpm typecheck`: PASS.
+- focused provider repair check `pnpm vitest run tests/providers/calendar-oauth-exchange.test.ts tests/providers/whatsapp-media-retrieval.test.ts tests/providers/webhook-executor.test.ts tests/providers/provider-configuration.test.ts`: PASS, 4 files / 15 tests.
+- full `pnpm vitest run tests/providers`: NOT ACCEPTED as PASS; previous run was interrupted by runtime with exit code null before final summary.
+- per-file provider verification: PASS through files 1-19; stopped during file 20 because root disk pressure returned to 100% use (~328 MB free) and continuing risked another volatile failure.
+- `pnpm vitest run tests/ai`: NOT EXECUTED on the persistent candidate.
+- product/UI merge and checks: NOT EXECUTED.
+- full E01 gate `pnpm typecheck && pnpm test && pnpm lint && pnpm build`: NOT EXECUTED.
+
+Reason not verified:
+- host runtime remained resource-constrained while unrelated workloads were active;
+- root filesystem returned to 100% use during provider verification;
+- provider suite and AI/product/full gates did not complete with final exit-code evidence.
+
+Provider proof statement:
+No live provider verification is claimed. Connector tests are fixture/injected-transport contract checks only.
+
+Next action:
+Resume E01 from the preserved candidate branch with a clean runtime/disk state; complete remaining provider files from `tests/providers/calendar-sync-token-rebuild.test.ts` onward, then run the AI suite, merge product pin, and execute the full gate before publishing accepted integration.
+
