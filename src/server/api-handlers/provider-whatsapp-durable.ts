@@ -6,14 +6,14 @@ import {
 } from "../integrations/whatsapp/inbox-persistence";
 import type { ProviderHandlerResult } from "./provider-whatsapp";
 
-export type { DurableWhatsAppInboxStore };
+export type DurableWhatsAppInboundWebhookStore = DurableWhatsAppInboxStore;
 
 export interface DurableWhatsAppInboundWebhookInput {
   rawBody: string;
   headers: Record<string, string | undefined>;
   appSecret: string;
   workspaceByPhoneNumberId: Record<string, string>;
-  store: DurableWhatsAppInboxStore;
+  store: DurableWhatsAppInboundWebhookStore;
 }
 
 function header(headers: Record<string, string | undefined>, name: string): string | undefined {
