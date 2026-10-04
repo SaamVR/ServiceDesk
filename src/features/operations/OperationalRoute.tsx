@@ -1,4 +1,5 @@
 import { UIStateCard } from "@/components/shell/UIState";
+import { PlatformBillingPreview } from "@/features/billing/PlatformBillingPreview";
 import { CheckoutPreview } from "@/features/checkout/CheckoutPreview";
 import { CrewJobPreview } from "@/features/crew/CrewJobPreview";
 import { CrmPreview } from "@/features/crm/CrmPreview";
@@ -125,7 +126,15 @@ function BusinessPanel() {
         <label className="form-field">Bedrooms <input readOnly value="3" /></label>
         <label className="form-field">Bathrooms <input readOnly value="2" /></label>
         <label className="form-field">Preferred date <input readOnly value="Next Friday morning" /></label>
-        <button className="button-primary full" type="button">Continue request</button>
+        <button
+          className="button-primary full"
+          type="button"
+          disabled
+          aria-disabled="true"
+          title="Fixture preview only; create/update request command is not integrated on this branch."
+        >
+          Continue request · preview
+        </button>
       </form>
       <RequestSummaryPreview />
     </div>
@@ -217,10 +226,12 @@ function StaffPanel({ module }: { module: StaffModule }) {
     case "reports":
       moduleContent = <ReportsPreview />;
       break;
+    case "billing":
+      moduleContent = <PlatformBillingPreview />;
+      break;
     case "quality":
     case "automations":
     case "settings":
-    case "billing":
       moduleContent = <StaffAttentionOverview view={view} />;
       break;
   }
