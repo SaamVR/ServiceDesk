@@ -1,11 +1,11 @@
 import { UIStateCard } from "@/components/shell/UIState";
 import { PlatformBillingPreview } from "@/features/billing/PlatformBillingPreview";
-import { CheckoutPreview } from "@/features/checkout/CheckoutPreview";
-import { CrewJobPreview } from "@/features/crew/CrewJobPreview";
-import { CrmPreview } from "@/features/crm/CrmPreview";
+import { CheckoutFixturePreview } from "@/features/checkout/CheckoutFixturePreview";
+import { CrewJobFixturePreview } from "@/features/crew/CrewJobFixturePreview";
+import { CrmFixturePreview } from "@/features/crm/CrmFixturePreview";
 import { InboxPreview } from "@/features/inbox/InboxPreview";
 import { ConnectorOperationsPreview } from "@/features/integrations/ConnectorOperationsPreview";
-import { InvoiceLedgerPreview } from "@/features/invoices/InvoiceLedgerPreview";
+import { InvoiceLedgerFixturePreview } from "@/features/invoices/InvoiceLedgerFixturePreview";
 import { OnboardingReadiness } from "@/features/onboarding/OnboardingReadiness";
 import { CommunicationPreferences } from "@/features/preferences/CommunicationPreferences";
 import { PropertyRecurringPreview } from "@/features/properties/PropertyRecurringPreview";
@@ -14,12 +14,12 @@ import {
   uiStateScenarios,
 } from "@/features/product/story-model";
 import { QualityReviewPreview } from "@/features/quality/QualityReviewPreview";
-import { QuoteApprovalPreview } from "@/features/quotes/QuoteApprovalPreview";
+import { QuoteApprovalFixturePreview } from "@/features/quotes/QuoteApprovalFixturePreview";
 import { RecoveryActionsPreview } from "@/features/recovery/RecoveryActionsPreview";
 import { ReportsPreview } from "@/features/reports/ReportsPreview";
 import { EnquiryForm } from "@/features/request-intake/EnquiryForm";
 import { RequestSummaryFixturePreview } from "@/features/request-intake/RequestSummaryFixturePreview";
-import { SchedulePreview } from "@/features/schedule/SchedulePreview";
+import { ScheduleFixturePreview } from "@/features/schedule/ScheduleFixturePreview";
 import { OwnerSettingsPreview } from "@/features/settings/OwnerSettingsPreview";
 import {
   buildBusinessModuleHref,
@@ -232,7 +232,7 @@ function BusinessPanel({ module, slug }: { module: BusinessModule; slug: string 
             <h2>Booking waits for a fresh slot and verified payment evidence</h2>
             <p>Public booking can preview the quote and hold state, but receipts stay hidden until provider callbacks are verified.</p>
           </section>
-          <CheckoutPreview />
+          <CheckoutFixturePreview />
         </div>
       );
       break;
@@ -304,10 +304,10 @@ function CustomerPanel({ module }: { module: CustomerModule }) {
       );
       break;
     case "booking":
-      moduleContent = <CheckoutPreview />;
+      moduleContent = <CheckoutFixturePreview />;
       break;
     case "invoice":
-      moduleContent = <InvoiceLedgerPreview />;
+      moduleContent = <InvoiceLedgerFixturePreview />;
       break;
     case "preferences":
       moduleContent = <CommunicationPreferences />;
@@ -345,16 +345,16 @@ function StaffPanel({ module }: { module: StaffModule }) {
       moduleContent = <InboxPreview />;
       break;
     case "customers":
-      moduleContent = <CrmPreview />;
+      moduleContent = <CrmFixturePreview />;
       break;
     case "requests":
       moduleContent = <RequestSummaryFixturePreview />;
       break;
     case "quotes":
-      moduleContent = <QuoteApprovalPreview />;
+      moduleContent = <QuoteApprovalFixturePreview />;
       break;
     case "schedule":
-      moduleContent = <SchedulePreview />;
+      moduleContent = <ScheduleFixturePreview />;
       break;
     case "jobs":
       moduleContent = (
@@ -367,7 +367,7 @@ function StaffPanel({ module }: { module: StaffModule }) {
       );
       break;
     case "invoices":
-      moduleContent = <InvoiceLedgerPreview />;
+      moduleContent = <InvoiceLedgerFixturePreview />;
       break;
     case "reports":
       moduleContent = <ReportsPreview />;
@@ -451,7 +451,7 @@ function CrewPanel({ module }: { module: CrewModule }) {
       </article>
       <p>V1 requires network access for authoritative field updates; offline sync is not claimed.</p>
     </div>
-  ) : <CrewJobPreview />;
+  ) : <CrewJobFixturePreview />;
 
   return (
     <div className="customer-workspace-stack">
