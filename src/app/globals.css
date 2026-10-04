@@ -50,6 +50,17 @@ button, a, input, textarea, select {
   outline-offset: 3px;
 }
 
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 h1, h2, h3, p { margin-top: 0; }
 
 h1 {
@@ -185,6 +196,30 @@ p { color: var(--muted); }
 .button-secondary:hover { border-color: var(--accent); text-decoration: none; }
 
 .full { width: 100%; }
+
+.form-field {
+  display: grid;
+  gap: calc(var(--space) * 0.75);
+  margin-bottom: calc(var(--space) * 1.5);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.form-field input,
+.form-field textarea,
+.form-field select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: calc(var(--space) * 1.25);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.form-field input[readonly] {
+  background: #fbfcfc;
+}
 
 .interface-card,
 .plain-card,
@@ -512,5 +547,21 @@ p { color: var(--muted); }
   .section-card, .grid-section, .presentation-shell { padding: calc(var(--space) * 2); }
   .action-row { align-items: stretch; flex-direction: column; }
   .button-primary, .button-secondary { width: 100%; }
-  .site-nav { display: none; }
+
+  .site-nav {
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: var(--space);
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .site-nav a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+  }
 }
