@@ -1,12 +1,12 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default function OnboardingPage() {
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="onboarding"
-      workspaceLabel="ServiceDesk setup"
-      title="Owner setup for services, areas, team, policies and integrations."
-      description="Onboarding shows readiness without hiding provider setup blockers. Live messaging, Calendar and payment modes require controlled proof before release."
+      workspaceLabel="BrightRoom Services"
+      title="Onboarding readiness before go-live."
+      description="Owner setup, provider readiness and policy checks are labelled as pending until configuration evidence exists."
     />
   );
 }
