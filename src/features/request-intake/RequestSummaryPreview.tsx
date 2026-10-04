@@ -1,12 +1,26 @@
-import { sampleQuote, sampleRequest } from "@/features/operations/sample-data";
+import type { QuoteDTO, RequestDTO } from "@/contracts";
 import { buildEditableRequestSummary } from "./view-models";
 
-export function RequestSummaryPreview() {
-  const view = buildEditableRequestSummary({ request: sampleRequest, quote: sampleQuote });
+interface RequestSummaryPreviewProps {
+  request: RequestDTO;
+  quote: QuoteDTO;
+  modeLabel?: string;
+  actionSuffix?: string;
+  actionTitle?: string;
+}
+
+export function RequestSummaryPreview({
+  request,
+  quote,
+  modeLabel = "Request summary",
+  actionSuffix = "preview",
+  actionTitle = "Preview only; ServiceDeskFacade.updateRequest is not integrated on this branch.",
+}: RequestSummaryPreviewProps) {
+  const view = buildEditableRequestSummary({ request, quote });
 
   return (
     <aside className="plain-card" aria-label="Editable request summary preview">
-      <span className="status-pill pending">Fixture summary</span>
+      <span className="status-pill pending">{modeLabel}</span>
       <h2>{view.title}</h2>
       <p>{view.versionLabel} · {view.statusLabel}</p>
       <dl className="summary-list">
@@ -22,9 +36,9 @@ export function RequestSummaryPreview() {
         type="button"
         disabled
         aria-disabled="true"
-        title="Fixture preview only; ServiceDeskFacade.updateRequest is not integrated on this branch."
+        title={actionTitle}
       >
-        {view.primaryAction} · preview
+        {view.primaryAction} · {actionSuffix}
       </button>
       <p>{view.boundaryNotice}</p>
     </aside>
