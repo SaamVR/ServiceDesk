@@ -145,3 +145,50 @@ Packets:
 - `docs/execution/batches/cycle-4-worker-3.md`
 
 Canonical pnpm/Vitest/typecheck/build/browser proof remains `CONFIGURATION_BLOCKED`. Workers perform one quick recovery probe only, then continue under `docs/execution/runtime-outage-mode-20261004.md` when normal package access remains unavailable.
+
+
+## High-Throughput Mode v2 — Active from Cycle 5
+
+Coordinator model: GPT-5.6 Sol High
+Worker model: GPT-5.5 High
+
+Cycle 4 is integrated as `IMPLEMENTED` for all three lanes. Canonical package/test/build proof remains `CONFIGURATION_BLOCKED`.
+
+### Active long-run batches
+
+| Lane | Active | Start SHA | Minimum normal completion | Backup already prepared |
+| --- | --- | --- | --- | --- |
+| Core | `CYCLE-5-W1` | `6c062755a8d5f5e75051527a71687b98fa3070d7` | >=5 substantive slices or all READY/FALLBACK exhausted | `CYCLE-6-W1` |
+| Connectors/AI | `CYCLE-5-W2` | `cd702409b15ac659d2296aa3c5e00bdbacfe5f93` | >=5 substantive slices or all READY/FALLBACK exhausted | `CYCLE-6-W2` |
+| Product/UI | `CYCLE-5-W3` | `eeed52256937d520c37921228402e287b31e1c8e` | >=5 substantive slices or all READY/FALLBACK exhausted | `CYCLE-6-W3` |
+
+Active packets:
+- `docs/execution/batches/cycle-5-worker-1.md`
+- `docs/execution/batches/cycle-5-worker-2.md`
+- `docs/execution/batches/cycle-5-worker-3.md`
+
+Prepared backups:
+- `docs/execution/batches/cycle-6-worker-1.md`
+- `docs/execution/batches/cycle-6-worker-2.md`
+- `docs/execution/batches/cycle-6-worker-3.md`
+
+Governing throughput docs:
+- `docs/execution/high-throughput-mode-v2-20261004.md`
+- `docs/execution/ten-run-horizon-cycle5-14.md`
+
+### No-barrier coordinator rule
+
+When any worker returns:
+1. review that lane immediately;
+2. integrate accepted range immediately;
+3. do not wait for the other workers;
+4. activate that lane's Cycle 6 backup immediately;
+5. prepare the next backup from the horizon before returning the next prompt.
+
+### Efficiency rule
+
+A worker returning after one narrow implementation slice is incomplete unless:
+- every remaining READY/FALLBACK task is complete, or
+- one genuine blocker prevents all remaining owned work.
+
+Receipt-only or DNS-only runs are not accepted while package-free owned work exists.
