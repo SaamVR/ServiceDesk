@@ -49,10 +49,19 @@ function normalizeCode(code: string | undefined): string {
   return (code && code.trim() ? code.trim().toUpperCase() : "UNKNOWN_PROVIDER_FAILURE");
 }
 
+function redactSensitive(value: string): string {
+  return value
+    .replace(/\\bBearer\\s+[A-Za-z0-9._~+\\/=-]+/gi, "Bearer [redacted]")
+    .replace(/access_token=[^\\s&]+/gi, "access_token=[redacted]")
+    .replace(/token["']?\\s*[:=]\\s*["']?[^"'\\s,}&]+/gi, "token:[redacted]")
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g, "[redacted-email]")
+    .replace(/\\+?\\d{8,15}/g, "[redacted-phone]");
+}
+
 function redactedMessage(input: ProviderFailureInput, normalizedCode: string): string {
   const source = input.message?.trim();
   if (!source) return normalizedCode;
-  const collapsed = source.replace(/\s+/g, " ");
+  const collapsed = redactSensitive(source).replace(/\\s+/g, " ");
   return collapsed.length > 180 ? `${collapsed.slice(0, 177)}...` : collapsed;
 }
 
