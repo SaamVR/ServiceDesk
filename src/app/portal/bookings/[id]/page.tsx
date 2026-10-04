@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function PortalBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="customer"
       customerModule="booking"
       resourceLabel={`booking ${id}`}
-      title="Track slot hold, visit confirmation and provider status separately."
-      description="The booking route shows appointment state, payment state, Calendar freshness and message delivery as distinct records."
+      title="Booking detail with slot, payment and visit state."
+      description="Booking state stays fixture/sandbox-labelled until the verified payment bridge is complete."
     />
   );
 }
