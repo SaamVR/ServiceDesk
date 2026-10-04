@@ -6,6 +6,8 @@ export default async function BusinessSitePage({ params }: { params: Promise<{ s
   return (
     <OperationalRoute
       surface="business"
+      businessModule="home"
+      businessSlug={slug}
       workspaceLabel="BrightRoom Services"
       resourceLabel={slug}
       title="Book a cleaning service with a clear request record."
