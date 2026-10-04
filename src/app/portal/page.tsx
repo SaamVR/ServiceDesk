@@ -1,8 +1,8 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default function PortalPage() {
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="customer"
       customerModule="overview"
       title="Customer portal for properties, requests, quotes, visits and invoices."
