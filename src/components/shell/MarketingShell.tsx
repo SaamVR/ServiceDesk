@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import { productRoutes } from "@/features/product/story-model";
 
 interface MarketingShellProps {
   eyebrow?: string;
   title: string;
   description: string;
-  children: React.ReactNode;
+  children: ReactNode;
   primaryHref?: string;
   primaryLabel?: string;
   secondaryHref?: string;
