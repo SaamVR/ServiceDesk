@@ -326,3 +326,24 @@ New priority inserted after active E05 Core work:
 `V1-E03-PG-ADAPTER` — implement concrete Postgres/Supabase `PaymentApplicationRepository` transaction adapter and rerun E03 through real application persistence.
 
 Do not reuse unrelated Supabase projects.
+
+
+## V1 Integration Sprint 6 — ACTIVE
+
+Shared RC/base:
+`612cd9ec1b2bbb0f8fc1d139989390e06dd543cf`
+
+| Lane | Branch | Mission | State |
+| --- | --- | --- | --- |
+| Core | `feat/servicedesk-v1-core-sprint5` | Make E03 payment RPC durable/reproducible, then E06 visit transition + field evidence/checklist persistence | READY |
+| Connectors/AI | `feat/servicedesk-v1-connectors-sprint6` | E07 recurrence provider automation + visit reminders; no Google recurring series | READY |
+| Product/UI | `feat/servicedesk-v1-product-sprint5` | E07 recurrence Product boundary; no client schedule truth | READY |
+
+ServiceDesk staging:
+`cpmmgivhlkfbiwzhlcey`
+
+Evidence:
+- E05 Core DB proof PASS.
+- E06 Calendar and Crew Product outage proof PASS at IMPLEMENTED level.
+- E03 staging function exists but must be captured/hardened in repository migration.
+- Google Calendar controlled provider proof is now the next external provider gate; implementation may continue without blocking on it.
