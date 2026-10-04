@@ -21,10 +21,6 @@ create index if not exists outbox_stale_lease_idx
 on public.outbox_events(status, locked_at, locked_by)
 where status = 'PENDING' and locked_at is not null;
 
-create index if not exists outbox_terminal_idx
-on public.outbox_events(workspace_id, status, updated_at desc)
-where status in ('SENT', 'FAILED', 'SUPPRESSED');
-
 create or replace function public.claim_ready_outbox_events(
   p_worker_id text,
   p_now timestamptz,
