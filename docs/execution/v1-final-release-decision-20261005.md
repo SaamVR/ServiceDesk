@@ -2,37 +2,58 @@
 
 Current state: `PRODUCTION_RELEASE_BLOCKED`
 
-## What is verified
-- Frozen candidate SHA is exact: `8b7066876263491c908f6453219d48e6300a8b17`.
-- Repository freeze reconciliation is PASS.
-- Dedicated ServiceDesk Supabase staging is ACTIVE_HEALTHY.
-- Durable DB migration history is present through `0015a` and matches the frozen repository chain.
-- Current staging proof/business fixture counts checked are zero.
-- Service-role command RPC privileges are present on the accepted ServiceDesk command boundaries.
-- No Render ServiceDesk web service currently exists in the connected workspace.
-- Render deployment configuration requirements have been inspected from the frozen source.
+## Verified
 
-## What is not yet verified
-- `SAMVR_RECONCILIATION=PASS`
-- canonical install/typecheck/test/lint/build
-- full local secret scan
-- Render deployment from frozen candidate
-- deployed SHA and boot/health evidence
-- post-deploy smoke
-- desktop/tablet/mobile browser acceptance
-- leaked-password protection enabled
-- controlled live-provider evidence for WhatsApp/Calendar/Email/n8n/AI
+Final reconciled release candidate:
+- branch: `rc/servicedesk-v1-release-candidate-20261005`
+- SHA: `b966bb685729a2e8e19b7c46d764d871672a1636`
 
-Stripe/payment remains SANDBOX-only by owner policy.
+Candidate is 9 commits ahead of original source freeze `8b7066876263491c908f6453219d48e6300a8b17`, with no divergence behind the freeze.
 
-## Reason deployment is paused
-The release packet explicitly requires `SAMVR_RECONCILIATION=PASS` and no secret-scan blocker before Render deployment. The authorized `samvr` device became offline during this release cycle. The gate is being preserved rather than converted into a false PASS.
+Release gates:
+- repository reconciliation: PASS
+- samvr reconciliation: PASS
+- install/frozen lockfile: PASS
+- typecheck: PASS
+- Vitest: PASS — 200 files / 720 tests
+- lint: PASS — 0 errors, 6 warnings
+- production build: PASS
+- Gitleaks: PASS — 0 findings
+- dedicated Supabase staging: ACTIVE_HEALTHY
+- migration parity through 0015a: PASS
+- proof fixture cleanup: PASS
+- service-role command RPC sanity: PASS
+
+No GitHub Actions credits were used.
+
+## Deployment status
+
+Render service creation was attempted after the predeploy gates passed.
+
+Render returned:
+
+`Hobby Tier is limited to 25 services`
+
+No unrelated Render service was deleted or repurposed.
+
+Therefore Render deployment, boot verification, HTTP smoke, and browser acceptance cannot yet execute.
+
+## Remaining production gates
+
+1. Free one Render service slot or increase Render service capacity.
+2. Create the pinned ServiceDesk Web Service and verify deployed SHA.
+3. Run post-deploy route/HTTP smoke.
+4. Run browser acceptance at 1440x900, 834x1112, and 390x844.
+5. Verify/harden required Supabase production security configuration, including leaked-password protection.
+6. Controlled provider evidence remains separate for WhatsApp, Google Calendar, Email, n8n and AI.
+7. Stripe/payment remains SANDBOX-only by owner policy.
 
 ## Decision
-Do not label this build `PRODUCTION_RELEASE_READY`.
 
-The correct state remains:
+Correct release state:
 
 `PRODUCTION_RELEASE_BLOCKED`
 
-The next transition may become `DEPLOYED_NOT_RELEASE_VERIFIED` only after the required device/quality gate passes and the frozen SHA is deployed to Render.
+The blocker is currently Render account capacity, not source quality.
+
+Do not label `PRODUCTION_RELEASE_READY` until deployment, browser, security, and required provider gates are satisfied.
