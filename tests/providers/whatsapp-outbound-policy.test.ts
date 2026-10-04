@@ -64,6 +64,17 @@ describe("WhatsApp outbound dispatch policy", () => {
     expect(templated.ok).toBe(true);
   });
 
+  test("does not let a future inbound timestamp open the customer-service window", () => {
+    const futureInbound = prepareWhatsAppDispatch(
+      ctx,
+      job({ payload: { lastInboundAt: "2026-10-04T10:05:00.000Z" } }),
+      meta,
+    );
+
+    expect(futureInbound.ok).toBe(false);
+    if (!futureInbound.ok) expect(futureInbound.code).toBe("WHATSAPP_TEMPLATE_REQUIRED");
+  });
+
   test("rejects non-WhatsApp outbox jobs in the WhatsApp dispatcher", () => {
     const prepared = prepareWhatsAppDispatch(ctx, job({ channel: "EMAIL" }), meta);
 
