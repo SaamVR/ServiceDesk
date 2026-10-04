@@ -1,16 +1,26 @@
 import type { ActorContext, CommandMeta, RequestDTO } from "../../contracts";
-import type { CreateRequestInput, FindSlotsInput, VerifiedPaymentEvent } from "./facade";
+import type {
+  ConversationHandoverInput,
+  ConversationReplyInput,
+  CreateRequestInput,
+  FindSlotsInput,
+  InboundMessageEvent,
+  VerifiedPaymentEvent,
+  WorkspaceSnapshotQuery,
+} from "./facade";
+import { createConversationFacadeMethods, type ConversationFacadeDependencies } from "./inbound-message";
 import { createPaymentApplicationFacadeMethods, type PaymentApplicationFacadeDependencies } from "./payment-application-facade";
 import { readPropertySnapshot, type PropertyReadRepository } from "./property-read";
 import { createRequestQuoteFacadeMethods, type RequestQuoteFacadeDependencies } from "./request-quote-facade";
 
-export type ServerEntrypointDependencies = RequestQuoteFacadeDependencies & PaymentApplicationFacadeDependencies & {
+export type ServerEntrypointDependencies = RequestQuoteFacadeDependencies & PaymentApplicationFacadeDependencies & ConversationFacadeDependencies & {
   propertyRepository: PropertyReadRepository;
 };
 
 export function createServerCommandEntrypoints(deps: ServerEntrypointDependencies) {
   const requestQuoteFacade = createRequestQuoteFacadeMethods(deps);
   const paymentFacade = createPaymentApplicationFacadeMethods(deps);
+  const conversationFacade = createConversationFacadeMethods(deps);
   return {
     createRequestCommand: (ctx: ActorContext, input: CreateRequestInput, meta: CommandMeta) => requestQuoteFacade.createRequest(ctx, input, meta),
     updateRequestCommand: (ctx: ActorContext, requestId: string, patch: Partial<RequestDTO>, meta: CommandMeta) => requestQuoteFacade.updateRequest(ctx, requestId, patch, meta),
@@ -19,6 +29,10 @@ export function createServerCommandEntrypoints(deps: ServerEntrypointDependencie
     findSlotsCommand: (ctx: ActorContext, input: FindSlotsInput) => requestQuoteFacade.findSlots(ctx, input),
     holdSlotCommand: (ctx: ActorContext, slotId: string, quoteId: string, meta: CommandMeta) => requestQuoteFacade.holdSlot(ctx, slotId, quoteId, meta),
     applyVerifiedPaymentCommand: (event: VerifiedPaymentEvent) => paymentFacade.applyVerifiedPayment(event),
+    applyInboundMessageCommand: (event: InboundMessageEvent) => conversationFacade.applyInboundMessage(event),
+    setConversationHandoverCommand: (ctx: ActorContext, conversationId: string, input: ConversationHandoverInput, meta: CommandMeta) => conversationFacade.setConversationHandover(ctx, conversationId, input, meta),
+    enqueueConversationReplyCommand: (ctx: ActorContext, conversationId: string, input: ConversationReplyInput, meta: CommandMeta) => conversationFacade.enqueueConversationReply(ctx, conversationId, input, meta),
+    readWorkspaceSnapshotCommand: (ctx: ActorContext, query: WorkspaceSnapshotQuery) => conversationFacade.readWorkspaceSnapshot(ctx, query),
     readPropertySnapshotCommand: (ctx: ActorContext, customerId: string) => readPropertySnapshot(ctx, customerId, deps.propertyRepository),
   };
 }
