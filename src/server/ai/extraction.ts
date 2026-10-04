@@ -43,8 +43,8 @@ function serviceArea(text: string): string | undefined {
 
 export function extractCleaningRequest(text: string): CleaningRequestExtraction {
   const lower = text.toLowerCase();
-  const bedrooms = intAfter(/\b(\d{1,2})\s*(?:bed|bedroom|br)\b/i, text);
-  const bathrooms = intAfter(/\b(\d{1,2})\s*(?:bath|bathroom|ba)\b/i, text);
+  const bedrooms = intAfter(/\b(\d{1,2})\s*(?:beds?|bedrooms?|br)\b/i, text);
+  const bathrooms = intAfter(/\b(\d{1,2})\s*(?:baths?|bathrooms?|ba)\b/i, text);
   const corrections = Array.from(text.matchAll(/\b(?:actually|correction|change that|sorry)\b[^.!?]*/gi)).map((match) => match[0].trim());
   const unsupportedReasons = UNSUPPORTED_WORK.filter((word) => lower.includes(word));
   const riskFlags: AiRiskFlag[] = [];
