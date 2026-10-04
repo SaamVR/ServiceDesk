@@ -19,7 +19,7 @@ export interface QuoteAcceptanceAvailability {
   pending?: boolean;
 }
 
-const acceptableStatuses: QuoteDTO["status"][] = ["SENT", "APPROVED"];
+const acceptableStatuses: QuoteDTO["status"][] = ["SENT"];
 
 function failure(error: { code: string; message: string }): ProductActionError {
   return { code: error.code, message: error.message };
