@@ -17,7 +17,7 @@ No implementation was performed by this planning pass. No test command was execu
 
 | Batch | State | Dependency / next gate |
 |---|---|---|
-| E01 | BLOCKED | Runtime cannot install/execute pnpm gate; see E01 checkpoints below |
+| E01 | BLOCKED | samvr install gate passed; remaining blocker is real compile/test failures |
 | E02 | BLOCKED | E01-T4 coherent executable checkpoint |
 | E03 | BLOCKED | E02-T4 + DEP-C1-MESSAGE-STORE |
 | E04 | BLOCKED | DEP-C1-INT-BASELINE + DEP-C1-CALENDAR-STORE |
@@ -125,19 +125,6 @@ Static result:
 - `src/server/integrations/index.ts` points to Chat 2-owned integration modules and does not modify forbidden shared contracts/core/domain/migrations/UI/package files.
 - This static audit cannot prove compile correctness or test behavior.
 
-### Next dependency
-
-E01 remains blocked until a runtime/worktree can execute:
-
-```bash
-pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm vitest run tests/providers
-pnpm vitest run tests/ai
-```
-
-Do not start E02 until E01-T4 has an executable checkpoint or Chat 1/controller explicitly accepts a substitute verification path.
-
 ## E01 environment recovery retry — 2026-10-04
 
 Start connector HEAD: `c4eb4cb887038b83efbec01f30526536603636c9`  
@@ -192,11 +179,40 @@ No tests passed in this runtime. No CONTRACT_TESTED claim is created by this ret
 
 The prior static barrel/ownership audit remains the only available fallback evidence in this runtime. It is not executable verification and does not satisfy E01-T4.
 
-### Next dependency
+## E01 controller runtime update — 2026-10-04
 
-E01 remains blocked until one of the following is available:
+Controller/device decision: option A accepted and executed on `samvr`.
 
-1. a runtime with working DNS/package access to activate `pnpm@10.17.1` and install dependencies; or
-2. a controller-approved substitute verification path, explicitly documented by Chat 1.
+Reported state:
 
-Do not start E02 until the executable gate runs or Chat 1/controller accepts a substitute path.
+```text
+BRANCH=feat/servicedesk-v1-connectors
+HEAD=0a39772690625b432440c42d01b9afb0f7f83bb6
+RUNTIME=samvr
+NODE=v22.23.2
+PNPM=10.17.1 via /dev/shm standalone package
+NPM_REGISTRY_ACCESS=PASS
+pnpm install --frozen-lockfile=PASS
+```
+
+Updated E01 state:
+
+```text
+E01=BLOCKED
+E02=BLOCKED
+BLOCKER=REAL_COMPILE_TEST_FAILURES
+```
+
+The previous `BLOCKED_RUNTIME_PACKAGE_ACCESS` blocker is superseded for the samvr runtime. E01 remains blocked because the executable gate has moved to real compile/test failures. Do not start E02. Do not expand connector features. Next work must collect exact `pnpm typecheck`, `pnpm vitest run tests/providers`, and `pnpm vitest run tests/ai` failures from `samvr`, then repair only Chat 2-owned compile/import/test failures.
+
+## Current next dependency
+
+E01 remains blocked until these commands execute and pass on `samvr` or another working runtime:
+
+```bash
+pnpm typecheck
+pnpm vitest run tests/providers
+pnpm vitest run tests/ai
+```
+
+Do not start E02 until E01-T4 has an executable checkpoint or Chat 1/controller explicitly accepts a substitute path.
