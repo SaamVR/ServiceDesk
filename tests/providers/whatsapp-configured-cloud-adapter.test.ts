@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 import type { ActorContext, CommandMeta } from "../../src/contracts";
 import type { OutboxJob } from "../../src/server/integrations";
-import { sendConfiguredWhatsAppCloudMessage, type WhatsAppCloudHttpTransport } from "../../src/server/integrations/whatsapp/configured-adapter";
+import type { WhatsAppCloudHttpTransport } from "../../src/server/integrations/whatsapp/cloud-api";
+import { sendConfiguredWhatsAppCloudMessage } from "../../src/server/integrations/whatsapp/configured-adapter";
 
 const ctx: ActorContext = { workspaceId: "ws-clearnest", role: "OWNER", userId: "owner-1" };
 const meta: CommandMeta = { idempotencyKey: "cmd-1", now: "2026-10-04T12:00:00.000Z" };
