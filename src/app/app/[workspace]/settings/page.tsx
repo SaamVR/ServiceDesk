@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffSettingsPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
       staffModule="settings"
       workspaceLabel={workspace}
-      title="Team, services, policies and integrations settings."
-      description="Owner-controlled settings expose roles, invite state, service catalog, areas, policies and reconnect/test states without showing secrets."
+      title="Owner settings workspace."
+      description="Settings changes remain preview-only until accepted server commands exist."
     />
   );
 }

@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function PortalInvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="customer"
       customerModule="invoice"
       resourceLabel={`invoice ${id}`}
-      title="See balance, allocations and next payment action."
-      description="Invoice UI separates total, allocated payments, refunds and remaining balance. Payment receipts require verified callback evidence."
+      title="Invoice ledger and receipt boundary."
+      description="Final receipt visibility is driven by authoritative invoice state, not a mocked checkout screen."
     />
   );
 }

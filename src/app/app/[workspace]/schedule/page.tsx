@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffSchedulePage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
-        staffModule="schedule"
+      staffModule="schedule"
       workspaceLabel={workspace}
-      title="Crew schedule with freshness and conflict reasons."
-      description="Schedule lanes explain service duration, buffer, crew eligibility, stale Calendar data and external-busy conflicts before confirming a slot."
+      title="Schedule and capacity workspace."
+      description="Find slots and hold slot use injected adapters and remain disabled until accepted server wiring exists."
     />
   );
 }
