@@ -7,8 +7,9 @@ function money(minor: number, currency: string) {
 export function buildInvoiceLedgerView(invoice: InvoiceDTO) {
   const paidMinor = Math.max(invoice.allocatedMinor - invoice.refundedMinor, 0);
   const collectedRatio = invoice.totalMinor > 0 ? paidMinor / invoice.totalMinor : 0;
-  const collectedPercent = Math.round(collectedRatio * 100);
-  const canShowFinalReceipt = invoice.status === "PAID" && invoice.balanceMinor === 0;
+  const collectedPercent = Math.min(100, Math.max(0, Math.round(collectedRatio * 100)));
+  const hasFullNetPayment = invoice.totalMinor > 0 && paidMinor >= invoice.totalMinor;
+  const canShowFinalReceipt = invoice.status === "PAID" && invoice.balanceMinor === 0 && hasFullNetPayment;
 
   return {
     invoiceId: invoice.id,
