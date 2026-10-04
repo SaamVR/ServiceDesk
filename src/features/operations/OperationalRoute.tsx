@@ -21,6 +21,12 @@ import { RequestSummaryPreview } from "@/features/request-intake/RequestSummaryP
 import { SchedulePreview } from "@/features/schedule/SchedulePreview";
 import { OwnerSettingsPreview } from "@/features/settings/OwnerSettingsPreview";
 import {
+  buildCustomerModuleHref,
+  customerModuleConfig,
+  customerNavigation,
+  type CustomerModule,
+} from "./customer-modules";
+import {
   buildStaffModuleHref,
   staffModuleConfig,
   staffNavigationGroups,
@@ -50,11 +56,11 @@ interface OperationalRouteProps {
   workspaceLabel?: string;
   resourceLabel?: string;
   staffModule?: StaffModule;
+  customerModule?: CustomerModule;
 }
 
-const surfaceNav: Record<Exclude<Surface, "staff">, string[]> = {
+const surfaceNav: Record<Exclude<Surface, "staff" | "customer">, string[]> = {
   business: ["Services", "Areas", "FAQs", "Enquire", "Book"],
-  customer: ["Portal", "Properties", "Quotes", "Bookings", "Invoices", "Preferences"],
   crew: ["Today", "Job detail", "Checklist", "Proof", "Incident", "Completion"],
   onboarding: ["Business", "Services", "Team", "Policies", "Integrations", "Readiness"],
   tour: ["Scenario", "Command", "Receipt label", "Recovery", "Presentation"],
@@ -67,6 +73,7 @@ export function OperationalRoute({
   workspaceLabel = "BrightRoom Services",
   resourceLabel,
   staffModule = "overview",
+  customerModule = "overview",
 }: OperationalRouteProps) {
   return (
     <main className="site-shell">
@@ -92,6 +99,22 @@ export function OperationalRoute({
               </div>
             ))}
           </nav>
+        ) : surface === "customer" ? (
+          <nav className="site-nav" aria-label="Customer portal">
+            {customerNavigation.map((item) => (
+              <a
+                aria-current={customerModule === item.module ? "page" : undefined}
+                href={buildCustomerModuleHref(item.module, {
+                  quoteId: sampleQuote.id,
+                  bookingId: sampleVisit.id,
+                  invoiceId: sampleInvoice.id,
+                })}
+                key={item.module}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
         ) : (
           <nav className="site-nav" aria-label="Workspace">
             {surfaceNav[surface].map((item) => <a href="#workspace" key={item}>{item}</a>)}
@@ -106,7 +129,7 @@ export function OperationalRoute({
           <p className="lead">{description}</p>
         </div>
         {surface === "business" && <BusinessPanel />}
-        {surface === "customer" && <CustomerPanel />}
+        {surface === "customer" && <CustomerPanel module={customerModule} />}
         {surface === "staff" && <StaffPanel module={staffModule} />}
         {surface === "crew" && <CrewPanel />}
         {surface === "onboarding" && <OnboardingPanel />}
@@ -141,7 +164,7 @@ function BusinessPanel() {
   );
 }
 
-function CustomerPanel() {
+function CustomerPanel({ module }: { module: CustomerModule }) {
   const view = buildCustomerPortalView({
     request: sampleRequest,
     quote: sampleQuote,
@@ -150,32 +173,65 @@ function CustomerPanel() {
     invoice: sampleInvoice,
     conversation: sampleConversation,
   });
+  const config = customerModuleConfig[module];
+
+  let moduleContent;
+  switch (module) {
+    case "overview":
+      moduleContent = (
+        <div className="card-grid three">
+          <article className="plain-card">
+            <span className="status-pill pending">Sample DTO data</span>
+            <h2>{view.serviceLabel}</h2>
+            <p>{view.quoteVersionLabel}</p>
+            <p>{view.handoverLabel}</p>
+          </article>
+          <article className="plain-card">
+            <span className="status-pill success">Current quote</span>
+            <h2>{view.totalLabel}</h2>
+            <p>Deposit {view.depositLabel}; balance {view.balanceLabel}</p>
+            <p>{view.visitStatusLabel}</p>
+          </article>
+          <article className="plain-card">
+            <span className="status-pill attention">{view.slotFreshness}</span>
+            <h2>Appointment slot</h2>
+            <p>Slot freshness must be checked by the facade before instant confirmation.</p>
+          </article>
+        </div>
+      );
+      break;
+    case "properties":
+      moduleContent = <PropertyRecurringPreview />;
+      break;
+    case "quote":
+      moduleContent = (
+        <section className="plain-card" aria-label="Customer quote preview">
+          <span className="status-pill success">Current quote</span>
+          <h2>{view.totalLabel}</h2>
+          <p>{view.quoteVersionLabel}; acceptance must target the exact current version.</p>
+          <p>Deposit {view.depositLabel}; balance {view.balanceLabel}.</p>
+        </section>
+      );
+      break;
+    case "booking":
+      moduleContent = <CheckoutPreview />;
+      break;
+    case "invoice":
+      moduleContent = <InvoiceLedgerPreview />;
+      break;
+    case "preferences":
+      moduleContent = <CommunicationPreferences />;
+      break;
+  }
 
   return (
     <div className="customer-workspace-stack">
-      <div className="card-grid three">
-        <article className="plain-card">
-          <span className="status-pill pending">Sample DTO data</span>
-          <h2>{view.serviceLabel}</h2>
-          <p>{view.quoteVersionLabel}</p>
-          <p>{view.handoverLabel}</p>
-        </article>
-        <article className="plain-card">
-          <span className="status-pill success">Current quote</span>
-          <h2>{view.totalLabel}</h2>
-          <p>Deposit {view.depositLabel}; balance {view.balanceLabel}</p>
-          <p>{view.visitStatusLabel}</p>
-        </article>
-        <article className="plain-card">
-          <span className="status-pill attention">{view.slotFreshness}</span>
-          <h2>Appointment slot</h2>
-          <p>Slot freshness must be checked by the facade before instant confirmation.</p>
-        </article>
-      </div>
-      <PropertyRecurringPreview />
-      <CheckoutPreview />
-      <InvoiceLedgerPreview />
-      <CommunicationPreferences />
+      <section className="mini-panel" aria-label={`${config.label} module context`}>
+        <span className="status-pill neutral">Customer portal</span>
+        <h2>{config.label}</h2>
+        <p>{config.description}</p>
+      </section>
+      {moduleContent}
     </div>
   );
 }
