@@ -65,6 +65,10 @@ function templateStatusFailure(templateKey: string, registration: WhatsAppTempla
   return { ok: true, value: true };
 }
 
+function missingRequiredTemplate(): Result<true> {
+  return { ok: false, code: "WHATSAPP_TEMPLATE_REQUIRED", message: "Approved WhatsApp template is required outside the customer-service window." };
+}
+
 export async function dispatchWhatsAppOutboxJob(input: DispatchWhatsAppOutboxJobInput): Promise<Result<WhatsAppOutboundDispatchResult>> {
   const latestJob = await input.store.loadLatestOutboxJob(input.queuedJob.id);
   if (!latestJob) {
@@ -83,10 +87,9 @@ export async function dispatchWhatsAppOutboxJob(input: DispatchWhatsAppOutboxJob
   }
 
   if (prepared.value.policy.requiresTemplate) {
-    const template = latestJob.templateKey ? await input.store.loadTemplate(latestJob.templateKey) : null;
     const templateReady = latestJob.templateKey
-      ? templateStatusFailure(latestJob.templateKey, template)
-      : ({ ok: false, code: "WHATSAPP_TEMPLATE_REQUIRED", message: "Approved WhatsApp template is required outside the customer-service window." } as const);
+      ? templateStatusFailure(latestJob.templateKey, await input.store.loadTemplate(latestJob.templateKey))
+      : missingRequiredTemplate();
     if (!templateReady.ok) return templateReady;
   }
 
