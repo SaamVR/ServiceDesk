@@ -13,6 +13,27 @@ export interface VerifiedPaymentApplicationOutcome {
   invoice?: InvoiceDTO;
   attentionItemId?: string;
 }
+export interface InboundMessageEvent {
+  receiptKey: string;
+  workspaceId: string;
+  channel: "WHATSAPP";
+  providerAccountId: string;
+  providerMessageId: string;
+  senderRef: string;
+  occurredAt: string;
+  contentKind: "TEXT" | "MEDIA_REFERENCE" | "UNSUPPORTED";
+  text?: string;
+  media?: { provider: "WHATSAPP"; providerMediaId: string };
+  rawProviderEventRef: string;
+}
+export interface InboundMessageApplicationOutcome {
+  state: "APPLIED" | "DUPLICATE";
+  conversation: ConversationDTO;
+  message?: MessageDTO;
+}
+export interface ConversationHandoverInput { active: boolean; assignedUserId?: string; }
+export interface ConversationReplyInput { body: string; channel: "WHATSAPP" | "EMAIL"; }
+export interface ConversationReplyOutcome { message: MessageDTO; outboxEventId: string; }
 export type VisitAction = "CONFIRM" | "ASSIGN" | "EN_ROUTE" | "START" | "SUBMIT_REVIEW" | "COMPLETE" | "CANCEL";
 export interface WorkspaceSnapshotQuery { customerId?: string; requestId?: string; visitId?: string; invoiceId?: string; }
 export interface WorkspaceSnapshot { requests: RequestDTO[]; quotes: QuoteDTO[]; visits: VisitDTO[]; invoices: InvoiceDTO[]; }
