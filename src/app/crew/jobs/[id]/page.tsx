@@ -6,6 +6,7 @@ export default async function CrewJobDetailPage({ params }: { params: Promise<{ 
   return (
     <OperationalRoute
       surface="crew"
+      crewModule="job"
       workspaceLabel="Crew workspace"
       resourceLabel={`job ${id}`}
       title="Job detail with progress actions and completion review."
