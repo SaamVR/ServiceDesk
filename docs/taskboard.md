@@ -192,3 +192,31 @@ A worker returning after one narrow implementation slice is incomplete unless:
 - one genuine blocker prevents all remaining owned work.
 
 Receipt-only or DNS-only runs are not accepted while package-free owned work exists.
+
+
+## V1 integration sprint pivot
+
+High-throughput Cycle 5 micro-hardening packets are PAUSED as primary work. They remain useful regression backlog but are no longer the critical path.
+
+New RC candidate:
+- `rc/servicedesk-v1-unverified-20261004`
+- HEAD `fb222d26132897561ae2eed3d6f5aa91475bf591`
+- state: `IMPLEMENTED_UNVERIFIED_RC`
+
+Coordinator source:
+- `docs/execution/v1-integration-sprint-20261004.md`
+
+Critical path now:
+1. `V1-INT-1` full RC static compatibility/shared-contract audit.
+2. `V1-INT-2` Core E02 server composition.
+3. `V1-INT-3` atomic verified payment core transaction boundary.
+4. `V1-INT-4` durable outbox claim/lease/retry worker.
+5. `V1-INT-5` inbox persistence/handover/read model.
+6. `V1-INT-6` crew transitions + field evidence.
+7. `V1-INT-7` recurrence persistence/commands.
+8. `V1-INT-8` invoice/manual payment + quality/attention lifecycle.
+9. `V1-INT-9` reporting/admin/settings/platform billing/usage.
+10. `V1-INT-10` full regression/DB/provider/browser/operations closure.
+
+Primary efficiency rule:
+Existing broad provider/UI source should be integrated/wired before more feature-family expansion or isolated edge-case hardening.
