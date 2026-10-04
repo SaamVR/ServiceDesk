@@ -75,6 +75,41 @@ describe("WhatsApp outbound dispatch policy", () => {
     if (!futureInbound.ok) expect(futureInbound.code).toBe("WHATSAPP_TEMPLATE_REQUIRED");
   });
 
+  test("blocks freeform messages when inbound timestamp is invalid", () => {
+    const prepared = prepareWhatsAppDispatch(ctx, job({ payload: { lastInboundAt: "not-a-date" } }), meta);
+
+    expect(prepared.ok).toBe(false);
+    if (!prepared.ok) expect(prepared.code).toBe("WHATSAPP_TEMPLATE_REQUIRED");
+  });
+
+  test("allows freeform message at exactly the 24-hour customer-service boundary", () => {
+    const prepared = prepareWhatsAppDispatch(ctx, job({ payload: { lastInboundAt: "2026-10-03T10:00:00.000Z" } }), meta);
+
+    expect(prepared.ok).toBe(true);
+    if (prepared.ok) {
+      expect(prepared.value.policy.requiresTemplate).toBe(false);
+      expect(prepared.value.dispatch.freeformText).toBe("Your quote is ready.");
+    }
+  });
+
+  test("suppresses missing opt-in before provider call", () => {
+    const prepared = prepareWhatsAppDispatch(
+      ctx,
+      job({ recipient: { recipientRef: "contact-1", consentRequired: true, hasOptIn: false, optedOut: false } }),
+      meta,
+    );
+
+    expect(prepared.ok).toBe(false);
+    if (!prepared.ok) expect(prepared.code).toBe("MISSING_OPT_IN");
+  });
+
+  test("requires outbox idempotency before provider call", () => {
+    const prepared = prepareWhatsAppDispatch(ctx, job({ idempotencyKey: "" }), meta);
+
+    expect(prepared.ok).toBe(false);
+    if (!prepared.ok) expect(prepared.code).toBe("MISSING_IDEMPOTENCY_KEY");
+  });
+
   test("rejects non-WhatsApp outbox jobs in the WhatsApp dispatcher", () => {
     const prepared = prepareWhatsAppDispatch(ctx, job({ channel: "EMAIL" }), meta);
 
