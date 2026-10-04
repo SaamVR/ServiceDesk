@@ -9,6 +9,10 @@ describe("E03 payment persistence migration", () => {
     expect(sql).toContain("unique (provider, provider_account_id, provider_event_id)");
     expect(sql).toContain("unique (workspace_id, provider_account_id, provider_transaction_id, purpose)");
     expect(sql).toContain("check ((allocated_minor - refunded_minor) + balance_minor = total_minor)");
+    expect(sql).toContain("foreign key (workspace_id, quote_id) references public.quotes(workspace_id, id)");
+    expect(sql).toContain("foreign key (workspace_id, hold_id) references public.slot_holds(workspace_id, id)");
+    expect(sql).toContain("foreign key (workspace_id, invoice_id) references public.invoices(workspace_id, id)");
+    expect(sql).toContain("create policy invoices_customer_read");
     expect(sql).toContain("alter table public.invoices enable row level security");
     expect(sql).not.toContain("for insert with check (true)");
   });
