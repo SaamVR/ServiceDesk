@@ -442,3 +442,27 @@ Evidence:
 - canonical pnpm/Vitest/typecheck/build still CONFIGURATION_BLOCKED
 - controlled provider proof still pending for WhatsApp, Calendar, Email, n8n and AI
 - Stripe/payment remains SANDBOX only
+
+
+## V1 Integration Sprint 10 — FINAL ACCEPTANCE
+
+Shared final-candidate base:
+`7dbf49e4e714b5f149d9efc083b8739d44eb3935`
+
+| Lane | Branch | Mission | State |
+| --- | --- | --- | --- |
+| Core | `feat/servicedesk-v1-core-sprint9` | Final E03-E09 DB/RLS/concurrency journey + operations evidence | READY |
+| Connectors/AI | `feat/servicedesk-v1-connectors-sprint10` | Combined provider contract/preflight + current-build proof packet | READY |
+| Product/UI | `feat/servicedesk-v1-product-sprint8` | Final guided route journey + browser acceptance preparation | READY |
+
+Current evidence:
+- E03 payment DB proof PASS
+- E05 inbox DB proof PASS
+- E06 field runtime DB proof PASS
+- E07 recurrence DB proof PASS
+- E08 manual payment/quality DB proof PASS
+- E09 reporting/platform billing/usage DB proof PASS
+- provider controlled proof remains CONFIGURATION_BLOCKED
+- canonical pnpm/Vitest/typecheck/build/browser remains CONFIGURATION_BLOCKED until executable runtime returns
+
+No provider-verification claim may be made without controlled receipts bound to the accepted release SHA.
