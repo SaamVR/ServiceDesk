@@ -133,6 +133,50 @@ p { color: var(--muted); }
   font-size: 0.95rem;
 }
 
+.site-nav a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 calc(var(--space) * 1.25);
+}
+
+.site-nav a[aria-current="page"] {
+  background: #e1efe9;
+  color: var(--accent-strong);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.site-nav.grouped {
+  align-items: stretch;
+  gap: var(--space);
+}
+
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 0.75);
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 65%);
+}
+
+.nav-group > span {
+  padding: 0 var(--space);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nav-group a {
+  white-space: nowrap;
+}
+
 .section-card,
 .grid-section,
 .presentation-shell {
@@ -539,6 +583,23 @@ p { color: var(--muted); }
     flex-direction: column;
   }
 
+  .site-nav {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .site-nav.grouped {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: var(--space);
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .nav-group {
+    flex: 0 0 auto;
+  }
+
   .mobile-preview { margin-left: 0; }
 }
 
@@ -547,6 +608,11 @@ p { color: var(--muted); }
   .section-card, .grid-section, .presentation-shell { padding: calc(var(--space) * 2); }
   .action-row { align-items: stretch; flex-direction: column; }
   .button-primary, .button-secondary { width: 100%; }
+
+  .site-header {
+    top: var(--space);
+    border-radius: var(--radius);
+  }
 
   .site-nav {
     width: 100%;
@@ -563,5 +629,19 @@ p { color: var(--muted); }
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
+  }
+
+  .site-nav.grouped {
+    gap: var(--space);
+  }
+
+  .nav-group {
+    align-items: stretch;
+    border-radius: calc(var(--radius) + 8px);
+  }
+
+  .nav-group > span {
+    display: flex;
+    align-items: center;
   }
 }
