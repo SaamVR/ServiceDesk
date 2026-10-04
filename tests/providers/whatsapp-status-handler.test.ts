@@ -59,6 +59,23 @@ describe("handleWhatsAppStatusWebhook", () => {
     expect(calls).toHaveLength(0);
   });
 
+  test("acknowledges structurally irrelevant status payloads without throwing or mutating delivery state", async () => {
+    const rawBody = JSON.stringify({ entry: { malformed: true } });
+    const { store, calls } = makeStore();
+
+    const result = await handleWhatsAppStatusWebhook({
+      rawBody,
+      headers: { "x-hub-signature-256": signature(rawBody, "secret") },
+      appSecret: "secret",
+      workspaceByPhoneNumberId: { "phone-1": "ws-clearnest" },
+      store,
+    });
+
+    expect(result).toMatchObject({ statusCode: 200, acknowledged: true, retryable: false });
+    expect(JSON.parse(result.body ?? "{}")).toEqual({ applied: 0, duplicate: 0, stale: 0 });
+    expect(calls).toHaveLength(0);
+  });
+
   test("persists delivered callback as separate from provider acceptance", async () => {
     const rawBody = JSON.stringify(statusPayload("delivered"));
     const { store, calls } = makeStore();
