@@ -1,0 +1,90 @@
+{
+  "name": "ServiceDesk booking.confirmed internal alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "servicedesk-booking-confirmed",
+        "responseMode": "responseNode"
+      },
+      "id": "servicedesk-webhook",
+      "name": "ServiceDesk signed webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.type}}",
+              "operation": "equals",
+              "value2": "booking.confirmed"
+            }
+          ]
+        }
+      },
+      "id": "event-filter",
+      "name": "Only booking.confirmed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"received\":true,\"eventId\":$json.id}"
+      },
+      "id": "acknowledge",
+      "name": "Acknowledge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [520, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 202,
+        "responseBody": "={\"ignored\":true}"
+      },
+      "id": "ignore",
+      "name": "Ignore other events",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [520, 120]
+    }
+  ],
+  "connections": {
+    "ServiceDesk signed webhook": {
+      "main": [
+        [
+          {
+            "node": "Only booking.confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only booking.confirmed": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore other events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "notes": "Example only. Verify x-servicedesk-signature with the shared secret before trusting payloads. n8n must not mutate booking/payment truth; it is only for internal staff notification."
+}
