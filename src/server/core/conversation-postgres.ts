@@ -1,4 +1,14 @@
-import type { ActorContext, ConversationDTO, MessageDTO, Result, WorkspaceSnapshot } from "../../contracts";
+import type {
+  ActorContext,
+  AttentionItemDTO,
+  ConversationDTO,
+  MessageDTO,
+  RecurrenceRuleDTO,
+  Result,
+  VisitChecklistItemDTO,
+  VisitEvidenceDTO,
+  WorkspaceSnapshot,
+} from "../../contracts";
 import type {
   ConversationHandoverInput,
   ConversationReplyInput,
@@ -42,6 +52,14 @@ function maybeString(value: unknown): string | undefined {
   return String(value);
 }
 
+function maybeNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function rows(value: unknown): RpcRow[] {
+  return Array.isArray(value) ? value.flatMap((item) => (asRow(item) ? [item as RpcRow] : [])) : [];
+}
+
 function conversationFromRpc(row: RpcRow): ConversationDTO {
   const src = asRow(row.conversation) ?? row;
   return {
@@ -73,8 +91,68 @@ function messageFromRpc(row: RpcRow): MessageDTO {
   };
 }
 
-function rows(value: unknown): RpcRow[] {
-  return Array.isArray(value) ? value.flatMap((item) => (asRow(item) ? [item as RpcRow] : [])) : [];
+function recurrenceRuleFromRpc(row: RpcRow): RecurrenceRuleDTO {
+  return {
+    id: String(field(row, "id")),
+    workspaceId: String(field(row, "workspaceId", "workspace_id")),
+    requestId: String(field(row, "requestId", "request_id")),
+    propertyId: String(field(row, "propertyId", "property_id")),
+    frequency: String(field(row, "frequency")) as RecurrenceRuleDTO["frequency"],
+    timezone: String(field(row, "timezone")),
+    localStartTime: String(field(row, "localStartTime", "local_start_time")),
+    startsOn: String(field(row, "startsOn", "starts_on")),
+    endsOn: maybeString(field(row, "endsOn", "ends_on")),
+    maxOccurrences: maybeNumber(field(row, "maxOccurrences", "max_occurrences")),
+    generatedOccurrences: Number(field(row, "generatedOccurrences", "generated_occurrences") ?? 0),
+    status: String(field(row, "status")) as RecurrenceRuleDTO["status"],
+    nextOccurrenceOn: maybeString(field(row, "nextOccurrenceOn", "next_occurrence_on")),
+    version: Number(field(row, "version") ?? 0),
+    createdAt: String(field(row, "createdAt", "created_at")),
+    updatedAt: String(field(row, "updatedAt", "updated_at")),
+  };
+}
+
+function visitEvidenceFromRpc(row: RpcRow): VisitEvidenceDTO {
+  return {
+    id: String(field(row, "id")),
+    workspaceId: String(field(row, "workspaceId", "workspace_id")),
+    visitId: String(field(row, "visitId", "visit_id")),
+    kind: String(field(row, "kind")) as VisitEvidenceDTO["kind"],
+    mediaReference: field(row, "mediaReference", "media_reference") as VisitEvidenceDTO["mediaReference"],
+    text: maybeString(field(row, "text")),
+    capturedAt: String(field(row, "capturedAt", "captured_at")),
+    submittedByUserId: String(field(row, "submittedByUserId", "submitted_by_user_id")),
+    createdAt: String(field(row, "createdAt", "created_at")),
+  };
+}
+
+function checklistItemFromRpc(row: RpcRow): VisitChecklistItemDTO {
+  return {
+    id: String(field(row, "id")),
+    workspaceId: String(field(row, "workspaceId", "workspace_id")),
+    visitId: String(field(row, "visitId", "visit_id")),
+    itemKey: String(field(row, "itemKey", "item_key")),
+    completed: Boolean(field(row, "completed")),
+    note: maybeString(field(row, "note")),
+    updatedByUserId: String(field(row, "updatedByUserId", "updated_by_user_id")),
+    updatedAt: String(field(row, "updatedAt", "updated_at")),
+    version: Number(field(row, "version") ?? 0),
+  };
+}
+
+function attentionItemFromRpc(row: RpcRow): AttentionItemDTO {
+  return {
+    id: String(field(row, "id")),
+    workspaceId: String(field(row, "workspaceId", "workspace_id")),
+    type: String(field(row, "type")),
+    severity: String(field(row, "severity")) as AttentionItemDTO["severity"],
+    status: String(field(row, "status")) as AttentionItemDTO["status"],
+    resourceType: String(field(row, "resourceType", "resource_type")),
+    resourceId: String(field(row, "resourceId", "resource_id")),
+    ownerUserId: maybeString(field(row, "ownerUserId", "owner_user_id")),
+    dueAt: maybeString(field(row, "dueAt", "due_at")),
+    summary: String(field(row, "summary")),
+  };
 }
 
 export function createPostgresConversationFacadeMethods(
@@ -136,6 +214,11 @@ export function createPostgresConversationFacadeMethods(
         invoices: [],
         conversations: rows(row.conversations).map(conversationFromRpc),
         messages: rows(row.messages).map(messageFromRpc),
+        recurrenceRules: rows(row.recurrenceRules).map(recurrenceRuleFromRpc),
+        visitEvidence: rows(row.visitEvidence).map(visitEvidenceFromRpc),
+        visitChecklistItems: rows(row.visitChecklistItems).map(checklistItemFromRpc),
+        attentionItems: rows(row.attentionItems).map(attentionItemFromRpc),
+        qualityCases: [],
       }));
     },
   };
