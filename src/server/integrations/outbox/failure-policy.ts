@@ -27,6 +27,8 @@ const retryableCodes = new Set([
   "HTTP_502",
   "HTTP_503",
   "HTTP_504",
+  "CALENDAR_RATE_LIMITED",
+  "CALENDAR_SERVER_ERROR",
 ]);
 
 const suppressedCodes = new Set([
@@ -56,6 +58,22 @@ const terminalCodes = new Set([
   "EMAIL_PAYLOAD_INVALID",
   "WEBHOOK_CONFIG_INVALID",
   "INVALID_PROVIDER_RESPONSE",
+  "CALENDAR_NOT_CONFIGURED",
+  "CALENDAR_DISCONNECTED",
+  "CALENDAR_REAUTH_REQUIRED",
+  "CALENDAR_BINDING_MISSING",
+  "CALENDAR_SYNC_TOKEN_EXPIRED",
+  "CALENDAR_SYNC_STALE",
+  "CALENDAR_VISIT_PAYLOAD_INVALID",
+  "VISIT_CREW_MISSING",
+  "VISIT_START_INVALID",
+  "CALENDAR_VISIT_PROJECTION_INVALID",
+  "CALENDAR_OUTBOX_IDENTITY_MISMATCH",
+  "CALENDAR_OUTBOX_VISIT_MISMATCH",
+  "CALENDAR_OUTBOX_CREW_MISMATCH",
+  "UNSUPPORTED_CALENDAR_OUTBOX_TOPIC",
+  "INVALID_PROVIDER_EVENT_MAPPING",
+  "OPERATOR_REVIEW_REQUIRED",
 ]);
 
 function normalizeCode(code: string | undefined): string {
@@ -67,7 +85,7 @@ function redactSensitive(value: string): string {
     .replace(/\bBearer\s+[A-Za-z0-9._~+\/=-]+/gi, "Bearer [redacted]")
     .replace(/access_token=[^\s&]+/gi, "access_token=[redacted]")
     .replace(/token["']?\s*[:=]\s*["']?[^"'\s,}&]+/gi, "token:[redacted]")
-    .replace(/(rawProviderEvent|raw provider event|raw webhook response|raw response|rawBody|body|html|text)\s*[:=]\s*["']?[^"'\n]{8,}/gi, "$1:[redacted]")
+    .replace(/(rawProviderEvent|raw provider event|raw webhook response|raw response|raw payload|rawPayload|rawBody|body|html|text)\s*[:=]\s*["']?[^"'\n]{8,}/gi, "$1:[redacted]")
     .replace(/<[^>]+>/g, "[redacted-html]")
     .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[redacted-email]")
     .replace(/\+?\d{8,15}/g, "[redacted-phone]");

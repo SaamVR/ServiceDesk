@@ -3,8 +3,8 @@ import type { VerifiedPaymentEvent } from "../core/facade";
 
 export type ProviderMode = "FIXTURE" | "SANDBOX" | "LIVE";
 export type ProviderVerificationState = "CONTRACT_TESTED" | "PROVIDER_VERIFIED" | "CONFIGURATION_BLOCKED";
-export type DeliveryChannel = "WHATSAPP" | "EMAIL" | "WEBHOOK";
-export type DeliveryPurpose = "QUOTE" | "CONFIRMATION" | "REMINDER" | "INVOICE" | "FEEDBACK" | "STAFF_ALERT" | "CUSTOMER_REPLY";
+export type DeliveryChannel = "WHATSAPP" | "EMAIL" | "WEBHOOK" | "GOOGLE_CALENDAR";
+export type DeliveryPurpose = "QUOTE" | "CONFIRMATION" | "REMINDER" | "INVOICE" | "FEEDBACK" | "STAFF_ALERT" | "CUSTOMER_REPLY" | "CALENDAR_VISIT";
 
 export interface RedactedProviderEvidence {
   provider: "WHATSAPP" | "GOOGLE_CALENDAR" | "PAYMENT" | "EMAIL" | "WEBHOOK" | "AI";
