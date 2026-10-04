@@ -3,6 +3,7 @@ import { CheckoutPreview } from "@/features/checkout/CheckoutPreview";
 import { CrewJobPreview } from "@/features/crew/CrewJobPreview";
 import { CrmPreview } from "@/features/crm/CrmPreview";
 import { InboxPreview } from "@/features/inbox/InboxPreview";
+import { InvoiceLedgerPreview } from "@/features/invoices/InvoiceLedgerPreview";
 import { OnboardingReadiness } from "@/features/onboarding/OnboardingReadiness";
 import { CommunicationPreferences } from "@/features/preferences/CommunicationPreferences";
 import { PropertyRecurringPreview } from "@/features/properties/PropertyRecurringPreview";
@@ -130,6 +131,7 @@ function CustomerPanel() {
       </div>
       <PropertyRecurringPreview />
       <CheckoutPreview />
+      <InvoiceLedgerPreview />
       <CommunicationPreferences />
     </div>
   );
