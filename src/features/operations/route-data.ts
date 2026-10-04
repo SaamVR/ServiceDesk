@@ -3,16 +3,18 @@ import type {
   ConversationDTO,
   IntegrationStatusDTO,
   InvoiceDTO,
+  MessageDTO,
   QuoteDTO,
   RequestDTO,
   SlotDTO,
   VisitDTO,
 } from "@/contracts";
+import type { CheckoutProviderMode } from "@/features/checkout/view-models";
+import type { InboxActionAvailability } from "@/features/inbox/view-models";
 import type { BusinessModule } from "./business-modules";
 import type { CrewModule } from "./crew-modules";
 import type { CustomerModule } from "./customer-modules";
 import type { StaffModule } from "./staff-modules";
-import type { CheckoutProviderMode } from "@/features/checkout/view-models";
 
 export type OperationalSurface = "business" | "customer" | "staff" | "crew" | "onboarding" | "tour";
 
@@ -56,6 +58,14 @@ export interface StaffQueueSnapshot {
   integrations: IntegrationStatusDTO[];
 }
 
+export interface InboxSnapshot {
+  conversation: ConversationDTO;
+  messages: MessageDTO[];
+  customerLabel: string;
+  requestLabel: string;
+  actionAvailability?: InboxActionAvailability;
+}
+
 export interface CrmSnapshot {
   request: RequestDTO;
   quote: QuoteDTO;
@@ -90,36 +100,19 @@ export interface CrewJobSnapshot {
 
 export interface OperationalRouteData {
   sourceLabel: "SERVER_SNAPSHOT" | "FIXTURE_UI_ONLY";
-  navigation: {
-    quoteId: string;
-    bookingId: string;
-    invoiceId: string;
-    visitId: string;
-  };
-  business: {
-    enquiry: {
-      form: EnquiryFormSnapshot;
-      summary: RequestSummarySnapshot;
-    };
-    checkout: CheckoutSnapshot;
-  };
-  customer: {
-    overview: CustomerPortalSnapshot;
-    checkout: CheckoutSnapshot;
-    invoice: InvoiceDTO;
-  };
+  navigation: { quoteId: string; bookingId: string; invoiceId: string; visitId: string };
+  business: { enquiry: { form: EnquiryFormSnapshot; summary: RequestSummarySnapshot }; checkout: CheckoutSnapshot };
+  customer: { overview: CustomerPortalSnapshot; checkout: CheckoutSnapshot; invoice: InvoiceDTO };
   staff: {
     attention: StaffQueueSnapshot;
+    inbox: InboxSnapshot;
     crm: CrmSnapshot;
     requestSummary: RequestSummarySnapshot;
     quoteApproval: QuoteApprovalSnapshot;
     schedule: ScheduleSnapshot;
     jobsVisit: VisitDTO;
   };
-  crew: {
-    today: CrewTodaySnapshot;
-    job: CrewJobSnapshot;
-  };
+  crew: { today: CrewTodaySnapshot; job: CrewJobSnapshot };
 }
 
 export interface OperationalRoutePropsBase {
