@@ -76,6 +76,22 @@ describe("provider-whatsapp API handler", () => {
     expect(store.persisted).toEqual([]);
   });
 
+  test("acknowledges structurally irrelevant inbound payloads without persistence", async () => {
+    const store = new RecordingStore();
+    const rawBody = JSON.stringify({ entry: { malformed: true } });
+    const result = await handleWhatsAppInboundWebhook({
+      rawBody,
+      headers: { "x-hub-signature-256": metaSignature(rawBody, "secret") },
+      appSecret: "secret",
+      workspaceByPhoneNumberId: { "phone-1": "ws-clearnest" },
+      store,
+    });
+
+    expect(result).toMatchObject({ statusCode: 200, acknowledged: true, retryable: false });
+    expect(JSON.parse(result.body ?? "{}")).toEqual({ received: 0, inserted: 0, duplicate: 0 });
+    expect(store.persisted).toEqual([]);
+  });
+
   test("persists inbound message before acknowledgement", async () => {
     const store = new RecordingStore();
     const rawBody = rawMessageBody("wamid-inserted");
