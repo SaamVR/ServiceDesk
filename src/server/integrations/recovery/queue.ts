@@ -19,6 +19,8 @@ export interface ProviderRecoveryQueueRecord {
   queuedAt: string;
   occurredAt: string;
   nextAttemptAt?: string;
+  leaseExpiresAt?: string;
+  leasedBy?: string;
   redactedTarget?: string;
   operatorVisible: boolean;
   mutatesBusinessTruth: false;
