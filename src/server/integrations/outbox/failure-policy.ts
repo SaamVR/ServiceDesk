@@ -27,21 +27,18 @@ const retryableCodes = new Set([
   "HTTP_502",
   "HTTP_503",
   "HTTP_504",
+  "CALENDAR_RATE_LIMITED",
+  "CALENDAR_SERVER_ERROR",
 ]);
 
 const suppressedCodes = new Set([
   "RECIPIENT_OPTED_OUT",
+  "RECIPIENT_HARD_BOUNCED",
   "MISSING_OPT_IN",
   "QUIET_HOURS",
   "HUMAN_HANDOVER_ACTIVE",
-  "SUPPRESSED",
-  "RECIPIENT_HARD_BOUNCED",
   "HANDOVER_OPEN",
-  "CUSTOMER_REPLIED_NEEDS_REVIEW",
-  "BOOKING_ALREADY_CONFIRMED",
-  "BOOKING_CANCELLED",
-  "INVOICE_ALREADY_PAID",
-  "INVOICE_VOID",
+  "SUPPRESSED",
 ]);
 
 const terminalCodes = new Set([
@@ -58,39 +55,46 @@ const terminalCodes = new Set([
   "UNSUPPORTED_DISPATCH_CHANNEL",
   "WORKSPACE_MISMATCH",
   "CHANNEL_MISMATCH",
-  "INVALID_PROVIDER_RESPONSE",
-  "OUTBOX_INTENT_ID_MISMATCH",
-  "OUTBOX_INTENT_WORKSPACE_MISMATCH",
-  "OUTBOX_INTENT_IDEMPOTENCY_MISMATCH",
-  "OUTBOX_INTENT_CHANNEL_MISSING",
-  "OUTBOX_INTENT_PURPOSE_MISSING",
-  "OUTBOX_INTENT_RECIPIENT_MISSING",
-  "OUTBOX_INTENT_RESOLUTION_FAILED",
   "EMAIL_PAYLOAD_INVALID",
   "WEBHOOK_CONFIG_INVALID",
-  "WEBHOOK_TRANSPORT_INVALID_RESPONSE",
-  "WEBHOOK_DELIVERY_TERMINAL",
+  "INVALID_PROVIDER_RESPONSE",
+  "CALENDAR_NOT_CONFIGURED",
+  "CALENDAR_DISCONNECTED",
+  "CALENDAR_REAUTH_REQUIRED",
+  "CALENDAR_BINDING_MISSING",
+  "CALENDAR_SYNC_TOKEN_EXPIRED",
+  "CALENDAR_SYNC_STALE",
+  "CALENDAR_VISIT_PAYLOAD_INVALID",
+  "VISIT_CREW_MISSING",
+  "VISIT_START_INVALID",
+  "CALENDAR_VISIT_PROJECTION_INVALID",
+  "CALENDAR_OUTBOX_IDENTITY_MISMATCH",
+  "CALENDAR_OUTBOX_VISIT_MISMATCH",
+  "CALENDAR_OUTBOX_CREW_MISMATCH",
+  "UNSUPPORTED_CALENDAR_OUTBOX_TOPIC",
+  "INVALID_PROVIDER_EVENT_MAPPING",
+  "OPERATOR_REVIEW_REQUIRED",
 ]);
 
 function normalizeCode(code: string | undefined): string {
-  return code && code.trim() ? code.trim().toUpperCase() : "UNKNOWN_PROVIDER_FAILURE";
+  return (code && code.trim() ? code.trim().toUpperCase() : "UNKNOWN_PROVIDER_FAILURE");
 }
 
-export function redactDispatchMessage(value: string): string {
+function redactSensitive(value: string): string {
   return value
     .replace(/\bBearer\s+[A-Za-z0-9._~+\/=-]+/gi, "Bearer [redacted]")
     .replace(/access_token=[^\s&]+/gi, "access_token=[redacted]")
     .replace(/token["']?\s*[:=]\s*["']?[^"'\s,}&]+/gi, "token:[redacted]")
-    .replace(/secret["']?\s*[:=]\s*["']?[^"'\s,}&]+/gi, "secret:[redacted]")
+    .replace(/(rawProviderEvent|raw provider event|raw webhook response|raw response|raw payload|rawPayload|rawBody|body|html|text)\s*[:=]\s*["']?[^"'\n]{8,}/gi, "$1:[redacted]")
+    .replace(/<[^>]+>/g, "[redacted-html]")
     .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[redacted-email]")
-    .replace(/\+?\d{8,15}/g, "[redacted-phone]")
-    .replace(/<[^>]{0,240}>/g, "[redacted-html]");
+    .replace(/\+?\d{8,15}/g, "[redacted-phone]");
 }
 
 function redactedMessage(input: ProviderFailureInput, normalizedCode: string): string {
   const source = input.message?.trim();
   if (!source) return normalizedCode;
-  const collapsed = redactDispatchMessage(source).replace(/\s+/g, " ");
+  const collapsed = redactSensitive(source).replace(/\s+/g, " ");
   return collapsed.length > 180 ? `${collapsed.slice(0, 177)}...` : collapsed;
 }
 

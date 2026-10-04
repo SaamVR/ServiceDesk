@@ -7,7 +7,8 @@ export type TransactionalEmailPurpose =
   | "INVOICE_ISSUED"
   | "PAYMENT_RECEIPT"
   | "PAYMENT_REMINDER"
-  | "VISIT_REMINDER";
+  | "VISIT_REMINDER"
+  | "CUSTOMER_REPLY";
 
 export type EmailSuppressionCode =
   | "RECIPIENT_OPTED_OUT"
@@ -58,7 +59,7 @@ function recipientDomain(email: string): string {
 export function shouldSuppressTransactionalEmail(job: Pick<TransactionalEmailJob, "purpose" | "to" | "policy">): EmailSuppressionCode | undefined {
   if (job.policy.optedOut) return "RECIPIENT_OPTED_OUT";
   if (job.policy.hardBounced) return "RECIPIENT_HARD_BOUNCED";
-  if (job.policy.handoverOpen) return "HANDOVER_OPEN";
+  if (job.policy.handoverOpen && job.purpose !== "CUSTOMER_REPLY") return "HANDOVER_OPEN";
   if (job.policy.bookingStatus === "CANCELLED") return "BOOKING_CANCELLED";
 
   if (job.purpose === "QUOTE_READY") {

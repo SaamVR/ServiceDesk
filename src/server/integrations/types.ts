@@ -3,8 +3,8 @@ import type { VerifiedPaymentEvent } from "../core/facade";
 
 export type ProviderMode = "FIXTURE" | "SANDBOX" | "LIVE";
 export type ProviderVerificationState = "CONTRACT_TESTED" | "PROVIDER_VERIFIED" | "CONFIGURATION_BLOCKED";
-export type DeliveryChannel = "WHATSAPP" | "EMAIL" | "WEBHOOK";
-export type DeliveryPurpose = "QUOTE" | "CONFIRMATION" | "REMINDER" | "INVOICE" | "FEEDBACK" | "STAFF_ALERT";
+export type DeliveryChannel = "WHATSAPP" | "EMAIL" | "WEBHOOK" | "GOOGLE_CALENDAR";
+export type DeliveryPurpose = "QUOTE" | "CONFIRMATION" | "REMINDER" | "INVOICE" | "FEEDBACK" | "STAFF_ALERT" | "CUSTOMER_REPLY" | "CALENDAR_VISIT";
 
 export interface RedactedProviderEvidence {
   provider: "WHATSAPP" | "GOOGLE_CALENDAR" | "PAYMENT" | "EMAIL" | "WEBHOOK" | "AI";
@@ -143,7 +143,7 @@ export function hasRecipientSuppression(job: OutboxJob): string | null {
   if (job.recipient.optedOut) return "RECIPIENT_OPTED_OUT";
   if (job.recipient.consentRequired && !job.recipient.hasOptIn) return "MISSING_OPT_IN";
   if (job.recipient.quietHoursBlocked) return "QUIET_HOURS";
-  if (job.handoverGuard?.handoverActive) return "HUMAN_HANDOVER_ACTIVE";
+  if (job.handoverGuard?.handoverActive && job.purpose !== "CUSTOMER_REPLY") return "HUMAN_HANDOVER_ACTIVE";
   return null;
 }
 
