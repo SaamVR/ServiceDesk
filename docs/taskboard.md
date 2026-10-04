@@ -347,3 +347,20 @@ Evidence:
 - E06 Calendar and Crew Product outage proof PASS at IMPLEMENTED level.
 - E03 staging function exists but must be captured/hardened in repository migration.
 - Google Calendar controlled provider proof is now the next external provider gate; implementation may continue without blocking on it.
+
+
+## Sprint 6 durable-save recovery
+
+Coordinator verification found:
+- Core Sprint 5 remote HEAD still `612cd9ec1b2bbb0f8fc1d139989390e06dd543cf`;
+- Connector Sprint 6 remote HEAD still `612cd9ec1b2bbb0f8fc1d139989390e06dd543cf`;
+- Product Sprint 5 remote HEAD still `612cd9ec1b2bbb0f8fc1d139989390e06dd543cf`;
+- no V1-INT6 receipts exist on those remote branches.
+
+Therefore no Sprint 6 implementation is currently durable/integratable.
+
+Recovery requirement for all three lanes:
+- preserve any legitimate existing GPT Runtime work;
+- remote branch HEAD must advance;
+- required receipt must exist remotely;
+- only then may coordinator accept/integrate Sprint 6.
