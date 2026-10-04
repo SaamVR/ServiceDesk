@@ -25,17 +25,40 @@ function safeCompare(left: string, right: string): boolean {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+export interface StripeSignatureVerificationOptions {
+  nowSeconds?: number;
+  toleranceSeconds?: number;
+}
+
 export function signStripeFixturePayload(rawBody: string, secret: string, timestamp = Math.floor(Date.now() / 1000)): string {
   const signature = createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
   return `t=${timestamp},v1=${signature}`;
 }
 
-export function verifyStripeSignature(rawBody: string, signatureHeader: string | undefined, secret: string): Result<true> {
+export function verifyStripeSignature(
+  rawBody: string,
+  signatureHeader: string | undefined,
+  secret: string,
+  options: StripeSignatureVerificationOptions = {},
+): Result<true> {
   if (!signatureHeader) return { ok: false, code: "MISSING_SIGNATURE", message: "Missing Stripe-Signature header." };
   const parts = Object.fromEntries(signatureHeader.split(",").map((part) => part.split("=", 2)));
   const timestamp = parts.t;
   const signature = parts.v1;
   if (!timestamp || !signature) return { ok: false, code: "MALFORMED_SIGNATURE", message: "Stripe signature header is malformed." };
+
+  const timestampSeconds = Number(timestamp);
+  if (!Number.isFinite(timestampSeconds) || timestampSeconds <= 0) {
+    return { ok: false, code: "MALFORMED_SIGNATURE", message: "Stripe signature timestamp is malformed." };
+  }
+
+  if (options.nowSeconds !== undefined) {
+    const toleranceSeconds = options.toleranceSeconds ?? 300;
+    if (Math.abs(options.nowSeconds - timestampSeconds) > toleranceSeconds) {
+      return { ok: false, code: "SIGNATURE_TIMESTAMP_OUT_OF_TOLERANCE", message: "Stripe signature timestamp is outside the allowed tolerance." };
+    }
+  }
+
   const expected = createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
   if (!safeCompare(expected, signature)) return { ok: false, code: "SIGNATURE_MISMATCH", message: "Stripe webhook signature did not match raw body." };
   return { ok: true, value: true };
@@ -78,7 +101,13 @@ export class FixtureStripePaymentAdapter implements PaymentAdapter {
   }
 
   async verifyWebhook(rawBody: string, headers: Record<string, string | undefined>): Promise<Result<VerifiedPaymentWebhook>> {
-    const verified = verifyStripeSignature(rawBody, headers["stripe-signature"] ?? headers["Stripe-Signature"], this.webhookSecret);
+    const nowSeconds = Math.floor(new Date(this.now()).getTime() / 1000);
+    const verified = verifyStripeSignature(
+      rawBody,
+      headers["stripe-signature"] ?? headers["Stripe-Signature"],
+      this.webhookSecret,
+      { nowSeconds, toleranceSeconds: 300 },
+    );
     if (!verified.ok) return verified;
 
     let payload: FixtureStripeWebhookPayload;
