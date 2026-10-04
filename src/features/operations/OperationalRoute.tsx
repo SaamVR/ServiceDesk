@@ -12,6 +12,7 @@ import {
   uiStateScenarios,
 } from "@/features/product/story-model";
 import { ReportsPreview } from "@/features/reports/ReportsPreview";
+import { RequestSummaryPreview } from "@/features/request-intake/RequestSummaryPreview";
 import { SchedulePreview } from "@/features/schedule/SchedulePreview";
 import {
   sampleAttentionItems,
@@ -89,16 +90,7 @@ function BusinessPanel() {
         <label className="form-field">Preferred date <input readOnly value="Next Friday morning" /></label>
         <button className="button-primary full" type="button">Continue request</button>
       </form>
-      <aside className="plain-card">
-        <p className="label">AI chat + editable summary</p>
-        <div className="message incoming">Do you cover SW11?</div>
-        <div className="message outgoing">Area validation is pending through the service-area tool.</div>
-        <dl className="summary-list">
-          <div><dt>Quote status</dt><dd>Draft</dd></div>
-          <div><dt>Hold</dt><dd>{moveOutFixture.holdMinutes}m after slot selection</dd></div>
-          <div><dt>Provider history</dt><dd>Synthetic sample</dd></div>
-        </dl>
-      </aside>
+      <RequestSummaryPreview />
     </div>
   );
 }
