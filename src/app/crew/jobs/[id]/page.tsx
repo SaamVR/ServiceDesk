@@ -1,16 +1,16 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
-export default async function CrewJobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CrewJobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="crew"
       crewModule="job"
       workspaceLabel="Crew workspace"
-      resourceLabel={`job ${id}`}
-      title="Job detail with progress actions and completion review."
-      description="Checklist, photo evidence, time/material notes, incidents and completion review are visible without claiming offline sync in V1."
+      resourceLabel={`visit ${id}`}
+      title="Crew job detail and field evidence boundary."
+      description="Crew mutations remain disabled until the accepted visit transition and field evidence persistence commands exist."
     />
   );
 }
