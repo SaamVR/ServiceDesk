@@ -60,6 +60,10 @@ export function providerInboxReceiptKey(input: Pick<PersistProviderInboxEventInp
   return `${input.workspaceId}:${input.providerAccountId}:${input.providerMessageId}`;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function header(headers: Record<string, string | undefined>, name: string): string | undefined {
   const exact = headers[name];
   if (exact) return exact;
@@ -174,14 +178,18 @@ function parseStatusCallbacks(raw: unknown, workspaceByPhoneNumberId: Record<str
 
       const statuses = Array.isArray(change.value?.statuses) ? change.value.statuses : [];
       for (const status of statuses) {
+        if (!isRecord(status)) continue;
+
         const providerMessageId = String(status.id ?? "");
         const providerStatus = String(status.status ?? "");
         const providerTimestamp = String(status.timestamp ?? "");
         const deliveryState = statusToDeliveryState(providerStatus);
         if (!providerMessageId || !providerTimestamp || !deliveryState) continue;
 
-        const errors = status.errors as Array<{ code?: number; title?: string }> | undefined;
-        const firstError = errors?.[0];
+        const errors = Array.isArray(status.errors) ? status.errors : [];
+        const firstError = isRecord(errors[0]) ? errors[0] : undefined;
+        const errorCode = typeof firstError?.code === "number" ? firstError.code : undefined;
+        const errorTitle = typeof firstError?.title === "string" ? firstError.title : undefined;
         const recipientId = typeof status.recipient_id === "string" ? status.recipient_id : undefined;
 
         callbacks.push({
@@ -196,8 +204,8 @@ function parseStatusCallbacks(raw: unknown, workspaceByPhoneNumberId: Record<str
           providerTimestamp,
           callbackKey: `${phoneNumberId}:${providerMessageId}:${providerStatus}:${providerTimestamp}`,
           rawProviderEvent,
-          errorCode: firstError?.code,
-          errorTitle: firstError?.title,
+          errorCode,
+          errorTitle,
         });
       }
     }

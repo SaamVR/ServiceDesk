@@ -19,6 +19,10 @@ export interface WhatsAppInboundMessage {
   mediaId?: string;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export class InMemoryInboundDedupe {
   private readonly seen = new Set<string>();
 
@@ -73,12 +77,16 @@ export function parseInboundMessages(raw: unknown, workspaceByPhoneNumberId: Rec
 
       const providerMessages = Array.isArray(change.value?.messages) ? change.value.messages : [];
       for (const message of providerMessages) {
+        if (!isRecord(message)) continue;
+
         const id = String(message.id ?? "");
         const from = String(message.from ?? "");
         const timestamp = String(message.timestamp ?? "");
         const type = message.type === "text" || message.type === "image" ? message.type : "unsupported";
-        const textBody = (message.text as { body?: string } | undefined)?.body;
-        const mediaId = (message.image as { id?: string } | undefined)?.id;
+        const text = isRecord(message.text) ? message.text : undefined;
+        const image = isRecord(message.image) ? message.image : undefined;
+        const textBody = typeof text?.body === "string" ? text.body : undefined;
+        const mediaId = typeof image?.id === "string" ? image.id : undefined;
         if (!id || !from) continue;
         messages.push({ workspaceId, phoneNumberId, providerMessageId: id, from, timestamp, type, text: textBody, mediaId });
       }
