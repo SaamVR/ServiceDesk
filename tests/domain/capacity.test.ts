@@ -38,6 +38,53 @@ describe("capacity and slot holds", () => {
     }).map((slot) => slot.id)).toEqual(["slot_2"]);
   });
 
+  it("excludes past, now-starting and malformed slot windows", () => {
+    const now = "2026-10-04T06:00:00.000Z";
+    const unsafeSlots: CapacitySlot[] = [
+      {
+        id: "slot_past",
+        workspaceId: "ws_1",
+        crewId: "crew_1",
+        startsAt: "2026-10-04T04:00:00.000Z",
+        endsAt: "2026-10-04T08:30:00.000Z",
+        capacityMinutes: 270,
+      },
+      {
+        id: "slot_now",
+        workspaceId: "ws_1",
+        crewId: "crew_1",
+        startsAt: now,
+        endsAt: "2026-10-04T10:30:00.000Z",
+        capacityMinutes: 270,
+      },
+      {
+        id: "slot_invalid",
+        workspaceId: "ws_1",
+        crewId: "crew_1",
+        startsAt: "2026-10-05T13:30:00.000Z",
+        endsAt: "2026-10-05T09:00:00.000Z",
+        capacityMinutes: 270,
+      },
+      {
+        id: "slot_future",
+        workspaceId: "ws_1",
+        crewId: "crew_1",
+        startsAt: "2026-10-05T09:00:00.000Z",
+        endsAt: "2026-10-05T13:30:00.000Z",
+        capacityMinutes: 270,
+      },
+    ];
+
+    expect(findAvailableSlots({
+      workspaceId: "ws_1",
+      slots: unsafeSlots,
+      existingHolds: [],
+      durationMinutes: 240,
+      bufferMinutes: 30,
+      now,
+    }).map((slot) => slot.id)).toEqual(["slot_future"]);
+  });
+
   it("prevents the last slot race with active non-expired holds", () => {
     const activeHold: SlotHold = {
       id: "hold_existing",
@@ -80,6 +127,24 @@ describe("capacity and slot holds", () => {
         status: "HELD",
       },
     });
+  });
+
+  it("rejects zero, negative and non-integer hold durations", () => {
+    for (const holdMinutes of [0, -1, 1.5]) {
+      expect(createSlotHold({
+        workspaceId: "ws_1",
+        slotId: "slot_2",
+        quoteId: "quote_new",
+        now: "2026-10-04T06:16:00.000Z",
+        holdMinutes,
+        existingHolds: [],
+        createId: () => "hold_unused",
+      })).toEqual({
+        ok: false,
+        code: "HOLD_DURATION_INVALID",
+        message: "Hold duration must be a positive integer number of minutes.",
+      });
+    }
   });
 
   it("expands weekly recurrence using explicit timezone-aware local start times", () => {
