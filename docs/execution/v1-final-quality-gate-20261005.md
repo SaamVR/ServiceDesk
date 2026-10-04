@@ -1,88 +1,60 @@
 # ServiceDesk AI V1 — Final Quality Gate (2026-10-05)
 
-Status: PASS / DEPLOYMENT_INFRA_BLOCKED
+Status: PASS
 
-## Candidate reconciliation
+## Final deploy candidate
 
-Original source freeze:
-- branch: `rc/servicedesk-v1-source-freeze-20261005`
-- SHA: `8b7066876263491c908f6453219d48e6300a8b17`
-
-During mandatory `samvr` reconciliation, legitimate post-freeze release-gate work was discovered and preserved. GitHub branch `fix/servicedesk-v1-release-gate-20261005` contained accepted release-fix commits descended from the freeze. The final two acceptance drifts found by the canonical suite were repaired and pushed.
-
-Final deploy candidate:
 - branch: `rc/servicedesk-v1-release-candidate-20261005`
 - SHA: `b966bb685729a2e8e19b7c46d764d871672a1636`
-- lineage: 9 commits ahead of the original freeze, 0 behind
-- final repair commit: `fix(release): close final acceptance gate drift`
+- lineage: 9 commits ahead of original freeze `8b7066876263491c908f6453219d48e6300a8b17`, 0 behind
 
 Verdicts:
 - `REPO_RECONCILIATION=PASS`
 - `SAMVR_RECONCILIATION=PASS`
 
-## samvr reconciliation
-
-Observed ServiceDesk repository:
-- `/home/ubuntu/work/servicedesk-v1-release-gate-20261005`
-
-Observed worktrees:
-- release-gate worktree: clean
-- detached historical fix-check worktree: no modified tracked source; only untracked `node_modules`
-- final candidate worktree: clean after commit/push
-
-No stash contained omitted source work.
-All legitimate release fixes discovered on device are now durable on GitHub.
-
-## Canonical executable gate
-
-Executed on `samvr` against exact candidate `b966bb685729a2e8e19b7c46d764d871672a1636`.
+## Canonical executable gate on samvr
 
 Runtime:
-- Node: `v22.23.2`
-- pnpm: `10.17.1`
+- Node `v22.23.2`
+- pnpm `10.17.1`
 
 Results:
-- `pnpm install --frozen-lockfile`: PASS
-- `pnpm typecheck`: PASS
+- frozen-lockfile install: PASS
+- typecheck: PASS
 - focused release regressions: PASS
-- `pnpm test`: PASS
-  - Test Files: 200 passed / 200
-  - Tests: 720 passed / 720
-- `pnpm lint`: PASS
-  - 0 errors
-  - 6 warnings
-- `pnpm build`: PASS
+- Vitest: PASS — 200 files / 720 tests
+- lint: PASS — 0 errors, 6 warnings
+- production build: PASS
 - `git diff --check`: PASS
-- Gitleaks full repository/history scan: PASS
-  - findings: 0
+- Gitleaks: PASS — 0 findings
 
-Next.js generated tracked config noise during build was restored before commit; it is not part of the release candidate.
+No GitHub Actions credits were used.
 
-Verdicts:
-- `CANONICAL_QUALITY_GATE=PASS`
-- `SECRET_SCAN=PASS`
+## Local production HTTP smoke
 
-GitHub Actions were not used.
+Exact candidate built and started locally on `samvr`.
 
-## Production-build HTTP smoke on samvr
-
-A self-contained frozen-lockfile install, production build, `next start`, and HTTP route smoke executed successfully on the exact candidate.
-
-All checked routes returned HTTP 200:
-- `/`
-- `/b/brightroom`
-- `/b/brightroom/enquire`
-- `/portal`
-- `/crew/today`
-- `/onboarding`
-- `/presentation`
-- `/app/demo/overview`
-- `/app/demo/inbox`
-- `/app/demo/settings`
+10/10 representative routes returned HTTP 200.
 
 Verdict: `LOCAL_PRODUCTION_HTTP_SMOKE=PASS`
 
-This does not substitute for post-Render smoke or browser acceptance.
+## Render deployment proof
+
+Service:
+- `servicedesk-ai-v1-rc`
+- ID `srv-db1e069srm7s73b8fr30`
+- deploy `dep-db1e06psrm7s73b8fufg`
+- URL `https://servicedesk-ai-v1-rc.onrender.com`
+
+Render checked out exact SHA `b966bb685729a2e8e19b7c46d764d871672a1636`.
+
+Results:
+- build: PASS
+- boot: PASS
+- deploy status: `live`
+- public Render HTTP smoke: PASS — 10/10 checked routes returned 200
+
+Verdict: `RENDER_DEPLOYMENT_GATE=PASS`
 
 ## Database release checks
 
@@ -90,32 +62,14 @@ Dedicated Supabase:
 - project: ServiceDesk
 - ref: `cpmmgivhlkfbiwzhlcey`
 - state: `ACTIVE_HEALTHY`
-- PostgreSQL 17
-- region: us-east-1
+- migration parity through `0015a`: PASS
+- proof/business fixture cleanup: PASS
+- service-role command RPC sanity: PASS
 
-Observed migration history matches repository migrations through `0015a_e10b_read_helpers.sql`.
+Known security advisor state remains under final production hardening, including leaked-password protection not yet claimed enabled.
 
-Current proof/business fixture sanity:
-- workspaces: 0
-- auth users: 0
-- requests: 0
-- quotes: 0
-- capacity slots: 0
-- slot holds: 0
+## Overall
 
-Service-role command RPCs checked are executable by service role and denied to `anon` / `authenticated` for the authoritative command entrypoints.
+Source, canonical quality, secret scan, local runtime smoke, Render build/boot, and Render HTTP smoke are PASS.
 
-Known security advisor state remains:
-- `citext` installed in `public`
-- `has_active_membership(...)` SECURITY DEFINER callable by `authenticated`
-- `is_customer_for_workspace(...)` SECURITY DEFINER callable by `authenticated`
-- deny-all RLS/no-policy findings on `invitations` and `servicedesk_command_idempotency` remain known/intentional
-- leaked-password protection is not claimed enabled
-
-## Release gate
-
-Source/quality/secret/database/local-smoke predeploy gates are PASS.
-
-Render infrastructure currently blocks service creation because the Hobby workspace is at its 25-service limit.
-
-Current release state: `PRODUCTION_RELEASE_BLOCKED`
+Current product state: `DEPLOYED_NOT_RELEASE_VERIFIED`
