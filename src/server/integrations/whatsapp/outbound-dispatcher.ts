@@ -86,12 +86,14 @@ export async function dispatchWhatsAppOutboxJob(input: DispatchWhatsAppOutboxJob
   }
 
   if (prepared.value.policy.requiresTemplate) {
-    if (!latestJob.templateKey) return missingRequiredTemplate();
+    if (!latestJob.templateKey) {
+      return { ok: false, code: "WHATSAPP_TEMPLATE_REQUIRED", message: "A WhatsApp template is required outside the customer service window." };
+    }
     const templateReady = evaluateWhatsAppTemplateRegistration(await input.store.loadTemplate(latestJob.templateKey), {
       purpose: latestJob.purpose,
       locale: input.config.templateLanguageCode ?? "en_US",
     });
-    if (!templateReady.ok) return templateReady;
+    if (!templateReady.ok) return { ok: false, code: templateReady.code, message: templateReady.message };
   }
 
   const sent = await sendConfiguredWhatsAppCloudMessage(

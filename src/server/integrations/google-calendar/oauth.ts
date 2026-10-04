@@ -281,8 +281,8 @@ function tokenResult(config: GoogleCalendarOAuthConfig, parsed: unknown, refresh
   return {
     ok: true,
     value: {
-      accessTokenRef: "provider-access-token-captured",
-      refreshTokenRef: typeof providerRefresh === "string" && providerRefresh.trim() ? "provider-refresh-token-captured" : refreshTokenRef,
+      accessTokenRef: "provider-calendar-token-ref",
+      refreshTokenRef: typeof providerRefresh === "string" && providerRefresh.trim() ? "provider-calendar-refresh-ref" : refreshTokenRef,
       expiresAt: expires.value,
       scopes: normalizeGoogleCalendarScopes((parsed as { scope?: unknown }).scope as string | string[] | undefined),
       exchangedAt: config.now,

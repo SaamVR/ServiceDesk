@@ -43,8 +43,8 @@ describe("Google Calendar OAuth exchange transport", () => {
     expect(body.get("redirect_uri")).toBe(config.redirectUri);
     if (result.ok) {
       expect(result.value).toMatchObject({
-        accessTokenRef: "provider-access-token-captured",
-        refreshTokenRef: "provider-refresh-token-captured",
+        accessTokenRef: "provider-calendar-token-ref",
+        refreshTokenRef: "provider-calendar-refresh-ref",
         scopes: ["scope-a", "scope-b"],
         expiresAt: "2026-10-04T10:00:00.000Z",
         exchangedAt: "2026-10-04T09:00:00.000Z",
@@ -65,7 +65,7 @@ describe("Google Calendar OAuth exchange transport", () => {
     expect(result).toMatchObject({
       ok: true,
       value: {
-        accessTokenRef: "provider-access-token-captured",
+        accessTokenRef: "provider-calendar-token-ref",
         refreshTokenRef: "encrypted-refresh-ref",
         expiresAt: "2026-10-04T09:30:00.000Z",
         scopes: ["scope-a", "scope-b"],

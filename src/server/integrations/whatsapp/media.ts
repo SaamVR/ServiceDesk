@@ -217,7 +217,7 @@ export async function fetchWhatsAppInboundMedia(
       providerMessageId: authorization.providerMessageId,
       mediaId: authorization.mediaId,
       mimeType: downloadedMime,
-      sizeBytes: downloadedBytes.byteLength,
+      sizeBytes: declaredSize,
       bytes: downloadedBytes,
       evidence: {
         provider: "WHATSAPP",

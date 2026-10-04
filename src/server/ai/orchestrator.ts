@@ -1,7 +1,7 @@
 import type { ActorContext, Result } from "../../contracts";
 import { extractCleaningRequest, missingIntakeQuestions, shouldHandover } from "./extraction";
 import { fixtureKnowledge, type ApprovedKnowledgeIndex } from "./knowledge";
-import type { AiConversationStore, AiMessageInput, AiService, AssistantToolCall, AssistantTurn } from "./types";
+import type { AiConversationStore, AiMessageInput, AiService as AiServiceContract, AssistantToolCall, AssistantTurn } from "./types";
 
 export class InMemoryAiConversationStore implements AiConversationStore {
   readonly messages: Array<{ conversationId: string; workspaceId: string; messageId: string; text: string; receivedAt: string }> = [];
@@ -39,7 +39,7 @@ function replyFor(missingQuestions: string[], handoverReason: string | null): st
   return "Thanks, I have the main details. I can prepare this for a staff-approved quote and available slots.";
 }
 
-export class FixtureAiService implements AiService {
+export class FixtureAiService implements AiServiceContract {
   constructor(
     private readonly store: AiConversationStore = new InMemoryAiConversationStore(),
     private readonly knowledge: ApprovedKnowledgeIndex = fixtureKnowledge,
@@ -84,4 +84,4 @@ export class FixtureAiService implements AiService {
   }
 }
 
-export const AiService = new FixtureAiService();
+export const fixtureAiService = new FixtureAiService();

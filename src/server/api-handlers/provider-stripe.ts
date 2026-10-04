@@ -1,7 +1,7 @@
 import type { Result } from "../../contracts";
 import type { PaymentAdapter, VerifiedPaymentWebhook } from "../integrations/types";
 
-export interface ProviderHandlerResult {
+export interface StripeProviderHandlerResult {
   statusCode: number;
   body?: string;
   acknowledged: boolean;
@@ -21,7 +21,7 @@ export interface StripePaymentWebhookHandlerInput {
   store: PaymentWebhookApplicationStore;
 }
 
-function resultToStatus(result: Result<VerifiedPaymentWebhook>): ProviderHandlerResult | null {
+function resultToStatus(result: Result<VerifiedPaymentWebhook>): StripeProviderHandlerResult | null {
   if (result.ok) return null;
   const signatureFailure =
     result.code === "MISSING_SIGNATURE"
@@ -37,19 +37,21 @@ function resultToStatus(result: Result<VerifiedPaymentWebhook>): ProviderHandler
   };
 }
 
-export async function handleStripePaymentWebhook(input: StripePaymentWebhookHandlerInput): Promise<ProviderHandlerResult> {
+export async function handleStripePaymentWebhook(input: StripePaymentWebhookHandlerInput): Promise<StripeProviderHandlerResult> {
   const verified = await input.adapter.verifyWebhook(input.rawBody, input.headers);
-  const failedVerification = resultToStatus(verified);
-  if (failedVerification) return failedVerification;
+  if (verified.ok === false) {
+    return resultToStatus(verified)!;
+  }
+  const verifiedWebhook = verified.value;
 
   try {
-    const applicationResult = await input.store.applyVerifiedPayment(verified.value);
+    const applicationResult = await input.store.applyVerifiedPayment(verifiedWebhook);
     return {
       statusCode: 200,
       body: JSON.stringify({
         result: applicationResult,
-        providerEventId: verified.value.event.providerEventId,
-        providerTransactionId: verified.value.event.providerTransactionId,
+        providerEventId: verifiedWebhook.event.providerEventId,
+        providerTransactionId: verifiedWebhook.event.providerTransactionId,
       }),
       acknowledged: true,
       retryable: false,

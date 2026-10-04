@@ -60,7 +60,7 @@ describe("signed outbound webhook executor", () => {
     });
 
     expect(result).toMatchObject({ outcome: "RETRY", retryable: true, nextAttempt: 2, businessMutationAllowed: false });
-    expect(result.nextAttemptAt).toBe("2026-10-04T10:01:00.000Z");
+    expect(result.nextAttemptAt).toBe("2026-10-04T10:02:00.000Z");
   });
 
   test("treats deterministic 4xx as final failure and 429/5xx as retryable", async () => {

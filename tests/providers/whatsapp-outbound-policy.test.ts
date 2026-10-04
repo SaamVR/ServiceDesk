@@ -3,7 +3,7 @@ import type { ActorContext, CommandMeta } from "../../src/contracts";
 import type { OutboxJob } from "../../src/server/integrations/types";
 import { prepareWhatsAppDispatch } from "../../src/server/integrations/whatsapp/outbound-policy";
 
-const ctx: ActorContext = { workspaceId: "ws-clearnest", role: "STAFF", userId: "staff-1" };
+const ctx: ActorContext = { workspaceId: "ws-clearnest", role: "DISPATCHER", userId: "staff-1" };
 const meta: CommandMeta = { idempotencyKey: "cmd-1", now: "2026-10-04T10:00:00.000Z" };
 
 function job(overrides: Partial<OutboxJob> = {}): OutboxJob {
