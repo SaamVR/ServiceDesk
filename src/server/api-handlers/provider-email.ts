@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { classifyEmailCallbackPolicy } from "../integrations/email/callback-policy";
 
 export interface EmailProviderHandlerResult {
   statusCode: number;
@@ -102,7 +103,8 @@ export async function handleEmailProviderCallback(input: EmailProviderCallbackRe
     };
   }
 
-  const suppressionAction: EmailSuppressionAction = eventType === "BOUNCE" || eventType === "COMPLAINT" ? "SUPPRESS_RECIPIENT" : "NONE";
+  const bounceType = normalizeBounceType(parsed.bounceType);
+  const callbackPolicy = classifyEmailCallbackPolicy({ eventType, bounceType });
 
   try {
     await input.store.applyEmailCallback({
@@ -113,8 +115,8 @@ export async function handleEmailProviderCallback(input: EmailProviderCallbackRe
       recipientRef,
       occurredAt,
       eventType,
-      suppressionAction,
-      bounceType: normalizeBounceType(parsed.bounceType),
+      suppressionAction: callbackPolicy.suppressionAction,
+      bounceType,
       reason: typeof parsed.reason === "string" ? parsed.reason : undefined,
       rawProviderEvent: input.rawBody,
     });
