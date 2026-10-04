@@ -13,10 +13,13 @@ import {
   integrationCards,
   uiStateScenarios,
 } from "@/features/product/story-model";
+import { QualityReviewPreview } from "@/features/quality/QualityReviewPreview";
 import { QuoteApprovalPreview } from "@/features/quotes/QuoteApprovalPreview";
+import { RecoveryActionsPreview } from "@/features/recovery/RecoveryActionsPreview";
 import { ReportsPreview } from "@/features/reports/ReportsPreview";
 import { RequestSummaryPreview } from "@/features/request-intake/RequestSummaryPreview";
 import { SchedulePreview } from "@/features/schedule/SchedulePreview";
+import { OwnerSettingsPreview } from "@/features/settings/OwnerSettingsPreview";
 import {
   buildStaffModuleHref,
   staffModuleConfig,
@@ -227,9 +230,13 @@ function StaffPanel({ module }: { module: StaffModule }) {
       moduleContent = <PlatformBillingPreview />;
       break;
     case "quality":
+      moduleContent = <QualityReviewPreview embedded />;
+      break;
     case "automations":
+      moduleContent = <RecoveryActionsPreview embedded />;
+      break;
     case "settings":
-      moduleContent = <StaffAttentionOverview view={view} />;
+      moduleContent = <OwnerSettingsPreview embedded />;
       break;
   }
 
