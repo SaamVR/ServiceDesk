@@ -42,9 +42,9 @@ describe("showcase sample data integrity", () => {
     expect(sampleQuote.balanceMinor).toBe(25_500);
     expect(sampleQuote.durationMinutes).toBe(240);
     expect(sampleQuote.bufferMinutes).toBe(30);
-    expect(moveOutFixture.total).toBe(340);
-    expect(moveOutFixture.deposit).toBe(85);
-    expect(moveOutFixture.balance).toBe(255);
+    expect(moveOutFixture.totalMinor).toBe(34_000);
+    expect(moveOutFixture.depositMinor).toBe(8_500);
+    expect(moveOutFixture.balanceMinor).toBe(25_500);
   });
 
   it("contains every V1 integration provider as non-live until provider evidence exists", () => {
