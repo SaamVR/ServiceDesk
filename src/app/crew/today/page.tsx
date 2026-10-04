@@ -1,8 +1,8 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default function CrewTodayPage() {
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="crew"
       crewModule="today"
       workspaceLabel="Crew workspace"
