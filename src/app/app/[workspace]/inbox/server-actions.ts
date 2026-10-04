@@ -1,3 +1,4 @@
+import type { WorkspaceSnapshot } from "@/server/core/facade";
 import {
   buildInboxSnapshotFromWorkspaceSnapshot,
   createInboxServerActionFactory,
@@ -5,7 +6,6 @@ import {
   type LoadInboxInput,
   type ReplyInput,
   type ToggleHandoverInput,
-  type WorkspaceSnapshot,
 } from "@/features/inbox/server-boundary";
 
 export function createRouteLocalInboxBoundary(commands: InboxCommandPort) {
@@ -20,8 +20,8 @@ export function createRouteLocalInboxBoundary(commands: InboxCommandPort) {
     enqueueReply(input: ReplyInput) {
       return actions.enqueueReply(input);
     },
-    mapSnapshot(snapshot: WorkspaceSnapshot, selectedConversationId: string) {
-      return buildInboxSnapshotFromWorkspaceSnapshot(snapshot, selectedConversationId);
+    mapSnapshot(snapshot: WorkspaceSnapshot, selectedConversationId: string, workspaceId: string) {
+      return buildInboxSnapshotFromWorkspaceSnapshot(snapshot, selectedConversationId, workspaceId);
     },
   };
 }
