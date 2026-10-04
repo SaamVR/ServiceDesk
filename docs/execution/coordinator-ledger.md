@@ -932,3 +932,47 @@ Final objective:
 - combined provider compatibility and controlled-proof packet
 - final Product guided journey/browser acceptance preparation
 - canonical package/build/browser/provider gates remain honestly separate.
+
+
+## E10 acceptance integrated / E10B final code closure
+
+Accepted E10 worker finals:
+- Core: 69afd287219e3c129dc78a64e548ea306a0f6510
+- Connector: a50d66a3bc645822e2f0c1c0d0b2cf8c07c04617
+- Product: 867c924d0f819f2d9922fa28cfbf23a302c0fb0c
+
+All three acceptance ranges are integrated into the RC.
+
+Customer RLS correction:
+- prior customer visibility FAIL was caused by an acceptance SQL session without a populated authenticated JWT sub;
+- rerun with request.jwt.claims sub set and role=authenticated returned:
+  - own customer_count=1
+  - own invoice_count=1
+  - own conversation_count=1
+- fixture cleanup returned zero workspace/auth-user rows.
+- customer RLS is therefore not a current code blocker.
+
+Remaining code blockers found by final acceptance:
+- Request/Quote/Capacity repository abstractions still lack concrete Supabase gateways/composition;
+- quote acceptance was missing from the frozen facade even though payment requires quote status ACCEPTED;
+- customer portal checkout remains preview-only despite an existing Stripe-style SANDBOX connector.
+
+Coordinator froze:
+- ServiceDeskFacade.acceptQuote(ctx,id,meta)
+
+Current RC after freeze:
+25e5770e96b250923c81254f0477461fc89feb4f
+
+E10B branches:
+- feat/servicedesk-v1-core-e10b
+- feat/servicedesk-v1-connectors-e10b
+- feat/servicedesk-v1-product-e10b
+
+E10B goal:
+- close only those final executable-flow seams;
+- no feature-family expansion.
+
+Non-code release gates:
+- Supabase Auth leaked-password protection is disabled; enable from Authentication/Auth Email password security before production. Supabase documents leaked-password protection as a Pro-plan-or-above feature.
+- canonical package/typecheck/Vitest/build/browser execution remains configuration-blocked;
+- controlled provider proof remains configuration-blocked for WhatsApp, Google Calendar, Email, n8n, AI; Stripe stays SANDBOX only.
