@@ -37,7 +37,7 @@ function requestedDateText(text: string): string | undefined {
 }
 
 function serviceArea(text: string): string | undefined {
-  const area = text.match(/\b(?:in|near|at)\s+([A-Z][A-Za-z ]{2,30}?)(?=\s+(?:today|tomorrow|next|this|on|with|for)|[.,;?]|$)/);
+  const area = text.match(/\b(?:in|near|at)\s+([A-Z][A-Za-z ]{2,30}?)(?=\s+(?:today|tomorrow|next|this|on|with|for|\d{4}-\d{2}-\d{2})|[.,;?]|$)/);
   return area?.[1]?.trim();
 }
 
