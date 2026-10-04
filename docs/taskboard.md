@@ -267,3 +267,24 @@ Provider policy:
 
 Critical next external gate:
 - after W1 E03 source/transaction implementation is complete, if the only remaining proof is real PostgreSQL/RLS/transaction execution, ask owner for Supabase staging access then—not before.
+
+
+## V1 current execution
+
+Common accepted RC for new Core/Connector work:
+`b744bbba9c02904a5981e09c8d064face0de4a90`
+
+| Lane | Branch | Active work | State |
+| --- | --- | --- | --- |
+| Core | `feat/servicedesk-v1-core-sprint3` | INT3 E04 durable outbox claim/lease/retry worker | READY |
+| Connectors/AI | `feat/servicedesk-v1-connectors-sprint3` | INT3 shared outbox execution adapter + channel adapters | READY |
+| Product/UI | `feat/servicedesk-v1-product-sprint2` | INT2 recovery: finish server action adapters + preserve module coverage + receipt | RECOVERY_REQUIRED |
+
+E03 source:
+- Core/payment bridge IMPLEMENTED under outage mode.
+- Stripe remains SANDBOX/DEMO only.
+- Real PostgreSQL transaction/RLS proof is waiting on dedicated ServiceDesk Supabase staging.
+
+Supabase approval needed from owner before project creation:
+- organization currently available: `ECom CMS`
+- do not reuse `Booking agent` or `CMS Project`.
