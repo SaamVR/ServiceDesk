@@ -1,4 +1,4 @@
-import type { ActorContext, CommandMeta, ConversationDTO, InvoiceDTO, MessageDTO, QuoteDTO, RecurrenceFrequency, RecurrenceRuleDTO, RequestDTO, Result, SlotDTO, VisitChecklistItemDTO, VisitDTO, VisitEvidenceDTO, VisitEvidenceKind } from "../../contracts";
+import type { ActorContext, AttentionItemDTO, CommandMeta, ConversationDTO, InvoiceDTO, MessageDTO, QualityCaseDTO, QuoteDTO, RecurrenceFrequency, RecurrenceRuleDTO, RequestDTO, Result, SlotDTO, VisitChecklistItemDTO, VisitDTO, VisitEvidenceDTO, VisitEvidenceKind } from "../../contracts";
 export interface CreateRequestInput { customerId?: string; propertyId?: string; serviceCode?: string; }
 export interface FindSlotsInput { requestId: string; from: string; to: string; preferredCrewId?: string; }
 export interface VerifiedPaymentEvent {
@@ -52,9 +52,21 @@ export interface CreateRecurrenceRuleInput {
   maxOccurrences?: number;
 }
 export type RecurrenceRuleAction = "PAUSE" | "RESUME" | "SKIP_NEXT";
+export interface ManualPaymentInput {
+  amountMinor: number;
+  currency: string;
+  method: "CASH" | "BANK_TRANSFER" | "OTHER";
+  reference: string;
+  occurredAt: string;
+}
+export type QualityCaseAction = "START_REVIEW" | "ASSIGN" | "RESOLVE" | "REQUEST_REVIEW";
+export interface QualityCaseActionInput {
+  ownerUserId?: string;
+  resolutionNote?: string;
+}
 export type VisitAction = "CONFIRM" | "ASSIGN" | "EN_ROUTE" | "START" | "SUBMIT_REVIEW" | "COMPLETE" | "CANCEL";
 export interface WorkspaceSnapshotQuery { customerId?: string; requestId?: string; visitId?: string; invoiceId?: string; conversationId?: string; }
-export interface WorkspaceSnapshot { requests: RequestDTO[]; quotes: QuoteDTO[]; visits: VisitDTO[]; invoices: InvoiceDTO[]; conversations: ConversationDTO[]; messages: MessageDTO[]; }
+export interface WorkspaceSnapshot { requests: RequestDTO[]; quotes: QuoteDTO[]; visits: VisitDTO[]; invoices: InvoiceDTO[]; conversations: ConversationDTO[]; messages: MessageDTO[]; recurrenceRules: RecurrenceRuleDTO[]; visitEvidence: VisitEvidenceDTO[]; visitChecklistItems: VisitChecklistItemDTO[]; attentionItems: AttentionItemDTO[]; qualityCases: QualityCaseDTO[]; }
 export interface ServiceDeskFacade {
   createRequest(ctx: ActorContext, input: CreateRequestInput, meta: CommandMeta): Promise<Result<RequestDTO>>;
   updateRequest(ctx: ActorContext, id: string, patch: Partial<RequestDTO>, meta: CommandMeta): Promise<Result<RequestDTO>>;
@@ -71,5 +83,7 @@ export interface ServiceDeskFacade {
   setVisitChecklistItem(ctx: ActorContext, visitId: string, input: SetVisitChecklistItemInput, meta: CommandMeta): Promise<Result<VisitChecklistItemDTO>>;
   createRecurrenceRule(ctx: ActorContext, input: CreateRecurrenceRuleInput, meta: CommandMeta): Promise<Result<RecurrenceRuleDTO>>;
   applyRecurrenceRuleAction(ctx: ActorContext, id: string, action: RecurrenceRuleAction, meta: CommandMeta): Promise<Result<RecurrenceRuleDTO>>;
+  applyManualPayment(ctx: ActorContext, invoiceId: string, input: ManualPaymentInput, meta: CommandMeta): Promise<Result<InvoiceDTO>>;
+  applyQualityCaseAction(ctx: ActorContext, id: string, action: QualityCaseAction, input: QualityCaseActionInput, meta: CommandMeta): Promise<Result<QualityCaseDTO>>;
   readWorkspaceSnapshot(ctx: ActorContext, query: WorkspaceSnapshotQuery): Promise<Result<WorkspaceSnapshot>>;
 }
