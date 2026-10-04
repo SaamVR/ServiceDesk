@@ -31,17 +31,12 @@ const retryableCodes = new Set([
 
 const suppressedCodes = new Set([
   "RECIPIENT_OPTED_OUT",
+  "RECIPIENT_HARD_BOUNCED",
   "MISSING_OPT_IN",
   "QUIET_HOURS",
   "HUMAN_HANDOVER_ACTIVE",
-  "SUPPRESSED",
-  "RECIPIENT_HARD_BOUNCED",
   "HANDOVER_OPEN",
-  "CUSTOMER_REPLIED_NEEDS_REVIEW",
-  "BOOKING_ALREADY_CONFIRMED",
-  "BOOKING_CANCELLED",
-  "INVOICE_ALREADY_PAID",
-  "INVOICE_VOID",
+  "SUPPRESSED",
 ]);
 
 const terminalCodes = new Set([
@@ -58,39 +53,30 @@ const terminalCodes = new Set([
   "UNSUPPORTED_DISPATCH_CHANNEL",
   "WORKSPACE_MISMATCH",
   "CHANNEL_MISMATCH",
-  "INVALID_PROVIDER_RESPONSE",
-  "OUTBOX_INTENT_ID_MISMATCH",
-  "OUTBOX_INTENT_WORKSPACE_MISMATCH",
-  "OUTBOX_INTENT_IDEMPOTENCY_MISMATCH",
-  "OUTBOX_INTENT_CHANNEL_MISSING",
-  "OUTBOX_INTENT_PURPOSE_MISSING",
-  "OUTBOX_INTENT_RECIPIENT_MISSING",
-  "OUTBOX_INTENT_RESOLUTION_FAILED",
   "EMAIL_PAYLOAD_INVALID",
   "WEBHOOK_CONFIG_INVALID",
-  "WEBHOOK_TRANSPORT_INVALID_RESPONSE",
-  "WEBHOOK_DELIVERY_TERMINAL",
+  "INVALID_PROVIDER_RESPONSE",
 ]);
 
 function normalizeCode(code: string | undefined): string {
-  return code && code.trim() ? code.trim().toUpperCase() : "UNKNOWN_PROVIDER_FAILURE";
+  return (code && code.trim() ? code.trim().toUpperCase() : "UNKNOWN_PROVIDER_FAILURE");
 }
 
-export function redactDispatchMessage(value: string): string {
+function redactSensitive(value: string): string {
   return value
     .replace(/\bBearer\s+[A-Za-z0-9._~+\/=-]+/gi, "Bearer [redacted]")
     .replace(/access_token=[^\s&]+/gi, "access_token=[redacted]")
     .replace(/token["']?\s*[:=]\s*["']?[^"'\s,}&]+/gi, "token:[redacted]")
-    .replace(/secret["']?\s*[:=]\s*["']?[^"'\s,}&]+/gi, "secret:[redacted]")
+    .replace(/(rawProviderEvent|raw provider event|raw webhook response|raw response|rawBody|body|html|text)\s*[:=]\s*["']?[^"'\n]{8,}/gi, "$1:[redacted]")
+    .replace(/<[^>]+>/g, "[redacted-html]")
     .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[redacted-email]")
-    .replace(/\+?\d{8,15}/g, "[redacted-phone]")
-    .replace(/<[^>]{0,240}>/g, "[redacted-html]");
+    .replace(/\+?\d{8,15}/g, "[redacted-phone]");
 }
 
 function redactedMessage(input: ProviderFailureInput, normalizedCode: string): string {
   const source = input.message?.trim();
   if (!source) return normalizedCode;
-  const collapsed = redactDispatchMessage(source).replace(/\s+/g, " ");
+  const collapsed = redactSensitive(source).replace(/\s+/g, " ");
   return collapsed.length > 180 ? `${collapsed.slice(0, 177)}...` : collapsed;
 }
 

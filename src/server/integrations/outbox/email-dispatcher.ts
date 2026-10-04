@@ -11,6 +11,7 @@ const purposeMap: Record<OutboxJob["purpose"], TransactionalEmailPurpose> = {
   REMINDER: "VISIT_REMINDER",
   FEEDBACK: "PAYMENT_RECEIPT",
   STAFF_ALERT: "QUOTE_READY",
+  CUSTOMER_REPLY: "CUSTOMER_REPLY",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -27,8 +28,10 @@ function payloadFor(job: OutboxJob): Record<string, unknown> {
   return nested ?? job.payload;
 }
 
-function policyFor(value: unknown): TransactionalEmailPolicy {
-  return isRecord(value) ? value as TransactionalEmailPolicy : {};
+function policyFor(value: unknown, job: OutboxJob): TransactionalEmailPolicy {
+  const policy = isRecord(value) ? value as TransactionalEmailPolicy : {};
+  if (job.purpose === "CUSTOMER_REPLY") return { ...policy, handoverOpen: false };
+  return policy;
 }
 
 export function buildTransactionalEmailJob(job: OutboxJob): Result<TransactionalEmailJob> {
@@ -51,7 +54,7 @@ export function buildTransactionalEmailJob(job: OutboxJob): Result<Transactional
       subject,
       text,
       html,
-      policy: policyFor(payload.policy),
+      policy: policyFor(payload.policy, job),
     },
   };
 }
