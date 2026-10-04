@@ -26,6 +26,33 @@ export interface StripeCheckoutHttpResponse {
 
 export type StripeCheckoutHttpTransport = (request: StripeCheckoutHttpRequest) => Promise<StripeCheckoutHttpResponse>;
 
+export interface RedactedStripeCheckoutRequestSummary {
+  method: "POST";
+  host: string;
+  endpoint: string;
+  hasBearerAuthorization: boolean;
+  hasConnectedAccount: boolean;
+  hasIdempotencyKey: boolean;
+  bodyKeys: string[];
+}
+
+export function redactedStripeCheckoutRequestSummary(request: StripeCheckoutHttpRequest): RedactedStripeCheckoutRequestSummary {
+  const url = new URL(request.url);
+  const bodyKeys: string[] = [];
+  const params = new URLSearchParams(request.body);
+  for (const key of params.keys()) bodyKeys.push(key);
+
+  return {
+    method: request.method,
+    host: url.host,
+    endpoint: url.pathname,
+    hasBearerAuthorization: request.headers.authorization?.startsWith("Bearer ") === true,
+    hasConnectedAccount: Boolean(request.headers["stripe-account"]),
+    hasIdempotencyKey: Boolean(request.headers["idempotency-key"]),
+    bodyKeys: Array.from(new Set(bodyKeys)).sort(),
+  };
+}
+
 function amountForPurpose(input: CheckoutInput): number {
   if (input.purpose === "DEPOSIT") return input.quote.depositMinor;
   if (input.purpose === "BALANCE") return input.quote.balanceMinor;
