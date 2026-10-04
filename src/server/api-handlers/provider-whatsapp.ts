@@ -56,6 +56,10 @@ export interface WhatsAppStatusWebhookInput {
   store: ProviderDeliveryStatusStore;
 }
 
+export function providerInboxReceiptKey(input: Pick<PersistProviderInboxEventInput, "workspaceId" | "providerAccountId" | "providerMessageId">): string {
+  return `${input.workspaceId}:${input.providerAccountId}:${input.providerMessageId}`;
+}
+
 function header(headers: Record<string, string | undefined>, name: string): string | undefined {
   const exact = headers[name];
   if (exact) return exact;
@@ -155,7 +159,7 @@ function statusToDeliveryState(status: string): WhatsAppDeliveryState | null {
 
 function parseStatusCallbacks(raw: unknown, workspaceByPhoneNumberId: Record<string, string>, rawProviderEvent: string): WhatsAppStatusCallbackInput[] {
   const payload = raw as {
-    entry?: Array<{ changes?: Array<{ value?: { metadata?: { phone_number_id?: string }; statuses?: Array<Record<string, unknown>> } }> }>;
+    entry?: Array<{ changes?: Array<{ value?: { metadata?: { phone_number_id?: string }; statuses?: unknown } }> }>;
   };
 
   const callbacks: WhatsAppStatusCallbackInput[] = [];
@@ -168,7 +172,8 @@ function parseStatusCallbacks(raw: unknown, workspaceByPhoneNumberId: Record<str
       const workspaceId = workspaceByPhoneNumberId[phoneNumberId];
       if (!workspaceId) continue;
 
-      for (const status of change.value?.statuses ?? []) {
+      const statuses = Array.isArray(change.value?.statuses) ? change.value.statuses : [];
+      for (const status of statuses) {
         const providerMessageId = String(status.id ?? "");
         const providerStatus = String(status.status ?? "");
         const providerTimestamp = String(status.timestamp ?? "");
