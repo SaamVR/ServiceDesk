@@ -17,7 +17,7 @@ export interface LedgerEntry {
   occurredAt: string;
 }
 
-export interface AppendLedgerEntryInput extends Omit<LedgerEntry, "id"> {}
+export type AppendLedgerEntryInput = Omit<LedgerEntry, "id">;
 
 export interface OutboxEvent {
   id: string;
@@ -31,7 +31,7 @@ export interface OutboxEvent {
   createdAt: string;
 }
 
-export interface EnqueueOutboxEventInput extends Pick<OutboxEvent, "workspaceId" | "topic" | "payload" | "idempotencyKey" | "createdAt"> {}
+export type EnqueueOutboxEventInput = Pick<OutboxEvent, "workspaceId" | "topic" | "payload" | "idempotencyKey" | "createdAt">;
 
 export interface AttentionItem {
   id: string;
@@ -45,7 +45,7 @@ export interface AttentionItem {
   createdAt: string;
 }
 
-export interface RaiseAttentionItemInput extends Omit<AttentionItem, "id" | "status"> {}
+export type RaiseAttentionItemInput = Omit<AttentionItem, "id" | "status">;
 
 function addMinutes(iso: string, minutes: number): string {
   return new Date(new Date(iso).getTime() + minutes * 60_000).toISOString();
@@ -107,8 +107,7 @@ export function enqueueOutboxEvent(
 export function recordOutboxFailure(event: OutboxEvent, failedAt: string, maxAttempts: number): OutboxEvent {
   const attempts = event.attempts + 1;
   if (attempts >= maxAttempts) {
-    const { nextAttemptAt: _nextAttemptAt, ...withoutNextAttempt } = event;
-    return { ...withoutNextAttempt, attempts, status: "FAILED" };
+    return { ...event, attempts, status: "FAILED", nextAttemptAt: undefined };
   }
 
   const delayMinutes = 2 ** attempts;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { presentationSlides, tourScenarios } from "../../src/features/product/story-model";
 
-const allowedStaticAnchors = new Set(["pain", "promise", "pricing", "contact"]);
+const allowedStaticAnchors = new Set<string>(["pain", "promise", "pricing", "contact"]);
 
 describe("presentation and tour linking contract", () => {
   it("keeps the ten-slide deck ordered and uniquely addressable", () => {
@@ -12,8 +12,7 @@ describe("presentation and tour linking contract", () => {
   });
 
   it("links every routed slide to either a controlled scenario or approved static tour anchor", () => {
-    const scenarioIds = new Set(tourScenarios.map((scenario) => scenario.id));
-
+    const scenarioIds = new Set<string>(tourScenarios.map((scenario) => scenario.id));
     for (const slide of presentationSlides) {
       const anchor = slide.tourHref.replace("/tour#", "");
       expect(slide.tourHref.startsWith("/tour#")).toBe(true);

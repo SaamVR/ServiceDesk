@@ -1,7 +1,6 @@
 import type { ConversationDTO, IntegrationStatusDTO } from "@/contracts";
 
 type PreferenceSource = "FIXTURE_UI_ONLY";
-
 type PreferenceChannel = ConversationDTO["channel"];
 
 interface BuildCommunicationPreferenceViewInput {
@@ -20,6 +19,10 @@ const optionLabels: Record<PreferenceChannel, string> = {
   WHATSAPP: "WhatsApp messages",
   EMAIL: "Email notifications",
 };
+
+function humanize(value: string): string {
+  return value.toLowerCase().replaceAll("_", " ");
+}
 
 function getIntegration(channel: PreferenceChannel, integrations: IntegrationStatusDTO[]) {
   return integrations.find((integration) => integration.provider === providerByChannel[channel]);
@@ -40,7 +43,7 @@ function describeAvailability(channel: PreferenceChannel, integrations: Integrat
     return {
       available: false,
       state: integration.status.toLowerCase(),
-      reason: `${optionLabels[channel]} is ${integration.status.toLowerCase()} in ${integration.mode ?? "unknown"} mode.`,
+      reason: `${optionLabels[channel]} is ${humanize(integration.status)} in ${humanize(integration.mode ?? "unknown")} mode.`,
     };
   }
 

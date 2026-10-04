@@ -9,16 +9,19 @@ describe("accessibility and responsive evidence contracts", () => {
   });
 
   it("keeps every tour step routed and proof-bounded", () => {
-    const steps = tourScenarios.flatMap((scenario) => scenario.steps);
-
-    expect(steps.length).toBeGreaterThan(10);
-    expect(steps.every((step) => step.routeHref.startsWith("/"))).toBe(true);
-    expect(steps.every((step) => ["FIXTURE_UI_ONLY", "SANDBOX", "CONFIGURATION_BLOCKED"].includes(step.proofBoundary))).toBe(true);
+    let count = 0;
+    for (const scenario of tourScenarios) {
+      for (const step of scenario.steps) {
+        count += 1;
+        expect(step.routeHref.startsWith("/")).toBe(true);
+        expect(["FIXTURE_UI_ONLY", "SANDBOX", "CONFIGURATION_BLOCKED"]).toContain(step.proofBoundary);
+      }
+    }
+    expect(count).toBeGreaterThan(10);
   });
 
   it("does not allow provider verified claims in showcase data", () => {
     const serialized = JSON.stringify(tourScenarios);
-
     expect(serialized).not.toContain("PROVIDER_VERIFIED");
     expect(serialized).not.toContain("LIVE receipt");
     expect(serialized).not.toContain("Delivered proof");

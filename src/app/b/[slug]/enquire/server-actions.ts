@@ -12,7 +12,7 @@ export type BusinessEnquiryServerActionResult = ProductActionResult<{
   quote: QuoteDTO;
 }>;
 
-export interface BusinessEnquiryServerCommands extends EnquiryCommandPort {}
+export type BusinessEnquiryServerCommands = EnquiryCommandPort;
 
 export function createBusinessEnquiryServerActionFactory(commands: BusinessEnquiryServerCommands) {
   return createEnquiryServerActionFactory(commands);

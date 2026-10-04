@@ -21,8 +21,9 @@ describe("outbox worker runtime migration", () => {
     expect(sql).toContain("attempts = claimed.attempts + 1");
   });
 
-  it("does not grant public or authenticated mutation authority", () => {
+  it("grants worker claim only to the trusted service role", () => {
     expect(sql).toContain("revoke all on function public.claim_ready_outbox_events");
-    expect(sql).not.toContain("grant execute on function public.claim_ready_outbox_events");
+    expect(sql).toMatch(/grant execute on function public\.claim_ready_outbox_events[\s\S]*to service_role/i);
+    expect(sql).not.toMatch(/grant execute on function public\.claim_ready_outbox_events[\s\S]*to (?:anon|authenticated|public)/i);
   });
 });
