@@ -2,6 +2,7 @@ import type { Result } from "../../../contracts";
 import type { InboundMessageApplicationOutcome, InboundMessageEvent } from "../../core/facade";
 import type { DurableWhatsAppInboundProcessor, DurableWhatsAppInboundProcessingResult } from "./inbound-processor";
 import type { DurableWhatsAppInboxRecord } from "./inbox-persistence";
+import { normalizeProviderTimestampToIso } from "./timestamp-normalization";
 
 export type WhatsAppInboundBusinessCommandResult = "APPLIED" | "DUPLICATE";
 
@@ -34,7 +35,7 @@ export function toWhatsAppInboundBusinessCommandInput(record: DurableWhatsAppInb
     providerAccountId: record.providerAccountId,
     providerMessageId: record.providerMessageId,
     senderRef: record.senderRef,
-    providerTimestamp: record.providerTimestamp,
+    providerTimestamp: normalizeProviderTimestampToIso(record.providerTimestamp),
     contentKind: record.contentKind,
     text: record.text,
     media: record.media,
@@ -51,7 +52,7 @@ export function toInboundMessageEvent(record: DurableWhatsAppInboxRecord): Inbou
     providerAccountId: record.providerAccountId,
     providerMessageId: record.providerMessageId,
     senderRef: record.senderRef,
-    occurredAt: record.providerTimestamp,
+    occurredAt: normalizeProviderTimestampToIso(record.providerTimestamp),
     contentKind: record.contentKind,
     text: record.text,
     media: record.media,
