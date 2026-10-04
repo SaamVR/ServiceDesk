@@ -9,11 +9,25 @@ import type {
   VisitDTO,
 } from "@/contracts";
 
+export const showcaseIds = {
+  workspace: "ws_showcase",
+  customer: "cust_sample",
+  property: "prop_sample",
+  request: "req_moveout_001",
+  quote: "quote_moveout_001",
+  slot: "slot_showcase_001",
+  visit: "visit_showcase_001",
+  invoice: "invoice_showcase_001",
+  conversation: "conv_showcase_001",
+  crew: "crew_alpha",
+  dispatcher: "dispatcher_1",
+} as const;
+
 export const sampleRequest: RequestDTO = {
-  id: "req_moveout_001",
-  workspaceId: "ws_showcase",
-  customerId: "cust_sample",
-  propertyId: "prop_sample",
+  id: showcaseIds.request,
+  workspaceId: showcaseIds.workspace,
+  customerId: showcaseIds.customer,
+  propertyId: showcaseIds.property,
   serviceCode: "MOVE_OUT",
   status: "QUOTED",
   bedrooms: 3,
@@ -25,7 +39,7 @@ export const sampleRequest: RequestDTO = {
 };
 
 export const sampleQuote: QuoteDTO = {
-  id: "quote_moveout_001",
+  id: showcaseIds.quote,
   workspaceId: sampleRequest.workspaceId,
   requestId: sampleRequest.id,
   version: 2,
@@ -43,9 +57,9 @@ export const sampleQuote: QuoteDTO = {
 };
 
 export const sampleSlot: SlotDTO = {
-  id: "slot_showcase_001",
+  id: showcaseIds.slot,
   workspaceId: sampleRequest.workspaceId,
-  crewId: "crew_alpha",
+  crewId: showcaseIds.crew,
   startAt: "2026-10-09T09:00:00.000Z",
   endAt: "2026-10-09T13:30:00.000Z",
   serviceMinutes: 240,
@@ -54,7 +68,7 @@ export const sampleSlot: SlotDTO = {
 };
 
 export const sampleVisit: VisitDTO = {
-  id: "visit_showcase_001",
+  id: showcaseIds.visit,
   workspaceId: sampleRequest.workspaceId,
   requestId: sampleRequest.id,
   quoteId: sampleQuote.id,
@@ -67,7 +81,7 @@ export const sampleVisit: VisitDTO = {
 };
 
 export const sampleInvoice: InvoiceDTO = {
-  id: "invoice_showcase_001",
+  id: showcaseIds.invoice,
   workspaceId: sampleRequest.workspaceId,
   visitId: sampleVisit.id,
   status: "PARTIALLY_PAID",
@@ -79,12 +93,12 @@ export const sampleInvoice: InvoiceDTO = {
 };
 
 export const sampleConversation: ConversationDTO = {
-  id: "conv_showcase_001",
+  id: showcaseIds.conversation,
   workspaceId: sampleRequest.workspaceId,
   requestId: sampleRequest.id,
   customerId: sampleRequest.customerId,
   channel: "WHATSAPP",
-  assignedUserId: "dispatcher_1",
+  assignedUserId: showcaseIds.dispatcher,
   handoverActive: true,
   version: 8,
   lastMessageAt: "2026-10-04T06:12:00.000Z",
@@ -99,7 +113,7 @@ export const sampleAttentionItems: AttentionItemDTO[] = [
     status: "OPEN",
     resourceType: "slot",
     resourceId: sampleSlot.id,
-    ownerUserId: "dispatcher_1",
+    ownerUserId: showcaseIds.dispatcher,
     dueAt: "2026-10-04T07:00:00.000Z",
     summary: "Calendar freshness is stale before the customer can confirm instantly.",
   },
@@ -111,7 +125,7 @@ export const sampleAttentionItems: AttentionItemDTO[] = [
     status: "OPEN",
     resourceType: "conversation",
     resourceId: sampleConversation.id,
-    ownerUserId: "dispatcher_1",
+    ownerUserId: showcaseIds.dispatcher,
     dueAt: "2026-10-04T07:15:00.000Z",
     summary: "Message accepted by fixture queue only; no provider-delivered proof exists.",
   },
@@ -123,7 +137,7 @@ export const sampleAttentionItems: AttentionItemDTO[] = [
     status: "OPEN",
     resourceType: "visit",
     resourceId: sampleVisit.id,
-    ownerUserId: "dispatcher_1",
+    ownerUserId: showcaseIds.dispatcher,
     dueAt: "2026-10-04T07:30:00.000Z",
     summary: "Late or uncertain payment requires capacity review before visit confirmation.",
   },
@@ -135,7 +149,7 @@ export const sampleAttentionItems: AttentionItemDTO[] = [
     status: "OPEN",
     resourceType: "invoice",
     resourceId: sampleInvoice.id,
-    ownerUserId: "dispatcher_1",
+    ownerUserId: showcaseIds.dispatcher,
     dueAt: "2026-10-09T18:00:00.000Z",
     summary: "Balance collection waits for reviewed completion and verified payment callback.",
   },
