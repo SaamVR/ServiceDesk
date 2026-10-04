@@ -1,3 +1,4 @@
+import { planProviderRecoveryLease } from "./lease";
 import type { ProviderRecoveryQueueRecord } from "./queue";
 
 export interface ProviderRecoveryBatchPlanInput {
@@ -12,6 +13,15 @@ export interface ProviderRecoveryBatchPlan {
   heldForOperator: number;
 }
 
+export interface LeasedProviderRecoveryBatchPlanInput extends ProviderRecoveryBatchPlanInput {
+  workerId: string;
+  leaseDurationSeconds?: number;
+}
+
+export interface LeasedProviderRecoveryBatchPlan extends ProviderRecoveryBatchPlan {
+  skipped: Array<{ idempotencyKey: string; reason: "LEASED" }>;
+}
+
 function autoRunnable(record: ProviderRecoveryQueueRecord): boolean {
   return record.queue === "provider-retry" || record.queue === "provider-reconciliation";
 }
@@ -21,12 +31,12 @@ function dueAt(record: ProviderRecoveryQueueRecord): number {
   return new Date(record.nextAttemptAt ?? record.queuedAt).getTime();
 }
 
-export function planProviderRecoveryBatch(input: ProviderRecoveryBatchPlanInput): ProviderRecoveryBatchPlan {
+function sortedRunnable(input: ProviderRecoveryBatchPlanInput): { runnable: ProviderRecoveryQueueRecord[]; futureAutoRunnable: number; heldForOperator: number } {
   const now = new Date(input.now).getTime();
-  const maxItems = Math.max(0, Math.floor(input.maxItems));
   let heldForOperator = 0;
-
+  let futureAutoRunnable = 0;
   const runnable: ProviderRecoveryQueueRecord[] = [];
+
   for (const record of input.records) {
     if (!autoRunnable(record)) {
       heldForOperator += 1;
@@ -34,6 +44,7 @@ export function planProviderRecoveryBatch(input: ProviderRecoveryBatchPlanInput)
     }
 
     if (dueAt(record) <= now) runnable.push(record);
+    else futureAutoRunnable += 1;
   }
 
   runnable.sort((left, right) => {
@@ -44,13 +55,59 @@ export function planProviderRecoveryBatch(input: ProviderRecoveryBatchPlanInput)
     return left.idempotencyKey.localeCompare(right.idempotencyKey);
   });
 
+  return { runnable, futureAutoRunnable, heldForOperator };
+}
+
+export function planProviderRecoveryBatch(input: ProviderRecoveryBatchPlanInput): ProviderRecoveryBatchPlan {
+  const maxItems = Math.max(0, Math.floor(input.maxItems));
+  const { runnable, futureAutoRunnable, heldForOperator } = sortedRunnable(input);
   const ready = runnable.slice(0, maxItems);
-  const futureAutoRunnable = input.records.filter((record) => autoRunnable(record) && dueAt(record) > now).length;
   const dueButLimited = Math.max(0, runnable.length - ready.length);
 
   return {
     ready,
     deferred: futureAutoRunnable + dueButLimited,
     heldForOperator,
+  };
+}
+
+export function planLeasedProviderRecoveryBatch(input: LeasedProviderRecoveryBatchPlanInput): LeasedProviderRecoveryBatchPlan {
+  const maxItems = Math.max(0, Math.floor(input.maxItems));
+  const { runnable, futureAutoRunnable, heldForOperator } = sortedRunnable(input);
+  const ready: ProviderRecoveryQueueRecord[] = [];
+  const skipped: Array<{ idempotencyKey: string; reason: "LEASED" }> = [];
+
+  for (const record of runnable) {
+    const lease = planProviderRecoveryLease({
+      workspaceId: record.workspaceId,
+      idempotencyKey: record.idempotencyKey,
+      workerId: input.workerId,
+      now: input.now,
+      leaseOwner: record.leasedBy,
+      leaseExpiresAt: record.leaseExpiresAt,
+      leaseDurationSeconds: input.leaseDurationSeconds,
+    });
+
+    if (!lease.canExecute) {
+      skipped.push({ idempotencyKey: record.idempotencyKey, reason: "LEASED" });
+      continue;
+    }
+
+    if (ready.length >= maxItems) break;
+    ready.push({
+      ...record,
+      leasedBy: lease.holder,
+      leaseExpiresAt: lease.leaseExpiresAt,
+      mutatesBusinessTruth: false,
+    });
+  }
+
+  const availableButLimited = Math.max(0, runnable.length - skipped.length - ready.length);
+
+  return {
+    ready,
+    deferred: futureAutoRunnable + availableButLimited,
+    heldForOperator,
+    skipped,
   };
 }
