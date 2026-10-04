@@ -1,69 +1,81 @@
 # ServiceDesk AI V1 — Render Deployment (2026-10-05)
 
-Status: PREPARED_NOT_DEPLOYED
+Status: DEPLOYMENT_INFRA_BLOCKED
 
 ## Deployment target
+
 - User-specified Render project: `prj-db1bllqd0e5s73f0m03g`
 - Render workspace: `tea-d1ihdsbipnbc73bpc8f0`
 - Repository: `SaamVR/ServiceDesk`
-- Deployment source branch: `rc/servicedesk-v1-source-freeze-20261005`
-- Exact frozen SHA: `8b7066876263491c908f6453219d48e6300a8b17`
+- Pinned candidate branch: `rc/servicedesk-v1-release-candidate-20261005`
+- Exact candidate SHA: `b966bb685729a2e8e19b7c46d764d871672a1636`
+- Auto-deploy intent: OFF
 
-## Render inventory
-Connected Render workspace inspection found no existing ServiceDesk web service.
-Existing services belong to other products/projects.
+The candidate was produced after mandatory reconciliation found legitimate release fixes after the original source freeze. No legitimate newer work was discarded.
 
-No duplicate ServiceDesk infrastructure was created.
+## Predeploy gates
 
-## Frozen application runtime
+- `REPO_RECONCILIATION=PASS`
+- `SAMVR_RECONCILIATION=PASS`
+- `CANONICAL_QUALITY_GATE=PASS`
+- `SECRET_SCAN=PASS`
+- Supabase migration parity through `0015a`: PASS
+- proof fixture cleanup: PASS
+
+## Planned Render service
+
+Single Node Web Service using existing Supabase; no duplicate Render Postgres.
+
+Runtime:
 - Next.js 16
 - Node `22.23.2`
 - pnpm `10.17.1`
-- Intended build boundary: frozen-lockfile install then `pnpm build`
-- Intended start boundary: `pnpm start`
-- Existing Supabase remains the PostgreSQL backend; no Render Postgres is required.
-- Stripe/payment mode remains SANDBOX / DEMO ONLY.
-- Frozen source contains no dedicated API health route; root/public HTTP route will be used for initial deploy health verification.
+- region intended: Virginia, close to Supabase `us-east-1`
+- plan intended: Free / Hobby-compatible
+- no dedicated health API route in source; use root/public route for initial HTTP health smoke
 
-## Environment inventory
+Pinned build command prepared:
 
-### Non-secret
-- ServiceDesk Supabase URL: project ref `cpmmgivhlkfbiwzhlcey`
-- Runtime environment name
-- Public/base app URL after Render assigns it
-- Payment mode: SANDBOX
+`corepack pnpm install --frozen-lockfile && test "$(git rev-parse HEAD)" = "b966bb685729a2e8e19b7c46d764d871672a1636" && corepack pnpm build`
 
-### Secret references
-Exact values must never be committed or printed.
-Potential provider/runtime secret references include:
-- Supabase service-role / secret key where server RPC composition requires it
-- WhatsApp provider credentials
-- Google Calendar OAuth credentials/tokens
-- Email provider credential
-- n8n/webhook signing secret
-- AI provider key
-- payment webhook signing secret if/when a controlled sandbox webhook is configured
+Start command prepared:
 
-The frozen provider adapters are dependency-injected and do not by themselves prove a complete environment wiring path.
+`corepack pnpm start`
 
-## Deployment gate
-Release policy requires:
-- `REPO_RECONCILIATION=PASS`
-- `SAMVR_RECONCILIATION=PASS`
-- no secret-scan blocker
+Non-secret Render runtime pin:
+- `NODE_VERSION=22.23.2`
 
-Current:
-- Repository reconciliation: PASS
-- samvr reconciliation: BLOCKED (device offline)
-- full local secret scan: pending
+Provider credentials were not printed or committed.
+Stripe/payment remains SANDBOX / DEMO ONLY.
 
-Therefore no Render deploy was triggered yet.
+## Render account blocker
 
-## Next executable action
-When `samvr` is reachable:
-1. reconcile local ServiceDesk worktrees/stashes/commits;
-2. run canonical grouped quality and secret gate;
-3. if PASS, create/configure one Render Web Service from the frozen branch;
-4. verify deployed SHA, build/boot logs and public URL;
-5. run HTTP smoke and browser acceptance;
-6. update this document with Render service/deploy identifiers and final status.
+Direct Web Service creation was attempted through connected Render tooling.
+
+Render rejected the create request with:
+
+`Hobby Tier is limited to 25 services`
+
+The connected workspace currently has no ServiceDesk web service available to reuse through the connector, and the connector does not expose a safe delete/retarget operation for an existing service.
+
+Therefore:
+- no ServiceDesk Render service ID exists yet
+- no deploy ID exists yet
+- no public ServiceDesk Render URL exists yet
+- no post-deploy HTTP/browser smoke can execute yet
+
+Verdict:
+
+`RENDER_DEPLOYMENT=BLOCKED_ACCOUNT_SERVICE_LIMIT`
+
+No unrelated Render service was deleted or repurposed without owner authorization.
+
+## Immediate continuation after capacity is available
+
+1. create one ServiceDesk Web Service from the pinned RC branch;
+2. verify Render cloned exact SHA `b966bb685729...`;
+3. inspect build and boot logs;
+4. verify root/public HTTP response;
+5. run route smoke;
+6. execute desktop/tablet/mobile browser acceptance;
+7. update final release decision.
