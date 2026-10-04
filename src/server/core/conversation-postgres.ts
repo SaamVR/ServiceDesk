@@ -2,7 +2,9 @@ import type {
   ActorContext,
   AttentionItemDTO,
   ConversationDTO,
+  InvoiceDTO,
   MessageDTO,
+  QualityCaseDTO,
   RecurrenceRuleDTO,
   Result,
   VisitChecklistItemDTO,
@@ -91,6 +93,20 @@ function messageFromRpc(row: RpcRow): MessageDTO {
   };
 }
 
+function invoiceFromRpc(row: RpcRow): InvoiceDTO {
+  return {
+    id: String(field(row, "id")),
+    workspaceId: String(field(row, "workspaceId", "workspace_id")),
+    visitId: maybeString(field(row, "visitId", "visit_id")),
+    status: String(field(row, "status")) as InvoiceDTO["status"],
+    currency: String(field(row, "currency")) as InvoiceDTO["currency"],
+    totalMinor: Number(field(row, "totalMinor", "total_minor") ?? 0),
+    allocatedMinor: Number(field(row, "allocatedMinor", "allocated_minor") ?? 0),
+    refundedMinor: Number(field(row, "refundedMinor", "refunded_minor") ?? 0),
+    balanceMinor: Number(field(row, "balanceMinor", "balance_minor") ?? 0),
+  };
+}
+
 function recurrenceRuleFromRpc(row: RpcRow): RecurrenceRuleDTO {
   return {
     id: String(field(row, "id")),
@@ -155,6 +171,24 @@ function attentionItemFromRpc(row: RpcRow): AttentionItemDTO {
   };
 }
 
+function qualityCaseFromRpc(row: RpcRow): QualityCaseDTO {
+  return {
+    id: String(field(row, "id")),
+    workspaceId: String(field(row, "workspaceId", "workspace_id")),
+    visitId: String(field(row, "visitId", "visit_id")),
+    state: String(field(row, "state")) as QualityCaseDTO["state"],
+    feedbackScore: maybeNumber(field(row, "feedbackScore", "feedback_score")),
+    summary: String(field(row, "summary")),
+    ownerUserId: maybeString(field(row, "ownerUserId", "owner_user_id")),
+    dueAt: maybeString(field(row, "dueAt", "due_at")),
+    resolutionNote: maybeString(field(row, "resolutionNote", "resolution_note")),
+    reviewRequestState: String(field(row, "reviewRequestState", "review_request_state")) as QualityCaseDTO["reviewRequestState"],
+    version: Number(field(row, "version") ?? 0),
+    createdAt: String(field(row, "createdAt", "created_at")),
+    updatedAt: String(field(row, "updatedAt", "updated_at")),
+  };
+}
+
 export function createPostgresConversationFacadeMethods(
   client: SupabaseRpcClient,
 ): Pick<ServiceDeskFacade, "applyInboundMessage" | "setConversationHandover" | "enqueueConversationReply" | "readWorkspaceSnapshot"> {
@@ -211,14 +245,14 @@ export function createPostgresConversationFacadeMethods(
         requests: [],
         quotes: [],
         visits: [],
-        invoices: [],
+        invoices: rows(row.invoices).map(invoiceFromRpc),
         conversations: rows(row.conversations).map(conversationFromRpc),
         messages: rows(row.messages).map(messageFromRpc),
         recurrenceRules: rows(row.recurrenceRules).map(recurrenceRuleFromRpc),
         visitEvidence: rows(row.visitEvidence).map(visitEvidenceFromRpc),
         visitChecklistItems: rows(row.visitChecklistItems).map(checklistItemFromRpc),
         attentionItems: rows(row.attentionItems).map(attentionItemFromRpc),
-        qualityCases: [],
+        qualityCases: rows(row.qualityCases).map(qualityCaseFromRpc),
       }));
     },
   };
