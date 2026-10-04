@@ -81,7 +81,7 @@ export function applyRecoveryAttemptResult(input: ProviderRecoveryAttemptInput):
     };
   }
 
-  if (input.record.attempts >= input.record.maxAttempts) {
+  if (nextAttempts >= input.record.maxAttempts) {
     return {
       disposition: "OPERATOR_REVIEW",
       enqueue: true,
@@ -90,7 +90,7 @@ export function applyRecoveryAttemptResult(input: ProviderRecoveryAttemptInput):
         input.record,
         "provider-operator-review",
         "OPERATOR_REVIEW",
-        input.record.attempts,
+        nextAttempts,
         input.attemptedAt,
         true,
       ),
