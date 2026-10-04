@@ -15,6 +15,9 @@ export type ProductActionStatus =
   | "consent_blocked"
   | "outbound_enqueue_failed"
   | "snapshot_auth_failed"
+  | "visit_not_found"
+  | "invalid_transition"
+  | "review_required"
   | "not_found"
   | "server_error";
 
@@ -49,10 +52,14 @@ export function mapProductActionError(error: ProductActionError): ProductActionS
     case "SNAPSHOT_AUTHORIZATION_FAILED":
     case "SNAPSHOT_FORBIDDEN":
       return stateFromError("snapshot_auth_failed", error);
+    case "UNAUTHORIZED_CREW":
+    case "CREW_UNAUTHORIZED":
     case "AUTH_REQUIRED":
     case "AUTHORIZATION_FAILED":
     case "UNAUTHORIZED":
       return stateFromError("auth_required", error);
+    case "WRONG_WORKSPACE":
+    case "VISIT_WORKSPACE_MISMATCH":
     case "WORKSPACE_DENIED":
     case "WORKSPACE_MISMATCH":
     case "CONVERSATION_WORKSPACE_MISMATCH":
@@ -66,6 +73,16 @@ export function mapProductActionError(error: ProductActionError): ProductActionS
       return stateFromError("visitor_failure", error);
     case "QUOTE_NOT_FOUND":
       return stateFromError("quote_not_found", error);
+    case "VISIT_NOT_FOUND":
+    case "CREW_VISIT_NOT_FOUND":
+      return stateFromError("visit_not_found", error);
+    case "INVALID_CREW_TRANSITION":
+    case "INVALID_TRANSITION":
+    case "CREW_TRANSITION_NOT_ALLOWED":
+      return stateFromError("invalid_transition", error);
+    case "REVIEW_REQUIRED":
+    case "VISIT_REVIEW_REQUIRED":
+      return stateFromError("review_required", error);
     case "CONVERSATION_NOT_FOUND":
     case "MESSAGE_CONVERSATION_MISMATCH":
       return stateFromError("conversation_not_found", error);
