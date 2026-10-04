@@ -353,7 +353,8 @@ p { color: var(--muted); }
 .status-pill.failure { background: #ffe2e2; color: var(--failure); }
 
 .state-preview,
-.staff-workspace-stack {
+.staff-workspace-stack,
+.customer-workspace-stack {
   display: grid;
   gap: calc(var(--space) * 1.5);
   margin-top: calc(var(--space) * 3);
@@ -378,6 +379,22 @@ p { color: var(--muted); }
 .state-card.pending { border-left-color: var(--pending); }
 .state-card.neutral { border-left-color: var(--accent); }
 .state-card.failure { border-left-color: var(--failure); }
+
+.checkout-panel {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: calc(var(--space) * 2);
+  padding: calc(var(--space) * 2);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 8px);
+  background: var(--surface);
+}
+
+.checkout-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--space) * 1.5);
+}
 
 .tri-pane-preview,
 .inbox-preview {
@@ -473,6 +490,8 @@ p { color: var(--muted); }
   .split-preview,
   .tri-pane-preview,
   .inbox-preview,
+  .checkout-panel,
+  .checkout-steps,
   .state-preview,
   .card-grid.two,
   .card-grid.three {
