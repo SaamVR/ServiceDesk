@@ -23,7 +23,12 @@ export interface StripePaymentWebhookHandlerInput {
 
 function resultToStatus(result: Result<VerifiedPaymentWebhook>): ProviderHandlerResult | null {
   if (result.ok) return null;
-  const statusCode = result.code === "MISSING_SIGNATURE" || result.code === "SIGNATURE_MISMATCH" || result.code === "MALFORMED_SIGNATURE" ? 400 : 422;
+  const signatureFailure =
+    result.code === "MISSING_SIGNATURE"
+    || result.code === "SIGNATURE_MISMATCH"
+    || result.code === "MALFORMED_SIGNATURE"
+    || result.code === "SIGNATURE_TIMESTAMP_OUT_OF_TOLERANCE";
+  const statusCode = signatureFailure ? 400 : 422;
   return {
     statusCode,
     body: result.message,
