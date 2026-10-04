@@ -11,14 +11,18 @@ import { CommunicationPreferences } from "@/features/preferences/CommunicationPr
 import { PropertyRecurringPreview } from "@/features/properties/PropertyRecurringPreview";
 import {
   integrationCards,
-  moveOutFixture,
   uiStateScenarios,
 } from "@/features/product/story-model";
 import { QuoteApprovalPreview } from "@/features/quotes/QuoteApprovalPreview";
 import { ReportsPreview } from "@/features/reports/ReportsPreview";
 import { RequestSummaryPreview } from "@/features/request-intake/RequestSummaryPreview";
 import { SchedulePreview } from "@/features/schedule/SchedulePreview";
-import { staffModuleConfig, type StaffModule } from "./staff-modules";
+import {
+  buildStaffModuleHref,
+  staffModuleConfig,
+  staffNavigationGroups,
+  type StaffModule,
+} from "./staff-modules";
 import {
   sampleAttentionItems,
   sampleConversation,
@@ -53,18 +57,6 @@ const surfaceNav: Record<Exclude<Surface, "staff">, string[]> = {
   tour: ["Scenario", "Command", "Receipt label", "Recovery", "Presentation"],
 };
 
-const primaryStaffNav: Array<{ module: StaffModule; label: string }> = [
-  { module: "overview", label: "Overview" },
-  { module: "inbox", label: "Inbox" },
-  { module: "customers", label: "Customers" },
-  { module: "quotes", label: "Quotes" },
-  { module: "schedule", label: "Schedule" },
-  { module: "jobs", label: "Jobs" },
-  { module: "invoices", label: "Invoices" },
-  { module: "quality", label: "Operations" },
-  { module: "settings", label: "Settings" },
-];
-
 export function OperationalRoute({
   surface,
   title,
@@ -81,15 +73,20 @@ export function OperationalRoute({
           <span>{workspaceLabel}</span>
         </a>
         {surface === "staff" ? (
-          <nav className="site-nav" aria-label="Staff workspace">
-            {primaryStaffNav.map((item) => (
-              <a
-                aria-current={staffModule === item.module ? "page" : undefined}
-                href={`/app/${encodeURIComponent(workspaceLabel)}/${item.module}`}
-                key={item.module}
-              >
-                {item.label}
-              </a>
+          <nav className="site-nav grouped" aria-label="Staff workspace">
+            {staffNavigationGroups.map((group) => (
+              <div className="nav-group" key={group.label}>
+                <span>{group.label}</span>
+                {group.modules.map((module) => (
+                  <a
+                    aria-current={staffModule === module ? "page" : undefined}
+                    href={buildStaffModuleHref(workspaceLabel, module)}
+                    key={module}
+                  >
+                    {staffModuleConfig[module].label}
+                  </a>
+                ))}
+              </div>
             ))}
           </nav>
         ) : (
