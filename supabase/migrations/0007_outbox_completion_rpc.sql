@@ -5,7 +5,7 @@ create or replace function public.complete_outbox_event(
   p_worker_id text,
   p_status public.outbox_status,
   p_at timestamptz,
-  p_attempts integer,
+  p_attempts integer default null,
   p_error_code text default null,
   p_next_attempt_at timestamptz default null,
   p_provider_reference text default null
@@ -21,8 +21,11 @@ begin
   if p_worker_id is null or length(trim(p_worker_id)) = 0 then
     raise exception 'worker id is required' using errcode = '22023';
   end if;
-  if p_at is null or p_attempts is null or p_attempts < 1 then
-    raise exception 'completion timestamp and positive attempts are required' using errcode = '22023';
+  if p_at is null then
+    raise exception 'completion timestamp is required' using errcode = '22023';
+  end if;
+  if p_attempts is not null and p_attempts < 1 then
+    raise exception 'attempts must be positive when provided' using errcode = '22023';
   end if;
   if p_status not in ('PENDING','SENT','FAILED','SUPPRESSED') then
     raise exception 'unsupported outbox completion status' using errcode = '22023';
@@ -34,7 +37,7 @@ begin
   update public.outbox_events
   set
     status = p_status,
-    attempts = p_attempts,
+    attempts = coalesce(p_attempts, attempts),
     next_attempt_at = case when p_status = 'PENDING' then p_next_attempt_at else null end,
     sent_at = case when p_status = 'SENT' then p_at else sent_at end,
     provider_reference = case when p_status = 'SENT' then p_provider_reference else provider_reference end,
