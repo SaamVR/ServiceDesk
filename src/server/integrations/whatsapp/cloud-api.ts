@@ -32,6 +32,15 @@ export interface WhatsAppCloudAcceptance {
   providerMessageId: string;
 }
 
+export interface RedactedWhatsAppCloudRequestSummary {
+  method: "POST";
+  graphHost: string;
+  apiVersion?: string;
+  endpoint?: string;
+  hasBearerAuthorization: boolean;
+  bodyType?: string;
+}
+
 export interface WhatsAppCloudFailurePolicy {
   retryable: boolean;
   terminal: boolean;
@@ -56,6 +65,39 @@ function messagesUrl(config: WhatsAppCloudApiConfig): string {
   const base = config.graphBaseUrl.replace(/\/+$/, "");
   const version = config.apiVersion.replace(/^\/+|\/+$/g, "");
   return `${base}/${version}/${encodeURIComponent(config.phoneNumberId)}/messages`;
+}
+
+export function redactWhatsAppCloudRequestForEvidence(request: WhatsAppCloudHttpRequest): RedactedWhatsAppCloudRequestSummary {
+  let graphHost = "unknown-host";
+  let apiVersion: string | undefined;
+  let endpoint: string | undefined;
+  let bodyType: string | undefined;
+
+  try {
+    const url = new URL(request.url);
+    graphHost = url.host;
+    const [, version, , resource] = url.pathname.split("/");
+    apiVersion = version || undefined;
+    endpoint = resource || undefined;
+  } catch {
+    graphHost = "invalid-url";
+  }
+
+  try {
+    const parsed = JSON.parse(request.body) as { type?: unknown };
+    bodyType = typeof parsed.type === "string" ? parsed.type : undefined;
+  } catch {
+    bodyType = "unparseable";
+  }
+
+  return {
+    method: request.method,
+    graphHost,
+    apiVersion,
+    endpoint,
+    hasBearerAuthorization: request.headers.authorization?.startsWith("Bearer ") ?? false,
+    bodyType,
+  };
 }
 
 function requestBody(message: WhatsAppCloudMessage): Result<Record<string, unknown>> {
