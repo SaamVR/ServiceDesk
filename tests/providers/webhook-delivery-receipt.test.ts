@@ -30,7 +30,7 @@ describe("webhook delivery receipt", () => {
     expect(replay).toMatchObject({ result: "DUPLICATE_DELIVERED", receipt: { delivered: true, attempts: 1 } });
   });
 
-  test("updates retryable failure until final failure or delivery", () => {
+  test("records retryable failure then updates until final failure or delivery", () => {
     const retry = mergeWebhookDeliveryReceipt(undefined, {
       workspaceId: "ws-1",
       endpointId: "endpoint-1",
@@ -51,7 +51,7 @@ describe("webhook delivery receipt", () => {
       endpointHost: "hooks.example.test",
     });
 
-    expect(retry).toMatchObject({ result: "UPDATED", receipt: { delivered: false, finalFailure: false, nextAttemptAt: "2026-10-04T08:02:00.000Z" } });
+    expect(retry).toMatchObject({ result: "INSERTED", receipt: { delivered: false, finalFailure: false, nextAttemptAt: "2026-10-04T08:02:00.000Z" } });
     expect(final).toMatchObject({ result: "UPDATED", receipt: { delivered: false, finalFailure: true, attempts: 3 } });
   });
 });
