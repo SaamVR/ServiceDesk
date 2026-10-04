@@ -49,7 +49,7 @@ returns table (
   updated_at timestamptz
 )
 language plpgsql
-security definer
+security invoker
 set search_path = public
 as $$
 begin
@@ -114,6 +114,7 @@ $$;
 revoke all on function public.claim_ready_outbox_events(text, timestamptz, integer, integer) from public;
 revoke all on function public.claim_ready_outbox_events(text, timestamptz, integer, integer) from anon;
 revoke all on function public.claim_ready_outbox_events(text, timestamptz, integer, integer) from authenticated;
+grant execute on function public.claim_ready_outbox_events(text, timestamptz, integer, integer) to service_role;
 
 comment on function public.claim_ready_outbox_events(text, timestamptz, integer, integer) is
   'Trusted server/service-role atomic outbox claim. Uses FOR UPDATE SKIP LOCKED and lease expiry; terminal rows are never claimed.';
