@@ -1,0 +1,8 @@
+import type { ActorContext, OwnerSettingsSnapshotDTO } from "@/contracts";
+import { productActionFailure, productActionSuccess, type ProductActionError, type ProductActionResult } from "@/features/operations/server-action-adapters";
+export interface CoreResultSuccess<T> { ok: true; value: T }
+export interface CoreResultFailure { ok: false; code: string; message: string; fieldErrors?: Record<string, string> }
+export type CoreResult<T> = CoreResultSuccess<T> | CoreResultFailure;
+export interface OwnerSettingsReadPort { readOwnerSettingsSnapshot(ctx: ActorContext): Promise<CoreResult<OwnerSettingsSnapshotDTO>>; }
+const fail = (e: CoreResultFailure): ProductActionError => ({ code: e.code, message: e.message, fieldErrors: e.fieldErrors });
+export function createOwnerSettingsReadFactory(port: OwnerSettingsReadPort) { return async function readOwnerSettings(ctx: ActorContext): Promise<ProductActionResult<OwnerSettingsSnapshotDTO>> { const steps = ["readOwnerSettingsSnapshot"]; if (ctx.role !== "OWNER") return productActionFailure({ code: "AUTHORIZATION_FAILED", message: "Only an owner can read owner settings." }, steps, "readOwnerSettingsSnapshot"); const result = await port.readOwnerSettingsSnapshot(ctx); if (!result.ok) return productActionFailure(fail(result), steps, "readOwnerSettingsSnapshot"); if (result.value.workspaceId !== ctx.workspaceId) return productActionFailure({ code: "WORKSPACE_MISMATCH", message: "Owner settings snapshot belongs to a different workspace." }, steps, "readOwnerSettingsSnapshot"); return productActionSuccess(result.value, steps, "Owner settings snapshot loaded from accepted server facade."); }; }
