@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./whatsapp/adapter";
 export * from "./whatsapp/outbound-policy";
+export * from "./whatsapp/outbound-dispatcher";
 export * from "./whatsapp/cloud-api";
 export * from "./whatsapp/configured-adapter";
 export * from "./whatsapp/media";
