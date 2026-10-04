@@ -43,6 +43,31 @@ describe("ServiceDesk product showcase content contract", () => {
     expect(tourScenarios.every((scenario) => scenario.providerEvidence === "SYNTHETIC_UNTIL_CHAT_2_VERIFIED")).toBe(true);
   });
 
+  it("ties every tour scenario to implemented product routes", () => {
+    for (const scenario of tourScenarios) {
+      expect(scenario.routeLinks.length).toBeGreaterThanOrEqual(3);
+      expect(scenario.routeLinks.every((link) => link.href.startsWith("/"))).toBe(true);
+      expect(scenario.steps.every((step) => step.routeHref.startsWith("/"))).toBe(true);
+    }
+
+    expect(tourScenarios[0].routeLinks.map((link) => link.href)).toEqual([
+      "/b/brightroom/enquire",
+      "/portal/quotes/quote_moveout_001",
+      "/portal/bookings/visit_showcase_001",
+      "/crew/jobs/visit_showcase_001",
+      "/portal/invoices/invoice_showcase_001",
+    ]);
+  });
+
+  it("keeps tour scenarios free from forbidden provider-proof claims", () => {
+    const forbidden = ["PROVIDER_VERIFIED", "live receipt", "delivered proof", "production payment"];
+    const scenarioText = JSON.stringify(tourScenarios).toLowerCase();
+
+    for (const phrase of forbidden) {
+      expect(scenarioText).not.toContain(phrase.toLowerCase());
+    }
+  });
+
   it("defines ten accessible presentation slides that deep-link to tour steps", () => {
     expect(presentationSlides).toHaveLength(10);
     expect(presentationSlides.every((slide) => slide.tourHref.startsWith("/tour#"))).toBe(true);
