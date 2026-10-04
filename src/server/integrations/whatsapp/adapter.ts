@@ -86,7 +86,12 @@ export function parseInboundMessages(raw: unknown, workspaceByPhoneNumberId: Rec
 
 export function isInsideCustomerServiceWindow(lastInboundAt: string | undefined, now: string): boolean {
   if (!lastInboundAt) return false;
-  return new Date(now).getTime() - new Date(lastInboundAt).getTime() <= 24 * 60 * 60 * 1000;
+  const lastInboundMs = new Date(lastInboundAt).getTime();
+  const nowMs = new Date(now).getTime();
+  if (!Number.isFinite(lastInboundMs) || !Number.isFinite(nowMs)) return false;
+
+  const elapsedMs = nowMs - lastInboundMs;
+  return elapsedMs >= 0 && elapsedMs <= 24 * 60 * 60 * 1000;
 }
 
 export class FixtureWhatsAppAdapter implements MessagingAdapter {
