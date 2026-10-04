@@ -6,14 +6,7 @@ import {
 } from "./configured-adapter";
 import type { WhatsAppCloudHttpTransport } from "./cloud-api";
 import { prepareWhatsAppDispatch } from "./outbound-policy";
-
-export type WhatsAppTemplateApprovalStatus = "APPROVED" | "CONFIGURED" | "MISSING" | "DISABLED";
-
-export interface WhatsAppTemplateRegistration {
-  templateKey: string;
-  locale: string;
-  status: WhatsAppTemplateApprovalStatus;
-}
+import { evaluateWhatsAppTemplateRegistration, type WhatsAppTemplateRegistryEntry } from "./template-registry";
 
 export interface WhatsAppProviderAccountRegistration {
   workspaceId: string;
@@ -33,7 +26,7 @@ export interface RecordWhatsAppProviderAcceptanceInput {
 export interface WhatsAppOutboundDispatchStore {
   loadLatestOutboxJob(jobId: string): Promise<OutboxJob | null>;
   loadProviderAccount(workspaceId: string): Promise<WhatsAppProviderAccountRegistration | null>;
-  loadTemplate(templateKey: string): Promise<WhatsAppTemplateRegistration | null>;
+  loadTemplate(templateKey: string): Promise<WhatsAppTemplateRegistryEntry | null>;
   recordProviderAcceptance(input: RecordWhatsAppProviderAcceptanceInput): Promise<{
     status: WhatsAppAcceptanceRecordStatus;
     result: ProviderSendResult;
@@ -55,18 +48,21 @@ export interface WhatsAppOutboundDispatchResult extends ProviderSendResult {
   providerAccountRef: string;
 }
 
-function templateStatusFailure(templateKey: string, registration: WhatsAppTemplateRegistration | null): Result<true> {
-  if (!registration || registration.status === "MISSING") {
-    return { ok: false, code: "WHATSAPP_TEMPLATE_MISSING", message: `WhatsApp template ${templateKey} is not registered.` };
-  }
-  if (registration.status !== "APPROVED") {
-    return { ok: false, code: "WHATSAPP_TEMPLATE_NOT_APPROVED", message: `WhatsApp template ${templateKey} is not approved for provider dispatch.` };
-  }
-  return { ok: true, value: true };
-}
-
 function missingRequiredTemplate(): Result<true> {
   return { ok: false, code: "WHATSAPP_TEMPLATE_REQUIRED", message: "Approved WhatsApp template is required outside the customer-service window." };
+}
+
+function assertConversationVersionIsCurrent(queuedJob: OutboxJob, latestJob: OutboxJob): Result<true> {
+  const queuedVersion = queuedJob.handoverGuard?.expectedConversationVersion;
+  const latestVersion = latestJob.handoverGuard?.expectedConversationVersion;
+  if (queuedVersion !== undefined && latestVersion !== undefined && queuedVersion !== latestVersion) {
+    return {
+      ok: false,
+      code: "STALE_CONVERSATION_VERSION",
+      message: "WhatsApp outbox job was queued for an older conversation version and must be re-evaluated before send.",
+    };
+  }
+  return { ok: true, value: true };
 }
 
 export async function dispatchWhatsAppOutboxJob(input: DispatchWhatsAppOutboxJobInput): Promise<Result<WhatsAppOutboundDispatchResult>> {
@@ -74,6 +70,9 @@ export async function dispatchWhatsAppOutboxJob(input: DispatchWhatsAppOutboxJob
   if (!latestJob) {
     return { ok: false, code: "OUTBOX_JOB_NOT_FOUND", message: "WhatsApp outbox job no longer exists at dispatch time." };
   }
+
+  const conversationVersion = assertConversationVersionIsCurrent(input.queuedJob, latestJob);
+  if (!conversationVersion.ok) return conversationVersion;
 
   const prepared = prepareWhatsAppDispatch(input.ctx, latestJob, input.meta);
   if (!prepared.ok) return prepared;
@@ -87,9 +86,11 @@ export async function dispatchWhatsAppOutboxJob(input: DispatchWhatsAppOutboxJob
   }
 
   if (prepared.value.policy.requiresTemplate) {
-    const templateReady = latestJob.templateKey
-      ? templateStatusFailure(latestJob.templateKey, await input.store.loadTemplate(latestJob.templateKey))
-      : missingRequiredTemplate();
+    if (!latestJob.templateKey) return missingRequiredTemplate();
+    const templateReady = evaluateWhatsAppTemplateRegistration(await input.store.loadTemplate(latestJob.templateKey), {
+      purpose: latestJob.purpose,
+      locale: input.config.templateLanguageCode ?? "en_US",
+    });
     if (!templateReady.ok) return templateReady;
   }
 
