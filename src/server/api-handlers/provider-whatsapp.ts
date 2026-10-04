@@ -159,8 +159,10 @@ function parseStatusCallbacks(raw: unknown, workspaceByPhoneNumberId: Record<str
   };
 
   const callbacks: WhatsAppStatusCallbackInput[] = [];
-  for (const entry of payload.entry ?? []) {
-    for (const change of entry.changes ?? []) {
+  const entries = Array.isArray(payload.entry) ? payload.entry : [];
+  for (const entry of entries) {
+    const changes = Array.isArray(entry.changes) ? entry.changes : [];
+    for (const change of changes) {
       const phoneNumberId = change.value?.metadata?.phone_number_id;
       if (!phoneNumberId) continue;
       const workspaceId = workspaceByPhoneNumberId[phoneNumberId];
