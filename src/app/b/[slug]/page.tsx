@@ -1,10 +1,10 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function BusinessSitePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="business"
       businessModule="home"
       businessSlug={slug}
