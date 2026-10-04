@@ -5,6 +5,7 @@ import { CrmPreview } from "@/features/crm/CrmPreview";
 import { InboxPreview } from "@/features/inbox/InboxPreview";
 import { OnboardingReadiness } from "@/features/onboarding/OnboardingReadiness";
 import { CommunicationPreferences } from "@/features/preferences/CommunicationPreferences";
+import { PropertyRecurringPreview } from "@/features/properties/PropertyRecurringPreview";
 import {
   integrationCards,
   moveOutFixture,
@@ -126,6 +127,7 @@ function CustomerPanel() {
           <p>Slot freshness must be checked by the facade before instant confirmation.</p>
         </article>
       </div>
+      <PropertyRecurringPreview />
       <CheckoutPreview />
       <CommunicationPreferences />
     </div>
