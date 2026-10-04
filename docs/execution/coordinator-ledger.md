@@ -903,3 +903,32 @@ Sprint 9 branches:
 - feat/servicedesk-v1-core-sprint8
 - feat/servicedesk-v1-connectors-sprint9
 - feat/servicedesk-v1-product-sprint7
+
+
+## Sprint 9 accepted / Final E10 active
+
+Accepted worker finals:
+- W1 Core E09: 14009404b2e7e43dbce95350c43ea252de1b7794
+- W2 Connector E10 preflight/evidence: da1a6e76c7f57b946396cb3b4ef133d57ba862ba
+- W3 Product E09: b00d458fd77feabdc8ce8b3c8013f827b12519fa
+
+Live ServiceDesk staging:
+- sd_0014_reporting_platform_usage applied
+- sd_0014a_conversation_reply_usage_gate applied
+- platform_subscriptions, platform_subscription_ledger, workspace_usage_counters, workspace_usage_limits exist
+- reporting/platform/usage proof recorded PASS by W1
+- proof fixtures cleaned
+
+Combined RC:
+7dbf49e4e714b5f149d9efc083b8739d44eb3935
+
+Final E10 branches:
+- feat/servicedesk-v1-core-sprint9
+- feat/servicedesk-v1-connectors-sprint10
+- feat/servicedesk-v1-product-sprint8
+
+Final objective:
+- integrated DB/RLS/concurrency acceptance
+- combined provider compatibility and controlled-proof packet
+- final Product guided journey/browser acceptance preparation
+- canonical package/build/browser/provider gates remain honestly separate.
