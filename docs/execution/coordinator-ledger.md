@@ -316,3 +316,55 @@ Published:
 - Worker 3: `docs/execution/batches/cycle-4-worker-3.md` — invoice progress/final-receipt truth hardening.
 
 All three remain bounded Runtime Outage Mode slices and require only one quick normal network recovery probe before package-free execution.
+
+
+## Cycle 3 integration — outage-mode IMPLEMENTED slices
+
+All three Cycle 3 workers returned `STATE=IMPLEMENTED` with `CANONICAL_GATE=CONFIGURATION_BLOCKED`.
+
+Coordinator reviewed the exact worker ranges and integrated only the minimal dependency closures exercised by the outage-mode harnesses. Whole historical worker branches were not merged.
+
+| Worker | Worker final SHA | Accepted integration completion SHA | Proof ruling |
+| --- | --- | --- | --- |
+| Worker 1 Core | `ef19a54e325d4e9ed9baa390a4316e097dbba923` | `431abc17dfebdf3e5685f6f3acf84f6551de6dfa` | `IMPLEMENTED`; canonical Vitest/typecheck/DB gate still `CONFIGURATION_BLOCKED` |
+| Worker 2 Connectors/AI | `af47a5623232c96062a06323b884b35801f41f0b` | `33fc991c095871dc935a821fee2cb90b03136001` | `IMPLEMENTED`; canonical provider/AI/typecheck gate still `CONFIGURATION_BLOCKED`; no `PROVIDER_VERIFIED` |
+| Worker 3 Product/UI | `caea4ba4bc7e7a3ebb1cedd30e25de044179542d` | `b585ad94d73c0ac43a95edf8369bcf7e4c618d5c` | `IMPLEMENTED`; canonical Product/build/browser gate still `CONFIGURATION_BLOCKED` |
+
+Blob-for-blob verification:
+- Worker 1 integrated closure matched Worker 1 final evidence.
+- Worker 2 integrated connector/handler/test closure matched Worker 2 final evidence.
+- Worker 3 integrated pure view-model/test closure matched Worker 3 final evidence.
+
+### Integrated Cycle 3 behavior
+
+Worker 1:
+- operations domain/repository seam added to integration;
+- canonical regression cases for ledger idempotency, terminal outbox failure, attention idempotency and repository failure propagation;
+- package-free outage harness.
+
+Worker 2:
+- durable WhatsApp inbox persistence record outcomes;
+- idempotent inbound processor keyed by existing durable receipt identity;
+- retry-safe persist → process → ACK composition;
+- processor failure is retryable and not acknowledged;
+- provider duplicate still reaches idempotent processor so failed processing can recover on retry;
+- canonical provider tests + package-free outage harness.
+
+Worker 3:
+- pure request/operations/schedule/reporting view-model closure;
+- reporting conversion bounded by supplied request truth;
+- orphan visit request IDs cannot inflate conversion;
+- duplicate visits cannot double-count request conversion;
+- scheduled capacity still derives from supplied visit records;
+- canonical regression cases + package-free outage harness.
+
+No Cycle 3 slice is promoted to `CONTRACT_TESTED`, `PROVIDER_VERIFIED`, or `OPERATIONS_VERIFIED` while the canonical pnpm/Vitest/typecheck/build/browser stack remains unavailable.
+
+## Cycle 4 source-derived targets
+
+Published:
+- `docs/execution/batches/cycle-4-worker-1.md` — Core capacity temporal/hold safety.
+- `docs/execution/batches/cycle-4-worker-2.md` — WhatsApp delivery FAILED terminal-state monotonicity.
+- `docs/execution/batches/cycle-4-worker-3.md` — Product checkout/invoice receipt truth boundaries.
+
+Workers make one quick normal recovery probe and then use Runtime Outage Mode if the same infrastructure condition remains. Cycle 4 is substantive implementation work, not another DNS-only cycle.
