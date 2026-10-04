@@ -11,6 +11,7 @@ export * from "./configuration/checks";
 export * from "./configuration/readiness";
 export * from "./evidence/templates";
 export * from "./n8n/execution";
+export * from "./operations/snapshot";
 export * from "./recovery/policy";
 export * from "./subscription/adapter";
 export * from "./webhook/signed";
