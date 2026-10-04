@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffReportsPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
-        staffModule="reports"
+      staffModule="reports"
       workspaceLabel={workspace}
-      title="Reports derived from stored operational records."
-      description="Conversion, collection, capacity and contribution reporting labels missing cost data and never lets AI invent metrics."
+      title="Reporting workspace."
+      description="Reports derive from supplied server records and must not infer missing business truth."
     />
   );
 }
