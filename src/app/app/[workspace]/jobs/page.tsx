@@ -6,6 +6,7 @@ export default async function StaffJobsPage({ params }: { params: Promise<{ work
   return (
     <OperationalRoute
       surface="staff"
+        staffModule="jobs"
       workspaceLabel={workspace}
       title="Jobs from assignment to completion review."
       description="Job cards expose crew status, checklist state, photo/time/material proof, incident state and review before balance invoice creation."
