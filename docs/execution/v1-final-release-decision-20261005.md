@@ -1,60 +1,46 @@
 # ServiceDesk AI V1 — Final Release Decision (2026-10-05)
 
-Current state: `PRODUCTION_RELEASE_BLOCKED`
+Current state: `DEPLOYED_NOT_RELEASE_VERIFIED`
 
 ## Verified
 
-Final reconciled release candidate:
+Final candidate:
 - branch: `rc/servicedesk-v1-release-candidate-20261005`
 - SHA: `b966bb685729a2e8e19b7c46d764d871672a1636`
 
-Candidate is 9 commits ahead of original source freeze `8b7066876263491c908f6453219d48e6300a8b17`, with no divergence behind the freeze.
-
-Release gates:
+Quality and runtime:
 - repository reconciliation: PASS
 - samvr reconciliation: PASS
-- install/frozen lockfile: PASS
-- typecheck: PASS
-- Vitest: PASS — 200 files / 720 tests
-- lint: PASS — 0 errors, 6 warnings
-- production build: PASS
-- Gitleaks: PASS — 0 findings
-- local production HTTP route smoke: PASS — 10/10 checked routes returned 200
-- dedicated Supabase staging: ACTIVE_HEALTHY
+- install/typecheck/test/lint/build: PASS
+- Vitest: 200 files / 720 tests PASS
+- Gitleaks: 0 findings
+- local production HTTP smoke: 10/10 PASS
+- Supabase staging: ACTIVE_HEALTHY
 - migration parity through 0015a: PASS
 - proof fixture cleanup: PASS
-- service-role command RPC sanity: PASS
+
+Render:
+- service: `servicedesk-ai-v1-rc`
+- service ID: `srv-db1e069srm7s73b8fr30`
+- deploy ID: `dep-db1e06psrm7s73b8fufg`
+- deployed SHA: `b966bb685729a2e8e19b7c46d764d871672a1636`
+- deploy status: `live`
+- URL: `https://servicedesk-ai-v1-rc.onrender.com`
+- public HTTP smoke: 10/10 checked routes returned 200
 
 No GitHub Actions credits were used.
 
-## Deployment status
+## Remaining production-release gates
 
-Render service creation was attempted after the predeploy gates passed.
-
-Render returned:
-
-`Hobby Tier is limited to 25 services`
-
-No unrelated Render service was deleted or repurposed.
-
-Therefore Render deployment, deployed-SHA verification, post-deploy smoke, and browser acceptance cannot yet execute.
-
-## Remaining production gates
-
-1. Free one Render service slot or increase Render service capacity.
-2. Create the pinned ServiceDesk Web Service and verify deployed SHA.
-3. Run post-deploy route/HTTP smoke.
-4. Run browser acceptance at 1440x900, 834x1112, and 390x844.
-5. Verify/harden required Supabase production security configuration, including leaked-password protection.
-6. Controlled provider evidence remains separate for WhatsApp, Google Calendar, Email, n8n and AI.
-7. Stripe/payment remains SANDBOX-only by owner policy.
+1. Browser acceptance at 1440x900, 834x1112, and 390x844.
+2. Verify/harden required Supabase production security configuration, including leaked-password protection.
+3. Controlled provider evidence remains separate for WhatsApp, Google Calendar, Email, n8n and AI.
+4. Stripe/payment remains SANDBOX-only by owner policy.
 
 ## Decision
 
-Correct release state:
+The ServiceDesk V1 candidate is successfully deployed and publicly serving on Render.
 
-`PRODUCTION_RELEASE_BLOCKED`
+Do not yet label it `PRODUCTION_RELEASE_READY`; the correct state is:
 
-The current blocker is Render account capacity, not source quality or local runtime health.
-
-Do not label `PRODUCTION_RELEASE_READY` until deployment, browser, security, and required provider gates are satisfied.
+`DEPLOYED_NOT_RELEASE_VERIFIED`
