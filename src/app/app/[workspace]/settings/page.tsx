@@ -8,6 +8,7 @@ export default async function StaffSettingsPage({ params }: { params: Promise<{ 
     <>
       <OperationalRoute
         surface="staff"
+        staffModule="settings"
         workspaceLabel={workspace}
         title="Team, services, policies and integrations settings."
         description="Owner-controlled settings expose roles, invite state, service catalog, areas, policies and reconnect/test states without showing secrets."
