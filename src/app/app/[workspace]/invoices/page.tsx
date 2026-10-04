@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffInvoicesPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
-        staffModule="invoices"
+      staffModule="invoices"
       workspaceLabel={workspace}
-      title="Invoices, allocations and collection attention."
-      description="Staff sees deposit, balance, partial allocation, manual payment review, refund work and overdue reminder eligibility from stored ledger records."
+      title="Invoice ledger workspace."
+      description="Manual collection and receipt state wait for accepted invoice/payment server boundaries."
     />
   );
 }

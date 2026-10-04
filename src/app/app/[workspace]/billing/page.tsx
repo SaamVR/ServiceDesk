@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffBillingPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
-        staffModule="billing"
+      staffModule="billing"
       workspaceLabel={workspace}
-      title="Business billing and platform plan status."
-      description="Platform subscription state stays separate from customer cleaning payments, invoices, refunds and receipts. Live payment mode requires eligibility proof."
+      title="Platform billing and usage."
+      description="Billing data remains snapshot-driven and does not mutate plan state from Product."
     />
   );
 }

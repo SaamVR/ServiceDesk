@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffRequestsPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
-        staffModule="requests"
+      staffModule="requests"
       workspaceLabel={workspace}
-      title="Requests move from collecting to quoted without losing history."
-      description="The request view is a dedicated review surface for NEW, COLLECTING, READY, NEEDS_REVIEW, QUOTED, BOOKED, LOST and CLOSED states."
+      title="Request summary workspace."
+      description="Request edits remain disabled until create/update/calculateQuote commands are wired."
     />
   );
 }

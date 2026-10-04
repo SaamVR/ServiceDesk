@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffJobsPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
-        staffModule="jobs"
+      staffModule="jobs"
       workspaceLabel={workspace}
-      title="Jobs from assignment to completion review."
-      description="Job cards expose crew status, checklist state, photo/time/material proof, incident state and review before balance invoice creation."
+      title="Visit jobs workspace."
+      description="Staff assignment and transitions remain server-authorized and disabled in fixture mode."
     />
   );
 }

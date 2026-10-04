@@ -1,15 +1,15 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default async function StaffQuotesPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace } = await params;
 
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="staff"
-        staffModule="quotes"
+      staffModule="quotes"
       workspaceLabel={workspace}
-      title="Quotes, approvals and version changes."
-      description="Dispatcher review surfaces policy exceptions, deterministic price snapshots, validity, acceptance version and request-change state."
+      title="Quote approval workspace."
+      description="Quote send uses an injected sendQuote adapter and remains disabled until wired to accepted entrypoints."
     />
   );
 }
