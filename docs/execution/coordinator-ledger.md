@@ -976,3 +976,32 @@ Non-code release gates:
 - Supabase Auth leaked-password protection is disabled; enable from Authentication/Auth Email password security before production. Supabase documents leaked-password protection as a Pro-plan-or-above feature.
 - canonical package/typecheck/Vitest/build/browser execution remains configuration-blocked;
 - controlled provider proof remains configuration-blocked for WhatsApp, Google Calendar, Email, n8n, AI; Stripe stays SANDBOX only.
+
+## V1 source freeze
+
+Source-freeze branch: rc/servicedesk-v1-source-freeze-20261005
+Source-freeze SHA: 8b7066876263491c908f6453219d48e6300a8b17
+
+E10B accepted/integrated:
+- Core early command closure: 58fcbfb604d19fe6b5c0fabe047d55629ff89807
+- Connector sandbox checkout: 6577bc3e1d93a733871b3a01062ebb1a974fd0eb
+- Product quote/slot/checkout: b988c82cd09de4c4bcf2fbac39004872f63b58b7
+
+Coordinator final integration corrections:
+- customer quote acceptance only from SENT
+- Product checkout caller no longer supplies amount/currency
+- concrete early-flow Postgres command entrypoints expose acceptQuote
+
+Final source status:
+- SOURCE_FREEZE_READY
+- PRODUCTION_RELEASE_BLOCKED
+
+Remaining gates:
+- canonical package install/typecheck/Vitest/lint/build
+- browser acceptance at desktop/tablet/mobile
+- controlled provider proof for WhatsApp, Google Calendar, Email, n8n, AI
+- Stripe/payment remains SANDBOX only
+- Supabase Auth leaked-password protection configuration before production if available
+- review accepted security-advisor warnings before production
+
+No further feature sprint is authorized by this freeze. Any new source change must reopen the freeze explicitly.
