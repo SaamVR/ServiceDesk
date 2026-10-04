@@ -24,6 +24,11 @@ export interface SendQuoteCommandMeta {
   expectedVersion?: number;
 }
 
+export interface AcceptQuoteCommandMeta {
+  expectedVersion?: number;
+  now: string;
+}
+
 export async function createQuoteDraftWithRepository(
   repository: QuoteRepository,
   input: CreateQuoteDraftCommandInput,
@@ -67,6 +72,31 @@ export async function sendQuoteByIdWithRepository(
 ): Promise<Result<QuoteSnapshot>> {
   const quote = await repository.findById(quoteId);
   return sendQuoteSnapshot(repository, quote, meta);
+}
+
+export async function acceptQuoteByIdWithRepository(
+  repository: QuoteRepository,
+  quoteId: string,
+  meta: AcceptQuoteCommandMeta,
+): Promise<Result<QuoteSnapshot>> {
+  const quote = await repository.findById(quoteId);
+  if (!quote) return { ok: false, code: "QUOTE_NOT_FOUND", message: "No quote exists for this identifier." };
+
+  if (meta.expectedVersion !== undefined && meta.expectedVersion !== quote.version) {
+    return { ok: false, code: "VERSION_CONFLICT", message: "Quote version changed before acceptance." };
+  }
+
+  if (quote.status !== "SENT") {
+    return { ok: false, code: "QUOTE_NOT_SENT", message: "Only a sent quote can be accepted." };
+  }
+
+  if (new Date(meta.now).getTime() > new Date(quote.validUntil).getTime()) {
+    return { ok: false, code: "QUOTE_EXPIRED", message: "Quote validity window has expired." };
+  }
+
+  const accepted: QuoteSnapshot = { ...quote, status: "ACCEPTED" };
+  await repository.updateQuoteStatus(quote.id, "ACCEPTED");
+  return { ok: true, value: accepted };
 }
 
 async function sendQuoteSnapshot(
