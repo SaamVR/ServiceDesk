@@ -11,13 +11,13 @@ import { PropertyRecurringPreview } from "@/features/properties/PropertyRecurrin
 import {
   integrationCards,
   moveOutFixture,
-  staffModules,
   uiStateScenarios,
 } from "@/features/product/story-model";
 import { QuoteApprovalPreview } from "@/features/quotes/QuoteApprovalPreview";
 import { ReportsPreview } from "@/features/reports/ReportsPreview";
 import { RequestSummaryPreview } from "@/features/request-intake/RequestSummaryPreview";
 import { SchedulePreview } from "@/features/schedule/SchedulePreview";
+import { staffModuleConfig, type StaffModule } from "./staff-modules";
 import {
   sampleAttentionItems,
   sampleConversation,
@@ -41,18 +41,37 @@ interface OperationalRouteProps {
   description: string;
   workspaceLabel?: string;
   resourceLabel?: string;
+  staffModule?: StaffModule;
 }
 
-const surfaceNav: Record<Surface, string[]> = {
+const surfaceNav: Record<Exclude<Surface, "staff">, string[]> = {
   business: ["Services", "Areas", "FAQs", "Enquire", "Book"],
   customer: ["Portal", "Properties", "Quotes", "Bookings", "Invoices", "Preferences"],
-  staff: ["Overview", "Inbox", "Customers", "Quotes", "Schedule", "Jobs", "Invoices", "Operations", "Settings"],
   crew: ["Today", "Job detail", "Checklist", "Proof", "Incident", "Completion"],
   onboarding: ["Business", "Services", "Team", "Policies", "Integrations", "Readiness"],
   tour: ["Scenario", "Command", "Receipt label", "Recovery", "Presentation"],
 };
 
-export function OperationalRoute({ surface, title, description, workspaceLabel = "BrightRoom Services", resourceLabel }: OperationalRouteProps) {
+const primaryStaffNav: Array<{ module: StaffModule; label: string }> = [
+  { module: "overview", label: "Overview" },
+  { module: "inbox", label: "Inbox" },
+  { module: "customers", label: "Customers" },
+  { module: "quotes", label: "Quotes" },
+  { module: "schedule", label: "Schedule" },
+  { module: "jobs", label: "Jobs" },
+  { module: "invoices", label: "Invoices" },
+  { module: "quality", label: "Operations" },
+  { module: "settings", label: "Settings" },
+];
+
+export function OperationalRoute({
+  surface,
+  title,
+  description,
+  workspaceLabel = "BrightRoom Services",
+  resourceLabel,
+  staffModule = "overview",
+}: OperationalRouteProps) {
   return (
     <main className="site-shell">
       <header className="site-header" aria-label={`${surface} workspace navigation`}>
@@ -60,9 +79,23 @@ export function OperationalRoute({ surface, title, description, workspaceLabel =
           <span className="brand-mark" aria-hidden="true">SD</span>
           <span>{workspaceLabel}</span>
         </a>
-        <nav className="site-nav" aria-label="Workspace">
-          {surfaceNav[surface].map((item) => <a href="#workspace" key={item}>{item}</a>)}
-        </nav>
+        {surface === "staff" ? (
+          <nav className="site-nav" aria-label="Staff workspace">
+            {primaryStaffNav.map((item) => (
+              <a
+                aria-current={staffModule === item.module ? "page" : undefined}
+                href={`/app/${encodeURIComponent(workspaceLabel)}/${item.module}`}
+                key={item.module}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        ) : (
+          <nav className="site-nav" aria-label="Workspace">
+            {surfaceNav[surface].map((item) => <a href="#workspace" key={item}>{item}</a>)}
+          </nav>
+        )}
       </header>
 
       <section className="section-card" id="workspace">
@@ -73,7 +106,7 @@ export function OperationalRoute({ surface, title, description, workspaceLabel =
         </div>
         {surface === "business" && <BusinessPanel />}
         {surface === "customer" && <CustomerPanel />}
-        {surface === "staff" && <StaffPanel />}
+        {surface === "staff" && <StaffPanel module={staffModule} />}
         {surface === "crew" && <CrewPanel />}
         {surface === "onboarding" && <OnboardingPanel />}
         {surface === "tour" && <TourPanel />}
@@ -138,7 +171,7 @@ function CustomerPanel() {
   );
 }
 
-function StaffPanel() {
+function StaffPanel({ module }: { module: StaffModule }) {
   const view = buildStaffQueueView({
     request: sampleRequest,
     quote: sampleQuote,
@@ -146,39 +179,99 @@ function StaffPanel() {
     attentionItems: sampleAttentionItems,
     integrations: sampleIntegrations,
   });
+  const config = staffModuleConfig[module];
+
+  let moduleContent;
+  switch (module) {
+    case "overview":
+      moduleContent = <StaffAttentionOverview view={view} />;
+      break;
+    case "inbox":
+      moduleContent = <InboxPreview />;
+      break;
+    case "customers":
+      moduleContent = <CrmPreview />;
+      break;
+    case "requests":
+      moduleContent = <RequestSummaryPreview />;
+      break;
+    case "quotes":
+      moduleContent = <QuoteApprovalPreview />;
+      break;
+    case "schedule":
+      moduleContent = <SchedulePreview />;
+      break;
+    case "jobs":
+      moduleContent = (
+        <section className="plain-card" aria-label="Staff jobs preview">
+          <span className="status-pill pending">DTO-derived sample</span>
+          <h2>Visit {sampleVisit.id}</h2>
+          <p>Status {sampleVisit.status.replaceAll("_", " ")} · crew {sampleVisit.crewId ?? "unassigned"}.</p>
+          <p>Staff assignment and transition commands remain server-authorized through the core facade.</p>
+        </section>
+      );
+      break;
+    case "invoices":
+      moduleContent = <InvoiceLedgerPreview />;
+      break;
+    case "reports":
+      moduleContent = <ReportsPreview />;
+      break;
+    case "quality":
+    case "automations":
+    case "settings":
+    case "billing":
+      moduleContent = <StaffAttentionOverview view={view} />;
+      break;
+  }
 
   return (
     <div className="staff-workspace-stack">
-      <div className="tri-pane-preview" aria-label="Staff attention queue preview">
-        <aside>
-          <p className="label">Attention queue</p>
-          {view.items.map((item, index) => (
-            <button className={`list-row${index === 0 ? " active" : ""}`} key={item.id}>
-              {item.severity} · {item.summary}
-            </button>
+      <section className="mini-panel" aria-label={`${config.label} module context`}>
+        <span className="status-pill neutral">{config.group}</span>
+        <h2>{config.label}</h2>
+        <p>{config.description}</p>
+      </section>
+      {moduleContent}
+    </div>
+  );
+}
+
+function StaffAttentionOverview({
+  view,
+}: {
+  view: ReturnType<typeof buildStaffQueueView>;
+}) {
+  return (
+    <div className="tri-pane-preview" aria-label="Staff attention queue preview">
+      <aside>
+        <p className="label">Attention queue</p>
+        {view.items.map((item, index) => (
+          <button
+            className={`list-row${index === 0 ? " active" : ""}`}
+            key={item.id}
+            type="button"
+            disabled
+            aria-disabled="true"
+          >
+            {item.severity} · {item.summary}
+          </button>
+        ))}
+      </aside>
+      <section>
+        <p className="label">Request context</p>
+        <h3>{view.requestLabel}</h3>
+        <p>{view.quoteLabel}</p>
+        <p>{view.handoverLabel}; AI draft only.</p>
+      </section>
+      <aside>
+        <p className="label">Next action</p>
+        <ul className="check-list">
+          {view.items.map((item) => (
+            <li key={item.id}>{item.resourceLabel}: {item.integrationLabel ?? item.nextAction}</li>
           ))}
-        </aside>
-        <section>
-          <p className="label">Request context</p>
-          <h3>{view.requestLabel}</h3>
-          <p>{view.quoteLabel}</p>
-          <p>{view.handoverLabel}; AI draft only.</p>
-        </section>
-        <aside>
-          <p className="label">Context</p>
-          <ul className="check-list">
-            {view.items.map((item) => (
-              <li key={item.id}>{item.resourceLabel}: {item.integrationLabel ?? item.nextAction}</li>
-            ))}
-            {staffModules.slice(0, 3).map((module) => <li key={module}>{module}</li>)}
-          </ul>
-        </aside>
-      </div>
-      <CrmPreview />
-      <QuoteApprovalPreview />
-      <InboxPreview />
-      <SchedulePreview />
-      <ReportsPreview />
+        </ul>
+      </aside>
     </div>
   );
 }
