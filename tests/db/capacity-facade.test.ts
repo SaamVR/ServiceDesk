@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { CapacitySlot, SlotHold } from "../../src/domain/capacity";
 import type { QuoteSnapshot } from "../../src/domain/quote";
+import { holdSlotWithRepository } from "../../src/server/core/capacity";
 import type { RequestRecord } from "../../src/server/core/requests";
 import { createCapacityFacadeMethods } from "../../src/server/core/capacity-facade";
 
@@ -116,5 +118,31 @@ describe("capacity facade methods", () => {
       value: { holdId: "hold_1", expiresAt: "2026-10-04T06:15:00.000Z" },
     });
     expect(inserted).toEqual(["hold_1:quote_1:2026-10-04T06:15:00.000Z"]);
+  });
+
+  it("fails closed when a repository returns a cross-workspace slot", async () => {
+    const inserted: SlotHold[] = [];
+    const crossWorkspaceSlot: CapacitySlot = {
+      id: "slot_1",
+      workspaceId: "ws_2",
+      crewId: "crew_1",
+      startsAt: "2026-10-05T09:00:00.000Z",
+      endsAt: "2026-10-05T13:30:00.000Z",
+      capacityMinutes: 270,
+    };
+
+    await expect(holdSlotWithRepository(owner, {
+      slotId: "slot_1",
+      quoteId: "quote_1",
+      quoteWorkspaceId: "ws_1",
+      durationMinutes: 240,
+      bufferMinutes: 30,
+    }, { idempotencyKey: "idem", now }, {
+      nextHoldId: () => "hold_1",
+      findSlotById: async () => ({ ok: true, value: crossWorkspaceSlot }),
+      listActiveHoldsForSlot: async () => ({ ok: true, value: [] }),
+      insertHold: async (hold) => { inserted.push(hold); return { ok: true, value: hold }; },
+    })).resolves.toEqual({ ok: false, code: "SLOT_WORKSPACE_MISMATCH", message: "Slot does not belong to this workspace." });
+    expect(inserted).toHaveLength(0);
   });
 });
