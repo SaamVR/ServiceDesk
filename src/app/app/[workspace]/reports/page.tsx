@@ -6,6 +6,7 @@ export default async function StaffReportsPage({ params }: { params: Promise<{ w
   return (
     <OperationalRoute
       surface="staff"
+        staffModule="reports"
       workspaceLabel={workspace}
       title="Reports derived from stored operational records."
       description="Conversion, collection, capacity and contribution reporting labels missing cost data and never lets AI invent metrics."
