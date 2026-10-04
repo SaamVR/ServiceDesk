@@ -9,9 +9,13 @@ function signature(rawBody: string, secret: string): string {
 
 class RecordingStore implements ProviderInboxEventStore {
   readonly inputs: PersistProviderInboxEventInput[] = [];
+  readonly duplicates = new Set<string>();
 
   async persistInboundMessage(input: PersistProviderInboxEventInput): Promise<"INSERTED" | "DUPLICATE"> {
     this.inputs.push(input);
+    const receiptKey = providerInboxReceiptKey(input);
+    if (this.duplicates.has(receiptKey)) return "DUPLICATE";
+    this.duplicates.add(receiptKey);
     return "INSERTED";
   }
 }
@@ -124,5 +128,48 @@ describe("WhatsApp inbound payload validation", () => {
     expect(JSON.parse(result.body ?? "{}")).toEqual({ received: 2, inserted: 2, duplicate: 0 });
     expect(store.inputs.map(providerInboxReceiptKey)).toEqual(["ws-clearnest:phone-1:wamid-1", "ws-clearnest:phone-1:wamid-2"]);
     expect(store.inputs[1]).toMatchObject({ type: "image", mediaId: "media-1" });
+  });
+
+  test("summarizes duplicate and inserted outcomes from the same webhook batch", async () => {
+    const store = new RecordingStore();
+    const rawBody = JSON.stringify({
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                metadata: { phone_number_id: "phone-1" },
+                messages: [
+                  { id: "wamid-a", from: "contact-a", timestamp: "1791108001", type: "text", text: { body: "First" } },
+                  { id: "wamid-a", from: "contact-a", timestamp: "1791108002", type: "text", text: { body: "Duplicate" } },
+                ],
+              },
+            },
+            {
+              value: {
+                metadata: { phone_number_id: "phone-2" },
+                messages: [{ id: "wamid-a", from: "contact-b", timestamp: "1791108003", type: "text", text: { body: "Same id, different account" } }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = await handleWhatsAppInboundWebhook({
+      rawBody,
+      headers: { "x-hub-signature-256": signature(rawBody, "secret") },
+      appSecret: "secret",
+      workspaceByPhoneNumberId: { "phone-1": "ws-clearnest", "phone-2": "ws-clearnest" },
+      store,
+    });
+
+    expect(result).toMatchObject({ statusCode: 200, acknowledged: true, retryable: false });
+    expect(JSON.parse(result.body ?? "{}")).toEqual({ received: 3, inserted: 2, duplicate: 1 });
+    expect(store.inputs.map(providerInboxReceiptKey)).toEqual([
+      "ws-clearnest:phone-1:wamid-a",
+      "ws-clearnest:phone-1:wamid-a",
+      "ws-clearnest:phone-2:wamid-a",
+    ]);
   });
 });
