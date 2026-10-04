@@ -103,6 +103,10 @@ export function updateRequestRecord(
   const authorized = authorizeRequestMutation(ctx, request);
   if (authorized.ok === false) return { ok: false, code: authorized.code, message: authorized.message };
 
+  if (ctx.role === "VISITOR" && patch.status !== undefined) {
+    return { ok: false, code: "VISITOR_STATUS_MUTATION_FORBIDDEN", message: "Visitors cannot directly change request lifecycle status." };
+  }
+
   if (meta.expectedVersion !== undefined && meta.expectedVersion !== request.version) {
     return { ok: false, code: "VERSION_CONFLICT", message: "Request version changed before this command was applied." };
   }
