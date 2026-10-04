@@ -1,4 +1,5 @@
 import type { QuoteDTO, VisitDTO } from "@/contracts";
+import { buildFixtureInboxSnapshot } from "@/features/inbox/InboxFixturePreview";
 import {
   sampleAttentionItems,
   sampleConversation,
@@ -14,26 +15,13 @@ import type { OperationalRouteData, OperationalRoutePropsBase } from "./route-da
 
 function buildFixtureOperationalRouteData(): OperationalRouteData {
   const acceptedQuote: QuoteDTO = { ...sampleQuote, status: "ACCEPTED" };
-  const previousQuote: QuoteDTO = {
-    ...sampleQuote,
-    id: "quote_previous",
-    version: 1,
-    totalMinor: 31_000,
-    depositMinor: 7_750,
-    balanceMinor: 23_250,
-    durationMinutes: 220,
-  };
+  const previousQuote: QuoteDTO = { ...sampleQuote, id: "quote_previous", version: 1, totalMinor: 31_000, depositMinor: 7_750, balanceMinor: 23_250, durationMinutes: 220 };
   const awaitingPaymentVisit: VisitDTO = { ...sampleVisit, status: "AWAITING_PAYMENT" };
   const inProgressVisit: VisitDTO = { ...sampleVisit, status: "IN_PROGRESS" };
 
   return {
     sourceLabel: "FIXTURE_UI_ONLY",
-    navigation: {
-      quoteId: sampleQuote.id,
-      bookingId: sampleVisit.id,
-      invoiceId: sampleInvoice.id,
-      visitId: sampleVisit.id,
-    },
+    navigation: { quoteId: sampleQuote.id, bookingId: sampleVisit.id, invoiceId: sampleInvoice.id, visitId: sampleVisit.id },
     business: {
       enquiry: {
         form: {
@@ -46,63 +34,23 @@ function buildFixtureOperationalRouteData(): OperationalRouteData {
         },
         summary: { request: sampleRequest, quote: sampleQuote },
       },
-      checkout: {
-        quote: acceptedQuote,
-        slot: { ...sampleSlot, availabilityFresh: true },
-        visit: awaitingPaymentVisit,
-        invoice: sampleInvoice,
-        paymentMode: "SANDBOX",
-        holdExpiresAt: "2026-10-04T06:30:00.000Z",
-      },
+      checkout: { quote: acceptedQuote, slot: { ...sampleSlot, availabilityFresh: true }, visit: awaitingPaymentVisit, invoice: sampleInvoice, paymentMode: "SANDBOX", holdExpiresAt: "2026-10-04T06:30:00.000Z" },
     },
     customer: {
-      overview: {
-        request: sampleRequest,
-        quote: sampleQuote,
-        slot: sampleSlot,
-        visit: sampleVisit,
-        invoice: sampleInvoice,
-        conversation: sampleConversation,
-      },
-      checkout: {
-        quote: acceptedQuote,
-        slot: { ...sampleSlot, availabilityFresh: true },
-        visit: awaitingPaymentVisit,
-        invoice: sampleInvoice,
-        paymentMode: "SANDBOX",
-        holdExpiresAt: "2026-10-04T06:30:00.000Z",
-      },
+      overview: { request: sampleRequest, quote: sampleQuote, slot: sampleSlot, visit: sampleVisit, invoice: sampleInvoice, conversation: sampleConversation },
+      checkout: { quote: acceptedQuote, slot: { ...sampleSlot, availabilityFresh: true }, visit: awaitingPaymentVisit, invoice: sampleInvoice, paymentMode: "SANDBOX", holdExpiresAt: "2026-10-04T06:30:00.000Z" },
       invoice: sampleInvoice,
     },
     staff: {
-      attention: {
-        request: sampleRequest,
-        quote: sampleQuote,
-        conversation: sampleConversation,
-        attentionItems: sampleAttentionItems,
-        integrations: sampleIntegrations,
-      },
-      crm: {
-        request: sampleRequest,
-        quote: sampleQuote,
-        visit: sampleVisit,
-        invoice: sampleInvoice,
-        conversation: sampleConversation,
-      },
+      attention: { request: sampleRequest, quote: sampleQuote, conversation: sampleConversation, attentionItems: sampleAttentionItems, integrations: sampleIntegrations },
+      inbox: buildFixtureInboxSnapshot(),
+      crm: { request: sampleRequest, quote: sampleQuote, visit: sampleVisit, invoice: sampleInvoice, conversation: sampleConversation },
       requestSummary: { request: sampleRequest, quote: sampleQuote },
       quoteApproval: { request: sampleRequest, currentQuote: sampleQuote, previousQuote },
-      schedule: {
-        slot: sampleSlot,
-        visit: sampleVisit,
-        integrations: sampleIntegrations,
-        attentionItems: sampleAttentionItems,
-      },
+      schedule: { slot: sampleSlot, visit: sampleVisit, integrations: sampleIntegrations, attentionItems: sampleAttentionItems },
       jobsVisit: sampleVisit,
     },
-    crew: {
-      today: { request: sampleRequest, visit: sampleVisit },
-      job: { request: sampleRequest, visit: inProgressVisit, invoice: sampleInvoice },
-    },
+    crew: { today: { request: sampleRequest, visit: sampleVisit }, job: { request: sampleRequest, visit: inProgressVisit, invoice: sampleInvoice } },
   };
 }
 
