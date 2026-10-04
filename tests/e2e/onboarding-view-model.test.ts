@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildOnboardingReadinessView } from "../../src/features/onboarding/view-models";
+import {
+  buildOnboardingReadinessView,
+  buildOnboardingSetupView,
+} from "../../src/features/onboarding/view-models";
 import { sampleIntegrations } from "../../src/features/operations/sample-data";
 
 describe("onboarding readiness view model", () => {
@@ -22,5 +25,21 @@ describe("onboarding readiness view model", () => {
 
     expect(view.overallState).toBe("CONFIGURATION_BLOCKED");
     expect(view.items.every((item) => item.canClaimLive === false)).toBe(true);
+  });
+
+  it("keeps setup steps ordered and blocks launch when providers are not live", () => {
+    const view = buildOnboardingSetupView(sampleIntegrations);
+
+    expect(view.steps.map((step) => step.key)).toEqual([
+      "business",
+      "services",
+      "team",
+      "policies",
+      "integrations",
+      "readiness",
+    ]);
+    expect(view.readyToLaunch).toBe(false);
+    expect(view.steps.find((step) => step.key === "integrations")?.state).toBe("CONFIGURATION_BLOCKED");
+    expect(view.launchLabel).toBe("Launch blocked by provider configuration");
   });
 });
