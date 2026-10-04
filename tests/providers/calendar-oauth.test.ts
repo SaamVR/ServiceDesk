@@ -46,7 +46,7 @@ describe("Google Calendar OAuth connection policy", () => {
     expect(status).toMatchObject({ status: "DEGRADED", canCreateEvents: false, canReadBusy: true });
   });
 
-  test("marks connection stale when access token is expired", () => {
+  test("marks connection refresh-needed when access token is expired but refresh token exists", () => {
     const status = evaluateGoogleCalendarConnection({
       workspaceId: "ws-clearnest",
       crewId: "crew-1",
@@ -57,7 +57,7 @@ describe("Google Calendar OAuth connection policy", () => {
       now: "2026-10-04T09:00:00.000Z",
     });
 
-    expect(status).toMatchObject({ status: "REAUTH_REQUIRED", reason: "ACCESS_TOKEN_EXPIRED" });
+    expect(status).toMatchObject({ status: "DEGRADED", reason: "ACCESS_TOKEN_EXPIRED", canCreateEvents: false, canReadBusy: false });
   });
 
   test("refresh adapter redacts tokens and reports reconnect on invalid_grant", async () => {
