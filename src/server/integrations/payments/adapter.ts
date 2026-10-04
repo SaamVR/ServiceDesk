@@ -81,7 +81,13 @@ export class FixtureStripePaymentAdapter implements PaymentAdapter {
     const verified = verifyStripeSignature(rawBody, headers["stripe-signature"] ?? headers["Stripe-Signature"], this.webhookSecret);
     if (!verified.ok) return verified;
 
-    const payload = JSON.parse(rawBody) as FixtureStripeWebhookPayload;
+    let payload: FixtureStripeWebhookPayload;
+    try {
+      payload = JSON.parse(rawBody) as FixtureStripeWebhookPayload;
+    } catch {
+      return { ok: false, code: "PAYMENT_PAYLOAD_MALFORMED", message: "Verified payment webhook payload is malformed JSON." };
+    }
+
     if (payload.account !== this.providerAccountId) return { ok: false, code: "PAYMENT_ACCOUNT_MISMATCH", message: "Webhook account does not match configured payment account." };
     if (payload.type !== "checkout.session.completed" && payload.type !== "payment_intent.succeeded") {
       return { ok: false, code: "PAYMENT_EVENT_IGNORED", message: "Payment event is not a succeeded checkout/payment event." };
