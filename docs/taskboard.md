@@ -309,3 +309,20 @@ E03/E04 real database proof:
 Provider policy:
 - Stripe remains SANDBOX/DEMO only.
 - other provider credentials requested only when their exact gate is ready.
+
+
+## ServiceDesk Supabase staging
+
+Project:
+`cpmmgivhlkfbiwzhlcey` — ServiceDesk
+
+State:
+- migrations 0001–0007a applied;
+- E03 schema proof PASS;
+- E04 database lease proof PASS;
+- proof fixtures cleaned.
+
+New priority inserted after active E05 Core work:
+`V1-E03-PG-ADAPTER` — implement concrete Postgres/Supabase `PaymentApplicationRepository` transaction adapter and rerun E03 through real application persistence.
+
+Do not reuse unrelated Supabase projects.
