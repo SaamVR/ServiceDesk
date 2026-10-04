@@ -74,15 +74,15 @@ async function main(): Promise<void> {
 
   const mail = await port.execute(event("EMAIL"));
   assert.equal(mail.ok && mail.value.outcome, "SENT");
-  assert.equal(mail.ok && mail.value.providerReference, "email.idem-evt-email");
+  assert.equal(mail.ok && mail.value.outcome === "SENT" ? mail.value.providerReference : undefined, "email.idem-evt-email");
 
   const hook = await port.execute(event("WEBHOOK"));
   assert.equal(hook.ok && hook.value.outcome, "SENT");
-  assert.equal(hook.ok && hook.value.providerReference, "hook.idem-evt-webhook");
+  assert.equal(hook.ok && hook.value.outcome === "SENT" ? hook.value.providerReference : undefined, "hook.idem-evt-webhook");
 
   const retry = await port.execute(event("WHATSAPP", "evt-wa-retry"));
   assert.equal(retry.ok && retry.value.outcome, "RETRYABLE_FAILURE");
-  assert.equal(retry.ok && retry.value.code, "RATE_LIMITED");
+  assert.equal(retry.ok && retry.value.outcome === "RETRYABLE_FAILURE" ? retry.value.code : undefined, "RATE_LIMITED");
   assert.ok(JSON.stringify(retry).includes("RATE_LIMITED"));
   assert.ok(!JSON.stringify(retry).includes("sk_test_secret"));
   assert.ok(!JSON.stringify(retry).includes("+15555550123"));
@@ -98,7 +98,7 @@ async function main(): Promise<void> {
 
   const webhookRetry = await port.execute(event("WEBHOOK", "evt-webhook-retry"));
   assert.equal(webhookRetry.ok && webhookRetry.value.outcome, "RETRYABLE_FAILURE");
-  assert.equal(webhookRetry.ok && webhookRetry.value.retryAfterSeconds, 60);
+  assert.equal(webhookRetry.ok && webhookRetry.value.outcome === "RETRYABLE_FAILURE" ? webhookRetry.value.retryAfterSeconds : undefined, 60);
 
   const webhookTerminal = await port.execute(event("WEBHOOK", "evt-webhook-terminal"));
   assert.equal(webhookTerminal.ok && webhookTerminal.value.outcome, "TERMINAL_FAILURE");
@@ -109,12 +109,12 @@ async function main(): Promise<void> {
   const beforeMismatchCalls = whatsappCalls;
   const mismatch = await port.execute(event("WHATSAPP", "evt-mismatch"));
   assert.equal(mismatch.ok && mismatch.value.outcome, "TERMINAL_FAILURE");
-  assert.equal(mismatch.ok && mismatch.value.code, "OUTBOX_INTENT_WORKSPACE_MISMATCH");
+  assert.equal(mismatch.ok && mismatch.value.outcome === "TERMINAL_FAILURE" ? mismatch.value.code : undefined, "OUTBOX_INTENT_WORKSPACE_MISMATCH");
   assert.equal(whatsappCalls, beforeMismatchCalls);
 
   const missing = await port.execute(event("EMAIL", "evt-missing"));
   assert.equal(missing.ok && missing.value.outcome, "TERMINAL_FAILURE");
-  assert.equal(missing.ok && missing.value.code, "OUTBOX_INTENT_RESOLUTION_FAILED");
+  assert.equal(missing.ok && missing.value.outcome === "TERMINAL_FAILURE" ? missing.value.code : undefined, "OUTBOX_INTENT_RESOLUTION_FAILED");
 
   console.log("runtime-outage-outbox-execution-adapter-harness PASS");
 }

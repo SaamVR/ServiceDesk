@@ -14,14 +14,14 @@ function succeededCheckoutRaw(overrides: Record<string, unknown> = {}): string {
         amount_total: 8500,
         currency: "usd",
         payment_intent: "pi_1234",
-        metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT" },
+        metadata: { workspaceId: "ws-clearnest", purpose: "DEPOSIT", quoteId: "quote-1", holdId: "hold-1" },
       },
     },
     ...overrides,
   });
 }
 
-function store(result: "APPLIED" | "DUPLICATE" | "OUT_OF_ORDER_IGNORED" | "PAYMENT_REVIEW") {
+function store(result: "APPLIED" | "DUPLICATE" | "PAYMENT_REVIEW") {
   const calls: unknown[] = [];
   const applicationStore: PaymentWebhookApplicationStore = {
     async applyVerifiedPayment(input) {
@@ -143,10 +143,10 @@ describe("Stripe payment webhook handler", () => {
     expect(state.calls).toHaveLength(1);
   });
 
-  test("acknowledges out-of-order callbacks without regressing later verified state", async () => {
+  test("acknowledges a non-regressive duplicate outcome for an already-applied callback", async () => {
     const adapter = new FixtureStripePaymentAdapter("whsec_test", "acct_123", () => "2026-10-04T10:00:00.000Z");
     const rawBody = succeededCheckoutRaw({ id: "evt_old" });
-    const state = store("OUT_OF_ORDER_IGNORED");
+    const state = store("DUPLICATE");
 
     const result = await handleStripePaymentWebhook({
       rawBody,
@@ -156,7 +156,7 @@ describe("Stripe payment webhook handler", () => {
     });
 
     expect(result).toMatchObject({ statusCode: 200, acknowledged: true, retryable: false });
-    expect(JSON.parse(result.body ?? "{}")).toMatchObject({ result: "OUT_OF_ORDER_IGNORED" });
+    expect(JSON.parse(result.body ?? "{}")).toMatchObject({ result: "DUPLICATE" });
   });
 
   test("does not acknowledge when durable application fails", async () => {

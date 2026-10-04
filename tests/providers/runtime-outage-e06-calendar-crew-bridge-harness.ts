@@ -115,6 +115,7 @@ async function run() {
 
   const second = await dispatcher.dispatch({ job: intent.value, committedAt: now, attempt: 2, expectedChannel: "GOOGLE_CALENDAR" });
   assert.equal(second.ok, true);
+  if (!second.ok || second.value.outcome !== "ACCEPTED" || sent.value.outcome !== "ACCEPTED") throw new Error("calendar dispatch was not accepted");
   assert.equal(second.value.idempotencyKey, intent.value.idempotencyKey);
   assert.equal(second.value.providerMessageId, sent.value.providerMessageId);
 

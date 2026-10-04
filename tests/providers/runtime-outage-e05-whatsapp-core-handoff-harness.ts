@@ -18,7 +18,8 @@ import { FixtureWhatsAppAdapter } from "../../src/server/integrations/whatsapp/a
 import { FixtureEmailAdapter } from "../../src/server/integrations/email/adapter";
 import { buildWhatsAppDeliveryStateUpdate } from "../../src/server/integrations/whatsapp/delivery-state-bridge";
 import type { ClaimedOutboxEvent } from "../../src/contracts/outbox";
-import type { InboundMessageApplicationOutcome } from "../../src/server/core/facade";
+import type { Result } from "../../src/contracts";
+import type { InboundMessageApplicationOutcome, InboundMessageEvent } from "../../src/server/core/facade";
 
 const now = "2026-10-04T14:40:00.000Z";
 const secret = "test-app-secret";
@@ -91,7 +92,7 @@ class FakeSupabaseClient implements SupabaseProviderInboundReceiptClient {
             return this;
           },
           async maybeSingle() {
-            const row = client.rows.find((candidate) => Object.entries(filters).every(([key, value]) => (candidate as Record<string, unknown>)[key] === value));
+            const row = client.rows.find((candidate) => Object.entries(filters).every(([key, value]) => (candidate as unknown as Record<string, unknown>)[key] === value));
             return { data: row ?? null, error: null };
           },
         };
@@ -104,7 +105,7 @@ class CorePort {
   readonly events: unknown[] = [];
   outcomes: Array<InboundMessageApplicationOutcome["state"] | Error> = [];
 
-  async applyInboundMessage(event: any) {
+  async applyInboundMessage(event: InboundMessageEvent): Promise<Result<InboundMessageApplicationOutcome>> {
     this.events.push(event);
     const outcome = this.outcomes.shift() ?? "APPLIED";
     if (outcome instanceof Error) return { ok: false as const, code: "CORE_WRITE_FAILED", message: outcome.message };

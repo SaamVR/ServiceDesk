@@ -40,7 +40,8 @@ async function run() {
   const calendarRetry = await calendarDispatcher.dispatch({ job: recurrence.value, committedAt: now, attempt: 2, expectedChannel: "GOOGLE_CALENDAR" });
   assert.equal(calendarFirst.ok && calendarFirst.value.outcome, "ACCEPTED");
   assert.equal(calendarRetry.ok && calendarRetry.value.outcome, "ACCEPTED");
-  assert.equal(calendarFirst.ok && calendarRetry.ok && calendarFirst.value.providerMessageId, calendarRetry.ok && calendarRetry.value.providerMessageId);
+  if (!calendarFirst.ok || calendarFirst.value.outcome !== "ACCEPTED" || !calendarRetry.ok || calendarRetry.value.outcome !== "ACCEPTED") throw new Error("recurrence calendar dispatch was not accepted");
+  assert.equal(calendarFirst.value.providerMessageId, calendarRetry.value.providerMessageId);
 
   assert.equal(planRecurrenceRuleProviderMutation("PAUSE").shouldMutateProviderEvents, false);
   assert.equal(planRecurrenceRuleProviderMutation("SKIP_NEXT").shouldMutateProviderEvents, false);

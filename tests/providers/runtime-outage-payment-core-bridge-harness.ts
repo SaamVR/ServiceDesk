@@ -45,7 +45,23 @@ class ReviewStore implements PaymentReviewStore {
   }
 }
 
-const quote: QuoteDTO = { id: "quote-123", workspaceId: "ws-clearnest", currency: "USD", depositMinor: 5000, balanceMinor: 15000, totalMinor: 20000 };
+const quote: QuoteDTO = {
+  id: "quote-123",
+  workspaceId: "ws-clearnest",
+  requestId: "req-123",
+  version: 1,
+  status: "ACCEPTED",
+  currency: "USD",
+  subtotalMinor: 20000,
+  taxMinor: 0,
+  depositMinor: 5000,
+  balanceMinor: 15000,
+  totalMinor: 20000,
+  durationMinutes: 120,
+  bufferMinutes: 30,
+  rateVersion: "fixture-v1",
+  validUntil: "2026-10-05T00:00:00.000Z",
+};
 const hold = { holdId: "hold-123", workspaceId: "ws-clearnest", quoteId: "quote-123", expiresAt: "2026-10-05T00:00:00.000Z" };
 
 async function main(): Promise<void> {

@@ -45,7 +45,7 @@ const handler = createSandboxCheckoutCommandHandler({
 async function main() {
   const accepted = await handler.execute({ quote, hold, purpose: "DEPOSIT", successUrl: "https://app.example.test/success", cancelUrl: "https://app.example.test/cancel" });
   assert.equal(accepted.ok, true);
-  if (!accepted.ok) throw new Error(accepted.message);
+  if (!accepted.ok) throw new Error("sandbox checkout was not accepted");
   assert.equal(accepted.value.mode, "SANDBOX");
   assert.equal(accepted.value.amountMinor, 2500);
   assert.equal(accepted.value.businessTruthMutation, false);
