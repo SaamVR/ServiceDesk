@@ -94,3 +94,28 @@ Checkpoint:
 `6d74ea7d74f87525df73bc72367c7084b77e86b3`
 
 Do not promote this candidate to canonical acceptance until catch-up testing is available.
+
+
+## Cycle 3 final closeout
+
+| Worker | Final SHA | Outage proof | Coordinator recheck | Candidate status |
+| --- | --- | --- | --- | --- |
+| Worker 1 Core | `ef19a54e325d4e9ed9baa390a4316e097dbba923` | `IMPLEMENTED` | PASS | staged |
+| Worker 2 Connectors/AI | `af47a5623232c96062a06323b884b35801f41f0b` | `IMPLEMENTED` | PASS — retry-safe inbound processor independently exercised | staged |
+| Worker 3 Product/UI | `caea4ba4bc7e7a3ebb1cedd30e25de044179542d` | `IMPLEMENTED` | PASS | staged |
+
+Provisional integration candidate:
+`feat/servicedesk-v1-outage-candidate`
+at `f77f18ca2fe06a744398bcc4ba5dd6804d06b1e5`.
+
+Canonical catch-up gate remains `CONFIGURATION_BLOCKED`.
+
+## Coordinator Cycle 4 — executable outage mode
+
+| Task | Owner | State | Start SHA | Target |
+| --- | --- | --- | --- | --- |
+| `CYCLE-4-W1` DST-safe recurrence | Worker 1 | READY | `ef19a54e325d4e9ed9baa390a4316e097dbba923` | preserve weekly local wall-clock across IANA timezone DST changes |
+| `CYCLE-4-W2` WhatsApp error redaction | Worker 2 | READY | `af47a5623232c96062a06323b884b35801f41f0b` | prevent backend exception details leaking into provider-facing retry responses |
+| `CYCLE-4-W3` invoice truth hardening | Worker 3 | READY | `caea4ba4bc7e7a3ebb1cedd30e25de044179542d` | clamp collection progress and guard final-receipt state |
+
+All Cycle 4 tasks use the Runtime Outage Mode contract until normal pnpm/Git transport returns.
