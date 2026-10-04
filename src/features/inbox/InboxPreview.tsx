@@ -34,7 +34,7 @@ export function InboxPreview({
     <div className="inbox-preview" aria-label="Shared inbox delivery state preview" data-source={fixtureLabel ?? "SERVER_SNAPSHOT"}>
       <div className="inbox-thread-list">
         <p className="label">Threads · {fixtureLabel ?? "server snapshot"}</p>
-        <button className="list-row active" type="button" disabled aria-disabled="true" title="Conversation selection is server-snapshot scoped; route-local loader selects the active thread.">{thread.customerLabel}</button>
+        <button className="list-row active" type="button" disabled aria-disabled="true" title="No thread selection command is wired on this fixture; the route-local server snapshot selects the active thread.">{thread.customerLabel}</button>
         <button className="list-row" type="button" disabled aria-disabled="true" title="Server snapshot required before selecting another thread.">Delivery uncertain</button>
         <button className="list-row" type="button" disabled aria-disabled="true" title="Server snapshot required before selecting another thread.">Crew absence</button>
       </div>

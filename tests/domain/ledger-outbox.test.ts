@@ -77,11 +77,12 @@ describe("ledger, outbox, and attention primitives", () => {
       nextAttemptAt: "2026-10-04T06:05:00.000Z",
     });
 
-    expect(recordOutboxFailure({ ...event, attempts: 2 }, "2026-10-04T06:01:00.000Z", 3)).toMatchObject({
+    const terminalFailure = recordOutboxFailure({ ...event, attempts: 2 }, "2026-10-04T06:01:00.000Z", 3);
+    expect(terminalFailure).toMatchObject({
       status: "FAILED",
       attempts: 3,
-      nextAttemptAt: undefined,
     });
+    expect(terminalFailure).not.toHaveProperty("nextAttemptAt");
   });
 
   it("deduplicates open attention items by workspace, type, and resource", () => {
