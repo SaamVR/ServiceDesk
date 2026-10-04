@@ -51,6 +51,13 @@ export const TRANSACTIONAL_EMAIL_TEMPLATES: Record<TransactionalEmailPurpose, Tr
     body: "A scheduled visit is coming up. Review timing and preparation details in your ServiceDesk workspace.",
     ctaLabel: "View visit",
   },
+  CUSTOMER_REPLY: {
+    purpose: "CUSTOMER_REPLY",
+    subject: "New reply from your service team",
+    heading: "You have a new reply",
+    body: "A service team reply is available in your ServiceDesk workspace.",
+    ctaLabel: "View reply",
+  },
 };
 
 export interface BuildTransactionalEmailJobInput {

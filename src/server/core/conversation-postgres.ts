@@ -9,7 +9,6 @@ import type {
   Result,
   VisitChecklistItemDTO,
   VisitEvidenceDTO,
-  WorkspaceSnapshot,
 } from "../../contracts";
 import type {
   ConversationHandoverInput,
@@ -18,6 +17,7 @@ import type {
   InboundMessageApplicationOutcome,
   InboundMessageEvent,
   ServiceDeskFacade,
+  WorkspaceSnapshot,
   WorkspaceSnapshotQuery,
 } from "./facade";
 import type { SupabaseRpcClient } from "./payment-application-postgres";

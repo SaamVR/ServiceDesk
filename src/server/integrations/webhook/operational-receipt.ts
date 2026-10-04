@@ -39,7 +39,7 @@ function redact(value: string | undefined): string | undefined {
 
 function stateFor(input: WebhookOperationalReceiptInput): Pick<WebhookOperationalReceipt, "state" | "action" | "terminal"> {
   if (input.n8nState === "PENDING") return { state: "N8N_PENDING", action: "WAIT_FOR_N8N_COMPLETION", terminal: false };
-  if (input.status >= 200 && input.status < 300 && input.n8nState !== "PENDING") return { state: "DELIVERED", action: "ACK_DELIVERED", terminal: true };
+  if (input.status >= 200 && input.status < 300) return { state: "DELIVERED", action: "ACK_DELIVERED", terminal: true };
   if (input.status === 408 || input.status === 409 || input.status === 425 || input.status === 429 || input.status >= 500) {
     return { state: "RETRYABLE_FAILURE", action: "E04_RETRY", terminal: false };
   }

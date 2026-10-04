@@ -141,7 +141,7 @@ export function createConversationFacadeMethods(deps: ConversationFacadeDependen
 
     async readWorkspaceSnapshot(ctx: ActorContext, query: WorkspaceSnapshotQuery): Promise<Result<WorkspaceSnapshot>> {
       if (ctx.role === "VISITOR" || ctx.role === "CREW") return failClosed("FORBIDDEN", "Role is not authorized for workspace inbox snapshots.");
-      return deps.conversationRepository.transaction(async (tx) => {
+      return deps.conversationRepository.transaction<WorkspaceSnapshot>(async (tx) => {
         let customerId = query.customerId;
         if (ctx.role === "CUSTOMER") {
           if (!ctx.userId) return failClosed("CUSTOMER_AUTH_REQUIRED", "Customer identity is required.");
@@ -156,7 +156,7 @@ export function createConversationFacadeMethods(deps: ConversationFacadeDependen
         const snapshot = await tx.readSnapshot({ workspaceId: ctx.workspaceId, customerId, requestId: query.requestId, conversationId: query.conversationId });
         if (snapshot.ok === false) return snapshot;
         const allowedConversationIds = new Set(snapshot.value.conversations.map((conversation) => conversation.id));
-        return { ok: true, value: { requests: snapshot.value.requests, quotes: snapshot.value.quotes, visits: snapshot.value.visits, invoices: snapshot.value.invoices, conversations: snapshot.value.conversations.map(conversationToDTO), messages: snapshot.value.messages.filter((message) => allowedConversationIds.has(message.conversationId)).map(messageToDTO) } };
+        return { ok: true, value: { requests: snapshot.value.requests, quotes: snapshot.value.quotes, visits: snapshot.value.visits, invoices: snapshot.value.invoices, conversations: snapshot.value.conversations.map(conversationToDTO), messages: snapshot.value.messages.filter((message) => allowedConversationIds.has(message.conversationId)).map(messageToDTO), recurrenceRules: [], visitEvidence: [], visitChecklistItems: [], attentionItems: [], qualityCases: [] } };
       });
     },
   };

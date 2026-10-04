@@ -6,6 +6,8 @@ import {
   type ProductActionState,
 } from "./action-state";
 
+export type { ProductActionError };
+
 export type CommandSuccess<T> = { ok: true; value: T };
 export type CommandFailure = { ok: false; error: ProductActionError };
 export type ProductCommandResult<T> = CommandSuccess<T> | CommandFailure;

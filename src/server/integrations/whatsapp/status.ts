@@ -12,7 +12,8 @@ export type WhatsAppDeliveryTransitionReason =
   | "SAME_STATE_AND_TIMESTAMP"
   | "OLDER_PROVIDER_TIMESTAMP"
   | "LOWER_ORDER_STATE"
-  | "FAILED_AFTER_CONFIRMED_DELIVERY";
+  | "FAILED_AFTER_CONFIRMED_DELIVERY"
+  | "STATUS_AFTER_TERMINAL_FAILURE";
 
 export interface WhatsAppDeliveryTransition {
   result: WhatsAppDeliveryTransitionResult;
