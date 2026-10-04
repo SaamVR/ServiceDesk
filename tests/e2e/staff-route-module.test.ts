@@ -60,4 +60,11 @@ describe("staff route module map", () => {
     expect(buildStaffModuleHref("brightroom", "quotes")).toBe("/app/brightroom/quotes");
     expect(buildStaffModuleHref("Bright Room", "schedule")).toBe("/app/Bright%20Room/schedule");
   });
+
+  it("does not fall back dedicated routes to the generic overview surface", () => {
+    expect(staffModuleConfig.quality.primarySurface).toBe("quality-review");
+    expect(staffModuleConfig.automations.primarySurface).toBe("recovery-actions");
+    expect(staffModuleConfig.settings.primarySurface).toBe("owner-settings");
+    expect(staffModuleConfig.billing.primarySurface).toBe("platform-billing");
+  });
 });
