@@ -1,220 +1,190 @@
 # ServiceDesk AI — V1-INT4 Worker 1 Receipt
 
 Worker: 1  
-Sprint: V1-INT4  
-Branch: `feat/servicedesk-v1-core-sprint4`  
-Coordinator ref: `9ce12193caf3d2104168931b28efeeaf22a9d531`
+Sprint: V1-INT4 / INT4B  
+Branch: `feat/servicedesk-v1-core-sprint4`
+Coordinator refs: `9ce12193caf3d2104168931b28efeeaf22a9d531`, `184331936ba6c81a1d216c7d866d8b62bd2c5b10`
 
-## Start / final SHA
+## INT4B — E03/E05 PostgreSQL Integration Closure
 
-- Exact required sprint base: `602e581c1df860480c230da893128c0d1b8ca395`
-- Observed starting branch HEAD: `602e581c1df860480c230da893128c0d1b8ca395`
-- Final implementation SHA before this receipt: `074d1477588613f34c6eb80115f4e2d0388b266d`
-- Final SHA after this receipt: recorded by GitHub commit containing this file
-
-## Runtime probe
-
-Single normal recovery probe only:
+Dedicated Supabase staging project used only:
 
 ```text
-node --version => v22.16.0
-npm --version => 10.9.2
-corepack --version => 0.32.0
-pnpm --version => bash: pnpm: command not found
-git ls-remote https://github.com/SaamVR/ServiceDesk.git feat/servicedesk-v1-core-sprint4 => Could not resolve host: github.com
-ts-node --version => v10.9.2
+Project: ServiceDesk
+Project ref: cpmmgivhlkfbiwzhlcey
+Region: us-east-1
+Postgres: 17.11.0.002
 ```
 
-Canonical pnpm/Git access remained unavailable, so this sprint entered Runtime Outage Mode.
+### Branch start
 
-## Completed slices
+Expected current HEAD at assignment:
+`79a02a7be75066e37f69ceae6780a2dbe551d5fe`
 
-### INT4-W1-T1 — Conversation/inbox runtime migration
+Observed branch HEAD matched expected before INT4B source changes.
 
-State: IMPLEMENTED
-
-Added:
-- `supabase/migrations/0008_conversation_inbox_runtime.sql`
-
-Behavior covered in source:
-- provider thread identity uniqueness per workspace/channel;
-- provider receipt keys on messages;
-- provider account/timestamp metadata;
-- content kind and media reference metadata without raw media bytes;
-- raw provider event reference only;
-- outbound idempotency key and outbox event linkage;
-- delivery state lifecycle fields;
-- `provider_inbound_receipts` trusted-server table;
-- staff/customer read policies and no anonymous/direct mutation policy for provider receipts.
-
-### INT4-W1-T2 — Conversation/message domain + repository
-
-State: IMPLEMENTED
-
-Added:
-- `src/domain/conversations.ts`
-- `src/server/core/conversation-repository.ts`
-
-Behavior:
-- typed conversation, message, receipt, contact, active request and reply outbox records;
-- DTO mapping that does not expose internal receipt/idempotency fields;
-- stable provider thread identity derivation;
-- transaction/unit-of-work repository port for conversation/message/outbox mutations;
-- workspace fail-closed helper for returned conversation rows.
-
-### INT4-W1-T3 — Authoritative inbound application
-
-State: IMPLEMENTED
-
-Added:
-- `src/server/core/inbound-message.ts`
-
-Behavior:
-- validates receipt/provider/message/sender/timestamp/content before mutation;
-- duplicate provider receipt/message returns `DUPLICATE` without second message/version mutation;
-- same-workspace provider thread lookup/create;
-- customer attachment by exact contact;
-- active request attachment only when repository resolves one unambiguous active request;
-- unknown sender persists unattached conversation;
-- inbound message persistence and exactly one conversation version/lastMessageAt bump;
-- no AI/provider call from Core.
-
-### INT4-W1-T4 — Human handover command
-
-State: IMPLEMENTED
-
-Behavior:
-- OWNER/DISPATCHER + userId required;
-- expectedVersion required and exact;
-- assignment is current actor or explicit repository-authorized staff;
-- deactivate clears active handover/assignment;
-- version and handoverOwnerRevision increment on state change;
-- stale/cross-workspace/unauthorized assignment fail closed.
-
-### INT4-W1-T5 — Business-authorized staff reply
-
-State: IMPLEMENTED
-
-Behavior:
-- OWNER/DISPATCHER + expectedVersion required;
-- nonblank bounded body;
-- channel must match conversation channel;
-- recipient resolved from authoritative customer contact;
-- consent/opt-out enforced before outbox;
-- creates OUTBOUND STAFF message with `QUEUED` delivery state;
-- enqueues exactly one `conversation.reply` outbox event with authoritative IDs only;
-- workspace+idempotency duplicate returns prior result without second message/outbox;
-- message/outbox/conversation update occur inside one repository transaction.
-
-### INT4-W1-T6 — Workspace/inbox snapshot read
-
-State: IMPLEMENTED
-
-Behavior:
-- OWNER/DISPATCHER workspace-scoped staff snapshot;
-- CUSTOMER scoped to their resolved customer identity;
-- VISITOR/CREW denied;
-- conversationId/customerId/requestId filters without crossing workspace boundary;
-- messages returned only for authorized conversations.
-
-### INT4-W1-T7 — Server composition
-
-State: IMPLEMENTED
+### Migration repair
 
 Updated:
-- `src/server/core/server-entrypoints.ts`
+- `supabase/migrations/0008_conversation_inbox_runtime.sql`
 
-Added command entrypoints:
-- `applyInboundMessageCommand`
-- `setConversationHandoverCommand`
-- `enqueueConversationReplyCommand`
-- `readWorkspaceSnapshotCommand`
+Repairs:
+- removed unsupported `CREATE POLICY IF NOT EXISTS` usage;
+- switched to deterministic `DROP POLICY IF EXISTS` + `CREATE POLICY`;
+- replaced `conversations_staff_all` with read-only `conversations_staff_select`;
+- recreated `messages_staff_select` safely;
+- added `messages_customer_select` safely;
+- preserved customer read semantics for conversations;
+- added `messages(workspace_id, outbox_event_id)` composite FK to `outbox_events(workspace_id, id)` with nullable outbox linkage;
+- aligned `provider_inbound_receipts` with canonical technical receipt identity/retry metadata:
+  - `workspace_id`
+  - `provider`
+  - `provider_account_id`
+  - `provider_message_id`
+  - `provider_receipt_key`
+  - `sender_ref`
+  - `provider_occurred_at`
+  - `raw_provider_event_ref`
+  - `content_kind`
+  - `conversation_id`
+  - `message_id`
+  - `received_at`
+  - `processed_at`
+  - `state`
+- no raw webhook body, access token, provider secret, AI authority flag, or raw media bytes are stored in receipts.
 
-No Connector imports or provider calls were added to Core.
+Staging application:
 
-### INT4-W1-T8 — Package-free harness + canonical tests
-
-State: IMPLEMENTED / AUTHORED_NOT_CANONICALLY_EXECUTED
-
-Added:
-- `tests/db/runtime-outage-e05-inbox-handover-harness.ts`
-- `tests/db/conversation-repository.test.ts`
-- `tests/db/inbound-message-facade.test.ts`
-- `tests/db/conversation-handover-reply.test.ts`
-- `tests/db/conversation-snapshot.test.ts`
-- `tests/db/conversation-migration-structure.test.ts`
-
-Package-free Runtime command executed in `/mnt/data/sd-e05`:
-
-```bash
-ts-node --transpile-only --compiler-options '{"module":"CommonJS","moduleResolution":"Node"}' tests/db/runtime-outage-e05-inbox-handover-harness.ts
+```text
+Supabase apply_migration name: sd_0008_conversation_inbox_runtime_int4b
+Result: success=true
 ```
+
+### RPCs and adapters
+
+Implemented trusted-server Postgres RPCs in staging:
+
+- `public.servicedesk_apply_verified_payment(jsonb)`
+- `public.servicedesk_apply_inbound_message(jsonb)`
+- `public.servicedesk_set_conversation_handover(jsonb)`
+- `public.servicedesk_enqueue_conversation_reply(jsonb)`
+- `public.servicedesk_read_workspace_snapshot(jsonb)`
+
+Security posture:
+
+```sql
+revoke execute on function ... from public, anon, authenticated;
+grant execute on function ... to service_role;
+```
+
+Added typed Supabase RPC adapters:
+
+- `src/server/core/payment-application-postgres.ts`
+- `src/server/core/conversation-postgres.ts`
+
+These adapters call the trusted RPC boundary instead of pretending Supabase JS provides an interactive TypeScript transaction callback.
+
+### E05 DB proof
+
+Real PostgreSQL proof executed against `cpmmgivhlkfbiwzhlcey` in rollback-wrapped fixture transactions.
+
+Covered:
+- inbound `APPLIED` creates provider receipt + conversation + message;
+- duplicate receipt returns `DUPLICATE`;
+- exact message count remains stable after duplicate;
+- conversation version increments exactly once on first inbound;
+- duplicate inbound does not bump version;
+- handover activation succeeds with exact expected version;
+- stale handover returns `VERSION_CONFLICT`;
+- unauthorized `CREW` handover is rejected;
+- cross-workspace handover fails closed;
+- staff reply creates message + outbox atomically;
+- duplicate reply idempotency returns prior row and creates no second message/outbox;
+- opt-out rejection happens before outbox;
+- staff snapshot includes authorized conversations/messages;
+- customer snapshot for customer 1 sees own conversation;
+- customer snapshot for customer 2 sees zero conversations;
+- visitor snapshot returns `FORBIDDEN`.
 
 Result:
 
 ```text
-runtime-outage e05 inbox handover harness PASS
+E05_DB_PROOF=PASS
 ```
 
-Harness coverage:
-- first inbound creates conversation/message;
-- retry receipt returns DUPLICATE with no version bump;
-- unknown sender persists unattached conversation;
-- handover activation/deactivation/version conflict;
-- unauthorized/cross-workspace handover rejected;
-- staff reply creates message + outbox once;
-- handover-active human reply remains allowed;
-- opt-out fails before outbox;
-- transaction failure rolls back message/outbox;
-- staff snapshot includes authorized conversations/messages;
-- customer snapshot cannot see another customer;
-- visitor snapshot denied.
+### E03 DB proof
 
-## Changed files
+Real PostgreSQL proof executed against `cpmmgivhlkfbiwzhlcey` in rollback-wrapped fixture transactions.
 
-- `supabase/migrations/0008_conversation_inbox_runtime.sql`
-- `src/domain/conversations.ts`
-- `src/server/core/conversation-repository.ts`
-- `src/server/core/inbound-message.ts`
-- `src/server/core/server-entrypoints.ts`
-- `tests/db/runtime-outage-e05-inbox-handover-harness.ts`
-- `tests/db/conversation-repository.test.ts`
-- `tests/db/inbound-message-facade.test.ts`
-- `tests/db/conversation-handover-reply.test.ts`
-- `tests/db/conversation-snapshot.test.ts`
-- `tests/db/conversation-migration-structure.test.ts`
-- `docs/execution/receipts/v1-int4-worker-1.md`
+Covered:
+- `$340` quote fixture;
+- `$85` deposit application;
+- invoice allocation: total `34000`, allocated `8500`, balance `25500`;
+- hold confirmation;
+- visit creation;
+- ledger credit;
+- booking/payment outbox;
+- duplicate provider event returns `DUPLICATE` with no second mutation;
+- duplicate provider transaction returns `DUPLICATE` with no second mutation;
+- expired hold routes to `PAYMENT_REVIEW` with no false booking;
+- `$255` balance payment closes invoice to `PAID` and balance `0`;
+- deliberate ledger trigger failure rolls back partial invoice/application/visit/ledger/outbox state.
 
-## Proof level
-
-- Outage harness: PASS
-- Source implementation state: IMPLEMENTED
-- Canonical pnpm install: NOT_EXECUTED / CONFIGURATION_BLOCKED
-- Canonical Vitest: NOT_EXECUTED / CONFIGURATION_BLOCKED
-- Typecheck: NOT_EXECUTED / CONFIGURATION_BLOCKED
-- DB/RLS proof: NOT_EXECUTED
-- Provider proof: N/A
-
-## Blockers
+Result:
 
 ```text
-pnpm: command not found
-git ls-remote https://github.com/SaamVR/ServiceDesk.git feat/servicedesk-v1-core-sprint4 => Could not resolve host: github.com
-SUPABASE_STAGING_REQUIRED_FOR_E05_DB_PROOF
+E03_DB_PROOF=PASS
 ```
 
-## Next
+### Fixture cleanup
+
+All DB proof fixtures were executed inside explicit transaction + rollback blocks.
+
+Cleanup confirmation query:
+
+```sql
+select count(*) as remaining_int4b_workspaces
+from public.workspaces
+where slug like 'int4b-%';
+```
+
+Observed:
+
+```text
+remaining_int4b_workspaces=0
+PROOF_FIXTURES_CLEANED=YES
+```
+
+### Security advisor
+
+Ran Supabase security advisor after migration/RPC work.
+
+Remaining findings:
+
+1. `public.invitations` has RLS enabled but no policies — known intentional deny-all until invitation flows are implemented.
+2. `citext` extension is installed in public — pre-existing staging warning.
+3. `authenticated` can execute two existing SECURITY DEFINER RLS helper functions:
+   - `public.has_active_membership(...)`
+   - `public.is_customer_for_workspace(...)`
+
+No new public/anon execution exposure was reported for the INT4B command RPCs. INT4B RPC execute was revoked from `public`, `anon`, and `authenticated`, then granted to `service_role` only.
+
+### Canonical gate
+
+Canonical package/tooling remains blocked in GPT Runtime:
+
+```text
+pnpm unavailable in GPT Runtime
+git ls-remote cannot resolve github.com
+```
+
+Because real staging DB proof passed but canonical pnpm/Vitest/typecheck still did not run, the evidence label is:
+
+```text
+STATE=OPERATIONS_VERIFIED
+CANONICAL_GATE=CONFIGURATION_BLOCKED
+```
+
+## Ready next
 
 READY_NEXT=E06 crew transitions and field evidence
-
-When canonical access returns, run:
-
-```bash
-corepack prepare pnpm@10.17.1 --activate
-pnpm install --frozen-lockfile
-pnpm vitest run tests/db/runtime-outage-e05-inbox-handover-harness.ts tests/db/conversation-repository.test.ts tests/db/inbound-message-facade.test.ts tests/db/conversation-handover-reply.test.ts tests/db/conversation-snapshot.test.ts tests/db/conversation-migration-structure.test.ts
-pnpm test:db
-pnpm typecheck
-```
-
-When Supabase staging is available, run real PostgreSQL/RLS/transaction proof for receipt identity, conversation/customer read policies, handover versioning, reply idempotency, and message+outbox rollback.
