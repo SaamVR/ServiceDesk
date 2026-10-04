@@ -98,6 +98,37 @@ describe("handleWhatsAppStatusWebhook", () => {
     expect(calls).toHaveLength(0);
   });
 
+  test("skips non-object status entries without failing the webhook", async () => {
+    const rawBody = JSON.stringify({
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                metadata: { phone_number_id: "phone-1" },
+                statuses: [null, "bad-entry", { id: "wamid-valid", status: "delivered", timestamp: "1791108000" }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const { store, calls } = makeStore();
+
+    const result = await handleWhatsAppStatusWebhook({
+      rawBody,
+      headers: { "x-hub-signature-256": signature(rawBody, "secret") },
+      appSecret: "secret",
+      workspaceByPhoneNumberId: { "phone-1": "ws-clearnest" },
+      store,
+    });
+
+    expect(result).toMatchObject({ statusCode: 200, acknowledged: true, retryable: false });
+    expect(JSON.parse(result.body ?? "{}")).toEqual({ applied: 1, duplicate: 0, stale: 0 });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ providerMessageId: "wamid-valid", deliveryState: "DELIVERED" });
+  });
+
   test("persists delivered callback as separate from provider acceptance", async () => {
     const rawBody = JSON.stringify(statusPayload("delivered"));
     const { store, calls } = makeStore();

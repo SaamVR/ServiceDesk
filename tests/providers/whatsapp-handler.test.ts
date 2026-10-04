@@ -117,6 +117,37 @@ describe("provider-whatsapp API handler", () => {
     expect(store.persisted).toEqual([]);
   });
 
+  test("skips non-object inbound message entries without failing the webhook", async () => {
+    const store = new RecordingStore();
+    const rawBody = JSON.stringify({
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                metadata: { phone_number_id: "phone-1" },
+                messages: [null, "bad-entry", { id: "wamid-valid", from: "contact-a", timestamp: "1791108000", type: "text", text: { body: "Valid" } }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = await handleWhatsAppInboundWebhook({
+      rawBody,
+      headers: { "x-hub-signature-256": metaSignature(rawBody, "secret") },
+      appSecret: "secret",
+      workspaceByPhoneNumberId: { "phone-1": "ws-clearnest" },
+      store,
+    });
+
+    expect(result).toMatchObject({ statusCode: 200, acknowledged: true, retryable: false });
+    expect(JSON.parse(result.body ?? "{}")).toEqual({ received: 1, inserted: 1, duplicate: 0 });
+    expect(store.persisted).toEqual(["ws-clearnest:phone-1:wamid-valid"]);
+  });
+
   test("persists inbound message before acknowledgement", async () => {
     const store = new RecordingStore();
     const rawBody = rawMessageBody("wamid-inserted");
