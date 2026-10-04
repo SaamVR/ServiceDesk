@@ -57,6 +57,28 @@ describe("request command guards", () => {
     )).toEqual({ ok: false, code: "VISITOR_SCOPE_REQUIRED", message: "Visitor session cannot access this request." });
   });
 
+  it("prevents a visitor from mutating request lifecycle status", () => {
+    const visitor = { workspaceId: "ws_a", visitorSessionId: "visit_a", role: "VISITOR" as const };
+    const created = createRequestRecord(
+      visitor,
+      { workspaceId: "ws_a", visitorSessionId: "visit_a", serviceCode: "STANDARD" },
+      { idempotencyKey: "idem-visitor-create", now },
+      () => "req_visitor",
+    );
+    if (!created.ok) throw new Error("visitor fixture request was not created");
+
+    expect(updateRequestRecord(
+      visitor,
+      created.value,
+      { status: "BOOKED" },
+      { idempotencyKey: "idem-visitor-status", now, expectedVersion: 1 },
+    )).toEqual({
+      ok: false,
+      code: "VISITOR_STATUS_MUTATION_FORBIDDEN",
+      message: "Visitors cannot directly change request lifecycle status.",
+    });
+  });
+
   it("bumps versions on valid request updates", () => {
     const created = createRequestRecord(
       owner,
