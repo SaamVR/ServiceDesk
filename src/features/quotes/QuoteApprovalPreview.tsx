@@ -1,19 +1,29 @@
-import { sampleQuote, sampleRequest } from "@/features/operations/sample-data";
+import type { QuoteDTO, RequestDTO } from "@/contracts";
 import { buildQuoteApprovalView } from "./view-models";
 
-export function QuoteApprovalPreview() {
+interface QuoteApprovalPreviewProps {
+  request: RequestDTO;
+  currentQuote: QuoteDTO;
+  previousQuote?: QuoteDTO;
+}
+
+export function QuoteApprovalPreview(props?: QuoteApprovalPreviewProps) {
+  if (!props) {
+    return (
+      <section className="plain-card" aria-label="Staff quote approval preview">
+        <div className="section-heading compact">
+          <p className="eyebrow">Quote approval · server data required</p>
+          <h2>Quote approval waits for an authoritative request and current quote.</h2>
+          <p>ServiceDeskFacade.sendQuote is not wired here; this reusable component renders server-backed DTOs only.</p>
+        </div>
+      </section>
+    );
+  }
+
   const view = buildQuoteApprovalView({
-    request: sampleRequest,
-    currentQuote: sampleQuote,
-    previousQuote: {
-      ...sampleQuote,
-      id: "quote_previous",
-      version: 1,
-      totalMinor: 31_000,
-      depositMinor: 7_750,
-      balanceMinor: 23_250,
-      durationMinutes: 220,
-    },
+    request: props.request,
+    currentQuote: props.currentQuote,
+    previousQuote: props.previousQuote,
   });
 
   return (
