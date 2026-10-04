@@ -347,16 +347,19 @@ p { color: var(--muted); }
 }
 
 .status-pill.success { background: #dcebe5; color: var(--accent-strong); }
+.status-pill.neutral { background: #eef0f0; color: var(--ink); }
 .status-pill.attention { background: #fff3cf; color: var(--attention); }
 .status-pill.pending { background: #edf0ef; color: var(--pending); }
 .status-pill.failure { background: #ffe2e2; color: var(--failure); }
 
-.state-preview {
+.state-preview,
+.staff-workspace-stack {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: calc(var(--space) * 1.5);
   margin-top: calc(var(--space) * 3);
 }
+
+.state-preview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .state-card {
   display: flex;
@@ -376,19 +379,34 @@ p { color: var(--muted); }
 .state-card.neutral { border-left-color: var(--accent); }
 .state-card.failure { border-left-color: var(--failure); }
 
-.tri-pane-preview {
+.tri-pane-preview,
+.inbox-preview {
   display: grid;
   grid-template-columns: 0.9fr 1.4fr 0.9fr;
   gap: calc(var(--space) * 1.5);
 }
 
-.tri-pane-preview > * {
+.tri-pane-preview > *,
+.inbox-preview > * {
   min-width: 0;
   padding: calc(var(--space) * 1.5);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
 }
+
+.message-card {
+  display: grid;
+  gap: var(--space);
+  margin-top: var(--space);
+  padding: calc(var(--space) * 1.25);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fbfcfc;
+}
+
+.message-card.outbound { background: #f3f8f6; }
+.message-card p { margin-bottom: 0; }
 
 .list-row {
   display: block;
@@ -454,6 +472,7 @@ p { color: var(--muted); }
   .section-heading,
   .split-preview,
   .tri-pane-preview,
+  .inbox-preview,
   .state-preview,
   .card-grid.two,
   .card-grid.three {
