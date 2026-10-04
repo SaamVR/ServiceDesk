@@ -6,6 +6,7 @@ export default async function StaffOverviewPage({ params }: { params: Promise<{ 
   return (
     <OperationalRoute
       surface="staff"
+        staffModule="overview"
       workspaceLabel={workspace}
       title="Overview starts with attention, not charts."
       description="Open approvals, stale calendar state, uncertain delivery and payment review are shown before metrics so dispatchers know the next action."
