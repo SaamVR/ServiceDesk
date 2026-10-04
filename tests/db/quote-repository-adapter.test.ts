@@ -40,12 +40,16 @@ describe("quote persistence adapter", () => {
     expect(mapQuoteRowToSnapshot(row)).toEqual(quote);
   });
 
-  it("finds latest request quote by workspace and request id", async () => {
+  it("finds latest request quote and exact quote ids through the table gateway", async () => {
     const calls: string[] = [];
     const repo = createPostgresQuoteRepository({
       nextQuoteId: () => "quote_2",
+      findById: async (quoteId) => {
+        calls.push(`id:${quoteId}`);
+        return { data: mapQuoteSnapshotToRow(quote), error: null };
+      },
       findLatestByRequest: async (requestId) => {
-        calls.push(requestId);
+        calls.push(`request:${requestId}`);
         return { data: mapQuoteSnapshotToRow(quote), error: null };
       },
       saveQuote: async () => ({ data: mapQuoteSnapshotToRow(quote), error: null }),
@@ -54,6 +58,7 @@ describe("quote persistence adapter", () => {
     });
 
     await expect(repo.findLatestByRequest("req_1")).resolves.toEqual(quote);
-    expect(calls).toEqual(["req_1"]);
+    await expect(repo.findById("quote_1")).resolves.toEqual(quote);
+    expect(calls).toEqual(["request:req_1", "id:quote_1"]);
   });
 });
