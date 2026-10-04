@@ -1,0 +1,136 @@
+import type {
+  AttentionItemDTO,
+  ConversationDTO,
+  IntegrationStatusDTO,
+  InvoiceDTO,
+  QuoteDTO,
+  RequestDTO,
+  SlotDTO,
+  VisitDTO,
+} from "@/contracts";
+import type { BusinessModule } from "./business-modules";
+import type { CrewModule } from "./crew-modules";
+import type { CustomerModule } from "./customer-modules";
+import type { StaffModule } from "./staff-modules";
+import type { CheckoutProviderMode } from "@/features/checkout/view-models";
+
+export type OperationalSurface = "business" | "customer" | "staff" | "crew" | "onboarding" | "tour";
+
+export interface EnquiryFormSnapshot {
+  serviceLabel: string;
+  bedroomsLabel: string;
+  bathroomsLabel: string;
+  requestedStartLabel: string;
+  modeLabel?: string;
+  boundaryNotice?: string;
+}
+
+export interface RequestSummarySnapshot {
+  request: RequestDTO;
+  quote: QuoteDTO;
+}
+
+export interface CheckoutSnapshot {
+  quote: QuoteDTO;
+  slot: SlotDTO;
+  visit: VisitDTO;
+  invoice: InvoiceDTO;
+  paymentMode: CheckoutProviderMode;
+  holdExpiresAt: string;
+}
+
+export interface CustomerPortalSnapshot {
+  request: RequestDTO;
+  quote: QuoteDTO;
+  slot: SlotDTO;
+  visit: VisitDTO;
+  invoice: InvoiceDTO;
+  conversation: ConversationDTO;
+}
+
+export interface StaffQueueSnapshot {
+  request: RequestDTO;
+  quote?: QuoteDTO;
+  conversation?: ConversationDTO;
+  attentionItems: AttentionItemDTO[];
+  integrations: IntegrationStatusDTO[];
+}
+
+export interface CrmSnapshot {
+  request: RequestDTO;
+  quote: QuoteDTO;
+  visit: VisitDTO;
+  invoice: InvoiceDTO;
+  conversation: ConversationDTO;
+}
+
+export interface QuoteApprovalSnapshot {
+  request: RequestDTO;
+  currentQuote: QuoteDTO;
+  previousQuote?: QuoteDTO;
+}
+
+export interface ScheduleSnapshot {
+  slot: SlotDTO;
+  visit?: VisitDTO;
+  integrations: IntegrationStatusDTO[];
+  attentionItems: AttentionItemDTO[];
+}
+
+export interface CrewTodaySnapshot {
+  request: RequestDTO;
+  visit: VisitDTO;
+}
+
+export interface CrewJobSnapshot {
+  request: RequestDTO;
+  visit: VisitDTO;
+  invoice: InvoiceDTO;
+}
+
+export interface OperationalRouteData {
+  sourceLabel: "SERVER_SNAPSHOT" | "FIXTURE_UI_ONLY";
+  navigation: {
+    quoteId: string;
+    bookingId: string;
+    invoiceId: string;
+    visitId: string;
+  };
+  business: {
+    enquiry: {
+      form: EnquiryFormSnapshot;
+      summary: RequestSummarySnapshot;
+    };
+    checkout: CheckoutSnapshot;
+  };
+  customer: {
+    overview: CustomerPortalSnapshot;
+    checkout: CheckoutSnapshot;
+    invoice: InvoiceDTO;
+  };
+  staff: {
+    attention: StaffQueueSnapshot;
+    crm: CrmSnapshot;
+    requestSummary: RequestSummarySnapshot;
+    quoteApproval: QuoteApprovalSnapshot;
+    schedule: ScheduleSnapshot;
+    jobsVisit: VisitDTO;
+  };
+  crew: {
+    today: CrewTodaySnapshot;
+    job: CrewJobSnapshot;
+  };
+}
+
+export interface OperationalRoutePropsBase {
+  surface: OperationalSurface;
+  title: string;
+  description: string;
+  workspaceLabel?: string;
+  resourceLabel?: string;
+  businessModule?: BusinessModule;
+  businessSlug?: string;
+  crewModule?: CrewModule;
+  customerModule?: CustomerModule;
+  staffModule?: StaffModule;
+}

@@ -1,13 +1,12 @@
-import { OperationalRoute } from "@/features/operations/OperationalRoute";
+import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 
 export default function PortalPreferencesPage() {
   return (
-    <OperationalRoute
+    <OperationalFixtureRoute
       surface="customer"
       customerModule="preferences"
-      resourceLabel="preferences"
-      title="Manage communication preferences and consent."
-      description="Customers can see preferred channel, consent and provider availability without turning fixture messaging into live provider proof."
+      title="Communication preferences."
+      description="Preference changes remain preview-only until the accepted customer portal command boundary exists."
     />
   );
 }
