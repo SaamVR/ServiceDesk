@@ -1,6 +1,7 @@
 import { UIStateCard } from "@/components/shell/UIState";
 import { CheckoutPreview } from "@/features/checkout/CheckoutPreview";
 import { CrewJobPreview } from "@/features/crew/CrewJobPreview";
+import { CrmPreview } from "@/features/crm/CrmPreview";
 import { InboxPreview } from "@/features/inbox/InboxPreview";
 import { OnboardingReadiness } from "@/features/onboarding/OnboardingReadiness";
 import { CommunicationPreferences } from "@/features/preferences/CommunicationPreferences";
@@ -175,6 +176,7 @@ function StaffPanel() {
           </ul>
         </aside>
       </div>
+      <CrmPreview />
       <InboxPreview />
       <SchedulePreview />
       <ReportsPreview />
