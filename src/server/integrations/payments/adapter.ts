@@ -38,6 +38,10 @@ function isAllowedPaymentPurpose(value: unknown): value is "DEPOSIT" | "BALANCE"
   return value === "DEPOSIT" || value === "BALANCE" || value === "PLATFORM_SUBSCRIPTION";
 }
 
+function stringMetadata(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
 function amountForPurpose(input: CheckoutInput): Result<number> {
   if (!isAllowedPaymentPurpose(input.purpose)) {
     return { ok: false, code: "PAYMENT_PURPOSE_INVALID", message: "Checkout purpose is not supported by the payment connector." };
@@ -164,6 +168,18 @@ export function convertStripePayloadToVerifiedPaymentWebhook(
     return { ok: false, code: "PAYMENT_PURPOSE_INVALID", message: "Payment metadata purpose is not allowed." };
   }
 
+  const quoteId = stringMetadata(metadata.quoteId);
+  const holdId = stringMetadata(metadata.holdId);
+  const invoiceId = stringMetadata(metadata.invoiceId);
+
+  if (metadata.purpose === "DEPOSIT" && (!quoteId || !holdId)) {
+    return { ok: false, code: "PAYMENT_BOOKING_REFERENCE_MISSING", message: "Deposit payment metadata requires quoteId and holdId before Core application." };
+  }
+
+  if (metadata.purpose === "BALANCE" && !invoiceId) {
+    return { ok: false, code: "PAYMENT_INVOICE_REFERENCE_MISSING", message: "Balance payment metadata requires invoiceId before Core allocation." };
+  }
+
   const providerTransactionId = typeof object.payment_intent === "string" && object.payment_intent.trim()
     ? object.payment_intent
     : payload.type === "payment_intent.succeeded"
@@ -186,6 +202,9 @@ export function convertStripePayloadToVerifiedPaymentWebhook(
         amountMinor,
         currency: object.currency.toUpperCase(),
         occurredAt: new Date(payload.created * 1000).toISOString(),
+        ...(quoteId ? { quoteId } : {}),
+        ...(holdId ? { holdId } : {}),
+        ...(invoiceId ? { invoiceId } : {}),
       },
       evidence: {
         provider: "PAYMENT",
@@ -194,9 +213,19 @@ export function convertStripePayloadToVerifiedPaymentWebhook(
         capturedAt,
         controlledId: payload.id,
         redactedReceipt: `${payload.id.slice(0, 8)}…${object.id.slice(-4)}`,
-        notes: ["Webhook signature, account, purpose, amount, currency and transaction shape verified against fixture payload."],
+        notes: ["Stripe-style sandbox webhook signature, account, purpose, amount, currency, transaction and authoritative resource references verified against fixture payload."],
       },
     },
+  };
+}
+
+function checkoutMetadata(input: CheckoutInput): Record<string, string> {
+  return {
+    workspaceId: input.quote.workspaceId,
+    quoteId: input.quote.id,
+    holdId: input.hold.holdId,
+    purpose: input.purpose,
+    ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
   };
 }
 
@@ -212,6 +241,10 @@ export class FixtureStripePaymentAdapter implements PaymentAdapter {
       return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Hold and quote do not share workspace/quote scope." };
     }
 
+    if (input.purpose === "BALANCE" && !input.invoiceId?.trim()) {
+      return { ok: false, code: "PAYMENT_INVOICE_REFERENCE_MISSING", message: "Balance checkout requires invoiceId metadata." };
+    }
+
     const expiry = rejectExpiredHold(input, this.now());
     if (!expiry.ok) return expiry;
 
@@ -220,23 +253,24 @@ export class FixtureStripePaymentAdapter implements PaymentAdapter {
     const amountMinor = amount.value;
     if (amountMinor <= 0) return { ok: false, code: "INVALID_CHECKOUT_AMOUNT", message: "Checkout amount must be positive." };
 
-    const providerSessionId = `cs_fixture_${input.hold.holdId}_${input.purpose.toLowerCase()}`;
+    const providerSessionId = `cs_test_${input.hold.holdId}_${input.purpose.toLowerCase()}`;
     return {
       ok: true,
       value: {
-        provider: "FIXTURE",
+        provider: "STRIPE",
         providerSessionId,
-        checkoutUrl: `https://checkout.fixture.local/${providerSessionId}`,
+        checkoutUrl: `https://checkout.stripe.test/${providerSessionId}`,
         amountMinor,
         currency: input.quote.currency,
-        mode: "FIXTURE",
+        mode: "SANDBOX",
+        metadata: checkoutMetadata(input),
         evidence: {
           provider: "PAYMENT",
-          mode: "FIXTURE",
+          mode: "SANDBOX",
           verification: "CONTRACT_TESTED",
           capturedAt: this.now(),
           controlledId: providerSessionId,
-          notes: ["Fixture checkout only; Stripe sandbox receipt required before PROVIDER_VERIFIED."],
+          notes: ["Stripe-style sandbox checkout only; live provider receipt is not claimed for V1."],
         },
       },
     };

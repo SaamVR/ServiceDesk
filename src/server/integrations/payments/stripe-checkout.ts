@@ -75,9 +75,23 @@ function checkoutUrlSafe(value: string): boolean {
   }
 }
 
-function normalizeCheckoutInput(input: CheckoutInput, now: string): Result<{ amountMinor: number; currency: string; idempotencyKey: string }> {
+function checkoutMetadata(input: CheckoutInput): Record<string, string> {
+  return {
+    workspaceId: input.quote.workspaceId,
+    quoteId: input.quote.id,
+    holdId: input.hold.holdId,
+    purpose: input.purpose,
+    ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
+  };
+}
+
+function normalizeCheckoutInput(input: CheckoutInput, now: string): Result<{ amountMinor: number; currency: string; idempotencyKey: string; metadata: Record<string, string> }> {
   if (input.hold.workspaceId !== input.quote.workspaceId || input.hold.quoteId !== input.quote.id) {
     return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Hold and quote do not share workspace/quote scope." };
+  }
+
+  if (input.purpose === "BALANCE" && !input.invoiceId?.trim()) {
+    return { ok: false, code: "PAYMENT_INVOICE_REFERENCE_MISSING", message: "Balance checkout requires invoiceId metadata." };
   }
 
   const holdExpiresAtMs = new Date(input.hold.expiresAt).getTime();
@@ -111,6 +125,7 @@ function normalizeCheckoutInput(input: CheckoutInput, now: string): Result<{ amo
       amountMinor,
       currency,
       idempotencyKey: `checkout:${input.quote.workspaceId}:${input.hold.holdId}:${input.purpose}`,
+      metadata: checkoutMetadata(input),
     },
   };
 }
@@ -128,10 +143,9 @@ function buildCheckoutBody(input: CheckoutInput, amountMinor: number, currency: 
   params.set("line_items[0][price_data][currency]", currency);
   params.set("line_items[0][price_data][unit_amount]", String(amountMinor));
   params.set("line_items[0][price_data][product_data][name]", `ServiceDesk ${String(input.purpose).toLowerCase()} payment`);
-  params.set("metadata[workspaceId]", input.quote.workspaceId);
-  params.set("metadata[quoteId]", input.quote.id);
-  params.set("metadata[holdId]", input.hold.holdId);
-  params.set("metadata[purpose]", input.purpose);
+  for (const [key, value] of Object.entries(checkoutMetadata(input))) {
+    params.set(`metadata[${key}]`, value);
+  }
   return params.toString();
 }
 
@@ -162,7 +176,7 @@ function evidence(config: StripeCheckoutConfig, providerSessionId: string): Reda
     capturedAt: config.now(),
     controlledId: providerSessionId,
     redactedReceipt: `${providerSessionId.slice(0, 8)}…${providerSessionId.slice(-4)}`,
-    notes: ["Stripe-style checkout session accepted by injected transport; controlled provider receipt required before PROVIDER_VERIFIED."],
+    notes: ["Stripe-style sandbox checkout session accepted by injected transport; live provider receipt is not claimed for V1."],
   };
 }
 
@@ -222,6 +236,7 @@ export async function createStripeCheckoutSession(
         amountMinor: normalized.value.amountMinor,
         currency: normalized.value.currency.toUpperCase(),
         mode: config.mode,
+        metadata: normalized.value.metadata,
         evidence: evidence(config, providerSessionId),
       },
     };

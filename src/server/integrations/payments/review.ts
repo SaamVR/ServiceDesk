@@ -34,6 +34,9 @@ export interface PaymentReviewItem {
   providerEventId: string;
   providerTransactionRef: string;
   purpose: string;
+  quoteId?: string;
+  holdId?: string;
+  invoiceId?: string;
   reason: PaymentReviewReason;
   reasonCodes: PaymentReviewReason[];
   severity: PaymentReviewSeverity;
@@ -110,6 +113,11 @@ export function classifyPaymentReview(input: PaymentReviewClassificationInput): 
     notes.push("Payment application requested manual review without granting mutation authority to this adapter.");
   }
 
+  const refs: Pick<PaymentReviewItem, "quoteId" | "holdId" | "invoiceId"> = {};
+  if (event.quoteId) refs.quoteId = event.quoteId;
+  if (event.holdId) refs.holdId = event.holdId;
+  if (event.invoiceId) refs.invoiceId = event.invoiceId;
+
   return {
     reviewKey: reviewKey(input.webhook, reason),
     dedupeKey: dedupeKey(input.webhook),
@@ -119,6 +127,7 @@ export function classifyPaymentReview(input: PaymentReviewClassificationInput): 
     providerEventId: event.providerEventId,
     providerTransactionRef: redactedTransactionRef(event.providerTransactionId),
     purpose: event.purpose,
+    ...refs,
     reason,
     reasonCodes: [reason],
     severity,
