@@ -4,6 +4,14 @@ export interface FindSlotsInput { requestId: string; from: string; to: string; p
 export interface VerifiedPaymentEvent {
   provider: string; providerAccountId: string; providerEventId: string; providerTransactionId: string;
   purpose: "DEPOSIT" | "BALANCE" | "PLATFORM_SUBSCRIPTION"; workspaceId: string; amountMinor: number; currency: string; occurredAt: string;
+  quoteId?: string; holdId?: string; invoiceId?: string;
+}
+export type VerifiedPaymentApplicationState = "APPLIED" | "DUPLICATE" | "PAYMENT_REVIEW";
+export interface VerifiedPaymentApplicationOutcome {
+  state: VerifiedPaymentApplicationState;
+  visit?: VisitDTO;
+  invoice?: InvoiceDTO;
+  attentionItemId?: string;
 }
 export type VisitAction = "CONFIRM" | "ASSIGN" | "EN_ROUTE" | "START" | "SUBMIT_REVIEW" | "COMPLETE" | "CANCEL";
 export interface WorkspaceSnapshotQuery { customerId?: string; requestId?: string; visitId?: string; invoiceId?: string; }
@@ -15,7 +23,7 @@ export interface ServiceDeskFacade {
   sendQuote(ctx: ActorContext, id: string, meta: CommandMeta): Promise<Result<QuoteDTO>>;
   findSlots(ctx: ActorContext, input: FindSlotsInput): Promise<SlotDTO[]>;
   holdSlot(ctx: ActorContext, slotId: string, quoteId: string, meta: CommandMeta): Promise<Result<{holdId:string;expiresAt:string}>>;
-  applyVerifiedPayment(event: VerifiedPaymentEvent): Promise<Result<{visit?:VisitDTO;invoice?:InvoiceDTO}>>;
+  applyVerifiedPayment(event: VerifiedPaymentEvent): Promise<Result<VerifiedPaymentApplicationOutcome>>;
   transitionVisit(ctx: ActorContext, id: string, action: VisitAction, meta: CommandMeta): Promise<Result<VisitDTO>>;
   readWorkspaceSnapshot(ctx: ActorContext, query: WorkspaceSnapshotQuery): Promise<Result<WorkspaceSnapshot>>;
 }
