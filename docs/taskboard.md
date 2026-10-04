@@ -247,3 +247,23 @@ Primary goals:
 Old Cycle 5 micro-hardening remains backlog only and is not the critical path.
 
 No all-workers barrier: integrate each sprint branch immediately on return and issue its next capability batch independently.
+
+
+## V1 Integration Sprint 2 — ACTIVE
+
+Common RC/base:
+`35114c64b1400d9f68c49f5e0dbe98fefa167b0e`
+
+| Lane | Branch | Mission | State |
+| --- | --- | --- | --- |
+| Core | `feat/servicedesk-v1-core-sprint2` | E03 invoice/payment persistence + atomic verified payment application | READY |
+| Connectors/AI | `feat/servicedesk-v1-connectors-sprint2` | Stripe SANDBOX metadata/resource preservation + Core bridge | READY |
+| Product/UI | `feat/servicedesk-v1-product-sprint2` | central route data boundary + injected E02 action adapters | READY |
+
+Provider policy:
+- Stripe = SANDBOX/DEMO only for V1.
+- no live Stripe account is required or requested.
+- other provider/infrastructure credentials are requested only when their exact gate is ready.
+
+Critical next external gate:
+- after W1 E03 source/transaction implementation is complete, if the only remaining proof is real PostgreSQL/RLS/transaction execution, ask owner for Supabase staging access then—not before.
