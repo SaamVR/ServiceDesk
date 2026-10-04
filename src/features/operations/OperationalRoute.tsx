@@ -1,12 +1,26 @@
 import { UIStateCard } from "@/components/shell/UIState";
 import {
   crewActions,
-  customerJourneyCards,
   integrationCards,
   moveOutFixture,
   staffModules,
   uiStateScenarios,
 } from "@/features/product/story-model";
+import {
+  sampleAttentionItems,
+  sampleConversation,
+  sampleIntegrations,
+  sampleInvoice,
+  sampleQuote,
+  sampleRequest,
+  sampleSlot,
+  sampleVisit,
+} from "./sample-data";
+import {
+  buildCrewJobView,
+  buildCustomerPortalView,
+  buildStaffQueueView,
+} from "./view-models";
 
 type Surface = "business" | "customer" | "staff" | "crew" | "onboarding" | "tour";
 
@@ -84,52 +98,91 @@ function BusinessPanel() {
 }
 
 function CustomerPanel() {
+  const view = buildCustomerPortalView({
+    request: sampleRequest,
+    quote: sampleQuote,
+    slot: sampleSlot,
+    visit: sampleVisit,
+    invoice: sampleInvoice,
+    conversation: sampleConversation,
+  });
+
   return (
     <div className="card-grid three">
-      {customerJourneyCards.map((card) => (
-        <article className="plain-card" key={card.title}>
-          <span className="status-pill success">{card.state}</span>
-          <h2>{card.title}</h2>
-          <p>{card.detail}</p>
-        </article>
-      ))}
+      <article className="plain-card">
+        <span className="status-pill pending">Sample DTO data</span>
+        <h2>{view.serviceLabel}</h2>
+        <p>{view.quoteVersionLabel}</p>
+        <p>{view.handoverLabel}</p>
+      </article>
+      <article className="plain-card">
+        <span className="status-pill success">Current quote</span>
+        <h2>{view.totalLabel}</h2>
+        <p>Deposit {view.depositLabel}; balance {view.balanceLabel}</p>
+        <p>{view.visitStatusLabel}</p>
+      </article>
+      <article className="plain-card">
+        <span className="status-pill attention">{view.slotFreshness}</span>
+        <h2>Appointment slot</h2>
+        <p>Slot freshness must be checked by the facade before instant confirmation.</p>
+      </article>
     </div>
   );
 }
 
 function StaffPanel() {
+  const view = buildStaffQueueView({
+    request: sampleRequest,
+    quote: sampleQuote,
+    conversation: sampleConversation,
+    attentionItems: sampleAttentionItems,
+    integrations: sampleIntegrations,
+  });
+
   return (
     <div className="tri-pane-preview" aria-label="Staff workspace preview">
       <aside>
         <p className="label">Attention queue</p>
-        <button className="list-row active">Quote needs approval</button>
-        <button className="list-row">Calendar freshness stale</button>
-        <button className="list-row">Delivery uncertain</button>
+        {view.items.map((item, index) => (
+          <button className={`list-row${index === 0 ? " active" : ""}`} key={item.id}>
+            {item.severity} · {item.summary}
+          </button>
+        ))}
       </aside>
       <section>
         <p className="label">Shared inbox</p>
         <div className="message incoming">Customer changed date after quote was sent.</div>
-        <div className="message outgoing">Human handover active. AI draft only.</div>
+        <div className="message outgoing">{view.handoverLabel}. AI draft only.</div>
+        <p>{view.quoteLabel}</p>
       </section>
       <aside>
-        <p className="label">Operational modules</p>
-        <ul className="check-list">{staffModules.map((module) => <li key={module}>{module}</li>)}</ul>
+        <p className="label">Context</p>
+        <ul className="check-list">
+          {view.items.map((item) => (
+            <li key={item.id}>{item.resourceLabel}: {item.integrationLabel ?? item.nextAction}</li>
+          ))}
+          {staffModules.slice(0, 3).map((module) => <li key={module}>{module}</li>)}
+        </ul>
       </aside>
     </div>
   );
 }
 
 function CrewPanel() {
+  const view = buildCrewJobView({ request: sampleRequest, visit: sampleVisit, invoice: sampleInvoice });
+
   return (
     <div className="two-column">
       <div className="mobile-preview">
-        <p className="label">Today</p>
-        <h2>09:00 · Move-out clean</h2>
-        <button className="button-primary full" type="button">Start travel</button>
-        <ul className="check-list">{crewActions.map((action) => <li key={action}>{action}</li>)}</ul>
+        <p className="label">Today · sample assigned job</p>
+        <h2>{view.requestLabel}</h2>
+        <p>{view.statusLabel} · {view.durationLabel}</p>
+        <button className="button-primary full" type="button">{view.nextAction}</button>
+        <ul className="check-list">{crewActions.slice(2).map((action) => <li key={action}>{action}</li>)}</ul>
       </div>
       <aside className="plain-card">
         <p className="label">Completion review</p>
+        <p>{view.balanceLabel}</p>
         <p>Checklist, photo evidence, time/material note and incident state are separate. Completion requires review before balance invoice.</p>
         <span className="status-pill attention">Pending review</span>
       </aside>
