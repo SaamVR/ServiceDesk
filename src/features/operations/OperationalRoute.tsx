@@ -7,6 +7,7 @@ import {
   staffModules,
   uiStateScenarios,
 } from "@/features/product/story-model";
+import { SchedulePreview } from "@/features/schedule/SchedulePreview";
 import {
   sampleAttentionItems,
   sampleConversation,
@@ -168,6 +169,7 @@ function StaffPanel() {
         </aside>
       </div>
       <InboxPreview />
+      <SchedulePreview />
     </div>
   );
 }
