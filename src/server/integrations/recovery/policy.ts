@@ -98,7 +98,8 @@ export function classifyProviderRecovery(event: ProviderRecoveryEvent): Provider
     };
   }
 
-  if (event.attempts >= event.maxAttempts) {
+  const nextAttemptNumber = event.attempts + 1;
+  if (nextAttemptNumber >= event.maxAttempts) {
     return {
       ...base,
       action: "OPERATOR_REVIEW",
@@ -113,7 +114,7 @@ export function classifyProviderRecovery(event: ProviderRecoveryEvent): Provider
     action: "RETRY",
     retryable: true,
     terminal: false,
-    nextAttemptAt: nextRecoveryAttemptAt(event.occurredAt, event.attempts + 1),
+    nextAttemptAt: nextRecoveryAttemptAt(event.occurredAt, nextAttemptNumber + 1),
     notes: ["Transient provider failure will be retried with original idempotency key.", `idempotencyKey=${event.idempotencyKey}`],
   };
 }
