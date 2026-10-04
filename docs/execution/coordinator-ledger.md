@@ -190,3 +190,48 @@ Published after Cycle 1 closeout:
 - Worker 3 Product/UI: `docs/execution/batches/cycle-2-worker-3.md` — publication commit `7cfe0ae7d506d1c44a198cc0e1296682680a590a`
 
 Cycle 2 is intentionally recovery-gated. If a fresh GPT Runtime can establish GitHub and npm access, each worker continues immediately into its deferred substantive work. If the same infrastructure failure persists, workers must not create untestable application changes; they perform the packet's bounded static readiness fallback and publish a receipt.
+
+
+## Cycle 2 closeout and Runtime outage pivot
+
+Cycle 2 receipts were received from all three workers:
+
+| Worker | Cycle 2 final SHA | Result |
+| --- | --- | --- |
+| Worker 1 Core | `c8f6239db5062a6e7306de1c70686b3e0ac7dfd0` | `BLOCKED`; receipt-only; static operations map completed |
+| Worker 2 Connectors/AI | `a43840d8e1f3d3da6ab0c212966bb2064de837a1` | `BLOCKED`; receipt-only; detailed WhatsApp implementation map completed |
+| Worker 3 Product/UI | `739a60b9c170f97cc67137744e9aaf0927c2852d` | `BLOCKED`; receipt-only; Product route/view-model readiness map completed |
+
+The same infrastructure failure persisted across two complete cycles. Repeating the same DNS/package-manager gate is no longer the default execution strategy.
+
+### Outage-mode capability verified by coordinator
+
+GPT Runtime still provides:
+- Node 22;
+- global TypeScript;
+- global `ts-node`;
+- writable `/mnt/data`.
+
+Connected GitHub access can read exact branch files and recursive Git trees and can perform durable branch writes.
+
+The coordinator executed package-free scratch harnesses in GPT Runtime and observed:
+- `OFFLINE_CORE_HARNESS_PASS`;
+- `OFFLINE_WHATSAPP_HARNESS_PASS`;
+- corrected retry-safe WhatsApp design: `OFFLINE_WHATSAPP_RETRY_SAFE_PASS`;
+- `OFFLINE_PRODUCT_REPORTING_HARNESS_PASS`.
+
+The WhatsApp review found and corrected a material design flaw before implementation: processing only persistence-`INSERTED` records would lose downstream work after a processor failure because the provider retry would persist as `DUPLICATE` and could be falsely ACKed. Cycle 3 therefore requires an idempotent processor keyed by the existing durable `receiptKey` and processing of every durably persisted processable record, including provider duplicates.
+
+### New governing outage document
+
+`docs/execution/runtime-outage-mode-20261004.md`
+
+Outage-mode Runtime harness proof may support `IMPLEMENTED` for bounded pure TypeScript logic. It does not independently support `CONTRACT_TESTED`, `PROVIDER_VERIFIED`, or `OPERATIONS_VERIFIED`. The canonical pnpm/Vitest/typecheck/build/browser gate remains `CONFIGURATION_BLOCKED` until normal source/package access returns.
+
+## Cycle 3 packets
+
+- Worker 1 Core: `docs/execution/batches/cycle-3-worker-1.md`
+- Worker 2 Connectors/AI: `docs/execution/batches/cycle-3-worker-2.md`
+- Worker 3 Product/UI: `docs/execution/batches/cycle-3-worker-3.md`
+
+Cycle 3 is substantive outage-mode work, not another DNS-only recovery cycle.
