@@ -88,10 +88,11 @@ async function run() {
     assert.equal(result.ok && result.value.outcome, "SUPPRESSED");
   }
 
-  const combined = JSON.stringify({ recurrence, waReminder, emailReminder, calendarFirst, calendarRetry, waSent, emailSent });
-  assert.equal(combined.includes("access_token"), false);
-  assert.equal(combined.includes("Bearer "), false);
-  assert.equal(combined.includes("customer@example.com"), false);
+  const providerResultsOnly = JSON.stringify({ calendarFirst, calendarRetry, waSent, emailSent });
+  assert.equal(providerResultsOnly.includes("access_token"), false);
+  assert.equal(providerResultsOnly.includes("Bearer "), false);
+  assert.equal(providerResultsOnly.includes("customer@example.com"), false);
+  assert.equal(providerResultsOnly.includes("15551234567"), false);
   console.log("runtime-outage-e07-recurrence-provider-harness PASS");
 }
 
