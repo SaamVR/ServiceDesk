@@ -7,6 +7,7 @@ export type PaymentReviewReason =
   | "AMOUNT_MISMATCH"
   | "CURRENCY_MISMATCH"
   | "WORKSPACE_MISMATCH"
+  | "LATE_EXPIRED_HOLD_PAYMENT"
   | "APPLICATION_REQUESTED_REVIEW";
 
 export type PaymentReviewSeverity = "INFO" | "MEDIUM" | "HIGH";
@@ -17,6 +18,7 @@ export interface PaymentReviewClassificationInput {
   expectedWorkspaceId: string;
   expectedCurrency: string;
   expectedAmountMinor: number;
+  holdExpiresAt?: string;
 }
 
 export interface PaymentReviewItem {
@@ -44,6 +46,11 @@ function dedupeKey(webhook: VerifiedPaymentWebhook): string {
   return `${event.provider}:${event.providerAccountId}:${event.providerEventId}`;
 }
 
+function occurredAfter(occurredAt: string, boundary: string | undefined): boolean {
+  if (!boundary) return false;
+  return new Date(occurredAt).getTime() > new Date(boundary).getTime();
+}
+
 export function classifyPaymentReview(input: PaymentReviewClassificationInput): PaymentReviewItem {
   const event = input.webhook.event;
   const notes: string[] = [];
@@ -68,6 +75,10 @@ export function classifyPaymentReview(input: PaymentReviewClassificationInput): 
     reason = "AMOUNT_MISMATCH";
     severity = "HIGH";
     notes.push("Provider callback amount differs from server-side quote or invoice expectation.");
+  } else if (occurredAfter(event.occurredAt, input.holdExpiresAt)) {
+    reason = "LATE_EXPIRED_HOLD_PAYMENT";
+    severity = "HIGH";
+    notes.push("Verified payment occurred after the server-side hold expired; booking confirmation requires core review.");
   } else if (input.applicationResult === "OUT_OF_ORDER_IGNORED") {
     reason = "OUT_OF_ORDER_CALLBACK";
     severity = "MEDIUM";
