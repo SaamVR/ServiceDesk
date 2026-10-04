@@ -14,8 +14,8 @@ Branch: `feat/servicedesk-v1-product`
 ## Batch ledger
 | Batch | State | Ready work | Blocking dependency | Integrated? |
 |---|---|---|---|---|
-| E01 | ACTIVE | E01-01 complete; E01-02/E01-03 blocked by runtime; E01-04 in progress | runtime checkout/DNS for executable checks | No |
-| E02 | FROZEN/PARTIAL | E02-01, E02-02 | D-C1-E01-BASELINE, D-C1-E02-COMPOSITION for server wiring | No |
+| E01 | IMPLEMENTED_UNVERIFIED | E01-01/E01-04 implemented; E01-02/E01-03 blocked by runtime | runtime checkout/DNS for executable checks | No |
+| E02 | ACTIVE_PROPS_ONLY | E02-01/E02-02 props-only implemented; E02-03/E02-04 not started | D-C1-E01-BASELINE, D-C1-E02-COMPOSITION for server wiring | No |
 | E03 | BLOCKED candidate | props refactor only after DTO decision preferred | D-C1-SHARED-READS, D-C2-E03-INBOX | No |
 | E04 | BLOCKED candidate | props refactor fallback | D-C1-E02-COMPOSITION, D-C2-E04-CHECKOUT | No |
 | E05 | BLOCKED candidate | WorkspaceSnapshot-only fallback after baseline | D-C1-SHARED-READS, D-C2-E05-CALENDAR | No |
@@ -28,10 +28,10 @@ Branch: `feat/servicedesk-v1-product`
 ## Current source-backed blockers
 1. No observed composed authenticated `ServiceDeskFacade` accessor on integration.
 2. `WorkspaceSnapshot` lacks messages/properties/recurrence/preferences/quality/field evidence/integration/admin snapshots.
-3. Chat 3 shared-interface requests are not yet accepted/declined by Chat 1.
+3. Chat 3 shared-interface requests are not yet fully accepted/declined by Chat 1; current known Chat 1 decisions accept only `PropertyDTO` and `readPropertySnapshot` while deferring the other Chat 3 requests.
 4. Provider-backed inbox/checkout/Calendar actions require Chat 2-approved bridges.
 5. Vitest files under `tests/e2e` are not browser proof.
-6. Current GPT Runtime has no local checkout and cannot resolve `github.com`; commands and browser checks are NOT EXECUTED.
+6. Current GPT Runtime has no local checkout, no `pnpm`, and cannot resolve `github.com`; commands and browser checks are NOT EXECUTED.
 
 ## E01 execution log
 
@@ -115,14 +115,72 @@ Static fallback completed:
 ### E01-04 — Shared interface request execution mapping
 Status: IMPLEMENTED in `docs/presentation/shared-interface-requests-20261004.md`; Chat 1 response still pending.
 
+## E02 props-only execution log
+
+### E02-01 — Remove fixture ownership from request-summary rendering
+Status: IMPLEMENTED_UNVERIFIED.
+
+Observed starting SHA: `1f2a5384cd6d062235f8441802a1632ea4cfc476`.
+
+Code changes:
+- `src/features/request-intake/RequestSummaryPreview.tsx` now accepts `request: RequestDTO` and `quote: QuoteDTO` props and does not import `sample-data.ts`.
+- `src/features/request-intake/RequestSummaryFixturePreview.tsx` is the explicit showcase-only fixture wrapper using `sampleRequest` and `sampleQuote`.
+- `tests/e2e/request-summary-view-model.test.ts` now guards that the reusable summary component is DTO-driven and fixture ownership is isolated.
+
+Boundary preserved:
+- `buildEditableRequestSummary({ request, quote })` is unchanged.
+- Request mutation remains disabled/preview only.
+- No server action, facade singleton, contract edit, core edit, provider edit, migration edit, package edit, or lockfile edit was made.
+
+### E02-02 — Extract enquiry form state from OperationalRoute
+Status: IMPLEMENTED_UNVERIFIED.
+
+Code changes:
+- `src/features/request-intake/EnquiryForm.tsx` added as a reusable read-only component.
+- `src/features/operations/OperationalRoute.tsx` now composes `EnquiryForm` and `RequestSummaryFixturePreview` for business enquiry and staff request surfaces.
+- `tests/e2e/product-action-boundary.test.ts` now covers extracted request-intake boundaries and verifies production-capable request-intake files do not import `sample-data.ts`.
+
+Boundary preserved:
+- Enquiry fields render as read-only fixture values.
+- The continue button is disabled and labelled with the missing create/update command boundary.
+- No client pricing authority was added.
+- E02-03 and E02-04 server wiring were not started.
+
+### E02 focused checks
+Status: BLOCKED / NOT EXECUTED.
+
+Commands requested but not executed in current Runtime:
+
+```bash
+pnpm test tests/e2e/request-summary-view-model.test.ts tests/e2e/product-action-boundary.test.ts tests/e2e/view-model-boundary.test.ts
+pnpm typecheck
+pnpm lint
+pnpm build
+```
+
+Runtime blocker:
+
+```text
+/mnt/data/ServiceDesk: NO_GIT_CHECKOUT
+/mnt/data/ServiceDesk-work: NO_GIT_CHECKOUT
+/mnt/data/servicedesk: NO_GIT_CHECKOUT
+pnpm: missing
+git ls-remote https://github.com/SaamVR/ServiceDesk.git HEAD
+→ Could not resolve host: github.com
+```
+
+No CONTRACT_TESTED claim is made.
+
 ## Evidence state
 - Code/docs authored and pushed in product lane.
-- Tests/build/browser: NOT EXECUTED due runtime checkout/DNS blocker.
+- Tests/build/browser: NOT EXECUTED due runtime checkout/DNS/pnpm blocker.
 - Provider proof: NOT OBSERVED; no PROVIDER_VERIFIED claim.
+- Server wiring: NOT STARTED.
 
 ## Next executable task
-If runtime remains blocked: continue E02-01/E02-02 props-only refactor after Chat 1 acknowledges E01 inventory, without server wiring.
-If runtime recovers: run the E01 command set above first and repair any Product/UI failures.
+If runtime recovers: run the E02 focused command set above and repair Product/UI-only failures.
+If Chat 1 produces executable baseline + facade composition: start E02-03/E02-04 server wiring from accepted signatures.
+If integration remains unaccepted: do not expand server behavior; prepare Chat 1 handoff for this props-only range.
 
 ## Next integration destination
 `feat/servicedesk-v1-integrate`, controller-owned by Chat 1. Chat 3 will publish pinned worker SHAs only.
