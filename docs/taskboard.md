@@ -7,8 +7,8 @@ Controller: Chat 1 · Integration branch: `feat/servicedesk-v1-integrate`
 | 0.1 Scaffold + contract freeze | Chat 1 | DONE | `56872ccbd7fbe6de043c35d9d8d37d32c4b726ac` | `dbf1f756d588925a694a4131672248ddb21a14e3` | Node 22 pin; pnpm lock; `tsc --noEmit` exit 0; domain/contracts 5/5 PASS; move-out $340/$85/$255 + 240/30 PASS | worker lanes may start |
 | 0.2 Design scaffold/story map | Chat 3 | READY | `dbf1f756d588925a694a4131672248ddb21a14e3` | `dbf1f756d588925a694a4131672248ddb21a14e3` | branch fast-forwarded to contract freeze; no worker commit observed | Chat 3 implementation |
 | 0.3 Provider boundary spike | Chat 2 | READY | `dbf1f756d588925a694a4131672248ddb21a14e3` | `dbf1f756d588925a694a4131672248ddb21a14e3` | branch fast-forwarded to contract freeze; no worker commit observed | Chat 2 implementation |
-| 1.1 Tenancy/CRM/request | Chat 1 | ACTIVE | `dbf1f756d588925a694a4131672248ddb21a14e3` | `bfeb34f72540770acb27d88c3228cb867437691f` | Schema/RLS/auth guard/customer import/request command slices in progress; SQL cross-tenant proof added; RED test commits `2fcfe5a...` and `85838f3...`; GREEN request repository wrapper `e4b99cc...`; GREEN request persistence adapter `bfeb34f...`; local disconnected semantic review only because Runtime has no package install/network | final 1.1 review + SQL/Supabase reset proof before DONE |
-| 1.2 Quote/approval | Chat 1 | READY | after 1.1 review | n/a | snapshot/version tests required | 1.1 schema/service APIs |
+| 1.1 Tenancy/CRM/request | Chat 1 | REVIEW | `dbf1f756d588925a694a4131672248ddb21a14e3` | `bfeb34f72540770acb27d88c3228cb867437691f` | Schema/RLS/auth guard/customer import/request command slices implemented; SQL cross-tenant proof added; request repository + persistence adapter added; local disconnected semantic review only because Runtime has no package install/network | SQL/Supabase reset proof before DONE |
+| 1.2 Quote/approval | Chat 1 | ACTIVE | `bfeb34f72540770acb27d88c3228cb867437691f` | `0e522d093ccf21a100a7b8ebdba3ff48c8679a65` | RED quote/approval domain test `ac032563...`; GREEN quote catalog `93fe28d...`; GREEN approval guard `094eca8...`; quote schema migration `a39efcd...`; RED quote command seam `e510ada...`; GREEN command seam `0e522d...`; full suite not rerun in this runtime | run tests/typecheck/db reset when available; add DB-backed quote repository adapter |
 | 2.1 Capacity/visits/recurrence | Chat 1 | READY | Gate A | n/a | last-slot race/DST tests required | Gate A |
 | 2.2 Ledger/outbox/attention | Chat 1 | READY | later gate | n/a | idempotency/restart tests required | 2.1 schema |
 | 3.1 Field/quality/reporting | Chat 1 | READY | later gate | n/a | operations tests required | Gate B |
@@ -20,6 +20,6 @@ Controller: Chat 1 · Integration branch: `feat/servicedesk-v1-integrate`
 - Remote repository: `https://github.com/SaamVR/ServiceDesk`.
 - Initial repository bootstrap observed at `56872ccbd7fbe6de043c35d9d8d37d32c4b726ac`.
 - Contract/foundation SHA: `dbf1f756d588925a694a4131672248ddb21a14e3`.
-- Latest core implementation checkpoint recorded above: `bfeb34f72540770acb27d88c3228cb867437691f`; later doc-only taskboard commits may advance the branch ref.
+- Latest core implementation checkpoint recorded above: `0e522d093ccf21a100a7b8ebdba3ff48c8679a65`; later doc-only taskboard commits may advance the branch ref.
 - Provider success is not claimed. Provider adapters and controlled receipts remain Chat 2 / later-gate evidence.
 - Full `pnpm` suite was not rerun in this runtime because DNS/package-manager resolution is unavailable here; do not treat local semantic checks as provider or full CI proof.
