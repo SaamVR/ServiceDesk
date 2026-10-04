@@ -53,3 +53,14 @@ Coordinator rule: review and integrate each completed worker batch independently
 - Shared blocker: `GPT_RUNTIME_GIT_DNS_AND_PACKAGE_MANAGER_BLOCKED`.
 - No Cycle 1 application code was accepted into integration.
 - Next execution is a Cycle 2 recovery continuation; substantive feature work resumes only after the relevant Runtime gate is executable.
+
+
+## Coordinator Cycle 2 — recovery continuation
+
+| Task | Owner | State | Start SHA | Packet | Execution rule |
+| --- | --- | --- | --- | --- | --- |
+| `CYCLE-2-W1` Core recovery + operations seam | Worker 1 | READY_RECOVERY | `971225ef8f6fb1b93e26139fb66259373c6557f2` | `docs/execution/batches/cycle-2-worker-1.md` | Runtime gate first; if green continue Core repairs + operations seam; if blocked static receipt only |
+| `CYCLE-2-W2` Connector recovery + durable WhatsApp processor | Worker 2 | READY_RECOVERY | `a9fc2de46ce63b44b394718edc98e0dc07a4a354` | `docs/execution/batches/cycle-2-worker-2.md` | Runtime gate first; if green complete persist → processor → ACK + regression; if blocked static receipt only |
+| `CYCLE-2-W3` Product recovery + executable/browser proof | Worker 3 | READY_RECOVERY | `7857818c57634bb925549ea52fd380b031d426e1` | `docs/execution/batches/cycle-2-worker-3.md` | Runtime gate first; if green test/typecheck/lint/build/browser; if blocked static receipt only |
+
+Do not interpret `READY_RECOVERY` as executable proof. The last coordinator recheck still reproduced GitHub/npm DNS failure and unavailable pnpm. A fresh Runtime instance may retry; application edits remain gated by executable source/package access.
