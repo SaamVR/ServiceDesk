@@ -656,3 +656,31 @@ Missions:
 
 Next roadmap target after E05:
 E06 crew visit transitions + field evidence.
+
+
+## Supabase ServiceDesk staging activated
+
+Dedicated staging project:
+- name: `ServiceDesk`
+- project ref: `cpmmgivhlkfbiwzhlcey`
+- region: `us-east-1`
+- Postgres: `17.11`
+
+Applied migrations through:
+- `sd_0007a_supabase_security_hardening`
+
+Durable proof packet:
+- `docs/execution/supabase-staging-proof-20261004.md`
+
+Real staging findings:
+- fixed Postgres enum migration transaction defect in E04;
+- hardened Supabase RPC/function policy scope;
+- E03 schema/idempotency/accounting/cross-workspace FK proof PASS;
+- E04 lease/reclaim/stale-owner/terminal-reclaim proof PASS;
+- all proof fixtures cleaned after verification.
+
+E03 remaining critical gap:
+- `PaymentApplicationRepository.transaction(...)` has no concrete Postgres/Supabase adapter.
+- next Core batch after active E05 should close this before E06 if E05 does not already consume the lane.
+
+E04 source/DB semantics are staging-backed, but canonical app typecheck/Vitest/runtime Supabase client execution remains blocked by Runtime package access.
