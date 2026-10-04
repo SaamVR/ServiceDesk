@@ -36,6 +36,18 @@ function queuedJob(overrides: Partial<OutboxJob> = {}): OutboxJob {
   };
 }
 
+function template(templateKey = "quote_ready_v1", status: "APPROVED" | "CONFIGURED" | "MISSING" | "DISABLED" = "APPROVED") {
+  return {
+    templateKey,
+    providerTemplateName: templateKey,
+    locale: "en_US",
+    purpose: "QUOTE" as const,
+    status,
+    mode: "SANDBOX" as const,
+    capturedAt: "2026-10-04T12:00:00.000Z",
+  };
+}
+
 function acceptingTransport(calls: Array<Parameters<WhatsAppCloudHttpTransport>[0]>): WhatsAppCloudHttpTransport {
   return async (request) => {
     calls.push(request);
@@ -53,7 +65,7 @@ function store(latestJob: OutboxJob, overrides: Partial<WhatsAppOutboundDispatch
       return { workspaceId, providerAccountRef: "WHATSAPP_BUSINESS_ACCOUNT", phoneNumberId: "123456789" };
     },
     async loadTemplate(templateKey) {
-      return templateKey ? { templateKey, locale: "en_US", status: "APPROVED" } : null;
+      return template(templateKey);
     },
     async recordProviderAcceptance(input) {
       return { status: "RECORDED", result: input.result };
@@ -65,7 +77,7 @@ function store(latestJob: OutboxJob, overrides: Partial<WhatsAppOutboundDispatch
 describe("WhatsApp outbound dispatcher", () => {
   test("rechecks latest handover state immediately before provider send", async () => {
     const queued = queuedJob({ handoverGuard: { conversationId: "conv-1", expectedConversationVersion: 7, handoverActive: false } });
-    const latest = queuedJob({ handoverGuard: { conversationId: "conv-1", expectedConversationVersion: 8, handoverActive: true } });
+    const latest = queuedJob({ handoverGuard: { conversationId: "conv-1", expectedConversationVersion: 7, handoverActive: true } });
     const calls: Array<Parameters<WhatsAppCloudHttpTransport>[0]> = [];
 
     const result = await dispatchWhatsAppOutboxJob({
@@ -81,6 +93,45 @@ describe("WhatsApp outbound dispatcher", () => {
     expect(calls).toHaveLength(0);
   });
 
+  test("blocks stale queued conversation versions before provider send", async () => {
+    const queued = queuedJob({ handoverGuard: { conversationId: "conv-1", expectedConversationVersion: 7, handoverActive: false } });
+    const latest = queuedJob({ handoverGuard: { conversationId: "conv-1", expectedConversationVersion: 8, handoverActive: false } });
+    const calls: Array<Parameters<WhatsAppCloudHttpTransport>[0]> = [];
+
+    const result = await dispatchWhatsAppOutboxJob({
+      ctx,
+      queuedJob: queued,
+      meta,
+      config,
+      http: acceptingTransport(calls),
+      store: store(latest),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "STALE_CONVERSATION_VERSION" });
+    expect(calls).toHaveLength(0);
+  });
+
+  test("blocks provider account scope mismatch before provider call", async () => {
+    const latest = queuedJob();
+    const calls: Array<Parameters<WhatsAppCloudHttpTransport>[0]> = [];
+
+    const result = await dispatchWhatsAppOutboxJob({
+      ctx,
+      queuedJob: latest,
+      meta,
+      config,
+      http: acceptingTransport(calls),
+      store: store(latest, {
+        async loadProviderAccount() {
+          return { workspaceId: "ws-other", providerAccountRef: "WHATSAPP_BUSINESS_ACCOUNT", phoneNumberId: "123456789" };
+        },
+      }),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "WHATSAPP_PROVIDER_ACCOUNT_SCOPE_MISMATCH" });
+    expect(calls).toHaveLength(0);
+  });
+
   test("blocks outside-window sends when the template is missing or not approved", async () => {
     const latest = queuedJob({ templateKey: "quote_ready_v1", payload: { lastInboundAt: "2026-10-01T12:00:00.000Z" } });
     const calls: Array<Parameters<WhatsAppCloudHttpTransport>[0]> = [];
@@ -93,7 +144,7 @@ describe("WhatsApp outbound dispatcher", () => {
       http: acceptingTransport(calls),
       store: store(latest, {
         async loadTemplate() {
-          return { templateKey: "quote_ready_v1", locale: "en_US", status: "CONFIGURED" };
+          return template("quote_ready_v1", "CONFIGURED");
         },
       }),
     });
