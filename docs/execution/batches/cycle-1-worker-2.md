@@ -1,23 +1,27 @@
 # ServiceDesk AI — Cycle 1 Worker 2 Connectors/AI Batch
 
-Published by dedicated coordinator on 2026-10-04.
+Published by dedicated coordinator on 2026-10-04. Revised after fresh branch reconciliation.
 
 ## Retrieval / branch
 - Worker model: GPT-5.5 High
 - Worker branch: `feat/servicedesk-v1-connectors`
-- Current worker branch head observed by coordinator: `30313d3e5485e157cea8d1b86a87bdccf879537c`
-- Current integration head observed by coordinator before Cycle 1 packet commits: `a50c7c6adcc8bdc4d50b5b706045a76b71a86a4f`
+- Current worker branch head observed by coordinator: `3f1214cac4fdb4ebf0ac3128197d4e5c7d442a5a`
+- Integration head at revision start: `71e0579869694bf6db8de5660e16f21df390a3e3`
 - Contract source: `docs/contracts-v1.md` + `src/contracts/**` on integration.
-- Coordinator packet ref: `feat/servicedesk-v1-integrate` after this file is committed.
+- Preserve every legitimate commit newer than the observed head. Never reset/rebase/force-push.
 
 ## Coordinator observations before dispatch
-- `AGENTS.md` assigns Worker 2 ownership to `src/server/ai/**`, `src/server/integrations/**`, provider API handlers, `tests/ai/**`, `tests/providers/**`, and `examples/n8n/**`.
-- Connector ledger says E01 is still BLOCKED. GPT Runtime package access failed previously with `EAI_AGAIN registry.npmjs.org`; a later local-device report said install passed but real compile/test failures remained. Under the new coordinator packet, local devices are disallowed, so reproduce in GPT Runtime and record exact failures.
-- Current connector HEAD has no GitHub status checks attached (`total_count: 0` observed by coordinator).
-- Current connector barrel files observed:
-  - `src/server/integrations/index.ts` exports provider, recovery, subscription, webhook and closure modules.
-  - `src/server/ai/index.ts` exports AI transport/guard/orchestration modules.
-- Do not start E02 provider feature expansion until E01 compile/provider/AI test gate is executable or the coordinator explicitly accepts a substitute path.
+- Worker 2 ownership is `src/server/ai/**`, `src/server/integrations/**`, provider handler internals, `tests/ai/**`, `tests/providers/**`, and `examples/n8n/**`.
+- The current branch advanced after the first packet was drafted. Its ledger records connector compile/test repairs and a test run performed on `samvr`. Preserve the repaired source, but the new coordinator contract explicitly disallows samvr/samai/local-device evidence. That historical run is therefore not the Runtime-only acceptance gate.
+- Current source already contains durable WhatsApp normalization and persistence:
+  - `normalizeWhatsAppInboundMessage(message): NormalizedWhatsAppInboundEvent`
+  - `NormalizedWhatsAppInboundEvent.receiptKey`
+  - `buildDurableWhatsAppInboxRecord(message, rawProviderEventRef): DurableWhatsAppInboxRecord`
+  - `persistDurableWhatsAppInboundBatch(input): Promise<Result<DurableWhatsAppInboundBatchSummary>>`
+  - `handleDurableWhatsAppInboundWebhook(input): Promise<ProviderHandlerResult>`
+- `handleDurableWhatsAppInboundWebhook` currently verifies signature, parses, groups, persists, and ACKs. It does not yet hand persisted records to an explicit idempotent processor.
+- The coordinator's own GPT Runtime currently cannot resolve `github.com` or `registry.npmjs.org`; that is a Runtime blocker, not a test result. Retry independently in your GPT Runtime and record exact output.
+- Do not claim live-provider proof from fixture tests. No `PROVIDER_VERIFIED` label without controlled provider receipts.
 
 ## Allowed paths
 Primary implementation paths:
@@ -27,12 +31,11 @@ Primary implementation paths:
 - `tests/providers/**`
 - `tests/ai/**`
 - `examples/n8n/**`
-- connector/provider docs under `docs/provider-*` or `docs/handoffs/chat2-*` only when needed for receipt context
 
 Receipt path:
 - `docs/execution/receipts/worker-2-cycle-1.md`
 
-Forbidden unless a later coordinator packet explicitly grants exclusive ownership:
+Forbidden unless a later coordinator packet grants exclusive ownership:
 - `src/contracts/**`
 - `src/server/core/**`, `src/domain/**`, `supabase/migrations/**`
 - `src/app/**`, `src/features/**`, `src/components/**`, `src/styles/**`, `public/**`
@@ -40,19 +43,20 @@ Forbidden unless a later coordinator packet explicitly grants exclusive ownershi
 - `docs/taskboard.md`, `docs/execution/coordinator-ledger.md`, integration branch
 
 ## Batch objective
-Convert Connector/AI E01 from vague BLOCKED into exact executable errors, then repair only Worker-2-owned compile/test failures until `pnpm typecheck`, `tests/providers`, and `tests/ai` are green or a non-Worker-2 blocker is precisely recorded.
+First re-prove the current repaired connector branch in GPT Runtime. If and only if that executable gate is green, continue directly into the already-planned durable WhatsApp inbound processor composition so this run delivers a real capability rather than stopping after verification.
 
 ---
 
-## CYCLE-1-W2-T1 — Capture exact connector verification failures in GPT Runtime
+## CYCLE-1-W2-T1 — Re-prove current connector gate in GPT Runtime
 
 State: READY  
 Dependency: none  
-Base SHA: `30313d3e5485e157cea8d1b86a87bdccf879537c`  
-Capability outcome: exact failing connector command and actionable error transcript are known.
+Base SHA: `3f1214cac4fdb4ebf0ac3128197d4e5c7d442a5a`  
+Contract version: frozen V1 contracts on integration  
+Capability outcome: current repaired connector head has fresh Runtime-only compile/provider/AI evidence, or an exact Runtime/non-owned blocker.
 
 Steps:
-1. Verify runtime and branch:
+1. Verify:
    ```bash
    pwd
    node --version
@@ -64,8 +68,8 @@ Steps:
    getent hosts registry.npmjs.org || true
    git ls-remote https://github.com/SaamVR/ServiceDesk.git feat/servicedesk-v1-connectors
    ```
-2. In GPT Runtime only, create or reuse an isolated checkout of `feat/servicedesk-v1-connectors`. Preserve newer commits; no reset/rebase/force-push.
-3. Run exactly:
+2. In GPT Runtime only, use an isolated checkout of the current remote branch and preserve any newer head.
+3. Run:
    ```bash
    corepack prepare pnpm@10.17.1 --activate || true
    pnpm install --frozen-lockfile
@@ -73,103 +77,168 @@ Steps:
    pnpm vitest run tests/providers
    pnpm vitest run tests/ai
    ```
-4. If install/typecheck/test cannot run because of Runtime DNS/package/git failure, write that exact blocker to the receipt and stop unchecked feature expansion.
 
 Acceptance:
-- PASS only if all four executable commands actually pass in GPT Runtime.
-- ACTIVE_REPAIR only if the first failures are inside Worker-2-owned code/tests.
-- BLOCKED if failures require shared contracts/core/package/Product changes or external provider credentials.
+- GREEN only when all commands actually pass in GPT Runtime.
+- ACTIVE_REPAIR when failures are Worker-2-owned.
+- BLOCKED when checkout/install cannot execute or the first failure requires a forbidden/shared path.
+- Do not reuse the historical samvr PASS as this task's evidence.
 
 ---
 
-## CYCLE-1-W2-T2 — Repair connector-owned typecheck/import/test failures
+## CYCLE-1-W2-T2 — Repair only current Worker-2-owned failures
 
-State: READY_AFTER_T1_FAILURES  
-Dependency: `CYCLE-1-W2-T1` produced Worker-2-owned failures  
-Capability outcome: connector barrel/tests compile without touching shared contracts or package files.
+State: READY_AFTER_T1_OWNED_FAILURE  
+Dependency: `CYCLE-1-W2-T1` returns Worker-2-owned failures  
+Capability outcome: current repaired branch is executable without repeating already-fixed historical work unnecessarily.
 
-Likely source-derived surfaces to inspect first:
-- `src/server/integrations/index.ts`
+Inspect the exact Runtime errors first. Likely prior-repair surfaces include:
 - `src/server/ai/index.ts`
-- every missing module or duplicate export named by `pnpm typecheck`
-- failing files under `tests/providers/**` and `tests/ai/**`
+- `src/server/integrations/index.ts`
+- payment/Stripe lifecycle typing
+- WhatsApp template/dispatcher result typing
+- recovery/operations export naming
+- failing tests under `tests/providers/**` and `tests/ai/**`
 
-Repair rules:
-- Fix missing imports/exports by either adding the intended owned module or removing a stale export only if the file genuinely does not exist and no test expects it.
-- Do not widen DTOs or `ServiceDeskFacade` from connector branch.
-- Do not mark fixture/mocked tests as `PROVIDER_VERIFIED`; they can support only `IMPLEMENTED`, `CONTRACT_TESTED`, or `CONFIGURATION_BLOCKED`.
-- Keep commits coherent: test change + implementation change together.
+Rules:
+- Preserve fixes already present at the current head.
+- Do not widen `src/contracts/**` or core facade signatures.
+- Repair only failures reproduced by T1.
+- Keep behavior + tests in the same coherent commit.
 
-Verification after each repair slice:
+Verification:
 ```bash
 pnpm typecheck
 pnpm vitest run tests/providers
 pnpm vitest run tests/ai
 ```
 
-Acceptance:
-- Connector E01 can move to REVIEW only when those commands pass or a non-owned blocker is exact and coordinator-visible.
+Stopping rule:
+- If any remaining failure is non-owned, publish the receipt and stop. Do not bypass it.
 
 ---
 
-## CYCLE-1-W2-T3 — Provider/AI boundary regression tightening
+## CYCLE-1-W2-T3 — Add explicit idempotent WhatsApp inbound processor port
 
-State: READY_IF_T2_GREEN  
-Dependency: typecheck/provider/AI suites are executable  
-Capability outcome: current connector branch proves that providers never mutate business truth directly and AI cannot authorize payments/pricing/roles.
+State: READY_IF_T1_GREEN_OR_AFTER_T2_GREEN  
+Dependency: executable connector gate is green  
+Capability outcome: durable inbound records have an explicit connector-owned processing handoff whose duplicate identity is `receiptKey`.
 
-Work:
-1. Inspect existing tests under `tests/providers/**` and `tests/ai/**` before adding anything.
-2. Add only missing minimal tests for current modules, preferring existing helpers:
-   - provider callback handlers produce durable command/review objects, not direct core table writes;
-   - duplicate/out-of-order provider callbacks do not falsely confirm a booking/payment;
-   - AI guarded orchestration rejects model output that attempts to set price, payment status, role, or provider proof;
-   - handover-active conversations suppress outbound AI send.
-3. Use existing module names from `src/server/integrations/index.ts` and `src/server/ai/index.ts`; do not invent cross-lane contracts.
+Allowed/new source:
+- new `src/server/integrations/whatsapp/inbound-processor.ts`
+- `src/server/integrations/index.ts` only if exporting the new connector-owned module is necessary
 
-Focused commands:
+Required signatures:
+```ts
+export interface DurableWhatsAppInboundProcessor {
+  process(record: DurableWhatsAppInboxRecord): Promise<"PROCESSED" | "DUPLICATE">;
+}
+
+export interface ProcessDurableWhatsAppInboundBatchSummary {
+  received: number;
+  processed: number;
+  duplicate: number;
+  unsupported: number;
+}
+
+export function processDurableWhatsAppInboundBatch(
+  records: DurableWhatsAppInboxRecord[],
+  processor: DurableWhatsAppInboundProcessor,
+): Promise<Result<ProcessDurableWhatsAppInboundBatchSummary>>;
+```
+
+Behavior:
+- Process durable records only; no direct business-table mutation.
+- Duplicate identity is the existing `record.receiptKey`.
+- Unsupported records remain explicit and count as unsupported; do not invent text.
+- Processor errors return a typed `Result` failure carrying the receipt key, so the provider handler can return retryable failure.
+
+Test inputs/assertions:
+- unique TEXT record → processed 1;
+- duplicate processor response → duplicate 1;
+- MEDIA_REFERENCE remains intact;
+- UNSUPPORTED remains unsupported;
+- thrown processor error becomes typed failure, not successful ACK.
+
+Focused command:
 ```bash
+pnpm vitest run tests/providers/whatsapp-inbound-processor.test.ts
+```
+
+---
+
+## CYCLE-1-W2-T4 — Compose persist → processor → ACK
+
+State: READY_AFTER_T3  
+Dependencies: `CYCLE-1-W2-T3`  
+Capability outcome: verified inbound webhook is durably persisted before processor handoff and is not acknowledged when processing fails.
+
+Modify:
+- `src/server/api-handlers/provider-whatsapp-durable.ts`
+- `tests/providers/whatsapp-durable-inbound-handler.test.ts`
+
+Consumed signatures:
+- `persistDurableWhatsAppInboundBatch(...)`
+- `buildDurableWhatsAppInboxRecord(...)`
+- new `DurableWhatsAppInboundProcessor`
+- existing `ProviderHandlerResult`
+
+Implementation decision:
+- Extend `DurableWhatsAppInboundWebhookInput` with the processor port.
+- Preserve ordering: signature verification → parse/normalize → durable persistence → processor handoff → ACK.
+- Only records reported newly inserted by the durable store should be logically handed off as new work; duplicate webhook delivery must not create a second business action.
+- Processor failure after persistence returns HTTP 503, `acknowledged:false`, `retryable:true`.
+- A provider retry must be safe because receipt identity is stable and processor handling is idempotent.
+- Do not add direct core/database writes from the handler.
+
+Tests:
+- mixed text/media/unsupported batch;
+- provider duplicate;
+- processor failure after persistence then callback retry;
+- successful retry yields one logical processing effect per unique receipt key;
+- invalid signature remains non-retryable and never invokes persistence/processor.
+
+Focused command:
+```bash
+pnpm vitest run tests/providers/whatsapp-durable-inbound-handler.test.ts tests/providers/whatsapp-inbound-processor.test.ts tests/providers/whatsapp-inbound-normalization.test.ts
+```
+
+---
+
+## CYCLE-1-W2-T5 — Regression, receipt, and pinned range
+
+State: READY_AFTER_T4  
+Dependencies: T1–T4 complete  
+Capability outcome: coordinator receives a reviewable connector range with fresh Runtime proof and no ambiguous local-device evidence.
+
+Run one broader regression:
+```bash
+pnpm typecheck
 pnpm vitest run tests/providers
 pnpm vitest run tests/ai
 ```
 
-Acceptance:
-- Tests pass in GPT Runtime.
-- Receipt clearly distinguishes mock/fixture proof from missing live provider proof.
-
----
-
-## CYCLE-1-W2-T4 — Publish connector receipt and pinned range
-
-State: READY_AFTER_T1/T2/T3  
-Dependency: executable commands completed or exact blocker captured  
-Capability outcome: coordinator can review the connector range without stale Run 7/Run 10 ambiguity.
-
-Create/update:
+Create:
 - `docs/execution/receipts/worker-2-cycle-1.md`
 
-Receipt must include:
-- start SHA and final SHA;
-- whether the current final SHA includes only docs after prior implementation or real code changes;
-- command table: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm vitest run tests/providers`, `pnpm vitest run tests/ai`, each PASS/FAIL/NOT_EXECUTED;
-- exact first failure if any;
-- provider proof level for each provider: `CONTRACT_TESTED`, `CONFIGURATION_BLOCKED`, or `NOT_EXECUTED`;
-- files changed;
-- next task ID recommendation.
+Receipt records:
+- observed start SHA and final SHA;
+- each task state;
+- exact changed files;
+- exact commands/results;
+- historical samvr evidence separately labelled `NOT_ACCEPTED_FOR_CURRENT_RUNTIME_GATE`;
+- current proof labels (fixture suites may be `CONTRACT_TESTED`; live providers remain `CONFIGURATION_BLOCKED` or not verified);
+- first unresolved blocker, if any;
+- recommended next task.
 
-Commit:
-```bash
-git add src/server/integrations src/server/ai src/server/api-handlers tests/providers tests/ai examples/n8n docs/execution/receipts/worker-2-cycle-1.md
-git commit -m "test(connectors): restore executable provider ai gate"
-git push origin feat/servicedesk-v1-connectors
-```
-
-Only include paths that actually changed; do not create empty or cosmetic commits.
+Commit/push coherent changes to `feat/servicedesk-v1-connectors`. Do not edit the global taskboard or integration branch.
 
 ## Independent fallbacks
-Use only when Runtime cannot execute or first failure is non-owned:
-1. Static barrel audit: verify every export in `src/server/integrations/index.ts` and `src/server/ai/index.ts` maps to an existing file. Save result to receipt. No PASS claim.
-2. Static proof-label audit: search Worker-2-owned tests/docs for `PROVIDER_VERIFIED` and downgrade unsupported claims in Worker-2-owned docs/tests only. No live-provider claim.
+Use only if Runtime execution is blocked or a non-owned failure stops the primary path:
+1. Static barrel audit of every export in `src/server/integrations/index.ts` and `src/server/ai/index.ts`; save findings in the receipt only. No PASS claim.
+2. Static proof-label audit in Worker-2-owned docs/tests for unsupported `PROVIDER_VERIFIED` claims; correct only Worker-2-owned false claims. No feature expansion.
 
 ## Stop condition
-Stop after the receipt if `pnpm install`, clone, or typecheck cannot execute in GPT Runtime, or if the first real failure requires coordinator-owned shared contracts/package/core changes. Do not start E02.
+- If GPT Runtime cannot clone/install/run tests, publish the exact blocker receipt and stop unchecked expansion.
+- If T1/T2 becomes green, continue through T3–T5 in the same run; do not stop after the verification gate.
+- Do not start unrelated E03+ work in Cycle 1.
