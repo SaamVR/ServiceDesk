@@ -6,11 +6,11 @@ export interface ProviderReadinessSnapshotInput {
   missing: string[];
 }
 
-export type ProviderRecoveryAction = "RETRY" | "RECONCILE" | "OPERATOR_REVIEW" | "DEAD_LETTER";
+export type ProviderRecoverySnapshotAction = "RETRY" | "RECONCILE" | "OPERATOR_REVIEW" | "DEAD_LETTER";
 
 export interface ProviderRecoverySnapshotInput {
   provider: RedactedProviderEvidence["provider"] | "GOOGLE_CALENDAR";
-  action: ProviderRecoveryAction;
+  action: ProviderRecoverySnapshotAction;
   count: number;
 }
 

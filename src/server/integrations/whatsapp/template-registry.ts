@@ -1,4 +1,5 @@
-import type { DeliveryPurpose, ProviderMode, RedactedProviderEvidence, Result } from "../types";
+import type { Result } from "../../../contracts";
+import type { DeliveryPurpose, ProviderMode, RedactedProviderEvidence } from "../types";
 
 export type WhatsAppTemplateRegistryStatus = "APPROVED" | "CONFIGURED" | "MISSING" | "DISABLED";
 

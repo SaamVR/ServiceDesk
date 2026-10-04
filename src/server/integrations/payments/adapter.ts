@@ -152,7 +152,7 @@ export function convertStripePayloadToVerifiedPaymentWebhook(
   const object = payload.data.object;
   const metadata = object.metadata ?? {};
   const amountMinor = object.amount_total ?? object.amount_received;
-  if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
+  if (typeof amountMinor !== "number" || !Number.isInteger(amountMinor) || amountMinor <= 0) {
     return { ok: false, code: "PAYMENT_AMOUNT_INVALID", message: "Succeeded payment event did not include a positive integer amount." };
   }
 

@@ -62,7 +62,7 @@ export function extractCleaningRequest(text: string): CleaningRequestExtraction 
     hasOven: /\boven\b/i.test(text) ? true : undefined,
     area: serviceArea(text),
     requestedDateText: requestedDateText(text),
-    customerName: text.match(/\b(?:i am|i'm|name is)\s+([A-Z][A-Za-z'-]{1,30})\b/)?.[1],
+    customerName: text.match(/\b(?:i am|i'm|name is)\s+([A-Z][A-Za-z'-]{1,30})\b/i)?.[1],
     propertyKind: propertyKind(text),
     corrections,
     unsupportedReasons,

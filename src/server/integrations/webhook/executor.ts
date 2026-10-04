@@ -79,7 +79,7 @@ function finalResult(input: {
     maxAttempts: input.maxAttempts,
     endpointHost: input.endpointHost,
     statusCode: input.statusCode,
-    nextAttemptAt: input.decision.retryable && input.decision.nextAttempt ? nextWebhookRetryAt({ now: input.now, attempt: input.decision.nextAttempt }) : undefined,
+    nextAttemptAt: input.decision.retryable && input.decision.nextAttempt ? nextWebhookRetryAt({ now: input.now, attempt: input.attempt }) : undefined,
     redactedResponseExcerpt: input.decision.outcome === "DELIVERED" ? undefined : redactedExcerpt(input.responseBody),
   };
 }

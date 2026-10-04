@@ -84,4 +84,4 @@ export class FixtureAiService implements AiService {
   }
 }
 
-export const AiService = new FixtureAiService();
+export const fixtureAiService = new FixtureAiService();

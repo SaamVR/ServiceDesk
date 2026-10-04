@@ -217,7 +217,7 @@ export async function fetchWhatsAppInboundMedia(
       providerMessageId: authorization.providerMessageId,
       mediaId: authorization.mediaId,
       mimeType: downloadedMime,
-      sizeBytes: downloadedBytes.byteLength,
+      sizeBytes: observedSize,
       bytes: downloadedBytes,
       evidence: {
         provider: "WHATSAPP",
@@ -225,7 +225,7 @@ export async function fetchWhatsAppInboundMedia(
         verification: "CONTRACT_TESTED",
         capturedAt: new Date(0).toISOString(),
         controlledId: authorization.mediaId,
-        notes: ["WhatsApp media retrieval contract exercised with injected transport; no live Meta media receipt is implied.", `MIME ${downloadedMime}; ${downloadedBytes.byteLength} bytes.`],
+        notes: ["WhatsApp media retrieval contract exercised with injected transport; no live Meta media receipt is implied.", `MIME ${downloadedMime}; ${observedSize} bytes.`],
       },
     },
   };

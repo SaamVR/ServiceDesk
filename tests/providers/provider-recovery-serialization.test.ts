@@ -42,7 +42,7 @@ describe("provider recovery serialization", () => {
     const serialized = serializeRecoveryRecord(record);
     expect(deserializeRecoveryRecord(serialized)).toEqual({ ok: true, value: serialized.record });
 
-    expect(deserializeRecoveryRecord({ ...serialized, record: { ...serialized.record, mutatesBusinessTruth: true } })).toMatchObject({
+    expect(deserializeRecoveryRecord({ ...serialized, record: { ...serialized.record, mutatesBusinessTruth: true } } as any)).toMatchObject({
       ok: false,
       code: "RECOVERY_RECORD_UNSAFE_MUTATION",
     });

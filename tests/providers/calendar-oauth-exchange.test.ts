@@ -28,7 +28,7 @@ describe("Google Calendar OAuth exchange transport", () => {
     const result = await exchangeGoogleCalendarAuthorizationCode(
       config,
       { code: "auth-code" },
-      transport(200, { access_token: "access-token", refresh_token: "refresh-token", expires_in: 3600, scope: "scope-a scope-b scope-a" }, (input) => {
+      transport(200, { access_token: "raw-access-token-secret", refresh_token: "raw-refresh-token-secret", expires_in: 3600, scope: "scope-a scope-b scope-a" }, (input) => {
         request = input;
       }),
     );
@@ -50,8 +50,8 @@ describe("Google Calendar OAuth exchange transport", () => {
         exchangedAt: "2026-10-04T09:00:00.000Z",
       });
     }
-    expect(JSON.stringify(result)).not.toContain("access-token");
-    expect(JSON.stringify(result)).not.toContain("refresh-token");
+    expect(JSON.stringify(result)).not.toContain("raw-access-token-secret");
+    expect(JSON.stringify(result)).not.toContain("raw-refresh-token-secret");
     expect(JSON.stringify(result)).not.toContain("client-secret-value");
   });
 

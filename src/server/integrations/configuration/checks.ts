@@ -39,7 +39,7 @@ export function assessProviderConfiguration(input: ProviderConfigurationInput): 
       notes:
         status === "CONTRACT_TESTED"
           ? ["Provider configuration checklist is complete for controlled sandbox proof; provider receipt still required before PROVIDER_VERIFIED."]
-          : missing.map((requirement) => `Missing configuration: ${requirement}. Do not include secret values in evidence.`),
+          : missing.map((requirement) => `Missing configuration: ${requirement}. Never include credentials in evidence.`),
     },
   };
 }

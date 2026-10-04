@@ -57,7 +57,7 @@ export function mergeWebhookDeliveryReceipt(
   current: WebhookDeliveryReceipt | undefined,
   update: WebhookDeliveryReceiptUpdate,
 ): WebhookDeliveryReceiptMergeDecision {
-  if (!current) return { result: update.outcome === "RETRY" ? "UPDATED" : "INSERTED", receipt: receiptFrom(update) };
+  if (!current) return { result: "INSERTED", receipt: receiptFrom(update) };
 
   if (current.delivered) return { result: "DUPLICATE_DELIVERED", receipt: current };
 

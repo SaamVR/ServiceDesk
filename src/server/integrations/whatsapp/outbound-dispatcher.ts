@@ -48,7 +48,7 @@ export interface WhatsAppOutboundDispatchResult extends ProviderSendResult {
   providerAccountRef: string;
 }
 
-function missingRequiredTemplate(): Result<true> {
+function missingRequiredTemplate(): Result<never> {
   return { ok: false, code: "WHATSAPP_TEMPLATE_REQUIRED", message: "Approved WhatsApp template is required outside the customer-service window." };
 }
 
