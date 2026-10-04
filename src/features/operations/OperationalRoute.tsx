@@ -1,9 +1,11 @@
+import { UIStateCard } from "@/components/shell/UIState";
 import {
   crewActions,
   customerJourneyCards,
   integrationCards,
   moveOutFixture,
   staffModules,
+  uiStateScenarios,
 } from "@/features/product/story-model";
 
 type Surface = "business" | "customer" | "staff" | "crew" | "onboarding" | "tour";
@@ -50,6 +52,7 @@ export function OperationalRoute({ surface, title, description, workspaceLabel =
         {surface === "crew" && <CrewPanel />}
         {surface === "onboarding" && <OnboardingPanel />}
         {surface === "tour" && <TourPanel />}
+        <RouteStatePreview />
       </section>
     </main>
   );
@@ -155,5 +158,15 @@ function TourPanel() {
       <h2>Tour commands use sample records and must not affect another tenant.</h2>
       <p>Test payment and synthetic history are labelled until Chat 2 supplies real provider receipts.</p>
     </div>
+  );
+}
+
+function RouteStatePreview() {
+  return (
+    <section className="state-preview" aria-label="Reusable loading, empty and error states">
+      {uiStateScenarios.map((scenario) => (
+        <UIStateCard key={scenario.state} scenario={scenario} />
+      ))}
+    </section>
   );
 }
