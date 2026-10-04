@@ -1,20 +1,50 @@
-import { buildCheckoutView } from "./view-models";
-import { sampleInvoice, sampleQuote, sampleSlot, sampleVisit } from "@/features/operations/sample-data";
+import type { InvoiceDTO, QuoteDTO, SlotDTO, VisitDTO } from "@/contracts";
+import { buildCheckoutView, type CheckoutProviderMode } from "./view-models";
 
-export function CheckoutPreview() {
+interface CheckoutPreviewProps {
+  quote: QuoteDTO;
+  slot: SlotDTO;
+  visit: VisitDTO;
+  invoice: InvoiceDTO;
+  paymentMode: CheckoutProviderMode;
+  holdExpiresAt: string;
+}
+
+export function CheckoutPreview(props?: CheckoutPreviewProps) {
+  if (!props) {
+    return (
+      <section className="checkout-panel" aria-label="Customer checkout state preview">
+        <div>
+          <p className="eyebrow">Checkout state · server data required</p>
+          <h2>Checkout waits for authoritative quote, slot, visit and invoice DTOs.</h2>
+          <p>No hosted checkout command or provider receipt is exposed from this reusable component.</p>
+        </div>
+        <button
+          className="button-primary full"
+          type="button"
+          disabled
+          aria-disabled="true"
+          title="Server-backed checkout preview only; hosted checkout command is not integrated on this branch."
+        >
+          Checkout unavailable · preview
+        </button>
+      </section>
+    );
+  }
+
   const view = buildCheckoutView({
-    quote: { ...sampleQuote, status: "ACCEPTED" },
-    slot: { ...sampleSlot, availabilityFresh: true },
-    visit: { ...sampleVisit, status: "AWAITING_PAYMENT" },
-    invoice: sampleInvoice,
-    paymentMode: "SANDBOX",
-    holdExpiresAt: "2026-10-04T06:30:00.000Z",
+    quote: props.quote,
+    slot: props.slot,
+    visit: props.visit,
+    invoice: props.invoice,
+    paymentMode: props.paymentMode,
+    holdExpiresAt: props.holdExpiresAt,
   });
 
   return (
     <section className="checkout-panel" aria-label="Customer checkout state preview">
       <div>
-        <p className="eyebrow">Checkout state · sandbox sample</p>
+        <p className="eyebrow">Checkout state · {props.paymentMode.toLowerCase()} sample</p>
         <h2>Accept quote, hold slot, collect deposit, then confirm visit.</h2>
         <p>{view.warning}</p>
       </div>
