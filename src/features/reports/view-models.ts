@@ -28,9 +28,20 @@ const duration = (minutes: number) => {
 };
 
 export function buildReportingView({ requests, quotes, visits, invoices }: ReportingInput): ReportingView {
-  const bookedRequests = requests.filter((request) => request.status === "BOOKED" || request.status === "CLOSED").length;
-  const bookedFromVisits = new Set(visits.map((visit) => visit.requestId)).size;
-  const booked = Math.max(bookedRequests, bookedFromVisits);
+  const suppliedRequestIds = new Set(requests.map((request) => request.id));
+  const bookedRequestIds = new Set(
+    requests
+      .filter((request) => request.status === "BOOKED" || request.status === "CLOSED")
+      .map((request) => request.id),
+  );
+
+  for (const visit of visits) {
+    if (suppliedRequestIds.has(visit.requestId)) {
+      bookedRequestIds.add(visit.requestId);
+    }
+  }
+
+  const booked = bookedRequestIds.size;
   const totalRequests = requests.length;
   const conversion = totalRequests === 0 ? "No data" : `${Math.round((booked / totalRequests) * 100)}%`;
 
