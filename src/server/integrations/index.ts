@@ -44,3 +44,6 @@ export * from "./operations/snapshot";
 export * from "./recovery/policy";
 export * from "./subscription/adapter";
 export * from "./webhook/signed";
+export * from "./webhook/executor";
+export * from "./webhook/n8n-linkage";
+export * from "./webhook/recovery";
