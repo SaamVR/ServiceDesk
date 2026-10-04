@@ -5,19 +5,20 @@ import { createQuoteDraftWithRepository, sendQuoteWithRepository } from "../../s
 const now = "2026-10-04T06:00:00.000Z";
 
 describe("quote command repository seam", () => {
-  it("creates versioned quote snapshots and supersedes the previous request quote", () => {
+  it("creates versioned quote snapshots and supersedes the previous request quote", async () => {
     const saved: QuoteSnapshot[] = [];
     const superseded: string[] = [];
 
     const repo = {
       nextQuoteId: () => `quote_${saved.length + 1}`,
-      findLatestByRequest: () => saved.at(-1),
-      saveQuote: (quote: QuoteSnapshot) => { saved.push(quote); },
-      supersedeQuote: (quoteId: string) => { superseded.push(quoteId); },
-      updateQuoteStatus: () => undefined,
+      findById: async (quoteId: string) => saved.find((quote) => quote.id === quoteId),
+      findLatestByRequest: async () => saved.at(-1),
+      saveQuote: async (quote: QuoteSnapshot) => { saved.push(quote); },
+      supersedeQuote: async (quoteId: string) => { superseded.push(quoteId); },
+      updateQuoteStatus: async () => undefined,
     };
 
-    const first = createQuoteDraftWithRepository(repo, {
+    const first = await createQuoteDraftWithRepository(repo, {
       workspaceId: "ws_1",
       requestId: "req_1",
       serviceCode: "STANDARD",
@@ -25,7 +26,7 @@ describe("quote command repository seam", () => {
       bathrooms: 1,
       now,
     });
-    const second = createQuoteDraftWithRepository(repo, {
+    const second = await createQuoteDraftWithRepository(repo, {
       workspaceId: "ws_1",
       requestId: "req_1",
       serviceCode: "STANDARD",
@@ -40,7 +41,7 @@ describe("quote command repository seam", () => {
     expect(saved.map((quote) => quote.totalMinor)).toEqual([13_500, 15_500]);
   });
 
-  it("sends only the current approved quote version", () => {
+  it("sends only the current approved quote version", async () => {
     const quote = {
       id: "quote_1",
       requestId: "req_1",
@@ -64,18 +65,19 @@ describe("quote command repository seam", () => {
     const statusUpdates: string[] = [];
     const repo = {
       nextQuoteId: () => "quote_unused",
-      findLatestByRequest: () => quote,
-      saveQuote: () => undefined,
-      supersedeQuote: () => undefined,
-      updateQuoteStatus: (quoteId: string, status: QuoteSnapshot["status"]) => { statusUpdates.push(`${quoteId}:${status}`); },
+      findById: async () => quote,
+      findLatestByRequest: async () => quote,
+      saveQuote: async () => undefined,
+      supersedeQuote: async () => undefined,
+      updateQuoteStatus: async (quoteId: string, status: QuoteSnapshot["status"]) => { statusUpdates.push(`${quoteId}:${status}`); },
     };
 
-    expect(sendQuoteWithRepository(repo, "req_1", { expectedVersion: 1 })).toEqual({
+    await expect(sendQuoteWithRepository(repo, "req_1", { expectedVersion: 1 })).resolves.toEqual({
       ok: false,
       code: "VERSION_CONFLICT",
       message: "Quote version changed before send.",
     });
-    expect(sendQuoteWithRepository(repo, "req_1", { expectedVersion: 2 })).toMatchObject({ ok: true, value: { status: "SENT" } });
+    await expect(sendQuoteWithRepository(repo, "req_1", { expectedVersion: 2 })).resolves.toMatchObject({ ok: true, value: { status: "SENT" } });
     expect(statusUpdates).toEqual(["quote_1:SENT"]);
   });
 });
