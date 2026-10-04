@@ -1,3 +1,4 @@
+import type { RecurrenceRuleDTO, VisitDTO } from "@/contracts";
 import {
   sampleInvoice,
   sampleQuote,
@@ -5,9 +6,43 @@ import {
   sampleSlot,
   sampleVisit,
 } from "@/features/operations/sample-data";
+import { RecurrenceRulePreview } from "@/features/recurrence/RecurrenceRulePreview";
 import { buildPropertyRecurringView } from "./view-models";
 
-export function PropertyRecurringPreview() {
+const fixtureRecurrenceRule: RecurrenceRuleDTO = {
+  id: "rule_fixture_monthly_001",
+  workspaceId: sampleRequest.workspaceId,
+  requestId: sampleRequest.id,
+  propertyId: sampleRequest.propertyId ?? "prop_sample",
+  frequency: "MONTHLY",
+  timezone: "America/New_York",
+  localStartTime: "09:00",
+  startsOn: "2026-11-01",
+  endsOn: "2027-04-01",
+  maxOccurrences: 6,
+  generatedOccurrences: 1,
+  status: "ACTIVE",
+  nextOccurrenceOn: "2026-11-01",
+  version: 1,
+  createdAt: "2026-10-04T06:30:00.000Z",
+  updatedAt: "2026-10-04T06:30:00.000Z",
+};
+
+interface PropertyRecurringPreviewProps {
+  recurrenceRule?: RecurrenceRuleDTO;
+  materializedVisits?: VisitDTO[];
+  sourceLabel?: "SERVER_SNAPSHOT" | "FIXTURE_UI_ONLY";
+  audience?: "customer" | "staff";
+  actionsInjected?: boolean;
+}
+
+export function PropertyRecurringPreview({
+  recurrenceRule = fixtureRecurrenceRule,
+  materializedVisits = [sampleVisit],
+  sourceLabel = "FIXTURE_UI_ONLY",
+  audience = "customer",
+  actionsInjected = false,
+}: PropertyRecurringPreviewProps) {
   const view = buildPropertyRecurringView({
     request: sampleRequest,
     quote: sampleQuote,
@@ -19,9 +54,12 @@ export function PropertyRecurringPreview() {
   return (
     <section className="plain-card" aria-label="Property and recurring visit preview">
       <div className="section-heading compact">
-        <p className="eyebrow">Properties · fixture only</p>
+        <p className="eyebrow">Properties · {sourceLabel}</p>
         <h2>{view.propertyLabel}</h2>
-        <p>Property history and recurring visits are shown as a customer-facing proof panel, but they remain fixture-only until shared property and recurrence DTOs exist.</p>
+        <p>
+          Property history and recurring visits render authoritative RecurrenceRuleDTO fields only.
+          Product never calculates the next occurrence or materializes future VisitDTOs from a recurrence rule.
+        </p>
       </div>
 
       <div className="card-grid three">
@@ -45,11 +83,19 @@ export function PropertyRecurringPreview() {
         </article>
 
         <article className="mini-panel">
-          <span className="status-pill attention">{view.recurringCandidate.frequencyLabel}</span>
+          <span className="status-pill attention">{recurrenceRule.frequency.toLowerCase()}</span>
           <h3>Recurring visits</h3>
-          <p>{view.recurringCandidate.blocker}</p>
+          <p>Next occurrence is shown only from server-supplied nextOccurrenceOn: {recurrenceRule.nextOccurrenceOn ?? "not supplied"}.</p>
         </article>
       </div>
+
+      <RecurrenceRulePreview
+        rule={recurrenceRule}
+        materializedVisits={materializedVisits}
+        audience={audience}
+        actionsInjected={actionsInjected}
+        sourceLabel={sourceLabel}
+      />
 
       <ol className="timeline-list">
         {view.history.map((item, index) => (
