@@ -1,6 +1,7 @@
 import { UIStateCard } from "@/components/shell/UIState";
 import { CheckoutPreview } from "@/features/checkout/CheckoutPreview";
 import { InboxPreview } from "@/features/inbox/InboxPreview";
+import { OnboardingReadiness } from "@/features/onboarding/OnboardingReadiness";
 import {
   crewActions,
   integrationCards,
@@ -204,14 +205,17 @@ function CrewPanel() {
 
 function OnboardingPanel() {
   return (
-    <div className="card-grid two">
-      {integrationCards.map((integration) => (
-        <article className="plain-card" key={integration.title}>
-          <span className="status-pill pending">Setup required</span>
-          <h2>{integration.title}</h2>
-          <p>{integration.detail}</p>
-        </article>
-      ))}
+    <div className="staff-workspace-stack">
+      <OnboardingReadiness />
+      <div className="card-grid two">
+        {integrationCards.map((integration) => (
+          <article className="plain-card" key={integration.title}>
+            <span className="status-pill pending">Setup required</span>
+            <h2>{integration.title}</h2>
+            <p>{integration.detail}</p>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }
