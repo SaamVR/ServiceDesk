@@ -9,6 +9,8 @@ export * from "./whatsapp/inbound-normalization";
 export * from "./whatsapp/inbox-persistence";
 export * from "./google-calendar/adapter";
 export * from "./google-calendar/oauth";
+export * from "./google-calendar/rest-client";
+export * from "./google-calendar/configured-adapter";
 export * from "./google-calendar/reconciliation";
 export * from "./payments/adapter";
 export * from "./payments/review";
