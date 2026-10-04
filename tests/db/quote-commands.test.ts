@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { QuoteSnapshot } from "../../src/domain/quote";
-import { createQuoteDraftWithRepository, sendQuoteWithRepository } from "../../src/server/core/quotes";
+import { acceptQuoteByIdWithRepository, createQuoteDraftWithRepository, sendQuoteWithRepository } from "../../src/server/core/quotes";
 
 const now = "2026-10-04T06:00:00.000Z";
 
@@ -65,7 +65,7 @@ describe("quote command repository seam", () => {
     const statusUpdates: string[] = [];
     const repo = {
       nextQuoteId: () => "quote_unused",
-      findById: async () => quote,
+      findById: async (quoteId: string) => quoteId === quote.id ? quote : undefined,
       findLatestByRequest: async () => quote,
       saveQuote: async () => undefined,
       supersedeQuote: async () => undefined,
@@ -79,5 +79,53 @@ describe("quote command repository seam", () => {
     });
     await expect(sendQuoteWithRepository(repo, "req_1", { expectedVersion: 2 })).resolves.toMatchObject({ ok: true, value: { status: "SENT" } });
     expect(statusUpdates).toEqual(["quote_1:SENT"]);
+  });
+
+  it("accepts only a sent, unexpired quote at the expected version", async () => {
+    const sentQuote = {
+      id: "quote_accepted",
+      requestId: "req_1",
+      workspaceId: "ws_1",
+      version: 3,
+      status: "SENT" as const,
+      currency: "USD",
+      serviceCode: "MOVE_OUT" as const,
+      subtotalMinor: 34_000,
+      taxMinor: 0,
+      totalMinor: 34_000,
+      depositMinor: 8_500,
+      balanceMinor: 25_500,
+      durationMinutes: 240,
+      bufferMinutes: 30,
+      rateVersion: "synthetic-cleaning-v1",
+      validUntil: "2026-10-06T06:00:00.000Z",
+      lineItems: [],
+    } satisfies QuoteSnapshot;
+
+    const statusUpdates: string[] = [];
+    const repo = {
+      nextQuoteId: () => "quote_unused",
+      findById: async (quoteId: string) => quoteId === sentQuote.id ? sentQuote : undefined,
+      findLatestByRequest: async () => sentQuote,
+      saveQuote: async () => undefined,
+      supersedeQuote: async () => undefined,
+      updateQuoteStatus: async (quoteId: string, status: QuoteSnapshot["status"]) => { statusUpdates.push(`${quoteId}:${status}`); },
+    };
+
+    await expect(acceptQuoteByIdWithRepository(repo, sentQuote.id, { expectedVersion: 2, now })).resolves.toEqual({
+      ok: false,
+      code: "VERSION_CONFLICT",
+      message: "Quote version changed before acceptance.",
+    });
+    await expect(acceptQuoteByIdWithRepository(repo, sentQuote.id, { expectedVersion: 3, now: "2026-10-07T06:00:00.000Z" })).resolves.toEqual({
+      ok: false,
+      code: "QUOTE_EXPIRED",
+      message: "Quote validity window has expired.",
+    });
+    await expect(acceptQuoteByIdWithRepository(repo, sentQuote.id, { expectedVersion: 3, now })).resolves.toMatchObject({
+      ok: true,
+      value: { status: "ACCEPTED", version: 3 },
+    });
+    expect(statusUpdates).toEqual(["quote_accepted:ACCEPTED"]);
   });
 });
