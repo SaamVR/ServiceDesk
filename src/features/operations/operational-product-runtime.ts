@@ -64,12 +64,15 @@ export interface OperationalQuote {
 
 export interface OperationalVisit {
   id: string;
+  workspaceId: string;
   requestId: string;
   quoteId: string;
   crewId?: string;
   status: string;
-  startAt?: string;
+  startAt: string;
   endAt?: string;
+  serviceMinutes: number;
+  bufferMinutes: number;
   version: number;
 }
 
@@ -125,9 +128,11 @@ export interface OperationalStaffSnapshot {
   attentionItems: OperationalAttention[];
   qualityCases: OperationalQualityCase[];
   recurrenceRules: OperationalRecurrence[];
+  crews: Array<{ id: string; name: string; active: boolean }>;
   capacitySlots: Array<{ id: string; crewId: string; startAt: string; endAt: string; capacityMinutes: number }>;
   slotHolds: Array<{ id: string; slotId: string; quoteId: string; status: string; expiresAt: string }>;
   visitEvidence: Array<{ id: string; visitId: string; kind: string; capturedAt: string; text?: string }>;
+  visitChecklistItems: Array<{ id: string; visitId: string; itemKey: string; completed: boolean; note?: string; version: number }>;
   reporting?: ReportingSnapshotDTO;
   platformBilling?: PlatformBillingSnapshotDTO;
   ownerSettings?: OwnerSettingsSnapshotDTO;
@@ -348,9 +353,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       .limit(300),
     service.from("quality_cases").select("*").eq("workspace_id", workspace.id).order("updated_at", { ascending: false }).limit(300),
     service.from("recurrence_rules").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(100),
+    service.from("crews").select("id,name,active").eq("workspace_id", workspace.id).order("name", { ascending: true }).limit(100),
     service.from("capacity_slots").select("*").eq("workspace_id", workspace.id).order("starts_at", { ascending: true }).limit(300),
     service.from("slot_holds").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(300),
     service.from("visit_evidence").select("*").eq("workspace_id", workspace.id).order("captured_at", { ascending: false }).limit(1000),
+    service.from("visit_checklist_items").select("*").eq("workspace_id", workspace.id).order("updated_at", { ascending: false }).limit(1000),
   ]);
 
   const failedRead = tableReads.find((result) => result.error);
@@ -371,9 +378,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     attentionRows,
     qualityRows,
     recurrenceRows,
+    crewRows,
     capacityRows,
     holdRows,
     evidenceRows,
+    checklistRows,
   ] = tableReads.map((result) => rows(result.data));
 
   const serviceById = new Map(serviceRows.map((row) => [String(row.id), row]));
@@ -422,18 +431,25 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     durationMinutes: numberValue(row, "duration_minutes"),
     validUntil: textValue(row, "valid_until"),
   }));
-  const visits: OperationalVisit[] = visitRows.map((row) => ({
-    id: String(row.id),
-    requestId: String(row.request_id),
-    quoteId: String(row.quote_id),
-    crewId: textValue(row, "crew_id"),
-    status: String(
-      row.status === "SCHEDULED" ? "CONFIRMED" : row.status === "NEEDS_REVIEW" ? "PENDING_REVIEW" : row.status,
-    ),
-    startAt: textValue(row, "starts_at"),
-    endAt: textValue(row, "ends_at"),
-    version: numberValue(row, "version", 1),
-  }));
+  const quoteById = new Map(quotes.map((quote) => [quote.id, quote]));
+  const visits: OperationalVisit[] = visitRows.map((row) => {
+    const quote = quoteById.get(String(row.quote_id));
+    return {
+      id: String(row.id),
+      workspaceId: workspace.id,
+      requestId: String(row.request_id),
+      quoteId: String(row.quote_id),
+      crewId: textValue(row, "crew_id"),
+      status: String(
+        row.status === "SCHEDULED" ? "CONFIRMED" : row.status === "NEEDS_REVIEW" ? "PENDING_REVIEW" : row.status,
+      ),
+      startAt: String(row.starts_at),
+      endAt: textValue(row, "ends_at"),
+      serviceMinutes: quote?.durationMinutes ?? 0,
+      bufferMinutes: quote ? Math.max(0, numberValue(quoteRows.find((candidate) => String(candidate.id) === quote.id) ?? {}, "buffer_minutes")) : 0,
+      version: numberValue(row, "version", 1),
+    };
+  });
 
   const reportingFacade = createPostgresReportingPlatformFacadeMethods(rpc);
   const now = new Date();
@@ -488,6 +504,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         status: String(row.status),
         nextOccurrenceOn: textValue(row, "next_occurrence_on"),
       })),
+      crews: crewRows.map((row) => ({
+        id: String(row.id),
+        name: String(row.name ?? "Crew"),
+        active: Boolean(row.active),
+      })),
       capacitySlots: capacityRows.map((row) => ({
         id: String(row.id),
         crewId: String(row.crew_id),
@@ -508,6 +529,14 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         kind: String(row.kind),
         capturedAt: String(row.captured_at),
         text: textValue(row, "text"),
+      })),
+      visitChecklistItems: checklistRows.map((row) => ({
+        id: String(row.id),
+        visitId: String(row.visit_id),
+        itemKey: String(row.item_key),
+        completed: Boolean(row.completed),
+        note: textValue(row, "note"),
+        version: numberValue(row, "version", 1),
       })),
       reporting: reportingResult.ok ? reportingResult.value : undefined,
       platformBilling: billingResult.ok ? billingResult.value : undefined,
@@ -751,4 +780,68 @@ export async function transitionOperationalVisit(
   return result.ok
     ? { ok: true, message: "Visit moved to " + result.value.status.replaceAll("_", " ").toLowerCase() + "." }
     : { ok: false, message: result.message };
+}
+
+
+export async function addOperationalVisitNote(
+  workspaceSlug: string,
+  visitId: string,
+  kind: "TIME_MATERIAL_NOTE" | "INCIDENT_NOTE",
+  note: string,
+): Promise<OperationalActionResult> {
+  const trimmed = note.trim();
+  if (!trimmed) return { ok: false, message: "Add a note before saving." };
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const current = await resolved.value.service
+    .from("visits")
+    .select("id,version")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("id", visitId)
+    .maybeSingle();
+  if (current.error || !current.data) return { ok: false, message: "The visit is no longer available." };
+  const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
+  const result = await facade.addVisitEvidence(
+    resolved.value.actor,
+    visitId,
+    { kind, text: trimmed, capturedAt: new Date().toISOString() },
+    {
+      idempotencyKey: "visit-note-" + crypto.randomUUID(),
+      now: new Date().toISOString(),
+      expectedVersion: Number(current.data.version),
+    },
+  );
+  return result.ok ? { ok: true, message: kind === "INCIDENT_NOTE" ? "Incident recorded." : "Job note saved." } : { ok: false, message: result.message };
+}
+
+export async function setOperationalChecklistItem(
+  workspaceSlug: string,
+  visitId: string,
+  itemKey: string,
+  completed: boolean,
+  note?: string,
+): Promise<OperationalActionResult> {
+  const key = itemKey.trim();
+  if (!key) return { ok: false, message: "Checklist item name is required." };
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const current = await resolved.value.service
+    .from("visits")
+    .select("id,version")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("id", visitId)
+    .maybeSingle();
+  if (current.error || !current.data) return { ok: false, message: "The visit is no longer available." };
+  const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
+  const result = await facade.setVisitChecklistItem(
+    resolved.value.actor,
+    visitId,
+    { itemKey: key, completed, note: note?.trim() || undefined },
+    {
+      idempotencyKey: "visit-checklist-" + crypto.randomUUID(),
+      now: new Date().toISOString(),
+      expectedVersion: Number(current.data.version),
+    },
+  );
+  return result.ok ? { ok: true, message: "Checklist updated." } : { ok: false, message: result.message };
 }
