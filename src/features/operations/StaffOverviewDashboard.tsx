@@ -3,6 +3,7 @@ import { EmptyState, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge 
 import { buildStaffModuleHref } from "@/features/operations/staff-modules";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
+import { summarizeOutstandingInvoices } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
 
 function attentionTone(severity: "INFO" | "WARNING" | "CRITICAL") {
@@ -60,11 +61,14 @@ export function StaffOverviewDashboard({
   const activeJobs = snapshot.visits.filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status));
   const waitingRequests = snapshot.requests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status));
   const waitingQuotes = snapshot.quotes.filter((quote) => quote.status === "SENT");
-  const unpaidInvoices = snapshot.invoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
+  const outstanding = summarizeOutstandingInvoices(snapshot.invoices);
   const qualityIssues = snapshot.qualityCases.filter((qualityCase) => qualityCase.state !== "RESOLVED");
 
-  const outstandingMinor = unpaidInvoices.reduce((sum, invoice) => sum + invoice.balanceMinor, 0);
-  const currency = unpaidInvoices[0]?.currency;
+  const outstandingValue = outstanding.currency && outstanding.totalMinor !== undefined
+    ? formatMinorMoney(outstanding.totalMinor, outstanding.currency)
+    : outstanding.multipleCurrencies
+      ? "Multiple currencies"
+      : "—";
   const sortedAttention = [...attention].sort((left, right) => {
     const weight = { CRITICAL: 0, WARNING: 1, INFO: 2 };
     return weight[left.severity] - weight[right.severity];
@@ -85,7 +89,7 @@ export function StaffOverviewDashboard({
           { label: "Active jobs", value: activeJobs.length, detail: "Not completed or cancelled" },
           { label: "Waiting requests", value: waitingRequests.length, detail: "Needs intake or review" },
           { label: "Quotes awaiting reply", value: waitingQuotes.length, detail: "Sent to customers" },
-          { label: "Outstanding", value: currency ? formatMinorMoney(outstandingMinor, currency) : "—", detail: unpaidInvoices.length ? `${unpaidInvoices.length} invoice${unpaidInvoices.length === 1 ? "" : "s"}` : "No unpaid invoices" },
+          { label: "Outstanding", value: outstandingValue, detail: outstanding.count ? `${outstanding.count} invoice${outstanding.count === 1 ? "" : "s"}${outstanding.multipleCurrencies ? " across multiple currencies" : ""}` : "No unpaid invoices" },
         ]}
       />
 
