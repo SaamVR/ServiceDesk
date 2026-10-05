@@ -15,6 +15,7 @@ import type { QualityCaseAction } from "@/server/core/facade";
 import { createPostgresManualPaymentQualityFacadeMethods } from "@/server/core/manual-quality-postgres";
 import type { SupabaseRpcClient } from "@/server/core/payment-application-postgres";
 import { createPostgresReportingPlatformFacadeMethods } from "@/server/core/reporting-platform-postgres";
+import { createPostgresRecurrenceFacadeMethods } from "@/server/core/recurrence-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
 
@@ -113,6 +114,7 @@ export interface OperationalRecurrence {
   frequency: string;
   status: string;
   nextOccurrenceOn?: string;
+  version: number;
 }
 
 export interface OperationalStaffSnapshot {
@@ -530,6 +532,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         frequency: String(row.frequency),
         status: String(row.status),
         nextOccurrenceOn: textValue(row, "next_occurrence_on"),
+        version: numberValue(row, "version", 1),
       })),
       crews: crewRows.map((row) => ({
         id: String(row.id),
@@ -871,4 +874,35 @@ export async function setOperationalChecklistItem(
     },
   );
   return result.ok ? { ok: true, message: "Checklist updated." } : safeCoreFailure(result, "Could not update the checklist. Refresh and try again.");
+}
+
+
+export async function applyOperationalRecurrenceAction(
+  workspaceSlug: string,
+  ruleId: string,
+  action: "PAUSE" | "RESUME" | "SKIP_NEXT",
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const current = await resolved.value.service
+    .from("recurrence_rules")
+    .select("id,version,status")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("id", ruleId)
+    .maybeSingle();
+  if (current.error || !current.data) return { ok: false, message: "The recurring service rule is no longer available." };
+  const facade = createPostgresRecurrenceFacadeMethods(resolved.value.rpc);
+  const result = await facade.applyRecurrenceRuleAction(
+    resolved.value.actor,
+    ruleId,
+    action,
+    {
+      idempotencyKey: "recurrence-" + crypto.randomUUID(),
+      now: new Date().toISOString(),
+      expectedVersion: Number(current.data.version),
+    },
+  );
+  return result.ok
+    ? { ok: true, message: action === "PAUSE" ? "Recurring service paused." : action === "RESUME" ? "Recurring service resumed." : "Next occurrence skipped." }
+    : safeCoreFailure(result, "Could not update the recurring service. Refresh and try again.");
 }
