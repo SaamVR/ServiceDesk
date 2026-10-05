@@ -17,6 +17,7 @@ import {
   acceptCustomerPortalQuote,
   holdCustomerPortalSlot,
   loadCustomerPortalSnapshot,
+  updateCustomerCommunicationPreference,
   type CustomerPortalActionResult,
   type CustomerPortalConsent,
   type CustomerPortalSnapshot,
@@ -470,6 +471,26 @@ function InvoiceView({
 }
 
 function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
+  const seen = new Set<string>();
+  const preferences = data.consents.filter((consent) => {
+    const key = `${consent.channel}:${consent.purpose}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  async function changePreference(formData: FormData) {
+    "use server";
+    const status = String(formData.get("status") ?? "");
+    const result = await updateCustomerCommunicationPreference({
+      consentId: String(formData.get("consentId") ?? ""),
+      channel: String(formData.get("channel") ?? ""),
+      purpose: String(formData.get("purpose") ?? ""),
+      status: status === "GRANTED" ? "GRANTED" : "REVOKED",
+    });
+    actionRedirect("/portal/preferences", result);
+  }
+
   const columns = [
     {
       id: "channel",
@@ -485,16 +506,36 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
     },
     {
       id: "recorded",
-      header: "Recorded",
+      header: "Last changed",
       cell: (consent: CustomerPortalConsent) => formatWhen(consent.recordedAt, data.workspace.timezone),
       priority: "secondary" as const,
+    },
+    {
+      id: "action",
+      header: "Action",
+      align: "end" as const,
+      cell: (consent: CustomerPortalConsent) => {
+        const nextStatus = consent.status === "GRANTED" ? "REVOKED" : "GRANTED";
+        return (
+          <form action={changePreference}>
+            <input type="hidden" name="consentId" value={consent.id} />
+            <input type="hidden" name="channel" value={consent.channel} />
+            <input type="hidden" name="purpose" value={consent.purpose} />
+            <input type="hidden" name="status" value={nextStatus} />
+            <button className={nextStatus === "GRANTED" ? styles.primaryButton : styles.secondaryButton} type="submit">
+              {nextStatus === "GRANTED" ? "Allow" : "Revoke"}
+            </button>
+          </form>
+        );
+      },
+      priority: "primary" as const,
     },
   ];
 
   return (
     <div className={styles.stack}>
       <CustomerCard title="Communication preferences">
-        {data.consents.length === 0 ? (
+        {preferences.length === 0 ? (
           <CustomerEmptyState
             title="No preferences recorded"
             description="Your saved communication preferences will appear here when they are available."
@@ -502,25 +543,36 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
         ) : (
           <div className={styles.customerTable}>
             <DataTable
-              caption="Communication preferences"
+              caption="Current communication preferences"
               columns={columns}
-              rows={data.consents}
+              rows={preferences}
               getRowKey={(consent) => consent.id}
               renderMobileRow={(consent) => (
-                <DataCellStack
-                  primary={formatStatus(consent.channel) + " · " + formatStatus(consent.status)}
-                  secondary={formatStatus(consent.purpose) + " · " + formatWhen(consent.recordedAt, data.workspace.timezone)}
-                />
+                <div className={styles.preferenceMobileRow}>
+                  <DataCellStack
+                    primary={formatStatus(consent.channel) + " · " + formatStatus(consent.status)}
+                    secondary={formatStatus(consent.purpose) + " · " + formatWhen(consent.recordedAt, data.workspace.timezone)}
+                  />
+                  <form action={changePreference}>
+                    <input type="hidden" name="consentId" value={consent.id} />
+                    <input type="hidden" name="channel" value={consent.channel} />
+                    <input type="hidden" name="purpose" value={consent.purpose} />
+                    <input type="hidden" name="status" value={consent.status === "GRANTED" ? "REVOKED" : "GRANTED"} />
+                    <button className={styles.secondaryButton} type="submit">
+                      {consent.status === "GRANTED" ? "Revoke" : "Allow"}
+                    </button>
+                  </form>
+                </div>
               )}
             />
           </div>
         )}
       </CustomerCard>
 
-      <CustomerCard title="Changes">
+      <CustomerCard title="How changes work">
         <CustomerNotice
-          title="Preference changes aren't available online yet"
-          description="Your saved preferences remain unchanged. Contact the business if you need to update them."
+          title="Your latest choice is used"
+          description="Changes are recorded immediately in your account. If a message is not permitted by your latest preference, ServiceDesk blocks that outbound message."
           tone="info"
         />
       </CustomerCard>

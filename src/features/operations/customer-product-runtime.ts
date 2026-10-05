@@ -568,3 +568,61 @@ export async function holdCustomerPortalSlot(quoteId: string, slotId: string): P
     message: "Time reserved. Review the updated quote for the hold expiry and next step.",
   };
 }
+
+export async function updateCustomerCommunicationPreference(input: {
+  consentId: string;
+  channel: string;
+  purpose: string;
+  status: "GRANTED" | "REVOKED";
+}): Promise<CustomerPortalActionResult> {
+  const resolved = await resolveCustomer();
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const channel = input.channel.trim().toUpperCase();
+  const purpose = input.purpose.trim();
+  if (!["WHATSAPP", "EMAIL", "SMS"].includes(channel) || !purpose || !input.consentId) {
+    return { ok: false, message: "That communication preference could not be updated." };
+  }
+
+  const idempotencyKey = [
+    "customer-consent",
+    resolved.value.customer.id,
+    input.consentId,
+    input.status,
+  ].join(":");
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_record_customer_consent", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorRole: resolved.value.actor.role,
+      actorUserId: resolved.value.actor.userId,
+      customerId: resolved.value.customer.id,
+      channel,
+      purpose,
+      status: input.status,
+      expectedConsentId: input.consentId,
+      idempotencyKey,
+      now: new Date().toISOString(),
+    },
+  });
+
+  if (error) {
+    return { ok: false, message: "Your communication preference could not be saved. Try again." };
+  }
+  if (!data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    return {
+      ok: false,
+      message: code === "CONSENT_VERSION_CONFLICT"
+        ? "This preference changed since the page loaded. Refresh and try again."
+        : "Your communication preference could not be saved. Try again.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: input.status === "GRANTED"
+      ? "Communication preference enabled."
+      : "Communication preference revoked.",
+  };
+}

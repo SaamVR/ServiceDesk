@@ -226,6 +226,17 @@
   min-width: 0;
 }
 
+.preferenceMobileRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.preferenceMobileRow form {
+  flex: 0 0 auto;
+}
+
 .preferencesNote {
   margin: 10px 0 0;
   color: var(--app-text-muted, #626b76);
@@ -274,6 +285,16 @@
   .slotOption {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .preferenceMobileRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .preferenceMobileRow form,
+  .preferenceMobileRow button {
+    width: 100%;
   }
 
   .detailActions > * {

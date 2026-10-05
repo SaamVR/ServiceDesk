@@ -54,6 +54,16 @@ describe("customer-facing production product contracts", () => {
     expect(customerRuntime).toContain('.from("slot_holds")');
   });
 
+  it("lets customers change current communication preferences through the trusted command", () => {
+    expect(portal).toContain("updateCustomerCommunicationPreference");
+    expect(portal).toContain("changePreference");
+    expect(portal).toContain('\"Allow\"');
+    expect(portal).toContain('\"Revoke\"');
+    expect(customerRuntime).toContain("servicedesk_record_customer_consent");
+    expect(customerRuntime).toContain("expectedConsentId");
+    expect(customerRuntime).not.toContain('.from("communication_consents").update');
+  });
+
   it("keeps public business pages focused on services and customer next steps", () => {
     expect(business).toContain("PublicBusinessShell");
     expect(business).toContain("Available services");
