@@ -6,7 +6,9 @@ import {
   type CustomerPortalSnapshot,
 } from "./customer-product-runtime";
 import { formatMinorMoney } from "./view-models";
+import { PageHeader } from "@/components/product";
 import styles from "./OperationalProductRoute.module.css";
+import shellStyles from "./CustomerPublicProduct.module.css";
 
 type CustomerModule = "overview" | "properties" | "quote" | "booking" | "invoice" | "preferences";
 
@@ -54,12 +56,19 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
   );
 }
 
-function CustomerNavigation() {
+function CustomerNavigation({ module }: { module: CustomerModule }) {
+  const items = [
+    { href: "/portal", label: "Overview", active: module === "overview" },
+    { href: "/portal/properties", label: "Properties", active: module === "properties" },
+    { href: "/portal/preferences", label: "Preferences", active: module === "preferences" },
+  ];
   return (
-    <nav className="site-nav" aria-label="Customer portal navigation">
-      <a href="/portal">Overview</a>
-      <a href="/portal/properties">Properties</a>
-      <a href="/portal/preferences">Preferences</a>
+    <nav className={shellStyles.portalNav} aria-label="Customer portal navigation">
+      {items.map((item) => (
+        <a href={item.href} aria-current={item.active ? "page" : undefined} key={item.href}>
+          {item.label}
+        </a>
+      ))}
     </nav>
   );
 }
@@ -349,21 +358,20 @@ export async function CustomerProductRoute({
   const result = await loadCustomerPortalSnapshot();
 
   return (
-    <main className="site-shell">
-      <header className="site-header" aria-label="Customer portal navigation">
-        <a className="brand-lockup" href="/portal">
-          <span className="brand-mark" aria-hidden="true">SD</span>
+    <main className={shellStyles.portalShell}>
+      <header className={shellStyles.portalHeader} aria-label="Customer portal navigation">
+        <a className={shellStyles.portalBrand} href="/portal">
+          <span className={shellStyles.brandMark} aria-hidden="true">SD</span>
           <span>{result.ok ? result.value.workspace.name : "Customer portal"}</span>
         </a>
-        <CustomerNavigation />
+        <CustomerNavigation module={module} />
       </header>
 
-      <section className="section-card">
-        <div className="section-heading compact">
-          <p className="eyebrow">Customer portal</p>
-          <h1>{moduleTitle[module]}</h1>
-          {result.ok && <p className="lead">Welcome, {result.value.customer.displayName}.</p>}
-        </div>
+      <section className={shellStyles.portalBody}>
+        <PageHeader eyebrow="Customer account" title={moduleTitle[module]} />
+        {result.ok ? (
+          <p className={shellStyles.customerWelcome}>Welcome, {result.value.customer.displayName}.</p>
+        ) : null}
 
         <Notice notice={notice} error={error} />
 
