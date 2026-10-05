@@ -768,12 +768,7 @@ function ScheduleView({
     const visitId = String(formData.get("visitId") ?? "");
     const crewId = String(formData.get("crewId") ?? "");
     const expectedVersion = Number(formData.get("expectedVersion"));
-    const result = await assignOperationalCrew(
-      workspaceSlug,
-      visitId,
-      crewId,
-      expectedVersion,
-    );
+    const result = await assignOperationalCrew(workspaceSlug, visitId, crewId, expectedVersion);
     actionRedirect(workspaceSlug, "schedule", result);
   }
 
@@ -789,40 +784,52 @@ function ScheduleView({
 
   const now = Date.parse(data.loadedAt);
   const week = now + 7 * 24 * 60 * 60 * 1000;
-  const upcoming = data.visits.filter((visit) => {
-    const time = visit.startAt ? Date.parse(visit.startAt) : Number.NaN;
-    return Number.isFinite(time) && time >= now && time <= week;
-  });
+  const upcoming = data.visits
+    .filter((visit) => {
+      const time = visit.startAt ? Date.parse(visit.startAt) : Number.NaN;
+      return Number.isFinite(time) && time >= now && time <= week && visit.status !== "CANCELLED";
+    })
+    .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt));
   const scheduledRequestIds = new Set(data.visits.map((visit) => visit.requestId));
   const unscheduled = data.requests.filter(
-    (request) =>
-      !scheduledRequestIds.has(request.id) && !["LOST", "CLOSED"].includes(request.status),
+    (request) => !scheduledRequestIds.has(request.id) && !["LOST", "CLOSED"].includes(request.status),
   );
   const acceptedQuotes = data.quotes.filter(
-    (quote) =>
-      quote.status === "ACCEPTED" &&
-      !data.visits.some((visit) => visit.quoteId === quote.id),
+    (quote) => quote.status === "ACCEPTED" && !data.visits.some((visit) => visit.quoteId === quote.id),
   );
   const heldSlotIds = new Set(
     data.slotHolds
       .filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now)
       .map((hold) => hold.slotId),
   );
+  const unassignedUpcoming = upcoming.filter((visit) => !visit.crewId).length;
+  const activeHolds = data.slotHolds.filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now).length;
   const dispatch = buildOperationalDispatchIntelligence(data);
   const visitLabels = Object.fromEntries(data.visits.map((visit) => {
     const request = data.requests.find((item) => item.id === visit.requestId);
-    const customer = request?.customerId
-      ? data.customers.find((item) => item.id === request.customerId)
-      : undefined;
+    const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
     return [visit.id, `${request?.serviceLabel ?? "Service visit"}${customer ? ` · ${customer.displayName}` : ""}`];
   }));
-  const visitMeta = Object.fromEntries(data.visits.map((visit) => [
-    visit.id,
-    formatWhen(visit.startAt, data.workspace.timezone),
-  ]));
+  const visitMeta = Object.fromEntries(data.visits.map((visit) => [visit.id, formatWhen(visit.startAt, data.workspace.timezone)]));
 
   return (
-    <div className={styles.stack}>
+    <section className={styles.scheduleWorkspace} aria-label="Scheduling and dispatch workspace">
+      <header className={styles.scheduleHeader}>
+        <div>
+          <p className={styles.scheduleEyebrow}>Planning & dispatch</p>
+          <h2>Schedule</h2>
+          <p>Plan the next seven days, place accepted work into capacity, and confirm crew assignments.</p>
+        </div>
+        <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open jobs</a>
+      </header>
+
+      <section className={styles.scheduleMetrics} aria-label="Scheduling summary">
+        <div><span>Next 7 days</span><strong>{upcoming.length}</strong><small>Scheduled visits</small></div>
+        <div className={unassignedUpcoming ? styles.scheduleMetricWarning : undefined}><span>Need crew</span><strong>{unassignedUpcoming}</strong><small>Upcoming visits</small></div>
+        <div className={acceptedQuotes.length ? styles.scheduleMetricAttention : undefined}><span>Awaiting slot</span><strong>{acceptedQuotes.length}</strong><small>Accepted quotes</small></div>
+        <div><span>Active holds</span><strong>{activeHolds}</strong><small>Temporary capacity holds</small></div>
+      </section>
+
       <DispatcherIntelligence
         recommendations={dispatch.recommendations}
         timeline={dispatch.timeline}
@@ -840,131 +847,99 @@ function ScheduleView({
           </form>
         )}
       />
-      <Panel>
-        <SectionHeader
-          title="Next 7 days"
-          description={upcoming.length + " scheduled visit" + (upcoming.length === 1 ? "" : "s") + " · " + unscheduled.length + " unscheduled"}
-        />
-        <DataTable<OperationalVisit>
-          caption="Upcoming scheduled visits"
-          rows={upcoming}
-          getRowKey={(visit) => visit.id}
-          emptyTitle="No visits scheduled"
-          emptyDescription="No visits are scheduled in the next seven days."
-          columns={[
-            {
-              id: "start",
-              header: "Start",
-              priority: "primary",
-              cell: (visit) => formatWhen(visit.startAt, data.workspace.timezone),
-            },
-            {
-              id: "service",
-              header: "Service",
-              priority: "primary",
-              cell: (visit) => data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit",
-            },
-            {
-              id: "crew",
-              header: "Crew",
-              cell: (visit) => visit.crewId ? data.crews.find((crew) => crew.id === visit.crewId)?.name ?? "Assigned crew" : "Unassigned",
-            },
-            {
-              id: "status",
-              header: "Status",
-              cell: (visit) => <StatusBadge tone={statusBadgeTone(visit.status)}>{visit.status.replaceAll("_", " ")}</StatusBadge>,
-            },
-          ]}
-          renderMobileRow={(visit) => (
-            <DataCellStack
-              primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-              secondary={formatWhen(visit.startAt, data.workspace.timezone) + " · " + visit.status.replaceAll("_", " ")}
-            />
+
+      <div className={styles.schedulePlanningGrid}>
+        <section className={styles.scheduleCard} aria-labelledby="next-seven-days-heading">
+          <div className={styles.scheduleCardHeader}>
+            <div><p className={styles.scheduleCardEyebrow}>Upcoming</p><h3 id="next-seven-days-heading">Next 7 days</h3><p>{upcoming.length} scheduled visit{upcoming.length === 1 ? "" : "s"}.</p></div>
+          </div>
+          {upcoming.length === 0 ? (
+            <div className={styles.scheduleEmpty}><strong>No upcoming visits</strong><p>No visits are scheduled in the next seven days.</p></div>
+          ) : (
+            <div className={styles.scheduleVisitList}>
+              {upcoming.slice(0, 12).map((visit) => {
+                const request = data.requests.find((item) => item.id === visit.requestId);
+                const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
+                const crew = visit.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
+                return (
+                  <a className={styles.scheduleVisitRow} href={`/app/${encodeURIComponent(workspaceSlug)}/jobs?job=${encodeURIComponent(visit.id)}`} key={visit.id}>
+                    <time>{formatWhen(visit.startAt, data.workspace.timezone)}</time>
+                    <span className={styles.scheduleVisitCopy}><strong>{request?.serviceLabel ?? "Service visit"}</strong><small>{customer?.displayName ?? "Customer"} · {crew?.name ?? "Crew unassigned"}</small></span>
+                    <StatusBadge tone={statusBadgeTone(visit.status)}>{visit.status.replaceAll("_", " ")}</StatusBadge>
+                  </a>
+                );
+              })}
+            </div>
           )}
-        />
-      </Panel>
+        </section>
 
-      <Panel>
-        <SectionHeader
-          title="Accepted quotes awaiting booking"
-          description="Choose only from current capacity; holding a slot never implies payment."
-        />
-        {acceptedQuotes.length === 0 ? (
-          <p>No accepted quotes are waiting for a slot.</p>
-        ) : (
-          acceptedQuotes.map((quote) => {
-            const activeHold = data.slotHolds.find(
-              (hold) =>
-                hold.quoteId === quote.id &&
-                hold.status === "HELD" &&
-                Date.parse(hold.expiresAt) > now,
-            );
-            const requiredMinutes = quote.durationMinutes + quote.bufferMinutes;
-            const candidates = data.capacitySlots.filter((slot) => {
-              const start = Date.parse(slot.startAt);
-              const end = Date.parse(slot.endAt);
-              const windowMinutes = Number.isFinite(start) && Number.isFinite(end)
-                ? Math.floor((end - start) / 60000)
-                : 0;
-              return (
-                start >= now &&
-                !heldSlotIds.has(slot.id) &&
-                slot.capacityMinutes >= requiredMinutes &&
-                windowMinutes >= requiredMinutes
-              );
-            });
-            return (
-              <div className={styles.bookingBlock} key={quote.id}>
-                <p>
-                  <strong>{data.requests.find((item) => item.id === quote.requestId)?.serviceLabel ?? "Service"}</strong>
-                  {" · "}{quote.durationMinutes} min
-                </p>
-                {activeHold ? (
-                  <p>Slot held until {formatWhen(activeHold.expiresAt, data.workspace.timezone)}. Payment remains pending.</p>
-                ) : candidates.length === 0 ? (
-                  <p>No capacity slot currently fits this quote.</p>
-                ) : (
-                  <div className={styles.actions}>
-                    {candidates.slice(0, 5).map((slot) => (
-                      <form action={holdSlot} key={slot.id}>
-                        <input type="hidden" name="quoteId" value={quote.id} />
-                        <input type="hidden" name="slotId" value={slot.id} />
-                        <button className="app-button-secondary" type="submit">
-                          Hold {formatWhen(slot.startAt, data.workspace.timezone)}
-                        </button>
-                      </form>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-        <p className="app-field-help">
-          ServiceDesk rechecks availability when you hold a slot. Holding a slot does not create
-          a payment or a confirmed visit.
-        </p>
-      </Panel>
+        <section className={styles.scheduleCard} aria-labelledby="booking-queue-heading">
+          <div className={styles.scheduleCardHeader}>
+            <div><p className={styles.scheduleCardEyebrow}>Capacity</p><h3 id="booking-queue-heading">Accepted work awaiting a slot</h3><p>Holding capacity never implies payment or a confirmed visit.</p></div>
+          </div>
+          {acceptedQuotes.length === 0 ? (
+            <div className={styles.scheduleEmpty}><strong>Booking queue is clear</strong><p>No accepted quotes are waiting for capacity.</p></div>
+          ) : (
+            <div className={styles.bookingQueue}>
+              {acceptedQuotes.map((quote) => {
+                const request = data.requests.find((item) => item.id === quote.requestId);
+                const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
+                const activeHold = data.slotHolds.find((hold) => hold.quoteId === quote.id && hold.status === "HELD" && Date.parse(hold.expiresAt) > now);
+                const requiredMinutes = quote.durationMinutes + quote.bufferMinutes;
+                const candidates = data.capacitySlots.filter((slot) => {
+                  const start = Date.parse(slot.startAt);
+                  const end = Date.parse(slot.endAt);
+                  const windowMinutes = Number.isFinite(start) && Number.isFinite(end) ? Math.floor((end - start) / 60000) : 0;
+                  return start >= now && !heldSlotIds.has(slot.id) && slot.capacityMinutes >= requiredMinutes && windowMinutes >= requiredMinutes;
+                });
+                return (
+                  <article className={styles.bookingQueueItem} key={quote.id}>
+                    <div className={styles.bookingQueueTitle}><span><strong>{request?.serviceLabel ?? "Service"}</strong><small>{customer?.displayName ?? "Customer"} · {quote.durationMinutes} min service</small></span><StatusBadge tone={activeHold ? "warning" : candidates.length ? "info" : "neutral"}>{activeHold ? "Slot held" : candidates.length ? `${candidates.length} slots` : "No fit"}</StatusBadge></div>
+                    {activeHold ? (
+                      <p>Held until {formatWhen(activeHold.expiresAt, data.workspace.timezone)}. Payment remains pending.</p>
+                    ) : candidates.length === 0 ? (
+                      <p>No current capacity slot fits the required service + buffer time.</p>
+                    ) : (
+                      <div className={styles.slotChoices}>
+                        {candidates.slice(0, 4).map((slot) => (
+                          <form action={holdSlot} key={slot.id}>
+                            <input type="hidden" name="quoteId" value={quote.id} />
+                            <input type="hidden" name="slotId" value={slot.id} />
+                            <button className="app-button-secondary" type="submit">Hold {formatWhen(slot.startAt, data.workspace.timezone)}</button>
+                          </form>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
 
-      <Panel>
-        <SectionHeader title="Unscheduled work" description="Open requests without a visit." />
+      <section className={styles.unscheduledCard} aria-labelledby="unscheduled-heading">
+        <div className={styles.scheduleCardHeader}>
+          <div><p className={styles.scheduleCardEyebrow}>Intake follow-through</p><h3 id="unscheduled-heading">Unscheduled work</h3><p>Open requests that do not yet have a visit.</p></div>
+          <a href={buildStaffModuleHref(workspaceSlug, "requests")}>Open requests →</a>
+        </div>
         {unscheduled.length === 0 ? (
-          <AppEmptyState title="No unscheduled work" description="No open requests are waiting for a visit." />
+          <div className={styles.scheduleEmpty}><strong>No unscheduled work</strong><p>Every open request is already connected to a visit.</p></div>
         ) : (
-          <div className="app-row-list">
-            {unscheduled.slice(0, 20).map((request) => (
-              <article className="app-row" key={request.id}>
-                <div>
-                  <h3>{request.serviceLabel}</h3>
-                  <p>Requested {formatWhen(request.requestedStartAt, data.workspace.timezone)}</p>
-                </div>
-                <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>
-              </article>
-            ))}
+          <div className={styles.unscheduledGrid}>
+            {unscheduled.slice(0, 12).map((request) => {
+              const customer = request.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
+              return (
+                <a href={`/app/${encodeURIComponent(workspaceSlug)}/requests?request=${encodeURIComponent(request.id)}`} key={request.id}>
+                  <span><strong>{request.serviceLabel}</strong><small>{customer?.displayName ?? "Visitor enquiry"} · Requested {formatWhen(request.requestedStartAt, data.workspace.timezone)}</small></span>
+                  <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>
+                </a>
+              );
+            })}
           </div>
         )}
-      </Panel>
-    </div>
+      </section>
+    </section>
   );
 }
 
