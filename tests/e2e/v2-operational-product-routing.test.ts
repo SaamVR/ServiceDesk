@@ -75,9 +75,10 @@ describe("V2 operational product routing", () => {
     expect(runtime).toContain("transitionOperationalVisit");
   });
 
-  it("keeps unsupported operations disabled instead of faking success", () => {
+  it("wires supported crew assignment while keeping unrelated unsupported operations honest", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
-    expect(route).toContain("Crew changes are not available from this screen yet.");
+    expect(route).toContain("assignOperationalCrew");
+    expect(route).toContain("<DispatcherIntelligence");
     expect(route).toContain("Recovery must be handled manually from the related record.");
     expect(route).toContain("does not simulate Stripe or provider");
   });
