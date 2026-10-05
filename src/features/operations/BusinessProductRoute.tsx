@@ -106,7 +106,7 @@ export async function BusinessProductRoute({ slug, module }: BusinessProductRout
               <h1>Continue from your accepted quote.</h1>
               <p>
                 Open your customer account to review booking and payment status.
-                Online payments remain sandbox-only.
+                Online payment is not enabled for customer use yet.
               </p>
               <a className="button-primary" href="/portal">
                 Open customer portal
