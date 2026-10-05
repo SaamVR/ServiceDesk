@@ -68,16 +68,6 @@ function formatWhen(value?: string) {
     : new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-function statusTone(status: string) {
-  if (["PAID", "COMPLETED", "RESOLVED", "DELIVERED", "READ", "CONNECTED", "ACTIVE"].includes(status)) {
-    return "success";
-  }
-  if (["FAILED", "PAYMENT_REVIEW", "BLOCKED", "REAUTH_REQUIRED", "VOID"].includes(status)) {
-    return "attention";
-  }
-  return "pending";
-}
-
 function statusBadgeTone(status: string): "neutral" | "success" | "warning" | "danger" | "info" {
   if (["PAID", "COMPLETED", "RESOLVED", "DELIVERED", "READ", "CONNECTED", "ACTIVE", "ACCEPTED"].includes(status)) {
     return "success";
