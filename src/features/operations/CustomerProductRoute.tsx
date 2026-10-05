@@ -473,9 +473,8 @@ function InvoiceView({
 function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
   const seen = new Set<string>();
   const preferences = data.consents.filter((consent) => {
-    const key = `${consent.channel}:${consent.purpose}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
+    if (seen.has(consent.channel)) return false;
+    seen.add(consent.channel);
     return true;
   });
 
@@ -484,8 +483,6 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
     const status = String(formData.get("status") ?? "");
     const result = await updateCustomerCommunicationPreference({
       consentId: String(formData.get("consentId") ?? ""),
-      channel: String(formData.get("channel") ?? ""),
-      purpose: String(formData.get("purpose") ?? ""),
       status: status === "GRANTED" ? "GRANTED" : "REVOKED",
     });
     actionRedirect("/portal/preferences", result);
@@ -519,8 +516,6 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
         return (
           <form action={changePreference}>
             <input type="hidden" name="consentId" value={consent.id} />
-            <input type="hidden" name="channel" value={consent.channel} />
-            <input type="hidden" name="purpose" value={consent.purpose} />
             <input type="hidden" name="status" value={nextStatus} />
             <button className={nextStatus === "GRANTED" ? styles.primaryButton : styles.secondaryButton} type="submit">
               {nextStatus === "GRANTED" ? "Allow" : "Revoke"}
@@ -555,8 +550,6 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
                   />
                   <form action={changePreference}>
                     <input type="hidden" name="consentId" value={consent.id} />
-                    <input type="hidden" name="channel" value={consent.channel} />
-                    <input type="hidden" name="purpose" value={consent.purpose} />
                     <input type="hidden" name="status" value={consent.status === "GRANTED" ? "REVOKED" : "GRANTED"} />
                     <button className={styles.secondaryButton} type="submit">
                       {consent.status === "GRANTED" ? "Revoke" : "Allow"}
@@ -572,7 +565,7 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
       <CustomerCard title="How changes work">
         <CustomerNotice
           title="Your latest choice is used"
-          description="Changes are recorded immediately in your account. If a message is not permitted by your latest preference, ServiceDesk blocks that outbound message."
+          description="Each channel uses your latest recorded choice. If Email, WhatsApp or SMS is not permitted by that latest choice, ServiceDesk blocks that outbound message."
           tone="info"
         />
       </CustomerCard>
