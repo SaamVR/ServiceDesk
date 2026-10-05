@@ -131,7 +131,7 @@ async function resolveCustomer(): Promise<
     return {
       ok: false,
       kind: "configuration",
-      message: "The customer portal is not connected to its data service yet.",
+      message: "The customer portal is temporarily unavailable.",
     };
   }
 
@@ -183,7 +183,7 @@ async function resolveCustomer(): Promise<
     return {
       ok: false,
       kind: "workspace_selection",
-      message: "This account is linked to more than one business. Workspace selection is required before continuing.",
+      message: "This account is linked to more than one business. Choose a business before continuing.",
     };
   }
 
@@ -196,7 +196,7 @@ async function resolveCustomer(): Promise<
     .maybeSingle();
 
   if (workspaceResult.error || !workspaceResult.data) {
-    return { ok: false, kind: "server", message: "The linked business workspace could not be loaded." };
+    return { ok: false, kind: "server", message: "The linked business could not be loaded." };
   }
 
   const workspace = workspaceResult.data as { id: string; slug: string; name: string };
