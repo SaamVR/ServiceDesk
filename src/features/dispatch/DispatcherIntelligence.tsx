@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { MetricStrip, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
+import { MetricStrip, Panel, StatusBadge } from "@/components/product/PagePrimitives";
 import { formatOperationalTime, resolveOperationalTimeZone } from "@/features/crew/time-format";
 import type { DispatchAssignmentAvailability } from "./assignment-boundary";
 import type { DispatchStaffDataQualityIssue } from "./staff-integration";
@@ -25,6 +25,10 @@ function confidenceTone(confidence: DispatchCandidateRecommendation["confidence"
   return "warning" as const;
 }
 
+function shortJobReference(visitId: string) {
+  return visitId.length > 12 ? `…${visitId.slice(-8)}` : visitId;
+}
+
 export interface DispatcherApprovalControlInput {
   recommendation: DispatchVisitRecommendation;
   candidate: DispatchCandidateRecommendation;
@@ -41,6 +45,8 @@ export function DispatcherIntelligence({
   },
   dataQualityIssues = [],
   crewLabels = {},
+  visitLabels = {},
+  visitMeta = {},
   renderApprovalControl,
 }: {
   recommendations: readonly DispatchVisitRecommendation[];
@@ -49,6 +55,8 @@ export function DispatcherIntelligence({
   assignmentAvailability?: DispatchAssignmentAvailability;
   dataQualityIssues?: readonly DispatchStaffDataQualityIssue[];
   crewLabels?: Readonly<Record<string, string>>;
+  visitLabels?: Readonly<Record<string, string>>;
+  visitMeta?: Readonly<Record<string, string>>;
   renderApprovalControl?: (input: DispatcherApprovalControlInput) => ReactNode;
 }) {
   const resolvedTimeZone = resolveOperationalTimeZone(workspaceTimeZone);
@@ -56,137 +64,175 @@ export function DispatcherIntelligence({
     recommendation.candidates.some((candidate) => candidate.eligible),
   ).length;
   const collisions = timeline.reduce((sum, lane) => sum + lane.conflictCount, 0);
+  const activeCrews = timeline.filter((lane) => lane.active).length;
 
   return (
     <section className={styles.shell} aria-labelledby="dispatch-intelligence-heading">
-      <SectionHeader
-        title="Dispatch suggestions"
-        description="Review unassigned jobs, crew availability and schedule conflicts before making a crew change."
-      />
+      <header className={styles.header}>
+        <div>
+          <p className={styles.eyebrow}>Dispatch intelligence</p>
+          <h2 id="dispatch-intelligence-heading">Crew assignment board</h2>
+          <p>Compare workload and scheduling constraints before committing an assignment.</p>
+        </div>
+        <StatusBadge tone="info">Human approval required</StatusBadge>
+      </header>
 
       <MetricStrip items={[
-        { label: "Unassigned", value: recommendations.length },
-        { label: "Suggested", value: eligible },
-        { label: "Conflicts", value: collisions, tone: collisions > 0 ? "attention" : "default" },
+        { label: "Unassigned", value: recommendations.length, detail: "Jobs needing crew" },
+        { label: "Ready to assign", value: eligible, detail: "At least one eligible crew" },
+        { label: "Active crews", value: activeCrews, detail: "Shown in crew day" },
+        { label: "Conflicts", value: collisions, detail: "Schedule overlaps", tone: collisions > 0 ? "attention" : "default" },
         ...(dataQualityIssues.length > 0
-          ? [{ label: "Needs data", value: dataQualityIssues.length, tone: "attention" as const }]
+          ? [{ label: "Needs data", value: dataQualityIssues.length, detail: "Excluded from suggestions", tone: "attention" as const }]
           : []),
       ]} />
 
-      {dataQualityIssues.length > 0 ? (
-        <Panel>
-          <SectionHeader
-            title="Jobs needing schedule data"
-            description="These jobs are excluded from crew suggestions until their scheduling data is complete."
-          />
-          <ul className={styles.attention}>
-            {dataQualityIssues.map((item) => (
-              <li key={item.visitId + ":" + item.code}>
-                <strong>{item.visitId}</strong> · {item.message}
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      ) : null}
-
-      {recommendations.length === 0 ? (
-        <Panel>
-          <p className={styles.empty}>No unassigned jobs need a crew suggestion.</p>
-        </Panel>
-      ) : (
-        <div className={styles.grid}>
-          {recommendations.map((recommendation) => (
-            <Panel className={styles.visit} key={recommendation.visitId} ariaLabel={`Dispatch suggestions for ${recommendation.visitId}`}>
-              <div className={styles.visitHead}>
+      <div className={styles.board}>
+        <div className={styles.recommendationColumn}>
+          {dataQualityIssues.length > 0 ? (
+            <Panel className={styles.dataQualityPanel}>
+              <div className={styles.panelHeader}>
                 <div>
-                  <p className={styles.meta}>Job {recommendation.visitId}</p>
-                  <h3>Choose a crew</h3>
+                  <p className={styles.panelEyebrow}>Incomplete scheduling data</p>
+                  <h3>Jobs needing schedule data</h3>
+                  <p>These jobs are excluded from crew suggestions until their scheduling data is complete.</p>
                 </div>
-                <StatusBadge tone="warning">Approval required</StatusBadge>
+                <StatusBadge tone="warning">{dataQualityIssues.length} blocked</StatusBadge>
               </div>
-
-              {recommendation.attentionReasons.length > 0 ? (
-                <ul className={styles.attention}>
-                  {recommendation.attentionReasons.map((reason) => <li key={reason}>{reason}</li>)}
-                </ul>
-              ) : null}
-
-              <div className={styles.candidates}>
-                {recommendation.candidates.map((candidate) => (
-                  <article className={styles.candidate} key={candidate.candidateCrewId}>
-                    <div className={styles.rank}>#{candidate.rank}</div>
-                    <div className={styles.candidateBody}>
-                      <div className={styles.candidateHead}>
-                        <strong>{crewLabels[candidate.candidateCrewId] ?? candidate.candidateCrewId}</strong>
-                        <StatusBadge tone={confidenceTone(candidate.confidence)}>
-                          {candidate.confidence.toLowerCase()} confidence
-                        </StatusBadge>
-                      </div>
-                      <p className={styles.meta}>{candidate.currentWorkloadMinutes} min scheduled</p>
-                      <ul className={styles.reasons}>
-                        {candidate.reasons.map((reason) => <li key={reason}>{reason}</li>)}
-                      </ul>
-                      {candidate.conflicts.length > 0 ? (
-                        <div className={styles.conflicts}>
-                          {candidate.conflicts.map((conflict) => (
-                            <StatusBadge tone="danger" key={conflict}>{conflictLabel[conflict]}</StatusBadge>
-                          ))}
-                        </div>
-                      ) : null}
-                      <p className={styles.meta}>Travel time isn’t scored because routing data isn’t available.</p>
-                    </div>
-                    <div className={styles.approval}>
-                      {candidate.eligible && assignmentAvailability.enabled && renderApprovalControl
-                        ? renderApprovalControl({ recommendation, candidate })
-                        : (
-                          <button className="app-button-secondary" type="button" disabled>
-                            {candidate.eligible ? "Assign crew" : "Resolve conflict"}
-                          </button>
-                        )}
-                    </div>
-                  </article>
+              <ul className={styles.dataQualityList}>
+                {dataQualityIssues.map((item) => (
+                  <li key={item.visitId + ":" + item.code}>
+                    <span>{visitLabels[item.visitId] ?? `Job ${shortJobReference(item.visitId)}`}</span>
+                    <small>{item.message}</small>
+                  </li>
                 ))}
+              </ul>
+            </Panel>
+          ) : null}
+
+          {recommendations.length === 0 ? (
+            <Panel className={styles.emptyPanel}>
+              <span className={styles.emptyIcon} aria-hidden="true">✓</span>
+              <div>
+                <strong>No unassigned jobs</strong>
+                <p>Every schedulable job currently has a crew assignment.</p>
               </div>
             </Panel>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className={styles.recommendationList}>
+              {recommendations.map((recommendation) => {
+                const bestCandidate = recommendation.candidates.find((candidate) => candidate.eligible);
+                return (
+                  <Panel className={styles.visit} key={recommendation.visitId} ariaLabel={`Dispatch suggestions for ${recommendation.visitId}`}>
+                    <div className={styles.visitHead}>
+                      <div className={styles.visitTitle}>
+                        <p>{visitMeta[recommendation.visitId] ?? `Job ${shortJobReference(recommendation.visitId)}`}</p>
+                        <h3>{visitLabels[recommendation.visitId] ?? "Unassigned service visit"}</h3>
+                      </div>
+                      <div className={styles.visitStatus}>
+                        {bestCandidate ? <StatusBadge tone="success">Candidate ready</StatusBadge> : <StatusBadge tone="warning">Conflict review</StatusBadge>}
+                        <StatusBadge tone="info">Approval required</StatusBadge>
+                      </div>
+                    </div>
 
-      <Panel>
-        <SectionHeader
-          title="Crew day"
-          description={`Times shown in ${resolvedTimeZone.timeZone}.`}
-        />
-        <div className={styles.lanes}>
-          {timeline.map((lane) => (
-            <article className={styles.lane} key={lane.crewId}>
-              <div className={styles.laneHead}>
-                <div>
-                  <strong>{crewLabels[lane.crewId] ?? lane.crewId}</strong>
-                  <p className={styles.meta}>{lane.active ? "Active" : "Inactive"} · {lane.workloadMinutes} min scheduled</p>
-                </div>
-                <StatusBadge tone={lane.conflictCount > 0 ? "danger" : "success"}>
-                  {lane.conflictCount > 0 ? `${lane.conflictCount} conflicts` : "Clear"}
-                </StatusBadge>
-              </div>
-              <div className={styles.laneVisits}>
-                {lane.visits.length === 0 ? (
-                  <p className={styles.empty}>No assigned jobs.</p>
-                ) : lane.visits.map((visit) => (
-                  <div className={styles.laneVisit} key={visit.visitId}>
-                    <span>{formatOperationalTime(visit.startAt, workspaceTimeZone)}–{formatOperationalTime(visit.endAt, workspaceTimeZone)}</span>
-                    <strong>{visit.visitId}</strong>
-                    <span className={styles.meta}>{visit.status.replaceAll("_", " ").toLowerCase()}</span>
-                    {visit.conflictWithVisitIds.length > 0 ? (
-                      <span className={styles.conflictText}>Overlaps {visit.conflictWithVisitIds.join(", ")}</span>
+                    {recommendation.attentionReasons.length > 0 ? (
+                      <div className={styles.attentionBlock}>
+                        <strong>Operational context</strong>
+                        <ul>
+                          {recommendation.attentionReasons.map((reason) => <li key={reason}>{reason}</li>)}
+                        </ul>
+                      </div>
                     ) : null}
-                  </div>
-                ))}
-              </div>
-            </article>
-          ))}
+
+                    <div className={styles.candidates}>
+                      {recommendation.candidates.slice(0, 4).map((candidate) => (
+                        <article className={`${styles.candidate} ${candidate.eligible ? styles.candidateEligible : styles.candidateBlocked}`} key={candidate.candidateCrewId}>
+                          <div className={styles.rank} aria-label={`Rank ${candidate.rank}`}>{candidate.rank}</div>
+                          <div className={styles.candidateBody}>
+                            <div className={styles.candidateHead}>
+                              <div>
+                                <strong>{crewLabels[candidate.candidateCrewId] ?? candidate.candidateCrewId}</strong>
+                                <span>{candidate.currentWorkloadMinutes} min scheduled</span>
+                              </div>
+                              <StatusBadge tone={confidenceTone(candidate.confidence)}>
+                                {candidate.confidence.toLowerCase()} confidence
+                              </StatusBadge>
+                            </div>
+                            <div className={styles.reasonChips}>
+                              {candidate.reasons.slice(0, 3).map((reason) => <span key={reason}>{reason}</span>)}
+                            </div>
+                            {candidate.conflicts.length > 0 ? (
+                              <div className={styles.conflicts}>
+                                {candidate.conflicts.map((conflict) => (
+                                  <StatusBadge tone="danger" key={conflict}>{conflictLabel[conflict]}</StatusBadge>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className={styles.routingNote}>Travel time isn’t scored because routing data isn’t available.</p>
+                            )}
+                          </div>
+                          <div className={styles.approval}>
+                            {candidate.eligible && assignmentAvailability.enabled && renderApprovalControl
+                              ? renderApprovalControl({ recommendation, candidate })
+                              : (
+                                <button className="app-button-secondary" type="button" disabled>
+                                  {candidate.eligible ? "Assign crew" : "Resolve conflict"}
+                                </button>
+                              )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </Panel>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </Panel>
+
+        <Panel className={styles.timelinePanel} ariaLabel="Crew day schedule">
+          <div className={styles.panelHeader}>
+            <div>
+              <p className={styles.panelEyebrow}>Crew day</p>
+              <h3>Assigned workload</h3>
+              <p>Times shown in {resolvedTimeZone.timeZone}. Conflicts stay visible until resolved.</p>
+            </div>
+          </div>
+          <div className={styles.lanes}>
+            {timeline.length === 0 ? (
+              <div className={styles.timelineEmpty}>No crew schedule is available.</div>
+            ) : timeline.map((lane) => (
+              <article className={styles.lane} key={lane.crewId}>
+                <div className={styles.laneHead}>
+                  <div>
+                    <strong>{crewLabels[lane.crewId] ?? lane.crewId}</strong>
+                    <p>{lane.active ? "Active" : "Inactive"} · {lane.workloadMinutes} min scheduled</p>
+                  </div>
+                  <StatusBadge tone={lane.conflictCount > 0 ? "danger" : "success"}>
+                    {lane.conflictCount > 0 ? `${lane.conflictCount} conflicts` : "Clear"}
+                  </StatusBadge>
+                </div>
+                <div className={styles.laneVisits}>
+                  {lane.visits.length === 0 ? (
+                    <p className={styles.laneEmpty}>No assigned jobs.</p>
+                  ) : lane.visits.map((visit) => (
+                    <div className={styles.laneVisit} key={visit.visitId}>
+                      <span className={styles.laneTime}>{formatOperationalTime(visit.startAt, workspaceTimeZone)}–{formatOperationalTime(visit.endAt, workspaceTimeZone)}</span>
+                      <span className={styles.laneJob}>
+                        <strong>{visitLabels[visit.visitId] ?? `Job ${shortJobReference(visit.visitId)}`}</strong>
+                        <small>{visit.status.replaceAll("_", " ").toLowerCase()}</small>
+                      </span>
+                      {visit.conflictWithVisitIds.length > 0 ? (
+                        <span className={styles.conflictText}>Overlaps another assigned job</span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </Panel>
+      </div>
 
       {!assignmentAvailability.enabled ? (
         <p className={styles.footer}>{assignmentAvailability.disabledReason}</p>
