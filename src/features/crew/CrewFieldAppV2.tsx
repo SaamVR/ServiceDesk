@@ -61,10 +61,20 @@ export function CrewJobDetailV2({
   job,
   timeZone,
   workspaceName,
+  transitionAction,
+  checklistAction,
+  noteAction,
+  notice,
+  error,
 }: {
   job: CrewJobDetailInput;
   timeZone: string;
   workspaceName?: string;
+  transitionAction?: (formData: FormData) => Promise<void>;
+  checklistAction?: (formData: FormData) => Promise<void>;
+  noteAction?: (formData: FormData) => Promise<void>;
+  notice?: string;
+  error?: string;
 }) {
   const view = buildCrewJobDetailView(job, timeZone);
   return (
@@ -79,6 +89,9 @@ export function CrewJobDetailV2({
         <span className={styles.sync}>{view.syncLabel}</span>
       </header>
 
+      {notice ? <p className={styles.panel} role="status">{notice}</p> : null}
+      {error ? <p className={styles.panel} role="alert"><strong>{error}</strong></p> : null}
+
       <div className={styles.grid}>
         <article className={styles.panel}>
           <p className={styles.label}>Job context</p>
@@ -92,7 +105,21 @@ export function CrewJobDetailV2({
           <p className={styles.label}>Checklist</p>
           <h2>{view.checklistProgressLabel}</h2>
           <ul className={styles.notes}>
-            {view.checklist.map((item) => <li key={item.id}>{item.completed ? "Done" : "Pending"} · {item.itemKey}{item.note ? " · " + item.note : ""}</li>)}
+            {view.checklist.map((item) => (
+              <li key={item.id}>
+                <span>{item.completed ? "Done" : "Pending"} · {item.itemKey}{item.note ? " · " + item.note : ""}</span>
+                {checklistAction ? (
+                  <form action={checklistAction}>
+                    <input type="hidden" name="itemKey" value={item.itemKey} />
+                    <input type="hidden" name="completed" value={item.completed ? "false" : "true"} />
+                    <input type="hidden" name="expectedVersion" value={view.version} />
+                    <button className={styles.action} type="submit">
+                      {item.completed ? "Reopen" : "Mark done"}
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
           </ul>
         </article>
 
@@ -109,7 +136,44 @@ export function CrewJobDetailV2({
           <p className={styles.label}>Review handoff</p>
           <h2>{view.nextActionLabel}</h2>
           <p>{view.evidenceGate.canSubmitReview ? "Required evidence is ready. You can submit this job for review." : view.evidenceGate.blocker}</p>
+          {transitionAction && view.transitionAction ? (
+            <form action={transitionAction}>
+              <input type="hidden" name="action" value={view.transitionAction} />
+              <input type="hidden" name="expectedVersion" value={view.version} />
+              <button
+                className={styles.action}
+                type="submit"
+                disabled={view.transitionAction === "SUBMIT_REVIEW" && !view.evidenceGate.canSubmitReview}
+              >
+                {view.nextActionLabel}
+              </button>
+            </form>
+          ) : null}
           <p className={styles.muted}>After submission, the office reviews and completes the job.</p>
+        </article>
+
+        <article className={styles.panel}>
+          <p className={styles.label}>Job notes</p>
+          {noteAction ? (
+            <>
+              <form action={noteAction} className={styles.evidence}>
+                <input type="hidden" name="kind" value="TIME_MATERIAL_NOTE" />
+                <input type="hidden" name="expectedVersion" value={view.version} />
+                <label htmlFor="crew-job-note">Add a work note</label>
+                <textarea id="crew-job-note" name="note" rows={3} required />
+                <button className={styles.action} type="submit">Save note</button>
+              </form>
+              <form action={noteAction} className={styles.evidence}>
+                <input type="hidden" name="kind" value="INCIDENT_NOTE" />
+                <input type="hidden" name="expectedVersion" value={view.version} />
+                <label htmlFor="crew-incident-note">Report an issue</label>
+                <textarea id="crew-incident-note" name="note" rows={3} required />
+                <button className={styles.action} type="submit">Report issue</button>
+              </form>
+            </>
+          ) : (
+            <p className={styles.muted}>Job notes are unavailable.</p>
+          )}
         </article>
       </div>
 
