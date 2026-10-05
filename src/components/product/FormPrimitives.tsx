@@ -41,10 +41,12 @@ export function FormField({
   description?: string;
   error?: string;
   required?: boolean;
-  children: ReactNode;
+  children: ReactNode | ((props: { id: string; describedBy?: string; invalid: boolean }) => ReactNode);
 }) {
   const helpId = description ? `${id}-help` : undefined;
   const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [helpId, errorId].filter(Boolean).join(" ") || undefined;
+  const control = typeof children === "function" ? children({ id, describedBy, invalid: Boolean(error) }) : children;
 
   return (
     <div className={`app-form-field ${error ? "has-error" : ""}`.trim()}>
@@ -53,8 +55,8 @@ export function FormField({
         {required ? <span className="app-required" aria-hidden="true">*</span> : null}
       </label>
       {description ? <p className="app-field-help" id={helpId}>{description}</p> : null}
-      <div className="app-field-control" data-describedby={[helpId, errorId].filter(Boolean).join(" ") || undefined}>
-        {children}
+      <div className="app-field-control">
+        {control}
       </div>
       {error ? <p className="app-field-error" id={errorId} role="alert">{error}</p> : null}
     </div>
@@ -71,6 +73,7 @@ export function TextInput({
   required,
   autoComplete,
   describedBy,
+  invalid,
 }: {
   id: string;
   name: string;
@@ -81,6 +84,7 @@ export function TextInput({
   required?: boolean;
   autoComplete?: string;
   describedBy?: string;
+  invalid?: boolean;
 }) {
   return (
     <input
@@ -94,6 +98,7 @@ export function TextInput({
       required={required}
       autoComplete={autoComplete}
       aria-describedby={describedBy}
+      aria-invalid={invalid || undefined}
     />
   );
 }
@@ -107,6 +112,7 @@ export function TextArea({
   disabled,
   required,
   describedBy,
+  invalid,
 }: {
   id: string;
   name: string;
@@ -116,6 +122,7 @@ export function TextArea({
   disabled?: boolean;
   required?: boolean;
   describedBy?: string;
+  invalid?: boolean;
 }) {
   return (
     <textarea
@@ -128,6 +135,7 @@ export function TextArea({
       disabled={disabled}
       required={required}
       aria-describedby={describedBy}
+      aria-invalid={invalid || undefined}
     />
   );
 }
@@ -140,6 +148,7 @@ export function SelectInput({
   disabled,
   required,
   describedBy,
+  invalid,
 }: {
   id: string;
   name: string;
@@ -148,6 +157,7 @@ export function SelectInput({
   disabled?: boolean;
   required?: boolean;
   describedBy?: string;
+  invalid?: boolean;
 }) {
   return (
     <select
@@ -158,6 +168,7 @@ export function SelectInput({
       disabled={disabled}
       required={required}
       aria-describedby={describedBy}
+      aria-invalid={invalid || undefined}
     >
       {children}
     </select>
