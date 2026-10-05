@@ -78,7 +78,9 @@ describe("V2 operational product routing", () => {
   it("keeps genuinely unsupported operations disabled while wiring authoritative crew assignment", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
     const runtime = source("src/features/operations/operational-product-runtime.ts");
-    expect(route).toContain("Recovery must be handled manually from the related record.");
+    expect(route).toContain("attentionResourceHref");
+    expect(route).toContain("Open related record");
+    expect(route).toContain("Reference only");
     expect(route).toContain("does not simulate online settlement");
     expect(route).toContain("assignOperationalCrew");
     expect(route).toContain('assignmentAvailability={{ enabled: true');

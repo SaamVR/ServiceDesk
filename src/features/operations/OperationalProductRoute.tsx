@@ -1722,7 +1722,32 @@ function QualityView({
   );
 }
 
-function AutomationsView({ data }: { data: OperationalStaffSnapshot }) {
+function attentionResourceHref(workspaceSlug: string, item: OperationalAttention): string | undefined {
+  const workspace = encodeURIComponent(workspaceSlug);
+  const resourceId = encodeURIComponent(item.resourceId);
+  switch (item.resourceType.toLowerCase()) {
+    case "conversation":
+      return `/app/${workspace}/inbox?conversation=${resourceId}`;
+    case "customer":
+      return `/app/${workspace}/customers?customer=${resourceId}`;
+    case "request":
+      return `/app/${workspace}/requests?request=${resourceId}`;
+    case "quote":
+      return `/app/${workspace}/quotes?quote=${resourceId}`;
+    case "visit":
+    case "job":
+      return `/app/${workspace}/jobs?job=${resourceId}`;
+    case "invoice":
+      return `/app/${workspace}/invoices?invoice=${resourceId}`;
+    case "quality":
+    case "quality_case":
+      return `/app/${workspace}/quality?case=${resourceId}`;
+    default:
+      return undefined;
+  }
+}
+
+function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot; workspaceSlug: string }) {
   if (data.attentionItems.length === 0) {
     return (
       <EmptyState
@@ -1777,21 +1802,31 @@ function AutomationsView({ data }: { data: OperationalStaffSnapshot }) {
             id: "action",
             header: "Action",
             priority: "primary",
-            cell: () => (
-              <button
-                className="app-button-secondary"
-                type="button"
-                disabled
-                title="Recovery must be handled manually from the related record."
-              >
-                Open related record
-              </button>
-            ),
+            cell: (item) => {
+              const href = attentionResourceHref(workspaceSlug, item);
+              return href ? (
+                <a className="app-button-secondary" href={href}>Open related record</a>
+              ) : (
+                <span className="app-field-help" title="This attention item has no supported deep link yet.">
+                  Reference only
+                </span>
+              );
+            },
           },
         ]}
-        renderMobileRow={(item) => (
-          <DataCellStack primary={item.summary} secondary={item.severity + " · " + item.resourceType} />
-        )}
+        renderMobileRow={(item) => {
+          const href = attentionResourceHref(workspaceSlug, item);
+          return (
+            <div>
+              <DataCellStack primary={item.summary} secondary={item.severity + " · " + item.resourceType} />
+              {href ? (
+                <div className="app-row-actions">
+                  <a className="app-button-secondary" href={href}>Open related record</a>
+                </div>
+              ) : null}
+            </div>
+          );
+        }}
       />
       <FeedbackBanner
         title="Recovery remains human-owned"
@@ -2113,7 +2148,7 @@ function renderModule(
     case "quality":
       return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} />;
     case "automations":
-      return <AutomationsView data={data} />;
+      return <AutomationsView data={data} workspaceSlug={workspaceSlug} />;
     case "reports":
       return <ReportsView data={data} />;
     case "billing":
