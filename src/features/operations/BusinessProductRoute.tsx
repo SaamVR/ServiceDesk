@@ -1,5 +1,6 @@
 import { buildBusinessModuleHref, businessNavigation, type BusinessModule } from "./business-modules";
 import { loadPublicBusiness } from "./public-business-runtime";
+import styles from "./CustomerPublicProduct.module.css";
 
 interface BusinessProductRouteProps {
   slug: string;
@@ -8,7 +9,7 @@ interface BusinessProductRouteProps {
 
 function BusinessNavigation({ slug, module }: { slug: string; module: BusinessModule }) {
   return (
-    <nav className="site-nav" aria-label="Business navigation">
+    <nav className={styles.businessNav} aria-label="Business navigation">
       {businessNavigation.map((item) => (
         <a
           href={buildBusinessModuleHref(slug, item.module)}
@@ -26,76 +27,86 @@ export async function BusinessProductRoute({ slug, module }: BusinessProductRout
   const result = await loadPublicBusiness(slug);
 
   return (
-    <main className="site-shell">
-      <header className="site-header">
-        <a className="brand-lockup" href={buildBusinessModuleHref(slug, "home")}>
-          <span className="brand-mark" aria-hidden="true">SD</span>
+    <main className={styles.businessShell}>
+      <header className={styles.businessHeader}>
+        <a className={styles.businessBrand} href={buildBusinessModuleHref(slug, "home")}>
+          <span className={styles.brandMark} aria-hidden="true">SD</span>
           <span>{result.ok ? result.value.workspace.name : "Service business"}</span>
         </a>
         <BusinessNavigation slug={slug} module={module} />
       </header>
 
-      <section className="section-card">
+      <section className={styles.businessBody}>
         {result.ok ? (
           module === "home" ? (
             <>
-              <div className="section-heading">
-                <p className="eyebrow">Professional cleaning services</p>
-                <h1>Choose the service that fits your home.</h1>
-                <p className="lead">
-                  Browse the services currently offered by {result.value.workspace.name}.
-                </p>
-              </div>
-              <div className="card-grid three">
+              <section className={styles.businessHero}>
+                <div className={styles.businessHeroCopy}>
+                  <p className="eyebrow">Professional home services</p>
+                  <h1>Book the right service without the back-and-forth.</h1>
+                  <p>
+                    Choose from the services currently offered by {result.value.workspace.name},
+                    then send the team the details they need to prepare your quote.
+                  </p>
+                </div>
+                <div className={styles.businessHeroActions}>
+                  <a className="button-primary" href={buildBusinessModuleHref(slug, "enquire")}>
+                    Start an enquiry
+                  </a>
+                  <a className="button-secondary" href="/portal">
+                    Customer sign in
+                  </a>
+                </div>
+              </section>
+
+              <section className={styles.serviceSection} aria-labelledby="services-heading">
+                <div className={styles.serviceSectionHeader}>
+                  <div>
+                    <p className="eyebrow">Services</p>
+                    <h2 id="services-heading">What we can help with</h2>
+                  </div>
+                </div>
                 {result.value.services.length === 0 ? (
                   <section className="plain-card">
                     <h2>No services listed</h2>
                     <p>Please contact the business directly for current availability.</p>
                   </section>
                 ) : (
-                  result.value.services.map((service) => (
-                    <article className="plain-card" key={service.code}>
-                      <p className="label">{service.code.replaceAll("_", " ")}</p>
-                      <h2>{service.name}</h2>
-                      <p>
-                        {service.requiresReview
-                          ? "A team member will review the request before confirming the quote."
-                          : "Available for request and quote review."}
-                      </p>
-                    </article>
-                  ))
+                  <div className={styles.serviceGrid}>
+                    {result.value.services.map((service) => (
+                      <article className={styles.serviceCard} key={service.code}>
+                        <p className={styles.serviceCode}>{service.code.replaceAll("_", " ")}</p>
+                        <h3>{service.name}</h3>
+                        <p>
+                          {service.requiresReview
+                            ? "We’ll review your details before confirming the quote."
+                            : "Send your details to request a quote."}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
                 )}
-              </div>
-              <div className="action-row">
-                <a className="button-primary" href={buildBusinessModuleHref(slug, "enquire")}>
-                  Start an enquiry
-                </a>
-                <a className="button-secondary" href="/portal">
-                  Customer sign in
-                </a>
-              </div>
+              </section>
             </>
           ) : module === "enquire" ? (
-            <section className="plain-card">
+            <section className={styles.businessState}>
               <p className="eyebrow">Enquiry</p>
-              <h1>Online enquiry is temporarily unavailable.</h1>
+              <h1>Online enquiries are being prepared.</h1>
               <p>
-                The business can publish its live service catalog, but this version does not yet
-                have a customer-contact intake that can safely connect a web visitor to a follow-up
-                record. No request will be submitted until that connection is available.
+                The service list is live, but online contact intake is not connected yet.
+                No request will be created until a secure contact flow is available.
               </p>
               <button className="button-primary" type="button" disabled>
                 Submit enquiry
               </button>
             </section>
           ) : (
-            <section className="plain-card">
+            <section className={styles.businessState}>
               <p className="eyebrow">Booking</p>
-              <h1>Continue from an accepted quote.</h1>
+              <h1>Continue from your accepted quote.</h1>
               <p>
-                Booking and payment start from your customer account after a quote is accepted.
-                Online payments remain sandbox-only and are never shown as paid before the payment
-                record is verified.
+                Open your customer account to review booking and payment status.
+                Online payments remain sandbox-only.
               </p>
               <a className="button-primary" href="/portal">
                 Open customer portal
@@ -103,9 +114,9 @@ export async function BusinessProductRoute({ slug, module }: BusinessProductRout
             </section>
           )
         ) : (
-          <section className="plain-card">
-            <span className="status-pill attention">{result.kind.replaceAll("_", " ")}</span>
-            <h1>Business page unavailable</h1>
+          <section className={styles.businessState}>
+            <p className="eyebrow">Service unavailable</p>
+            <h1>We can’t load this business page right now.</h1>
             <p>{result.message}</p>
           </section>
         )}
