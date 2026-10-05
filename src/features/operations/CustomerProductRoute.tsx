@@ -232,14 +232,14 @@ function BookingView({
         </dl>
       </section>
       <section className="plain-card">
-        <p className="label">Checkout</p>
-        <h2>Sandbox checkout only</h2>
+        <p className="label">Payment</p>
+        <h2>Online payment is not enabled yet</h2>
         <p>
-          Online checkout can start only after a current slot hold exists. Customer self-service
-          slot reservation is not available yet, so no payment success is shown or simulated here.
+          Your booking and invoice status remain visible here. The business will let you know when
+          an online payment option is available.
         </p>
         <button className="button-primary" type="button" disabled>
-          Start sandbox checkout
+          Pay online
         </button>
       </section>
     </div>
