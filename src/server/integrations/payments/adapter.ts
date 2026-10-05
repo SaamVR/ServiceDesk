@@ -47,11 +47,18 @@ function amountForPurpose(input: CheckoutInput): Result<number> {
     return { ok: false, code: "PAYMENT_PURPOSE_INVALID", message: "Checkout purpose is not supported by the payment connector." };
   }
   if (input.purpose === "DEPOSIT") return { ok: true, value: input.quote.depositMinor };
-  if (input.purpose === "BALANCE") return { ok: true, value: input.quote.balanceMinor };
+  if (input.purpose === "BALANCE") {
+    if (!Number.isInteger(input.balanceMinor) || (input.balanceMinor ?? 0) <= 0) {
+      return { ok: false, code: "PAYMENT_INVOICE_BALANCE_INVALID", message: "Balance checkout requires the current authoritative invoice balance." };
+    }
+    return { ok: true, value: input.balanceMinor! };
+  }
   return { ok: true, value: input.quote.totalMinor };
 }
 
 function rejectExpiredHold(input: CheckoutInput, now: string): Result<true> {
+  if (input.purpose !== "DEPOSIT") return { ok: true, value: true };
+  if (!input.hold) return { ok: false, code: "PAYMENT_HOLD_REFERENCE_MISSING", message: "Deposit checkout requires an authoritative hold." };
   const holdExpiresAtMs = new Date(input.hold.expiresAt).getTime();
   const nowMs = new Date(now).getTime();
   if (!Number.isFinite(holdExpiresAtMs) || !Number.isFinite(nowMs)) {
@@ -223,8 +230,8 @@ function checkoutMetadata(input: CheckoutInput): Record<string, string> {
   return {
     workspaceId: input.quote.workspaceId,
     quoteId: input.quote.id,
-    holdId: input.hold.holdId,
     purpose: input.purpose,
+    ...(input.hold ? { holdId: input.hold.holdId } : {}),
     ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
   };
 }
@@ -237,8 +244,13 @@ export class FixtureStripePaymentAdapter implements PaymentAdapter {
   ) {}
 
   async createCheckout(input: CheckoutInput): Promise<Result<CheckoutSession>> {
-    if (input.hold.workspaceId !== input.quote.workspaceId || input.hold.quoteId !== input.quote.id) {
-      return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Hold and quote do not share workspace/quote scope." };
+    if (input.purpose === "DEPOSIT") {
+      if (!input.hold) {
+        return { ok: false, code: "PAYMENT_HOLD_REFERENCE_MISSING", message: "Deposit checkout requires an authoritative hold." };
+      }
+      if (input.hold.workspaceId !== input.quote.workspaceId || input.hold.quoteId !== input.quote.id) {
+        return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Hold and quote do not share workspace/quote scope." };
+      }
     }
 
     if (input.purpose === "BALANCE" && !input.invoiceId?.trim()) {
@@ -253,7 +265,7 @@ export class FixtureStripePaymentAdapter implements PaymentAdapter {
     const amountMinor = amount.value;
     if (amountMinor <= 0) return { ok: false, code: "INVALID_CHECKOUT_AMOUNT", message: "Checkout amount must be positive." };
 
-    const providerSessionId = `cs_test_${input.hold.holdId}_${input.purpose.toLowerCase()}`;
+    const providerSessionId = `cs_test_${input.hold?.holdId ?? input.invoiceId ?? input.quote.id}_${input.purpose.toLowerCase()}`;
     return {
       ok: true,
       value: {
