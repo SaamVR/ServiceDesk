@@ -13,6 +13,7 @@ import {
   setOperationalChecklistItem,
   toggleInboxHandover,
   transitionOperationalVisit,
+  updateOperationalServiceCatalogItem,
   type OperationalActionResult,
   type OperationalAttention,
   type OperationalCustomer,
@@ -1910,6 +1911,18 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     return <EmptyState title="Settings unavailable" detail="Workspace settings are temporarily unavailable." />;
   }
 
+  async function serviceCatalogAction(formData: FormData) {
+    "use server";
+    const result = await updateOperationalServiceCatalogItem(workspaceSlug, {
+      serviceId: String(formData.get("serviceId") ?? ""),
+      name: String(formData.get("name") ?? ""),
+      active: String(formData.get("active") ?? "") === "on",
+      requiresReview: String(formData.get("requiresReview") ?? "") === "on",
+      expectedUpdatedAt: String(formData.get("expectedUpdatedAt") ?? ""),
+    });
+    actionRedirect(workspaceSlug, "settings", result);
+  }
+
   async function recurrenceAction(formData: FormData) {
     "use server";
     const raw = String(formData.get("action") ?? "");
@@ -1928,15 +1941,63 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
   return (
     <div className={styles.stack}>
       <Panel>
-        <SectionHeader title="Service catalog" description="Services currently available to this workspace." />
-        <div className="app-row-list">
-          {snapshot.services.map((service) => (
-            <article className="app-row" key={service.code}>
-              <div><h3>{service.label}</h3><p>{service.code}</p></div>
-              <StatusBadge tone={service.enabled ? "success" : "neutral"}>{service.enabled ? "Enabled" : "Disabled"}</StatusBadge>
-            </article>
-          ))}
-        </div>
+        <SectionHeader
+          title="Service catalog"
+          description={
+            data.actor.role === "OWNER"
+              ? "Manage customer-facing service names, availability and manual-review requirements."
+              : "Services currently available to this workspace. Only owners can change the catalog."
+          }
+        />
+        {data.serviceCatalog.length === 0 ? (
+          <AppEmptyState title="No services configured" description="Add services during workspace setup before taking new enquiries." />
+        ) : (
+          <div className="app-row-list">
+            {data.serviceCatalog.map((service) => (
+              data.actor.role === "OWNER" ? (
+                <form action={serviceCatalogAction} className="app-row" key={service.id}>
+                  <input type="hidden" name="serviceId" value={service.id} />
+                  <input type="hidden" name="expectedUpdatedAt" value={service.updatedAt} />
+                  <div>
+                    <label>
+                      <span className="app-sr-only">Service name for {service.code}</span>
+                      <input
+                        className="app-input"
+                        name="name"
+                        type="text"
+                        defaultValue={service.name}
+                        maxLength={120}
+                        required
+                      />
+                    </label>
+                    <p>{service.code} · Updated {formatWhen(service.updatedAt, data.workspace.timezone)}</p>
+                  </div>
+                  <div className="app-row-meta">
+                    <label className="app-checkbox-field">
+                      <input name="active" type="checkbox" defaultChecked={service.active} />
+                      <span><strong>Available</strong><small>Show for new enquiries.</small></span>
+                    </label>
+                    <label className="app-checkbox-field">
+                      <input name="requiresReview" type="checkbox" defaultChecked={service.requiresReview} />
+                      <span><strong>Manual review</strong><small>Require staff review before confirmation.</small></span>
+                    </label>
+                    <button className="app-button-primary" type="submit">Save</button>
+                  </div>
+                </form>
+              ) : (
+                <article className="app-row" key={service.id}>
+                  <div>
+                    <h3>{service.name}</h3>
+                    <p>{service.code}{service.requiresReview ? " · Manual review required" : ""}</p>
+                  </div>
+                  <StatusBadge tone={service.active ? "success" : "neutral"}>
+                    {service.active ? "Available" : "Unavailable"}
+                  </StatusBadge>
+                </article>
+              )
+            ))}
+          </div>
+        )}
       </Panel>
 
       <Panel>

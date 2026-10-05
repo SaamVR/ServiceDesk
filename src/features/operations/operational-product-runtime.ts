@@ -117,6 +117,15 @@ export interface OperationalRecurrence {
   version: number;
 }
 
+export interface OperationalServiceCatalogItem {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+  requiresReview: boolean;
+  updatedAt: string;
+}
+
 export interface OperationalStaffSnapshot {
   loadedAt: string;
   workspace: { id: string; slug: string; name: string; timezone: string };
@@ -132,6 +141,7 @@ export interface OperationalStaffSnapshot {
   attentionItems: OperationalAttention[];
   qualityCases: OperationalQualityCase[];
   recurrenceRules: OperationalRecurrence[];
+  serviceCatalog: OperationalServiceCatalogItem[];
   crews: Array<{ id: string; name: string; active: boolean }>;
   capacitySlots: Array<{ id: string; crewId: string; startAt: string; endAt: string; capacityMinutes: number }>;
   slotHolds: Array<{ id: string; slotId: string; quoteId: string; status: string; expiresAt: string }>;
@@ -542,6 +552,14 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         nextOccurrenceOn: textValue(row, "next_occurrence_on"),
         version: numberValue(row, "version", 1),
       })),
+      serviceCatalog: serviceRows.map((row) => ({
+        id: String(row.id),
+        code: String(row.code),
+        name: String(row.name),
+        active: Boolean(row.active),
+        requiresReview: Boolean(row.requires_review),
+        updatedAt: String(row.updated_at),
+      })),
       crews: crewRows.map((row) => ({
         id: String(row.id),
         name: String(row.name ?? "Crew"),
@@ -940,4 +958,70 @@ export async function applyOperationalRecurrenceAction(
   return result.ok
     ? { ok: true, message: action === "PAUSE" ? "Recurring service paused." : action === "RESUME" ? "Recurring service resumed." : "Next occurrence skipped." }
     : safeCoreFailure(result, "Could not update the recurring service. Refresh and try again.");
+}
+
+export async function updateOperationalServiceCatalogItem(
+  workspaceSlug: string,
+  input: {
+    serviceId: string;
+    name: string;
+    active: boolean;
+    requiresReview: boolean;
+    expectedUpdatedAt: string;
+  },
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only workspace owners can change the service catalog." };
+  }
+
+  const serviceId = input.serviceId.trim();
+  const name = input.name.trim();
+  if (!serviceId || !name || name.length > 120 || !input.expectedUpdatedAt) {
+    return { ok: false, message: "Check the service details and try again." };
+  }
+
+  const idempotencyKey = [
+    "service-catalog",
+    serviceId,
+    input.expectedUpdatedAt,
+    name,
+    input.active ? "active" : "inactive",
+    input.requiresReview ? "review" : "direct",
+  ].join(":");
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_update_service_catalog_item", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      serviceId,
+      name,
+      active: input.active,
+      requiresReview: input.requiresReview,
+      expectedUpdatedAt: input.expectedUpdatedAt,
+      idempotencyKey,
+      now: new Date().toISOString(),
+    },
+  });
+
+  if (error) {
+    return { ok: false, message: "The service could not be saved. Try again." };
+  }
+  if (!data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "SERVICE_VERSION_CONFLICT") {
+      return { ok: false, message: "This service changed since the page loaded. Refresh and try again." };
+    }
+    if (code === "OWNER_SCOPE_REQUIRED") {
+      return { ok: false, message: "Only workspace owners can change the service catalog." };
+    }
+    if (code === "SERVICE_NOT_FOUND") {
+      return { ok: false, message: "This service is no longer available. Refresh the page." };
+    }
+    return { ok: false, message: "The service could not be saved. Check the details and try again." };
+  }
+
+  return { ok: true, message: "Service catalog updated." };
 }

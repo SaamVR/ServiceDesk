@@ -93,7 +93,8 @@ describe("V2 operational product routing", () => {
     expect(runtime).toContain('.eq("customer_id", customer.id)');
     expect(runtime).toContain("acceptCustomerPortalQuote");
     expect(route).toContain("CustomerPortalShell");
-    expect(route).toContain("Online payment is not available from this invoice yet.");
+    expect(route).toContain("Open sandbox payment");
+    expect(route).toContain("No real money is charged");
     expect(route).not.toContain("FIXTURE_UI_ONLY");
   });
 
