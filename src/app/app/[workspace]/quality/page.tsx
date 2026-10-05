@@ -1,15 +1,20 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffQualityPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffQualityPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspace: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { workspace } = await params;
-
+  const query = await searchParams;
   return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="quality"
-      workspaceLabel={workspace}
-      title="Quality review workspace."
-      description="Customer reviews and quality actions remain disabled until accepted server commands exist."
+    <OperationalProductRoute
+      workspaceSlug={workspace}
+      module="quality"
+      notice={query.notice}
+      error={query.error}
     />
   );
 }
