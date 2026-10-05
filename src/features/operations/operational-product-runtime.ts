@@ -18,6 +18,7 @@ import { createPostgresReportingPlatformFacadeMethods } from "@/server/core/repo
 import { createPostgresRecurrenceFacadeMethods } from "@/server/core/recurrence-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
+import { buildOperationalIntegrationHealth, type OperationalIntegrationHealth } from "./integration-health-runtime";
 
 type Row = Record<string, unknown>;
 
@@ -142,6 +143,7 @@ export interface OperationalStaffSnapshot {
   qualityCases: OperationalQualityCase[];
   recurrenceRules: OperationalRecurrence[];
   serviceCatalog: OperationalServiceCatalogItem[];
+  integrations: OperationalIntegrationHealth[];
   crews: Array<{ id: string; name: string; active: boolean }>;
   capacitySlots: Array<{ id: string; crewId: string; startAt: string; endAt: string; capacityMinutes: number }>;
   slotHolds: Array<{ id: string; slotId: string; quoteId: string; status: string; expiresAt: string }>;
@@ -560,6 +562,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         requiresReview: Boolean(row.requires_review),
         updatedAt: String(row.updated_at),
       })),
+      integrations: buildOperationalIntegrationHealth(),
       crews: crewRows.map((row) => ({
         id: String(row.id),
         name: String(row.name ?? "Crew"),

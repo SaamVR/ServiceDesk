@@ -2116,10 +2116,53 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
       </Panel>
 
       <Panel>
-        <SectionHeader title="Integrations" description="Connection health requires a dedicated workspace integration-status read." />
-        <button className="app-button-secondary" type="button" disabled title="Integration status is not part of the current settings read.">
-          Manage integrations
-        </button>
+        <SectionHeader
+          title="Integrations"
+          description="Server-side readiness only. Secret values are never exposed, and configuration does not count as provider verification."
+        />
+        <div className="app-row-list">
+          {data.integrations.map((integration) => {
+            const readyForProof = integration.configurationState === "CONFIGURED";
+            const statusLabel = integration.provider === "PAYMENT"
+              ? "Sandbox ready"
+              : readyForProof
+                ? "Ready for proof"
+                : integration.configurationState === "PARTIAL"
+                  ? "Partial setup"
+                  : "Setup required";
+            const tone = integration.provider === "PAYMENT" || integration.configurationState === "PARTIAL"
+              ? "warning" as const
+              : readyForProof
+                ? "info" as const
+                : "neutral" as const;
+            return (
+              <article className="app-row" key={integration.provider}>
+                <div>
+                  <h3>{integration.label}</h3>
+                  <p>{integration.mode} · {integration.verificationState.replaceAll("_", " ")}</p>
+                  <p>{integration.message}</p>
+                  {integration.missingConfiguration.length > 0 ? (
+                    <p>
+                      Missing: {integration.missingConfiguration
+                        .slice(0, 3)
+                        .map((item) => item.replaceAll("_", " ").toLowerCase())
+                        .join(", ")}
+                      {integration.missingConfiguration.length > 3
+                        ? ` +${integration.missingConfiguration.length - 3} more`
+                        : ""}
+                    </p>
+                  ) : null}
+                </div>
+                <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
+              </article>
+            );
+          })}
+        </div>
+        <FeedbackBanner
+          title="Provider proof stays separate"
+          description="These statuses are derived from server configuration presence and the internal payment sandbox. WhatsApp, Calendar, Email, n8n and AI are not called provider-verified until controlled external receipts are available."
+          tone="info"
+        />
       </Panel>
     </div>
   );
