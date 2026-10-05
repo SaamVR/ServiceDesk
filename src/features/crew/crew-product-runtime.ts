@@ -9,6 +9,8 @@ import type {
   VisitEvidenceDTO,
 } from "@/contracts";
 import { createCrewSyncState } from "./sync-state";
+import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
+import type { SupabaseRpcClient } from "@/server/core/payment-application-postgres";
 import type {
   CrewAuthorizedContext,
   CrewJobDetailInput,
@@ -385,4 +387,127 @@ export async function loadCrewJob(
   } catch {
     return { ok: false, kind: "server", message: "Job details could not be loaded." };
   }
+}
+
+
+export type CrewProductActionResult =
+  | { ok: true; message: string }
+  | { ok: false; message: string };
+
+export async function transitionCrewJob(
+  workspaceSlug: string | undefined,
+  visitId: string,
+  action: "EN_ROUTE" | "START" | "SUBMIT_REVIEW",
+  expectedVersion: number,
+): Promise<CrewProductActionResult> {
+  const resolved = await resolveCrewWorkspace(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!visitId || !Number.isInteger(expectedVersion) || expectedVersion <= 0) {
+    return { ok: false, message: "Refresh this job and try again." };
+  }
+
+  const facade = createPostgresVisitFieldRuntimeFacadeMethods(
+    resolved.value.service as unknown as SupabaseRpcClient,
+  );
+  const result = await facade.transitionVisit(
+    resolved.value.actor,
+    visitId,
+    action,
+    {
+      idempotencyKey: "crew-transition-" + crypto.randomUUID(),
+      expectedVersion,
+      now: new Date().toISOString(),
+    },
+  );
+
+  return result.ok
+    ? { ok: true, message: "Job status updated." }
+    : {
+        ok: false,
+        message:
+          result.code === "VERSION_CONFLICT"
+            ? "This job changed elsewhere. Refresh before trying again."
+            : result.message,
+      };
+}
+
+export async function updateCrewChecklistItem(
+  workspaceSlug: string | undefined,
+  visitId: string,
+  itemKey: string,
+  completed: boolean,
+  expectedVersion: number,
+  note?: string,
+): Promise<CrewProductActionResult> {
+  const resolved = await resolveCrewWorkspace(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!visitId || !itemKey.trim() || !Number.isInteger(expectedVersion) || expectedVersion <= 0) {
+    return { ok: false, message: "Refresh this job and try again." };
+  }
+
+  const facade = createPostgresVisitFieldRuntimeFacadeMethods(
+    resolved.value.service as unknown as SupabaseRpcClient,
+  );
+  const result = await facade.setVisitChecklistItem(
+    resolved.value.actor,
+    visitId,
+    { itemKey: itemKey.trim(), completed, note: note?.trim() || undefined },
+    {
+      idempotencyKey: "crew-checklist-" + crypto.randomUUID(),
+      expectedVersion,
+      now: new Date().toISOString(),
+    },
+  );
+
+  return result.ok
+    ? { ok: true, message: completed ? "Checklist item completed." : "Checklist item reopened." }
+    : {
+        ok: false,
+        message:
+          result.code === "VERSION_CONFLICT"
+            ? "This job changed elsewhere. Refresh before trying again."
+            : result.message,
+      };
+}
+
+export async function addCrewFieldNote(
+  workspaceSlug: string | undefined,
+  visitId: string,
+  kind: "TIME_MATERIAL_NOTE" | "INCIDENT_NOTE",
+  note: string,
+  expectedVersion: number,
+): Promise<CrewProductActionResult> {
+  const trimmed = note.trim();
+  if (!trimmed) return { ok: false, message: "Write a note before saving." };
+
+  const resolved = await resolveCrewWorkspace(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!visitId || !Number.isInteger(expectedVersion) || expectedVersion <= 0) {
+    return { ok: false, message: "Refresh this job and try again." };
+  }
+
+  const facade = createPostgresVisitFieldRuntimeFacadeMethods(
+    resolved.value.service as unknown as SupabaseRpcClient,
+  );
+  const now = new Date().toISOString();
+  const result = await facade.addVisitEvidence(
+    resolved.value.actor,
+    visitId,
+    { kind, text: trimmed, capturedAt: now },
+    {
+      idempotencyKey: "crew-note-" + crypto.randomUUID(),
+      expectedVersion,
+      now,
+    },
+  );
+
+  return result.ok
+    ? { ok: true, message: kind === "INCIDENT_NOTE" ? "Issue reported to the office." : "Job note saved." }
+    : {
+        ok: false,
+        message:
+          result.code === "VERSION_CONFLICT"
+            ? "This job changed elsewhere. Refresh before trying again."
+            : result.message,
+      };
 }
