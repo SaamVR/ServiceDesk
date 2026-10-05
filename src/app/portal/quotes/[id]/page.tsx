@@ -1,15 +1,13 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { CustomerProductRoute } from "@/features/operations/CustomerProductRoute";
 
-export default async function PortalQuotePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PortalQuotePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { id } = await params;
-
-  return (
-    <OperationalFixtureRoute
-      surface="customer"
-      customerModule="quote"
-      resourceLabel={`quote ${id}`}
-      title="Quote detail and acceptance boundary."
-      description="Quote acceptance must target the exact server version and remains disabled in fixture mode."
-    />
-  );
+  const query = await searchParams;
+  return <CustomerProductRoute module="quote" resourceId={id} notice={query.notice} error={query.error} />;
 }
