@@ -43,6 +43,7 @@ interface OperationalProductRouteProps {
   selectedQuoteId?: string;
   selectedQualityCaseId?: string;
   selectedJobId?: string;
+  selectedInvoiceId?: string;
   notice?: string;
   error?: string;
 }
@@ -1315,19 +1316,27 @@ function JobsView({
 function InvoicesView({
   data,
   workspaceSlug,
+  selectedInvoiceId,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
+  selectedInvoiceId?: string;
 }) {
   async function manualPayment(formData: FormData) {
     "use server";
+    const invoiceId = String(formData.get("invoiceId") ?? "");
     const amount = String(formData.get("amount") ?? "").trim();
     const match = amount.match(/^(\d+)(?:\.(\d{1,2}))?$/);
     if (!match) {
-      actionRedirect(workspaceSlug, "invoices", {
-        ok: false,
-        message: "Enter a valid payment amount.",
-      });
+      actionRedirect(
+        workspaceSlug,
+        "invoices",
+        {
+          ok: false,
+          message: "Enter a valid payment amount.",
+        },
+        "invoice=" + encodeURIComponent(invoiceId) + "&",
+      );
     }
     const amountMinor =
       Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
@@ -1336,12 +1345,17 @@ function InvoicesView({
       methodRaw === "CASH" || methodRaw === "BANK_TRANSFER" ? methodRaw : "OTHER";
     const result = await applyOperationalManualPayment(
       workspaceSlug,
-      String(formData.get("invoiceId") ?? ""),
+      invoiceId,
       amountMinor,
       method,
       String(formData.get("reference") ?? ""),
     );
-    actionRedirect(workspaceSlug, "invoices", result);
+    actionRedirect(
+      workspaceSlug,
+      "invoices",
+      result,
+      "invoice=" + encodeURIComponent(invoiceId) + "&",
+    );
   }
 
   if (data.invoices.length === 0) {
@@ -1350,9 +1364,20 @@ function InvoicesView({
     );
   }
 
-  const outstanding = data.invoices.filter(
-    (invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID",
+  const selectedInvoice =
+    data.invoices.find((invoice) => invoice.id === selectedInvoiceId) ??
+    data.invoices[0];
+  const selectedInvoiceQuote = data.quotes.find(
+    (quote) => quote.id === selectedInvoice.quoteId,
   );
+  const selectedInvoiceRequest = data.requests.find(
+    (request) => request.id === selectedInvoiceQuote?.requestId,
+  );
+  const selectedInvoiceCustomer = data.customers.find(
+    (customer) => customer.id === selectedInvoiceRequest?.customerId,
+  );
+  const selectedInvoiceCanRecordPayment =
+    selectedInvoice.balanceMinor > 0 && selectedInvoice.status !== "VOID";
 
   return (
     <div className={styles.stack}>
@@ -1363,6 +1388,7 @@ function InvoicesView({
         caption="Invoices"
         rows={data.invoices}
         getRowKey={(invoice) => invoice.id}
+        selectedRowKey={selectedInvoice.id}
         columns={[
           {
             id: "invoice",
@@ -1391,89 +1417,137 @@ function InvoicesView({
             header: "Status",
             cell: (invoice) => <StatusBadge tone={statusBadgeTone(invoice.status)}>{invoice.status.replaceAll("_", " ")}</StatusBadge>,
           },
+          {
+            id: "action",
+            header: "Action",
+            priority: "primary",
+            cell: (invoice) => (
+              <a
+                className="app-button-secondary"
+                href={"?invoice=" + encodeURIComponent(invoice.id)}
+                aria-current={invoice.id === selectedInvoice.id ? "page" : undefined}
+              >
+                {invoice.id === selectedInvoice.id ? "Viewing" : "Open"}
+              </a>
+            ),
+          },
         ]}
         renderMobileRow={(invoice) => (
-          <DataCellStack
-            primary={formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due"}
-            secondary={invoice.status.replaceAll("_", " ") + " · invoice " + invoice.id.slice(0, 8)}
-          />
+          <div className="app-row">
+            <DataCellStack
+              primary={formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due"}
+              secondary={invoice.status.replaceAll("_", " ") + " · invoice " + invoice.id.slice(0, 8)}
+            />
+            <a
+              className="app-button-secondary"
+              href={"?invoice=" + encodeURIComponent(invoice.id)}
+              aria-current={invoice.id === selectedInvoice.id ? "page" : undefined}
+            >
+              {invoice.id === selectedInvoice.id ? "Viewing" : "Open"}
+            </a>
+          </div>
         )}
       />
 
-      {outstanding.length ? (
-        <Panel>
-          <SectionHeader
-            title="Record manual payment"
-            description="Use this only for payment received outside the online checkout flow."
-          />
-          <div className="app-grid app-grid-two">
-            {outstanding.slice(0, 6).map((invoice) => (
-              <FormSection
-                key={invoice.id}
-                title={formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due"}
-                description={"Invoice " + invoice.id.slice(0, 8)}
-              >
-                <form action={manualPayment}>
-                  <input type="hidden" name="invoiceId" value={invoice.id} />
-                  <FormGrid columns={2}>
-                    <FormField id={"payment-amount-" + invoice.id} label="Amount" required>
-                      {({ id, describedBy, invalid }) => (
-                        <TextInput
-                          id={id}
-                          name="amount"
-                          type="text"
-                          defaultValue={(invoice.balanceMinor / 100).toFixed(2)}
-                          required
-                          describedBy={describedBy}
-                          invalid={invalid}
-                        />
-                      )}
-                    </FormField>
-                    <FormField id={"payment-method-" + invoice.id} label="Method" required>
-                      {({ id, describedBy, invalid }) => (
-                        <SelectInput
-                          id={id}
-                          name="method"
-                          defaultValue="BANK_TRANSFER"
-                          required
-                          describedBy={describedBy}
-                          invalid={invalid}
-                        >
-                          <option value="BANK_TRANSFER">Bank transfer</option>
-                          <option value="CASH">Cash</option>
-                          <option value="OTHER">Other</option>
-                        </SelectInput>
-                      )}
-                    </FormField>
-                    <FormField id={"payment-reference-" + invoice.id} label="Reference" required>
-                      {({ id, describedBy, invalid }) => (
-                        <TextInput
-                          id={id}
-                          name="reference"
-                          placeholder="Bank reference or receipt number"
-                          required
-                          describedBy={describedBy}
-                          invalid={invalid}
-                        />
-                      )}
-                    </FormField>
-                  </FormGrid>
-                  <FormActions>
-                    <button className="app-button-secondary" type="submit">Apply payment</button>
-                  </FormActions>
-                  <p className="app-field-help">
-                    Records an offline/manual payment only. It does not simulate online settlement.
-                  </p>
-                </form>
-              </FormSection>
-            ))}
-          </div>
-        </Panel>
-      ) : (
-        <Panel>
-          <AppEmptyState title="Nothing outstanding" description="There are no invoice balances requiring payment." />
-        </Panel>
-      )}
+      <Panel>
+        <SectionHeader
+          title={"Invoice " + selectedInvoice.id.slice(0, 8)}
+          description={
+            (selectedInvoiceCustomer?.displayName ?? "Customer unavailable") +
+            " · " +
+            (selectedInvoiceRequest?.serviceLabel ?? "Service invoice")
+          }
+          action={
+            <StatusBadge tone={statusBadgeTone(selectedInvoice.status)}>
+              {selectedInvoice.status.replaceAll("_", " ")}
+            </StatusBadge>
+          }
+        />
+
+        <div className="app-grid app-grid-two">
+          <section>
+            <h3>Balance</h3>
+            <dl className="summary-list">
+              <div><dt>Total</dt><dd>{formatMinorMoney(selectedInvoice.totalMinor, selectedInvoice.currency)}</dd></div>
+              <div><dt>Paid / allocated</dt><dd>{formatMinorMoney(selectedInvoice.allocatedMinor, selectedInvoice.currency)}</dd></div>
+              <div><dt>Refunded</dt><dd>{formatMinorMoney(selectedInvoice.refundedMinor, selectedInvoice.currency)}</dd></div>
+              <div><dt>Outstanding</dt><dd>{formatMinorMoney(selectedInvoice.balanceMinor, selectedInvoice.currency)}</dd></div>
+            </dl>
+          </section>
+
+          {selectedInvoiceCanRecordPayment ? (
+            <FormSection
+              title="Record manual payment"
+              description="Use this only for payment received outside the online checkout flow."
+            >
+              <form action={manualPayment}>
+                <input type="hidden" name="invoiceId" value={selectedInvoice.id} />
+                <FormGrid columns={2}>
+                  <FormField id={"payment-amount-" + selectedInvoice.id} label="Amount" required>
+                    {({ id, describedBy, invalid }) => (
+                      <TextInput
+                        id={id}
+                        name="amount"
+                        type="text"
+                        defaultValue={(selectedInvoice.balanceMinor / 100).toFixed(2)}
+                        required
+                        describedBy={describedBy}
+                        invalid={invalid}
+                      />
+                    )}
+                  </FormField>
+                  <FormField id={"payment-method-" + selectedInvoice.id} label="Method" required>
+                    {({ id, describedBy, invalid }) => (
+                      <SelectInput
+                        id={id}
+                        name="method"
+                        defaultValue="BANK_TRANSFER"
+                        required
+                        describedBy={describedBy}
+                        invalid={invalid}
+                      >
+                        <option value="BANK_TRANSFER">Bank transfer</option>
+                        <option value="CASH">Cash</option>
+                        <option value="OTHER">Other</option>
+                      </SelectInput>
+                    )}
+                  </FormField>
+                  <FormField id={"payment-reference-" + selectedInvoice.id} label="Reference" required>
+                    {({ id, describedBy, invalid }) => (
+                      <TextInput
+                        id={id}
+                        name="reference"
+                        placeholder="Bank reference or receipt number"
+                        required
+                        describedBy={describedBy}
+                        invalid={invalid}
+                      />
+                    )}
+                  </FormField>
+                </FormGrid>
+                <FormActions>
+                  <button className="app-button-primary" type="submit">Apply payment</button>
+                </FormActions>
+                <p className="app-field-help">
+                  Records an offline/manual payment only. It does not simulate online settlement.
+                </p>
+              </form>
+            </FormSection>
+          ) : (
+            <section>
+              <h3>Payment action</h3>
+              <AppEmptyState
+                title={selectedInvoice.status === "VOID" ? "Invoice void" : "Nothing outstanding"}
+                description={
+                  selectedInvoice.status === "VOID"
+                    ? "Manual payment cannot be recorded on a void invoice."
+                    : "This invoice has no balance requiring a manual payment."
+                }
+              />
+            </section>
+          )}
+        </div>
+      </Panel>
     </div>
   );
 }
@@ -1952,6 +2026,7 @@ function renderModule(
   selectedQuoteId?: string,
   selectedQualityCaseId?: string,
   selectedJobId?: string,
+  selectedInvoiceId?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -1973,7 +2048,7 @@ function renderModule(
     case "jobs":
       return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} />;
     case "invoices":
-      return <InvoicesView data={data} workspaceSlug={workspaceSlug} />;
+      return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} />;
     case "quality":
       return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} />;
     case "automations":
@@ -1996,6 +2071,7 @@ export async function OperationalProductRoute({
   selectedQuoteId,
   selectedQualityCaseId,
   selectedJobId,
+  selectedInvoiceId,
   notice,
   error,
 }: OperationalProductRouteProps) {
@@ -2013,7 +2089,7 @@ export async function OperationalProductRoute({
       <Notice notice={notice} error={error} />
 
       {result.ok ? (
-        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId)
+        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId)
       ) : (
         <Panel>
           <FeedbackBanner
