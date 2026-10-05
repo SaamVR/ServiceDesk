@@ -17,9 +17,9 @@ describe("V2 dispatch assignment migration contract", () => {
 
   it("guards version, active crew, overlap and idempotency", () => {
     expect(sql).toContain("VERSION_CONFLICT");
-    expect(sql).toContain("CREW_UNAVAILABLE");
-    expect(sql).toContain("SCHEDULE_CONFLICT");
-    expect(sql).toContain("visit.assign_crew");
+    expect(sql).toContain("CREW_NOT_AVAILABLE");
+    expect(sql).toContain("CREW_SCHEDULE_CONFLICT");
+    expect(sql).toContain("assign_visit_crew");
     expect(sql).toContain("pg_advisory_xact_lock");
   });
 });

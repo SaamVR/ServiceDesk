@@ -15,6 +15,16 @@ function readable(value: string) {
   return value.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
 }
 
+function formatVisitStart(value: string, timeZone: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone,
+  }).format(date);
+}
+
 export function StaffOverviewDashboard({
   workspace,
   snapshot,
@@ -23,7 +33,7 @@ export function StaffOverviewDashboard({
   workspace: string;
   snapshot?: Pick<
     OperationalStaffSnapshot,
-    "requests" | "quotes" | "visits" | "invoices" | "attentionItems" | "qualityCases"
+    "workspace" | "requests" | "quotes" | "visits" | "invoices" | "attentionItems" | "qualityCases"
   >;
   errorMessage?: string;
 }) {
@@ -143,7 +153,7 @@ export function StaffOverviewDashboard({
                 <article className="app-row" key={visit.id}>
                   <div>
                     <h3>Visit {visit.id}</h3>
-                    <p>{formatVisitStart(visit.startAt)}</p>
+                    <p>{formatVisitStart(visit.startAt, snapshot.workspace.timezone)}</p>
                   </div>
                   <div className="app-row-meta">
                     <StatusBadge tone={visit.status === "PAYMENT_REVIEW" || visit.status === "PENDING_REVIEW" ? "warning" : "neutral"}>{readable(visit.status)}</StatusBadge>

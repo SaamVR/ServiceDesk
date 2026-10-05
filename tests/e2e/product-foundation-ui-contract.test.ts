@@ -47,7 +47,8 @@ describe("professional product foundation contracts", () => {
     expect(dialog).toContain("showModal()");
     expect(dialog).toContain("onCancel");
     expect(dialog).toContain("aria-labelledby");
-    expect(dialog).toContain("app-dialog-drawer");
+    expect(dialog).toContain('variant?: "dialog" | "drawer"');
+    expect(dialog).toContain("app-dialog-\${variant}");
     expect(css).toContain(".app-dialog::backdrop");
   });
 

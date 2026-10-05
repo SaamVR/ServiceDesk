@@ -303,7 +303,7 @@ describe("V2 crew authorization and evidence handoff", () => {
       uploadTransportAvailable: false,
     });
 
-    expect(view.locationLabel).toBe("Location hidden");
+    expect(view.locationLabel).toBe("Address hidden");
     expect(view.customerLabel).toBeUndefined();
     expect(view.accessNotes).toBeUndefined();
     expect(view.serviceNotes).toBeUndefined();

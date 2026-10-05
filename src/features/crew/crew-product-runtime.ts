@@ -44,11 +44,11 @@ interface ResolvedCrewActor {
   rpc: SupabaseRpcClient;
 }
 
-function fail<T>(
+function fail(
   kind: CrewProductRuntimeErrorKind,
   code: string,
   message: string,
-): CrewProductRuntimeResult<T> {
+): Extract<CrewProductRuntimeResult<never>, { ok: false }> {
   return { ok: false, kind, code, message };
 }
 

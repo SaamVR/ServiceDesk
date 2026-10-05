@@ -23,7 +23,7 @@ import {
   type OperationalVisit,
 } from "./operational-product-runtime";
 import { staffModuleConfig, type StaffModule } from "./staff-modules";
-import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
+import { EmptyState as AppEmptyState, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { DataCellStack, DataTable, RowActions } from "@/components/product/DataTable";
 import { OperationsToolbar, SplitWorkspace, ToolbarResultCount, WorkspaceList, WorkspaceListItem, WorkspacePane } from "@/components/product/WorkspacePrimitives";
 import { FormActions, FormField, FormGrid, FormSection, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";

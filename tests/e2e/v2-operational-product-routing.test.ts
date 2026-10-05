@@ -92,8 +92,8 @@ describe("V2 operational product routing", () => {
     expect(runtime).toContain('.eq("auth_user_id", authData.user.id)');
     expect(runtime).toContain('.eq("customer_id", customer.id)');
     expect(runtime).toContain("acceptCustomerPortalQuote");
-    expect(route).toContain("Customer self-service");
-    expect(route).toContain("Start sandbox checkout");
+    expect(route).toContain("CustomerPortalShell");
+    expect(route).toContain("Online payment is not available from this invoice yet.");
     expect(route).not.toContain("FIXTURE_UI_ONLY");
   });
 
