@@ -1700,41 +1700,156 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
   if (!snapshot) {
     return <EmptyState title="Reports unavailable" detail="Reporting data is temporarily unavailable." />;
   }
-  const conversion =
+
+  const conversionBps = snapshot.conversionRateBps ?? 0;
+  const conversionPercent = Math.max(0, Math.min(100, conversionBps / 100));
+  const conversionLabel =
     snapshot.conversionRateBps === undefined
       ? "—"
-      : (snapshot.conversionRateBps / 100).toFixed(1) + "%";
+      : conversionPercent.toFixed(1) + "%";
   const currency = snapshot.currency ?? "USD";
+  const requestMax = Math.max(snapshot.requestCount, 1);
+  const bookedPercent = Math.round((snapshot.bookedRequestCount / requestMax) * 100);
+  const totalSchedule = snapshot.scheduledServiceMinutes + snapshot.scheduledBufferMinutes;
+  const serviceShare = totalSchedule > 0
+    ? Math.round((snapshot.scheduledServiceMinutes / totalSchedule) * 100)
+    : 0;
 
   return (
-    <div className={styles.stack}>
-      <MetricStrip
-        items={[
-          { label: "Requests", value: snapshot.requestCount, detail: "In selected reporting period" },
-          { label: "Booked", value: snapshot.bookedRequestCount, detail: "Persisted booked requests" },
-          { label: "Conversion", value: conversion, detail: "Stored reporting metric" },
-          { label: "Collected", value: formatMinorMoney(snapshot.collectedMinor, currency), detail: "Allocated collections" },
-          { label: "Outstanding", value: formatMinorMoney(snapshot.outstandingMinor, currency), detail: "Open customer balances", tone: snapshot.outstandingMinor > 0 ? "attention" : "default" },
-        ]}
-      />
-      <Panel>
-        <SectionHeader
-          title="Operations"
-          description={(snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period") + " – " + (snapshot.to ? formatWhen(snapshot.to, data.workspace.timezone) : "Now")}
-        />
-        <div className="app-grid app-grid-two">
-          <div className="app-row-list">
-            <article className="app-row"><div><h3>Scheduled service</h3><p>{Math.round(snapshot.scheduledServiceMinutes / 60)} hours</p></div></article>
-            <article className="app-row"><div><h3>Scheduled buffer</h3><p>{Math.round(snapshot.scheduledBufferMinutes / 60)} hours</p></div></article>
-          </div>
-          <div className="app-row-list">
-            <article className="app-row"><div><h3>Open attention</h3><p>{snapshot.openAttentionCount}</p></div></article>
-            <article className="app-row"><div><h3>Unresolved quality</h3><p>{snapshot.unresolvedQualityCount}</p></div></article>
-          </div>
+    <section className={styles.reportsWorkspace} aria-label="Operations reporting workspace">
+      <header className={styles.adminPageHeader}>
+        <div>
+          <p className={styles.adminEyebrow}>Business performance</p>
+          <h2>Reports</h2>
+          <p>
+            {snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period"}
+            {" – "}
+            {snapshot.to ? formatWhen(snapshot.to, data.workspace.timezone) : "Now"}
+          </p>
         </div>
-        <p className="app-field-help">Updated {formatWhen(snapshot.generatedAt, data.workspace.timezone)}.</p>
-      </Panel>
-    </div>
+        <div className={styles.reportUpdated}>
+          <span>Last updated</span>
+          <strong>{formatWhen(snapshot.generatedAt, data.workspace.timezone)}</strong>
+        </div>
+      </header>
+
+      <section className={styles.reportKpis} aria-label="Business performance summary">
+        <article>
+          <span>Requests</span>
+          <strong>{snapshot.requestCount}</strong>
+          <small>Service demand</small>
+        </article>
+        <article>
+          <span>Booked</span>
+          <strong>{snapshot.bookedRequestCount}</strong>
+          <small>Confirmed demand</small>
+        </article>
+        <article>
+          <span>Request conversion</span>
+          <strong>{conversionLabel}</strong>
+          <small>Requests converted to bookings</small>
+        </article>
+        <article>
+          <span>Collected</span>
+          <strong>{formatMinorMoney(snapshot.collectedMinor, currency)}</strong>
+          <small>Allocated collections</small>
+        </article>
+        <article className={snapshot.outstandingMinor > 0 ? styles.reportAttention : undefined}>
+          <span>Outstanding</span>
+          <strong>{formatMinorMoney(snapshot.outstandingMinor, currency)}</strong>
+          <small>Open customer balances</small>
+        </article>
+      </section>
+
+      <div className={styles.reportGrid}>
+        <section className={styles.adminCard}>
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>Conversion</p>
+              <h3>Request funnel</h3>
+            </div>
+          </div>
+          <div className={styles.funnelRows}>
+            <div>
+              <span>Requests</span>
+              <div><i style={{ width: "100%" }} /></div>
+              <strong>{snapshot.requestCount}</strong>
+            </div>
+            <div>
+              <span>Booked</span>
+              <div><i style={{ width: bookedPercent + "%" }} /></div>
+              <strong>{snapshot.bookedRequestCount}</strong>
+            </div>
+            <div>
+              <span>Conversion</span>
+              <div><i style={{ width: conversionPercent + "%" }} /></div>
+              <strong>{conversionLabel}</strong>
+            </div>
+          </div>
+          <div className={styles.reportInsight}>
+            <strong>Request conversion</strong>
+            <p>Calculated from persisted requests and booked request state for this reporting period.</p>
+          </div>
+        </section>
+
+        <section className={styles.adminCard}>
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>Cash position</p>
+              <h3>Collections</h3>
+            </div>
+          </div>
+          <div className={styles.moneySummary}>
+            <div>
+              <span>Collected</span>
+              <strong>{formatMinorMoney(snapshot.collectedMinor, currency)}</strong>
+            </div>
+            <div className={snapshot.outstandingMinor > 0 ? styles.moneyWarning : undefined}>
+              <span>Outstanding</span>
+              <strong>{formatMinorMoney(snapshot.outstandingMinor, currency)}</strong>
+            </div>
+          </div>
+          <p className={styles.adminHelp}>Customer invoice balances remain authoritative in Invoices.</p>
+        </section>
+
+        <section className={styles.adminCard}>
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>Capacity</p>
+              <h3>Scheduled workload</h3>
+            </div>
+          </div>
+          <div className={styles.capacityBody}>
+            <div className={styles.capacityBar} aria-label="Scheduled service versus buffer">
+              <i style={{ width: serviceShare + "%" }} />
+            </div>
+            <div className={styles.capacityLegend}>
+              <span><strong>{Math.round(snapshot.scheduledServiceMinutes / 60)}h</strong> service</span>
+              <span><strong>{Math.round(snapshot.scheduledBufferMinutes / 60)}h</strong> buffer</span>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.adminCard}>
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>Exceptions</p>
+              <h3>Operational risk</h3>
+            </div>
+          </div>
+          <div className={styles.riskRows}>
+            <a href={buildStaffModuleHref(data.workspace.slug, "automations")}>
+              <span><strong>Open attention</strong><small>Recovery queue</small></span>
+              <b>{snapshot.openAttentionCount}</b>
+            </a>
+            <a href={buildStaffModuleHref(data.workspace.slug, "quality")}>
+              <span><strong>Unresolved quality</strong><small>Quality queue</small></span>
+              <b>{snapshot.unresolvedQualityCount}</b>
+            </a>
+          </div>
+        </section>
+      </div>
+    </section>
   );
 }
 
@@ -1743,57 +1858,102 @@ function BillingView({ data }: { data: OperationalStaffSnapshot }) {
   if (!snapshot) {
     return <EmptyState title="Platform billing unavailable" detail="Subscription information is temporarily unavailable." />;
   }
+
   const subscription = snapshot.subscription;
+  const atLimit = snapshot.usage.filter((row) => row.state === "LIMIT_REACHED").length;
+
   return (
-    <div className={styles.stack}>
-      <Panel>
-        <SectionHeader
-          title={subscription.plan + " · " + subscription.status.replaceAll("_", " ")}
-          description="ServiceDesk subscription"
-          action={
-            <StatusBadge tone={subscription.providerMode === "SANDBOX" ? "warning" : statusBadgeTone(subscription.status)}>
-              {subscription.providerMode === "SANDBOX" ? "Sandbox billing" : "Live billing"}
-            </StatusBadge>
-          }
-        />
-        {subscription.providerMode === "SANDBOX" ? (
-          <FeedbackBanner
-            title="Sandbox platform billing"
-            description="Platform subscription billing is not a live charge in this mode."
-            tone="warning"
-          />
-        ) : null}
-        <dl className="summary-list">
-          <div><dt>Trial ends</dt><dd>{formatWhen(subscription.trialEndsAt, data.workspace.timezone)}</dd></div>
-          <div><dt>Current period ends</dt><dd>{formatWhen(subscription.currentPeriodEndsAt, data.workspace.timezone)}</dd></div>
-        </dl>
-      </Panel>
-
-      <Panel>
-        <SectionHeader title="Usage" description="Current platform usage and limits." />
-        <div className="app-row-list">
-          {snapshot.usage.map((row) => (
-            <article className="app-row" key={row.metric}>
-              <div>
-                <h3>{row.metric.replaceAll("_", " ").toLowerCase()}</h3>
-                <p>{row.used} used · {row.limit ?? "Unlimited"} limit</p>
-              </div>
-              <StatusBadge tone={row.state === "LIMIT_REACHED" ? "warning" : "neutral"}>
-                {row.state.replaceAll("_", " ")}
-              </StatusBadge>
-            </article>
-          ))}
+    <section className={styles.billingWorkspace} aria-label="ServiceDesk subscription billing">
+      <header className={styles.adminPageHeader}>
+        <div>
+          <p className={styles.adminEyebrow}>Account & plan</p>
+          <h2>Billing</h2>
+          <p>ServiceDesk subscription billing and platform usage.</p>
         </div>
-      </Panel>
+        <StatusBadge tone={subscription.providerMode === "SANDBOX" ? "warning" : statusBadgeTone(subscription.status)}>
+          {subscription.providerMode === "SANDBOX" ? "Sandbox billing" : "Live billing"}
+        </StatusBadge>
+      </header>
 
-      <Panel>
-        <SectionHeader title="Customer payments are separate" />
-        <p>
-          Cleaning invoices and customer payment balances stay in Invoices. They do not change the
-          ServiceDesk subscription shown here.
-        </p>
-      </Panel>
-    </div>
+      {subscription.providerMode === "SANDBOX" ? (
+        <div className={styles.billingNotice}>
+          <span aria-hidden="true">i</span>
+          <div>
+            <strong>Platform billing is in sandbox mode</strong>
+            <p>No live ServiceDesk subscription charge is created in this mode.</p>
+          </div>
+        </div>
+      ) : null}
+
+      <section className={styles.planHero}>
+        <div>
+          <p>Current plan</p>
+          <h3>{subscription.plan}</h3>
+          <StatusBadge tone={statusBadgeTone(subscription.status)}>
+            {subscription.status.replaceAll("_", " ")}
+          </StatusBadge>
+        </div>
+        <dl>
+          <div>
+            <dt>Billing mode</dt>
+            <dd>{subscription.providerMode === "SANDBOX" ? "Sandbox" : "Live"}</dd>
+          </div>
+          <div>
+            <dt>Trial ends</dt>
+            <dd>{formatWhen(subscription.trialEndsAt, data.workspace.timezone)}</dd>
+          </div>
+          <div>
+            <dt>Period ends</dt>
+            <dd>{formatWhen(subscription.currentPeriodEndsAt, data.workspace.timezone)}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className={styles.adminCard}>
+        <div className={styles.adminCardHeader}>
+          <div>
+            <p className={styles.adminSectionEyebrow}>Plan usage</p>
+            <h3>Usage & limits</h3>
+          </div>
+          <span>{atLimit ? atLimit + " at limit" : "Within limits"}</span>
+        </div>
+        <div className={styles.usageGrid}>
+          {snapshot.usage.map((row) => {
+            const percent =
+              row.limit && row.limit > 0
+                ? Math.min(100, Math.round((row.used / row.limit) * 100))
+                : 100;
+            return (
+              <article key={row.metric}>
+                <div>
+                  <span>
+                    <strong>{row.metric.replaceAll("_", " ").toLowerCase()}</strong>
+                    <small>{row.used} used · {row.limit ?? "Unlimited"} limit</small>
+                  </span>
+                  <StatusBadge tone={row.state === "LIMIT_REACHED" ? "warning" : "neutral"}>
+                    {row.state === "UNLIMITED" ? "Unlimited" : row.state.replaceAll("_", " ").toLowerCase()}
+                  </StatusBadge>
+                </div>
+                <div className={styles.usageTrack} aria-label={row.metric.replaceAll("_", " ") + " usage"}>
+                  <i style={{ width: percent + "%" }} />
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={styles.billingSeparation}>
+        <div>
+          <p className={styles.adminSectionEyebrow}>Customer finance</p>
+          <h3>Customer invoices are separate</h3>
+          <p>Service invoices and customer collections do not change the ServiceDesk subscription shown here.</p>
+        </div>
+        <a className="app-button-secondary" href={buildStaffModuleHref(data.workspace.slug, "invoices")}>
+          Open customer invoices
+        </a>
+      </section>
+    </section>
   );
 }
 
