@@ -16,10 +16,12 @@ describe("V2 customer communication preference command", () => {
     expect(sql).toContain("grant execute on function public.servicedesk_record_customer_consent(jsonb) to service_role");
   });
 
-  it("appends audited consent history with stale-page and idempotency protection", () => {
+  it("appends audited channel-level consent history with stale-page and idempotency protection", () => {
     expect(sql).toContain("insert into public.communication_consents");
     expect(sql).toContain("CUSTOMER_PORTAL");
     expect(sql).toContain("CONSENT_VERSION_CONFLICT");
+    expect(sql).toContain("and channel = v_channel");
+    expect(sql).not.toContain("and purpose = v_purpose\n  order by recorded_at desc");
     expect(sql).toContain("customer.consent.record");
     expect(sql).toContain("pg_advisory_xact_lock");
     expect(sql).toContain("insert into public.audit_events");

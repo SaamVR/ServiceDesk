@@ -571,16 +571,12 @@ export async function holdCustomerPortalSlot(quoteId: string, slotId: string): P
 
 export async function updateCustomerCommunicationPreference(input: {
   consentId: string;
-  channel: string;
-  purpose: string;
   status: "GRANTED" | "REVOKED";
 }): Promise<CustomerPortalActionResult> {
   const resolved = await resolveCustomer();
   if (!resolved.ok) return { ok: false, message: resolved.message };
 
-  const channel = input.channel.trim().toUpperCase();
-  const purpose = input.purpose.trim();
-  if (!["WHATSAPP", "EMAIL", "SMS"].includes(channel) || !purpose || !input.consentId) {
+  if (!input.consentId) {
     return { ok: false, message: "That communication preference could not be updated." };
   }
 
@@ -597,8 +593,6 @@ export async function updateCustomerCommunicationPreference(input: {
       actorRole: resolved.value.actor.role,
       actorUserId: resolved.value.actor.userId,
       customerId: resolved.value.customer.id,
-      channel,
-      purpose,
       status: input.status,
       expectedConsentId: input.consentId,
       idempotencyKey,

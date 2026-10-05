@@ -61,6 +61,9 @@ describe("customer-facing production product contracts", () => {
     expect(portal).toContain('\"Revoke\"');
     expect(customerRuntime).toContain("servicedesk_record_customer_consent");
     expect(customerRuntime).toContain("expectedConsentId");
+    expect(portal).toContain("seen.has(consent.channel)");
+    expect(portal).not.toContain('name="channel"');
+    expect(portal).not.toContain('name="purpose"');
     expect(customerRuntime).not.toContain('.from("communication_consents").update');
   });
 
