@@ -12,6 +12,7 @@ import {
   toggleInboxHandover,
   transitionOperationalVisit,
   type OperationalActionResult,
+  type OperationalAttention,
   type OperationalCustomer,
   type OperationalInvoice,
   type OperationalQuote,
@@ -1279,46 +1280,70 @@ function AutomationsView({ data }: { data: OperationalStaffSnapshot }) {
 
   return (
     <div className={styles.stack}>
-      {data.attentionItems.map((item) => (
-        <section className="plain-card" key={item.id}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <p className="label">{item.type.replaceAll("_", " ")}</p>
-              <h3>{item.summary}</h3>
-            </div>
-            <span
-              className={
-                "status-pill " +
-                statusTone(item.severity === "CRITICAL" ? "FAILED" : "PENDING")
-              }
-            >
-              {item.severity}
-            </span>
-          </div>
-          <dl className="summary-list">
-            <div>
-              <dt>Resource</dt>
-              <dd>{item.resourceType}</dd>
-            </div>
-            <div>
-              <dt>Owner</dt>
-              <dd>{item.ownerUserId ? "Assigned" : "Unassigned"}</dd>
-            </div>
-            <div>
-              <dt>Due</dt>
-              <dd>{formatWhen(item.dueAt)}</dd>
-            </div>
-          </dl>
-          <button
-            className="button-secondary"
-            type="button"
-            disabled
-            title="Recovery must be handled manually from the related record."
-          >
-            Run recovery
-          </button>
-        </section>
-      ))}
+      <OperationsToolbar
+        context={<ToolbarResultCount count={data.attentionItems.length} label="attention items" />}
+      />
+      <DataTable<OperationalAttention>
+        caption="Operational recovery queue"
+        rows={data.attentionItems}
+        getRowKey={(item) => item.id}
+        columns={[
+          {
+            id: "issue",
+            header: "Issue",
+            priority: "primary",
+            cell: (item) => <DataCellStack primary={item.summary} secondary={item.type.replaceAll("_", " ")} />,
+          },
+          {
+            id: "severity",
+            header: "Severity",
+            cell: (item) => (
+              <StatusBadge tone={item.severity === "CRITICAL" ? "danger" : item.severity === "WARNING" ? "warning" : "info"}>
+                {item.severity}
+              </StatusBadge>
+            ),
+          },
+          {
+            id: "resource",
+            header: "Resource",
+            cell: (item) => item.resourceType,
+          },
+          {
+            id: "owner",
+            header: "Owner",
+            cell: (item) => item.ownerUserId ? "Assigned" : "Unassigned",
+          },
+          {
+            id: "due",
+            header: "Due",
+            priority: "optional",
+            cell: (item) => formatWhen(item.dueAt),
+          },
+          {
+            id: "action",
+            header: "Action",
+            priority: "primary",
+            cell: () => (
+              <button
+                className="app-button-secondary"
+                type="button"
+                disabled
+                title="Recovery must be handled manually from the related record."
+              >
+                Open related record
+              </button>
+            ),
+          },
+        ]}
+        renderMobileRow={(item) => (
+          <DataCellStack primary={item.summary} secondary={item.severity + " · " + item.resourceType} />
+        )}
+      />
+      <FeedbackBanner
+        title="Recovery remains human-owned"
+        description="This queue surfaces persisted operational attention. No generic recovery mutation exists, so ServiceDesk does not invent a workflow-builder action."
+        tone="info"
+      />
     </div>
   );
 }
@@ -1334,38 +1359,35 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
       ? "—"
       : (snapshot.conversionRateBps / 100).toFixed(1) + "%";
   const currency = snapshot.currency ?? "USD";
-  const cards = [
-    ["Requests", String(snapshot.requestCount)],
-    ["Booked", String(snapshot.bookedRequestCount)],
-    ["Conversion", conversion],
-    ["Collected", formatMinorMoney(snapshot.collectedMinor, currency)],
-    ["Outstanding", formatMinorMoney(snapshot.outstandingMinor, currency)],
-    ["Scheduled service", Math.round(snapshot.scheduledServiceMinutes / 60) + "h"],
-    ["Open attention", String(snapshot.openAttentionCount)],
-    ["Quality cases", String(snapshot.unresolvedQualityCount)],
-  ];
+
   return (
     <div className={styles.stack}>
-      <section className="plain-card">
-        <div className={styles.sectionHeader}>
-          <div>
-            <p className="label">Performance</p>
-            <h2>Business activity</h2>
+      <MetricStrip
+        items={[
+          { label: "Requests", value: snapshot.requestCount, detail: "In selected reporting period" },
+          { label: "Booked", value: snapshot.bookedRequestCount, detail: "Persisted booked requests" },
+          { label: "Conversion", value: conversion, detail: "Stored reporting metric" },
+          { label: "Collected", value: formatMinorMoney(snapshot.collectedMinor, currency), detail: "Allocated collections" },
+          { label: "Outstanding", value: formatMinorMoney(snapshot.outstandingMinor, currency), detail: "Open customer balances", tone: snapshot.outstandingMinor > 0 ? "attention" : "default" },
+        ]}
+      />
+      <Panel>
+        <SectionHeader
+          title="Operations"
+          description={(snapshot.from ? formatWhen(snapshot.from) : "Rolling period") + " – " + (snapshot.to ? formatWhen(snapshot.to) : "Now")}
+        />
+        <div className="app-grid app-grid-two">
+          <div className="app-row-list">
+            <article className="app-row"><div><h3>Scheduled service</h3><p>{Math.round(snapshot.scheduledServiceMinutes / 60)} hours</p></div></article>
+            <article className="app-row"><div><h3>Scheduled buffer</h3><p>{Math.round(snapshot.scheduledBufferMinutes / 60)} hours</p></div></article>
           </div>
-          <span className="status-pill neutral">
-            {snapshot.from ? formatWhen(snapshot.from) : "Rolling period"} – {snapshot.to ? formatWhen(snapshot.to) : "Now"}
-          </span>
+          <div className="app-row-list">
+            <article className="app-row"><div><h3>Open attention</h3><p>{snapshot.openAttentionCount}</p></div></article>
+            <article className="app-row"><div><h3>Unresolved quality</h3><p>{snapshot.unresolvedQualityCount}</p></div></article>
+          </div>
         </div>
-        <div className="metric-grid">
-          {cards.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </div>
-        <p className="form-note">Updated {formatWhen(snapshot.generatedAt)}.</p>
-      </section>
+        <p className="app-field-help">Updated {formatWhen(snapshot.generatedAt)}.</p>
+      </Panel>
     </div>
   );
 }
@@ -1378,49 +1400,53 @@ function BillingView({ data }: { data: OperationalStaffSnapshot }) {
   const subscription = snapshot.subscription;
   return (
     <div className={styles.stack}>
-      <section className="plain-card">
-        <div className={styles.sectionHeader}>
-          <div>
-            <p className="label">ServiceDesk subscription</p>
-            <h2>{subscription.plan} · {subscription.status.replaceAll("_", " ")}</h2>
-          </div>
-          <span className={"status-pill " + statusTone(subscription.status)}>
-            {subscription.providerMode === "SANDBOX" ? "Sandbox billing" : "Live billing"}
-          </span>
-        </div>
-        {subscription.providerMode === "SANDBOX" && (
-          <p>Platform subscription billing is running in sandbox mode and does not represent a live charge.</p>
-        )}
+      <Panel>
+        <SectionHeader
+          title={subscription.plan + " · " + subscription.status.replaceAll("_", " ")}
+          description="ServiceDesk subscription"
+          action={
+            <StatusBadge tone={subscription.providerMode === "SANDBOX" ? "warning" : statusBadgeTone(subscription.status)}>
+              {subscription.providerMode === "SANDBOX" ? "Sandbox billing" : "Live billing"}
+            </StatusBadge>
+          }
+        />
+        {subscription.providerMode === "SANDBOX" ? (
+          <FeedbackBanner
+            title="Sandbox platform billing"
+            description="Platform subscription billing is not a live charge in this mode."
+            tone="warning"
+          />
+        ) : null}
         <dl className="summary-list">
           <div><dt>Trial ends</dt><dd>{formatWhen(subscription.trialEndsAt)}</dd></div>
           <div><dt>Current period ends</dt><dd>{formatWhen(subscription.currentPeriodEndsAt)}</dd></div>
         </dl>
-      </section>
-      <section className="plain-card">
-        <h2>Usage</h2>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead><tr><th>Metric</th><th>Used</th><th>Limit</th><th>Status</th></tr></thead>
-            <tbody>
-              {snapshot.usage.map((row) => (
-                <tr key={row.metric}>
-                  <td>{row.metric.replaceAll("_", " ").toLowerCase()}</td>
-                  <td>{row.used}</td>
-                  <td>{row.limit ?? "Unlimited"}</td>
-                  <td>{row.state.replaceAll("_", " ")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      </Panel>
+
+      <Panel>
+        <SectionHeader title="Usage" description="Current platform usage and limits." />
+        <div className="app-row-list">
+          {snapshot.usage.map((row) => (
+            <article className="app-row" key={row.metric}>
+              <div>
+                <h3>{row.metric.replaceAll("_", " ").toLowerCase()}</h3>
+                <p>{row.used} used · {row.limit ?? "Unlimited"} limit</p>
+              </div>
+              <StatusBadge tone={row.state === "LIMIT_REACHED" ? "warning" : "neutral"}>
+                {row.state.replaceAll("_", " ")}
+              </StatusBadge>
+            </article>
+          ))}
         </div>
-      </section>
-      <section className="plain-card">
-        <h2>Customer payments are separate</h2>
+      </Panel>
+
+      <Panel>
+        <SectionHeader title="Customer payments are separate" />
         <p>
           Cleaning invoices and customer payment balances stay in Invoices. They do not change the
           ServiceDesk subscription shown here.
         </p>
-      </section>
+      </Panel>
     </div>
   );
 }
@@ -1432,56 +1458,58 @@ function SettingsView({ data }: { data: OperationalStaffSnapshot }) {
   }
   return (
     <div className={styles.stack}>
-      <section className="plain-card">
-        <h2>Service catalog</h2>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead><tr><th>Service</th><th>Code</th><th>Status</th></tr></thead>
-            <tbody>
-              {snapshot.services.map((service) => (
-                <tr key={service.code}>
-                  <td><strong>{service.label}</strong></td>
-                  <td>{service.code}</td>
-                  <td>{service.enabled ? "Enabled" : "Disabled"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <Panel>
+        <SectionHeader title="Service catalog" description="Services currently available to this workspace." />
+        <div className="app-row-list">
+          {snapshot.services.map((service) => (
+            <article className="app-row" key={service.code}>
+              <div><h3>{service.label}</h3><p>{service.code}</p></div>
+              <StatusBadge tone={service.enabled ? "success" : "neutral"}>{service.enabled ? "Enabled" : "Disabled"}</StatusBadge>
+            </article>
+          ))}
         </div>
-      </section>
-      <section className="plain-card">
-        <h2>Team</h2>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead><tr><th>Member</th><th>Role</th><th>Status</th></tr></thead>
-            <tbody>
-              {snapshot.members.map((member) => (
-                <tr key={member.userId}>
-                  <td>{member.userId.slice(0, 8)}…</td>
-                  <td>{member.role}</td>
-                  <td>{member.active ? "Active" : "Inactive"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      </Panel>
+
+      <Panel>
+        <SectionHeader title="Team" description="Workspace memberships without exposing private credentials." />
+        <div className="app-row-list">
+          {snapshot.members.map((member) => (
+            <article className="app-row" key={member.userId}>
+              <div><h3>{member.role}</h3><p>{member.userId.slice(0, 8)}…</p></div>
+              <StatusBadge tone={member.active ? "success" : "neutral"}>{member.active ? "Active" : "Inactive"}</StatusBadge>
+            </article>
+          ))}
         </div>
-      </section>
-      <section className="plain-card">
-        <div className={styles.sectionHeader}>
-          <div><p className="label">Invitations</p><h2>{snapshot.invitations.filter((invite) => invite.state === "PENDING").length} pending</h2></div>
-        </div>
-        {snapshot.invitations.length === 0 ? <p>No invitations.</p> : snapshot.invitations.map((invite) => (
-          <p key={invite.id}>{invite.role} · {invite.state.replaceAll("_", " ")} · created {formatWhen(invite.createdAt)}</p>
-        ))}
-        <p className="form-note">Invitation links and tokens are never displayed here.</p>
-      </section>
-      <section className="plain-card">
-        <h2>Integrations</h2>
-        <p>Connection status is not available from this settings read yet. Provider credentials remain private.</p>
-        <button className="button-secondary" type="button" disabled title="Integration settings require a workspace integration-status read.">
+      </Panel>
+
+      <Panel>
+        <SectionHeader
+          title="Invitations"
+          description={snapshot.invitations.filter((invite) => invite.state === "PENDING").length + " pending"}
+        />
+        {snapshot.invitations.length === 0 ? (
+          <AppEmptyState title="No invitations" description="No team invitations are recorded." />
+        ) : (
+          <div className="app-row-list">
+            {snapshot.invitations.map((invite) => (
+              <article className="app-row" key={invite.id}>
+                <div><h3>{invite.role}</h3><p>Created {formatWhen(invite.createdAt)}</p></div>
+                <StatusBadge tone={invite.state === "PENDING" ? "warning" : invite.state === "ACCEPTED" ? "success" : "neutral"}>
+                  {invite.state}
+                </StatusBadge>
+              </article>
+            ))}
+          </div>
+        )}
+        <p className="app-field-help">Invitation links and tokens are never displayed here.</p>
+      </Panel>
+
+      <Panel>
+        <SectionHeader title="Integrations" description="Connection health requires a dedicated workspace integration-status read." />
+        <button className="app-button-secondary" type="button" disabled title="Integration status is not part of the current settings read.">
           Manage integrations
         </button>
-      </section>
+      </Panel>
     </div>
   );
 }
