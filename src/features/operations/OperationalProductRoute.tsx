@@ -5,10 +5,13 @@ import { OwnerSettingsPreview } from "@/features/settings/OwnerSettingsPreview";
 import {
   applyOperationalManualPayment,
   applyOperationalQualityAction,
+  calculateOperationalQuote,
   enqueueInboxReply,
+  holdOperationalSlot,
   loadOperationalStaffSnapshot,
   sendOperationalQuote,
   toggleInboxHandover,
+  transitionOperationalVisit,
   type OperationalActionResult,
   type OperationalStaffSnapshot,
 } from "./operational-product-runtime";
@@ -327,7 +330,22 @@ function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
   );
 }
 
-function RequestsView({ data }: { data: OperationalStaffSnapshot }) {
+function RequestsView({
+  data,
+  workspaceSlug,
+}: {
+  data: OperationalStaffSnapshot;
+  workspaceSlug: string;
+}) {
+  async function calculateQuote(formData: FormData) {
+    "use server";
+    const result = await calculateOperationalQuote(
+      workspaceSlug,
+      String(formData.get("requestId") ?? ""),
+    );
+    actionRedirect(workspaceSlug, "requests", result);
+  }
+
   if (data.requests.length === 0) {
     return (
       <EmptyState
@@ -347,11 +365,18 @@ function RequestsView({ data }: { data: OperationalStaffSnapshot }) {
             <th>Status</th>
             <th>Requested</th>
             <th>Home</th>
+            <th>Quote</th>
           </tr>
         </thead>
         <tbody>
           {data.requests.map((request) => {
             const customer = data.customers.find((item) => item.id === request.customerId);
+            const currentQuote = data.quotes.find((item) => item.requestId === request.id && item.status !== "SUPERSEDED");
+            const canCalculate =
+              Boolean(request.serviceCode) &&
+              request.bedrooms !== undefined &&
+              request.bathrooms !== undefined &&
+              !["BOOKED", "LOST", "CLOSED"].includes(request.status);
             return (
               <tr key={request.id}>
                 <td>
@@ -366,6 +391,18 @@ function RequestsView({ data }: { data: OperationalStaffSnapshot }) {
                 <td>{formatWhen(request.requestedStartAt)}</td>
                 <td>
                   {request.bedrooms ?? "—"} bed · {request.bathrooms ?? "—"} bath
+                </td>
+                <td>
+                  {currentQuote ? (
+                    <span>{currentQuote.status.replaceAll("_", " ")} · v{currentQuote.version}</span>
+                  ) : (
+                    <form action={calculateQuote}>
+                      <input type="hidden" name="requestId" value={request.id} />
+                      <button className="button-secondary" type="submit" disabled={!canCalculate}>
+                        Calculate quote
+                      </button>
+                    </form>
+                  )}
                 </td>
               </tr>
             );
@@ -444,7 +481,23 @@ function QuotesView({
   );
 }
 
-function ScheduleView({ data }: { data: OperationalStaffSnapshot }) {
+function ScheduleView({
+  data,
+  workspaceSlug,
+}: {
+  data: OperationalStaffSnapshot;
+  workspaceSlug: string;
+}) {
+  async function holdSlot(formData: FormData) {
+    "use server";
+    const result = await holdOperationalSlot(
+      workspaceSlug,
+      String(formData.get("quoteId") ?? ""),
+      String(formData.get("slotId") ?? ""),
+    );
+    actionRedirect(workspaceSlug, "schedule", result);
+  }
+
   const now = Date.now();
   const week = now + 7 * 24 * 60 * 60 * 1000;
   const upcoming = data.visits.filter((visit) => {
@@ -456,6 +509,7 @@ function ScheduleView({ data }: { data: OperationalStaffSnapshot }) {
     (request) =>
       !scheduledRequestIds.has(request.id) && !["LOST", "CLOSED"].includes(request.status),
   );
+  const acceptedQuotes = data.quotes.filter((quote) => quote.status === "ACCEPTED");
 
   return (
     <div className={styles.stack}>
@@ -473,21 +527,13 @@ function ScheduleView({ data }: { data: OperationalStaffSnapshot }) {
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
-                <tr>
-                  <th>Start</th>
-                  <th>Service</th>
-                  <th>Crew</th>
-                  <th>Status</th>
-                </tr>
+                <tr><th>Start</th><th>Service</th><th>Crew</th><th>Status</th></tr>
               </thead>
               <tbody>
                 {upcoming.map((visit) => (
                   <tr key={visit.id}>
                     <td>{formatWhen(visit.startAt)}</td>
-                    <td>
-                      {data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ??
-                        "Visit"}
-                    </td>
+                    <td>{data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}</td>
                     <td>{visit.crewId ? "Assigned" : "Unassigned"}</td>
                     <td>{visit.status.replaceAll("_", " ")}</td>
                   </tr>
@@ -496,6 +542,54 @@ function ScheduleView({ data }: { data: OperationalStaffSnapshot }) {
             </table>
           </div>
         )}
+      </section>
+
+      <section className="plain-card">
+        <h2>Accepted quotes awaiting booking</h2>
+        {acceptedQuotes.length === 0 ? (
+          <p>No accepted quotes are waiting for a slot.</p>
+        ) : (
+          acceptedQuotes.map((quote) => {
+            const activeHold = data.slotHolds.find(
+              (hold) =>
+                hold.quoteId === quote.id &&
+                hold.status === "HELD" &&
+                Date.parse(hold.expiresAt) > now,
+            );
+            const candidates = data.capacitySlots.filter(
+              (slot) => slot.capacityMinutes >= quote.durationMinutes,
+            );
+            return (
+              <div className={styles.bookingBlock} key={quote.id}>
+                <p>
+                  <strong>{data.requests.find((item) => item.id === quote.requestId)?.serviceLabel ?? "Service"}</strong>
+                  {" · "}{quote.durationMinutes} min
+                </p>
+                {activeHold ? (
+                  <p>Slot held until {formatWhen(activeHold.expiresAt)}. Payment remains pending.</p>
+                ) : candidates.length === 0 ? (
+                  <p>No capacity slot currently fits this quote.</p>
+                ) : (
+                  <div className={styles.actions}>
+                    {candidates.slice(0, 5).map((slot) => (
+                      <form action={holdSlot} key={slot.id}>
+                        <input type="hidden" name="quoteId" value={quote.id} />
+                        <input type="hidden" name="slotId" value={slot.id} />
+                        <button className="button-secondary" type="submit">
+                          Hold {formatWhen(slot.startAt)}
+                        </button>
+                      </form>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+        <p className="form-note">
+          A hold is authoritative only after the server accepts it. Holding a slot does not create
+          payment or a confirmed visit.
+        </p>
       </section>
 
       <section className="plain-card">
@@ -510,17 +604,46 @@ function ScheduleView({ data }: { data: OperationalStaffSnapshot }) {
             </p>
           ))
         )}
-        <p className="form-note">
-          Capacity and hold commands exist, but this staff screen does not manufacture a slot or
-          booking. Scheduling controls remain disabled until the slot-selection workflow is
-          composed here.
-        </p>
       </section>
     </div>
   );
 }
 
-function JobsView({ data }: { data: OperationalStaffSnapshot }) {
+function JobsView({
+  data,
+  workspaceSlug,
+}: {
+  data: OperationalStaffSnapshot;
+  workspaceSlug: string;
+}) {
+  async function transitionVisit(formData: FormData) {
+    "use server";
+    const action = String(formData.get("action") ?? "") as
+      | "ASSIGN"
+      | "EN_ROUTE"
+      | "START"
+      | "SUBMIT_REVIEW"
+      | "COMPLETE";
+    if (!["ASSIGN", "EN_ROUTE", "START", "SUBMIT_REVIEW", "COMPLETE"].includes(action)) {
+      actionRedirect(workspaceSlug, "jobs", { ok: false, message: "Unsupported visit action." });
+    }
+    const result = await transitionOperationalVisit(
+      workspaceSlug,
+      String(formData.get("visitId") ?? ""),
+      action,
+    );
+    actionRedirect(workspaceSlug, "jobs", result);
+  }
+
+  const nextAction = (status: string) => {
+    if (status === "CONFIRMED") return { action: "ASSIGN" as const, label: "Confirm crew assignment" };
+    if (status === "ASSIGNED") return { action: "EN_ROUTE" as const, label: "Mark en route" };
+    if (status === "EN_ROUTE") return { action: "START" as const, label: "Start job" };
+    if (status === "IN_PROGRESS") return { action: "SUBMIT_REVIEW" as const, label: "Submit for review" };
+    if (status === "PENDING_REVIEW") return { action: "COMPLETE" as const, label: "Complete after review" };
+    return undefined;
+  };
+
   if (data.visits.length === 0) {
     return <EmptyState title="No jobs yet" detail="Paid and scheduled visits will appear here." />;
   }
@@ -534,34 +657,46 @@ function JobsView({ data }: { data: OperationalStaffSnapshot }) {
             <th>Service</th>
             <th>Crew</th>
             <th>Status</th>
-            <th>Operational action</th>
+            <th>Evidence</th>
+            <th>Next action</th>
           </tr>
         </thead>
         <tbody>
-          {data.visits.map((visit) => (
-            <tr key={visit.id}>
-              <td>{formatWhen(visit.startAt)}</td>
-              <td>
-                {data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-              </td>
-              <td>{visit.crewId ? "Assigned" : "Unassigned"}</td>
-              <td>
-                <span className={"status-pill " + statusTone(visit.status)}>
-                  {visit.status.replaceAll("_", " ")}
-                </span>
-              </td>
-              <td>
-                <button
-                  type="button"
-                  className="button-secondary"
-                  disabled
-                  title="Crew assignment is not exposed by an accepted V1 staff command."
-                >
-                  Assign / change crew
-                </button>
-              </td>
-            </tr>
-          ))}
+          {data.visits.map((visit) => {
+            const action = nextAction(visit.status);
+            const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
+            return (
+              <tr key={visit.id}>
+                <td>{formatWhen(visit.startAt)}</td>
+                <td>{data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}</td>
+                <td>{visit.crewId ? "Assigned" : "Unassigned"}</td>
+                <td>
+                  <span className={"status-pill " + statusTone(visit.status)}>
+                    {visit.status.replaceAll("_", " ")}
+                  </span>
+                </td>
+                <td>{evidence.length} item{evidence.length === 1 ? "" : "s"}</td>
+                <td>
+                  {action ? (
+                    <form action={transitionVisit}>
+                      <input type="hidden" name="visitId" value={visit.id} />
+                      <button
+                        className="button-secondary"
+                        name="action"
+                        value={action.action}
+                        disabled={action.action === "ASSIGN" && !visit.crewId}
+                        title={action.action === "SUBMIT_REVIEW" && evidence.length < 2 ? "Before and after evidence is required by the server before review." : undefined}
+                      >
+                        {action.label}
+                      </button>
+                    </form>
+                  ) : (
+                    <span>No lifecycle action</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -863,13 +998,13 @@ function renderModule(
     case "customers":
       return <CustomersView data={data} />;
     case "requests":
-      return <RequestsView data={data} />;
+      return <RequestsView data={data} workspaceSlug={workspaceSlug} />;
     case "quotes":
       return <QuotesView data={data} workspaceSlug={workspaceSlug} />;
     case "schedule":
-      return <ScheduleView data={data} />;
+      return <ScheduleView data={data} workspaceSlug={workspaceSlug} />;
     case "jobs":
-      return <JobsView data={data} />;
+      return <JobsView data={data} workspaceSlug={workspaceSlug} />;
     case "invoices":
       return <InvoicesView data={data} workspaceSlug={workspaceSlug} />;
     case "quality":
