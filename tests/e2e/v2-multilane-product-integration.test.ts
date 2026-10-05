@@ -87,6 +87,18 @@ describe("V2 multilane production integration", () => {
     expect(migration).toContain("grant execute on function public.servicedesk_assign_visit_crew(jsonb) to service_role");
   });
 
+  it("keeps customer and public production routes out of the legacy demo shell", () => {
+    const customer = source("src/features/operations/CustomerProductRoute.tsx");
+    const business = source("src/features/operations/BusinessProductRoute.tsx");
+
+    expect(customer).toContain("portalShell");
+    expect(customer).not.toContain('className="site-shell"');
+    expect(customer).not.toContain("Start sandbox checkout");
+    expect(business).toContain("businessShell");
+    expect(business).not.toContain('className="site-shell"');
+    expect(business).not.toContain("sandbox-only");
+  });
+
   it("keeps crew offline truth explicit rather than claiming durable offline support", () => {
     const sync = source("src/features/crew/sync-state.ts");
     expect(sync).toContain('persistence: "SESSION_MEMORY_ONLY"');
