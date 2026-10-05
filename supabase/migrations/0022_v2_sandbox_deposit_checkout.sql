@@ -25,7 +25,7 @@ alter table public.sandbox_checkout_sessions
   check (
     (purpose = 'DEPOSIT' and hold_id is not null and invoice_id is null)
     or
-    (purpose = 'BALANCE' and invoice_id is not null)
+    (purpose = 'BALANCE' and invoice_id is not null and hold_id is null)
   );
 
 create index if not exists sandbox_checkout_sessions_hold_idx

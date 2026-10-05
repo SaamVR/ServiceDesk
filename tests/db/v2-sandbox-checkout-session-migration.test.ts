@@ -6,6 +6,10 @@ const sql = readFileSync(
   join(process.cwd(), "supabase/migrations/0021_v2_sandbox_checkout_sessions.sql"),
   "utf8",
 );
+const depositSql = readFileSync(
+  join(process.cwd(), "supabase/migrations/0022_v2_sandbox_deposit_checkout.sql"),
+  "utf8",
+);
 
 describe("V2 sandbox checkout session migration", () => {
   it("keeps checkout sessions non-authoritative and server-owned", () => {
@@ -25,5 +29,16 @@ describe("V2 sandbox checkout session migration", () => {
     expect(sql).toContain("references public.quotes(workspace_id, id)");
     expect(sql).toContain("foreign key (workspace_id, invoice_id)");
     expect(sql).toContain("references public.invoices(workspace_id, id)");
+  });
+
+  it("extends sessions for booking deposits without making checkout authoritative", () => {
+    expect(depositSql).toContain("alter column invoice_id drop not null");
+    expect(depositSql).toContain("add column if not exists hold_id uuid");
+    expect(depositSql).toContain("check (purpose in ('DEPOSIT','BALANCE'))");
+    expect(depositSql).toContain("foreign key (workspace_id, hold_id)");
+    expect(depositSql).toContain("references public.slot_holds(workspace_id, id)");
+    expect(depositSql).toContain("purpose = 'DEPOSIT' and hold_id is not null and invoice_id is null");
+    expect(depositSql).toContain("purpose = 'BALANCE' and invoice_id is not null and hold_id is null");
+    expect(depositSql).toContain("Never authoritative for paid invoice, confirmed hold or visit state");
   });
 });

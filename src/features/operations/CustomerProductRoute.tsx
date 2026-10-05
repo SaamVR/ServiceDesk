@@ -262,7 +262,10 @@ function QuoteView({
   const existingVisit = data.visits.find((visit) => visit.quoteId === quote.id && visit.status !== "CANCELLED");
   const activeHold = data.slotHolds.find((hold) =>
     hold.quoteId === quote.id
-    && (hold.status === "CONFIRMED" || Date.parse(hold.expiresAt) > Date.parse(data.loadedAt))
+    && (
+      hold.status === "CONFIRMED"
+      || (hold.status === "HELD" && Date.parse(hold.expiresAt) > Date.parse(data.loadedAt))
+    )
   );
   const bookingSlots = data.bookingSlots.filter((slot) => slot.quoteId === quote.id).slice(0, 8);
   const activeHoldId = activeHold?.id;
@@ -278,6 +281,18 @@ function QuoteView({
     const slotId = String(formData.get("slotId") ?? "");
     const result = await holdCustomerPortalSlot(quoteIdForAction, slotId);
     actionRedirect("/portal/quotes/" + encodeURIComponent(quoteIdForAction), result);
+  }
+
+  async function openDepositSandboxCheckout() {
+    "use server";
+    if (!activeHoldId) {
+      redirect(`/portal/quotes/${encodeURIComponent(quoteIdForAction)}?error=${encodeURIComponent("Choose a service time before opening deposit checkout.")}`);
+    }
+    const launched = await launchCustomerDepositSandboxCheckout(quoteIdForAction, activeHoldId);
+    if (!launched.ok) {
+      redirect(`/portal/quotes/${encodeURIComponent(quoteIdForAction)}?error=${encodeURIComponent(launched.message)}`);
+    }
+    redirect(launched.checkoutPath);
   }
 
   return (
@@ -320,13 +335,22 @@ function QuoteView({
             />
           ) : activeHold ? (
             <CustomerNotice
-              title="Time reserved"
+              title={activeHold.status === "CONFIRMED" ? "Time confirmed" : "Time reserved"}
               description={
                 activeHold.status === "CONFIRMED"
                   ? "This service time has been confirmed. Your booking will appear here when the visit record is ready."
-                  : `Your selected time is held until ${formatWhen(activeHold.expiresAt, data.workspace.timezone)}. The booking is not confirmed until payment is verified.`
+                  : quote.depositMinor > 0
+                    ? `Your selected time is held until ${formatWhen(activeHold.expiresAt, data.workspace.timezone)}. Complete the ${formatMinorMoney(quote.depositMinor, quote.currency)} sandbox deposit to confirm the booking.`
+                    : `Your selected time is held until ${formatWhen(activeHold.expiresAt, data.workspace.timezone)}. This quote has no payable deposit amount, so no payment action is available here.`
               }
               tone={activeHold.status === "CONFIRMED" ? "success" : "warning"}
+              action={
+                activeHold.status === "HELD" && quote.depositMinor > 0 ? (
+                  <form action={openDepositSandboxCheckout}>
+                    <button className={styles.primaryButton} type="submit">Pay deposit in sandbox</button>
+                  </form>
+                ) : undefined
+              }
             />
           ) : bookingSlots.length > 0 ? (
             <>
