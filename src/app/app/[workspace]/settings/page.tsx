@@ -1,15 +1,20 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffSettingsPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffSettingsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspace: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { workspace } = await params;
-
+  const query = await searchParams;
   return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="settings"
-      workspaceLabel={workspace}
-      title="Owner settings workspace."
-      description="Settings changes remain preview-only until accepted server commands exist."
+    <OperationalProductRoute
+      workspaceSlug={workspace}
+      module="settings"
+      notice={query.notice}
+      error={query.error}
     />
   );
 }
