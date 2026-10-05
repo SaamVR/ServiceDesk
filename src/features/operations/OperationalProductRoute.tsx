@@ -39,6 +39,8 @@ interface OperationalProductRouteProps {
   module: Exclude<StaffModule, "overview">;
   selectedConversationId?: string;
   selectedCustomerId?: string;
+  selectedRequestId?: string;
+  selectedQuoteId?: string;
   selectedQualityCaseId?: string;
   selectedJobId?: string;
   notice?: string;
@@ -402,17 +404,25 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
 function RequestsView({
   data,
   workspaceSlug,
+  selectedRequestId,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
+  selectedRequestId?: string;
 }) {
   async function calculateQuote(formData: FormData) {
     "use server";
+    const requestId = String(formData.get("requestId") ?? "");
     const result = await calculateOperationalQuote(
       workspaceSlug,
-      String(formData.get("requestId") ?? ""),
+      requestId,
     );
-    actionRedirect(workspaceSlug, "requests", result);
+    actionRedirect(
+      workspaceSlug,
+      "requests",
+      result,
+      "request=" + encodeURIComponent(requestId) + "&",
+    );
   }
 
   if (data.requests.length === 0) {
@@ -424,6 +434,24 @@ function RequestsView({
     );
   }
 
+  const selectedRequest =
+    data.requests.find((request) => request.id === selectedRequestId) ??
+    data.requests[0];
+  const selectedRequestCustomer = data.customers.find(
+    (customer) => customer.id === selectedRequest.customerId,
+  );
+  const selectedRequestProperty = data.properties.find(
+    (property) => property.id === selectedRequest.propertyId,
+  );
+  const selectedRequestQuote = data.quotes.find(
+    (quote) => quote.requestId === selectedRequest.id && quote.status !== "SUPERSEDED",
+  );
+  const selectedRequestCanCalculate =
+    Boolean(selectedRequest.serviceCode) &&
+    selectedRequest.bedrooms !== undefined &&
+    selectedRequest.bathrooms !== undefined &&
+    !["BOOKED", "LOST", "CLOSED"].includes(selectedRequest.status);
+
   return (
     <div className={styles.stack}>
       <OperationsToolbar
@@ -433,6 +461,7 @@ function RequestsView({
         caption="Request queue"
         rows={data.requests}
         getRowKey={(request) => request.id}
+        selectedRowKey={selectedRequest.id}
         columns={[
           {
             id: "service",
@@ -486,14 +515,92 @@ function RequestsView({
               );
             },
           },
+          {
+            id: "action",
+            header: "Action",
+            priority: "primary",
+            cell: (request) => (
+              <a
+                className="app-button-secondary"
+                href={"?request=" + encodeURIComponent(request.id)}
+                aria-current={request.id === selectedRequest.id ? "page" : undefined}
+              >
+                {request.id === selectedRequest.id ? "Viewing" : "Open"}
+              </a>
+            ),
+          },
         ]}
         renderMobileRow={(request) => (
-          <DataCellStack
-            primary={request.serviceLabel}
-            secondary={request.status.replaceAll("_", " ") + " · " + formatWhen(request.requestedStartAt, data.workspace.timezone)}
-          />
+          <div className="app-row">
+            <DataCellStack
+              primary={request.serviceLabel}
+              secondary={request.status.replaceAll("_", " ") + " · " + formatWhen(request.requestedStartAt, data.workspace.timezone)}
+            />
+            <a
+              className="app-button-secondary"
+              href={"?request=" + encodeURIComponent(request.id)}
+              aria-current={request.id === selectedRequest.id ? "page" : undefined}
+            >
+              {request.id === selectedRequest.id ? "Viewing" : "Open"}
+            </a>
+          </div>
         )}
       />
+
+      <Panel>
+        <SectionHeader
+          title={selectedRequest.serviceLabel}
+          description={
+            (selectedRequestCustomer?.displayName ?? "Visitor enquiry") +
+            " · " +
+            formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)
+          }
+          action={
+            <StatusBadge tone={statusBadgeTone(selectedRequest.status)}>
+              {selectedRequest.status.replaceAll("_", " ")}
+            </StatusBadge>
+          }
+        />
+
+        <div className="app-grid app-grid-two">
+          <section>
+            <h3>Request details</h3>
+            <dl className="summary-list">
+              <div><dt>Customer</dt><dd>{selectedRequestCustomer?.displayName ?? "Visitor enquiry"}</dd></div>
+              <div><dt>Property</dt><dd>{selectedRequestProperty?.label ?? "Not linked"}</dd></div>
+              <div><dt>Address</dt><dd>{selectedRequestProperty?.address ?? "Not available"}</dd></div>
+              <div><dt>Home</dt><dd>{(selectedRequest.bedrooms ?? "—") + " bed · " + (selectedRequest.bathrooms ?? "—") + " bath"}</dd></div>
+            </dl>
+          </section>
+
+          <section>
+            <h3>Quote</h3>
+            {selectedRequestQuote ? (
+              <div className="app-row-list">
+                <article className="app-row">
+                  <div>
+                    <h3>{formatMinorMoney(selectedRequestQuote.totalMinor, selectedRequestQuote.currency)}</h3>
+                    <p>Version {selectedRequestQuote.version}</p>
+                  </div>
+                  <StatusBadge tone={statusBadgeTone(selectedRequestQuote.status)}>
+                    {selectedRequestQuote.status.replaceAll("_", " ")}
+                  </StatusBadge>
+                </article>
+              </div>
+            ) : (
+              <div className={styles.actions}>
+                <p>No quote has been calculated for this request yet.</p>
+                <form action={calculateQuote}>
+                  <input type="hidden" name="requestId" value={selectedRequest.id} />
+                  <button className="app-button-secondary" type="submit" disabled={!selectedRequestCanCalculate}>
+                    Calculate quote
+                  </button>
+                </form>
+              </div>
+            )}
+          </section>
+        </div>
+      </Panel>
     </div>
   );
 }
@@ -501,22 +608,43 @@ function RequestsView({
 function QuotesView({
   data,
   workspaceSlug,
+  selectedQuoteId,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
+  selectedQuoteId?: string;
 }) {
   async function sendQuote(formData: FormData) {
     "use server";
+    const quoteId = String(formData.get("quoteId") ?? "");
     const result = await sendOperationalQuote(
       workspaceSlug,
-      String(formData.get("quoteId") ?? ""),
+      quoteId,
     );
-    actionRedirect(workspaceSlug, "quotes", result);
+    actionRedirect(
+      workspaceSlug,
+      "quotes",
+      result,
+      "quote=" + encodeURIComponent(quoteId) + "&",
+    );
   }
 
   if (data.quotes.length === 0) {
     return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." />;
   }
+
+  const selectedQuote =
+    data.quotes.find((quote) => quote.id === selectedQuoteId) ??
+    data.quotes[0];
+  const selectedQuoteRequest = data.requests.find(
+    (request) => request.id === selectedQuote.requestId,
+  );
+  const selectedQuoteCustomer = data.customers.find(
+    (customer) => customer.id === selectedQuoteRequest?.customerId,
+  );
+  const selectedQuoteProperty = data.properties.find(
+    (property) => property.id === selectedQuoteRequest?.propertyId,
+  );
 
   return (
     <div className={styles.stack}>
@@ -527,6 +655,7 @@ function QuotesView({
         caption="Quotes"
         rows={data.quotes}
         getRowKey={(quote) => quote.id}
+        selectedRowKey={selectedQuote.id}
         columns={[
           {
             id: "request",
@@ -561,25 +690,81 @@ function QuotesView({
             priority: "primary",
             cell: (quote) => (
               <RowActions label={"Actions for quote " + quote.id}>
+                <a
+                  className="app-button-secondary"
+                  href={"?quote=" + encodeURIComponent(quote.id)}
+                  aria-current={quote.id === selectedQuote.id ? "page" : undefined}
+                >
+                  {quote.id === selectedQuote.id ? "Viewing" : "Open"}
+                </a>
                 {quote.status === "APPROVED" ? (
                   <form action={sendQuote}>
                     <input type="hidden" name="quoteId" value={quote.id} />
                     <button className="app-button-secondary" type="submit">Send quote</button>
                   </form>
-                ) : (
-                  <span>{quote.status === "SENT" ? "Awaiting customer" : "No action available"}</span>
-                )}
+                ) : quote.status === "SENT" ? (
+                  <span>Awaiting customer</span>
+                ) : null}
               </RowActions>
             ),
           },
         ]}
         renderMobileRow={(quote) => (
-          <DataCellStack
-            primary={formatMinorMoney(quote.totalMinor, quote.currency)}
-            secondary={quote.status.replaceAll("_", " ") + " · v" + quote.version}
-          />
+          <div className="app-row">
+            <DataCellStack
+              primary={formatMinorMoney(quote.totalMinor, quote.currency)}
+              secondary={quote.status.replaceAll("_", " ") + " · v" + quote.version}
+            />
+            <a
+              className="app-button-secondary"
+              href={"?quote=" + encodeURIComponent(quote.id)}
+              aria-current={quote.id === selectedQuote.id ? "page" : undefined}
+            >
+              {quote.id === selectedQuote.id ? "Viewing" : "Open"}
+            </a>
+          </div>
         )}
       />
+
+      <Panel>
+        <SectionHeader
+          title={selectedQuoteRequest?.serviceLabel ?? "Service quote"}
+          description={
+            (selectedQuoteCustomer?.displayName ?? "Customer unavailable") +
+            " · " +
+            (selectedQuoteProperty?.label ?? "No property linked")
+          }
+          action={
+            <StatusBadge tone={statusBadgeTone(selectedQuote.status)}>
+              {selectedQuote.status.replaceAll("_", " ")}
+            </StatusBadge>
+          }
+        />
+
+        <dl className="summary-list">
+          <div><dt>Total</dt><dd>{formatMinorMoney(selectedQuote.totalMinor, selectedQuote.currency)}</dd></div>
+          <div><dt>Deposit</dt><dd>{formatMinorMoney(selectedQuote.depositMinor, selectedQuote.currency)}</dd></div>
+          <div><dt>Balance</dt><dd>{formatMinorMoney(selectedQuote.balanceMinor, selectedQuote.currency)}</dd></div>
+          <div><dt>Service time</dt><dd>{selectedQuote.durationMinutes + " min + " + selectedQuote.bufferMinutes + " min buffer"}</dd></div>
+          <div><dt>Version</dt><dd>{selectedQuote.version}</dd></div>
+          <div><dt>Valid until</dt><dd>{formatWhen(selectedQuote.validUntil, data.workspace.timezone)}</dd></div>
+        </dl>
+
+        <div className={styles.actions}>
+          {selectedQuote.status === "APPROVED" ? (
+            <form action={sendQuote}>
+              <input type="hidden" name="quoteId" value={selectedQuote.id} />
+              <button className="app-button-primary" type="submit">Send quote</button>
+            </form>
+          ) : selectedQuote.status === "SENT" ? (
+            <p>Waiting for the customer to accept or decline this quote.</p>
+          ) : selectedQuote.status === "ACCEPTED" ? (
+            <p>Accepted. Continue scheduling from the Schedule workspace.</p>
+          ) : (
+            <p>No staff action is available for this quote in its current state.</p>
+          )}
+        </div>
+      </Panel>
     </div>
   );
 }
@@ -1763,6 +1948,8 @@ function renderModule(
   workspaceSlug: string,
   selectedConversationId?: string,
   selectedCustomerId?: string,
+  selectedRequestId?: string,
+  selectedQuoteId?: string,
   selectedQualityCaseId?: string,
   selectedJobId?: string,
 ) {
@@ -1778,9 +1965,9 @@ function renderModule(
     case "customers":
       return <CustomersView data={data} selectedCustomerId={selectedCustomerId} />;
     case "requests":
-      return <RequestsView data={data} workspaceSlug={workspaceSlug} />;
+      return <RequestsView data={data} workspaceSlug={workspaceSlug} selectedRequestId={selectedRequestId} />;
     case "quotes":
-      return <QuotesView data={data} workspaceSlug={workspaceSlug} />;
+      return <QuotesView data={data} workspaceSlug={workspaceSlug} selectedQuoteId={selectedQuoteId} />;
     case "schedule":
       return <ScheduleView data={data} workspaceSlug={workspaceSlug} />;
     case "jobs":
@@ -1805,6 +1992,8 @@ export async function OperationalProductRoute({
   module,
   selectedConversationId,
   selectedCustomerId,
+  selectedRequestId,
+  selectedQuoteId,
   selectedQualityCaseId,
   selectedJobId,
   notice,
@@ -1824,7 +2013,7 @@ export async function OperationalProductRoute({
       <Notice notice={notice} error={error} />
 
       {result.ok ? (
-        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedQualityCaseId, selectedJobId)
+        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId)
       ) : (
         <Panel>
           <FeedbackBanner
