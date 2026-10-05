@@ -9,15 +9,15 @@ export const businessModuleConfig: Record<
 > = {
   home: {
     label: "Services",
-    description: "Public service story, areas, process and FAQs.",
+    description: "Available services and how to get started.",
   },
   enquire: {
     label: "Enquire",
-    description: "Conversation plus editable request summary.",
+    description: "Tell the business what service you need.",
   },
   book: {
     label: "Book",
-    description: "Fresh slot, hold, checkout mode and visit confirmation boundary.",
+    description: "Continue booking from an accepted quote.",
   },
 };
 
