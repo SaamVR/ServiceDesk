@@ -2338,7 +2338,7 @@ export async function OperationalProductRoute({
   return (
     <>
       <PageHeader
-        eyebrow={config.group}
+        eyebrow={config.eyebrow}
         title={config.label}
         description={config.description}
       />
