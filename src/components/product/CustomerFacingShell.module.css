@@ -734,3 +734,28 @@ a.customerRow:hover {
     backdrop-filter: none;
   }
 }
+
+
+.brand:focus-visible,
+.desktopNav a:focus-visible,
+.mobileNav summary:focus-visible,
+.mobileNavPanel nav a:focus-visible,
+.businessFooter a:focus-visible,
+.backLink:focus-visible,
+.customerRow:focus-visible {
+  outline: 3px solid var(--app-accent, #176b53);
+  outline-offset: 2px;
+}
+
+.portalShell,
+.businessShell {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+@media (max-width: 620px) {
+  .desktopNav a,
+  .businessFooter a {
+    min-height: 44px;
+  }
+}
