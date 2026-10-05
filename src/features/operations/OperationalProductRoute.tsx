@@ -1978,9 +1978,15 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
   async function recurrenceAction(formData: FormData) {
     "use server";
     const raw = String(formData.get("action") ?? "");
-    const action = raw === "PAUSE" || raw === "RESUME" || raw === "SKIP_NEXT" ? raw : undefined;
+    const action =
+      raw === "PAUSE" || raw === "RESUME" || raw === "SKIP_NEXT"
+        ? raw
+        : undefined;
     if (!action) {
-      actionRedirect(workspaceSlug, "settings", { ok: false, message: "Unsupported recurring-service action." });
+      actionRedirect(workspaceSlug, "settings", {
+        ok: false,
+        message: "Unsupported recurring-service action.",
+      });
     }
     const result = await applyOperationalRecurrenceAction(
       workspaceSlug,
@@ -1990,185 +1996,303 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     actionRedirect(workspaceSlug, "settings", result);
   }
 
+  const activeServices = data.serviceCatalog.filter((service) => service.active).length;
+  const activeMembers = snapshot.members.filter((member) => member.active).length;
+  const pendingInvitations = snapshot.invitations.filter((invite) => invite.state === "PENDING").length;
+  const configuredIntegrations = data.integrations.filter(
+    (integration) => integration.configurationState === "CONFIGURED",
+  ).length;
+
   return (
-    <div className={styles.stack}>
-      <Panel>
-        <SectionHeader
-          title="Service catalog"
-          description={
-            data.actor.role === "OWNER"
-              ? "Manage customer-facing service names, availability and manual-review requirements."
-              : "Services currently available to this workspace. Only owners can change the catalog."
-          }
-        />
-        {data.serviceCatalog.length === 0 ? (
-          <AppEmptyState title="No services configured" description="Add services during workspace setup before taking new enquiries." />
-        ) : (
-          <div className="app-row-list">
-            {data.serviceCatalog.map((service) => (
-              data.actor.role === "OWNER" ? (
-                <form action={serviceCatalogAction} className="app-row" key={service.id}>
-                  <input type="hidden" name="serviceId" value={service.id} />
-                  <input type="hidden" name="expectedUpdatedAt" value={service.updatedAt} />
-                  <div>
-                    <label>
-                      <span className="app-sr-only">Service name for {service.code}</span>
-                      <input
-                        className="app-input"
-                        name="name"
-                        type="text"
-                        defaultValue={service.name}
-                        maxLength={120}
-                        required
-                      />
-                    </label>
-                    <p>{service.code} · Updated {formatWhen(service.updatedAt, data.workspace.timezone)}</p>
-                  </div>
-                  <div className="app-row-meta">
-                    <label className="app-checkbox-field">
-                      <input name="active" type="checkbox" defaultChecked={service.active} />
-                      <span><strong>Available</strong><small>Show for new enquiries.</small></span>
-                    </label>
-                    <label className="app-checkbox-field">
-                      <input name="requiresReview" type="checkbox" defaultChecked={service.requiresReview} />
-                      <span><strong>Manual review</strong><small>Require staff review before confirmation.</small></span>
-                    </label>
-                    <button className="app-button-primary" type="submit">Save</button>
-                  </div>
-                </form>
-              ) : (
-                <article className="app-row" key={service.id}>
-                  <div>
-                    <h3>{service.name}</h3>
-                    <p>{service.code}{service.requiresReview ? " · Manual review required" : ""}</p>
-                  </div>
-                  <StatusBadge tone={service.active ? "success" : "neutral"}>
-                    {service.active ? "Available" : "Unavailable"}
-                  </StatusBadge>
-                </article>
-              )
-            ))}
-          </div>
-        )}
-      </Panel>
-
-      <Panel>
-        <SectionHeader title="Team" description="Workspace memberships without exposing private credentials." />
-        <div className="app-row-list">
-          {snapshot.members.map((member) => (
-            <article className="app-row" key={member.userId}>
-              <div><h3>{member.role}</h3><p>{member.userId.slice(0, 8)}…</p></div>
-              <StatusBadge tone={member.active ? "success" : "neutral"}>{member.active ? "Active" : "Inactive"}</StatusBadge>
-            </article>
-          ))}
+    <section className={styles.settingsWorkspace} aria-label="Workspace settings console">
+      <header className={styles.adminPageHeader}>
+        <div>
+          <p className={styles.adminEyebrow}>Workspace settings console</p>
+          <h2>Settings</h2>
+          <p>{data.workspace.name} · {data.actor.role.toLowerCase()} access</p>
         </div>
-      </Panel>
+      </header>
 
-      <Panel>
-        <SectionHeader
-          title="Invitations"
-          description={snapshot.invitations.filter((invite) => invite.state === "PENDING").length + " pending"}
-        />
-        {snapshot.invitations.length === 0 ? (
-          <AppEmptyState title="No invitations" description="No team invitations are recorded." />
-        ) : (
-          <div className="app-row-list">
-            {snapshot.invitations.map((invite) => (
-              <article className="app-row" key={invite.id}>
-                <div><h3>{invite.role}</h3><p>Created {formatWhen(invite.createdAt, data.workspace.timezone)}</p></div>
-                <StatusBadge tone={invite.state === "PENDING" ? "warning" : invite.state === "ACCEPTED" ? "success" : "neutral"}>
-                  {invite.state}
-                </StatusBadge>
-              </article>
-            ))}
-          </div>
-        )}
-        <p className="app-field-help">Invitation links and tokens are never displayed here.</p>
-      </Panel>
-
-      <Panel>
-        <SectionHeader title="Recurring services" description="Pause, resume or skip the next occurrence using the existing recurring-service command." />
-        {data.recurrenceRules.length === 0 ? (
-          <AppEmptyState title="No recurring services" description="Recurring service rules will appear here when they are configured." />
-        ) : (
-          <div className="app-row-list">
-            {data.recurrenceRules.map((rule) => (
-              <article className="app-row" key={rule.id}>
-                <div>
-                  <h3>{rule.frequency.replaceAll("_", " ")}</h3>
-                  <p>{rule.nextOccurrenceOn ? "Next " + rule.nextOccurrenceOn : "No next occurrence"} · {rule.status.replaceAll("_", " ")}</p>
-                </div>
-                <form action={recurrenceAction}>
-                  <input type="hidden" name="ruleId" value={rule.id} />
-                  <RowActions label={"Recurring service actions for " + rule.id}>
-                    {rule.status === "ACTIVE" ? (
-                      <>
-                        <button className="app-button-secondary" name="action" value="PAUSE">Pause</button>
-                        <button className="app-button-secondary" name="action" value="SKIP_NEXT">Skip next</button>
-                      </>
-                    ) : rule.status === "PAUSED" ? (
-                      <button className="app-button-secondary" name="action" value="RESUME">Resume</button>
-                    ) : (
-                      <span>Completed</span>
-                    )}
-                  </RowActions>
-                </form>
-              </article>
-            ))}
-          </div>
-        )}
-      </Panel>
-
-      <Panel>
-        <SectionHeader
-          title="Integrations"
-          description="Server-side readiness only. Secret values are never exposed, and configuration does not count as provider verification."
-        />
-        <div className="app-row-list">
-          {data.integrations.map((integration) => {
-            const readyForProof = integration.configurationState === "CONFIGURED";
-            const statusLabel = integration.provider === "PAYMENT"
-              ? "Sandbox ready"
-              : readyForProof
-                ? "Ready for proof"
-                : integration.configurationState === "PARTIAL"
-                  ? "Partial setup"
-                  : "Setup required";
-            const tone = integration.provider === "PAYMENT" || integration.configurationState === "PARTIAL"
-              ? "warning" as const
-              : readyForProof
-                ? "info" as const
-                : "neutral" as const;
-            return (
-              <article className="app-row" key={integration.provider}>
-                <div>
-                  <h3>{integration.label}</h3>
-                  <p>{integration.mode} · {integration.verificationState.replaceAll("_", " ")}</p>
-                  <p>{integration.message}</p>
-                  {integration.missingConfiguration.length > 0 ? (
-                    <p>
-                      Missing: {integration.missingConfiguration
-                        .slice(0, 3)
-                        .map((item) => item.replaceAll("_", " ").toLowerCase())
-                        .join(", ")}
-                      {integration.missingConfiguration.length > 3
-                        ? ` +${integration.missingConfiguration.length - 3} more`
-                        : ""}
-                    </p>
-                  ) : null}
-                </div>
-                <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
-              </article>
-            );
-          })}
+      <section className={styles.settingsSummary} aria-label="Workspace configuration summary">
+        <div>
+          <span>Active services</span>
+          <strong>{activeServices}</strong>
         </div>
-        <FeedbackBanner
-          title="Provider proof stays separate"
-          description="These statuses are derived from server configuration presence and the internal payment sandbox. WhatsApp, Calendar, Email, n8n and AI are not called provider-verified until controlled external receipts are available."
-          tone="info"
-        />
-      </Panel>
-    </div>
+        <div>
+          <span>Active team</span>
+          <strong>{activeMembers}</strong>
+        </div>
+        <div>
+          <span>Pending invitations</span>
+          <strong>{pendingInvitations}</strong>
+        </div>
+        <div>
+          <span>Configured integrations</span>
+          <strong>{configuredIntegrations}/{data.integrations.length}</strong>
+        </div>
+      </section>
+
+      <div className={styles.settingsLayout}>
+        <nav className={styles.settingsNav} aria-label="Settings sections">
+          <a href="#services">Services</a>
+          <a href="#team">Team & access</a>
+          <a href="#recurrence">Recurring services</a>
+          <a href="#integrations">Integrations</a>
+        </nav>
+
+        <div className={styles.settingsContent}>
+          <section className={styles.settingsCard} id="services">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Services</p>
+                <h3>Service catalog</h3>
+                <p>
+                  {data.actor.role === "OWNER"
+                    ? "Manage customer-facing service names, availability and manual-review requirements."
+                    : "Services currently available to this workspace. Only owners can make changes to the catalog."}
+                </p>
+              </div>
+              <StatusBadge tone="neutral">{activeServices} active</StatusBadge>
+            </div>
+
+            {data.serviceCatalog.length === 0 ? (
+              <div className={styles.settingsEmpty}>
+                <strong>No services configured</strong>
+                <p>Add services during workspace setup before taking new enquiries.</p>
+              </div>
+            ) : (
+              <div className={styles.serviceSettingsList}>
+                {data.serviceCatalog.map((service) =>
+                  data.actor.role === "OWNER" ? (
+                    <form action={serviceCatalogAction} className={styles.serviceSettingRow} key={service.id}>
+                      <input type="hidden" name="serviceId" value={service.id} />
+                      <input type="hidden" name="expectedUpdatedAt" value={service.updatedAt} />
+
+                      <div className={styles.serviceSettingName}>
+                        <label>
+                          <span className="app-sr-only">Service name for {service.code}</span>
+                          <input
+                            className="app-input"
+                            name="name"
+                            type="text"
+                            defaultValue={service.name}
+                            maxLength={120}
+                            required
+                          />
+                        </label>
+                        <small>{service.code} · Updated {formatWhen(service.updatedAt, data.workspace.timezone)}</small>
+                      </div>
+
+                      <label className={styles.settingToggle}>
+                        <input name="active" type="checkbox" defaultChecked={service.active} />
+                        <span>
+                          <strong>Available</strong>
+                          <small>Show for new enquiries.</small>
+                        </span>
+                      </label>
+
+                      <label className={styles.settingToggle}>
+                        <input name="requiresReview" type="checkbox" defaultChecked={service.requiresReview} />
+                        <span>
+                          <strong>Manual review</strong>
+                          <small>Require staff review before confirmation.</small>
+                        </span>
+                      </label>
+
+                      <button className="app-button-primary" type="submit">Save</button>
+                    </form>
+                  ) : (
+                    <article className={styles.serviceSettingRow} key={service.id}>
+                      <div className={styles.serviceSettingName}>
+                        <strong>{service.name}</strong>
+                        <small>{service.code}{service.requiresReview ? " · Manual review required" : ""}</small>
+                      </div>
+                      <StatusBadge tone={service.active ? "success" : "neutral"}>
+                        {service.active ? "Available" : "Unavailable"}
+                      </StatusBadge>
+                    </article>
+                  ),
+                )}
+              </div>
+            )}
+          </section>
+
+          <section className={styles.settingsCard} id="team">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Access</p>
+                <h3>Team & invitations</h3>
+                <p>Workspace memberships and invitation state without exposing private credentials.</p>
+              </div>
+              <StatusBadge tone={pendingInvitations ? "warning" : "neutral"}>
+                {pendingInvitations} pending
+              </StatusBadge>
+            </div>
+
+            <div className={styles.teamColumns}>
+              <div>
+                <h4>Members</h4>
+                <div className={styles.settingsRows}>
+                  {snapshot.members.map((member, index) => (
+                    <article key={member.userId}>
+                      <span className={styles.memberAvatar} aria-hidden="true">{member.role.slice(0, 1)}</span>
+                      <span>
+                        <strong>{member.role.toLowerCase()}</strong>
+                        <small>Workspace member {index + 1}</small>
+                      </span>
+                      <StatusBadge tone={member.active ? "success" : "neutral"}>
+                        {member.active ? "Active" : "Inactive"}
+                      </StatusBadge>
+                    </article>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4>Invitations</h4>
+                {snapshot.invitations.length === 0 ? (
+                  <div className={styles.settingsEmpty}>
+                    <strong>No invitations</strong>
+                    <p>No team invitations are recorded.</p>
+                  </div>
+                ) : (
+                  <div className={styles.settingsRows}>
+                    {snapshot.invitations.map((invite) => (
+                      <article key={invite.id}>
+                        <span className={styles.memberAvatar} aria-hidden="true">+</span>
+                        <span>
+                          <strong>{invite.role.toLowerCase()}</strong>
+                          <small>Created {formatWhen(invite.createdAt, data.workspace.timezone)}</small>
+                        </span>
+                        <StatusBadge tone={invite.state === "PENDING" ? "warning" : invite.state === "ACCEPTED" ? "success" : "neutral"}>
+                          {invite.state.toLowerCase()}
+                        </StatusBadge>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <p className={styles.adminHelp}>Private credentials and invitation tokens are never displayed.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.settingsCard} id="recurrence">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Repeat work</p>
+                <h3>Recurring services</h3>
+                <p>Pause, resume or skip the next occurrence using the existing recurring-service command.</p>
+              </div>
+              <StatusBadge tone="neutral">{data.recurrenceRules.length} rules</StatusBadge>
+            </div>
+
+            {data.recurrenceRules.length === 0 ? (
+              <div className={styles.settingsEmpty}>
+                <strong>No recurring services</strong>
+                <p>Recurring service rules will appear here when they are configured.</p>
+              </div>
+            ) : (
+              <div className={styles.recurrenceSettingsList}>
+                {data.recurrenceRules.map((rule) => (
+                  <article className={styles.recurrenceSettingRow} key={rule.id}>
+                    <div>
+                      <strong>{rule.frequency.replaceAll("_", " ").toLowerCase()}</strong>
+                      <small>{rule.nextOccurrenceOn ? "Next " + rule.nextOccurrenceOn : "No next occurrence"}</small>
+                    </div>
+                    <StatusBadge tone={rule.status === "ACTIVE" ? "success" : "neutral"}>
+                      {rule.status.replaceAll("_", " ").toLowerCase()}
+                    </StatusBadge>
+                    <form action={recurrenceAction}>
+                      <input type="hidden" name="ruleId" value={rule.id} />
+                      {rule.status === "ACTIVE" ? (
+                        <div className={styles.settingActions}>
+                          <button className="app-button-secondary" name="action" value="PAUSE">Pause</button>
+                          <button className="app-button-secondary" name="action" value="SKIP_NEXT">Skip next</button>
+                        </div>
+                      ) : rule.status === "PAUSED" ? (
+                        <button className="app-button-secondary" name="action" value="RESUME">Resume</button>
+                      ) : (
+                        <span>Completed</span>
+                      )}
+                    </form>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className={styles.settingsCard} id="integrations">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Connections</p>
+                <SectionHeader
+                  title="Integrations"
+                  description="Connection readiness and verification status without exposing credentials."
+                />
+              </div>
+              <StatusBadge tone="neutral">{configuredIntegrations}/{data.integrations.length} configured</StatusBadge>
+            </div>
+
+            <div className={styles.integrationGrid}>
+              {data.integrations.map((integration) => {
+                const readyForProof = integration.configurationState === "CONFIGURED";
+                const statusLabel = integration.provider === "PAYMENT"
+                  ? "Sandbox ready"
+                  : readyForProof
+                    ? "Ready for proof"
+                    : integration.configurationState === "PARTIAL"
+                      ? "Partial setup"
+                      : "Setup required";
+                const tone = integration.provider === "PAYMENT" || integration.configurationState === "PARTIAL"
+                  ? "warning" as const
+                  : readyForProof
+                    ? "info" as const
+                    : "neutral" as const;
+
+                return (
+                  <article className={styles.integrationCard} key={integration.provider}>
+                    <div>
+                      <strong>{integration.label}</strong>
+                      <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
+                    </div>
+                    <p>{integration.message}</p>
+                    <dl>
+                      <div>
+                        <dt>Mode</dt>
+                        <dd>{integration.mode.toLowerCase()}</dd>
+                      </div>
+                      <div>
+                        <dt>Verification</dt>
+                        <dd>{integration.verificationState.replaceAll("_", " ").toLowerCase()}</dd>
+                      </div>
+                    </dl>
+                    {integration.missingConfiguration.length > 0 ? (
+                      <small>
+                        Still needed: {integration.missingConfiguration
+                          .slice(0, 3)
+                          .map((item) => item.replaceAll("_", " ").toLowerCase())
+                          .join(" · ")}
+                        {integration.missingConfiguration.length > 3
+                          ? ` · +${integration.missingConfiguration.length - 3} more`
+                          : ""}
+                      </small>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className={styles.integrationProofNote}>
+              <span aria-hidden="true">i</span>
+              <p>
+                <strong>Configuration is not provider verification.</strong>{" "}
+                Secret values are never exposed. Non-payment connections remain unverified until controlled external receipts are available. Payments remain an internal sandbox.
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
   );
 }
 
