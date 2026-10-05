@@ -145,6 +145,31 @@ export type OperationalRuntimeResult =
 
 export type OperationalActionResult = { ok: true; message: string } | { ok: false; message: string };
 
+function safeCoreFailure(
+  result: { ok: false; code: string; message: string },
+  fallback: string,
+): OperationalActionResult {
+  if (result.code === "VERSION_CONFLICT") {
+    return { ok: false, message: "This record changed since you opened it. Refresh and try again." };
+  }
+  if (result.code === "FORBIDDEN" || result.code.includes("SCOPE_REQUIRED")) {
+    return { ok: false, message: "You do not have permission to perform this action." };
+  }
+  if (result.code.includes("NOT_FOUND")) {
+    return { ok: false, message: "This record is no longer available. Refresh the page." };
+  }
+  if (result.code.includes("STATE_INVALID") || result.code.includes("NOT_ACCEPTED") || result.code.includes("NOT_SENT")) {
+    return { ok: false, message: "This action is no longer available for the current status. Refresh the page." };
+  }
+  if (result.code.includes("EVIDENCE_REQUIRED")) {
+    return { ok: false, message: "Add the required before and after evidence before continuing." };
+  }
+  if (result.code.includes("ALREADY_HELD")) {
+    return { ok: false, message: "That slot was just taken. Choose another available time." };
+  }
+  return { ok: false, message: fallback };
+}
+
 interface ResolvedStaffActor {
   workspace: { id: string; slug: string; name: string };
   actor: ActorContext;
@@ -578,7 +603,7 @@ export async function toggleInboxHandover(
   );
   return result.ok
     ? { ok: true, message: active ? "Human takeover is active." : "Human takeover was released." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not update human takeover. Refresh and try again.");
 }
 
 export async function enqueueInboxReply(
@@ -609,7 +634,7 @@ export async function enqueueInboxReply(
   );
   return result.ok
     ? { ok: true, message: "Reply queued. Delivery state will update from provider callbacks." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not queue the reply. Check the conversation and try again.");
 }
 
 export async function sendOperationalQuote(
@@ -634,7 +659,7 @@ export async function sendOperationalQuote(
   });
   return result.ok
     ? { ok: true, message: "Quote send command accepted. Provider delivery remains tracked separately." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not send the quote. Refresh the quote and try again.");
 }
 
 export async function applyOperationalManualPayment(
@@ -672,7 +697,7 @@ export async function applyOperationalManualPayment(
   );
   return result.ok
     ? { ok: true, message: "Manual payment recorded on the invoice." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not record the payment. Check the invoice and try again.");
 }
 
 export async function applyOperationalQualityAction(
@@ -708,7 +733,7 @@ export async function applyOperationalQualityAction(
       expectedVersion: Number(current.data.version),
     },
   );
-  return result.ok ? { ok: true, message: "Quality case updated." } : { ok: false, message: result.message };
+  return result.ok ? { ok: true, message: "Quality case updated." } : safeCoreFailure(result, "Could not update the quality case. Refresh and try again.");
 }
 
 
@@ -722,7 +747,7 @@ export async function calculateOperationalQuote(
   const result = await facade.calculateQuote(resolved.value.actor, requestId);
   return result.ok
     ? { ok: true, message: "Quote calculated and saved." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not calculate the quote. Check the request details and try again.");
 }
 
 export async function holdOperationalSlot(
@@ -751,7 +776,7 @@ export async function holdOperationalSlot(
   );
   return result.ok
     ? { ok: true, message: "Slot held until " + result.value.expiresAt + ". Payment is still pending." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not hold that slot. Refresh availability and try again.");
 }
 
 export async function transitionOperationalVisit(
@@ -781,7 +806,7 @@ export async function transitionOperationalVisit(
   );
   return result.ok
     ? { ok: true, message: "Visit moved to " + result.value.status.replaceAll("_", " ").toLowerCase() + "." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not update the job status. Refresh the job and try again.");
 }
 
 
@@ -813,7 +838,7 @@ export async function addOperationalVisitNote(
       expectedVersion: Number(current.data.version),
     },
   );
-  return result.ok ? { ok: true, message: kind === "INCIDENT_NOTE" ? "Incident recorded." : "Job note saved." } : { ok: false, message: result.message };
+  return result.ok ? { ok: true, message: kind === "INCIDENT_NOTE" ? "Incident recorded." : "Job note saved." } : safeCoreFailure(result, "Could not save the field note. Refresh and try again.");
 }
 
 export async function setOperationalChecklistItem(
@@ -845,5 +870,5 @@ export async function setOperationalChecklistItem(
       expectedVersion: Number(current.data.version),
     },
   );
-  return result.ok ? { ok: true, message: "Checklist updated." } : { ok: false, message: result.message };
+  return result.ok ? { ok: true, message: "Checklist updated." } : safeCoreFailure(result, "Could not update the checklist. Refresh and try again.");
 }
