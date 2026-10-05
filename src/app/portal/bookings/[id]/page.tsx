@@ -1,15 +1,13 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { CustomerProductRoute } from "@/features/operations/CustomerProductRoute";
 
-export default async function PortalBookingPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PortalBookingPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { id } = await params;
-
-  return (
-    <OperationalFixtureRoute
-      surface="customer"
-      customerModule="booking"
-      resourceLabel={`booking ${id}`}
-      title="Booking detail with slot, payment and visit state."
-      description="Booking state stays fixture/sandbox-labelled until the verified payment bridge is complete."
-    />
-  );
+  const query = await searchParams;
+  return <CustomerProductRoute module="booking" resourceId={id} notice={query.notice} error={query.error} />;
 }

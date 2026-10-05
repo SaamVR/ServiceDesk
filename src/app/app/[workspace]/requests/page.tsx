@@ -1,15 +1,7 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffRequestsPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffRequestsPage({ params, searchParams }: { params: Promise<{ workspace: string }>; searchParams: Promise<{ notice?: string; error?: string }> }) {
   const { workspace } = await params;
-
-  return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="requests"
-      workspaceLabel={workspace}
-      title="Request summary workspace."
-      description="Request edits remain disabled until create/update/calculateQuote commands are wired."
-    />
-  );
+  const query = await searchParams;
+  return <OperationalProductRoute workspaceSlug={workspace} module="requests" notice={query.notice} error={query.error} />;
 }

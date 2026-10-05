@@ -1,15 +1,20 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffBillingPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffBillingPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspace: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { workspace } = await params;
-
+  const query = await searchParams;
   return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="billing"
-      workspaceLabel={workspace}
-      title="Platform billing and usage."
-      description="Billing data remains snapshot-driven and does not mutate plan state from Product."
+    <OperationalProductRoute
+      workspaceSlug={workspace}
+      module="billing"
+      notice={query.notice}
+      error={query.error}
     />
   );
 }

@@ -1,15 +1,20 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffReportsPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffReportsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspace: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { workspace } = await params;
-
+  const query = await searchParams;
   return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="reports"
-      workspaceLabel={workspace}
-      title="Reporting workspace."
-      description="Reports derive from supplied server records and must not infer missing business truth."
+    <OperationalProductRoute
+      workspaceSlug={workspace}
+      module="reports"
+      notice={query.notice}
+      error={query.error}
     />
   );
 }

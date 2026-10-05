@@ -1,15 +1,21 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffInboxPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffInboxPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspace: string }>;
+  searchParams: Promise<{ conversation?: string; notice?: string; error?: string }>;
+}) {
   const { workspace } = await params;
-
+  const query = await searchParams;
   return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="inbox"
-      workspaceLabel={workspace}
-      title="Shared inbox with handover and context."
-      description="Desktop uses a thread list, conversation pane and customer/request context. Mobile opens one pane at a time without losing the resource URL."
+    <OperationalProductRoute
+      workspaceSlug={workspace}
+      module="inbox"
+      selectedConversationId={query.conversation}
+      notice={query.notice}
+      error={query.error}
     />
   );
 }

@@ -1,15 +1,20 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffSchedulePage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffSchedulePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspace: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { workspace } = await params;
-
+  const query = await searchParams;
   return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="schedule"
-      workspaceLabel={workspace}
-      title="Schedule and capacity workspace."
-      description="Find slots and hold slot use injected adapters and remain disabled until accepted server wiring exists."
+    <OperationalProductRoute
+      workspaceSlug={workspace}
+      module="schedule"
+      notice={query.notice}
+      error={query.error}
     />
   );
 }

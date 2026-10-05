@@ -1,15 +1,7 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffQuotesPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffQuotesPage({ params, searchParams }: { params: Promise<{ workspace: string }>; searchParams: Promise<{ notice?: string; error?: string }> }) {
   const { workspace } = await params;
-
-  return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="quotes"
-      workspaceLabel={workspace}
-      title="Quote approval workspace."
-      description="Quote send uses an injected sendQuote adapter and remains disabled until wired to accepted entrypoints."
-    />
-  );
+  const query = await searchParams;
+  return <OperationalProductRoute workspaceSlug={workspace} module="quotes" notice={query.notice} error={query.error} />;
 }

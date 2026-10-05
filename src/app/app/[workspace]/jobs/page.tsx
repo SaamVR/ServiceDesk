@@ -1,15 +1,20 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffJobsPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffJobsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspace: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { workspace } = await params;
-
+  const query = await searchParams;
   return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="jobs"
-      workspaceLabel={workspace}
-      title="Visit jobs workspace."
-      description="Staff assignment and transitions remain server-authorized and disabled in fixture mode."
+    <OperationalProductRoute
+      workspaceSlug={workspace}
+      module="jobs"
+      notice={query.notice}
+      error={query.error}
     />
   );
 }
