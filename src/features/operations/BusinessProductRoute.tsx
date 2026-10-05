@@ -252,7 +252,7 @@ function BookingView({ slug, businessName }: { slug: string; businessName: strin
             </li>
             <li>
               <span className={styles.stepNumber}>2</span>
-              <span><strong>Accept when you're ready</strong><span>An accepted quote lets the business move the service toward scheduling.</span></span>
+              <span><strong>Accept when you’re ready</strong><span>An accepted quote lets the business move the service toward scheduling.</span></span>
             </li>
             <li>
               <span className={styles.stepNumber}>3</span>

@@ -93,7 +93,8 @@ function Status({ value }: { value: string }) {
 
 function OverviewView({ data }: { data: CustomerPortalSnapshot }) {
   const activeQuotes = data.quotes.filter((quote) => !["DECLINED", "EXPIRED", "SUPERSEDED"].includes(quote.status));
-  const upcomingVisits = data.visits.filter((visit) => Date.parse(visit.startAt) >= Date.now());
+  const snapshotTime = Date.parse(data.loadedAt);
+  const upcomingVisits = data.visits.filter((visit) => Date.parse(visit.startAt) >= snapshotTime);
   const openInvoices = data.invoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
 
   const sentQuote = activeQuotes.find((quote) => quote.status === "SENT");

@@ -118,6 +118,7 @@ export interface OperationalRecurrence {
 }
 
 export interface OperationalStaffSnapshot {
+  loadedAt: string;
   workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
   customers: OperationalCustomer[];
@@ -498,6 +499,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   return {
     ok: true,
     value: {
+      loadedAt: now.toISOString(),
       workspace,
       actor,
       customers,

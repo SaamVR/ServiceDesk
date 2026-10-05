@@ -549,7 +549,7 @@ function ScheduleView({
     actionRedirect(workspaceSlug, "schedule", result);
   }
 
-  const now = Date.now();
+  const now = Date.parse(data.loadedAt);
   const week = now + 7 * 24 * 60 * 60 * 1000;
   const upcoming = data.visits.filter((visit) => {
     const time = visit.startAt ? Date.parse(visit.startAt) : Number.NaN;

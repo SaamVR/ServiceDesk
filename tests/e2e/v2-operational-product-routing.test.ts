@@ -21,8 +21,8 @@ const convertedStaff = [
 
 describe("V2 operational product routing", () => {
   it("removes fixture-first routing from converted staff modules", () => {
-    for (const module of convertedStaff) {
-      const file = source("src/app/app/[workspace]/" + module + "/page.tsx");
+    for (const routeModule of convertedStaff) {
+      const file = source("src/app/app/[workspace]/" + routeModule + "/page.tsx");
       expect(file).toContain("OperationalProductRoute");
       expect(file).not.toContain("OperationalFixtureRoute");
       expect(file).not.toContain("FIXTURE_UI_ONLY");

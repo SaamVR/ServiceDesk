@@ -68,6 +68,7 @@ export interface CustomerPortalConsent {
 }
 
 export interface CustomerPortalSnapshot {
+  loadedAt: string;
   workspace: { id: string; slug: string; name: string };
   customer: { id: string; displayName: string };
   actor: ActorContext;
@@ -326,6 +327,7 @@ export async function loadCustomerPortalSnapshot(): Promise<CustomerPortalResult
   return {
     ok: true,
     value: {
+      loadedAt: new Date().toISOString(),
       workspace,
       customer,
       actor,
