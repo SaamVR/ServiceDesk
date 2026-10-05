@@ -1,0 +1,374 @@
+.dashboard {
+  display: grid;
+  gap: 18px;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 74px;
+}
+
+.pageHeader h1 {
+  margin: 2px 0 3px;
+  color: var(--app-text);
+  font-size: clamp(1.65rem, 2.2vw, 2.15rem);
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+}
+
+.pageHeader > div > p:last-child {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: .82rem;
+}
+
+.eyebrow,
+.cardEyebrow {
+  margin: 0 !important;
+  color: var(--app-text-subtle) !important;
+  font-size: .66rem !important;
+  font-weight: 760;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kpiCard {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  min-height: 112px;
+  padding: 16px 17px;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  background: var(--app-surface);
+  box-shadow: 0 1px 1px rgb(16 24 40 / 3%);
+  overflow: hidden;
+}
+
+.kpiCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: transparent;
+}
+
+.kpiCard p,
+.kpiCard span {
+  margin: 0;
+}
+
+.kpiCard p {
+  color: var(--app-text-muted);
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.kpiCard strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: clamp(1.35rem, 2vw, 1.72rem);
+  font-weight: 730;
+  letter-spacing: -.04em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpiCard span {
+  color: var(--app-text-subtle);
+  font-size: .68rem;
+}
+
+.kpi_warning::before { background: #d39922; }
+.kpi_danger::before { background: var(--app-danger); }
+.kpi_warning strong { color: #7e5708; }
+.kpi_danger strong { color: var(--app-danger); }
+
+.primaryGrid,
+.secondaryGrid {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+
+.primaryGrid { grid-template-columns: minmax(0, 1.55fr) minmax(320px, .75fr); }
+.secondaryGrid { grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr); }
+
+.card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+}
+
+.cardHeader {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.cardHeader h2 {
+  margin: 2px 0 0;
+  color: var(--app-text);
+  font-size: .96rem;
+  line-height: 1.25;
+  letter-spacing: -.015em;
+}
+
+.cardHeader p:last-child:not(.cardEyebrow) {
+  margin: 3px 0 0;
+  color: var(--app-text-muted);
+  font-size: .74rem;
+}
+
+.textLink {
+  flex: 0 0 auto;
+  border-radius: 6px;
+  padding: 5px 7px;
+  color: var(--app-text-muted);
+  font-size: .73rem;
+  font-weight: 680;
+  text-decoration: none;
+}
+
+.textLink:hover {
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  text-decoration: none;
+}
+
+.scheduleList,
+.attentionList,
+.qualityList {
+  display: grid;
+}
+
+.scheduleRow {
+  min-width: 0;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 76px 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--app-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.scheduleRow:first-child,
+.attentionRow:first-child,
+.qualityRow:first-child { border-top: 0; }
+
+.scheduleRow:hover,
+.attentionRow:hover,
+.qualityRow:hover { background: var(--app-surface-subtle); text-decoration: none; }
+
+.scheduleTime {
+  color: var(--app-text);
+  font-size: .77rem;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+}
+
+.scheduleMarker {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--app-accent);
+  box-shadow: 0 0 0 4px var(--app-accent-soft);
+}
+
+.scheduleCopy,
+.attentionCopy,
+.qualityRow > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.scheduleCopy strong,
+.attentionCopy strong,
+.qualityRow strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: .8rem;
+  font-weight: 690;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scheduleCopy small,
+.attentionCopy small,
+.qualityRow small {
+  overflow: hidden;
+  color: var(--app-text-muted);
+  font-size: .69rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attentionRow,
+.qualityRow {
+  min-width: 0;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--app-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.qualityRow { grid-template-columns: minmax(0, 1fr) auto; }
+
+.severityDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--app-info);
+}
+
+.severity_warning { background: #d39922; }
+.severity_critical { background: var(--app-danger); }
+
+.pipelineGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pipelineItem {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  min-height: 120px;
+  padding: 16px;
+  border-right: 1px solid var(--app-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.pipelineItem:last-child { border-right: 0; }
+.pipelineItem:hover { background: var(--app-surface-subtle); text-decoration: none; }
+.pipelineItem span { color: var(--app-text-muted); font-size: .71rem; font-weight: 650; }
+.pipelineItem strong { color: var(--app-text); font-size: 1.55rem; font-weight: 720; letter-spacing: -.04em; }
+.pipelineItem small { color: var(--app-text-subtle); font-size: .68rem; line-height: 1.35; }
+
+.emptyBlock {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  padding: 24px;
+  text-align: left;
+}
+
+.emptyBlock > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--app-accent-soft);
+  color: var(--app-accent);
+  font-size: .75rem;
+  font-weight: 800;
+}
+
+.emptyBlock strong { color: var(--app-text); font-size: .82rem; }
+.emptyBlock p { margin: 2px 0 0; color: var(--app-text-muted); font-size: .72rem; }
+
+.quickActions {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+}
+
+.quickActions > span {
+  padding: 0 7px;
+  color: var(--app-text-subtle);
+  font-size: .66rem;
+  font-weight: 760;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.quickActions a {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  padding: 0 9px;
+  color: var(--app-text-muted);
+  font-size: .72rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.quickActions a:hover { background: var(--app-surface-muted); color: var(--app-text); text-decoration: none; }
+
+@media (max-width: 1180px) {
+  .kpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .primaryGrid,
+  .secondaryGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .dashboard { gap: 14px; }
+  .pageHeader { align-items: stretch; flex-direction: column; gap: 12px; }
+  .headerActions { justify-content: flex-start; }
+  .kpiGrid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpiCard { min-height: 98px; padding: 13px 14px; }
+  .cardHeader { align-items: flex-start; }
+  .scheduleRow { grid-template-columns: 64px 10px minmax(0, 1fr); }
+  .scheduleRow :global(.app-status) { grid-column: 3; justify-self: start; }
+  .pipelineGrid { grid-template-columns: 1fr; }
+  .pipelineItem { min-height: 88px; border-right: 0; border-top: 1px solid var(--app-border); }
+  .pipelineItem:first-child { border-top: 0; }
+}
+
+@media (max-width: 430px) {
+  .kpiGrid { grid-template-columns: 1fr; }
+  .headerActions { display: grid; grid-template-columns: 1fr 1fr; }
+  .scheduleRow { grid-template-columns: 58px 8px minmax(0, 1fr); padding-inline: 12px; }
+  .attentionRow { grid-template-columns: auto minmax(0, 1fr); }
+  .attentionRow :global(.app-status) { grid-column: 2; justify-self: start; }
+  .quickActions { align-items: stretch; }
+  .quickActions > span { width: 100%; padding: 4px 7px 0; }
+}

@@ -824,6 +824,17 @@ function ScheduleView({
       .map((hold) => hold.slotId),
   );
   const dispatch = buildOperationalDispatchIntelligence(data);
+  const visitLabels = Object.fromEntries(data.visits.map((visit) => {
+    const request = data.requests.find((item) => item.id === visit.requestId);
+    const customer = request?.customerId
+      ? data.customers.find((item) => item.id === request.customerId)
+      : undefined;
+    return [visit.id, `${request?.serviceLabel ?? "Service visit"}${customer ? ` · ${customer.displayName}` : ""}`];
+  }));
+  const visitMeta = Object.fromEntries(data.visits.map((visit) => [
+    visit.id,
+    formatWhen(visit.startAt, data.workspace.timezone),
+  ]));
 
   return (
     <div className={styles.stack}>
@@ -833,6 +844,8 @@ function ScheduleView({
         workspaceTimeZone={data.workspace.timezone}
         assignmentAvailability={{ enabled: true, label: "Assignment available" }}
         crewLabels={Object.fromEntries(data.crews.map((crew) => [crew.id, crew.name]))}
+        visitLabels={visitLabels}
+        visitMeta={visitMeta}
         renderApprovalControl={({ recommendation, candidate }) => (
           <form action={assignCrew}>
             <input type="hidden" name="visitId" value={recommendation.visitId} />
