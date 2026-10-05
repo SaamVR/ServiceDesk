@@ -38,6 +38,14 @@ export interface CrewSyncState {
   persistence: "SESSION_MEMORY_ONLY";
 }
 
+export interface CrewSyncPresentation {
+  label: string;
+  tone: "success" | "neutral" | "warning" | "danger" | "info";
+  guidance?: string;
+  retryAvailable: boolean;
+  refreshRequired: boolean;
+}
+
 export type CrewSyncEvent =
   | { type: "NETWORK_CHANGED"; online: boolean }
   | { type: "QUEUE_OPERATION"; operation: CrewPendingOperation }
@@ -133,17 +141,58 @@ export function reduceCrewSyncState(state: CrewSyncState, event: CrewSyncEvent):
   }
 }
 
-export function syncStatusLabel(state: CrewSyncState): string {
+export function buildCrewSyncPresentation(state: CrewSyncState): CrewSyncPresentation {
   switch (state.status) {
-    case "ONLINE_SYNCED": return "Online · synced";
-    case "OFFLINE_IDLE": return "Offline · no queued changes";
-    case "LOCAL_ACTION_PENDING": return state.online ? "Local action pending · ready to sync" : "Local action pending · offline";
-    case "SYNCING": return "Syncing";
-    case "SYNC_FAILED": return "Sync failed";
-    case "VERSION_CONFLICT": return "Version conflict · refresh required";
-    case "ACTION_NO_LONGER_VALID": return "Action no longer valid";
+    case "ONLINE_SYNCED":
+      return { label: "Saved", tone: "success", retryAvailable: false, refreshRequired: false };
+    case "OFFLINE_IDLE":
+      return {
+        label: "Offline",
+        tone: "warning",
+        guidance: "Reconnect before making changes.",
+        retryAvailable: false,
+        refreshRequired: false,
+      };
+    case "LOCAL_ACTION_PENDING":
+      return {
+        label: state.online ? "Pending" : "Pending · offline",
+        tone: "warning",
+        guidance: "Keep this screen open until pending changes are saved.",
+        retryAvailable: state.retryAvailable,
+        refreshRequired: false,
+      };
+    case "SYNCING":
+      return { label: "Saving…", tone: "info", retryAvailable: false, refreshRequired: false };
+    case "SYNC_FAILED":
+      return {
+        label: "Couldn’t save",
+        tone: "danger",
+        guidance: state.retryAvailable ? "Retry when your connection is stable." : "Refresh before trying again.",
+        retryAvailable: state.retryAvailable,
+        refreshRequired: !state.retryAvailable,
+      };
+    case "VERSION_CONFLICT":
+      return {
+        label: "Job updated",
+        tone: "warning",
+        guidance: "Refresh this job before making another change.",
+        retryAvailable: false,
+        refreshRequired: true,
+      };
+    case "ACTION_NO_LONGER_VALID":
+      return {
+        label: "Action unavailable",
+        tone: "warning",
+        guidance: "Refresh this job to see the latest status.",
+        retryAvailable: false,
+        refreshRequired: true,
+      };
   }
 }
 
+export function syncStatusLabel(state: CrewSyncState): string {
+  return buildCrewSyncPresentation(state).label;
+}
+
 export const crewOfflineCapabilityNotice =
-  "Queued-operation state is session-memory only. Durable offline persistence/service-worker replay is not implemented, so closing or reloading the page can lose unsynced local actions.";
+  "If your connection drops, keep this screen open until pending changes are saved.";

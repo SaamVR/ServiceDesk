@@ -306,7 +306,7 @@ describe("V2 crew authorization and evidence handoff", () => {
     expect(view.accessNotes).toBeUndefined();
     expect(view.serviceNotes).toBeUndefined();
     expect(view.highPriorityNotes).toEqual([]);
-    expect(view.uploadState).toContain("not implemented");
+    expect(view.uploadState).toContain("isn’t available");
   });
 
   it("routes evidence/checklist writes through accepted server commands with visit version metadata", async () => {

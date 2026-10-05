@@ -1,90 +1,194 @@
+import type { ReactNode } from "react";
+import { EmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import type { CrewJobDetailInput, CrewTodayJobInput } from "./v2-field-models";
 import { buildCrewJobDetailView, buildCrewTodayJobs } from "./v2-field-models";
 import { crewOfflineCapabilityNotice } from "./sync-state";
 import styles from "./CrewFieldAppV2.module.css";
 
+function exceptionLabel(value: "LATE_UNSTARTED" | "SYNC_CONFLICT") {
+  return value === "LATE_UNSTARTED" ? "Start time passed" : "Refresh needed";
+}
+
 export function CrewTodayV2({ jobs, now }: { jobs: readonly CrewTodayJobInput[]; now: string }) {
   const view = buildCrewTodayJobs(jobs, now);
+
   return (
-    <section className={styles.shell} aria-labelledby="crew-today-heading">
-      <header className={styles.topbar}>
-        <div>
-          <p className={styles.eyebrow}>Crew field app · assigned work only</p>
-          <h1 id="crew-today-heading">Today</h1>
-          <p className={styles.muted}>Authoritative visit status stays on the server. Local changes are never treated as confirmed until sync succeeds.</p>
+    <div className={styles.shell}>
+      <PageHeader
+        eyebrow="Crew"
+        title="Today"
+        description="Your assigned jobs for today. Changes are confirmed once saved."
+      />
+
+      {view.length === 0 ? (
+        <Panel>
+          <EmptyState title="No jobs today" description="There are no assigned jobs to show for this workday." />
+        </Panel>
+      ) : (
+        <div className={styles.jobs}>
+          {view.map((job) => (
+            <Panel className={styles.job} key={job.visitId} ariaLabel={job.serviceLabel}>
+              <div className={styles.jobHead}>
+                <div>
+                  <p className={styles.time}>{job.dateLabel} · {job.timeWindowLabel}</p>
+                  <h2>{job.serviceLabel}</h2>
+                  <p className={styles.location}>{job.locationLabel}{job.customerLabel ? ` · ${job.customerLabel}` : ""}</p>
+                </div>
+                <div className={styles.badges}>
+                  <StatusBadge tone={job.sync.tone}>{job.sync.label}</StatusBadge>
+                  <StatusBadge tone="info">{job.statusLabel}</StatusBadge>
+                </div>
+              </div>
+
+              {job.operationalException ? (
+                <p className={styles.alert}>{exceptionLabel(job.operationalException)}</p>
+              ) : null}
+
+              {job.highPriorityNotes.length > 0 ? (
+                <ul className={styles.notes}>
+                  {job.highPriorityNotes.map((note) => <li key={note}>{note}</li>)}
+                </ul>
+              ) : null}
+
+              <div className={styles.progressRow}>
+                <progress max={100} value={job.progressPercent} aria-label={`${job.progressPercent}% job progress`} />
+                <span>{job.checklistProgressLabel}</span>
+                <span>{job.evidenceProgressLabel}</span>
+              </div>
+
+              {job.sync.guidance ? <p className={styles.guidance}>{job.sync.guidance}</p> : null}
+
+              <a className="app-button-primary" href={`/crew/jobs/${encodeURIComponent(job.visitId)}`}>
+                {job.nextActionLabel}
+              </a>
+            </Panel>
+          ))}
         </div>
-      </header>
-      <div className={styles.jobs}>
-        {view.length === 0 ? <article className={styles.panel}><h2>No assigned jobs</h2><p>There are no authorized visit snapshots to show.</p></article> : null}
-        {view.map((job) => (
-          <article className={styles.job} key={job.visitId}>
-            <div className={styles.jobHead}>
-              <div><p className={styles.eyebrow}>{job.timeWindowLabel}</p><h2>{job.serviceLabel}</h2></div>
-              <span className={styles.sync}>{job.syncLabel}</span>
-            </div>
-            <p><strong>{job.locationLabel}</strong>{job.customerLabel ? " · " + job.customerLabel : ""}</p>
-            <p className={styles.muted}>Status: {job.statusLabel}</p>
-            {job.operationalException ? <p className={styles.danger}>Attention: {job.operationalException.replaceAll("_", " ").toLowerCase()}</p> : null}
-            {job.highPriorityNotes.length > 0 ? <ul className={styles.notes}>{job.highPriorityNotes.map((note) => <li key={note}>{note}</li>)}</ul> : null}
-            <div className={styles.progress} aria-label={job.progressPercent + "% visit progress"}><span style={{ width: job.progressPercent + "%" }} /></div>
-            <a className={styles.action} href={"/crew/jobs/" + encodeURIComponent(job.visitId)}>{job.nextActionLabel}</a>
-          </article>
-        ))}
-      </div>
+      )}
+
       <p className={styles.footer}>{crewOfflineCapabilityNotice}</p>
-    </section>
+    </div>
   );
 }
 
-export function CrewJobDetailV2({ job }: { job: CrewJobDetailInput }) {
+export interface CrewJobDetailV2Controls {
+  transition?: ReactNode;
+  checklist?: ReactNode;
+  evidence?: ReactNode;
+  reportIssue?: ReactNode;
+  retry?: ReactNode;
+  refresh?: ReactNode;
+}
+
+export function CrewJobDetailV2({
+  job,
+  controls = {},
+}: {
+  job: CrewJobDetailInput;
+  controls?: CrewJobDetailV2Controls;
+}) {
   const view = buildCrewJobDetailView(job);
+
   return (
-    <section className={styles.shell} aria-labelledby="crew-job-heading">
-      <header className={styles.topbar}>
-        <div>
-          <p className={styles.eyebrow}>Visit {view.visitId} · version {view.version}</p>
-          <h1 id="crew-job-heading">{view.serviceLabel}</h1>
-          <p>{view.timeWindowLabel} · {view.locationLabel}</p>
-          {view.customerLabel ? <p className={styles.muted}>{view.customerLabel}</p> : null}
-        </div>
-        <span className={styles.sync}>{view.syncLabel}</span>
-      </header>
+    <div className={styles.shell}>
+      <PageHeader
+        eyebrow="Job"
+        title={view.serviceLabel}
+        description={`${view.dateLabel} · ${view.timeWindowLabel} · ${view.locationLabel}`}
+        actions={<StatusBadge tone={view.sync.tone}>{view.sync.label}</StatusBadge>}
+      />
+
+      {view.sync.guidance ? (
+        <Panel className={styles.notice}>
+          <div className={styles.noticeRow}>
+            <p>{view.sync.guidance}</p>
+            {view.sync.refreshRequired ? controls.refresh : view.sync.retryAvailable ? controls.retry : null}
+          </div>
+        </Panel>
+      ) : null}
 
       <div className={styles.grid}>
-        <article className={styles.panel}>
-          <p className={styles.label}>Job context</p>
-          <p>{view.authorizationLabel}</p>
+        <Panel>
+          <SectionHeader title="Job details" description={view.customerLabel} />
+          <dl className={styles.detailList}>
+            <div><dt>Status</dt><dd>{view.statusLabel}</dd></div>
+            <div><dt>Address</dt><dd>{view.locationLabel}</dd></div>
+            <div><dt>Time zone</dt><dd>{view.timeZoneLabel}</dd></div>
+          </dl>
           {view.accessNotes ? <p><strong>Access:</strong> {view.accessNotes}</p> : null}
-          {view.serviceNotes ? <p><strong>Service:</strong> {view.serviceNotes}</p> : null}
-          {view.highPriorityNotes.length > 0 ? <ul className={styles.notes}>{view.highPriorityNotes.map((note) => <li key={note}>{note}</li>)}</ul> : null}
-        </article>
+          {view.serviceNotes ? <p><strong>Service notes:</strong> {view.serviceNotes}</p> : null}
+          {view.highPriorityNotes.length > 0 ? (
+            <ul className={styles.notes}>{view.highPriorityNotes.map((note) => <li key={note}>{note}</li>)}</ul>
+          ) : null}
+        </Panel>
 
-        <article className={styles.panel}>
-          <p className={styles.label}>Checklist</p>
-          <h2>{view.checklistProgressLabel}</h2>
-          <ul className={styles.notes}>
-            {view.checklist.map((item) => <li key={item.id}>{item.completed ? "Done" : "Pending"} · {item.itemKey}{item.note ? " · " + item.note : ""}</li>)}
-          </ul>
-        </article>
+        <Panel>
+          <SectionHeader title="Progress" description="Follow the job in order." />
+          <ol className={styles.timeline}>
+            {view.timeline.map((step) => (
+              <li className={step.current ? styles.currentStep : step.reached ? styles.reachedStep : ""} key={step.status}>
+                <span aria-hidden="true" />
+                <strong>{step.label}</strong>
+              </li>
+            ))}
+          </ol>
+        </Panel>
 
-        <article className={styles.panel}>
-          <p className={styles.label}>Evidence</p>
-          <div className={styles.evidence}>
-            <div className={styles.statusRow}><span>Before evidence</span><strong>{view.evidenceGate.beforeEvidencePresent ? "Recorded" : "Required"}</strong></div>
-            <div className={styles.statusRow}><span>After evidence</span><strong>{view.evidenceGate.afterEvidencePresent ? "Recorded" : "Required"}</strong></div>
+        <Panel>
+          <SectionHeader title="Checklist" description={view.checklistProgressLabel} action={controls.checklist} />
+          {view.checklist.length === 0 ? (
+            <p className={styles.muted}>No checklist items have been saved yet.</p>
+          ) : (
+            <ul className={styles.checklist}>
+              {view.checklist.map((item) => (
+                <li key={item.id}>
+                  <span aria-hidden="true">{item.completed ? "✓" : "○"}</span>
+                  <span>{item.itemKey}{item.note ? ` · ${item.note}` : ""}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel>
+          <SectionHeader title="Evidence" description="Before and after photos are required before review." action={controls.evidence} />
+          <div className={styles.evidenceGrid}>
+            <div>
+              <span>Before</span>
+              <StatusBadge tone={view.evidenceGate.beforeEvidencePresent ? "success" : "warning"}>
+                {view.evidenceGate.beforeEvidencePresent ? "Added" : "Required"}
+              </StatusBadge>
+            </div>
+            <div>
+              <span>After</span>
+              <StatusBadge tone={view.evidenceGate.afterEvidencePresent ? "success" : "warning"}>
+                {view.evidenceGate.afterEvidencePresent ? "Added" : "Required"}
+              </StatusBadge>
+            </div>
           </div>
           <p className={styles.muted}>{view.uploadState}</p>
-        </article>
+        </Panel>
 
-        <article className={styles.panel}>
-          <p className={styles.label}>Review handoff</p>
+        <Panel>
+          <SectionHeader title="Issues" description="Problems already flagged for this job." action={controls.reportIssue} />
+          {view.issues.length === 0 ? (
+            <p className={styles.muted}>No open issues.</p>
+          ) : (
+            <ul className={styles.notes}>
+              {view.issues.map((issue) => <li key={issue.id}>{issue.summary}</li>)}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel className={styles.actionPanel}>
+          <SectionHeader title="Next action" description={view.evidenceGate.blocker} />
           <h2>{view.nextActionLabel}</h2>
-          <p>{view.evidenceGate.canSubmitReview ? "Required evidence is present; server transition may be submitted." : view.evidenceGate.blocker}</p>
-          <p className={styles.muted}>Crew cannot mark a visit complete. Dispatcher/owner completion remains authoritative after review.</p>
-        </article>
+          {controls.transition ?? <p className={styles.muted}>No action is available on this screen right now.</p>}
+          <p className={styles.muted}>After you send the job for review, dispatch handles completion.</p>
+        </Panel>
       </div>
 
       <p className={styles.footer}>{crewOfflineCapabilityNotice}</p>
-    </section>
+    </div>
   );
 }
