@@ -5,7 +5,7 @@ export default async function BusinessEnquirePage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; service?: string }>;
 }) {
   const { slug } = await params;
   const query = await searchParams;
@@ -15,6 +15,7 @@ export default async function BusinessEnquirePage({
       module="enquire"
       notice={query.notice}
       error={query.error}
+      selectedServiceCode={query.service}
     />
   );
 }

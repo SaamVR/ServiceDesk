@@ -16,6 +16,7 @@ interface BusinessProductRouteProps {
   module: BusinessModule;
   notice?: string;
   error?: string;
+  selectedServiceCode?: string;
 }
 
 function serviceInitial(name: string) {
@@ -94,6 +95,12 @@ function HomeView({
                 <span className={styles.serviceMeta}>
                   {service.requiresReview ? "Request review required" : "Available to request"}
                 </span>
+                <a
+                  className={styles.serviceAction}
+                  href={buildBusinessModuleHref(slug, "enquire") + "?service=" + encodeURIComponent(service.code)}
+                >
+                  Enquire about this service
+                </a>
               </article>
             ))}
           </div>
@@ -119,14 +126,19 @@ function EnquiryView({
   services,
   notice,
   error,
+  selectedServiceCode,
 }: {
   slug: string;
   businessName: string;
   services: Array<{ code: string; name: string; requiresReview: boolean }>;
   notice?: string;
   error?: string;
+  selectedServiceCode?: string;
 }) {
   const idempotencyKey = crypto.randomUUID();
+  const selectedService = services.some((service) => service.code === selectedServiceCode)
+    ? selectedServiceCode
+    : undefined;
 
   async function submit(formData: FormData) {
     "use server";
@@ -182,7 +194,7 @@ function EnquiryView({
                 </FormField>
                 <FormField id="public-enquiry-service" label="Service" required>
                   {({ id, describedBy, invalid }) => (
-                    <SelectInput id={id} name="serviceCode" required describedBy={describedBy} invalid={invalid}>
+                    <SelectInput id={id} name="serviceCode" required defaultValue={selectedService} describedBy={describedBy} invalid={invalid}>
                       <option value="">Choose a service</option>
                       {services.map((service) => <option key={service.code} value={service.code}>{service.name}</option>)}
                     </SelectInput>
@@ -270,7 +282,7 @@ function BookingView({ slug, businessName }: { slug: string; businessName: strin
   );
 }
 
-export async function BusinessProductRoute({ slug, module, notice, error }: BusinessProductRouteProps) {
+export async function BusinessProductRoute({ slug, module, notice, error, selectedServiceCode }: BusinessProductRouteProps) {
   const result = await loadPublicBusiness(slug);
   const businessName = result.ok ? result.value.workspace.name : "Service business";
   const homeHref = buildBusinessModuleHref(slug, "home");
@@ -296,6 +308,7 @@ export async function BusinessProductRoute({ slug, module, notice, error }: Busi
             services={result.value.services}
             notice={notice}
             error={error}
+            selectedServiceCode={selectedServiceCode}
           />
         ) : (
           <BookingView slug={slug} businessName={result.value.workspace.name} />

@@ -38,6 +38,7 @@ interface OperationalProductRouteProps {
   module: Exclude<StaffModule, "overview">;
   selectedConversationId?: string;
   selectedQualityCaseId?: string;
+  selectedJobId?: string;
   notice?: string;
   error?: string;
 }
@@ -720,9 +721,11 @@ function ScheduleView({
 function JobsView({
   data,
   workspaceSlug,
+  selectedJobId,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
+  selectedJobId?: string;
 }) {
   async function transitionVisit(formData: FormData) {
     "use server";
@@ -735,12 +738,18 @@ function JobsView({
     if (!["ASSIGN", "EN_ROUTE", "START", "SUBMIT_REVIEW", "COMPLETE"].includes(action)) {
       actionRedirect(workspaceSlug, "jobs", { ok: false, message: "Unsupported visit action." });
     }
+    const visitId = String(formData.get("visitId") ?? "");
     const result = await transitionOperationalVisit(
       workspaceSlug,
-      String(formData.get("visitId") ?? ""),
+      visitId,
       action,
     );
-    actionRedirect(workspaceSlug, "jobs", result);
+    actionRedirect(
+      workspaceSlug,
+      "jobs",
+      result,
+      "job=" + encodeURIComponent(visitId) + "&",
+    );
   }
 
   async function saveVisitNote(formData: FormData) {
@@ -748,25 +757,37 @@ function JobsView({
     const kind = String(formData.get("kind") ?? "TIME_MATERIAL_NOTE") === "INCIDENT_NOTE"
       ? "INCIDENT_NOTE"
       : "TIME_MATERIAL_NOTE";
+    const visitId = String(formData.get("visitId") ?? "");
     const result = await addOperationalVisitNote(
       workspaceSlug,
-      String(formData.get("visitId") ?? ""),
+      visitId,
       kind,
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result);
+    actionRedirect(
+      workspaceSlug,
+      "jobs",
+      result,
+      "job=" + encodeURIComponent(visitId) + "&",
+    );
   }
 
   async function saveChecklistItem(formData: FormData) {
     "use server";
+    const visitId = String(formData.get("visitId") ?? "");
     const result = await setOperationalChecklistItem(
       workspaceSlug,
-      String(formData.get("visitId") ?? ""),
+      visitId,
       String(formData.get("itemKey") ?? ""),
       String(formData.get("completed") ?? "") === "true",
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result);
+    actionRedirect(
+      workspaceSlug,
+      "jobs",
+      result,
+      "job=" + encodeURIComponent(visitId) + "&",
+    );
   }
 
   const nextAction = (status: string) => {
@@ -782,6 +803,16 @@ function JobsView({
     return <EmptyState title="No jobs yet" detail="Paid and scheduled visits will appear here." />;
   }
 
+  const activeVisits = data.visits.filter(
+    (visit) => !["COMPLETED", "CANCELLED"].includes(visit.status),
+  );
+  const selectedVisit =
+    data.visits.find((visit) => visit.id === selectedJobId) ??
+    activeVisits[0] ??
+    data.visits[0];
+  const selectedEvidence = data.visitEvidence.filter((item) => item.visitId === selectedVisit.id);
+  const selectedChecklist = data.visitChecklistItems.filter((item) => item.visitId === selectedVisit.id);
+
   return (
     <div className={styles.stack}>
       <OperationsToolbar
@@ -791,6 +822,7 @@ function JobsView({
         caption="Jobs"
         rows={data.visits}
         getRowKey={(visit) => visit.id}
+        selectedRowKey={selectedVisit.id}
         columns={[
           {
             id: "visit",
@@ -825,7 +857,7 @@ function JobsView({
           },
           {
             id: "action",
-            header: "Next action",
+            header: "Actions",
             priority: "primary",
             cell: (visit) => {
               const action = nextAction(visit.status);
@@ -833,139 +865,199 @@ function JobsView({
               const reviewEvidenceReady =
                 evidence.some((item) => item.kind === "BEFORE_PHOTO") &&
                 evidence.some((item) => item.kind === "AFTER_PHOTO");
-              return action ? (
+              return (
                 <RowActions label={"Actions for job " + visit.id}>
-                  <form action={transitionVisit}>
-                    <input type="hidden" name="visitId" value={visit.id} />
-                    <button
-                      className="app-button-secondary"
-                      name="action"
-                      value={action.action}
-                      disabled={
-                        (action.action === "ASSIGN" && !visit.crewId) ||
-                        (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
-                      }
-                      title={
-                        action.action === "ASSIGN" && !visit.crewId
-                          ? "Choose a crew before confirming assignment."
-                          : action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
-                            ? "Add both before and after evidence before submitting for review."
-                            : undefined
-                      }
-                    >
-                      {action.label}
-                    </button>
-                  </form>
+                  <a
+                    className="app-button-secondary"
+                    href={"?job=" + encodeURIComponent(visit.id)}
+                    aria-current={visit.id === selectedVisit.id ? "page" : undefined}
+                  >
+                    {visit.id === selectedVisit.id ? "Viewing" : "Open"}
+                  </a>
+                  {action ? (
+                    <form action={transitionVisit}>
+                      <input type="hidden" name="visitId" value={visit.id} />
+                      <button
+                        className="app-button-secondary"
+                        name="action"
+                        value={action.action}
+                        disabled={
+                          (action.action === "ASSIGN" && !visit.crewId) ||
+                          (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
+                        }
+                        title={
+                          action.action === "ASSIGN" && !visit.crewId
+                            ? "Choose a crew before confirming assignment."
+                            : action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
+                              ? "Add both before and after evidence before submitting for review."
+                              : undefined
+                        }
+                      >
+                        {action.label}
+                      </button>
+                    </form>
+                  ) : null}
                 </RowActions>
-              ) : <span>No lifecycle action</span>;
+              );
             },
           },
         ]}
         renderMobileRow={(visit) => (
-          <DataCellStack
-            primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-            secondary={visit.status.replaceAll("_", " ") + " · " + formatWhen(visit.startAt)}
-          />
+          <div className="app-row">
+            <DataCellStack
+              primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
+              secondary={visit.status.replaceAll("_", " ") + " · " + formatWhen(visit.startAt)}
+            />
+            <a
+              className="app-button-secondary"
+              href={"?job=" + encodeURIComponent(visit.id)}
+              aria-current={visit.id === selectedVisit.id ? "page" : undefined}
+            >
+              {visit.id === selectedVisit.id ? "Viewing" : "Open"}
+            </a>
+          </div>
         )}
       />
 
-      {data.visits
-        .filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status))
-        .slice(0, 6)
-        .map((visit) => {
-          const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
-          const checklist = data.visitChecklistItems.filter((item) => item.visitId === visit.id);
-          return (
-            <Panel key={visit.id}>
-              <SectionHeader
-                title={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Service visit"}
-                description={formatWhen(visit.startAt) + " · " + visit.status.replaceAll("_", " ")}
-                action={<StatusBadge tone={statusBadgeTone(visit.status)}>{visit.status.replaceAll("_", " ")}</StatusBadge>}
-              />
+      <Panel>
+        <SectionHeader
+          title={data.requests.find((item) => item.id === selectedVisit.requestId)?.serviceLabel ?? "Service visit"}
+          description={
+            formatWhen(selectedVisit.startAt) +
+            " · " +
+            (selectedVisit.crewId
+              ? data.crews.find((crew) => crew.id === selectedVisit.crewId)?.name ?? "Assigned crew"
+              : "Unassigned")
+          }
+          action={
+            <StatusBadge tone={statusBadgeTone(selectedVisit.status)}>
+              {selectedVisit.status.replaceAll("_", " ")}
+            </StatusBadge>
+          }
+        />
 
-              <div className="app-grid app-grid-two">
-                <FormSection
-                  title="Field notes"
-                  description="Save time, material or incident notes directly to the job record."
-                >
-                  <form action={saveVisitNote}>
-                    <input type="hidden" name="visitId" value={visit.id} />
-                    <FormGrid columns={1}>
-                      <FormField id={"job-note-kind-" + visit.id} label="Note type">
-                        {({ id, describedBy, invalid }) => (
-                          <SelectInput id={id} name="kind" defaultValue="TIME_MATERIAL_NOTE" describedBy={describedBy} invalid={invalid}>
-                            <option value="TIME_MATERIAL_NOTE">Time / material note</option>
-                            <option value="INCIDENT_NOTE">Incident</option>
-                          </SelectInput>
-                        )}
-                      </FormField>
-                      <FormField id={"job-note-" + visit.id} label="Note" required>
-                        {({ id, describedBy, invalid }) => (
-                          <TextArea id={id} name="note" rows={3} required describedBy={describedBy} invalid={invalid} placeholder="Add a field note" />
-                        )}
-                      </FormField>
-                    </FormGrid>
-                    <FormActions>
-                      <button className="app-button-secondary" type="submit">Save note</button>
-                    </FormActions>
-                  </form>
-                  {evidence.length ? (
-                    <div className="app-row-list">
-                      {evidence.slice(0, 5).map((item) => (
-                        <article className="app-row" key={item.id}>
-                          <div>
-                            <h3>{item.kind.replaceAll("_", " ")}</h3>
-                            <p>{item.text ?? "Photo evidence"}</p>
-                          </div>
-                          <div className="app-row-meta"><span>{formatWhen(item.capturedAt)}</span></div>
-                        </article>
-                      ))}
-                    </div>
-                  ) : (
-                    <AppEmptyState title="No field evidence yet" description="Before/after photos are added from the authorized crew workflow; staff can record notes here." />
+        <div className="app-grid app-grid-two">
+          <FormSection
+            title="Field notes & evidence"
+            description="Keep the selected job focused while reviewing its field record."
+          >
+            <form action={saveVisitNote}>
+              <input type="hidden" name="visitId" value={selectedVisit.id} />
+              <FormGrid columns={1}>
+                <FormField id={"job-note-kind-" + selectedVisit.id} label="Note type">
+                  {({ id, describedBy, invalid }) => (
+                    <SelectInput
+                      id={id}
+                      name="kind"
+                      defaultValue="TIME_MATERIAL_NOTE"
+                      describedBy={describedBy}
+                      invalid={invalid}
+                    >
+                      <option value="TIME_MATERIAL_NOTE">Time / material note</option>
+                      <option value="INCIDENT_NOTE">Incident</option>
+                    </SelectInput>
                   )}
-                </FormSection>
+                </FormField>
+                <FormField id={"job-note-" + selectedVisit.id} label="Note" required>
+                  {({ id, describedBy, invalid }) => (
+                    <TextArea
+                      id={id}
+                      name="note"
+                      rows={3}
+                      required
+                      describedBy={describedBy}
+                      invalid={invalid}
+                      placeholder="Add a field note"
+                    />
+                  )}
+                </FormField>
+              </FormGrid>
+              <FormActions>
+                <button className="app-button-secondary" type="submit">Save note</button>
+              </FormActions>
+            </form>
 
-                <FormSection
-                  title="Checklist"
-                  description="Record or update a named checklist item for this visit."
-                >
-                  <form action={saveChecklistItem}>
-                    <input type="hidden" name="visitId" value={visit.id} />
-                    <input type="hidden" name="completed" value="true" />
-                    <FormGrid columns={1}>
-                      <FormField id={"checklist-key-" + visit.id} label="Item" required>
-                        {({ id, describedBy, invalid }) => (
-                          <TextInput id={id} name="itemKey" required describedBy={describedBy} invalid={invalid} placeholder="e.g. kitchen" />
-                        )}
-                      </FormField>
-                      <FormField id={"checklist-note-" + visit.id} label="Note">
-                        {({ id, describedBy, invalid }) => (
-                          <TextInput id={id} name="note" describedBy={describedBy} invalid={invalid} placeholder="Optional note" />
-                        )}
-                      </FormField>
-                    </FormGrid>
-                    <FormActions>
-                      <button className="app-button-secondary" type="submit">Mark complete</button>
-                    </FormActions>
-                  </form>
-                  {checklist.length ? (
-                    <div className="app-row-list">
-                      {checklist.map((item) => (
-                        <article className="app-row" key={item.id}>
-                          <div><h3>{item.itemKey}</h3><p>{item.note ?? "No note"}</p></div>
-                          <StatusBadge tone={item.completed ? "success" : "neutral"}>{item.completed ? "Complete" : "Open"}</StatusBadge>
-                        </article>
-                      ))}
+            {selectedEvidence.length ? (
+              <div className="app-row-list">
+                {selectedEvidence.slice(0, 8).map((item) => (
+                  <article className="app-row" key={item.id}>
+                    <div>
+                      <h3>{item.kind.replaceAll("_", " ")}</h3>
+                      <p>{item.text ?? "Photo evidence"}</p>
                     </div>
-                  ) : (
-                    <AppEmptyState title="No checklist items yet" description="Checklist items saved for this job will appear here." />
-                  )}
-                </FormSection>
+                    <div className="app-row-meta"><span>{formatWhen(item.capturedAt)}</span></div>
+                  </article>
+                ))}
               </div>
-            </Panel>
-          );
-        })}
+            ) : (
+              <AppEmptyState
+                title="No field evidence yet"
+                description="Before/after photos are added from the crew workflow; staff can record notes here."
+              />
+            )}
+          </FormSection>
+
+          <FormSection
+            title="Checklist"
+            description="Review and update checklist items for the selected job only."
+          >
+            <form action={saveChecklistItem}>
+              <input type="hidden" name="visitId" value={selectedVisit.id} />
+              <input type="hidden" name="completed" value="true" />
+              <FormGrid columns={1}>
+                <FormField id={"checklist-key-" + selectedVisit.id} label="Item" required>
+                  {({ id, describedBy, invalid }) => (
+                    <TextInput
+                      id={id}
+                      name="itemKey"
+                      required
+                      describedBy={describedBy}
+                      invalid={invalid}
+                      placeholder="e.g. kitchen"
+                    />
+                  )}
+                </FormField>
+                <FormField id={"checklist-note-" + selectedVisit.id} label="Note">
+                  {({ id, describedBy, invalid }) => (
+                    <TextInput
+                      id={id}
+                      name="note"
+                      describedBy={describedBy}
+                      invalid={invalid}
+                      placeholder="Optional note"
+                    />
+                  )}
+                </FormField>
+              </FormGrid>
+              <FormActions>
+                <button className="app-button-secondary" type="submit">Mark complete</button>
+              </FormActions>
+            </form>
+
+            {selectedChecklist.length ? (
+              <div className="app-row-list">
+                {selectedChecklist.map((item) => (
+                  <article className="app-row" key={item.id}>
+                    <div>
+                      <h3>{item.itemKey}</h3>
+                      <p>{item.note ?? "No note"}</p>
+                    </div>
+                    <StatusBadge tone={item.completed ? "success" : "neutral"}>
+                      {item.completed ? "Complete" : "Open"}
+                    </StatusBadge>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <AppEmptyState
+                title="No checklist items yet"
+                description="Checklist items saved for this job will appear here."
+              />
+            )}
+          </FormSection>
+        </div>
+      </Panel>
+
     </div>
   );
 }
@@ -1606,6 +1698,7 @@ function renderModule(
   workspaceSlug: string,
   selectedConversationId?: string,
   selectedQualityCaseId?: string,
+  selectedJobId?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -1625,7 +1718,7 @@ function renderModule(
     case "schedule":
       return <ScheduleView data={data} workspaceSlug={workspaceSlug} />;
     case "jobs":
-      return <JobsView data={data} workspaceSlug={workspaceSlug} />;
+      return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} />;
     case "invoices":
       return <InvoicesView data={data} workspaceSlug={workspaceSlug} />;
     case "quality":
@@ -1646,6 +1739,7 @@ export async function OperationalProductRoute({
   module,
   selectedConversationId,
   selectedQualityCaseId,
+  selectedJobId,
   notice,
   error,
 }: OperationalProductRouteProps) {
@@ -1663,7 +1757,7 @@ export async function OperationalProductRoute({
       <Notice notice={notice} error={error} />
 
       {result.ok ? (
-        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedQualityCaseId)
+        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedQualityCaseId, selectedJobId)
       ) : (
         <Panel>
           <FeedbackBanner

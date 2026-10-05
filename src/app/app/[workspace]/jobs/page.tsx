@@ -5,7 +5,7 @@ export default async function StaffJobsPage({
   searchParams,
 }: {
   params: Promise<{ workspace: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; job?: string }>;
 }) {
   const { workspace } = await params;
   const query = await searchParams;
@@ -13,6 +13,7 @@ export default async function StaffJobsPage({
     <OperationalProductRoute
       workspaceSlug={workspace}
       module="jobs"
+      selectedJobId={query.job}
       notice={query.notice}
       error={query.error}
     />

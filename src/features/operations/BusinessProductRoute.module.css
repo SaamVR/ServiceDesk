@@ -182,6 +182,33 @@
   font-weight: 650;
 }
 
+.serviceAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--app-border-strong, #ccd2d8);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: white;
+  color: var(--app-text, #171a1f);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.serviceAction:hover {
+  border-color: var(--app-accent, #176b53);
+  background: var(--app-accent-soft, #e9f4f0);
+  color: var(--app-accent-hover, #125842);
+  text-decoration: none;
+}
+
+.serviceAction:focus-visible {
+  outline: 3px solid var(--app-accent, #176b53);
+  outline-offset: 2px;
+}
+
 .ctaBand {
   display: flex;
   align-items: center;

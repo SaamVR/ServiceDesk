@@ -19,4 +19,12 @@ describe("V2 public enquiry product", () => {
     expect(route).not.toContain("Enquiry form temporarily unavailable");
     expect(route).not.toContain("New online enquiries cannot be submitted");
   });
+
+  it("carries a selected service from the catalog into the enquiry form", () => {
+    const route = source("src/features/operations/BusinessProductRoute.tsx");
+    const page = source("src/app/b/[slug]/enquire/page.tsx");
+    expect(route).toContain('"?service=" + encodeURIComponent(service.code)');
+    expect(route).toContain("defaultValue={selectedService}");
+    expect(page).toContain("selectedServiceCode={query.service}");
+  });
 });

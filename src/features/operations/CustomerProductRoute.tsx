@@ -20,6 +20,7 @@ import {
   type CustomerPortalConsent,
   type CustomerPortalSnapshot,
 } from "./customer-product-runtime";
+import { buildUpcomingVisits } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
 import styles from "./CustomerProductRoute.module.css";
 
@@ -93,12 +94,11 @@ function Status({ value }: { value: string }) {
 
 function OverviewView({ data }: { data: CustomerPortalSnapshot }) {
   const activeQuotes = data.quotes.filter((quote) => !["DECLINED", "EXPIRED", "SUPERSEDED"].includes(quote.status));
-  const snapshotTime = Date.parse(data.loadedAt);
-  const upcomingVisits = data.visits.filter((visit) => Date.parse(visit.startAt) >= snapshotTime);
+  const upcomingVisits = buildUpcomingVisits(data.visits, data.loadedAt);
   const openInvoices = data.invoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
 
   const sentQuote = activeQuotes.find((quote) => quote.status === "SENT");
-  const nextVisit = upcomingVisits.at(-1) ?? upcomingVisits[0];
+  const nextVisit = upcomingVisits[0];
   const outstandingInvoice = openInvoices[0];
 
   return (
