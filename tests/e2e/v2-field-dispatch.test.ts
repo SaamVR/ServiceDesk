@@ -301,12 +301,12 @@ describe("V2 crew authorization and evidence handoff", () => {
       uploadTransportAvailable: false,
     });
 
-    expect(view.locationLabel).toBe("Location hidden");
+    expect(view.locationLabel).toBe("Address hidden");
     expect(view.customerLabel).toBeUndefined();
     expect(view.accessNotes).toBeUndefined();
     expect(view.serviceNotes).toBeUndefined();
     expect(view.highPriorityNotes).toEqual([]);
-    expect(view.uploadState).toContain("not implemented");
+    expect(view.uploadState).toContain("Photo upload is not available yet");
   });
 
   it("routes evidence/checklist writes through accepted server commands with visit version metadata", async () => {
