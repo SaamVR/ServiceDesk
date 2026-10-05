@@ -1,13 +1,23 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { CrewTodayV2 } from "@/features/crew/CrewFieldAppV2";
+import { CrewRouteUnavailable } from "@/features/crew/CrewRouteUnavailable";
+import { loadCrewTodayProduct } from "@/features/crew/crew-product-runtime";
 
-export default function CrewTodayPage() {
+export default async function CrewTodayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ workspace?: string }>;
+}) {
+  const query = await searchParams;
+  const now = new Date().toISOString();
+  const result = await loadCrewTodayProduct(now, query.workspace);
+
+  if (!result.ok) {
+    return <CrewRouteUnavailable page="today" message={result.message} />;
+  }
+
   return (
-    <OperationalFixtureRoute
-      surface="crew"
-      crewModule="today"
-      workspaceLabel="Crew workspace"
-      title="Today list for assigned cleaning visits."
-      description="Crew sees assigned jobs only, with network-required V1 status and a safe path into the job detail workflow."
-    />
+    <main className="app-content" aria-label="Crew today">
+      <CrewTodayV2 jobs={result.value.jobs} now={now} />
+    </main>
   );
 }

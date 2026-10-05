@@ -46,8 +46,17 @@ async function main() {
 
   const todayBoundary = source("src/app/crew/today/server-actions.ts");
   const jobBoundary = source("src/app/crew/jobs/[id]/server-actions.ts");
-  assert(todayBoundary.includes('Pick<ServiceDeskFacade, "readWorkspaceSnapshot" | "transitionVisit">'), "today route boundary must use injected facade commands");
-  assert(jobBoundary.includes('Pick<ServiceDeskFacade, "readWorkspaceSnapshot" | "transitionVisit">'), "job route boundary must use injected facade commands");
+  assert(todayBoundary.includes('Pick<ServiceDeskFacade, "readWorkspaceSnapshot" | "transitionVisit">'), "legacy today route boundary must preserve injected facade commands");
+  assert(todayBoundary.includes("createCrewTodayV2RouteBoundary"), "today route must expose the V2 assigned-crew read seam");
+  assert(todayBoundary.includes("createCrewFieldReadFactory"), "today V2 boundary must use the field read factory");
+  assert(jobBoundary.includes('"readWorkspaceSnapshot" | "transitionVisit" | "addVisitEvidence" | "setVisitChecklistItem"'), "legacy job boundary must preserve accepted field commands");
+  assert(jobBoundary.includes("createCrewJobV2RouteBoundary"), "job route must expose the V2 assigned-crew read seam");
+  assert(jobBoundary.includes("createCrewFieldReadFactory"), "job V2 boundary must use the field read factory");
+
+  const v2ReadBoundary = source("src/features/crew/route-boundary.ts");
+  assert(v2ReadBoundary.includes('scope: "ASSIGNED_CREW_ONLY"'), "V2 crew read contract must be assigned-crew scoped");
+  assert(v2ReadBoundary.includes("workspaceTimeZone"), "V2 crew read contract must carry the workspace timezone");
+  assert(v2ReadBoundary.includes("WORKSPACE_MISMATCH"), "V2 crew read contract must fail closed across workspaces");
 
   for (const path of [
     "src/features/crew/server-boundary.ts",
@@ -56,6 +65,7 @@ async function main() {
     "src/features/crew/view-models.ts",
     "src/app/crew/today/server-actions.ts",
     "src/app/crew/jobs/[id]/server-actions.ts",
+    "src/features/crew/route-boundary.ts",
   ]) assertNoForbiddenImports(path);
 
   const route = source("src/features/operations/OperationalRoute.tsx");

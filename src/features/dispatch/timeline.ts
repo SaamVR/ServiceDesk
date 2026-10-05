@@ -11,6 +11,7 @@ export interface DispatchTimelineVisit {
 
 export interface DispatchCrewDayLane {
   crewId: string;
+  workspaceId: string;
   active: boolean;
   workloadMinutes: number;
   conflictCount: number;
@@ -34,7 +35,11 @@ export function buildCrewDayTimeline(snapshot: DispatchSnapshot): DispatchCrewDa
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((crew) => {
       const assigned = snapshot.visits
-        .filter((visit) => visit.crewId === crew.id && visit.status !== "CANCELLED")
+        .filter((visit) =>
+          visit.workspaceId === crew.workspaceId
+          && visit.crewId === crew.id
+          && visit.status !== "CANCELLED",
+        )
         .sort((a, b) => a.startAt.localeCompare(b.startAt) || a.id.localeCompare(b.id));
 
       const visits = assigned.map((visit) => {
@@ -54,6 +59,7 @@ export function buildCrewDayTimeline(snapshot: DispatchSnapshot): DispatchCrewDa
 
       return {
         crewId: crew.id,
+        workspaceId: crew.workspaceId,
         active: crew.active,
         workloadMinutes: assigned.reduce((sum, visit) => sum + visit.serviceMinutes + visit.bufferMinutes, 0),
         conflictCount: visits.filter((visit) => visit.conflictWithVisitIds.length > 0).length,
