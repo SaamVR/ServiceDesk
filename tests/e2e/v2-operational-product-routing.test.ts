@@ -106,6 +106,8 @@ describe("V2 operational product routing", () => {
     expect(route).not.toContain("function StaffNavigation");
     expect(overview).toContain("loadOperationalStaffSnapshot");
     expect(overview).toContain("snapshot={result.ok ? result.value : undefined}");
+    expect(overview).not.toContain("OperationalFixtureRoute");
+    expect(route).not.toContain("plain-card");
   });
 
   it("adopts W1 primitives and W3 dispatch components without duplicating their logic", () => {
@@ -125,6 +127,7 @@ describe("V2 operational product routing", () => {
     const qualityPage = source("src/app/app/[workspace]/quality/page.tsx");
     expect(runtime).toContain("addOperationalVisitNote");
     expect(runtime).toContain("setOperationalChecklistItem");
+    expect(runtime).toContain("applyOperationalRecurrenceAction");
     expect(runtime).toContain("safeCoreFailure");
     expect(runtime).not.toContain("message: result.message");
     expect(qualityPage).toContain("selectedQualityCaseId={query.case}");
@@ -135,7 +138,7 @@ describe("V2 operational product routing", () => {
     expect(route).not.toContain("ReportsPreview");
     expect(route).not.toContain("PlatformBillingPreview");
     expect(route).not.toContain("OwnerSettingsPreview");
-    expect(route).toContain("Business activity");
+    expect(route).toContain("Scheduled service");
     expect(route).toContain("ServiceDesk subscription");
     expect(route).toContain("Service catalog");
   });
