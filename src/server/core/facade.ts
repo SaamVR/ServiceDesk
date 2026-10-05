@@ -41,6 +41,7 @@ export interface AddVisitEvidenceInput {
   capturedAt: string;
 }
 export interface SetVisitChecklistItemInput { itemKey: string; completed: boolean; note?: string; }
+export interface AssignCrewInput { crewId: string; }
 export interface CreateRecurrenceRuleInput {
   requestId: string;
   propertyId: string;
@@ -81,6 +82,7 @@ export interface ServiceDeskFacade {
   setConversationHandover(ctx: ActorContext, id: string, input: ConversationHandoverInput, meta: CommandMeta): Promise<Result<ConversationDTO>>;
   enqueueConversationReply(ctx: ActorContext, id: string, input: ConversationReplyInput, meta: CommandMeta): Promise<Result<ConversationReplyOutcome>>;
   transitionVisit(ctx: ActorContext, id: string, action: VisitAction, meta: CommandMeta): Promise<Result<VisitDTO>>;
+  assignCrew(ctx: ActorContext, id: string, input: AssignCrewInput, meta: CommandMeta): Promise<Result<VisitDTO>>;
   addVisitEvidence(ctx: ActorContext, visitId: string, input: AddVisitEvidenceInput, meta: CommandMeta): Promise<Result<VisitEvidenceDTO>>;
   setVisitChecklistItem(ctx: ActorContext, visitId: string, input: SetVisitChecklistItemInput, meta: CommandMeta): Promise<Result<VisitChecklistItemDTO>>;
   createRecurrenceRule(ctx: ActorContext, input: CreateRecurrenceRuleInput, meta: CommandMeta): Promise<Result<RecurrenceRuleDTO>>;

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import {
   addOperationalVisitNote,
+  assignOperationalCrew,
   applyOperationalManualPayment,
   applyOperationalRecurrenceAction,
   applyOperationalQualityAction,
@@ -524,6 +525,20 @@ function ScheduleView({
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
 }) {
+  async function assignCrew(formData: FormData) {
+    "use server";
+    const visitId = String(formData.get("visitId") ?? "");
+    const crewId = String(formData.get("crewId") ?? "");
+    const expectedVersion = Number(formData.get("expectedVersion"));
+    const result = await assignOperationalCrew(
+      workspaceSlug,
+      visitId,
+      crewId,
+      expectedVersion,
+    );
+    actionRedirect(workspaceSlug, "schedule", result);
+  }
+
   async function holdSlot(formData: FormData) {
     "use server";
     const result = await holdOperationalSlot(
@@ -562,7 +577,17 @@ function ScheduleView({
       <DispatcherIntelligence
         recommendations={dispatch.recommendations}
         timeline={dispatch.timeline}
-        approvalCommandAvailable={false}
+        workspaceTimeZone={data.workspace.timezone}
+        assignmentAvailability={{ enabled: true, label: "Assignment available" }}
+        crewLabels={Object.fromEntries(data.crews.map((crew) => [crew.id, crew.name]))}
+        renderApprovalControl={({ recommendation, candidate }) => (
+          <form action={assignCrew}>
+            <input type="hidden" name="visitId" value={recommendation.visitId} />
+            <input type="hidden" name="crewId" value={candidate.candidateCrewId} />
+            <input type="hidden" name="expectedVersion" value={recommendation.visitVersion} />
+            <button className="app-button-primary" type="submit">Assign crew</button>
+          </form>
+        )}
       />
       <Panel>
         <SectionHeader

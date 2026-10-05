@@ -25,6 +25,7 @@ export function buildOperationalDispatchIntelligence(data: OperationalStaffSnaps
   const snapshot: DispatchSnapshot = {
     crews: data.crews.map((crew) => ({
       id: crew.id,
+      workspaceId: data.workspace.id,
       active: crew.active,
     })),
     visits: data.visits.map((visit) => ({

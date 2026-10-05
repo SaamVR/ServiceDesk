@@ -75,13 +75,14 @@ describe("V2 operational product routing", () => {
     expect(runtime).toContain("transitionOperationalVisit");
   });
 
-  it("keeps unsupported operations disabled instead of faking success", () => {
+  it("keeps genuinely unsupported operations disabled while wiring authoritative crew assignment", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
-    const dispatch = source("src/features/dispatch/DispatcherIntelligence.tsx");
+    const runtime = source("src/features/operations/operational-product-runtime.ts");
     expect(route).toContain("Recovery must be handled manually from the related record.");
     expect(route).toContain("does not simulate online settlement");
-    expect(route).toContain("approvalCommandAvailable={false}");
-    expect(dispatch).toContain("authoritative crew-assignment command");
+    expect(route).toContain("assignOperationalCrew");
+    expect(route).toContain('assignmentAvailability={{ enabled: true');
+    expect(runtime).toContain("facade.assignCrew");
   });
 
   it("scopes portal reads to the authenticated customer and keeps unsupported booking honest", () => {

@@ -40,6 +40,7 @@ export function DispatcherIntelligence({
     disabledReason: "Crew changes are not available from this screen yet.",
   },
   dataQualityIssues = [],
+  crewLabels = {},
   renderApprovalControl,
 }: {
   recommendations: readonly DispatchVisitRecommendation[];
@@ -47,6 +48,7 @@ export function DispatcherIntelligence({
   workspaceTimeZone?: string;
   assignmentAvailability?: DispatchAssignmentAvailability;
   dataQualityIssues?: readonly DispatchStaffDataQualityIssue[];
+  crewLabels?: Readonly<Record<string, string>>;
   renderApprovalControl?: (input: DispatcherApprovalControlInput) => ReactNode;
 }) {
   const resolvedTimeZone = resolveOperationalTimeZone(workspaceTimeZone);
@@ -115,7 +117,7 @@ export function DispatcherIntelligence({
                     <div className={styles.rank}>#{candidate.rank}</div>
                     <div className={styles.candidateBody}>
                       <div className={styles.candidateHead}>
-                        <strong>{candidate.candidateCrewId}</strong>
+                        <strong>{crewLabels[candidate.candidateCrewId] ?? candidate.candidateCrewId}</strong>
                         <StatusBadge tone={confidenceTone(candidate.confidence)}>
                           {candidate.confidence.toLowerCase()} confidence
                         </StatusBadge>
@@ -160,7 +162,7 @@ export function DispatcherIntelligence({
             <article className={styles.lane} key={lane.crewId}>
               <div className={styles.laneHead}>
                 <div>
-                  <strong>{lane.crewId}</strong>
+                  <strong>{crewLabels[lane.crewId] ?? lane.crewId}</strong>
                   <p className={styles.meta}>{lane.active ? "Active" : "Inactive"} · {lane.workloadMinutes} min scheduled</p>
                 </div>
                 <StatusBadge tone={lane.conflictCount > 0 ? "danger" : "success"}>

@@ -157,14 +157,13 @@ export function buildDispatchRecommendations(snapshot: DispatchSnapshot): Dispat
 }
 
 export interface DispatchApprovalIntent {
-  status: "APPROVAL_RECORDED_NOT_MUTATED";
+  status: "APPROVAL_READY_FOR_COMMAND";
   visitId: string;
   candidateCrewId: string;
   expectedVersion: number;
   approvedByRole: Extract<ActorRole, "OWNER" | "DISPATCHER">;
   humanApprovalRequired: true;
-  mutationReady: false;
-  blocker: "AUTHORITATIVE_CREW_ASSIGNMENT_COMMAND_MISSING";
+  mutationReady: true;
 }
 
 export type DispatchApprovalResult =
@@ -188,14 +187,13 @@ export function approveDispatchRecommendation(input: {
   return {
     ok: true,
     value: {
-      status: "APPROVAL_RECORDED_NOT_MUTATED",
+      status: "APPROVAL_READY_FOR_COMMAND",
       visitId: input.recommendation.visitId,
       candidateCrewId: candidate.candidateCrewId,
       expectedVersion: input.recommendation.visitVersion,
       approvedByRole: input.actorRole,
       humanApprovalRequired: true,
-      mutationReady: false,
-      blocker: "AUTHORITATIVE_CREW_ASSIGNMENT_COMMAND_MISSING",
+      mutationReady: true,
     },
   };
 }

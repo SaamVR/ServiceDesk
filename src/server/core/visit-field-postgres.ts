@@ -1,5 +1,5 @@
 import type { Result, VisitChecklistItemDTO, VisitDTO, VisitEvidenceDTO } from "../../contracts";
-import type { AddVisitEvidenceInput, ServiceDeskFacade, SetVisitChecklistItemInput, VisitAction } from "./facade";
+import type { AddVisitEvidenceInput, AssignCrewInput, ServiceDeskFacade, SetVisitChecklistItemInput, VisitAction } from "./facade";
 import type { SupabaseRpcClient } from "./payment-application-postgres";
 import type { ActorContext, CommandMeta } from "../../contracts";
 
@@ -121,13 +121,20 @@ function fromRpc<T>(data: RpcRow | null, error: { message: string; code?: string
   }
 }
 
-export function createPostgresVisitFieldRuntimeFacadeMethods(client: SupabaseRpcClient): Pick<ServiceDeskFacade, "transitionVisit" | "addVisitEvidence" | "setVisitChecklistItem"> {
+export function createPostgresVisitFieldRuntimeFacadeMethods(client: SupabaseRpcClient): Pick<ServiceDeskFacade, "transitionVisit" | "assignCrew" | "addVisitEvidence" | "setVisitChecklistItem"> {
   return {
     async transitionVisit(ctx: ActorContext, id: string, action: VisitAction, meta: CommandMeta): Promise<Result<VisitDTO>> {
       const { data, error } = await client.rpc<RpcRow>("servicedesk_transition_visit", {
         p_input: rpcInput(ctx, { visitId: id, action }, meta),
       });
       return fromRpc(data, error, "VISIT_TRANSITION_RPC_ERROR", "visit", asVisit);
+    },
+
+    async assignCrew(ctx: ActorContext, id: string, input: AssignCrewInput, meta: CommandMeta): Promise<Result<VisitDTO>> {
+      const { data, error } = await client.rpc<RpcRow>("servicedesk_assign_crew", {
+        p_input: rpcInput(ctx, { visitId: id, crewId: input.crewId }, meta),
+      });
+      return fromRpc(data, error, "VISIT_ASSIGN_CREW_RPC_ERROR", "visit", asVisit);
     },
 
     async addVisitEvidence(ctx: ActorContext, visitId: string, input: AddVisitEvidenceInput, meta: CommandMeta): Promise<Result<VisitEvidenceDTO>> {

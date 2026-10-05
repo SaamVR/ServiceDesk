@@ -1,13 +1,10 @@
 import type { ActorContext, CommandMeta, Result, VisitDTO } from "@/contracts";
+import type { AssignCrewInput } from "@/server/core/facade";
 import {
   buildDispatchRecommendations,
   type DispatchSnapshot,
   type DispatchVisitRecommendation,
 } from "./recommendations";
-
-export interface AssignCrewInput {
-  crewId: string;
-}
 
 export interface AuthoritativeCrewAssignmentCommandPort {
   assignCrew(

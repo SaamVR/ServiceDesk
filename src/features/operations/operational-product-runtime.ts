@@ -118,7 +118,7 @@ export interface OperationalRecurrence {
 }
 
 export interface OperationalStaffSnapshot {
-  workspace: { id: string; slug: string; name: string };
+  workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
   customers: OperationalCustomer[];
   properties: OperationalProperty[];
@@ -169,11 +169,17 @@ function safeCoreFailure(
   if (result.code.includes("ALREADY_HELD")) {
     return { ok: false, message: "That slot was just taken. Choose another available time." };
   }
+  if (result.code === "SCHEDULE_CONFLICT") {
+    return { ok: false, message: "That crew now has an overlapping job. Refresh dispatch suggestions." };
+  }
+  if (result.code === "CREW_UNAVAILABLE" || result.code === "CREW_NOT_FOUND") {
+    return { ok: false, message: "That crew is no longer available for this assignment." };
+  }
   return { ok: false, message: fallback };
 }
 
 interface ResolvedStaffActor {
-  workspace: { id: string; slug: string; name: string };
+  workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
   service: SupabaseClient;
   rpc: SupabaseRpcClient;
@@ -243,7 +249,7 @@ async function resolveStaffActor(workspaceSlug: string): Promise<
 
   const workspaceResult = await service
     .from("workspaces")
-    .select("id,slug,name")
+    .select("id,slug,name,timezone")
     .eq("slug", workspaceSlug)
     .maybeSingle();
 
@@ -254,7 +260,7 @@ async function resolveStaffActor(workspaceSlug: string): Promise<
     return { ok: false, kind: "not_found", message: "This workspace does not exist." };
   }
 
-  const workspace = workspaceResult.data as { id: string; slug: string; name: string };
+  const workspace = workspaceResult.data as { id: string; slug: string; name: string; timezone: string };
   const membershipResult = await service
     .from("memberships")
     .select("role,status")
@@ -780,6 +786,33 @@ export async function holdOperationalSlot(
   return result.ok
     ? { ok: true, message: "Slot held until " + result.value.expiresAt + ". Payment is still pending." }
     : safeCoreFailure(result, "Could not hold that slot. Refresh availability and try again.");
+}
+
+export async function assignOperationalCrew(
+  workspaceSlug: string,
+  visitId: string,
+  crewId: string,
+  expectedVersion: number,
+): Promise<OperationalActionResult> {
+  if (!visitId || !crewId || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
+    return { ok: false, message: "This crew assignment is no longer valid. Refresh the schedule." };
+  }
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
+  const result = await facade.assignCrew(
+    resolved.value.actor,
+    visitId,
+    { crewId },
+    {
+      idempotencyKey: "crew-assignment-" + crypto.randomUUID(),
+      now: new Date().toISOString(),
+      expectedVersion,
+    },
+  );
+  return result.ok
+    ? { ok: true, message: "Crew assigned." }
+    : safeCoreFailure(result, "Could not assign that crew. Refresh dispatch suggestions and try again.");
 }
 
 export async function transitionOperationalVisit(
