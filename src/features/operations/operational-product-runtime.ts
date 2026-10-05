@@ -25,6 +25,8 @@ export interface OperationalCustomer {
   id: string;
   displayName: string;
   leadSource?: string;
+  primaryEmail?: string;
+  primaryPhone?: string;
 }
 
 export interface OperationalProperty {
@@ -46,6 +48,7 @@ export interface OperationalRequest {
   bedrooms?: number;
   bathrooms?: number;
   requestedStartAt?: string;
+  preferredDate?: string;
   version: number;
   createdAt?: string;
 }
@@ -157,6 +160,11 @@ function textValue(row: Row, key: string): string | undefined {
 function numberValue(row: Row, key: string, fallback = 0): number {
   const found = row[key];
   return typeof found === "number" && Number.isFinite(found) ? found : fallback;
+}
+
+function objectValue(row: Row, key: string): Row | undefined {
+  const found = row[key];
+  return found && typeof found === "object" && !Array.isArray(found) ? found as Row : undefined;
 }
 
 function rows(data: unknown): Row[] {
@@ -330,6 +338,12 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       .order("created_at", { ascending: false })
       .limit(200),
     service
+      .from("customer_contacts")
+      .select("customer_id,kind,value,is_primary")
+      .eq("workspace_id", workspace.id)
+      .order("is_primary", { ascending: false })
+      .limit(400),
+    service
       .from("properties")
       .select("*")
       .eq("workspace_id", workspace.id)
@@ -370,6 +384,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
 
   const [
     customerRows,
+    contactRows,
     propertyRows,
     serviceRows,
     crewRows,
@@ -388,11 +403,27 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   ] = tableReads.map((result) => rows(result.data));
 
   const serviceById = new Map(serviceRows.map((row) => [String(row.id), row]));
-  const customers: OperationalCustomer[] = customerRows.map((row) => ({
-    id: String(row.id),
-    displayName: textValue(row, "display_name") ?? "Unnamed customer",
-    leadSource: textValue(row, "lead_source"),
-  }));
+  const contactsByCustomer = new Map<string, { email?: string; phone?: string }>();
+  for (const contact of contactRows) {
+    const customerId = String(contact.customer_id);
+    const current = contactsByCustomer.get(customerId) ?? {};
+    const value = textValue(contact, "value");
+    if (!value) continue;
+    if (contact.kind === "EMAIL" && !current.email) current.email = value;
+    if (contact.kind === "PHONE" && !current.phone) current.phone = value;
+    contactsByCustomer.set(customerId, current);
+  }
+
+  const customers: OperationalCustomer[] = customerRows.map((row) => {
+    const contact = contactsByCustomer.get(String(row.id));
+    return {
+      id: String(row.id),
+      displayName: textValue(row, "display_name") ?? "Unnamed customer",
+      leadSource: textValue(row, "lead_source"),
+      primaryEmail: contact?.email,
+      primaryPhone: contact?.phone,
+    };
+  });
   const properties: OperationalProperty[] = propertyRows.map((row) => ({
     id: String(row.id),
     customerId: String(row.customer_id),
@@ -405,6 +436,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   }));
   const requests: OperationalRequest[] = requestRows.map((row) => {
     const serviceRow = row.service_id ? serviceById.get(String(row.service_id)) : undefined;
+    const structuredFields = objectValue(row, "structured_fields");
     return {
       id: String(row.id),
       customerId: textValue(row, "customer_id"),
@@ -417,6 +449,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       bedrooms: typeof row.bedrooms === "number" ? row.bedrooms : undefined,
       bathrooms: typeof row.bathrooms === "number" ? row.bathrooms : undefined,
       requestedStartAt: textValue(row, "requested_start_at"),
+      preferredDate: structuredFields ? textValue(structuredFields, "preferredDate") : undefined,
       version: numberValue(row, "version", 1),
       createdAt: textValue(row, "created_at"),
     };
