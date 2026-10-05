@@ -43,13 +43,26 @@ describe("V2 operational product routing", () => {
     expect(runtime).toContain("createPostgresConversationFacadeMethods");
     expect(runtime).toContain("createPostgresRequestQuoteCapacityFacadeMethods");
     expect(runtime).toContain("createPostgresManualPaymentQualityFacadeMethods");
-    expect(runtime).toContain("Provider delivery remains tracked separately");
+    expect(runtime).toContain("createPostgresVisitFieldRuntimeFacadeMethods");
+    expect(runtime).toContain("calculateOperationalQuote");
+    expect(runtime).toContain("holdOperationalSlot");
+    expect(runtime).toContain("transitionOperationalVisit");
   });
 
   it("keeps unsupported operations disabled instead of faking success", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
-    expect(route).toContain("Crew assignment is not exposed by an accepted V1 staff command.");
-    expect(route).toContain("No accepted V1 recovery command exists.");
+    expect(route).toContain("Crew changes are not available from this screen yet.");
+    expect(route).toContain("Recovery must be handled manually from the related record.");
     expect(route).toContain("does not simulate Stripe or provider");
+  });
+
+  it("renders reports, billing and settings as business admin views rather than preview components", () => {
+    const route = source("src/features/operations/OperationalProductRoute.tsx");
+    expect(route).not.toContain("ReportsPreview");
+    expect(route).not.toContain("PlatformBillingPreview");
+    expect(route).not.toContain("OwnerSettingsPreview");
+    expect(route).toContain("Business activity");
+    expect(route).toContain("ServiceDesk subscription");
+    expect(route).toContain("Service catalog");
   });
 });
