@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import {
   addOperationalVisitNote,
   applyOperationalManualPayment,
+  applyOperationalRecurrenceAction,
   applyOperationalQualityAction,
   calculateOperationalQuote,
   enqueueInboxReply,
@@ -1462,11 +1463,27 @@ function BillingView({ data }: { data: OperationalStaffSnapshot }) {
   );
 }
 
-function SettingsView({ data }: { data: OperationalStaffSnapshot }) {
+function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot; workspaceSlug: string }) {
   const snapshot = data.ownerSettings;
   if (!snapshot) {
     return <EmptyState title="Settings unavailable" detail="Workspace settings are temporarily unavailable." />;
   }
+
+  async function recurrenceAction(formData: FormData) {
+    "use server";
+    const raw = String(formData.get("action") ?? "");
+    const action = raw === "PAUSE" || raw === "RESUME" || raw === "SKIP_NEXT" ? raw : undefined;
+    if (!action) {
+      actionRedirect(workspaceSlug, "settings", { ok: false, message: "Unsupported recurring-service action." });
+    }
+    const result = await applyOperationalRecurrenceAction(
+      workspaceSlug,
+      String(formData.get("ruleId") ?? ""),
+      action,
+    );
+    actionRedirect(workspaceSlug, "settings", result);
+  }
+
   return (
     <div className={styles.stack}>
       <Panel>
@@ -1516,6 +1533,39 @@ function SettingsView({ data }: { data: OperationalStaffSnapshot }) {
       </Panel>
 
       <Panel>
+        <SectionHeader title="Recurring services" description="Pause, resume or skip the next occurrence using the existing recurring-service command." />
+        {data.recurrenceRules.length === 0 ? (
+          <AppEmptyState title="No recurring services" description="Recurring service rules will appear here when they are configured." />
+        ) : (
+          <div className="app-row-list">
+            {data.recurrenceRules.map((rule) => (
+              <article className="app-row" key={rule.id}>
+                <div>
+                  <h3>{rule.frequency.replaceAll("_", " ")}</h3>
+                  <p>{rule.nextOccurrenceOn ? "Next " + rule.nextOccurrenceOn : "No next occurrence"} · {rule.status.replaceAll("_", " ")}</p>
+                </div>
+                <form action={recurrenceAction}>
+                  <input type="hidden" name="ruleId" value={rule.id} />
+                  <RowActions label={"Recurring service actions for " + rule.id}>
+                    {rule.status === "ACTIVE" ? (
+                      <>
+                        <button className="app-button-secondary" name="action" value="PAUSE">Pause</button>
+                        <button className="app-button-secondary" name="action" value="SKIP_NEXT">Skip next</button>
+                      </>
+                    ) : rule.status === "PAUSED" ? (
+                      <button className="app-button-secondary" name="action" value="RESUME">Resume</button>
+                    ) : (
+                      <span>Completed</span>
+                    )}
+                  </RowActions>
+                </form>
+              </article>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      <Panel>
         <SectionHeader title="Integrations" description="Connection health requires a dedicated workspace integration-status read." />
         <button className="app-button-secondary" type="button" disabled title="Integration status is not part of the current settings read.">
           Manage integrations
@@ -1562,7 +1612,7 @@ function renderModule(
     case "billing":
       return <BillingView data={data} />;
     case "settings":
-      return <SettingsView data={data} />;
+      return <SettingsView data={data} workspaceSlug={workspaceSlug} />;
   }
 }
 
