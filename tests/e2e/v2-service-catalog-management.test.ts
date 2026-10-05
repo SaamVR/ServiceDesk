@@ -33,7 +33,7 @@ describe("V2 owner service catalog management", () => {
     expect(route).toContain('name="expectedUpdatedAt"');
     expect(route).toContain('name="active"');
     expect(route).toContain('name="requiresReview"');
-    expect(route).toContain("Only owners can change the catalog");
-    expect(route).toContain("Show for new enquiries.");
+    expect(route).toContain("Only owners can make changes");
+    expect(route).toContain("Show for new enquiries");
   });
 });

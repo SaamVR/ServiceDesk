@@ -19,13 +19,13 @@ describe("V2 production settings integration health", () => {
   });
 
   it("replaces the disabled integration control with real readiness rows", () => {
-    expect(route).toContain('title="Integrations"');
+    expect(route).toContain('id="integrations"');
     expect(route).toContain("data.integrations.map");
     expect(route).toContain("Sandbox ready");
     expect(route).toContain("Ready for proof");
     expect(route).toContain("Partial setup");
     expect(route).toContain("Setup required");
-    expect(route).toContain("Provider proof stays separate");
+    expect(route).toContain("Configuration is not provider verification");
     expect(route).not.toContain('title="Integration status is not part of the current settings read."');
     expect(route).not.toContain(">Manage integrations</button>");
   });
@@ -35,6 +35,6 @@ describe("V2 production settings integration health", () => {
     expect(health).toContain("No live Stripe account or real-money charging is enabled.");
     expect(health).not.toContain("secretKey:");
     expect(route).toContain("Secret values are never exposed");
-    expect(route).toContain("not called provider-verified until controlled external receipts are available");
+    expect(route).toContain("remain unverified until controlled external receipts are available");
   });
 });

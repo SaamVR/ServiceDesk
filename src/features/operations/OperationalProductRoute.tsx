@@ -20,8 +20,8 @@ import {
   type OperationalVisit,
 } from "./operational-product-runtime";
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
-import { EmptyState as AppEmptyState, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
-import { DataCellStack, DataTable, RowActions } from "@/components/product/DataTable";
+import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
+import { DataCellStack, DataTable } from "@/components/product/DataTable";
 import { OperationsToolbar, ToolbarResultCount } from "@/components/product/WorkspacePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
@@ -1700,41 +1700,156 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
   if (!snapshot) {
     return <EmptyState title="Reports unavailable" detail="Reporting data is temporarily unavailable." />;
   }
-  const conversion =
+
+  const conversionBps = snapshot.conversionRateBps ?? 0;
+  const conversionPercent = Math.max(0, Math.min(100, conversionBps / 100));
+  const conversionLabel =
     snapshot.conversionRateBps === undefined
       ? "—"
-      : (snapshot.conversionRateBps / 100).toFixed(1) + "%";
+      : conversionPercent.toFixed(1) + "%";
   const currency = snapshot.currency ?? "USD";
+  const requestMax = Math.max(snapshot.requestCount, 1);
+  const bookedPercent = Math.round((snapshot.bookedRequestCount / requestMax) * 100);
+  const totalSchedule = snapshot.scheduledServiceMinutes + snapshot.scheduledBufferMinutes;
+  const serviceShare = totalSchedule > 0
+    ? Math.round((snapshot.scheduledServiceMinutes / totalSchedule) * 100)
+    : 0;
 
   return (
-    <div className={styles.stack}>
-      <MetricStrip
-        items={[
-          { label: "Requests", value: snapshot.requestCount, detail: "In selected reporting period" },
-          { label: "Booked", value: snapshot.bookedRequestCount, detail: "Persisted booked requests" },
-          { label: "Conversion", value: conversion, detail: "Stored reporting metric" },
-          { label: "Collected", value: formatMinorMoney(snapshot.collectedMinor, currency), detail: "Allocated collections" },
-          { label: "Outstanding", value: formatMinorMoney(snapshot.outstandingMinor, currency), detail: "Open customer balances", tone: snapshot.outstandingMinor > 0 ? "attention" : "default" },
-        ]}
-      />
-      <Panel>
-        <SectionHeader
-          title="Operations"
-          description={(snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period") + " – " + (snapshot.to ? formatWhen(snapshot.to, data.workspace.timezone) : "Now")}
-        />
-        <div className="app-grid app-grid-two">
-          <div className="app-row-list">
-            <article className="app-row"><div><h3>Scheduled service</h3><p>{Math.round(snapshot.scheduledServiceMinutes / 60)} hours</p></div></article>
-            <article className="app-row"><div><h3>Scheduled buffer</h3><p>{Math.round(snapshot.scheduledBufferMinutes / 60)} hours</p></div></article>
-          </div>
-          <div className="app-row-list">
-            <article className="app-row"><div><h3>Open attention</h3><p>{snapshot.openAttentionCount}</p></div></article>
-            <article className="app-row"><div><h3>Unresolved quality</h3><p>{snapshot.unresolvedQualityCount}</p></div></article>
-          </div>
+    <section className={styles.reportsWorkspace} aria-label="Operations reporting workspace">
+      <header className={styles.adminPageHeader}>
+        <div>
+          <p className={styles.adminEyebrow}>Business performance</p>
+          <h2>Reports</h2>
+          <p>
+            {snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period"}
+            {" – "}
+            {snapshot.to ? formatWhen(snapshot.to, data.workspace.timezone) : "Now"}
+          </p>
         </div>
-        <p className="app-field-help">Updated {formatWhen(snapshot.generatedAt, data.workspace.timezone)}.</p>
-      </Panel>
-    </div>
+        <div className={styles.reportUpdated}>
+          <span>Last updated</span>
+          <strong>{formatWhen(snapshot.generatedAt, data.workspace.timezone)}</strong>
+        </div>
+      </header>
+
+      <section className={styles.reportKpis} aria-label="Business performance summary">
+        <article>
+          <span>Requests</span>
+          <strong>{snapshot.requestCount}</strong>
+          <small>Service demand</small>
+        </article>
+        <article>
+          <span>Booked</span>
+          <strong>{snapshot.bookedRequestCount}</strong>
+          <small>Confirmed demand</small>
+        </article>
+        <article>
+          <span>Request conversion</span>
+          <strong>{conversionLabel}</strong>
+          <small>Requests converted to bookings</small>
+        </article>
+        <article>
+          <span>Collected</span>
+          <strong>{formatMinorMoney(snapshot.collectedMinor, currency)}</strong>
+          <small>Allocated collections</small>
+        </article>
+        <article className={snapshot.outstandingMinor > 0 ? styles.reportAttention : undefined}>
+          <span>Outstanding</span>
+          <strong>{formatMinorMoney(snapshot.outstandingMinor, currency)}</strong>
+          <small>Open customer balances</small>
+        </article>
+      </section>
+
+      <div className={styles.reportGrid}>
+        <section className={styles.adminCard}>
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>Conversion</p>
+              <h3>Request funnel</h3>
+            </div>
+          </div>
+          <div className={styles.funnelRows}>
+            <div>
+              <span>Requests</span>
+              <div><i style={{ width: "100%" }} /></div>
+              <strong>{snapshot.requestCount}</strong>
+            </div>
+            <div>
+              <span>Booked</span>
+              <div><i style={{ width: bookedPercent + "%" }} /></div>
+              <strong>{snapshot.bookedRequestCount}</strong>
+            </div>
+            <div>
+              <span>Conversion</span>
+              <div><i style={{ width: conversionPercent + "%" }} /></div>
+              <strong>{conversionLabel}</strong>
+            </div>
+          </div>
+          <div className={styles.reportInsight}>
+            <strong>Request conversion</strong>
+            <p>Calculated from persisted requests and booked request state for this reporting period.</p>
+          </div>
+        </section>
+
+        <section className={styles.adminCard}>
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>Cash position</p>
+              <h3>Collections</h3>
+            </div>
+          </div>
+          <div className={styles.moneySummary}>
+            <div>
+              <span>Collected</span>
+              <strong>{formatMinorMoney(snapshot.collectedMinor, currency)}</strong>
+            </div>
+            <div className={snapshot.outstandingMinor > 0 ? styles.moneyWarning : undefined}>
+              <span>Outstanding</span>
+              <strong>{formatMinorMoney(snapshot.outstandingMinor, currency)}</strong>
+            </div>
+          </div>
+          <p className={styles.adminHelp}>Customer invoice balances remain authoritative in Invoices.</p>
+        </section>
+
+        <section className={styles.adminCard}>
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>Capacity</p>
+              <h3>Scheduled workload</h3>
+            </div>
+          </div>
+          <div className={styles.capacityBody}>
+            <div className={styles.capacityBar} aria-label="Scheduled service versus buffer">
+              <i style={{ width: serviceShare + "%" }} />
+            </div>
+            <div className={styles.capacityLegend}>
+              <span><strong>{Math.round(snapshot.scheduledServiceMinutes / 60)}h</strong> service</span>
+              <span><strong>{Math.round(snapshot.scheduledBufferMinutes / 60)}h</strong> buffer</span>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.adminCard}>
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>Exceptions</p>
+              <h3>Operational risk</h3>
+            </div>
+          </div>
+          <div className={styles.riskRows}>
+            <a href={buildStaffModuleHref(data.workspace.slug, "automations")}>
+              <span><strong>Open attention</strong><small>Recovery queue</small></span>
+              <b>{snapshot.openAttentionCount}</b>
+            </a>
+            <a href={buildStaffModuleHref(data.workspace.slug, "quality")}>
+              <span><strong>Unresolved quality</strong><small>Quality queue</small></span>
+              <b>{snapshot.unresolvedQualityCount}</b>
+            </a>
+          </div>
+        </section>
+      </div>
+    </section>
   );
 }
 
@@ -1743,57 +1858,102 @@ function BillingView({ data }: { data: OperationalStaffSnapshot }) {
   if (!snapshot) {
     return <EmptyState title="Platform billing unavailable" detail="Subscription information is temporarily unavailable." />;
   }
+
   const subscription = snapshot.subscription;
+  const atLimit = snapshot.usage.filter((row) => row.state === "LIMIT_REACHED").length;
+
   return (
-    <div className={styles.stack}>
-      <Panel>
-        <SectionHeader
-          title={subscription.plan + " · " + subscription.status.replaceAll("_", " ")}
-          description="ServiceDesk subscription"
-          action={
-            <StatusBadge tone={subscription.providerMode === "SANDBOX" ? "warning" : statusBadgeTone(subscription.status)}>
-              {subscription.providerMode === "SANDBOX" ? "Sandbox billing" : "Live billing"}
-            </StatusBadge>
-          }
-        />
-        {subscription.providerMode === "SANDBOX" ? (
-          <FeedbackBanner
-            title="Sandbox platform billing"
-            description="Platform subscription billing is not a live charge in this mode."
-            tone="warning"
-          />
-        ) : null}
-        <dl className="summary-list">
-          <div><dt>Trial ends</dt><dd>{formatWhen(subscription.trialEndsAt, data.workspace.timezone)}</dd></div>
-          <div><dt>Current period ends</dt><dd>{formatWhen(subscription.currentPeriodEndsAt, data.workspace.timezone)}</dd></div>
-        </dl>
-      </Panel>
-
-      <Panel>
-        <SectionHeader title="Usage" description="Current platform usage and limits." />
-        <div className="app-row-list">
-          {snapshot.usage.map((row) => (
-            <article className="app-row" key={row.metric}>
-              <div>
-                <h3>{row.metric.replaceAll("_", " ").toLowerCase()}</h3>
-                <p>{row.used} used · {row.limit ?? "Unlimited"} limit</p>
-              </div>
-              <StatusBadge tone={row.state === "LIMIT_REACHED" ? "warning" : "neutral"}>
-                {row.state.replaceAll("_", " ")}
-              </StatusBadge>
-            </article>
-          ))}
+    <section className={styles.billingWorkspace} aria-label="ServiceDesk subscription billing">
+      <header className={styles.adminPageHeader}>
+        <div>
+          <p className={styles.adminEyebrow}>Account & plan</p>
+          <h2>Billing</h2>
+          <p>ServiceDesk subscription billing and platform usage.</p>
         </div>
-      </Panel>
+        <StatusBadge tone={subscription.providerMode === "SANDBOX" ? "warning" : statusBadgeTone(subscription.status)}>
+          {subscription.providerMode === "SANDBOX" ? "Sandbox billing" : "Live billing"}
+        </StatusBadge>
+      </header>
 
-      <Panel>
-        <SectionHeader title="Customer payments are separate" />
-        <p>
-          Cleaning invoices and customer payment balances stay in Invoices. They do not change the
-          ServiceDesk subscription shown here.
-        </p>
-      </Panel>
-    </div>
+      {subscription.providerMode === "SANDBOX" ? (
+        <div className={styles.billingNotice}>
+          <span aria-hidden="true">i</span>
+          <div>
+            <strong>Platform billing is in sandbox mode</strong>
+            <p>No live ServiceDesk subscription charge is created in this mode.</p>
+          </div>
+        </div>
+      ) : null}
+
+      <section className={styles.planHero}>
+        <div>
+          <p>Current plan</p>
+          <h3>{subscription.plan}</h3>
+          <StatusBadge tone={statusBadgeTone(subscription.status)}>
+            {subscription.status.replaceAll("_", " ")}
+          </StatusBadge>
+        </div>
+        <dl>
+          <div>
+            <dt>Billing mode</dt>
+            <dd>{subscription.providerMode === "SANDBOX" ? "Sandbox" : "Live"}</dd>
+          </div>
+          <div>
+            <dt>Trial ends</dt>
+            <dd>{formatWhen(subscription.trialEndsAt, data.workspace.timezone)}</dd>
+          </div>
+          <div>
+            <dt>Period ends</dt>
+            <dd>{formatWhen(subscription.currentPeriodEndsAt, data.workspace.timezone)}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className={styles.adminCard}>
+        <div className={styles.adminCardHeader}>
+          <div>
+            <p className={styles.adminSectionEyebrow}>Plan usage</p>
+            <h3>Usage & limits</h3>
+          </div>
+          <span>{atLimit ? atLimit + " at limit" : "Within limits"}</span>
+        </div>
+        <div className={styles.usageGrid}>
+          {snapshot.usage.map((row) => {
+            const percent =
+              row.limit && row.limit > 0
+                ? Math.min(100, Math.round((row.used / row.limit) * 100))
+                : 100;
+            return (
+              <article key={row.metric}>
+                <div>
+                  <span>
+                    <strong>{row.metric.replaceAll("_", " ").toLowerCase()}</strong>
+                    <small>{row.used} used · {row.limit ?? "Unlimited"} limit</small>
+                  </span>
+                  <StatusBadge tone={row.state === "LIMIT_REACHED" ? "warning" : "neutral"}>
+                    {row.state === "UNLIMITED" ? "Unlimited" : row.state.replaceAll("_", " ").toLowerCase()}
+                  </StatusBadge>
+                </div>
+                <div className={styles.usageTrack} aria-label={row.metric.replaceAll("_", " ") + " usage"}>
+                  <i style={{ width: percent + "%" }} />
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={styles.billingSeparation}>
+        <div>
+          <p className={styles.adminSectionEyebrow}>Customer finance</p>
+          <h3>Customer invoices are separate</h3>
+          <p>Service invoices and customer collections do not change the ServiceDesk subscription shown here.</p>
+        </div>
+        <a className="app-button-secondary" href={buildStaffModuleHref(data.workspace.slug, "invoices")}>
+          Open customer invoices
+        </a>
+      </section>
+    </section>
   );
 }
 
@@ -1818,9 +1978,15 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
   async function recurrenceAction(formData: FormData) {
     "use server";
     const raw = String(formData.get("action") ?? "");
-    const action = raw === "PAUSE" || raw === "RESUME" || raw === "SKIP_NEXT" ? raw : undefined;
+    const action =
+      raw === "PAUSE" || raw === "RESUME" || raw === "SKIP_NEXT"
+        ? raw
+        : undefined;
     if (!action) {
-      actionRedirect(workspaceSlug, "settings", { ok: false, message: "Unsupported recurring-service action." });
+      actionRedirect(workspaceSlug, "settings", {
+        ok: false,
+        message: "Unsupported recurring-service action.",
+      });
     }
     const result = await applyOperationalRecurrenceAction(
       workspaceSlug,
@@ -1830,185 +1996,303 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     actionRedirect(workspaceSlug, "settings", result);
   }
 
+  const activeServices = data.serviceCatalog.filter((service) => service.active).length;
+  const activeMembers = snapshot.members.filter((member) => member.active).length;
+  const pendingInvitations = snapshot.invitations.filter((invite) => invite.state === "PENDING").length;
+  const configuredIntegrations = data.integrations.filter(
+    (integration) => integration.configurationState === "CONFIGURED",
+  ).length;
+
   return (
-    <div className={styles.stack}>
-      <Panel>
-        <SectionHeader
-          title="Service catalog"
-          description={
-            data.actor.role === "OWNER"
-              ? "Manage customer-facing service names, availability and manual-review requirements."
-              : "Services currently available to this workspace. Only owners can change the catalog."
-          }
-        />
-        {data.serviceCatalog.length === 0 ? (
-          <AppEmptyState title="No services configured" description="Add services during workspace setup before taking new enquiries." />
-        ) : (
-          <div className="app-row-list">
-            {data.serviceCatalog.map((service) => (
-              data.actor.role === "OWNER" ? (
-                <form action={serviceCatalogAction} className="app-row" key={service.id}>
-                  <input type="hidden" name="serviceId" value={service.id} />
-                  <input type="hidden" name="expectedUpdatedAt" value={service.updatedAt} />
-                  <div>
-                    <label>
-                      <span className="app-sr-only">Service name for {service.code}</span>
-                      <input
-                        className="app-input"
-                        name="name"
-                        type="text"
-                        defaultValue={service.name}
-                        maxLength={120}
-                        required
-                      />
-                    </label>
-                    <p>{service.code} · Updated {formatWhen(service.updatedAt, data.workspace.timezone)}</p>
-                  </div>
-                  <div className="app-row-meta">
-                    <label className="app-checkbox-field">
-                      <input name="active" type="checkbox" defaultChecked={service.active} />
-                      <span><strong>Available</strong><small>Show for new enquiries.</small></span>
-                    </label>
-                    <label className="app-checkbox-field">
-                      <input name="requiresReview" type="checkbox" defaultChecked={service.requiresReview} />
-                      <span><strong>Manual review</strong><small>Require staff review before confirmation.</small></span>
-                    </label>
-                    <button className="app-button-primary" type="submit">Save</button>
-                  </div>
-                </form>
-              ) : (
-                <article className="app-row" key={service.id}>
-                  <div>
-                    <h3>{service.name}</h3>
-                    <p>{service.code}{service.requiresReview ? " · Manual review required" : ""}</p>
-                  </div>
-                  <StatusBadge tone={service.active ? "success" : "neutral"}>
-                    {service.active ? "Available" : "Unavailable"}
-                  </StatusBadge>
-                </article>
-              )
-            ))}
-          </div>
-        )}
-      </Panel>
-
-      <Panel>
-        <SectionHeader title="Team" description="Workspace memberships without exposing private credentials." />
-        <div className="app-row-list">
-          {snapshot.members.map((member) => (
-            <article className="app-row" key={member.userId}>
-              <div><h3>{member.role}</h3><p>{member.userId.slice(0, 8)}…</p></div>
-              <StatusBadge tone={member.active ? "success" : "neutral"}>{member.active ? "Active" : "Inactive"}</StatusBadge>
-            </article>
-          ))}
+    <section className={styles.settingsWorkspace} aria-label="Workspace settings console">
+      <header className={styles.adminPageHeader}>
+        <div>
+          <p className={styles.adminEyebrow}>Workspace settings console</p>
+          <h2>Settings</h2>
+          <p>{data.workspace.name} · {data.actor.role.toLowerCase()} access</p>
         </div>
-      </Panel>
+      </header>
 
-      <Panel>
-        <SectionHeader
-          title="Invitations"
-          description={snapshot.invitations.filter((invite) => invite.state === "PENDING").length + " pending"}
-        />
-        {snapshot.invitations.length === 0 ? (
-          <AppEmptyState title="No invitations" description="No team invitations are recorded." />
-        ) : (
-          <div className="app-row-list">
-            {snapshot.invitations.map((invite) => (
-              <article className="app-row" key={invite.id}>
-                <div><h3>{invite.role}</h3><p>Created {formatWhen(invite.createdAt, data.workspace.timezone)}</p></div>
-                <StatusBadge tone={invite.state === "PENDING" ? "warning" : invite.state === "ACCEPTED" ? "success" : "neutral"}>
-                  {invite.state}
-                </StatusBadge>
-              </article>
-            ))}
-          </div>
-        )}
-        <p className="app-field-help">Invitation links and tokens are never displayed here.</p>
-      </Panel>
-
-      <Panel>
-        <SectionHeader title="Recurring services" description="Pause, resume or skip the next occurrence using the existing recurring-service command." />
-        {data.recurrenceRules.length === 0 ? (
-          <AppEmptyState title="No recurring services" description="Recurring service rules will appear here when they are configured." />
-        ) : (
-          <div className="app-row-list">
-            {data.recurrenceRules.map((rule) => (
-              <article className="app-row" key={rule.id}>
-                <div>
-                  <h3>{rule.frequency.replaceAll("_", " ")}</h3>
-                  <p>{rule.nextOccurrenceOn ? "Next " + rule.nextOccurrenceOn : "No next occurrence"} · {rule.status.replaceAll("_", " ")}</p>
-                </div>
-                <form action={recurrenceAction}>
-                  <input type="hidden" name="ruleId" value={rule.id} />
-                  <RowActions label={"Recurring service actions for " + rule.id}>
-                    {rule.status === "ACTIVE" ? (
-                      <>
-                        <button className="app-button-secondary" name="action" value="PAUSE">Pause</button>
-                        <button className="app-button-secondary" name="action" value="SKIP_NEXT">Skip next</button>
-                      </>
-                    ) : rule.status === "PAUSED" ? (
-                      <button className="app-button-secondary" name="action" value="RESUME">Resume</button>
-                    ) : (
-                      <span>Completed</span>
-                    )}
-                  </RowActions>
-                </form>
-              </article>
-            ))}
-          </div>
-        )}
-      </Panel>
-
-      <Panel>
-        <SectionHeader
-          title="Integrations"
-          description="Server-side readiness only. Secret values are never exposed, and configuration does not count as provider verification."
-        />
-        <div className="app-row-list">
-          {data.integrations.map((integration) => {
-            const readyForProof = integration.configurationState === "CONFIGURED";
-            const statusLabel = integration.provider === "PAYMENT"
-              ? "Sandbox ready"
-              : readyForProof
-                ? "Ready for proof"
-                : integration.configurationState === "PARTIAL"
-                  ? "Partial setup"
-                  : "Setup required";
-            const tone = integration.provider === "PAYMENT" || integration.configurationState === "PARTIAL"
-              ? "warning" as const
-              : readyForProof
-                ? "info" as const
-                : "neutral" as const;
-            return (
-              <article className="app-row" key={integration.provider}>
-                <div>
-                  <h3>{integration.label}</h3>
-                  <p>{integration.mode} · {integration.verificationState.replaceAll("_", " ")}</p>
-                  <p>{integration.message}</p>
-                  {integration.missingConfiguration.length > 0 ? (
-                    <p>
-                      Missing: {integration.missingConfiguration
-                        .slice(0, 3)
-                        .map((item) => item.replaceAll("_", " ").toLowerCase())
-                        .join(", ")}
-                      {integration.missingConfiguration.length > 3
-                        ? ` +${integration.missingConfiguration.length - 3} more`
-                        : ""}
-                    </p>
-                  ) : null}
-                </div>
-                <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
-              </article>
-            );
-          })}
+      <section className={styles.settingsSummary} aria-label="Workspace configuration summary">
+        <div>
+          <span>Active services</span>
+          <strong>{activeServices}</strong>
         </div>
-        <FeedbackBanner
-          title="Provider proof stays separate"
-          description="These statuses are derived from server configuration presence and the internal payment sandbox. WhatsApp, Calendar, Email, n8n and AI are not called provider-verified until controlled external receipts are available."
-          tone="info"
-        />
-      </Panel>
-    </div>
+        <div>
+          <span>Active team</span>
+          <strong>{activeMembers}</strong>
+        </div>
+        <div>
+          <span>Pending invitations</span>
+          <strong>{pendingInvitations}</strong>
+        </div>
+        <div>
+          <span>Configured integrations</span>
+          <strong>{configuredIntegrations}/{data.integrations.length}</strong>
+        </div>
+      </section>
+
+      <div className={styles.settingsLayout}>
+        <nav className={styles.settingsNav} aria-label="Settings sections">
+          <a href="#services">Services</a>
+          <a href="#team">Team & access</a>
+          <a href="#recurrence">Recurring services</a>
+          <a href="#integrations">Integrations</a>
+        </nav>
+
+        <div className={styles.settingsContent}>
+          <section className={styles.settingsCard} id="services">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Services</p>
+                <h3>Service catalog</h3>
+                <p>
+                  {data.actor.role === "OWNER"
+                    ? "Manage customer-facing service names, availability and manual-review requirements."
+                    : "Services currently available to this workspace. Only owners can make changes to the catalog."}
+                </p>
+              </div>
+              <StatusBadge tone="neutral">{activeServices} active</StatusBadge>
+            </div>
+
+            {data.serviceCatalog.length === 0 ? (
+              <div className={styles.settingsEmpty}>
+                <strong>No services configured</strong>
+                <p>Add services during workspace setup before taking new enquiries.</p>
+              </div>
+            ) : (
+              <div className={styles.serviceSettingsList}>
+                {data.serviceCatalog.map((service) =>
+                  data.actor.role === "OWNER" ? (
+                    <form action={serviceCatalogAction} className={styles.serviceSettingRow} key={service.id}>
+                      <input type="hidden" name="serviceId" value={service.id} />
+                      <input type="hidden" name="expectedUpdatedAt" value={service.updatedAt} />
+
+                      <div className={styles.serviceSettingName}>
+                        <label>
+                          <span className="app-sr-only">Service name for {service.code}</span>
+                          <input
+                            className="app-input"
+                            name="name"
+                            type="text"
+                            defaultValue={service.name}
+                            maxLength={120}
+                            required
+                          />
+                        </label>
+                        <small>{service.code} · Updated {formatWhen(service.updatedAt, data.workspace.timezone)}</small>
+                      </div>
+
+                      <label className={styles.settingToggle}>
+                        <input name="active" type="checkbox" defaultChecked={service.active} />
+                        <span>
+                          <strong>Available</strong>
+                          <small>Show for new enquiries.</small>
+                        </span>
+                      </label>
+
+                      <label className={styles.settingToggle}>
+                        <input name="requiresReview" type="checkbox" defaultChecked={service.requiresReview} />
+                        <span>
+                          <strong>Manual review</strong>
+                          <small>Require staff review before confirmation.</small>
+                        </span>
+                      </label>
+
+                      <button className="app-button-primary" type="submit">Save</button>
+                    </form>
+                  ) : (
+                    <article className={styles.serviceSettingRow} key={service.id}>
+                      <div className={styles.serviceSettingName}>
+                        <strong>{service.name}</strong>
+                        <small>{service.code}{service.requiresReview ? " · Manual review required" : ""}</small>
+                      </div>
+                      <StatusBadge tone={service.active ? "success" : "neutral"}>
+                        {service.active ? "Available" : "Unavailable"}
+                      </StatusBadge>
+                    </article>
+                  ),
+                )}
+              </div>
+            )}
+          </section>
+
+          <section className={styles.settingsCard} id="team">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Access</p>
+                <h3>Team & invitations</h3>
+                <p>Workspace memberships and invitation state without exposing private credentials.</p>
+              </div>
+              <StatusBadge tone={pendingInvitations ? "warning" : "neutral"}>
+                {pendingInvitations} pending
+              </StatusBadge>
+            </div>
+
+            <div className={styles.teamColumns}>
+              <div>
+                <h4>Members</h4>
+                <div className={styles.settingsRows}>
+                  {snapshot.members.map((member, index) => (
+                    <article key={member.userId}>
+                      <span className={styles.memberAvatar} aria-hidden="true">{member.role.slice(0, 1)}</span>
+                      <span>
+                        <strong>{member.role.toLowerCase()}</strong>
+                        <small>Workspace member {index + 1}</small>
+                      </span>
+                      <StatusBadge tone={member.active ? "success" : "neutral"}>
+                        {member.active ? "Active" : "Inactive"}
+                      </StatusBadge>
+                    </article>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4>Invitations</h4>
+                {snapshot.invitations.length === 0 ? (
+                  <div className={styles.settingsEmpty}>
+                    <strong>No invitations</strong>
+                    <p>No team invitations are recorded.</p>
+                  </div>
+                ) : (
+                  <div className={styles.settingsRows}>
+                    {snapshot.invitations.map((invite) => (
+                      <article key={invite.id}>
+                        <span className={styles.memberAvatar} aria-hidden="true">+</span>
+                        <span>
+                          <strong>{invite.role.toLowerCase()}</strong>
+                          <small>Created {formatWhen(invite.createdAt, data.workspace.timezone)}</small>
+                        </span>
+                        <StatusBadge tone={invite.state === "PENDING" ? "warning" : invite.state === "ACCEPTED" ? "success" : "neutral"}>
+                          {invite.state.toLowerCase()}
+                        </StatusBadge>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <p className={styles.adminHelp}>Private credentials and invitation tokens are never displayed.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.settingsCard} id="recurrence">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Repeat work</p>
+                <h3>Recurring services</h3>
+                <p>Pause, resume or skip the next occurrence using the existing recurring-service command.</p>
+              </div>
+              <StatusBadge tone="neutral">{data.recurrenceRules.length} rules</StatusBadge>
+            </div>
+
+            {data.recurrenceRules.length === 0 ? (
+              <div className={styles.settingsEmpty}>
+                <strong>No recurring services</strong>
+                <p>Recurring service rules will appear here when they are configured.</p>
+              </div>
+            ) : (
+              <div className={styles.recurrenceSettingsList}>
+                {data.recurrenceRules.map((rule) => (
+                  <article className={styles.recurrenceSettingRow} key={rule.id}>
+                    <div>
+                      <strong>{rule.frequency.replaceAll("_", " ").toLowerCase()}</strong>
+                      <small>{rule.nextOccurrenceOn ? "Next " + rule.nextOccurrenceOn : "No next occurrence"}</small>
+                    </div>
+                    <StatusBadge tone={rule.status === "ACTIVE" ? "success" : "neutral"}>
+                      {rule.status.replaceAll("_", " ").toLowerCase()}
+                    </StatusBadge>
+                    <form action={recurrenceAction}>
+                      <input type="hidden" name="ruleId" value={rule.id} />
+                      {rule.status === "ACTIVE" ? (
+                        <div className={styles.settingActions}>
+                          <button className="app-button-secondary" name="action" value="PAUSE">Pause</button>
+                          <button className="app-button-secondary" name="action" value="SKIP_NEXT">Skip next</button>
+                        </div>
+                      ) : rule.status === "PAUSED" ? (
+                        <button className="app-button-secondary" name="action" value="RESUME">Resume</button>
+                      ) : (
+                        <span>Completed</span>
+                      )}
+                    </form>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className={styles.settingsCard} id="integrations">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Connections</p>
+                <SectionHeader
+                  title="Integrations"
+                  description="Connection readiness and verification status without exposing credentials."
+                />
+              </div>
+              <StatusBadge tone="neutral">{configuredIntegrations}/{data.integrations.length} configured</StatusBadge>
+            </div>
+
+            <div className={styles.integrationGrid}>
+              {data.integrations.map((integration) => {
+                const readyForProof = integration.configurationState === "CONFIGURED";
+                const statusLabel = integration.provider === "PAYMENT"
+                  ? "Sandbox ready"
+                  : readyForProof
+                    ? "Ready for proof"
+                    : integration.configurationState === "PARTIAL"
+                      ? "Partial setup"
+                      : "Setup required";
+                const tone = integration.provider === "PAYMENT" || integration.configurationState === "PARTIAL"
+                  ? "warning" as const
+                  : readyForProof
+                    ? "info" as const
+                    : "neutral" as const;
+
+                return (
+                  <article className={styles.integrationCard} key={integration.provider}>
+                    <div>
+                      <strong>{integration.label}</strong>
+                      <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
+                    </div>
+                    <p>{integration.message}</p>
+                    <dl>
+                      <div>
+                        <dt>Mode</dt>
+                        <dd>{integration.mode.toLowerCase()}</dd>
+                      </div>
+                      <div>
+                        <dt>Verification</dt>
+                        <dd>{integration.verificationState.replaceAll("_", " ").toLowerCase()}</dd>
+                      </div>
+                    </dl>
+                    {integration.missingConfiguration.length > 0 ? (
+                      <small>
+                        Still needed: {integration.missingConfiguration
+                          .slice(0, 3)
+                          .map((item) => item.replaceAll("_", " ").toLowerCase())
+                          .join(" · ")}
+                        {integration.missingConfiguration.length > 3
+                          ? ` · +${integration.missingConfiguration.length - 3} more`
+                          : ""}
+                      </small>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className={styles.integrationProofNote}>
+              <span aria-hidden="true">i</span>
+              <p>
+                <strong>Configuration is not provider verification.</strong>{" "}
+                Secret values are never exposed. Non-payment connections remain unverified until controlled external receipts are available. Payments remain an internal sandbox.
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
   );
 }
 

@@ -118,9 +118,9 @@ describe("V2 operational product routing", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
     const adapter = source("src/features/operations/dispatch-product-adapter.ts");
     expect(route).toContain("DataTable");
-    expect(route).toContain("SplitWorkspace");
+    expect(route).toContain("OperationsToolbar");
     expect(route).toContain("FeedbackBanner");
-    expect(route).toContain("FormSection");
+    expect(route).toContain("FormGrid");
     expect(route).toContain("DispatcherIntelligence");
     expect(adapter).toContain("buildDispatchRecommendations");
     expect(adapter).toContain("buildCrewDayTimeline");
@@ -142,7 +142,7 @@ describe("V2 operational product routing", () => {
     expect(route).not.toContain("ReportsPreview");
     expect(route).not.toContain("PlatformBillingPreview");
     expect(route).not.toContain("OwnerSettingsPreview");
-    expect(route).toContain("Scheduled service");
+    expect(route).toContain("Scheduled workload");
     expect(route).toContain("ServiceDesk subscription");
     expect(route).toContain("Service catalog");
   });
