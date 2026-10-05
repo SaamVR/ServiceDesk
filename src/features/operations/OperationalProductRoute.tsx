@@ -506,7 +506,16 @@ function ScheduleView({
     (request) =>
       !scheduledRequestIds.has(request.id) && !["LOST", "CLOSED"].includes(request.status),
   );
-  const acceptedQuotes = data.quotes.filter((quote) => quote.status === "ACCEPTED");
+  const acceptedQuotes = data.quotes.filter(
+    (quote) =>
+      quote.status === "ACCEPTED" &&
+      !data.visits.some((visit) => visit.quoteId === quote.id),
+  );
+  const heldSlotIds = new Set(
+    data.slotHolds
+      .filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now)
+      .map((hold) => hold.slotId),
+  );
 
   return (
     <div className={styles.stack}>
@@ -553,9 +562,20 @@ function ScheduleView({
                 hold.status === "HELD" &&
                 Date.parse(hold.expiresAt) > now,
             );
-            const candidates = data.capacitySlots.filter(
-              (slot) => slot.capacityMinutes >= quote.durationMinutes,
-            );
+            const requiredMinutes = quote.durationMinutes + quote.bufferMinutes;
+            const candidates = data.capacitySlots.filter((slot) => {
+              const start = Date.parse(slot.startAt);
+              const end = Date.parse(slot.endAt);
+              const windowMinutes = Number.isFinite(start) && Number.isFinite(end)
+                ? Math.floor((end - start) / 60000)
+                : 0;
+              return (
+                start >= now &&
+                !heldSlotIds.has(slot.id) &&
+                slot.capacityMinutes >= requiredMinutes &&
+                windowMinutes >= requiredMinutes
+              );
+            });
             return (
               <div className={styles.bookingBlock} key={quote.id}>
                 <p>
@@ -662,6 +682,9 @@ function JobsView({
           {data.visits.map((visit) => {
             const action = nextAction(visit.status);
             const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
+            const reviewEvidenceReady =
+              evidence.some((item) => item.kind === "BEFORE_PHOTO") &&
+              evidence.some((item) => item.kind === "AFTER_PHOTO");
             return (
               <tr key={visit.id}>
                 <td>{formatWhen(visit.startAt)}</td>
@@ -681,8 +704,15 @@ function JobsView({
                         className="button-secondary"
                         name="action"
                         value={action.action}
-                        disabled={action.action === "ASSIGN" && !visit.crewId}
-                        title={action.action === "SUBMIT_REVIEW" && evidence.length < 2 ? "Before and after evidence is required by the server before review." : undefined}
+                        disabled={
+                          (action.action === "ASSIGN" && !visit.crewId) ||
+                          (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
+                        }
+                        title={
+                          action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
+                            ? "Add both before and after evidence before submitting for review."
+                            : undefined
+                        }
                       >
                         {action.label}
                       </button>
