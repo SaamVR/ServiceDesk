@@ -137,13 +137,13 @@ export function syncStatusLabel(state: CrewSyncState): string {
   switch (state.status) {
     case "ONLINE_SYNCED": return "Online · synced";
     case "OFFLINE_IDLE": return "Offline · no queued changes";
-    case "LOCAL_ACTION_PENDING": return state.online ? "Local action pending · ready to sync" : "Local action pending · offline";
+    case "LOCAL_ACTION_PENDING": return state.online ? "Change pending" : "Change pending · offline";
     case "SYNCING": return "Syncing";
     case "SYNC_FAILED": return "Sync failed";
-    case "VERSION_CONFLICT": return "Version conflict · refresh required";
+    case "VERSION_CONFLICT": return "Updated elsewhere · refresh";
     case "ACTION_NO_LONGER_VALID": return "Action no longer valid";
   }
 }
 
 export const crewOfflineCapabilityNotice =
-  "Queued-operation state is session-memory only. Durable offline persistence/service-worker replay is not implemented, so closing or reloading the page can lose unsynced local actions.";
+  "Keep this page open until pending changes finish syncing. Offline changes are not saved after you close or reload the page.";
