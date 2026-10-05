@@ -18,12 +18,10 @@ import {
   type OperationalAttention,
   type OperationalCustomer,
   type OperationalInvoice,
-  type OperationalQuote,
-  type OperationalRequest,
   type OperationalStaffSnapshot,
   type OperationalVisit,
 } from "./operational-product-runtime";
-import { staffModuleConfig, type StaffModule } from "./staff-modules";
+import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
 import { EmptyState as AppEmptyState, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { DataCellStack, DataTable, RowActions } from "@/components/product/DataTable";
 import { OperationsToolbar, SplitWorkspace, ToolbarResultCount, WorkspaceList, WorkspaceListItem, WorkspacePane } from "@/components/product/WorkspacePrimitives";
@@ -489,10 +487,7 @@ function RequestsView({
   async function calculateQuote(formData: FormData) {
     "use server";
     const requestId = String(formData.get("requestId") ?? "");
-    const result = await calculateOperationalQuote(
-      workspaceSlug,
-      requestId,
-    );
+    const result = await calculateOperationalQuote(workspaceSlug, requestId);
     actionRedirect(
       workspaceSlug,
       "requests",
@@ -502,182 +497,139 @@ function RequestsView({
   }
 
   if (data.requests.length === 0) {
-    return (
-      <EmptyState
-        title="No requests in the queue"
-        detail="New enquiries will appear here as persisted requests."
-      />
-    );
+    return <EmptyState title="No requests in the queue" detail="New enquiries will appear here as persisted requests." />;
   }
 
-  const selectedRequest =
-    data.requests.find((request) => request.id === selectedRequestId) ??
-    data.requests[0];
-  const selectedRequestCustomer = data.customers.find(
-    (customer) => customer.id === selectedRequest.customerId,
+  const orderedRequests = [...data.requests].sort((left, right) =>
+    Date.parse(right.createdAt ?? "1970-01-01T00:00:00.000Z")
+    - Date.parse(left.createdAt ?? "1970-01-01T00:00:00.000Z"),
   );
-  const selectedRequestProperty = data.properties.find(
-    (property) => property.id === selectedRequest.propertyId,
-  );
-  const selectedRequestQuote = data.quotes.find(
-    (quote) => quote.requestId === selectedRequest.id && quote.status !== "SUPERSEDED",
-  );
-  const selectedRequestCanCalculate =
-    Boolean(selectedRequest.serviceCode) &&
-    selectedRequest.bedrooms !== undefined &&
-    selectedRequest.bathrooms !== undefined &&
-    !["BOOKED", "LOST", "CLOSED"].includes(selectedRequest.status);
+  const selectedRequest = orderedRequests.find((request) => request.id === selectedRequestId) ?? orderedRequests[0];
+  const selectedRequestCustomer = data.customers.find((customer) => customer.id === selectedRequest.customerId);
+  const selectedRequestProperty = data.properties.find((property) => property.id === selectedRequest.propertyId);
+  const selectedRequestQuote = data.quotes.find((quote) => quote.requestId === selectedRequest.id && quote.status !== "SUPERSEDED");
+  const selectedRequestCanCalculate = Boolean(selectedRequest.serviceCode)
+    && selectedRequest.bedrooms !== undefined
+    && selectedRequest.bathrooms !== undefined
+    && !["BOOKED", "LOST", "CLOSED"].includes(selectedRequest.status);
+  const selectedMissing = [
+    !selectedRequest.serviceCode ? "Service" : undefined,
+    selectedRequest.bedrooms === undefined ? "Bedrooms" : undefined,
+    selectedRequest.bathrooms === undefined ? "Bathrooms" : undefined,
+  ].filter((item): item is string => Boolean(item));
+  const requestsWithoutQuote = orderedRequests.filter((request) =>
+    !data.quotes.some((quote) => quote.requestId === request.id && quote.status !== "SUPERSEDED"),
+  ).length;
+  const reviewRequests = orderedRequests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status)).length;
 
   return (
-    <div className={styles.stack}>
-      <OperationsToolbar
-        context={<ToolbarResultCount count={data.requests.length} label="requests" />}
-      />
-      <DataTable<OperationalRequest>
-        caption="Request queue"
-        rows={data.requests}
-        getRowKey={(request) => request.id}
-        selectedRowKey={selectedRequest.id}
-        columns={[
-          {
-            id: "service",
-            header: "Service",
-            priority: "primary",
-            cell: (request) => (
-              <DataCellStack
-                primary={request.serviceLabel}
-                secondary={data.customers.find((item) => item.id === request.customerId)?.displayName ?? "Visitor enquiry"}
-              />
-            ),
-          },
-          {
-            id: "status",
-            header: "Status",
-            cell: (request) => <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>,
-          },
-          {
-            id: "requested",
-            header: "Requested",
-            cell: (request) => formatWhen(request.requestedStartAt, data.workspace.timezone),
-          },
-          {
-            id: "home",
-            header: "Home",
-            priority: "optional",
-            cell: (request) => (request.bedrooms ?? "—") + " bed · " + (request.bathrooms ?? "—") + " bath",
-          },
-          {
-            id: "quote",
-            header: "Quote",
-            priority: "primary",
-            cell: (request) => {
-              const currentQuote = data.quotes.find((item) => item.requestId === request.id && item.status !== "SUPERSEDED");
-              const canCalculate =
-                Boolean(request.serviceCode) &&
-                request.bedrooms !== undefined &&
-                request.bathrooms !== undefined &&
-                !["BOOKED", "LOST", "CLOSED"].includes(request.status);
-              return currentQuote ? (
-                <DataCellStack primary={currentQuote.status.replaceAll("_", " ")} secondary={"Version " + currentQuote.version} />
-              ) : (
-                <RowActions label={"Actions for " + request.serviceLabel}>
-                  <form action={calculateQuote}>
-                    <input type="hidden" name="requestId" value={request.id} />
-                    <button className="app-button-secondary" type="submit" disabled={!canCalculate}>
-                      Calculate quote
-                    </button>
-                  </form>
-                </RowActions>
-              );
-            },
-          },
-          {
-            id: "action",
-            header: "Action",
-            priority: "primary",
-            cell: (request) => (
-              <a
-                className="app-button-secondary"
-                href={"?request=" + encodeURIComponent(request.id)}
-                aria-current={request.id === selectedRequest.id ? "page" : undefined}
-              >
-                {request.id === selectedRequest.id ? "Viewing" : "Open"}
-              </a>
-            ),
-          },
-        ]}
-        renderMobileRow={(request) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={request.serviceLabel}
-              secondary={request.status.replaceAll("_", " ") + " · " + formatWhen(request.requestedStartAt, data.workspace.timezone)}
-            />
-            <a
-              className="app-button-secondary"
-              href={"?request=" + encodeURIComponent(request.id)}
-              aria-current={request.id === selectedRequest.id ? "page" : undefined}
-            >
-              {request.id === selectedRequest.id ? "Viewing" : "Open"}
-            </a>
-          </div>
-        )}
-      />
-
-      <Panel>
-        <SectionHeader
-          title={selectedRequest.serviceLabel}
-          description={
-            (selectedRequestCustomer?.displayName ?? "Visitor enquiry") +
-            " · " +
-            formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)
-          }
-          action={
-            <StatusBadge tone={statusBadgeTone(selectedRequest.status)}>
-              {selectedRequest.status.replaceAll("_", " ")}
-            </StatusBadge>
-          }
-        />
-
-        <div className="app-grid app-grid-two">
-          <section>
-            <h3>Request details</h3>
-            <dl className="summary-list">
-              <div><dt>Customer</dt><dd>{selectedRequestCustomer?.displayName ?? "Visitor enquiry"}</dd></div>
-              <div><dt>Property</dt><dd>{selectedRequestProperty?.label ?? "Not linked"}</dd></div>
-              <div><dt>Address</dt><dd>{selectedRequestProperty?.address ?? "Not available"}</dd></div>
-              <div><dt>Home</dt><dd>{(selectedRequest.bedrooms ?? "—") + " bed · " + (selectedRequest.bathrooms ?? "—") + " bath"}</dd></div>
-            </dl>
-          </section>
-
-          <section>
-            <h3>Quote</h3>
-            {selectedRequestQuote ? (
-              <div className="app-row-list">
-                <article className="app-row">
-                  <div>
-                    <h3>{formatMinorMoney(selectedRequestQuote.totalMinor, selectedRequestQuote.currency)}</h3>
-                    <p>Version {selectedRequestQuote.version}</p>
-                  </div>
-                  <StatusBadge tone={statusBadgeTone(selectedRequestQuote.status)}>
-                    {selectedRequestQuote.status.replaceAll("_", " ")}
-                  </StatusBadge>
-                </article>
-              </div>
-            ) : (
-              <div className={styles.actions}>
-                <p>No quote has been calculated for this request yet.</p>
-                <form action={calculateQuote}>
-                  <input type="hidden" name="requestId" value={selectedRequest.id} />
-                  <button className="app-button-secondary" type="submit" disabled={!selectedRequestCanCalculate}>
-                    Calculate quote
-                  </button>
-                </form>
-              </div>
-            )}
-          </section>
+    <section className={styles.salesWorkspace} aria-label="Request intake workspace">
+      <header className={styles.salesToolbar}>
+        <div>
+          <p className={styles.salesEyebrow}>Intake queue</p>
+          <h2>Requests</h2>
+          <p>{orderedRequests.length} total · {reviewRequests} need review · {requestsWithoutQuote} without quote</p>
         </div>
-      </Panel>
-    </div>
+        <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "inbox")}>Open inbox</a>
+      </header>
+
+      <div className={styles.salesSplit}>
+        <aside className={styles.salesQueue} aria-label="Request queue">
+          {orderedRequests.map((request) => {
+            const requestCustomer = data.customers.find((item) => item.id === request.customerId);
+            const currentQuote = data.quotes.find((quote) => quote.requestId === request.id && quote.status !== "SUPERSEDED");
+            const selected = request.id === selectedRequest.id;
+            return (
+              <a
+                className={`${styles.salesQueueItem} ${selected ? styles.salesQueueSelected : ""}`.trim()}
+                href={"?request=" + encodeURIComponent(request.id)}
+                aria-current={selected ? "page" : undefined}
+                key={request.id}
+              >
+                <span className={styles.salesQueueTop}>
+                  <strong>{request.serviceLabel}</strong>
+                  <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>
+                </span>
+                <span className={styles.salesQueueCustomer}>{requestCustomer?.displayName ?? "Visitor enquiry"}</span>
+                <span className={styles.salesQueueMeta}>
+                  <span>{formatWhen(request.requestedStartAt, data.workspace.timezone)}</span>
+                  <span>{currentQuote ? `Quote ${currentQuote.status.replaceAll("_", " ").toLowerCase()}` : "No quote"}</span>
+                </span>
+              </a>
+            );
+          })}
+        </aside>
+
+        <article className={styles.salesDetail}>
+          <header className={styles.salesDetailHeader}>
+            <div>
+              <p className={styles.salesEyebrow}>Request</p>
+              <h2>{selectedRequest.serviceLabel}</h2>
+              <p>{selectedRequestCustomer?.displayName ?? "Visitor enquiry"} · {formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)}</p>
+            </div>
+            <StatusBadge tone={statusBadgeTone(selectedRequest.status)}>{selectedRequest.status.replaceAll("_", " ")}</StatusBadge>
+          </header>
+
+          <div className={styles.salesDetailGrid}>
+            <section className={styles.salesSection}>
+              <div className={styles.salesSectionHeader}>
+                <div>
+                  <p className={styles.salesSectionEyebrow}>Customer & property</p>
+                  <h3>{selectedRequestCustomer?.displayName ?? "Visitor enquiry"}</h3>
+                </div>
+                {selectedRequestCustomer ? (
+                  <a className={styles.salesTextLink} href={`/app/${encodeURIComponent(workspaceSlug)}/customers?customer=${encodeURIComponent(selectedRequestCustomer.id)}`}>Open customer →</a>
+                ) : null}
+              </div>
+              <dl className={styles.salesSummary}>
+                <div><dt>Property</dt><dd>{selectedRequestProperty?.label ?? "Not linked"}</dd></div>
+                <div><dt>Address</dt><dd>{selectedRequestProperty?.address ?? "Not available"}</dd></div>
+                <div><dt>Home</dt><dd>{(selectedRequest.bedrooms ?? "—") + " bed · " + (selectedRequest.bathrooms ?? "—") + " bath"}</dd></div>
+                <div><dt>Requested</dt><dd>{formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)}</dd></div>
+              </dl>
+              {selectedRequestProperty?.accessNotes ? (
+                <div className={styles.salesNote}><span>Access</span><p>{selectedRequestProperty.accessNotes}</p></div>
+              ) : null}
+              {selectedRequestProperty?.serviceNotes ? (
+                <div className={styles.salesNote}><span>Service notes</span><p>{selectedRequestProperty.serviceNotes}</p></div>
+              ) : null}
+            </section>
+
+            <section className={styles.salesSection}>
+              <div className={styles.salesSectionHeader}>
+                <div>
+                  <p className={styles.salesSectionEyebrow}>Quote readiness</p>
+                  <h3>{selectedRequestQuote ? "Quote created" : selectedMissing.length ? "More information needed" : "Ready to price"}</h3>
+                </div>
+                {selectedRequestQuote ? <StatusBadge tone={statusBadgeTone(selectedRequestQuote.status)}>{selectedRequestQuote.status.replaceAll("_", " ")}</StatusBadge> : null}
+              </div>
+
+              {selectedRequestQuote ? (
+                <div className={styles.quoteSnapshot}>
+                  <div><span>Total</span><strong>{formatMinorMoney(selectedRequestQuote.totalMinor, selectedRequestQuote.currency)}</strong></div>
+                  <div><span>Deposit</span><strong>{formatMinorMoney(selectedRequestQuote.depositMinor, selectedRequestQuote.currency)}</strong></div>
+                  <div><span>Version</span><strong>v{selectedRequestQuote.version}</strong></div>
+                  <a className="app-button-primary" href={`/app/${encodeURIComponent(workspaceSlug)}/quotes?quote=${encodeURIComponent(selectedRequestQuote.id)}`}>Open quote</a>
+                </div>
+              ) : (
+                <>
+                  <ul className={styles.readinessList}>
+                    <li className={selectedRequest.serviceCode ? styles.ready : styles.notReady}><span>{selectedRequest.serviceCode ? "✓" : "!"}</span><strong>Service</strong><small>{selectedRequest.serviceCode ?? "Missing"}</small></li>
+                    <li className={selectedRequest.bedrooms !== undefined ? styles.ready : styles.notReady}><span>{selectedRequest.bedrooms !== undefined ? "✓" : "!"}</span><strong>Bedrooms</strong><small>{selectedRequest.bedrooms ?? "Missing"}</small></li>
+                    <li className={selectedRequest.bathrooms !== undefined ? styles.ready : styles.notReady}><span>{selectedRequest.bathrooms !== undefined ? "✓" : "!"}</span><strong>Bathrooms</strong><small>{selectedRequest.bathrooms ?? "Missing"}</small></li>
+                  </ul>
+                  <form action={calculateQuote} className={styles.salesPrimaryAction}>
+                    <input type="hidden" name="requestId" value={selectedRequest.id} />
+                    <button className="app-button-primary" type="submit" disabled={!selectedRequestCanCalculate}>Calculate quote</button>
+                    {!selectedRequestCanCalculate ? <span>Complete the missing intake details before pricing.</span> : <span>Uses the current authoritative pricing rules.</span>}
+                  </form>
+                </>
+              )}
+            </section>
+          </div>
+        </article>
+      </div>
+    </section>
   );
 }
 
@@ -693,10 +645,7 @@ function QuotesView({
   async function sendQuote(formData: FormData) {
     "use server";
     const quoteId = String(formData.get("quoteId") ?? "");
-    const result = await sendOperationalQuote(
-      workspaceSlug,
-      quoteId,
-    );
+    const result = await sendOperationalQuote(workspaceSlug, quoteId);
     actionRedirect(
       workspaceSlug,
       "quotes",
@@ -709,139 +658,112 @@ function QuotesView({
     return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." />;
   }
 
-  const selectedQuote =
-    data.quotes.find((quote) => quote.id === selectedQuoteId) ??
-    data.quotes[0];
-  const selectedQuoteRequest = data.requests.find(
-    (request) => request.id === selectedQuote.requestId,
-  );
-  const selectedQuoteCustomer = data.customers.find(
-    (customer) => customer.id === selectedQuoteRequest?.customerId,
-  );
-  const selectedQuoteProperty = data.properties.find(
-    (property) => property.id === selectedQuoteRequest?.propertyId,
-  );
+  const orderedQuotes = [...data.quotes].sort((left, right) => {
+    const statusWeight: Record<string, number> = { APPROVED: 0, SENT: 1, ACCEPTED: 2, DRAFT: 3, EXPIRED: 4, DECLINED: 5, SUPERSEDED: 6 };
+    return (statusWeight[left.status] ?? 9) - (statusWeight[right.status] ?? 9)
+      || right.version - left.version;
+  });
+  const selectedQuote = orderedQuotes.find((quote) => quote.id === selectedQuoteId) ?? orderedQuotes[0];
+  const selectedQuoteRequest = data.requests.find((request) => request.id === selectedQuote.requestId);
+  const selectedQuoteCustomer = data.customers.find((customer) => customer.id === selectedQuoteRequest?.customerId);
+  const selectedQuoteProperty = data.properties.find((property) => property.id === selectedQuoteRequest?.propertyId);
+  const awaitingCustomer = orderedQuotes.filter((quote) => quote.status === "SENT").length;
+  const readyToSend = orderedQuotes.filter((quote) => quote.status === "APPROVED").length;
 
   return (
-    <div className={styles.stack}>
-      <OperationsToolbar
-        context={<ToolbarResultCount count={data.quotes.length} label="quotes" />}
-      />
-      <DataTable<OperationalQuote>
-        caption="Quotes"
-        rows={data.quotes}
-        getRowKey={(quote) => quote.id}
-        selectedRowKey={selectedQuote.id}
-        columns={[
-          {
-            id: "request",
-            header: "Request",
-            priority: "primary",
-            cell: (quote) => (
-              <DataCellStack
-                primary={data.requests.find((item) => item.id === quote.requestId)?.serviceLabel ?? "Request"}
-                secondary={"Version " + quote.version}
-              />
-            ),
-          },
-          {
-            id: "total",
-            header: "Total",
-            cell: (quote) => formatMinorMoney(quote.totalMinor, quote.currency),
-          },
-          {
-            id: "status",
-            header: "Status",
-            cell: (quote) => <StatusBadge tone={statusBadgeTone(quote.status)}>{quote.status.replaceAll("_", " ")}</StatusBadge>,
-          },
-          {
-            id: "validity",
-            header: "Valid until",
-            priority: "optional",
-            cell: (quote) => formatWhen(quote.validUntil, data.workspace.timezone),
-          },
-          {
-            id: "action",
-            header: "Action",
-            priority: "primary",
-            cell: (quote) => (
-              <RowActions label={"Actions for quote " + quote.id}>
-                <a
-                  className="app-button-secondary"
-                  href={"?quote=" + encodeURIComponent(quote.id)}
-                  aria-current={quote.id === selectedQuote.id ? "page" : undefined}
-                >
-                  {quote.id === selectedQuote.id ? "Viewing" : "Open"}
-                </a>
-                {quote.status === "APPROVED" ? (
-                  <form action={sendQuote}>
-                    <input type="hidden" name="quoteId" value={quote.id} />
-                    <button className="app-button-secondary" type="submit">Send quote</button>
-                  </form>
-                ) : quote.status === "SENT" ? (
-                  <span>Awaiting customer</span>
-                ) : null}
-              </RowActions>
-            ),
-          },
-        ]}
-        renderMobileRow={(quote) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={formatMinorMoney(quote.totalMinor, quote.currency)}
-              secondary={quote.status.replaceAll("_", " ") + " · v" + quote.version}
-            />
-            <a
-              className="app-button-secondary"
-              href={"?quote=" + encodeURIComponent(quote.id)}
-              aria-current={quote.id === selectedQuote.id ? "page" : undefined}
-            >
-              {quote.id === selectedQuote.id ? "Viewing" : "Open"}
-            </a>
-          </div>
-        )}
-      />
-
-      <Panel>
-        <SectionHeader
-          title={selectedQuoteRequest?.serviceLabel ?? "Service quote"}
-          description={
-            (selectedQuoteCustomer?.displayName ?? "Customer unavailable") +
-            " · " +
-            (selectedQuoteProperty?.label ?? "No property linked")
-          }
-          action={
-            <StatusBadge tone={statusBadgeTone(selectedQuote.status)}>
-              {selectedQuote.status.replaceAll("_", " ")}
-            </StatusBadge>
-          }
-        />
-
-        <dl className="summary-list">
-          <div><dt>Total</dt><dd>{formatMinorMoney(selectedQuote.totalMinor, selectedQuote.currency)}</dd></div>
-          <div><dt>Deposit</dt><dd>{formatMinorMoney(selectedQuote.depositMinor, selectedQuote.currency)}</dd></div>
-          <div><dt>Balance</dt><dd>{formatMinorMoney(selectedQuote.balanceMinor, selectedQuote.currency)}</dd></div>
-          <div><dt>Service time</dt><dd>{selectedQuote.durationMinutes + " min + " + selectedQuote.bufferMinutes + " min buffer"}</dd></div>
-          <div><dt>Version</dt><dd>{selectedQuote.version}</dd></div>
-          <div><dt>Valid until</dt><dd>{formatWhen(selectedQuote.validUntil, data.workspace.timezone)}</dd></div>
-        </dl>
-
-        <div className={styles.actions}>
-          {selectedQuote.status === "APPROVED" ? (
-            <form action={sendQuote}>
-              <input type="hidden" name="quoteId" value={selectedQuote.id} />
-              <button className="app-button-primary" type="submit">Send quote</button>
-            </form>
-          ) : selectedQuote.status === "SENT" ? (
-            <p>Waiting for the customer to accept or decline this quote.</p>
-          ) : selectedQuote.status === "ACCEPTED" ? (
-            <p>Accepted. Continue scheduling from the Schedule workspace.</p>
-          ) : (
-            <p>No staff action is available for this quote in its current state.</p>
-          )}
+    <section className={styles.salesWorkspace} aria-label="Quote workspace">
+      <header className={styles.salesToolbar}>
+        <div>
+          <p className={styles.salesEyebrow}>Sales pipeline</p>
+          <h2>Quotes</h2>
+          <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} awaiting customer</p>
         </div>
-      </Panel>
-    </div>
+        <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "requests")}>Open requests</a>
+      </header>
+
+      <div className={styles.salesSplit}>
+        <aside className={styles.salesQueue} aria-label="Quote list">
+          {orderedQuotes.map((quote) => {
+            const request = data.requests.find((item) => item.id === quote.requestId);
+            const customer = data.customers.find((item) => item.id === request?.customerId);
+            const selected = quote.id === selectedQuote.id;
+            return (
+              <a
+                className={`${styles.salesQueueItem} ${selected ? styles.salesQueueSelected : ""}`.trim()}
+                href={"?quote=" + encodeURIComponent(quote.id)}
+                aria-current={selected ? "page" : undefined}
+                key={quote.id}
+              >
+                <span className={styles.salesQueueTop}>
+                  <strong>{request?.serviceLabel ?? "Service quote"}</strong>
+                  <StatusBadge tone={statusBadgeTone(quote.status)}>{quote.status.replaceAll("_", " ")}</StatusBadge>
+                </span>
+                <span className={styles.salesQueueCustomer}>{customer?.displayName ?? "Customer unavailable"}</span>
+                <span className={styles.salesQueueMeta}>
+                  <span>{formatMinorMoney(quote.totalMinor, quote.currency)}</span>
+                  <span>v{quote.version}</span>
+                </span>
+              </a>
+            );
+          })}
+        </aside>
+
+        <article className={styles.salesDetail}>
+          <header className={styles.salesDetailHeader}>
+            <div>
+              <p className={styles.salesEyebrow}>Quote v{selectedQuote.version}</p>
+              <h2>{selectedQuoteRequest?.serviceLabel ?? "Service quote"}</h2>
+              <p>{selectedQuoteCustomer?.displayName ?? "Customer unavailable"} · {selectedQuoteProperty?.label ?? "No property linked"}</p>
+            </div>
+            <StatusBadge tone={statusBadgeTone(selectedQuote.status)}>{selectedQuote.status.replaceAll("_", " ")}</StatusBadge>
+          </header>
+
+          <section className={styles.quoteFinancials} aria-label="Quote financial summary">
+            <div className={styles.quoteTotal}><span>Total</span><strong>{formatMinorMoney(selectedQuote.totalMinor, selectedQuote.currency)}</strong></div>
+            <div><span>Deposit</span><strong>{formatMinorMoney(selectedQuote.depositMinor, selectedQuote.currency)}</strong></div>
+            <div><span>Balance</span><strong>{formatMinorMoney(selectedQuote.balanceMinor, selectedQuote.currency)}</strong></div>
+          </section>
+
+          <div className={styles.salesDetailGrid}>
+            <section className={styles.salesSection}>
+              <div className={styles.salesSectionHeader}>
+                <div><p className={styles.salesSectionEyebrow}>Service</p><h3>Quote details</h3></div>
+              </div>
+              <dl className={styles.salesSummary}>
+                <div><dt>Customer</dt><dd>{selectedQuoteCustomer?.displayName ?? "Unavailable"}</dd></div>
+                <div><dt>Property</dt><dd>{selectedQuoteProperty?.label ?? "Not linked"}</dd></div>
+                <div><dt>Address</dt><dd>{selectedQuoteProperty?.address ?? "Not available"}</dd></div>
+                <div><dt>Service time</dt><dd>{selectedQuote.durationMinutes} min + {selectedQuote.bufferMinutes} min buffer</dd></div>
+                <div><dt>Valid until</dt><dd>{formatWhen(selectedQuote.validUntil, data.workspace.timezone)}</dd></div>
+              </dl>
+            </section>
+
+            <section className={styles.salesSection}>
+              <div className={styles.salesSectionHeader}>
+                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{selectedQuote.status === "APPROVED" ? "Ready to send" : selectedQuote.status === "SENT" ? "Waiting for customer" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
+              </div>
+              <div className={styles.quoteNextStep}>
+                {selectedQuote.status === "APPROVED" ? (
+                  <>
+                    <p>The quote is approved internally and ready to send to the customer.</p>
+                    <form action={sendQuote}>
+                      <input type="hidden" name="quoteId" value={selectedQuote.id} />
+                      <button className="app-button-primary" type="submit">Send quote</button>
+                    </form>
+                  </>
+                ) : selectedQuote.status === "SENT" ? (
+                  <><p>The quote is with the customer. No additional staff action is needed until they respond.</p><StatusBadge tone="info">Awaiting reply</StatusBadge></>
+                ) : selectedQuote.status === "ACCEPTED" ? (
+                  <><p>The customer accepted this quote. Continue to scheduling and capacity selection.</p><a className="app-button-primary" href={buildStaffModuleHref(workspaceSlug, "schedule")}>Open schedule</a></>
+                ) : (
+                  <><p>No staff action is available for this quote in its current state.</p><StatusBadge tone={statusBadgeTone(selectedQuote.status)}>{selectedQuote.status.replaceAll("_", " ")}</StatusBadge></>
+                )}
+              </div>
+            </section>
+          </div>
+        </article>
+      </div>
+    </section>
   );
 }
 
