@@ -22,8 +22,8 @@ import {
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
 import { EmptyState as AppEmptyState, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { DataCellStack, DataTable, RowActions } from "@/components/product/DataTable";
-import { OperationsToolbar, SplitWorkspace, ToolbarResultCount, WorkspaceList, WorkspaceListItem, WorkspacePane } from "@/components/product/WorkspacePrimitives";
-import { FormActions, FormField, FormGrid, FormSection, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
+import { OperationsToolbar, ToolbarResultCount } from "@/components/product/WorkspacePrimitives";
+import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
@@ -989,17 +989,8 @@ function JobsView({
       actionRedirect(workspaceSlug, "jobs", { ok: false, message: "Unsupported visit action." });
     }
     const visitId = String(formData.get("visitId") ?? "");
-    const result = await transitionOperationalVisit(
-      workspaceSlug,
-      visitId,
-      action,
-    );
-    actionRedirect(
-      workspaceSlug,
-      "jobs",
-      result,
-      "job=" + encodeURIComponent(visitId) + "&",
-    );
+    const result = await transitionOperationalVisit(workspaceSlug, visitId, action);
+    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
   }
 
   async function saveVisitNote(formData: FormData) {
@@ -1014,12 +1005,7 @@ function JobsView({
       kind,
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(
-      workspaceSlug,
-      "jobs",
-      result,
-      "job=" + encodeURIComponent(visitId) + "&",
-    );
+    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
   }
 
   async function saveChecklistItem(formData: FormData) {
@@ -1032,12 +1018,7 @@ function JobsView({
       String(formData.get("completed") ?? "") === "true",
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(
-      workspaceSlug,
-      "jobs",
-      result,
-      "job=" + encodeURIComponent(visitId) + "&",
-    );
+    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
   }
 
   const nextAction = (status: string) => {
@@ -1053,262 +1034,209 @@ function JobsView({
     return <EmptyState title="No jobs yet" detail="Paid and scheduled visits will appear here." />;
   }
 
-  const activeVisits = data.visits.filter(
-    (visit) => !["COMPLETED", "CANCELLED"].includes(visit.status),
-  );
-  const selectedVisit =
-    data.visits.find((visit) => visit.id === selectedJobId) ??
-    activeVisits[0] ??
-    data.visits[0];
+  const orderedVisits = [...data.visits].sort((left, right) => {
+    const leftClosed = ["COMPLETED", "CANCELLED"].includes(left.status) ? 1 : 0;
+    const rightClosed = ["COMPLETED", "CANCELLED"].includes(right.status) ? 1 : 0;
+    return leftClosed - rightClosed || Date.parse(left.startAt) - Date.parse(right.startAt);
+  });
+  const activeVisits = orderedVisits.filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status));
+  const selectedVisit = orderedVisits.find((visit) => visit.id === selectedJobId) ?? activeVisits[0] ?? orderedVisits[0];
+  const selectedRequest = data.requests.find((request) => request.id === selectedVisit.requestId);
+  const selectedCustomer = data.customers.find((customer) => customer.id === selectedRequest?.customerId);
+  const selectedProperty = data.properties.find((property) => property.id === selectedRequest?.propertyId);
+  const selectedCrew = selectedVisit.crewId ? data.crews.find((crew) => crew.id === selectedVisit.crewId) : undefined;
   const selectedEvidence = data.visitEvidence.filter((item) => item.visitId === selectedVisit.id);
   const selectedChecklist = data.visitChecklistItems.filter((item) => item.visitId === selectedVisit.id);
+  const selectedChecklistDone = selectedChecklist.filter((item) => item.completed).length;
+  const selectedBefore = selectedEvidence.some((item) => item.kind === "BEFORE_PHOTO");
+  const selectedAfter = selectedEvidence.some((item) => item.kind === "AFTER_PHOTO");
+  const selectedReviewEvidenceReady = selectedBefore && selectedAfter;
+  const selectedNextAction = nextAction(selectedVisit.status);
+  const unassigned = activeVisits.filter((visit) => !visit.crewId).length;
+  const inProgress = activeVisits.filter((visit) => ["EN_ROUTE", "IN_PROGRESS"].includes(visit.status)).length;
+  const pendingReview = activeVisits.filter((visit) => visit.status === "PENDING_REVIEW").length;
 
   return (
-    <div className={styles.stack}>
-      <OperationsToolbar
-        context={<ToolbarResultCount count={data.visits.length} label="jobs" />}
-      />
-      <DataTable<OperationalVisit>
-        caption="Jobs"
-        rows={data.visits}
-        getRowKey={(visit) => visit.id}
-        selectedRowKey={selectedVisit.id}
-        columns={[
-          {
-            id: "visit",
-            header: "Job",
-            priority: "primary",
-            cell: (visit) => (
-              <DataCellStack
-                primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-                secondary={formatWhen(visit.startAt, data.workspace.timezone)}
-              />
-            ),
-          },
-          {
-            id: "crew",
-            header: "Crew",
-            cell: (visit) => visit.crewId ? data.crews.find((crew) => crew.id === visit.crewId)?.name ?? "Assigned crew" : "Unassigned",
-          },
-          {
-            id: "status",
-            header: "Status",
-            cell: (visit) => <StatusBadge tone={statusBadgeTone(visit.status)}>{visit.status.replaceAll("_", " ")}</StatusBadge>,
-          },
-          {
-            id: "field",
-            header: "Field record",
-            priority: "optional",
-            cell: (visit) => {
-              const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
-              const checklist = data.visitChecklistItems.filter((item) => item.visitId === visit.id);
-              return evidence.length + " evidence · " + checklist.filter((item) => item.completed).length + "/" + checklist.length + " checklist";
-            },
-          },
-          {
-            id: "action",
-            header: "Actions",
-            priority: "primary",
-            cell: (visit) => {
-              const action = nextAction(visit.status);
-              const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
-              const reviewEvidenceReady =
-                evidence.some((item) => item.kind === "BEFORE_PHOTO") &&
-                evidence.some((item) => item.kind === "AFTER_PHOTO");
-              return (
-                <RowActions label={"Actions for job " + visit.id}>
-                  <a
-                    className="app-button-secondary"
-                    href={"?job=" + encodeURIComponent(visit.id)}
-                    aria-current={visit.id === selectedVisit.id ? "page" : undefined}
-                  >
-                    {visit.id === selectedVisit.id ? "Viewing" : "Open"}
-                  </a>
-                  {action ? (
-                    <form action={transitionVisit}>
-                      <input type="hidden" name="visitId" value={visit.id} />
-                      <button
-                        className="app-button-secondary"
-                        name="action"
-                        value={action.action}
-                        disabled={
-                          (action.action === "ASSIGN" && !visit.crewId) ||
-                          (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
-                        }
-                        title={
-                          action.action === "ASSIGN" && !visit.crewId
-                            ? "Choose a crew before confirming assignment."
-                            : action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
-                              ? "Add both before and after evidence before submitting for review."
-                              : undefined
-                        }
-                      >
-                        {action.label}
-                      </button>
-                    </form>
-                  ) : null}
-                </RowActions>
-              );
-            },
-          },
-        ]}
-        renderMobileRow={(visit) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-              secondary={visit.status.replaceAll("_", " ") + " · " + formatWhen(visit.startAt, data.workspace.timezone)}
-            />
-            <a
-              className="app-button-secondary"
-              href={"?job=" + encodeURIComponent(visit.id)}
-              aria-current={visit.id === selectedVisit.id ? "page" : undefined}
-            >
-              {visit.id === selectedVisit.id ? "Viewing" : "Open"}
-            </a>
-          </div>
-        )}
-      />
-
-      <Panel>
-        <SectionHeader
-          title={data.requests.find((item) => item.id === selectedVisit.requestId)?.serviceLabel ?? "Service visit"}
-          description={
-            formatWhen(selectedVisit.startAt, data.workspace.timezone) +
-            " · " +
-            (selectedVisit.crewId
-              ? data.crews.find((crew) => crew.id === selectedVisit.crewId)?.name ?? "Assigned crew"
-              : "Unassigned")
-          }
-          action={
-            <StatusBadge tone={statusBadgeTone(selectedVisit.status)}>
-              {selectedVisit.status.replaceAll("_", " ")}
-            </StatusBadge>
-          }
-        />
-
-        <div className="app-grid app-grid-two">
-          <FormSection
-            title="Field notes & evidence"
-            description="Keep the selected job focused while reviewing its field record."
-          >
-            <form action={saveVisitNote}>
-              <input type="hidden" name="visitId" value={selectedVisit.id} />
-              <FormGrid columns={1}>
-                <FormField id={"job-note-kind-" + selectedVisit.id} label="Note type">
-                  {({ id, describedBy, invalid }) => (
-                    <SelectInput
-                      id={id}
-                      name="kind"
-                      defaultValue="TIME_MATERIAL_NOTE"
-                      describedBy={describedBy}
-                      invalid={invalid}
-                    >
-                      <option value="TIME_MATERIAL_NOTE">Time / material note</option>
-                      <option value="INCIDENT_NOTE">Incident</option>
-                    </SelectInput>
-                  )}
-                </FormField>
-                <FormField id={"job-note-" + selectedVisit.id} label="Note" required>
-                  {({ id, describedBy, invalid }) => (
-                    <TextArea
-                      id={id}
-                      name="note"
-                      rows={3}
-                      required
-                      describedBy={describedBy}
-                      invalid={invalid}
-                      placeholder="Add a field note"
-                    />
-                  )}
-                </FormField>
-              </FormGrid>
-              <FormActions>
-                <button className="app-button-secondary" type="submit">Save note</button>
-              </FormActions>
-            </form>
-
-            {selectedEvidence.length ? (
-              <div className="app-row-list">
-                {selectedEvidence.slice(0, 8).map((item) => (
-                  <article className="app-row" key={item.id}>
-                    <div>
-                      <h3>{item.kind.replaceAll("_", " ")}</h3>
-                      <p>{item.text ?? "Photo evidence"}</p>
-                    </div>
-                    <div className="app-row-meta"><span>{formatWhen(item.capturedAt, data.workspace.timezone)}</span></div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <AppEmptyState
-                title="No field evidence yet"
-                description="Before/after photos are added from the crew workflow; staff can record notes here."
-              />
-            )}
-          </FormSection>
-
-          <FormSection
-            title="Checklist"
-            description="Review and update checklist items for the selected job only."
-          >
-            <form action={saveChecklistItem}>
-              <input type="hidden" name="visitId" value={selectedVisit.id} />
-              <input type="hidden" name="completed" value="true" />
-              <FormGrid columns={1}>
-                <FormField id={"checklist-key-" + selectedVisit.id} label="Item" required>
-                  {({ id, describedBy, invalid }) => (
-                    <TextInput
-                      id={id}
-                      name="itemKey"
-                      required
-                      describedBy={describedBy}
-                      invalid={invalid}
-                      placeholder="e.g. kitchen"
-                    />
-                  )}
-                </FormField>
-                <FormField id={"checklist-note-" + selectedVisit.id} label="Note">
-                  {({ id, describedBy, invalid }) => (
-                    <TextInput
-                      id={id}
-                      name="note"
-                      describedBy={describedBy}
-                      invalid={invalid}
-                      placeholder="Optional note"
-                    />
-                  )}
-                </FormField>
-              </FormGrid>
-              <FormActions>
-                <button className="app-button-secondary" type="submit">Mark complete</button>
-              </FormActions>
-            </form>
-
-            {selectedChecklist.length ? (
-              <div className="app-row-list">
-                {selectedChecklist.map((item) => (
-                  <article className="app-row" key={item.id}>
-                    <div>
-                      <h3>{item.itemKey}</h3>
-                      <p>{item.note ?? "No note"}</p>
-                    </div>
-                    <StatusBadge tone={item.completed ? "success" : "neutral"}>
-                      {item.completed ? "Complete" : "Open"}
-                    </StatusBadge>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <AppEmptyState
-                title="No checklist items yet"
-                description="Checklist items saved for this job will appear here."
-              />
-            )}
-          </FormSection>
+    <section className={styles.jobsWorkspace} aria-label="Field jobs workspace">
+      <header className={styles.jobsToolbar}>
+        <div>
+          <p className={styles.jobsEyebrow}>Field operations</p>
+          <h2>Jobs</h2>
+          <p>{activeVisits.length} active · {unassigned} unassigned · {pendingReview} awaiting review</p>
         </div>
-      </Panel>
+        <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "schedule")}>Open dispatch</a>
+      </header>
 
-    </div>
+      <section className={styles.jobsMetrics} aria-label="Job operation summary">
+        <div><span>Active jobs</span><strong>{activeVisits.length}</strong></div>
+        <div className={unassigned ? styles.jobsMetricWarning : undefined}><span>Unassigned</span><strong>{unassigned}</strong></div>
+        <div><span>Underway</span><strong>{inProgress}</strong></div>
+        <div><span>Review queue</span><strong>{pendingReview}</strong></div>
+      </section>
+
+      <div className={styles.jobsSplit}>
+        <aside className={styles.jobsQueue} aria-label="Job list">
+          {orderedVisits.map((visit) => {
+            const request = data.requests.find((item) => item.id === visit.requestId);
+            const customer = data.customers.find((item) => item.id === request?.customerId);
+            const crew = visit.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
+            const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
+            const checklist = data.visitChecklistItems.filter((item) => item.visitId === visit.id);
+            const selected = visit.id === selectedVisit.id;
+            return (
+              <a
+                className={`${styles.jobsQueueItem} ${selected ? styles.jobsQueueSelected : ""}`.trim()}
+                href={"?job=" + encodeURIComponent(visit.id)}
+                aria-current={selected ? "page" : undefined}
+                key={visit.id}
+              >
+                <span className={styles.jobsQueueTop}>
+                  <strong>{request?.serviceLabel ?? "Service visit"}</strong>
+                  <StatusBadge tone={statusBadgeTone(visit.status)}>{visit.status.replaceAll("_", " ")}</StatusBadge>
+                </span>
+                <span className={styles.jobsQueueCustomer}>{customer?.displayName ?? "Customer"}</span>
+                <span className={styles.jobsQueueMeta}>
+                  <span>{formatWhen(visit.startAt, data.workspace.timezone)}</span>
+                  <span>{crew?.name ?? "Unassigned"}</span>
+                </span>
+                <span className={styles.jobsQueueProgress}>{evidence.length} evidence · {checklist.filter((item) => item.completed).length}/{checklist.length} checklist</span>
+              </a>
+            );
+          })}
+        </aside>
+
+        <article className={styles.jobsDetail}>
+          <header className={styles.jobsDetailHeader}>
+            <div>
+              <p className={styles.jobsEyebrow}>Job {selectedVisit.id.slice(0, 8)}</p>
+              <h2>{selectedRequest?.serviceLabel ?? "Service visit"}</h2>
+              <p>{selectedCustomer?.displayName ?? "Customer"} · {selectedProperty?.label ?? "Property not linked"}</p>
+            </div>
+            <div className={styles.jobsHeaderActions}>
+              <StatusBadge tone={statusBadgeTone(selectedVisit.status)}>{selectedVisit.status.replaceAll("_", " ")}</StatusBadge>
+              {selectedNextAction ? (
+                <form action={transitionVisit}>
+                  <input type="hidden" name="visitId" value={selectedVisit.id} />
+                  <button
+                    className="app-button-primary"
+                    name="action"
+                    value={selectedNextAction.action}
+                    disabled={
+                      (selectedNextAction.action === "ASSIGN" && !selectedVisit.crewId) ||
+                      (selectedNextAction.action === "SUBMIT_REVIEW" && !selectedReviewEvidenceReady)
+                    }
+                    title={
+                      selectedNextAction.action === "ASSIGN" && !selectedVisit.crewId
+                        ? "Choose a crew before confirming assignment."
+                        : selectedNextAction.action === "SUBMIT_REVIEW" && !selectedReviewEvidenceReady
+                          ? "Add both before and after evidence before submitting for review."
+                          : undefined
+                    }
+                  >
+                    {selectedNextAction.label}
+                  </button>
+                </form>
+              ) : null}
+            </div>
+          </header>
+
+          <section className={styles.jobFactStrip} aria-label="Selected job summary">
+            <div><span>Scheduled</span><strong>{formatWhen(selectedVisit.startAt, data.workspace.timezone)}</strong></div>
+            <div><span>Crew</span><strong>{selectedCrew?.name ?? "Unassigned"}</strong></div>
+            <div><span>Duration</span><strong>{selectedVisit.serviceMinutes} min</strong></div>
+            <div><span>Checklist</span><strong>{selectedChecklistDone}/{selectedChecklist.length}</strong></div>
+          </section>
+
+          {selectedProperty ? (
+            <section className={styles.jobLocationBar}>
+              <div><span>Service location</span><strong>{selectedProperty.address || selectedProperty.label}</strong></div>
+              {selectedProperty.accessNotes ? <div><span>Access</span><strong>{selectedProperty.accessNotes}</strong></div> : null}
+            </section>
+          ) : null}
+
+          <div className={styles.jobsDetailGrid}>
+            <section className={styles.jobsSection}>
+              <div className={styles.jobsSectionHeader}>
+                <div><p className={styles.jobsSectionEyebrow}>Field record</p><h3>Evidence & notes</h3></div>
+                <div className={styles.evidenceMiniStatus}>
+                  <span className={selectedBefore ? styles.evidenceReady : undefined}>Before {selectedBefore ? "✓" : "—"}</span>
+                  <span className={selectedAfter ? styles.evidenceReady : undefined}>After {selectedAfter ? "✓" : "—"}</span>
+                </div>
+              </div>
+
+              {selectedEvidence.length ? (
+                <div className={styles.jobEvidenceList}>
+                  {selectedEvidence.slice(0, 8).map((item) => (
+                    <article className={styles.jobEvidenceRow} key={item.id}>
+                      <span className={styles.jobEvidenceIcon} aria-hidden="true">{item.kind.includes("PHOTO") ? "▣" : "•"}</span>
+                      <span><strong>{item.kind.replaceAll("_", " ")}</strong><small>{item.text ?? "Photo evidence"}</small></span>
+                      <time>{formatWhen(item.capturedAt, data.workspace.timezone)}</time>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className={styles.jobsEmpty}><strong>No field evidence yet</strong><p>Before/after photos are added from the crew workflow.</p></div>
+              )}
+
+              <form action={saveVisitNote} className={styles.jobNoteForm}>
+                <input type="hidden" name="visitId" value={selectedVisit.id} />
+                <FormGrid columns={1}>
+                  <FormField id={"job-note-kind-" + selectedVisit.id} label="Note type">
+                    {({ id, describedBy, invalid }) => (
+                      <SelectInput id={id} name="kind" defaultValue="TIME_MATERIAL_NOTE" describedBy={describedBy} invalid={invalid}>
+                        <option value="TIME_MATERIAL_NOTE">Time / material note</option>
+                        <option value="INCIDENT_NOTE">Incident</option>
+                      </SelectInput>
+                    )}
+                  </FormField>
+                  <FormField id={"job-note-" + selectedVisit.id} label="Add staff note" required>
+                    {({ id, describedBy, invalid }) => (
+                      <TextArea id={id} name="note" rows={3} required describedBy={describedBy} invalid={invalid} placeholder="Record an operational note" />
+                    )}
+                  </FormField>
+                </FormGrid>
+                <button className="app-button-secondary" type="submit">Save note</button>
+              </form>
+            </section>
+
+            <section className={styles.jobsSection}>
+              <div className={styles.jobsSectionHeader}>
+                <div><p className={styles.jobsSectionEyebrow}>Completion</p><h3>Checklist</h3></div>
+                <span className={styles.jobsSectionMeta}>{selectedChecklistDone}/{selectedChecklist.length} complete</span>
+              </div>
+
+              {selectedChecklist.length ? (
+                <ul className={styles.staffChecklist}>
+                  {selectedChecklist.map((item) => (
+                    <li className={item.completed ? styles.staffChecklistDone : undefined} key={item.id}>
+                      <span className={styles.staffCheckMark} aria-hidden="true">{item.completed ? "✓" : ""}</span>
+                      <span><strong>{item.itemKey}</strong><small>{item.note ?? "No note"}</small></span>
+                      <StatusBadge tone={item.completed ? "success" : "neutral"}>{item.completed ? "Complete" : "Open"}</StatusBadge>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className={styles.jobsEmpty}><strong>No checklist items</strong><p>Add an item below to start the staff checklist.</p></div>
+              )}
+
+              <form action={saveChecklistItem} className={styles.jobChecklistForm}>
+                <input type="hidden" name="visitId" value={selectedVisit.id} />
+                <input type="hidden" name="completed" value="true" />
+                <FormGrid columns={1}>
+                  <FormField id={"checklist-key-" + selectedVisit.id} label="Checklist item" required>
+                    {({ id, describedBy, invalid }) => <TextInput id={id} name="itemKey" required describedBy={describedBy} invalid={invalid} placeholder="e.g. kitchen" />}
+                  </FormField>
+                  <FormField id={"checklist-note-" + selectedVisit.id} label="Note">
+                    {({ id, describedBy, invalid }) => <TextInput id={id} name="note" describedBy={describedBy} invalid={invalid} placeholder="Optional note" />}
+                  </FormField>
+                </FormGrid>
+                <button className="app-button-secondary" type="submit">Mark complete</button>
+              </form>
+            </section>
+          </div>
+        </article>
+      </div>
+    </section>
   );
 }
 
@@ -1492,10 +1420,7 @@ function QualityView({
       | "REQUEST_REVIEW";
     const allowed = ["START_REVIEW", "ASSIGN", "RESOLVE", "REQUEST_REVIEW"];
     if (!allowed.includes(action)) {
-      actionRedirect(workspaceSlug, "quality", {
-        ok: false,
-        message: "Unsupported quality action.",
-      });
+      actionRedirect(workspaceSlug, "quality", { ok: false, message: "Unsupported quality action." });
     }
     const qualityCaseId = String(formData.get("qualityCaseId") ?? "");
     const result = await applyOperationalQualityAction(
@@ -1504,142 +1429,153 @@ function QualityView({
       action,
       String(formData.get("resolutionNote") ?? ""),
     );
-    actionRedirect(
-      workspaceSlug,
-      "quality",
-      result,
-      "case=" + encodeURIComponent(qualityCaseId) + "&",
-    );
+    actionRedirect(workspaceSlug, "quality", result, "case=" + encodeURIComponent(qualityCaseId) + "&");
   }
 
   if (data.qualityCases.length === 0) {
-    return (
-      <EmptyState
-        title="No quality cases"
-        detail="Customer feedback that requires operational review will appear here."
-      />
-    );
+    return <EmptyState title="No quality cases" detail="Customer feedback that requires operational review will appear here." />;
   }
 
-  const selected =
-    data.qualityCases.find((qualityCase) => qualityCase.id === selectedQualityCaseId) ??
-    data.qualityCases[0];
+  const orderedCases = [...data.qualityCases].sort((left, right) => {
+    const stateWeight: Record<string, number> = { IN_REVIEW: 0, OPEN: 1, RESOLVED: 2 };
+    return (stateWeight[left.state] ?? 9) - (stateWeight[right.state] ?? 9)
+      || (left.dueAt ? Date.parse(left.dueAt) : Number.MAX_SAFE_INTEGER) - (right.dueAt ? Date.parse(right.dueAt) : Number.MAX_SAFE_INTEGER);
+  });
+  const selected = orderedCases.find((qualityCase) => qualityCase.id === selectedQualityCaseId) ?? orderedCases[0];
   const visit = data.visits.find((item) => item.id === selected.visitId);
+  const request = visit ? data.requests.find((item) => item.id === visit.requestId) : undefined;
+  const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
+  const property = request?.propertyId ? data.properties.find((item) => item.id === request.propertyId) : undefined;
+  const crew = visit?.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
   const evidence = data.visitEvidence.filter((item) => item.visitId === selected.visitId);
-
-  const actions = (
-    <form action={qualityAction}>
-      <input type="hidden" name="qualityCaseId" value={selected.id} />
-      <RowActions label="Quality case actions">
-        {selected.state === "OPEN" ? (
-          <>
-            <button className="app-button-secondary" name="action" value="ASSIGN">Assign to me</button>
-            <button className="app-button-secondary" name="action" value="START_REVIEW">Start review</button>
-          </>
-        ) : null}
-        {selected.state === "RESOLVED" && selected.reviewRequestState === "ELIGIBLE" ? (
-          <button className="app-button-secondary" name="action" value="REQUEST_REVIEW">Request customer review</button>
-        ) : null}
-      </RowActions>
-    </form>
-  );
+  const openCount = orderedCases.filter((item) => item.state === "OPEN").length;
+  const reviewCount = orderedCases.filter((item) => item.state === "IN_REVIEW").length;
+  const resolvedCount = orderedCases.filter((item) => item.state === "RESOLVED").length;
 
   return (
-    <SplitWorkspace
-      ariaLabel="Quality review workspace"
-      mobileFocus="detail"
-      list={
-        <WorkspacePane
-          title="Quality queue"
-          description={data.qualityCases.length + " case" + (data.qualityCases.length === 1 ? "" : "s")}
-        >
-          <WorkspaceList ariaLabel="Quality cases">
-            {data.qualityCases.map((qualityCase) => (
-              <WorkspaceListItem
-                key={qualityCase.id}
+    <section className={styles.qualityWorkspace} aria-label="Quality review workspace">
+      <header className={styles.qualityToolbar}>
+        <div>
+          <p className={styles.qualityEyebrow}>Service quality</p>
+          <h2>Quality</h2>
+          <p>{openCount} open · {reviewCount} in review · {resolvedCount} resolved</p>
+        </div>
+        <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open jobs</a>
+      </header>
+
+      <div className={styles.qualitySplit}>
+        <aside className={styles.qualityQueue} aria-label="Quality case list">
+          {orderedCases.map((qualityCase) => {
+            const caseVisit = data.visits.find((item) => item.id === qualityCase.visitId);
+            const caseRequest = caseVisit ? data.requests.find((item) => item.id === caseVisit.requestId) : undefined;
+            const caseCustomer = caseRequest?.customerId ? data.customers.find((item) => item.id === caseRequest.customerId) : undefined;
+            const selectedCase = qualityCase.id === selected.id;
+            return (
+              <a
+                className={`${styles.qualityQueueItem} ${selectedCase ? styles.qualityQueueSelected : ""}`.trim()}
                 href={"?case=" + encodeURIComponent(qualityCase.id)}
-                selected={qualityCase.id === selected.id}
-                ariaLabel={qualityCase.summary}
+                aria-current={selectedCase ? "page" : undefined}
+                key={qualityCase.id}
               >
-                <DataCellStack
-                  primary={qualityCase.summary}
-                  secondary={qualityCase.state.replaceAll("_", " ") + " · " + formatWhen(qualityCase.dueAt, data.workspace.timezone)}
-                />
-              </WorkspaceListItem>
-            ))}
-          </WorkspaceList>
-        </WorkspacePane>
-      }
-      detail={
-        <WorkspacePane
-          title={selected.summary}
-          description={"Quality case · " + selected.state.replaceAll("_", " ")}
-          actions={actions}
-        >
-          <div className="app-grid app-grid-two">
-            <dl className="summary-list">
-              <div><dt>Visit</dt><dd>{visit ? formatWhen(visit.startAt, data.workspace.timezone) : "Visit unavailable"}</dd></div>
-              <div><dt>Score</dt><dd>{selected.feedbackScore ?? "Not scored"}</dd></div>
-              <div><dt>Deadline</dt><dd>{formatWhen(selected.dueAt, data.workspace.timezone)}</dd></div>
-              <div><dt>Review request</dt><dd>{selected.reviewRequestState.replaceAll("_", " ")}</dd></div>
-              <div><dt>Owner</dt><dd>{selected.ownerUserId ? "Assigned" : "Unassigned"}</dd></div>
-            </dl>
+                <span className={styles.qualityQueueTop}>
+                  <strong>{qualityCase.summary}</strong>
+                  <StatusBadge tone={statusBadgeTone(qualityCase.state)}>{qualityCase.state.replaceAll("_", " ")}</StatusBadge>
+                </span>
+                <span className={styles.qualityQueueCustomer}>{caseCustomer?.displayName ?? caseRequest?.serviceLabel ?? "Service visit"}</span>
+                <span className={styles.qualityQueueMeta}>
+                  <span>{qualityCase.feedbackScore !== undefined ? `${qualityCase.feedbackScore}/5 feedback` : "No score"}</span>
+                  <span>{qualityCase.ownerUserId ? "Assigned" : "Unassigned"}</span>
+                </span>
+              </a>
+            );
+          })}
+        </aside>
+
+        <article className={styles.qualityDetail}>
+          <header className={styles.qualityDetailHeader}>
             <div>
-              <h3>Field evidence</h3>
+              <p className={styles.qualityEyebrow}>Quality case</p>
+              <h2>{selected.summary}</h2>
+              <p>{customer?.displayName ?? "Customer"} · {request?.serviceLabel ?? "Service visit"}</p>
+            </div>
+            <div className={styles.qualityHeaderActions}>
+              <StatusBadge tone={statusBadgeTone(selected.state)}>{selected.state.replaceAll("_", " ")}</StatusBadge>
+              {selected.state === "OPEN" ? (
+                <form action={qualityAction} className={styles.qualityInlineActions}>
+                  <input type="hidden" name="qualityCaseId" value={selected.id} />
+                  <button className="app-button-secondary" name="action" value="ASSIGN">Assign to me</button>
+                  <button className="app-button-primary" name="action" value="START_REVIEW">Start review</button>
+                </form>
+              ) : selected.state === "RESOLVED" && selected.reviewRequestState === "ELIGIBLE" ? (
+                <form action={qualityAction}>
+                  <input type="hidden" name="qualityCaseId" value={selected.id} />
+                  <button className="app-button-primary" name="action" value="REQUEST_REVIEW">Request customer review</button>
+                </form>
+              ) : null}
+            </div>
+          </header>
+
+          <section className={styles.qualityMetrics} aria-label="Quality case summary">
+            <div><span>Feedback</span><strong>{selected.feedbackScore !== undefined ? `${selected.feedbackScore}/5` : "—"}</strong></div>
+            <div><span>Owner</span><strong>{selected.ownerUserId ? "Assigned" : "Unassigned"}</strong></div>
+            <div><span>Deadline</span><strong>{formatWhen(selected.dueAt, data.workspace.timezone)}</strong></div>
+            <div><span>Evidence</span><strong>{evidence.length}</strong></div>
+          </section>
+
+          <div className={styles.qualityDetailGrid}>
+            <section className={styles.qualitySection}>
+              <div className={styles.qualitySectionHeader}>
+                <div><p className={styles.qualitySectionEyebrow}>Service context</p><h3>Visit & customer</h3></div>
+                {visit ? <a className={styles.qualityTextLink} href={`/app/${encodeURIComponent(workspaceSlug)}/jobs?job=${encodeURIComponent(visit.id)}`}>Open job →</a> : null}
+              </div>
+              <dl className={styles.qualitySummary}>
+                <div><dt>Customer</dt><dd>{customer?.displayName ?? "Unavailable"}</dd></div>
+                <div><dt>Property</dt><dd>{property?.label ?? "Not linked"}</dd></div>
+                <div><dt>Visit</dt><dd>{visit ? formatWhen(visit.startAt, data.workspace.timezone) : "Unavailable"}</dd></div>
+                <div><dt>Crew</dt><dd>{crew?.name ?? (visit?.crewId ? "Assigned" : "Unassigned")}</dd></div>
+                <div><dt>Review request</dt><dd>{selected.reviewRequestState.replaceAll("_", " ")}</dd></div>
+              </dl>
+              {selected.resolutionNote ? <div className={styles.qualityResolution}><span>Resolution</span><p>{selected.resolutionNote}</p></div> : null}
+            </section>
+
+            <section className={styles.qualitySection}>
+              <div className={styles.qualitySectionHeader}>
+                <div><p className={styles.qualitySectionEyebrow}>Field proof</p><h3>Evidence</h3></div>
+                <span className={styles.qualitySectionMeta}>{evidence.length} item{evidence.length === 1 ? "" : "s"}</span>
+              </div>
               {evidence.length ? (
-                <div className="app-row-list">
+                <div className={styles.qualityEvidenceList}>
                   {evidence.map((item) => (
-                    <article className="app-row" key={item.id}>
-                      <div><strong>{item.kind.replaceAll("_", " ")}</strong><p>{item.text ?? "Photo evidence"}</p></div>
-                      <span>{formatWhen(item.capturedAt, data.workspace.timezone)}</span>
+                    <article className={styles.qualityEvidenceRow} key={item.id}>
+                      <span className={styles.qualityEvidenceIcon} aria-hidden="true">{item.kind.includes("PHOTO") ? "▣" : "•"}</span>
+                      <span><strong>{item.kind.replaceAll("_", " ")}</strong><small>{item.text ?? "Photo evidence"}</small></span>
+                      <time>{formatWhen(item.capturedAt, data.workspace.timezone)}</time>
                     </article>
                   ))}
                 </div>
               ) : (
-                <AppEmptyState title="No evidence recorded" description="No field evidence is currently linked to this visit." />
+                <div className={styles.qualityEmpty}><strong>No evidence recorded</strong><p>No field evidence is currently linked to this visit.</p></div>
               )}
-            </div>
+            </section>
           </div>
 
           {selected.state === "IN_REVIEW" ? (
-            <form action={qualityAction}>
-              <input type="hidden" name="qualityCaseId" value={selected.id} />
-              <FormSection title="Resolve case" description="Record the resolution before closing this quality issue.">
+            <section className={styles.qualityResolutionPanel}>
+              <div><p className={styles.qualitySectionEyebrow}>Resolution</p><h3>Close this case</h3><p>Record what was resolved before closing the quality issue.</p></div>
+              <form action={qualityAction}>
+                <input type="hidden" name="qualityCaseId" value={selected.id} />
                 <FormField id={"quality-resolution-" + selected.id} label="Resolution note" required>
                   {({ id, describedBy, invalid }) => (
-                    <TextArea
-                      id={id}
-                      name="resolutionNote"
-                      rows={4}
-                      required
-                      describedBy={describedBy}
-                      invalid={invalid}
-                      placeholder="Describe what was resolved"
-                    />
+                    <TextArea id={id} name="resolutionNote" rows={4} required describedBy={describedBy} invalid={invalid} placeholder="Describe what was resolved" />
                   )}
                 </FormField>
-                <FormActions>
-                  <button className="app-button-primary" name="action" value="RESOLVE">Resolve case</button>
-                </FormActions>
-              </FormSection>
-            </form>
+                <button className="app-button-primary" name="action" value="RESOLVE">Resolve case</button>
+              </form>
+            </section>
           ) : null}
-        </WorkspacePane>
-      }
-      context={
-        <WorkspacePane title="Visit context" description={visit?.status.replaceAll("_", " ") ?? "Visit unavailable"}>
-          {visit ? (
-            <dl className="summary-list">
-              <div><dt>Start</dt><dd>{formatWhen(visit.startAt, data.workspace.timezone)}</dd></div>
-              <div><dt>Crew</dt><dd>{visit.crewId ? data.crews.find((crew) => crew.id === visit.crewId)?.name ?? "Assigned" : "Unassigned"}</dd></div>
-              <div><dt>Evidence</dt><dd>{evidence.length}</dd></div>
-            </dl>
-          ) : (
-            <AppEmptyState title="Visit unavailable" description="The linked visit could not be found in the current workspace data." />
-          )}
-        </WorkspacePane>
-      }
-    />
+        </article>
+      </div>
+    </section>
   );
 }
 
