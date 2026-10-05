@@ -12,19 +12,24 @@ const runtime = source("src/features/operations/customer-product-runtime.ts");
 const route = source("src/app/portal/sandbox-checkout/[id]/page.tsx");
 
 describe("V2 customer sandbox checkout product", () => {
-  it("replaces the invoice dead-end with an explicit sandbox payment action", () => {
+  it("exposes explicit sandbox payment actions for deposits and invoice balances", () => {
+    expect(portal).toContain("launchCustomerDepositSandboxCheckout");
+    expect(portal).toContain("Pay deposit in sandbox");
     expect(portal).toContain("launchCustomerInvoiceSandboxCheckout");
     expect(portal).toContain("Open sandbox payment");
     expect(portal).toContain("No real money is charged");
     expect(portal).not.toContain("Online payment is not available from this invoice yet");
   });
 
-  it("renders a dedicated customer checkout route with explicit sandbox semantics", () => {
+  it("renders one dedicated checkout route for deposit and balance sandbox semantics", () => {
     expect(route).toContain("SandboxCheckoutProductRoute");
     expect(checkout).toContain("Stripe-style SANDBOX / DEMO");
+    expect(checkout).toContain('session.purpose === "DEPOSIT"');
+    expect(checkout).toContain("Sandbox deposit");
     expect(checkout).toContain("Complete sandbox payment");
     expect(checkout).toContain("No real money is charged");
-    expect(checkout).toContain("The checkout session itself is never authoritative for invoice state");
+    expect(checkout).toContain("never authoritative for hold, booking or invoice state");
+    expect(checkout).toContain("never authoritative for invoice state");
   });
 
   it("routes completion through signed webhook verification and Core payment application", () => {
@@ -33,14 +38,20 @@ describe("V2 customer sandbox checkout product", () => {
     expect(runtime).toContain("handleStripePaymentWebhook");
     expect(runtime).toContain("createPostgresPaymentApplicationFacadeMethods");
     expect(runtime).toContain("createPaymentWebhookApplicationStore");
+    expect(runtime).toContain('purpose: "DEPOSIT"');
     expect(runtime).toContain('purpose: "BALANCE"');
+    expect(runtime).toContain("holdId");
     expect(runtime).not.toContain('.from("invoices").update');
     expect(runtime).not.toContain('.from("invoices").upsert');
   });
 
-  it("guards stale sessions against authoritative invoice balance changes", () => {
+  it("guards stale sessions against authoritative deposit, hold and invoice changes", () => {
+    expect(runtime).toContain("quoteContext.quote.depositMinor !== sessionAmount");
+    expect(runtime).toContain('String(holdResult.data.status) !== "HELD"');
     expect(runtime).toContain("context.invoice.balanceMinor !== sessionAmount");
     expect(runtime).toContain('status: "CANCELLED"');
+    expect(checkout).toContain("Deposit amount changed");
+    expect(checkout).toContain("Service-time hold changed");
     expect(checkout).toContain("Invoice balance changed");
   });
 });

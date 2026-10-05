@@ -46,11 +46,13 @@ export async function SandboxCheckoutProductRoute({
     if (!completed.ok) {
       redirect(`/portal/sandbox-checkout/${encodeURIComponent(sessionId)}?error=${encodeURIComponent(completed.message)}`);
     }
-    const invoiceId = completed.invoiceId;
-    if (!invoiceId) {
-      redirect(`/portal?notice=${encodeURIComponent(completed.message)}`);
+    if (completed.invoiceId) {
+      redirect(`/portal/invoices/${encodeURIComponent(completed.invoiceId)}?notice=${encodeURIComponent(completed.message)}`);
     }
-    redirect(`/portal/invoices/${encodeURIComponent(invoiceId)}?notice=${encodeURIComponent(completed.message)}`);
+    if (completed.quoteId) {
+      redirect(`/portal/quotes/${encodeURIComponent(completed.quoteId)}?notice=${encodeURIComponent(completed.message)}`);
+    }
+    redirect(`/portal?notice=${encodeURIComponent(completed.message)}`);
   }
 
   if (!result.ok) {
@@ -73,12 +75,22 @@ export async function SandboxCheckoutProductRoute({
   }
 
   const session = result.value;
-  const amountChanged = session.currentInvoiceBalanceMinor !== session.amountMinor;
+  const isDeposit = session.purpose === "DEPOSIT";
+  const amountChanged = session.currentAmountMinor !== session.amountMinor;
+  const resourceClosed = isDeposit
+    ? session.resourceStatus !== "HELD"
+    : ["PAID", "VOID"].includes(session.resourceStatus);
   const canComplete =
     session.status === "OPEN"
     && !amountChanged
-    && session.invoiceStatus !== "PAID"
-    && session.currentInvoiceBalanceMinor > 0;
+    && !resourceClosed
+    && session.currentAmountMinor > 0;
+  const backHref = isDeposit
+    ? `/portal/quotes/${encodeURIComponent(session.quoteId)}`
+    : session.invoiceId
+      ? `/portal/invoices/${encodeURIComponent(session.invoiceId)}`
+      : "/portal";
+  const backLabel = isDeposit ? "Quote" : "Invoice";
 
   return (
     <CustomerPortalShell
@@ -88,10 +100,10 @@ export async function SandboxCheckoutProductRoute({
     >
       <CustomerPageHeader
         eyebrow="Stripe-style SANDBOX / DEMO"
-        title="Sandbox payment"
+        title={isDeposit ? "Sandbox deposit" : "Sandbox payment"}
         description="No real money is charged. This screen exercises the verified-payment application path while live Stripe remains intentionally disabled."
-        backHref={`/portal/invoices/${encodeURIComponent(session.invoiceId)}`}
-        backLabel="Invoice"
+        backHref={backHref}
+        backLabel={backLabel}
         action={
           <CustomerStatus tone={statusTone(session.status)}>
             {session.status.replaceAll("_", " ")}
@@ -107,8 +119,10 @@ export async function SandboxCheckoutProductRoute({
 
       <div className={styles.stack}>
         <CustomerNotice
-          title="Demo payment only"
-          description="Completing this payment generates a signed sandbox webhook in-process. ServiceDesk verifies that webhook and applies it through the same Postgres payment command used by provider callbacks. The checkout session itself is never authoritative for invoice state."
+          title={isDeposit ? "Demo deposit only" : "Demo payment only"}
+          description={isDeposit
+            ? "Completing this deposit generates a signed sandbox webhook in-process. ServiceDesk verifies that webhook and applies it through the same Postgres payment command used by provider callbacks. The checkout session itself is never authoritative for hold, booking or invoice state."
+            : "Completing this payment generates a signed sandbox webhook in-process. ServiceDesk verifies that webhook and applies it through the same Postgres payment command used by provider callbacks. The checkout session itself is never authoritative for invoice state."}
           tone="warning"
         />
 
@@ -118,12 +132,14 @@ export async function SandboxCheckoutProductRoute({
           eyebrow="Sandbox amount"
         >
           <CustomerSummaryList>
-            <CustomerSummaryItem label="Invoice" value={session.invoiceId} />
+            <CustomerSummaryItem label="Payment purpose" value={isDeposit ? "Booking deposit" : "Invoice balance"} />
+            <CustomerSummaryItem label={isDeposit ? "Quote" : "Invoice"} value={isDeposit ? session.quoteId : (session.invoiceId ?? "Unavailable")} />
+            {isDeposit && session.holdId ? <CustomerSummaryItem label="Service-time hold" value={session.holdId} /> : null}
             <CustomerSummaryItem
-              label="Current invoice balance"
-              value={formatMinorMoney(session.currentInvoiceBalanceMinor, session.currency)}
+              label={isDeposit ? "Current deposit" : "Current invoice balance"}
+              value={formatMinorMoney(session.currentAmountMinor, session.currency)}
             />
-            <CustomerSummaryItem label="Invoice status" value={session.invoiceStatus.replaceAll("_", " ")} />
+            <CustomerSummaryItem label={isDeposit ? "Hold status" : "Invoice status"} value={session.resourceStatus.replaceAll("_", " ")} />
             <CustomerSummaryItem label="Checkout mode" value="SANDBOX / DEMO" />
             <CustomerSummaryItem label="Session expires" value={formatWhen(session.expiresAt, session.workspaceTimezone)} />
           </CustomerSummaryList>
@@ -136,8 +152,8 @@ export async function SandboxCheckoutProductRoute({
                 </button>
               </form>
             ) : (
-              <a className={styles.secondaryButton} href={`/portal/invoices/${encodeURIComponent(session.invoiceId)}`}>
-                Return to invoice
+              <a className={styles.secondaryButton} href={backHref}>
+                Return to {isDeposit ? "quote" : "invoice"}
               </a>
             )}
           </div>
@@ -145,8 +161,20 @@ export async function SandboxCheckoutProductRoute({
 
         {amountChanged ? (
           <CustomerNotice
-            title="Invoice balance changed"
-            description="This sandbox session no longer matches the authoritative invoice balance. Return to the invoice and open a fresh sandbox payment session."
+            title={isDeposit ? "Deposit amount changed" : "Invoice balance changed"}
+            description={isDeposit
+              ? "This sandbox session no longer matches the authoritative quote deposit. Return to the quote and open a fresh sandbox deposit session."
+              : "This sandbox session no longer matches the authoritative invoice balance. Return to the invoice and open a fresh sandbox payment session."}
+            tone="warning"
+          />
+        ) : null}
+
+        {resourceClosed && session.status === "OPEN" && !amountChanged ? (
+          <CustomerNotice
+            title={isDeposit ? "Service-time hold changed" : "Invoice is no longer payable"}
+            description={isDeposit
+              ? "The service-time hold is no longer open for this deposit. Return to the quote and choose an available time again."
+              : "The invoice is paid or void, so this sandbox payment cannot be completed."}
             tone="warning"
           />
         ) : null}
