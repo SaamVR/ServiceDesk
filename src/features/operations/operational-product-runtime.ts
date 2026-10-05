@@ -640,7 +640,7 @@ export async function applyOperationalManualPayment(
     { idempotencyKey: "manual-payment-" + crypto.randomUUID(), now: new Date().toISOString() },
   );
   return result.ok
-    ? { ok: true, message: "Manual payment applied to the authoritative invoice ledger." }
+    ? { ok: true, message: "Manual payment recorded on the invoice." }
     : { ok: false, message: result.message };
 }
 
@@ -690,7 +690,7 @@ export async function calculateOperationalQuote(
   const facade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc);
   const result = await facade.calculateQuote(resolved.value.actor, requestId);
   return result.ok
-    ? { ok: true, message: "Quote calculated and persisted from the authoritative rate card." }
+    ? { ok: true, message: "Quote calculated and saved." }
     : { ok: false, message: result.message };
 }
 
