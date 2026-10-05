@@ -17,6 +17,7 @@ import type { SupabaseRpcClient } from "@/server/core/payment-application-postgr
 import { createPostgresReportingPlatformFacadeMethods } from "@/server/core/reporting-platform-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
+import { assignVisitCrewWithPostgres } from "@/features/dispatch/assignment-postgres";
 
 type Row = Record<string, unknown>;
 
@@ -59,6 +60,7 @@ export interface OperationalQuote {
   depositMinor: number;
   balanceMinor: number;
   durationMinutes: number;
+  bufferMinutes: number;
   validUntil?: string;
 }
 
@@ -112,10 +114,11 @@ export interface OperationalRecurrence {
 }
 
 export interface OperationalStaffSnapshot {
-  workspace: { id: string; slug: string; name: string };
+  workspace: { id: string; slug: string; name: string; timeZone: string };
   actor: ActorContext;
   customers: OperationalCustomer[];
   properties: OperationalProperty[];
+  crews: Array<{ id: string; name: string; active: boolean }>;
   requests: OperationalRequest[];
   quotes: OperationalQuote[];
   visits: OperationalVisit[];
@@ -140,7 +143,7 @@ export type OperationalRuntimeResult =
 export type OperationalActionResult = { ok: true; message: string } | { ok: false; message: string };
 
 interface ResolvedStaffActor {
-  workspace: { id: string; slug: string; name: string };
+  workspace: { id: string; slug: string; name: string; timeZone: string };
   actor: ActorContext;
   service: SupabaseClient;
   rpc: SupabaseRpcClient;
@@ -210,7 +213,7 @@ async function resolveStaffActor(workspaceSlug: string): Promise<
 
   const workspaceResult = await service
     .from("workspaces")
-    .select("id,slug,name")
+    .select("id,slug,name,timezone")
     .eq("slug", workspaceSlug)
     .maybeSingle();
 
@@ -221,7 +224,13 @@ async function resolveStaffActor(workspaceSlug: string): Promise<
     return { ok: false, kind: "not_found", message: "This workspace does not exist." };
   }
 
-  const workspace = workspaceResult.data as { id: string; slug: string; name: string };
+  const workspaceRow = workspaceResult.data as { id: string; slug: string; name: string; timezone?: string };
+  const workspace = {
+    id: workspaceRow.id,
+    slug: workspaceRow.slug,
+    name: workspaceRow.name,
+    timeZone: workspaceRow.timezone ?? "UTC",
+  };
   const membershipResult = await service
     .from("memberships")
     .select("role,status")
@@ -328,6 +337,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       .order("created_at", { ascending: false })
       .limit(300),
     service.from("service_catalog").select("*").eq("workspace_id", workspace.id).order("code", { ascending: true }).limit(100),
+    service.from("crews").select("id,name,active").eq("workspace_id", workspace.id).order("name", { ascending: true }).limit(100),
     service.from("requests").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(300),
     service.from("quotes").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(300),
     service.from("visits").select("*").eq("workspace_id", workspace.id).order("starts_at", { ascending: true }).limit(300),
@@ -362,6 +372,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     customerRows,
     propertyRows,
     serviceRows,
+    crewRows,
     requestRows,
     quoteRows,
     visitRows,
@@ -420,6 +431,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     depositMinor: numberValue(row, "deposit_minor"),
     balanceMinor: numberValue(row, "balance_minor"),
     durationMinutes: numberValue(row, "duration_minutes"),
+    bufferMinutes: numberValue(row, "buffer_minutes"),
     validUntil: textValue(row, "valid_until"),
   }));
   const visits: OperationalVisit[] = visitRows.map((row) => ({
@@ -451,6 +463,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       actor,
       customers,
       properties,
+      crews: crewRows.map((row) => ({
+        id: String(row.id),
+        name: textValue(row, "name") ?? "Crew",
+        active: Boolean(row.active),
+      })),
       requests,
       quotes,
       visits,
@@ -750,5 +767,35 @@ export async function transitionOperationalVisit(
   );
   return result.ok
     ? { ok: true, message: "Visit moved to " + result.value.status.replaceAll("_", " ").toLowerCase() + "." }
+    : { ok: false, message: result.message };
+}
+
+
+export async function assignOperationalCrew(
+  workspaceSlug: string,
+  visitId: string,
+  crewId: string,
+  expectedVersion: number,
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!visitId || !crewId || !Number.isInteger(expectedVersion) || expectedVersion <= 0) {
+    return { ok: false, message: "Choose a valid job and crew before assigning." };
+  }
+
+  const result = await assignVisitCrewWithPostgres(
+    resolved.value.rpc,
+    resolved.value.actor,
+    {
+      visitId,
+      crewId,
+      expectedVersion,
+      idempotencyKey: "dispatch-assign-" + crypto.randomUUID(),
+      now: new Date().toISOString(),
+    },
+  );
+
+  return result.ok
+    ? { ok: true, message: "Crew assigned to the job." }
     : { ok: false, message: result.message };
 }
