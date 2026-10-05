@@ -99,6 +99,37 @@ describe("V2 multilane production integration", () => {
     expect(business).not.toContain("sandbox-only");
   });
 
+  it("turns the public enquiry into a server-only idempotent lead workflow", () => {
+    const route = source("src/features/operations/BusinessProductRoute.tsx");
+    const runtime = source("src/features/operations/public-business-runtime.ts");
+    const migration = source("supabase/migrations/0017_v2_public_enquiry.sql");
+    const staffRuntime = source("src/features/operations/operational-product-runtime.ts");
+
+    expect(route).toContain("submitPublicEnquiry");
+    expect(route).toContain('name="displayName"');
+    expect(route).toContain('name="serviceCode"');
+    expect(route).toContain('name="companyWebsite"');
+    expect(route).toContain("servicedesk_visitor_session");
+    expect(route).not.toContain("Online enquiries are being prepared");
+
+    expect(runtime).toContain('service.rpc("servicedesk_create_public_enquiry"');
+    expect(runtime).toContain("visitorSessionId");
+    expect(runtime).toContain("submissionId");
+
+    expect(migration).toContain("security invoker");
+    expect(migration).toContain("public_enquiry.create");
+    expect(migration).toContain("customer_contacts");
+    expect(migration).toContain("'WEB'");
+    expect(migration).toContain("PUBLIC_ENQUIRY_CREATED");
+    expect(migration).toContain("revoke all on function public.servicedesk_create_public_enquiry(jsonb) from anon");
+    expect(migration).toContain("grant execute on function public.servicedesk_create_public_enquiry(jsonb) to service_role");
+
+    expect(staffRuntime).toContain('.from("customer_contacts")');
+    expect(staffRuntime).toContain("primaryEmail");
+    expect(staffRuntime).toContain("primaryPhone");
+    expect(staffRuntime).toContain("preferredDate");
+  });
+
   it("keeps crew offline truth explicit rather than claiming durable offline support", () => {
     const sync = source("src/features/crew/sync-state.ts");
     expect(sync).toContain('persistence: "SESSION_MEMORY_ONLY"');
