@@ -77,9 +77,11 @@ describe("V2 operational product routing", () => {
 
   it("keeps unsupported operations disabled instead of faking success", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
-    expect(route).toContain("Crew changes are not available from this screen yet.");
+    const dispatch = source("src/features/dispatch/DispatcherIntelligence.tsx");
     expect(route).toContain("Recovery must be handled manually from the related record.");
-    expect(route).toContain("does not simulate Stripe or provider");
+    expect(route).toContain("does not simulate online settlement");
+    expect(route).toContain("approvalCommandAvailable={false}");
+    expect(dispatch).toContain("authoritative crew-assignment command");
   });
 
   it("scopes portal reads to the authenticated customer and keeps unsupported booking honest", () => {
@@ -92,6 +94,40 @@ describe("V2 operational product routing", () => {
     expect(route).toContain("Customer self-service");
     expect(route).toContain("Start sandbox checkout");
     expect(route).not.toContain("FIXTURE_UI_ONLY");
+  });
+
+  it("uses one shared staff shell and loads Overview from live operational data", () => {
+    const layout = source("src/app/app/[workspace]/layout.tsx");
+    const route = source("src/features/operations/OperationalProductRoute.tsx");
+    const overview = source("src/app/app/[workspace]/overview/page.tsx");
+    expect(layout).toContain("StaffAppShell");
+    expect(route).not.toContain('className="site-shell"');
+    expect(route).not.toContain('className="site-header"');
+    expect(route).not.toContain("function StaffNavigation");
+    expect(overview).toContain("loadOperationalStaffSnapshot");
+    expect(overview).toContain("snapshot={result.ok ? result.value : undefined}");
+  });
+
+  it("adopts W1 primitives and W3 dispatch components without duplicating their logic", () => {
+    const route = source("src/features/operations/OperationalProductRoute.tsx");
+    const adapter = source("src/features/operations/dispatch-product-adapter.ts");
+    expect(route).toContain("DataTable");
+    expect(route).toContain("SplitWorkspace");
+    expect(route).toContain("FeedbackBanner");
+    expect(route).toContain("FormSection");
+    expect(route).toContain("DispatcherIntelligence");
+    expect(adapter).toContain("buildDispatchRecommendations");
+    expect(adapter).toContain("buildCrewDayTimeline");
+  });
+
+  it("surfaces accepted field commands and sanitizes backend failures", () => {
+    const runtime = source("src/features/operations/operational-product-runtime.ts");
+    const qualityPage = source("src/app/app/[workspace]/quality/page.tsx");
+    expect(runtime).toContain("addOperationalVisitNote");
+    expect(runtime).toContain("setOperationalChecklistItem");
+    expect(runtime).toContain("safeCoreFailure");
+    expect(runtime).not.toContain("message: result.message");
+    expect(qualityPage).toContain("selectedQualityCaseId={query.case}");
   });
 
   it("renders reports, billing and settings as business admin views rather than preview components", () => {
