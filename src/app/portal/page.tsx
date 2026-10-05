@@ -1,12 +1,10 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { CustomerProductRoute } from "@/features/operations/CustomerProductRoute";
 
-export default function PortalPage() {
-  return (
-    <OperationalFixtureRoute
-      surface="customer"
-      customerModule="overview"
-      title="Customer portal for properties, requests, quotes, visits and invoices."
-      description="Customers see only their own scoped records: property details, current quote version, booking state, invoice balance and communication preferences."
-    />
-  );
+export default async function PortalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
+  const query = await searchParams;
+  return <CustomerProductRoute module="overview" notice={query.notice} error={query.error} />;
 }
