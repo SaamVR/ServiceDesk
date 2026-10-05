@@ -11,8 +11,8 @@ describe("V2 jobs operational workspace", () => {
 
     expect(page).toContain("job?: string");
     expect(page).toContain("selectedJobId={query.job}");
-    expect(route).toContain('data.visits.find((visit) => visit.id === selectedJobId)');
-    expect(route).toContain("selectedRowKey={selectedVisit.id}");
+    expect(route).toContain('orderedVisits.find((visit) => visit.id === selectedJobId)');
+    expect(route).toContain('selected ? styles.jobsQueueSelected : ""');
   });
 
   it("shows one selected job detail instead of expanding several editable jobs", () => {
