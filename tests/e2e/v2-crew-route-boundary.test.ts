@@ -134,6 +134,8 @@ describe("crew production read boundary", () => {
       checklistProgressLabel: "1/1 checklist",
       evidenceProgressLabel: "1/2 photos",
       timeZoneLabel: "Europe/London",
+      accessNote: "Use side gate",
+      serviceNote: "Move-out clean",
     });
   });
 

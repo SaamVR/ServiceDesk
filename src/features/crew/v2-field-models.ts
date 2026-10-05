@@ -32,6 +32,8 @@ export interface CrewTodayJobView {
   statusLabel: string;
   locationLabel: string;
   customerLabel?: string;
+  accessNote?: string;
+  serviceNote?: string;
   highPriorityNotes: readonly string[];
   progressPercent: number;
   nextActionLabel: string;
@@ -117,6 +119,8 @@ export function buildCrewTodayJobs(jobs: readonly CrewTodayJobInput[], now: stri
         statusLabel: statusLabel(visit.status),
         locationLabel: context.authorized ? context.locationLabel ?? "Address unavailable" : "Address hidden",
         customerLabel: context.authorized ? context.customerLabel : undefined,
+        accessNote: context.authorized ? context.accessNotes : undefined,
+        serviceNote: context.authorized ? context.serviceNotes : undefined,
         highPriorityNotes: context.authorized ? context.highPriorityNotes ?? [] : [],
         progressPercent: progressByStatus[visit.status],
         nextActionLabel: nextActionLabel(visit),

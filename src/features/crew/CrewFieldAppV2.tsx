@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { EmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
+import type { VisitChecklistItemDTO } from "@/contracts";
 import type { CrewJobDetailInput, CrewTodayJobInput } from "./v2-field-models";
 import { buildCrewJobDetailView, buildCrewTodayJobs } from "./v2-field-models";
 import { crewOfflineCapabilityNotice } from "./sync-state";
@@ -44,8 +45,10 @@ export function CrewTodayV2({ jobs, now }: { jobs: readonly CrewTodayJobInput[];
                 <p className={styles.alert}>{exceptionLabel(job.operationalException)}</p>
               ) : null}
 
-              {job.highPriorityNotes.length > 0 ? (
+              {job.accessNote || job.serviceNote || job.highPriorityNotes.length > 0 ? (
                 <ul className={styles.notes}>
+                  {job.accessNote ? <li><strong>Access:</strong> {job.accessNote}</li> : null}
+                  {job.serviceNote ? <li><strong>Service:</strong> {job.serviceNote}</li> : null}
                   {job.highPriorityNotes.map((note) => <li key={note}>{note}</li>)}
                 </ul>
               ) : null}
@@ -73,7 +76,7 @@ export function CrewTodayV2({ jobs, now }: { jobs: readonly CrewTodayJobInput[];
 
 export interface CrewJobDetailV2Controls {
   transition?: ReactNode;
-  checklist?: ReactNode;
+  renderChecklistControl?: (item: VisitChecklistItemDTO) => ReactNode;
   evidence?: ReactNode;
   reportIssue?: ReactNode;
   retry?: ReactNode;
@@ -135,7 +138,7 @@ export function CrewJobDetailV2({
         </Panel>
 
         <Panel>
-          <SectionHeader title="Checklist" description={view.checklistProgressLabel} action={controls.checklist} />
+          <SectionHeader title="Checklist" description={view.checklistProgressLabel} />
           {view.checklist.length === 0 ? (
             <p className={styles.muted}>No checklist items have been saved yet.</p>
           ) : (
@@ -144,6 +147,7 @@ export function CrewJobDetailV2({
                 <li key={item.id}>
                   <span aria-hidden="true">{item.completed ? "✓" : "○"}</span>
                   <span>{item.itemKey}{item.note ? ` · ${item.note}` : ""}</span>
+                  {controls.renderChecklistControl ? controls.renderChecklistControl(item) : null}
                 </li>
               ))}
             </ul>

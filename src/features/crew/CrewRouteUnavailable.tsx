@@ -1,6 +1,12 @@
 import { EmptyState, PageHeader, Panel } from "@/components/product/PagePrimitives";
 
-export function CrewRouteUnavailable({ page }: { page: "today" | "job" }) {
+export function CrewRouteUnavailable({
+  page,
+  message,
+}: {
+  page: "today" | "job";
+  message?: string;
+}) {
   return (
     <main className="app-content" aria-label={page === "today" ? "Crew today" : "Crew job"}>
       <PageHeader
@@ -11,9 +17,9 @@ export function CrewRouteUnavailable({ page }: { page: "today" | "job" }) {
       <Panel>
         <EmptyState
           title="We can’t load this yet"
-          description={page === "today"
+          description={message ?? (page === "today"
             ? "Your assigned jobs aren’t available on this screen right now. Try again after signing in, or contact dispatch if this continues."
-            : "This job isn’t available on this screen right now. Return to Today or contact dispatch if this continues."}
+            : "This job isn’t available on this screen right now. Return to Today or contact dispatch if this continues.")}
           action={page === "job" ? <a className="app-button-secondary" href="/crew/today">Back to Today</a> : undefined}
         />
       </Panel>
