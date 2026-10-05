@@ -117,3 +117,16 @@ export function CrewJobDetailV2({
     </section>
   );
 }
+
+
+export function CrewFieldError({ title, message }: { title: string; message: string }) {
+  return (
+    <section className={styles.shell} aria-labelledby="crew-error-heading">
+      <article className={styles.panel}>
+        <p className={styles.eyebrow}>Crew workspace</p>
+        <h1 id="crew-error-heading">{title}</h1>
+        <p>{message}</p>
+      </article>
+    </section>
+  );
+}
