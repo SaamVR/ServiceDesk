@@ -81,12 +81,13 @@ export interface CalendarAdapter {
 }
 
 export interface CheckoutInput {
-  hold: { holdId: string; workspaceId: string; quoteId: string; expiresAt: string };
+  hold?: { holdId: string; workspaceId: string; quoteId: string; expiresAt: string };
   quote: QuoteDTO;
   purpose: "DEPOSIT" | "BALANCE" | "PLATFORM_SUBSCRIPTION";
   successUrl: string;
   cancelUrl: string;
   invoiceId?: string;
+  balanceMinor?: number;
 }
 
 export interface CheckoutSession {
