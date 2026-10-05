@@ -38,6 +38,7 @@ interface OperationalProductRouteProps {
   workspaceSlug: string;
   module: Exclude<StaffModule, "overview">;
   selectedConversationId?: string;
+  selectedCustomerId?: string;
   selectedQualityCaseId?: string;
   selectedJobId?: string;
   notice?: string;
@@ -252,7 +253,7 @@ function InboxView({
   );
 }
 
-function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
+function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSnapshot; selectedCustomerId?: string }) {
   if (data.customers.length === 0) {
     return (
       <EmptyState
@@ -261,6 +262,16 @@ function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
       />
     );
   }
+
+  const selectedCustomer =
+    data.customers.find((customer) => customer.id === selectedCustomerId) ??
+    data.customers[0];
+  const selectedProperties = data.properties.filter(
+    (property) => property.customerId === selectedCustomer.id,
+  );
+  const selectedRequests = data.requests.filter(
+    (request) => request.customerId === selectedCustomer.id,
+  );
 
   return (
     <div className={styles.stack}>
@@ -271,6 +282,7 @@ function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
         caption="Customers"
         rows={data.customers}
         getRowKey={(customer) => customer.id}
+        selectedRowKey={selectedCustomer.id}
         columns={[
           {
             id: "customer",
@@ -288,30 +300,56 @@ function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
             header: "Requests",
             cell: (customer) => data.requests.filter((item) => item.customerId === customer.id).length,
           },
+          {
+            id: "action",
+            header: "Action",
+            priority: "primary",
+            cell: (customer) => (
+              <a
+                className="app-button-secondary"
+                href={"?customer=" + encodeURIComponent(customer.id)}
+                aria-current={customer.id === selectedCustomer.id ? "page" : undefined}
+              >
+                {customer.id === selectedCustomer.id ? "Viewing" : "Open"}
+              </a>
+            ),
+          },
         ]}
         renderMobileRow={(customer) => (
-          <DataCellStack
-            primary={customer.displayName}
-            secondary={
-              data.properties.filter((item) => item.customerId === customer.id).length +
-              " properties · " +
-              data.requests.filter((item) => item.customerId === customer.id).length +
-              " requests"
-            }
-          />
+          <div className="app-row">
+            <DataCellStack
+              primary={customer.displayName}
+              secondary={
+                data.properties.filter((item) => item.customerId === customer.id).length +
+                " properties · " +
+                data.requests.filter((item) => item.customerId === customer.id).length +
+                " requests"
+              }
+            />
+            <a
+              className="app-button-secondary"
+              href={"?customer=" + encodeURIComponent(customer.id)}
+              aria-current={customer.id === selectedCustomer.id ? "page" : undefined}
+            >
+              {customer.id === selectedCustomer.id ? "Viewing" : "Open"}
+            </a>
+          </div>
         )}
       />
 
-      {data.customers.slice(0, 8).map((customer) => (
-        <Panel key={customer.id}>
-          <SectionHeader title={customer.displayName} description="Property context" />
-          {data.properties.filter((item) => item.customerId === customer.id).length === 0 ? (
-            <AppEmptyState title="No properties" description="No property is linked to this customer yet." />
-          ) : (
-            <div className="app-row-list">
-              {data.properties
-                .filter((item) => item.customerId === customer.id)
-                .map((property) => (
+      <Panel>
+        <SectionHeader
+          title={selectedCustomer.displayName}
+          description={selectedCustomer.leadSource ? "Lead source: " + selectedCustomer.leadSource : "Customer details"}
+        />
+        <div className="app-grid app-grid-two">
+          <section>
+            <h3>Properties</h3>
+            {selectedProperties.length === 0 ? (
+              <AppEmptyState title="No properties" description="No property is linked to this customer yet." />
+            ) : (
+              <div className="app-row-list">
+                {selectedProperties.map((property) => (
                   <article className="app-row" key={property.id}>
                     <div>
                       <h3>{property.label}</h3>
@@ -323,10 +361,40 @@ function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
                     </div>
                   </article>
                 ))}
-            </div>
-          )}
-        </Panel>
-      ))}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h3>Recent requests</h3>
+            {selectedRequests.length === 0 ? (
+              <AppEmptyState title="No requests" description="No service request is linked to this customer yet." />
+            ) : (
+              <div className="app-row-list">
+                {selectedRequests.slice(0, 8).map((request) => {
+                  const quote = data.quotes.find(
+                    (item) => item.requestId === request.id && item.status !== "SUPERSEDED",
+                  );
+                  return (
+                    <article className="app-row" key={request.id}>
+                      <div>
+                        <h3>{request.serviceLabel}</h3>
+                        <p>{formatWhen(request.requestedStartAt, data.workspace.timezone)}</p>
+                      </div>
+                      <div className="app-row-meta">
+                        <StatusBadge tone={statusBadgeTone(request.status)}>
+                          {request.status.replaceAll("_", " ")}
+                        </StatusBadge>
+                        <span>{quote ? "Quote " + quote.status.replaceAll("_", " ").toLowerCase() : "No quote yet"}</span>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
+      </Panel>
     </div>
   );
 }
@@ -1694,6 +1762,7 @@ function renderModule(
   data: OperationalStaffSnapshot,
   workspaceSlug: string,
   selectedConversationId?: string,
+  selectedCustomerId?: string,
   selectedQualityCaseId?: string,
   selectedJobId?: string,
 ) {
@@ -1707,7 +1776,7 @@ function renderModule(
         />
       );
     case "customers":
-      return <CustomersView data={data} />;
+      return <CustomersView data={data} selectedCustomerId={selectedCustomerId} />;
     case "requests":
       return <RequestsView data={data} workspaceSlug={workspaceSlug} />;
     case "quotes":
@@ -1735,6 +1804,7 @@ export async function OperationalProductRoute({
   workspaceSlug,
   module,
   selectedConversationId,
+  selectedCustomerId,
   selectedQualityCaseId,
   selectedJobId,
   notice,
@@ -1754,7 +1824,7 @@ export async function OperationalProductRoute({
       <Notice notice={notice} error={error} />
 
       {result.ok ? (
-        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedQualityCaseId, selectedJobId)
+        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedQualityCaseId, selectedJobId)
       ) : (
         <Panel>
           <FeedbackBanner
