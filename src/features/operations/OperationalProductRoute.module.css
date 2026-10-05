@@ -140,6 +140,13 @@
   gap: 0.35rem;
 }
 
+.bookingBlock {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border, #e4e7eb);
+}
+
 .successNotice,
 .errorNotice {
   padding: 0.8rem 1rem;
