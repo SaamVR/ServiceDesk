@@ -382,7 +382,7 @@ function RequestsView({
     return (
       <EmptyState
         title="No requests in the queue"
-        detail="New enquiries will appear here as persisted requests."
+        detail="New enquiries will appear here once they become requests."
       />
     );
   }
@@ -462,7 +462,7 @@ function QuotesView({
   }
 
   if (data.quotes.length === 0) {
-    return <EmptyState title="No quotes yet" detail="Calculated and persisted quotes will appear here." />;
+    return <EmptyState title="No quotes yet" detail="Calculated quotes will appear here." />;
   }
 
   return (
@@ -1260,7 +1260,7 @@ function SettingsView({ data }: { data: OperationalStaffSnapshot }) {
       <section className="plain-card">
         <h2>Integrations</h2>
         <p>Connection status is not available from this settings read yet. Provider credentials remain private.</p>
-        <button className="button-secondary" type="button" disabled title="Integration settings require a workspace integration-status read.">
+        <button className="button-secondary" type="button" disabled title="Integration management is not available from this screen yet.">
           Manage integrations
         </button>
       </section>
