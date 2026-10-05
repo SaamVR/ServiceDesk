@@ -337,3 +337,138 @@
     justify-content: center;
   }
 }
+
+
+.enquiryLayout {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(420px, 1.2fr);
+  gap: clamp(28px, 6vw, 72px);
+  align-items: start;
+  padding: clamp(28px, 6vw, 68px) 0;
+}
+
+.enquiryLayout .businessState {
+  padding: 0;
+}
+
+.enquirySteps {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+  color: #4f5964;
+  font-size: .88rem;
+  font-weight: 650;
+}
+
+.enquiryForm {
+  display: grid;
+  gap: 18px;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid #e2e6ea;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgb(16 24 40 / 6%);
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field > span {
+  color: #3f4751;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 11px;
+  border: 1px solid #ccd3d9;
+  border-radius: 8px;
+  background: #fff;
+  color: #171a1f;
+  font: inherit;
+}
+
+.field textarea {
+  min-height: 116px;
+  resize: vertical;
+}
+
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  border-color: #176b53;
+  outline: 3px solid rgb(23 107 83 / 20%);
+  outline-offset: 1px;
+}
+
+.privacyNote {
+  margin: -2px 0 0;
+  color: #707983;
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.successNotice,
+.errorNotice {
+  margin: 0;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-size: .86rem;
+  font-weight: 650;
+}
+
+.successNotice {
+  border: 1px solid #b9dfd1;
+  background: #eef9f5;
+  color: #125842;
+}
+
+.errorNotice {
+  border: 1px solid #efc5c1;
+  background: #fff3f2;
+  color: #963633;
+}
+
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+@media (max-width: 820px) {
+  .enquiryLayout {
+    grid-template-columns: 1fr;
+    padding-top: 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .enquiryForm {
+    padding: 16px;
+  }
+
+  .enquiryForm :global(.button-primary) {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+}
