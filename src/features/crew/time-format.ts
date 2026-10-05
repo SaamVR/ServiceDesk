@@ -65,6 +65,11 @@ function dateKey(value: Date, timeZone: string) {
   return `${byType.get("year")}-${byType.get("month")}-${byType.get("day")}`;
 }
 
+export function formatOperationalTime(value: string, workspaceTimeZone?: string): string {
+  const resolved = resolveOperationalTimeZone(workspaceTimeZone);
+  return timeFormatter(resolved.timeZone).format(new Date(value));
+}
+
 export function formatVisitWindow(
   visit: Pick<VisitDTO, "startAt" | "serviceMinutes" | "bufferMinutes">,
   workspaceTimeZone?: string,

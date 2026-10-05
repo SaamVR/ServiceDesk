@@ -101,6 +101,7 @@ function dispatchSnapshot(): DispatchSnapshot {
     crews: [
       {
         id: "crew_a",
+        workspaceId: "ws_1",
         active: true,
         availableFrom: "2026-10-05T08:00:00.000Z",
         availableTo: "2026-10-05T18:00:00.000Z",
@@ -108,6 +109,7 @@ function dispatchSnapshot(): DispatchSnapshot {
       },
       {
         id: "crew_b",
+        workspaceId: "ws_1",
         active: true,
         availableFrom: "2026-10-05T08:00:00.000Z",
         availableTo: "2026-10-05T18:00:00.000Z",
@@ -115,6 +117,7 @@ function dispatchSnapshot(): DispatchSnapshot {
       },
       {
         id: "crew_c",
+        workspaceId: "ws_1",
         active: true,
         availableFrom: "2026-10-05T08:00:00.000Z",
         availableTo: "2026-10-05T18:00:00.000Z",

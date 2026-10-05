@@ -6,6 +6,7 @@ export interface DispatchVisitSnapshot extends VisitDTO {
 
 export interface DispatchCrewSnapshot {
   id: string;
+  workspaceId: string;
   active: boolean;
   availableFrom?: string;
   availableTo?: string;
@@ -19,6 +20,7 @@ export interface DispatchSnapshot {
 }
 
 export type DispatchConflictCode =
+  | "CREW_WORKSPACE_MISMATCH"
   | "CREW_INACTIVE"
   | "OUTSIDE_AVAILABILITY"
   | "SERVICE_CONSTRAINT_MISMATCH"
@@ -39,6 +41,7 @@ export interface DispatchCandidateRecommendation {
 }
 
 export interface DispatchVisitRecommendation {
+  workspaceId: string;
   visitId: string;
   visitVersion: number;
   candidates: DispatchCandidateRecommendation[];
@@ -82,6 +85,7 @@ function candidateFor(snapshot: DispatchSnapshot, visit: DispatchVisitSnapshot, 
   const conflicts: DispatchConflictCode[] = [];
   const reasons: string[] = [];
 
+  if (crew.workspaceId !== visit.workspaceId) conflicts.push("CREW_WORKSPACE_MISMATCH");
   if (!crew.active) conflicts.push("CREW_INACTIVE");
 
   if (crew.availableFrom && crew.availableTo) {
@@ -89,19 +93,19 @@ function candidateFor(snapshot: DispatchSnapshot, visit: DispatchVisitSnapshot, 
     const from = new Date(crew.availableFrom).getTime();
     const to = new Date(crew.availableTo).getTime();
     if (visitRange.start < from || visitRange.end > to) conflicts.push("OUTSIDE_AVAILABILITY");
-    else reasons.push("Within declared crew availability");
+    else reasons.push("Within crew availability");
   }
 
   if (visit.serviceCode && crew.serviceCodes && crew.serviceCodes.length > 0) {
     if (!crew.serviceCodes.includes(visit.serviceCode)) conflicts.push("SERVICE_CONSTRAINT_MISMATCH");
-    else reasons.push("Service constraint matched");
+    else reasons.push("Service match");
   }
 
   if (existing.some((assigned) => overlaps(visit, assigned))) conflicts.push("SCHEDULE_OVERLAP");
   else reasons.push("No schedule overlap");
 
   const workload = workloadMinutes(existing);
-  reasons.push("Current scheduled workload " + workload + " minutes");
+  reasons.push("Scheduled workload " + workload + " minutes");
 
   const eligible = conflicts.length === 0;
   const score = eligible ? 100_000 - workload * 10 - existing.length * 1_000 : -100_000 - conflicts.length * 1_000;
@@ -137,11 +141,12 @@ export function buildDispatchRecommendations(snapshot: DispatchSnapshot): Dispat
       .map((candidate, index) => ({ ...candidate, rank: index + 1 }));
 
     const attentionReasons = (snapshot.attentionItems ?? [])
-      .filter((item) => item.resourceId === visit.id && item.status !== "RESOLVED")
+      .filter((item) => item.workspaceId === visit.workspaceId && item.resourceId === visit.id && item.status !== "RESOLVED")
       .map((item) => item.summary)
       .sort();
 
     return {
+      workspaceId: visit.workspaceId,
       visitId: visit.id,
       visitVersion: visit.version,
       candidates,

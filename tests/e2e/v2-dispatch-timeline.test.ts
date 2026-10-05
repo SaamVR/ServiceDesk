@@ -5,8 +5,8 @@ import { buildCrewDayTimeline } from "../../src/features/dispatch/timeline";
 function snapshot(): DispatchSnapshot {
   return {
     crews: [
-      { id: "crew_b", active: true },
-      { id: "crew_a", active: true },
+      { id: "crew_b", workspaceId: "ws_1", active: true },
+      { id: "crew_a", workspaceId: "ws_1", active: true },
     ],
     visits: [
       {
