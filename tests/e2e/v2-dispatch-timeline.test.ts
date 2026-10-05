@@ -34,6 +34,18 @@ function snapshot(): DispatchSnapshot {
         version: 4,
       },
       {
+        id: "visit_foreign",
+        workspaceId: "ws_other",
+        requestId: "req_foreign",
+        quoteId: "quote_foreign",
+        crewId: "crew_a",
+        status: "ASSIGNED",
+        startAt: "2026-10-05T09:30:00.000Z",
+        serviceMinutes: 300,
+        bufferMinutes: 30,
+        version: 1,
+      },
+      {
         id: "visit_b1",
         workspaceId: "ws_1",
         requestId: "req_b1",
@@ -50,7 +62,7 @@ function snapshot(): DispatchSnapshot {
 }
 
 describe("V2 dispatcher crew/day timeline", () => {
-  it("is deterministic, sorts lanes, computes workload, and exposes schedule collisions", () => {
+  it("is deterministic, workspace-scoped, sorts lanes, computes workload, and exposes schedule collisions", () => {
     const input = snapshot();
     const before = JSON.stringify(input);
     const first = buildCrewDayTimeline(input);
@@ -61,7 +73,9 @@ describe("V2 dispatcher crew/day timeline", () => {
     expect(first.map((lane) => lane.crewId)).toEqual(["crew_a", "crew_b"]);
 
     const crewA = first[0]!;
+    expect(crewA.workspaceId).toBe("ws_1");
     expect(crewA.workloadMinutes).toBe(225);
+    expect(crewA.visits.map((visit) => visit.visitId)).not.toContain("visit_foreign");
     expect(crewA.conflictCount).toBe(2);
     expect(crewA.visits[0]?.conflictWithVisitIds).toEqual(["visit_a2"]);
     expect(crewA.visits[1]?.conflictWithVisitIds).toEqual(["visit_a1"]);

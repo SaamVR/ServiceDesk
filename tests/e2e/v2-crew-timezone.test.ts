@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { VisitDTO } from "../../src/contracts";
 import {
+  formatOperationalTime,
   formatVisitWindow,
   isVisitOnOperationalDay,
   resolveOperationalTimeZone,
@@ -25,6 +26,7 @@ describe("crew operational timezone formatting", () => {
     expect(view.windowLabel).toBe("10:00–12:30");
     expect(view.timeZone).toBe("Europe/London");
     expect(view.timeZoneSource).toBe("WORKSPACE");
+    expect(formatOperationalTime(visit.startAt, "Europe/London")).toBe("10:00");
   });
 
   it("preserves local wall-clock meaning across the DST spring transition", () => {

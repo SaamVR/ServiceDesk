@@ -46,6 +46,13 @@ export interface CrewSyncPresentation {
   refreshRequired: boolean;
 }
 
+export interface CrewCommandFailure {
+  code: string;
+  message: string;
+  retryable?: boolean;
+  serverVersion?: number;
+}
+
 export type CrewSyncEvent =
   | { type: "NETWORK_CHANGED"; online: boolean }
   | { type: "QUEUE_OPERATION"; operation: CrewPendingOperation }
@@ -56,6 +63,53 @@ export type CrewSyncEvent =
   | { type: "ACTION_INVALID"; operationId: string; message: string }
   | { type: "RETRY_REQUESTED" }
   | { type: "DISCARD_OPERATION"; operationId: string };
+
+const staleCodes = new Set([
+  "VERSION_CONFLICT",
+  "STALE_VERSION",
+  "IDEMPOTENCY_CONFLICT",
+]);
+
+const invalidActionCodes = new Set([
+  "VISIT_STATE_INVALID",
+  "VISIT_TERMINAL",
+  "INVALID_CREW_TRANSITION",
+  "CREW_TRANSITION_NOT_ALLOWED",
+  "VISIT_NOT_FOUND",
+  "CREW_VISIT_NOT_FOUND",
+  "FORBIDDEN",
+  "CREW_UNAUTHORIZED",
+  "UNAUTHORIZED_CREW",
+]);
+
+export function crewCommandFailureToSyncEvent(
+  operationId: string,
+  failure: CrewCommandFailure,
+): CrewSyncEvent {
+  if (staleCodes.has(failure.code)) {
+    return {
+      type: "VERSION_CONFLICT",
+      operationId,
+      message: failure.message,
+      serverVersion: failure.serverVersion,
+    };
+  }
+
+  if (invalidActionCodes.has(failure.code)) {
+    return {
+      type: "ACTION_INVALID",
+      operationId,
+      message: failure.message,
+    };
+  }
+
+  return {
+    type: "SYNC_FAILED",
+    operationId,
+    message: failure.message,
+    retryable: failure.retryable === true,
+  };
+}
 
 export function createCrewSyncState(online = true): CrewSyncState {
   return {
