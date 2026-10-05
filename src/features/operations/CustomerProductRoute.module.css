@@ -158,6 +158,70 @@
   opacity: 0.55;
 }
 
+.bookingSection {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--app-border, #e2e6ea);
+}
+
+.bookingHeading {
+  display: grid;
+  gap: 4px;
+}
+
+.bookingHeading h3,
+.bookingHeading p {
+  margin: 0;
+}
+
+.bookingHeading h3 {
+  color: var(--app-text, #171a1f);
+  font-size: 0.94rem;
+}
+
+.bookingHeading p {
+  max-width: 64ch;
+  color: var(--app-text-muted, #626b76);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.slotGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.slotOption {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--app-border, #e2e6ea);
+  border-radius: 9px;
+  background: var(--app-surface-subtle, #fafbfc);
+}
+
+.slotCopy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.slotCopy strong {
+  color: var(--app-text, #171a1f);
+  font-size: 0.78rem;
+}
+
+.slotCopy small {
+  color: var(--app-text-muted, #626b76);
+  font-size: 0.69rem;
+}
+
 .customerTable {
   min-width: 0;
 }
@@ -199,6 +263,15 @@
   }
 
   .detailActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .slotGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .slotOption {
     align-items: stretch;
     flex-direction: column;
   }

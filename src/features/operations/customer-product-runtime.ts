@@ -1,9 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import type { ActorContext, QuoteDTO } from "@/contracts";
+import type { ActorContext, QuoteDTO, SlotDTO } from "@/contracts";
 import type { SupabaseRpcClient } from "@/server/core/payment-application-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
+import { createCustomerBookingFactory } from "@/features/schedule/customer-booking-boundary";
 
 type Row = Record<string, unknown>;
 
@@ -67,9 +68,24 @@ export interface CustomerPortalConsent {
   recordedAt: string;
 }
 
+export interface CustomerPortalBookingSlot {
+  quoteId: string;
+  id: string;
+  startAt: string;
+  endAt: string;
+}
+
+export interface CustomerPortalSlotHold {
+  id: string;
+  quoteId: string;
+  slotId: string;
+  status: string;
+  expiresAt: string;
+}
+
 export interface CustomerPortalSnapshot {
   loadedAt: string;
-  workspace: { id: string; slug: string; name: string };
+  workspace: { id: string; slug: string; name: string; timezone: string };
   customer: { id: string; displayName: string };
   actor: ActorContext;
   properties: CustomerPortalProperty[];
@@ -78,6 +94,8 @@ export interface CustomerPortalSnapshot {
   visits: CustomerPortalVisit[];
   invoices: CustomerPortalInvoice[];
   consents: CustomerPortalConsent[];
+  bookingSlots: CustomerPortalBookingSlot[];
+  slotHolds: CustomerPortalSlotHold[];
 }
 
 export type CustomerPortalResult =
@@ -93,7 +111,7 @@ export type CustomerPortalActionResult =
   | { ok: false; message: string };
 
 interface ResolvedCustomer {
-  workspace: { id: string; slug: string; name: string };
+  workspace: { id: string; slug: string; name: string; timezone: string };
   customer: { id: string; displayName: string };
   actor: ActorContext;
   service: SupabaseClient;
@@ -192,7 +210,7 @@ async function resolveCustomer(): Promise<
   const workspaceId = String(customerRow.workspace_id);
   const workspaceResult = await service
     .from("workspaces")
-    .select("id,slug,name")
+    .select("id,slug,name,timezone")
     .eq("id", workspaceId)
     .maybeSingle();
 
@@ -200,13 +218,14 @@ async function resolveCustomer(): Promise<
     return { ok: false, kind: "server", message: "The linked business could not be loaded." };
   }
 
-  const workspace = workspaceResult.data as { id: string; slug: string; name: string };
+  const workspace = workspaceResult.data as { id: string; slug: string; name: string; timezone?: string };
+  const resolvedWorkspace = { ...workspace, timezone: workspace.timezone ?? "UTC" };
   const customer = {
     id: String(customerRow.id),
     displayName: String(customerRow.display_name ?? "Customer"),
   };
   const actor: ActorContext = {
-    workspaceId: workspace.id,
+    workspaceId: resolvedWorkspace.id,
     userId: authData.user.id,
     role: "CUSTOMER",
   };
@@ -214,7 +233,7 @@ async function resolveCustomer(): Promise<
   return {
     ok: true,
     value: {
-      workspace,
+      workspace: resolvedWorkspace,
       customer,
       actor,
       service,
@@ -301,7 +320,27 @@ export async function loadCustomerPortalSnapshot(): Promise<CustomerPortalResult
   const quoteRows = rows(quoteResult.data);
   const quoteIds = quoteRows.map((row) => String(row.id));
 
-  const [visitsResult, invoicesResult] = await Promise.all([
+  const loadedAt = new Date().toISOString();
+  const bookingWindowTo = new Date(new Date(loadedAt).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const acceptedQuotes = quoteRows
+    .map((row) => mapQuote(row, workspace.id))
+    .filter((quote) => quote.status === "ACCEPTED");
+  const bookingFacade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc);
+  const bookingSlotsNested = await Promise.all(acceptedQuotes.map(async (quote) => {
+    const slots = await bookingFacade.findSlots(actor, {
+      requestId: quote.requestId,
+      from: loadedAt,
+      to: bookingWindowTo,
+    });
+    return slots.map((slot) => ({
+      quoteId: quote.id,
+      id: slot.id,
+      startAt: slot.startAt,
+      endAt: slot.endAt,
+    }));
+  }));
+
+  const [visitsResult, invoicesResult, holdsResult] = await Promise.all([
     requestIds.length === 0
       ? Promise.resolve({ data: [], error: null })
       : service
@@ -318,16 +357,25 @@ export async function loadCustomerPortalSnapshot(): Promise<CustomerPortalResult
           .eq("workspace_id", workspace.id)
           .in("quote_id", quoteIds)
           .order("created_at", { ascending: false }),
+    quoteIds.length === 0
+      ? Promise.resolve({ data: [], error: null })
+      : service
+          .from("slot_holds")
+          .select("id,quote_id,slot_id,status,expires_at")
+          .eq("workspace_id", workspace.id)
+          .in("quote_id", quoteIds)
+          .in("status", ["HELD", "CONFIRMED"])
+          .order("created_at", { ascending: false }),
   ]);
 
-  if (visitsResult.error || invoicesResult.error) {
+  if (visitsResult.error || invoicesResult.error || holdsResult.error) {
     return { ok: false, kind: "server", message: "Your booking or invoice history could not be loaded." };
   }
 
   return {
     ok: true,
     value: {
-      loadedAt: new Date().toISOString(),
+      loadedAt,
       workspace,
       customer,
       actor,
@@ -393,6 +441,14 @@ export async function loadCustomerPortalSnapshot(): Promise<CustomerPortalResult
         source: String(row.source),
         recordedAt: String(row.recorded_at),
       })),
+      bookingSlots: bookingSlotsNested.flat(),
+      slotHolds: rows(holdsResult.data).map((row) => ({
+        id: String(row.id),
+        quoteId: String(row.quote_id),
+        slotId: String(row.slot_id),
+        status: String(row.status),
+        expiresAt: String(row.expires_at),
+      })),
     },
   };
 }
@@ -446,4 +502,69 @@ export async function acceptCustomerPortalQuote(quoteId: string): Promise<Custom
   return result.ok
     ? { ok: true, message: "Quote accepted. The next step is scheduling." }
     : { ok: false, message: result.message };
+}
+
+export async function holdCustomerPortalSlot(quoteId: string, slotId: string): Promise<CustomerPortalActionResult> {
+  const resolved = await resolveCustomer();
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const quoteResult = await resolved.value.service
+    .from("quotes")
+    .select("*")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (quoteResult.error || !quoteResult.data) {
+    return { ok: false, message: "The quote is no longer available." };
+  }
+
+  const requestResult = await resolved.value.service
+    .from("requests")
+    .select("id,customer_id")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("id", quoteResult.data.request_id)
+    .maybeSingle();
+  if (requestResult.error || !requestResult.data || requestResult.data.customer_id !== resolved.value.customer.id) {
+    return { ok: false, message: "This quote is not linked to your customer account." };
+  }
+
+  const quote = mapQuote(quoteResult.data as Row, resolved.value.workspace.id);
+  if (quote.status !== "ACCEPTED") {
+    return { ok: false, message: "Accept the quote before choosing a service time." };
+  }
+
+  const now = new Date().toISOString();
+  const to = new Date(new Date(now).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const facade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc);
+  const booking = createCustomerBookingFactory(facade);
+  const available = await booking.findSlots({
+    ctx: resolved.value.actor,
+    quote,
+    requestId: quote.requestId,
+    from: now,
+    to,
+  });
+  if (!available.ok || !available.value) {
+    return { ok: false, message: available.error?.message ?? "Available service times could not be loaded." };
+  }
+
+  const slot = available.value.find((candidate: SlotDTO) => candidate.id === slotId);
+  if (!slot) {
+    return { ok: false, message: "That time is no longer available. Choose another available time." };
+  }
+
+  const held = await booking.holdSlot({
+    ctx: resolved.value.actor,
+    quote,
+    slot,
+    idempotencyKey: `customer-slot-hold:${resolved.value.workspace.id}:${quote.id}:${slot.id}:v${quote.version}`,
+    now,
+  });
+  if (!held.ok || !held.value) {
+    return { ok: false, message: held.error?.message ?? "That time could not be held. Choose another available time." };
+  }
+  return {
+    ok: true,
+    message: "Time reserved. Review the updated quote for the hold expiry and next step.",
+  };
 }

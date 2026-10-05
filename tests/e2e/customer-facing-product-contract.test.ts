@@ -10,6 +10,7 @@ const shell = source("src/components/product/CustomerFacingShell.tsx");
 const shellCss = source("src/components/product/CustomerFacingShell.module.css");
 const portal = source("src/features/operations/CustomerProductRoute.tsx");
 const portalCss = source("src/features/operations/CustomerProductRoute.module.css");
+const customerRuntime = source("src/features/operations/customer-product-runtime.ts");
 const business = source("src/features/operations/BusinessProductRoute.tsx");
 const businessCss = source("src/features/operations/BusinessProductRoute.module.css");
 
@@ -39,6 +40,18 @@ describe("customer-facing production product contracts", () => {
     expect(visibleRouteSource).not.toContain("server snapshot");
     expect(visibleRouteSource).not.toContain("command boundary");
     expect(visibleRouteSource).not.toContain("runtime seam");
+  });
+
+  it("lets an accepted customer quote select and hold authoritative availability", () => {
+    expect(portal).toContain("holdCustomerPortalSlot");
+    expect(portal).toContain("Choose a service time");
+    expect(portal).toContain("Hold this time");
+    expect(portal).toContain("data.workspace.timezone");
+    expect(customerRuntime).toContain("createCustomerBookingFactory");
+    expect(customerRuntime).toContain("bookingFacade.findSlots");
+    expect(customerRuntime).toContain("booking.holdSlot");
+    expect(customerRuntime).toContain("customer-slot-hold:");
+    expect(customerRuntime).toContain('.from("slot_holds")');
   });
 
   it("keeps public business pages focused on services and customer next steps", () => {

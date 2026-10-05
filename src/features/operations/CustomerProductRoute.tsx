@@ -15,6 +15,7 @@ import {
 } from "@/components/product/CustomerFacingShell";
 import {
   acceptCustomerPortalQuote,
+  holdCustomerPortalSlot,
   loadCustomerPortalSnapshot,
   type CustomerPortalActionResult,
   type CustomerPortalConsent,
@@ -33,12 +34,16 @@ interface CustomerProductRouteProps {
   error?: string;
 }
 
-function formatWhen(value?: string) {
+function formatWhen(value?: string, timeZone?: string) {
   if (!value) return "Not available";
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value
-    : new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
+    : new Intl.DateTimeFormat("en", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        ...(timeZone ? { timeZone } : {}),
+      }).format(date);
 }
 
 function formatStatus(status: string) {
@@ -124,7 +129,7 @@ function OverviewView({ data }: { data: CustomerPortalSnapshot }) {
             {nextVisit ? (
               <CustomerListRow
                 title="Upcoming booking"
-                meta={formatWhen(nextVisit.startAt)}
+                meta={formatWhen(nextVisit.startAt, data.workspace.timezone)}
                 status={<Status value={nextVisit.status} />}
                 href={"/portal/bookings/" + encodeURIComponent(nextVisit.id)}
               />
@@ -175,7 +180,7 @@ function OverviewView({ data }: { data: CustomerPortalSnapshot }) {
                   <CustomerListRow
                     key={visit.id}
                     title={data.requests.find((request) => request.id === visit.requestId)?.serviceLabel ?? "Service booking"}
-                    meta={formatWhen(visit.startAt)}
+                    meta={formatWhen(visit.startAt, data.workspace.timezone)}
                     status={<Status value={visit.status} />}
                     href={"/portal/bookings/" + encodeURIComponent(visit.id)}
                   />
@@ -251,10 +256,23 @@ function QuoteView({
 
   const request = data.requests.find((item) => item.id === quote.requestId);
   const quoteIdForAction = quote.id;
+  const existingVisit = data.visits.find((visit) => visit.quoteId === quote.id && visit.status !== "CANCELLED");
+  const activeHold = data.slotHolds.find((hold) =>
+    hold.quoteId === quote.id
+    && (hold.status === "CONFIRMED" || Date.parse(hold.expiresAt) > Date.parse(data.loadedAt))
+  );
+  const bookingSlots = data.bookingSlots.filter((slot) => slot.quoteId === quote.id).slice(0, 8);
 
   async function acceptQuote() {
     "use server";
     const result = await acceptCustomerPortalQuote(quoteIdForAction);
+    actionRedirect("/portal/quotes/" + encodeURIComponent(quoteIdForAction), result);
+  }
+
+  async function holdSlot(formData: FormData) {
+    "use server";
+    const slotId = String(formData.get("slotId") ?? "");
+    const result = await holdCustomerPortalSlot(quoteIdForAction, slotId);
     actionRedirect("/portal/quotes/" + encodeURIComponent(quoteIdForAction), result);
   }
 
@@ -276,7 +294,7 @@ function QuoteView({
         <CustomerSummaryItem label="Deposit" value={formatMinorMoney(quote.depositMinor, quote.currency)} />
         <CustomerSummaryItem label="Remaining balance" value={formatMinorMoney(quote.balanceMinor, quote.currency)} />
         <CustomerSummaryItem label="Estimated service time" value={quote.durationMinutes + " min"} />
-        <CustomerSummaryItem label="Valid until" value={formatWhen(quote.validUntil)} />
+        <CustomerSummaryItem label="Valid until" value={formatWhen(quote.validUntil, data.workspace.timezone)} />
       </CustomerSummaryList>
 
       {quote.status === "SENT" ? (
@@ -284,12 +302,54 @@ function QuoteView({
           <button className={styles.primaryButton} type="submit">Accept quote</button>
         </form>
       ) : quote.status === "ACCEPTED" ? (
-        <div className={styles.detailActions}>
-          <CustomerNotice
-            title="Quote accepted"
-            description="The business can now arrange the next available booking step."
-            tone="success"
-          />
+        <div className={styles.bookingSection}>
+          {existingVisit ? (
+            <CustomerNotice
+              title="Booking created"
+              description={`Your service is scheduled for ${formatWhen(existingVisit.startAt, data.workspace.timezone)}.`}
+              tone="success"
+              action={
+                <a className={styles.secondaryButton} href={"/portal/bookings/" + encodeURIComponent(existingVisit.id)}>
+                  View booking
+                </a>
+              }
+            />
+          ) : activeHold ? (
+            <CustomerNotice
+              title="Time reserved"
+              description={
+                activeHold.status === "CONFIRMED"
+                  ? "This service time has been confirmed. Your booking will appear here when the visit record is ready."
+                  : `Your selected time is held until ${formatWhen(activeHold.expiresAt, data.workspace.timezone)}. The booking is not confirmed until payment is verified.`
+              }
+              tone={activeHold.status === "CONFIRMED" ? "success" : "warning"}
+            />
+          ) : bookingSlots.length > 0 ? (
+            <>
+              <div className={styles.bookingHeading}>
+                <h3>Choose a service time</h3>
+                <p>Available times are refreshed from the current workspace schedule. A hold reserves your choice temporarily.</p>
+              </div>
+              <div className={styles.slotGrid}>
+                {bookingSlots.map((slot) => (
+                  <form className={styles.slotOption} action={holdSlot} key={slot.id}>
+                    <input type="hidden" name="slotId" value={slot.id} />
+                    <span className={styles.slotCopy}>
+                      <strong>{formatWhen(slot.startAt, data.workspace.timezone)}</strong>
+                      <small>Ends {formatWhen(slot.endAt, data.workspace.timezone)}</small>
+                    </span>
+                    <button className={styles.secondaryButton} type="submit">Hold this time</button>
+                  </form>
+                ))}
+              </div>
+            </>
+          ) : (
+            <CustomerNotice
+              title="No times available right now"
+              description="There are no open service times in the next two weeks. The business can add availability or help arrange a time."
+              tone="info"
+            />
+          )}
         </div>
       ) : (
         <div className={styles.detailActions}>
@@ -328,8 +388,8 @@ function BookingView({
         action={<Status value={visit.status} />}
       >
         <CustomerSummaryList>
-          <CustomerSummaryItem label="Starts" value={formatWhen(visit.startAt)} />
-          <CustomerSummaryItem label="Ends" value={formatWhen(visit.endAt)} />
+          <CustomerSummaryItem label="Starts" value={formatWhen(visit.startAt, data.workspace.timezone)} />
+          <CustomerSummaryItem label="Ends" value={formatWhen(visit.endAt, data.workspace.timezone)} />
           <CustomerSummaryItem label="Payment status" value={invoice ? formatStatus(invoice.status) : "No invoice issued"} />
         </CustomerSummaryList>
       </CustomerCard>
@@ -426,7 +486,7 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
     {
       id: "recorded",
       header: "Recorded",
-      cell: (consent: CustomerPortalConsent) => formatWhen(consent.recordedAt),
+      cell: (consent: CustomerPortalConsent) => formatWhen(consent.recordedAt, data.workspace.timezone),
       priority: "secondary" as const,
     },
   ];
@@ -449,7 +509,7 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
               renderMobileRow={(consent) => (
                 <DataCellStack
                   primary={formatStatus(consent.channel) + " · " + formatStatus(consent.status)}
-                  secondary={formatStatus(consent.purpose) + " · " + formatWhen(consent.recordedAt)}
+                  secondary={formatStatus(consent.purpose) + " · " + formatWhen(consent.recordedAt, data.workspace.timezone)}
                 />
               )}
             />
