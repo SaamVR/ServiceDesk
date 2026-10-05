@@ -30,6 +30,7 @@ import { FormActions, FormField, FormGrid, FormSection, SelectInput, TextArea, T
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
+import { formatWorkspaceDateTime } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
 import styles from "./OperationalProductRoute.module.css";
 
@@ -63,12 +64,8 @@ function actionRedirect(
   );
 }
 
-function formatWhen(value?: string) {
-  if (!value) return "Not scheduled";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
+function formatWhen(value: string | undefined, timeZone: string) {
+  return formatWorkspaceDateTime(value, timeZone);
 }
 
 function statusBadgeTone(status: string): "neutral" | "success" | "warning" | "danger" | "info" {
@@ -203,7 +200,7 @@ function InboxView({
                     <p>{message.body ?? "Media message"}</p>
                   </div>
                   <small>
-                    {formatWhen(message.createdAt)} · {message.deliveryState ? message.deliveryState.replaceAll("_", " ") : "Received"}
+                    {formatWhen(message.createdAt, data.workspace.timezone)} · {message.deliveryState ? message.deliveryState.replaceAll("_", " ") : "Received"}
                   </small>
                 </article>
               ))
@@ -388,7 +385,7 @@ function RequestsView({
           {
             id: "requested",
             header: "Requested",
-            cell: (request) => formatWhen(request.requestedStartAt),
+            cell: (request) => formatWhen(request.requestedStartAt, data.workspace.timezone),
           },
           {
             id: "home",
@@ -425,7 +422,7 @@ function RequestsView({
         renderMobileRow={(request) => (
           <DataCellStack
             primary={request.serviceLabel}
-            secondary={request.status.replaceAll("_", " ") + " · " + formatWhen(request.requestedStartAt)}
+            secondary={request.status.replaceAll("_", " ") + " · " + formatWhen(request.requestedStartAt, data.workspace.timezone)}
           />
         )}
       />
@@ -488,7 +485,7 @@ function QuotesView({
             id: "validity",
             header: "Valid until",
             priority: "optional",
-            cell: (quote) => formatWhen(quote.validUntil),
+            cell: (quote) => formatWhen(quote.validUntil, data.workspace.timezone),
           },
           {
             id: "action",
@@ -606,7 +603,7 @@ function ScheduleView({
               id: "start",
               header: "Start",
               priority: "primary",
-              cell: (visit) => formatWhen(visit.startAt),
+              cell: (visit) => formatWhen(visit.startAt, data.workspace.timezone),
             },
             {
               id: "service",
@@ -628,7 +625,7 @@ function ScheduleView({
           renderMobileRow={(visit) => (
             <DataCellStack
               primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-              secondary={formatWhen(visit.startAt) + " · " + visit.status.replaceAll("_", " ")}
+              secondary={formatWhen(visit.startAt, data.workspace.timezone) + " · " + visit.status.replaceAll("_", " ")}
             />
           )}
         />
@@ -670,7 +667,7 @@ function ScheduleView({
                   {" · "}{quote.durationMinutes} min
                 </p>
                 {activeHold ? (
-                  <p>Slot held until {formatWhen(activeHold.expiresAt)}. Payment remains pending.</p>
+                  <p>Slot held until {formatWhen(activeHold.expiresAt, data.workspace.timezone)}. Payment remains pending.</p>
                 ) : candidates.length === 0 ? (
                   <p>No capacity slot currently fits this quote.</p>
                 ) : (
@@ -680,7 +677,7 @@ function ScheduleView({
                         <input type="hidden" name="quoteId" value={quote.id} />
                         <input type="hidden" name="slotId" value={slot.id} />
                         <button className="app-button-secondary" type="submit">
-                          Hold {formatWhen(slot.startAt)}
+                          Hold {formatWhen(slot.startAt, data.workspace.timezone)}
                         </button>
                       </form>
                     ))}
@@ -706,7 +703,7 @@ function ScheduleView({
               <article className="app-row" key={request.id}>
                 <div>
                   <h3>{request.serviceLabel}</h3>
-                  <p>Requested {formatWhen(request.requestedStartAt)}</p>
+                  <p>Requested {formatWhen(request.requestedStartAt, data.workspace.timezone)}</p>
                 </div>
                 <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>
               </article>
@@ -831,7 +828,7 @@ function JobsView({
             cell: (visit) => (
               <DataCellStack
                 primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-                secondary={formatWhen(visit.startAt)}
+                secondary={formatWhen(visit.startAt, data.workspace.timezone)}
               />
             ),
           },
@@ -906,7 +903,7 @@ function JobsView({
           <div className="app-row">
             <DataCellStack
               primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-              secondary={visit.status.replaceAll("_", " ") + " · " + formatWhen(visit.startAt)}
+              secondary={visit.status.replaceAll("_", " ") + " · " + formatWhen(visit.startAt, data.workspace.timezone)}
             />
             <a
               className="app-button-secondary"
@@ -923,7 +920,7 @@ function JobsView({
         <SectionHeader
           title={data.requests.find((item) => item.id === selectedVisit.requestId)?.serviceLabel ?? "Service visit"}
           description={
-            formatWhen(selectedVisit.startAt) +
+            formatWhen(selectedVisit.startAt, data.workspace.timezone) +
             " · " +
             (selectedVisit.crewId
               ? data.crews.find((crew) => crew.id === selectedVisit.crewId)?.name ?? "Assigned crew"
@@ -985,7 +982,7 @@ function JobsView({
                       <h3>{item.kind.replaceAll("_", " ")}</h3>
                       <p>{item.text ?? "Photo evidence"}</p>
                     </div>
-                    <div className="app-row-meta"><span>{formatWhen(item.capturedAt)}</span></div>
+                    <div className="app-row-meta"><span>{formatWhen(item.capturedAt, data.workspace.timezone)}</span></div>
                   </article>
                 ))}
               </div>
@@ -1317,7 +1314,7 @@ function QualityView({
               >
                 <DataCellStack
                   primary={qualityCase.summary}
-                  secondary={qualityCase.state.replaceAll("_", " ") + " · " + formatWhen(qualityCase.dueAt)}
+                  secondary={qualityCase.state.replaceAll("_", " ") + " · " + formatWhen(qualityCase.dueAt, data.workspace.timezone)}
                 />
               </WorkspaceListItem>
             ))}
@@ -1332,9 +1329,9 @@ function QualityView({
         >
           <div className="app-grid app-grid-two">
             <dl className="summary-list">
-              <div><dt>Visit</dt><dd>{visit ? formatWhen(visit.startAt) : "Visit unavailable"}</dd></div>
+              <div><dt>Visit</dt><dd>{visit ? formatWhen(visit.startAt, data.workspace.timezone) : "Visit unavailable"}</dd></div>
               <div><dt>Score</dt><dd>{selected.feedbackScore ?? "Not scored"}</dd></div>
-              <div><dt>Deadline</dt><dd>{formatWhen(selected.dueAt)}</dd></div>
+              <div><dt>Deadline</dt><dd>{formatWhen(selected.dueAt, data.workspace.timezone)}</dd></div>
               <div><dt>Review request</dt><dd>{selected.reviewRequestState.replaceAll("_", " ")}</dd></div>
               <div><dt>Owner</dt><dd>{selected.ownerUserId ? "Assigned" : "Unassigned"}</dd></div>
             </dl>
@@ -1345,7 +1342,7 @@ function QualityView({
                   {evidence.map((item) => (
                     <article className="app-row" key={item.id}>
                       <div><strong>{item.kind.replaceAll("_", " ")}</strong><p>{item.text ?? "Photo evidence"}</p></div>
-                      <span>{formatWhen(item.capturedAt)}</span>
+                      <span>{formatWhen(item.capturedAt, data.workspace.timezone)}</span>
                     </article>
                   ))}
                 </div>
@@ -1384,7 +1381,7 @@ function QualityView({
         <WorkspacePane title="Visit context" description={visit?.status.replaceAll("_", " ") ?? "Visit unavailable"}>
           {visit ? (
             <dl className="summary-list">
-              <div><dt>Start</dt><dd>{formatWhen(visit.startAt)}</dd></div>
+              <div><dt>Start</dt><dd>{formatWhen(visit.startAt, data.workspace.timezone)}</dd></div>
               <div><dt>Crew</dt><dd>{visit.crewId ? data.crews.find((crew) => crew.id === visit.crewId)?.name ?? "Assigned" : "Unassigned"}</dd></div>
               <div><dt>Evidence</dt><dd>{evidence.length}</dd></div>
             </dl>
@@ -1446,7 +1443,7 @@ function AutomationsView({ data }: { data: OperationalStaffSnapshot }) {
             id: "due",
             header: "Due",
             priority: "optional",
-            cell: (item) => formatWhen(item.dueAt),
+            cell: (item) => formatWhen(item.dueAt, data.workspace.timezone),
           },
           {
             id: "action",
@@ -1503,7 +1500,7 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
       <Panel>
         <SectionHeader
           title="Operations"
-          description={(snapshot.from ? formatWhen(snapshot.from) : "Rolling period") + " – " + (snapshot.to ? formatWhen(snapshot.to) : "Now")}
+          description={(snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period") + " – " + (snapshot.to ? formatWhen(snapshot.to, data.workspace.timezone) : "Now")}
         />
         <div className="app-grid app-grid-two">
           <div className="app-row-list">
@@ -1515,7 +1512,7 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
             <article className="app-row"><div><h3>Unresolved quality</h3><p>{snapshot.unresolvedQualityCount}</p></div></article>
           </div>
         </div>
-        <p className="app-field-help">Updated {formatWhen(snapshot.generatedAt)}.</p>
+        <p className="app-field-help">Updated {formatWhen(snapshot.generatedAt, data.workspace.timezone)}.</p>
       </Panel>
     </div>
   );
@@ -1547,8 +1544,8 @@ function BillingView({ data }: { data: OperationalStaffSnapshot }) {
           />
         ) : null}
         <dl className="summary-list">
-          <div><dt>Trial ends</dt><dd>{formatWhen(subscription.trialEndsAt)}</dd></div>
-          <div><dt>Current period ends</dt><dd>{formatWhen(subscription.currentPeriodEndsAt)}</dd></div>
+          <div><dt>Trial ends</dt><dd>{formatWhen(subscription.trialEndsAt, data.workspace.timezone)}</dd></div>
+          <div><dt>Current period ends</dt><dd>{formatWhen(subscription.currentPeriodEndsAt, data.workspace.timezone)}</dd></div>
         </dl>
       </Panel>
 
@@ -1638,7 +1635,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
           <div className="app-row-list">
             {snapshot.invitations.map((invite) => (
               <article className="app-row" key={invite.id}>
-                <div><h3>{invite.role}</h3><p>Created {formatWhen(invite.createdAt)}</p></div>
+                <div><h3>{invite.role}</h3><p>Created {formatWhen(invite.createdAt, data.workspace.timezone)}</p></div>
                 <StatusBadge tone={invite.state === "PENDING" ? "warning" : invite.state === "ACCEPTED" ? "success" : "neutral"}>
                   {invite.state}
                 </StatusBadge>

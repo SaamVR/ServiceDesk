@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildUpcomingVisits,
+  formatWorkspaceDateTime,
   summarizeOutstandingInvoices,
 } from "../../src/features/operations/product-truth";
 
@@ -50,5 +51,22 @@ describe("V2 product truth helpers", () => {
     expect(summary.multipleCurrencies).toBe(true);
     expect(summary.currency).toBeUndefined();
     expect(summary.totalMinor).toBeUndefined();
+  });
+
+  it("formats operational times in the workspace timezone", () => {
+    const value = "2026-10-05T08:30:00.000Z";
+    const dhaka = formatWorkspaceDateTime(value, "Asia/Dhaka");
+    const utc = formatWorkspaceDateTime(value, "UTC");
+
+    expect(dhaka).not.toBe(utc);
+    expect(dhaka).toContain("2:30");
+    expect(utc).toContain("8:30");
+  });
+
+  it("fails safe to UTC when a stored timezone is invalid", () => {
+    const value = "2026-10-05T08:30:00.000Z";
+
+    expect(formatWorkspaceDateTime(value, "Not/A_Timezone"))
+      .toBe(formatWorkspaceDateTime(value, "UTC"));
   });
 });
