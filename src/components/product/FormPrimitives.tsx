@@ -72,17 +72,25 @@ export function TextInput({
   disabled,
   required,
   autoComplete,
+  min,
+  max,
+  inputMode,
+  maxLength,
   describedBy,
   invalid,
 }: {
   id: string;
   name: string;
-  type?: "text" | "email" | "tel" | "url" | "number" | "search";
+  type?: "text" | "email" | "tel" | "url" | "number" | "search" | "date";
   defaultValue?: string | number;
   placeholder?: string;
   disabled?: boolean;
   required?: boolean;
   autoComplete?: string;
+  min?: string | number;
+  max?: string | number;
+  inputMode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search";
+  maxLength?: number;
   describedBy?: string;
   invalid?: boolean;
 }) {
@@ -97,6 +105,10 @@ export function TextInput({
       disabled={disabled}
       required={required}
       autoComplete={autoComplete}
+      min={min}
+      max={max}
+      inputMode={inputMode}
+      maxLength={maxLength}
       aria-describedby={describedBy}
       aria-invalid={invalid || undefined}
     />
@@ -111,6 +123,7 @@ export function TextArea({
   rows = 4,
   disabled,
   required,
+  maxLength,
   describedBy,
   invalid,
 }: {
@@ -121,6 +134,7 @@ export function TextArea({
   rows?: number;
   disabled?: boolean;
   required?: boolean;
+  maxLength?: number;
   describedBy?: string;
   invalid?: boolean;
 }) {
@@ -134,6 +148,7 @@ export function TextArea({
       rows={rows}
       disabled={disabled}
       required={required}
+      maxLength={maxLength}
       aria-describedby={describedBy}
       aria-invalid={invalid || undefined}
     />

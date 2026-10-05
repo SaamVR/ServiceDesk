@@ -169,10 +169,10 @@ function safeCoreFailure(
   if (result.code.includes("ALREADY_HELD")) {
     return { ok: false, message: "That slot was just taken. Choose another available time." };
   }
-  if (result.code === "SCHEDULE_CONFLICT") {
+  if (result.code === "SCHEDULE_CONFLICT" || result.code === "CREW_SCHEDULE_CONFLICT") {
     return { ok: false, message: "That crew now has an overlapping job. Refresh dispatch suggestions." };
   }
-  if (result.code === "CREW_UNAVAILABLE" || result.code === "CREW_NOT_FOUND") {
+  if (result.code === "CREW_UNAVAILABLE" || result.code === "CREW_NOT_AVAILABLE" || result.code === "CREW_NOT_FOUND") {
     return { ok: false, message: "That crew is no longer available for this assignment." };
   }
   return { ok: false, message: fallback };

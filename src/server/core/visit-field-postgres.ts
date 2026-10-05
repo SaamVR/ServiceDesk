@@ -131,7 +131,7 @@ export function createPostgresVisitFieldRuntimeFacadeMethods(client: SupabaseRpc
     },
 
     async assignCrew(ctx: ActorContext, id: string, input: AssignCrewInput, meta: CommandMeta): Promise<Result<VisitDTO>> {
-      const { data, error } = await client.rpc<RpcRow>("servicedesk_assign_crew", {
+      const { data, error } = await client.rpc<RpcRow>("servicedesk_assign_visit_crew", {
         p_input: rpcInput(ctx, { visitId: id, crewId: input.crewId }, meta),
       });
       return fromRpc(data, error, "VISIT_ASSIGN_CREW_RPC_ERROR", "visit", asVisit);

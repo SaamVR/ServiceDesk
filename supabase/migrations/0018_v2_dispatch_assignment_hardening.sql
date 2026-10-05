@@ -1,4 +1,4 @@
--- ServiceDesk AI V2: authoritative dispatcher crew assignment
+-- ServiceDesk AI V2: dispatcher assignment concurrency/idempotency hardening
 -- Adds an atomic staff-only assignment command used by human-approved dispatch suggestions.
 
 create or replace function public.servicedesk_assign_visit_crew(p_input jsonb)

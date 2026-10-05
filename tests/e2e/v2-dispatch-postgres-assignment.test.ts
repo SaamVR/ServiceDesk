@@ -43,7 +43,7 @@ describe("V2 Postgres crew assignment adapter", () => {
         version: 8,
       }),
     });
-    expect(rpc).toHaveBeenCalledWith("servicedesk_assign_crew", {
+    expect(rpc).toHaveBeenCalledWith("servicedesk_assign_visit_crew", {
       p_input: {
         workspaceId: "ws_1",
         actorRole: "DISPATCHER",

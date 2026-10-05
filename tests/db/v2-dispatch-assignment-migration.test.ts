@@ -11,8 +11,8 @@ describe("V2 dispatch assignment migration contract", () => {
   it("keeps assignment service-role-only and security invoker", () => {
     expect(sql).toContain("security invoker");
     expect(sql).toContain("servicedesk_require_staff");
-    expect(sql).toContain("revoke all on function public.servicedesk_assign_crew(jsonb) from authenticated");
-    expect(sql).toContain("grant execute on function public.servicedesk_assign_crew(jsonb) to service_role");
+    expect(sql).toContain("revoke all on function public.servicedesk_assign_visit_crew(jsonb) from authenticated");
+    expect(sql).toContain("grant execute on function public.servicedesk_assign_visit_crew(jsonb) to service_role");
   });
 
   it("guards version, active crew, overlap and idempotency", () => {

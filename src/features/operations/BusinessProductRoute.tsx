@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import {
   CustomerCard,
   CustomerEmptyState,
@@ -6,12 +7,15 @@ import {
   PublicBusinessShell,
 } from "@/components/product/CustomerFacingShell";
 import { buildBusinessModuleHref, businessNavigation, type BusinessModule } from "./business-modules";
-import { loadPublicBusiness } from "./public-business-runtime";
+import { loadPublicBusiness, submitPublicEnquiry } from "./public-business-runtime";
+import { FormActions, FormField, FormGrid, FormSection, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import styles from "./BusinessProductRoute.module.css";
 
 interface BusinessProductRouteProps {
   slug: string;
   module: BusinessModule;
+  notice?: string;
+  error?: string;
 }
 
 function serviceInitial(name: string) {
@@ -109,28 +113,119 @@ function HomeView({
   );
 }
 
-function EnquiryView({ slug, businessName }: { slug: string; businessName: string }) {
+function EnquiryView({
+  slug,
+  businessName,
+  services,
+  notice,
+  error,
+}: {
+  slug: string;
+  businessName: string;
+  services: Array<{ code: string; name: string; requiresReview: boolean }>;
+  notice?: string;
+  error?: string;
+}) {
+  const idempotencyKey = crypto.randomUUID();
+
+  async function submit(formData: FormData) {
+    "use server";
+    const bedroomsRaw = String(formData.get("bedrooms") ?? "");
+    const bathroomsRaw = String(formData.get("bathrooms") ?? "");
+    const result = await submitPublicEnquiry(slug, {
+      displayName: String(formData.get("displayName") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      serviceCode: String(formData.get("serviceCode") ?? ""),
+      preferredDate: String(formData.get("preferredDate") ?? ""),
+      bedrooms: bedroomsRaw ? Number(bedroomsRaw) : undefined,
+      bathrooms: bathroomsRaw ? Number(bathroomsRaw) : undefined,
+      message: String(formData.get("message") ?? ""),
+      idempotencyKey: String(formData.get("idempotencyKey") ?? ""),
+    });
+    const key = result.ok ? "notice" : "error";
+    redirect(
+      buildBusinessModuleHref(slug, "enquire") +
+        "?" +
+        key +
+        "=" +
+        encodeURIComponent(result.message),
+    );
+  }
+
   return (
     <>
       <CustomerPageHeader
         eyebrow={businessName}
         title="Tell us what you need"
-        description="New online enquiries cannot be submitted from this page yet."
+        description="Send the details below and the team can review your request and follow up."
         backHref={buildBusinessModuleHref(slug, "home")}
         backLabel="Services"
       />
 
       <div className={styles.narrow}>
-        <CustomerCard title="Online enquiry">
-          <CustomerNotice
-            title="Enquiry form temporarily unavailable"
-            description="No request will be created from this page right now. Existing customers can open their account to review current quotes and bookings."
-            tone="info"
-          />
-          <div className={styles.actionRow}>
-            <a className={styles.primaryButton} href="/portal">Open customer account</a>
-            <a className={styles.secondaryButton} href={buildBusinessModuleHref(slug, "home")}>View services</a>
-          </div>
+        {notice ? <CustomerNotice title="Enquiry sent" description={notice} tone="success" /> : null}
+        {error ? <CustomerNotice title="Could not send enquiry" description={error} tone="warning" /> : null}
+
+        <CustomerCard title="Service enquiry">
+          <form action={submit}>
+            <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+            <FormSection
+              title="Your details"
+              description="Add at least one way for the team to contact you."
+            >
+              <FormGrid columns={2}>
+                <FormField id="public-enquiry-name" label="Name" required>
+                  {({ id, describedBy, invalid }) => (
+                    <TextInput id={id} name="displayName" autoComplete="name" required describedBy={describedBy} invalid={invalid} />
+                  )}
+                </FormField>
+                <FormField id="public-enquiry-service" label="Service" required>
+                  {({ id, describedBy, invalid }) => (
+                    <SelectInput id={id} name="serviceCode" required describedBy={describedBy} invalid={invalid}>
+                      <option value="">Choose a service</option>
+                      {services.map((service) => <option key={service.code} value={service.code}>{service.name}</option>)}
+                    </SelectInput>
+                  )}
+                </FormField>
+                <FormField id="public-enquiry-email" label="Email">
+                  {({ id, describedBy, invalid }) => (
+                    <TextInput id={id} name="email" type="email" autoComplete="email" describedBy={describedBy} invalid={invalid} />
+                  )}
+                </FormField>
+                <FormField id="public-enquiry-phone" label="Phone">
+                  {({ id, describedBy, invalid }) => (
+                    <TextInput id={id} name="phone" type="tel" autoComplete="tel" describedBy={describedBy} invalid={invalid} />
+                  )}
+                </FormField>
+                <FormField id="public-enquiry-date" label="Preferred date">
+                  {({ id, describedBy, invalid }) => (
+                    <TextInput id={id} name="preferredDate" type="date" describedBy={describedBy} invalid={invalid} />
+                  )}
+                </FormField>
+                <FormField id="public-enquiry-bedrooms" label="Bedrooms">
+                  {({ id, describedBy, invalid }) => (
+                    <TextInput id={id} name="bedrooms" type="number" min={0} max={10} inputMode="numeric" describedBy={describedBy} invalid={invalid} />
+                  )}
+                </FormField>
+                <FormField id="public-enquiry-bathrooms" label="Bathrooms">
+                  {({ id, describedBy, invalid }) => (
+                    <TextInput id={id} name="bathrooms" type="number" min={0} max={10} inputMode="numeric" describedBy={describedBy} invalid={invalid} />
+                  )}
+                </FormField>
+              </FormGrid>
+              <FormField id="public-enquiry-message" label="Anything else we should know?">
+                {({ id, describedBy, invalid }) => (
+                  <TextArea id={id} name="message" rows={5} maxLength={2000} describedBy={describedBy} invalid={invalid} />
+                )}
+              </FormField>
+              <FormActions>
+                <button className={styles.primaryButton} type="submit" disabled={services.length === 0}>
+                  Send enquiry
+                </button>
+              </FormActions>
+            </FormSection>
+          </form>
         </CustomerCard>
       </div>
     </>
@@ -175,7 +270,7 @@ function BookingView({ slug, businessName }: { slug: string; businessName: strin
   );
 }
 
-export async function BusinessProductRoute({ slug, module }: BusinessProductRouteProps) {
+export async function BusinessProductRoute({ slug, module, notice, error }: BusinessProductRouteProps) {
   const result = await loadPublicBusiness(slug);
   const businessName = result.ok ? result.value.workspace.name : "Service business";
   const homeHref = buildBusinessModuleHref(slug, "home");
@@ -195,7 +290,13 @@ export async function BusinessProductRoute({ slug, module }: BusinessProductRout
             services={result.value.services}
           />
         ) : module === "enquire" ? (
-          <EnquiryView slug={slug} businessName={result.value.workspace.name} />
+          <EnquiryView
+            slug={slug}
+            businessName={result.value.workspace.name}
+            services={result.value.services}
+            notice={notice}
+            error={error}
+          />
         ) : (
           <BookingView slug={slug} businessName={result.value.workspace.name} />
         )
