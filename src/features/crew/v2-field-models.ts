@@ -49,11 +49,11 @@ function endAt(visit: VisitDTO) {
   return new Date(new Date(visit.startAt).getTime() + (visit.serviceMinutes + visit.bufferMinutes) * 60_000);
 }
 
-function formatWindow(visit: VisitDTO) {
+function formatWindow(visit: VisitDTO, timeZone = "UTC") {
   const start = new Date(visit.startAt);
   const end = endAt(visit);
-  const format = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
-  return `${format.format(start)}–${format.format(end)} UTC`;
+  const format = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone });
+  return `${format.format(start)}–${format.format(end)}`;
 }
 
 function statusLabel(status: VisitDTO["status"]) {
@@ -78,15 +78,19 @@ function exceptionFor(visit: VisitDTO, sync: CrewSyncState, now: string): CrewTo
   return late ? "LATE_UNSTARTED" : undefined;
 }
 
-export function buildCrewTodayJobs(jobs: readonly CrewTodayJobInput[], now: string): CrewTodayJobView[] {
+export function buildCrewTodayJobs(
+  jobs: readonly CrewTodayJobInput[],
+  now: string,
+  timeZone = "UTC",
+): CrewTodayJobView[] {
   return [...jobs]
     .sort((a, b) => a.visit.startAt.localeCompare(b.visit.startAt) || a.visit.id.localeCompare(b.visit.id))
     .map(({ request, visit, context, sync }) => ({
       visitId: visit.id,
       serviceLabel: request.serviceCode ?? "Service visit",
-      timeWindowLabel: formatWindow(visit),
+      timeWindowLabel: formatWindow(visit, timeZone),
       statusLabel: statusLabel(visit.status),
-      locationLabel: context.authorized ? context.locationLabel ?? "Location not supplied" : "Location hidden",
+      locationLabel: context.authorized ? context.locationLabel ?? "Address unavailable" : "Address hidden",
       customerLabel: context.authorized ? context.customerLabel : undefined,
       highPriorityNotes: context.authorized ? context.highPriorityNotes ?? [] : [],
       progressPercent: progressByStatus[visit.status],
@@ -121,7 +125,7 @@ export function buildCrewEvidenceGate(
   const canSubmitReview = visit.status === "IN_PROGRESS" && requiredEvidenceComplete;
   let blocker: string | undefined;
   if (visit.status !== "IN_PROGRESS") blocker = "Review submission is available only while the job is in progress.";
-  else if (!beforeEvidencePresent || !afterEvidencePresent) blocker = "Before and after evidence are required by the authoritative visit transition gate.";
+  else if (!beforeEvidencePresent || !afterEvidencePresent) blocker = "Before and after evidence are required before review.";
 
   return {
     beforeEvidencePresent,
@@ -133,7 +137,7 @@ export function buildCrewEvidenceGate(
   };
 }
 
-export function buildCrewJobDetailView(input: CrewJobDetailInput) {
+export function buildCrewJobDetailView(input: CrewJobDetailInput, timeZone = "UTC") {
   const gate = buildCrewEvidenceGate(input.visit, input.evidence);
   const transition = getCrewOperableTransitionAction(input.visit);
   const completedChecklist = input.checklist.filter((item) => item.completed).length;
@@ -142,8 +146,8 @@ export function buildCrewJobDetailView(input: CrewJobDetailInput) {
     version: input.visit.version,
     serviceLabel: input.request.serviceCode ?? "Service visit",
     statusLabel: statusLabel(input.visit.status),
-    timeWindowLabel: formatWindow(input.visit),
-    locationLabel: input.context.authorized ? input.context.locationLabel ?? "Location not supplied" : "Location hidden",
+    timeWindowLabel: formatWindow(input.visit, timeZone),
+    locationLabel: input.context.authorized ? input.context.locationLabel ?? "Address unavailable" : "Address hidden",
     customerLabel: input.context.authorized ? input.context.customerLabel : undefined,
     serviceNotes: input.context.authorized ? input.context.serviceNotes : undefined,
     accessNotes: input.context.authorized ? input.context.accessNotes : undefined,
@@ -157,8 +161,8 @@ export function buildCrewJobDetailView(input: CrewJobDetailInput) {
     syncLabel: syncStatusLabel(input.sync),
     syncState: input.sync.status,
     uploadState: input.uploadTransportAvailable
-      ? "Evidence reference transport available"
-      : "Image upload transport is not implemented in this Product lane; no fake upload control is shown.",
-    authorizationLabel: input.context.authorized ? "Crew scope verified by server snapshot" : "Private job context redacted",
+      ? "Photo evidence can be added from this device."
+      : "Photo upload is not available yet. Existing evidence is still shown.",
+    authorizationLabel: input.context.authorized ? "Assigned to your crew" : "Job details are restricted.",
   };
 }
