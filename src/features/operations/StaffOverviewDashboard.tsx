@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { EmptyState, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { buildStaffModuleHref } from "@/features/operations/staff-modules";
-import type { WorkspaceSnapshot } from "@/server/core/facade";
+import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { formatMinorMoney } from "./view-models";
 
 function attentionTone(severity: "INFO" | "WARNING" | "CRITICAL") {
@@ -14,12 +14,21 @@ function readable(value: string) {
   return value.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
 }
 
+function formatVisitStart(value?: string) {
+  if (!value) return "Not scheduled";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
 export function StaffOverviewDashboard({
   workspace,
   snapshot,
+  errorMessage,
 }: {
   workspace: string;
-  snapshot?: WorkspaceSnapshot;
+  snapshot?: OperationalStaffSnapshot;
+  errorMessage?: string;
 }) {
   if (!snapshot) {
     return (
@@ -32,7 +41,7 @@ export function StaffOverviewDashboard({
         <Panel>
           <EmptyState
             title="Workspace activity is unavailable"
-            description="We could not load workspace activity for this view. Try again after the operational data connection is available."
+            description={errorMessage ?? "We could not load workspace activity for this view. Try again after the operational data connection is available."}
           />
         </Panel>
       </>
