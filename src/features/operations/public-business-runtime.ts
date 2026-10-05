@@ -176,11 +176,13 @@ export async function submitPublicEnquiry(
     const errorMessage =
       code === "SERVICE_NOT_FOUND"
         ? "That service is no longer available. Refresh the page and choose another service."
-        : code === "PUBLIC_ENQUIRY_EMAIL_INVALID"
-          ? "Enter a valid email address."
-          : code === "PUBLIC_ENQUIRY_ROOMS_INVALID"
-            ? "Check the bedroom and bathroom counts."
-            : "Your enquiry could not be sent. Check the form and try again.";
+        : code === "PUBLIC_ENQUIRY_RATE_LIMITED"
+          ? "Too many enquiries were sent recently. Try again later or contact the business directly."
+          : code === "PUBLIC_ENQUIRY_EMAIL_INVALID"
+            ? "Enter a valid email address."
+            : code === "PUBLIC_ENQUIRY_ROOMS_INVALID"
+              ? "Check the bedroom and bathroom counts."
+              : "Your enquiry could not be sent. Check the form and try again.";
     return { ok: false, message: errorMessage };
   }
 
