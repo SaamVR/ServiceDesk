@@ -1,12 +1,27 @@
 import { redirect } from "next/navigation";
+import { DataCellStack, DataTable } from "@/components/product/DataTable";
+import {
+  CustomerCard,
+  CustomerEmptyState,
+  CustomerList,
+  CustomerListRow,
+  CustomerNotice,
+  CustomerPageHeader,
+  CustomerPortalShell,
+  CustomerStatus,
+  CustomerSummaryItem,
+  CustomerSummaryList,
+  type CustomerFacingTone,
+} from "@/components/product/CustomerFacingShell";
 import {
   acceptCustomerPortalQuote,
   loadCustomerPortalSnapshot,
   type CustomerPortalActionResult,
+  type CustomerPortalConsent,
   type CustomerPortalSnapshot,
 } from "./customer-product-runtime";
 import { formatMinorMoney } from "./view-models";
-import styles from "./OperationalProductRoute.module.css";
+import styles from "./CustomerProductRoute.module.css";
 
 type CustomerModule = "overview" | "properties" | "quote" | "booking" | "invoice" | "preferences";
 
@@ -25,10 +40,21 @@ function formatWhen(value?: string) {
     : new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-function statusTone(status: string) {
-  if (["PAID", "COMPLETED", "ACCEPTED", "DELIVERED", "READ"].includes(status)) return "success";
-  if (["FAILED", "CANCELLED", "VOID", "EXPIRED", "PAYMENT_REVIEW"].includes(status)) return "attention";
-  return "pending";
+function formatStatus(status: string) {
+  return status
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function statusTone(status: string): CustomerFacingTone {
+  if (["PAID", "COMPLETED", "ACCEPTED", "DELIVERED", "READ", "CONFIRMED", "GRANTED"].includes(status)) {
+    return "success";
+  }
+  if (["FAILED", "CANCELLED", "VOID"].includes(status)) return "danger";
+  if (["EXPIRED", "PAYMENT_REVIEW", "PENDING_REVIEW", "REVOKED"].includes(status)) return "warning";
+  if (["SENT", "SCHEDULED", "OPEN"].includes(status)) return "info";
+  return "neutral";
 }
 
 function actionRedirect(path: string, result: CustomerPortalActionResult): never {
@@ -38,30 +64,31 @@ function actionRedirect(path: string, result: CustomerPortalActionResult): never
 
 function Notice({ notice, error }: { notice?: string; error?: string }) {
   if (!notice && !error) return null;
-  return (
-    <p className={error ? styles.errorNotice : styles.successNotice} role="status">
-      {error ?? notice}
-    </p>
+
+  return error ? (
+    <CustomerNotice
+      title="We couldn't complete that action"
+      description={error}
+      tone="danger"
+      assertive
+    />
+  ) : (
+    <CustomerNotice title="Account updated" description={notice} tone="success" />
   );
 }
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
-    <section className="plain-card">
-      <h2>{title}</h2>
-      <p>{detail}</p>
-    </section>
+    <CustomerEmptyState
+      title={title}
+      description={detail}
+      action={<a className={styles.secondaryButton} href="/portal">Back to overview</a>}
+    />
   );
 }
 
-function CustomerNavigation() {
-  return (
-    <nav className="site-nav" aria-label="Customer portal navigation">
-      <a href="/portal">Overview</a>
-      <a href="/portal/properties">Properties</a>
-      <a href="/portal/preferences">Preferences</a>
-    </nav>
-  );
+function Status({ value }: { value: string }) {
+  return <CustomerStatus tone={statusTone(value)}>{formatStatus(value)}</CustomerStatus>;
 }
 
 function OverviewView({ data }: { data: CustomerPortalSnapshot }) {
@@ -69,60 +96,112 @@ function OverviewView({ data }: { data: CustomerPortalSnapshot }) {
   const upcomingVisits = data.visits.filter((visit) => Date.parse(visit.startAt) >= Date.now());
   const openInvoices = data.invoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
 
+  const sentQuote = activeQuotes.find((quote) => quote.status === "SENT");
+  const nextVisit = upcomingVisits.at(-1) ?? upcomingVisits[0];
+  const outstandingInvoice = openInvoices[0];
+
   return (
     <div className={styles.stack}>
-      <div className="metric-grid">
-        <div><dt>Properties</dt><dd>{data.properties.length}</dd></div>
-        <div><dt>Open quotes</dt><dd>{activeQuotes.length}</dd></div>
-        <div><dt>Upcoming visits</dt><dd>{upcomingVisits.length}</dd></div>
-        <div><dt>Open invoices</dt><dd>{openInvoices.length}</dd></div>
+      <dl className={styles.overviewMetrics} aria-label="Account summary">
+        <div className={styles.metric}><dt>Properties</dt><dd>{data.properties.length}</dd></div>
+        <div className={styles.metric}><dt>Open quotes</dt><dd>{activeQuotes.length}</dd></div>
+        <div className={styles.metric}><dt>Upcoming bookings</dt><dd>{upcomingVisits.length}</dd></div>
+        <div className={styles.metric}><dt>Open invoices</dt><dd>{openInvoices.length}</dd></div>
+      </dl>
+
+      <CustomerCard title="Next steps">
+        {sentQuote || nextVisit || outstandingInvoice ? (
+          <CustomerList>
+            {sentQuote ? (
+              <CustomerListRow
+                title="Review your quote"
+                meta={formatMinorMoney(sentQuote.totalMinor, sentQuote.currency)}
+                status={<Status value={sentQuote.status} />}
+                href={"/portal/quotes/" + encodeURIComponent(sentQuote.id)}
+              />
+            ) : null}
+            {nextVisit ? (
+              <CustomerListRow
+                title="Upcoming booking"
+                meta={formatWhen(nextVisit.startAt)}
+                status={<Status value={nextVisit.status} />}
+                href={"/portal/bookings/" + encodeURIComponent(nextVisit.id)}
+              />
+            ) : null}
+            {outstandingInvoice ? (
+              <CustomerListRow
+                title="Invoice with an outstanding balance"
+                meta={formatMinorMoney(outstandingInvoice.balanceMinor, outstandingInvoice.currency)}
+                status={<Status value={outstandingInvoice.status} />}
+                href={"/portal/invoices/" + encodeURIComponent(outstandingInvoice.id)}
+              />
+            ) : null}
+          </CustomerList>
+        ) : (
+          <CustomerEmptyState
+            title="You're all caught up"
+            description="There are no quotes, upcoming bookings or invoice balances that need your attention right now."
+          />
+        )}
+      </CustomerCard>
+
+      <div className={styles.contentGrid}>
+        <div className={styles.stack}>
+          <CustomerCard title="Quotes">
+            {activeQuotes.length === 0 ? (
+              <CustomerEmptyState title="No active quotes" description="New quotes will appear here when they are ready for you." />
+            ) : (
+              <CustomerList>
+                {activeQuotes.slice(0, 6).map((quote) => (
+                  <CustomerListRow
+                    key={quote.id}
+                    title={data.requests.find((request) => request.id === quote.requestId)?.serviceLabel ?? "Service quote"}
+                    meta={formatMinorMoney(quote.totalMinor, quote.currency)}
+                    status={<Status value={quote.status} />}
+                    href={"/portal/quotes/" + encodeURIComponent(quote.id)}
+                  />
+                ))}
+              </CustomerList>
+            )}
+          </CustomerCard>
+
+          <CustomerCard title="Bookings">
+            {data.visits.length === 0 ? (
+              <CustomerEmptyState title="No bookings yet" description="Confirmed service visits will appear here." />
+            ) : (
+              <CustomerList>
+                {data.visits.slice(0, 6).map((visit) => (
+                  <CustomerListRow
+                    key={visit.id}
+                    title={data.requests.find((request) => request.id === visit.requestId)?.serviceLabel ?? "Service booking"}
+                    meta={formatWhen(visit.startAt)}
+                    status={<Status value={visit.status} />}
+                    href={"/portal/bookings/" + encodeURIComponent(visit.id)}
+                  />
+                ))}
+              </CustomerList>
+            )}
+          </CustomerCard>
+        </div>
+
+        <CustomerCard title="Invoices">
+          {data.invoices.length === 0 ? (
+            <CustomerEmptyState title="No invoices yet" description="Invoices will appear here after they are issued." />
+          ) : (
+            <CustomerList>
+              {data.invoices.slice(0, 6).map((invoice) => (
+                <CustomerListRow
+                  key={invoice.id}
+                  title={invoice.balanceMinor > 0 ? formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due" : "Paid in full"}
+                  meta={formatMinorMoney(invoice.totalMinor, invoice.currency) + " total"}
+                  status={<Status value={invoice.status} />}
+                  href={"/portal/invoices/" + encodeURIComponent(invoice.id)}
+                />
+              ))}
+            </CustomerList>
+          )}
+        </CustomerCard>
       </div>
-
-      <section className="plain-card">
-        <h2>Quotes</h2>
-        {activeQuotes.length === 0 ? (
-          <p>No active quotes.</p>
-        ) : (
-          activeQuotes.slice(0, 6).map((quote) => (
-            <p key={quote.id}>
-              <a href={"/portal/quotes/" + encodeURIComponent(quote.id)}>
-                {data.requests.find((request) => request.id === quote.requestId)?.serviceLabel ?? "Service quote"}
-              </a>
-              {" · "}{formatMinorMoney(quote.totalMinor, quote.currency)} · {quote.status.replaceAll("_", " ")}
-            </p>
-          ))
-        )}
-      </section>
-
-      <section className="plain-card">
-        <h2>Visits</h2>
-        {data.visits.length === 0 ? (
-          <p>No visits yet.</p>
-        ) : (
-          data.visits.slice(0, 6).map((visit) => (
-            <p key={visit.id}>
-              <a href={"/portal/bookings/" + encodeURIComponent(visit.id)}>{formatWhen(visit.startAt)}</a>
-              {" · "}{visit.status.replaceAll("_", " ")}
-            </p>
-          ))
-        )}
-      </section>
-
-      <section className="plain-card">
-        <h2>Invoices</h2>
-        {data.invoices.length === 0 ? (
-          <p>No invoices yet.</p>
-        ) : (
-          data.invoices.slice(0, 6).map((invoice) => (
-            <p key={invoice.id}>
-              <a href={"/portal/invoices/" + encodeURIComponent(invoice.id)}>
-                {formatMinorMoney(invoice.balanceMinor, invoice.currency)} balance
-              </a>
-              {" · "}{invoice.status.replaceAll("_", " ")}
-            </p>
-          ))
-        )}
-      </section>
     </div>
   );
 }
@@ -131,16 +210,29 @@ function PropertiesView({ data }: { data: CustomerPortalSnapshot }) {
   if (data.properties.length === 0) {
     return <EmptyState title="No properties" detail="No property is linked to your customer account yet." />;
   }
+
   return (
-    <div className={styles.stack}>
+    <div className={styles.propertyGrid}>
       {data.properties.map((property) => (
-        <section className="plain-card" key={property.id}>
-          <p className="label">Property</p>
-          <h2>{property.label}</h2>
-          <p>{property.address}</p>
-          {property.serviceNotes && <p><strong>Service notes:</strong> {property.serviceNotes}</p>}
-          {property.accessNotes && <p><strong>Access notes:</strong> {property.accessNotes}</p>}
-        </section>
+        <CustomerCard title={property.label} eyebrow="Property" key={property.id}>
+          <p className={styles.propertyAddress}>{property.address || "Address not available"}</p>
+          {property.serviceNotes || property.accessNotes ? (
+            <div className={styles.noteList}>
+              {property.serviceNotes ? (
+                <div className={styles.note}>
+                  <strong>Service notes</strong>
+                  <span>{property.serviceNotes}</span>
+                </div>
+              ) : null}
+              {property.accessNotes ? (
+                <div className={styles.note}>
+                  <strong>Access notes</strong>
+                  <span>{property.accessNotes}</span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </CustomerCard>
       ))}
     </div>
   );
@@ -165,30 +257,48 @@ function QuoteView({
   }
 
   return (
-    <section className="plain-card">
-      <div className={styles.sectionHeader}>
+    <CustomerCard
+      className={styles.detailCard}
+      title={request?.serviceLabel ?? "Service quote"}
+      eyebrow="Quote details"
+      action={<Status value={quote.status} />}
+    >
+      <div className={styles.detailHeader}>
         <div>
-          <p className="label">{request?.serviceLabel ?? "Service quote"}</p>
+          <p className={styles.detailLabel}>Quote total</p>
           <h2>{formatMinorMoney(quote.totalMinor, quote.currency)}</h2>
         </div>
-        <span className={"status-pill " + statusTone(quote.status)}>{quote.status.replaceAll("_", " ")}</span>
       </div>
-      <dl className="summary-list">
-        <div><dt>Deposit</dt><dd>{formatMinorMoney(quote.depositMinor, quote.currency)}</dd></div>
-        <div><dt>Remaining balance</dt><dd>{formatMinorMoney(quote.balanceMinor, quote.currency)}</dd></div>
-        <div><dt>Estimated service time</dt><dd>{quote.durationMinutes} min</dd></div>
-        <div><dt>Valid until</dt><dd>{formatWhen(quote.validUntil)}</dd></div>
-      </dl>
+
+      <CustomerSummaryList>
+        <CustomerSummaryItem label="Deposit" value={formatMinorMoney(quote.depositMinor, quote.currency)} />
+        <CustomerSummaryItem label="Remaining balance" value={formatMinorMoney(quote.balanceMinor, quote.currency)} />
+        <CustomerSummaryItem label="Estimated service time" value={quote.durationMinutes + " min"} />
+        <CustomerSummaryItem label="Valid until" value={formatWhen(quote.validUntil)} />
+      </CustomerSummaryList>
+
       {quote.status === "SENT" ? (
-        <form action={acceptQuote}>
-          <button className="button-primary" type="submit">Accept quote</button>
+        <form className={styles.detailActions} action={acceptQuote}>
+          <button className={styles.primaryButton} type="submit">Accept quote</button>
         </form>
       ) : quote.status === "ACCEPTED" ? (
-        <p>Quote accepted. The business can now reserve capacity for your booking.</p>
+        <div className={styles.detailActions}>
+          <CustomerNotice
+            title="Quote accepted"
+            description="The business can now arrange the next available booking step."
+            tone="success"
+          />
+        </div>
       ) : (
-        <p>No action is available for this quote right now.</p>
+        <div className={styles.detailActions}>
+          <CustomerNotice
+            title="No action needed"
+            description="There isn't an available action for this quote right now."
+            tone="info"
+          />
+        </div>
       )}
-    </section>
+    </CustomerCard>
   );
 }
 
@@ -203,36 +313,51 @@ function BookingView({
   if (!visit) {
     return <EmptyState title="Booking not found" detail="This booking is not available in your account." />;
   }
+
   const request = data.requests.find((item) => item.id === visit.requestId);
   const invoice = data.invoices.find((item) => item.visitId === visit.id);
 
   return (
     <div className={styles.stack}>
-      <section className="plain-card">
-        <div className={styles.sectionHeader}>
-          <div>
-            <p className="label">{request?.serviceLabel ?? "Service visit"}</p>
-            <h2>{formatWhen(visit.startAt)}</h2>
-          </div>
-          <span className={"status-pill " + statusTone(visit.status)}>{visit.status.replaceAll("_", " ")}</span>
-        </div>
-        <dl className="summary-list">
-          <div><dt>Start</dt><dd>{formatWhen(visit.startAt)}</dd></div>
-          <div><dt>End</dt><dd>{formatWhen(visit.endAt)}</dd></div>
-          <div><dt>Payment</dt><dd>{invoice ? invoice.status.replaceAll("_", " ") : "No invoice yet"}</dd></div>
-        </dl>
-      </section>
-      <section className="plain-card">
-        <p className="label">Checkout</p>
-        <h2>Sandbox checkout only</h2>
-        <p>
-          Online checkout can start only after a current slot hold exists. Customer self-service
-          slot reservation is not available yet, so no payment success is shown or simulated here.
-        </p>
-        <button className="button-primary" type="button" disabled>
-          Start sandbox checkout
-        </button>
-      </section>
+      <CustomerCard
+        className={styles.detailCard}
+        title={request?.serviceLabel ?? "Service booking"}
+        eyebrow="Booking details"
+        action={<Status value={visit.status} />}
+      >
+        <CustomerSummaryList>
+          <CustomerSummaryItem label="Starts" value={formatWhen(visit.startAt)} />
+          <CustomerSummaryItem label="Ends" value={formatWhen(visit.endAt)} />
+          <CustomerSummaryItem label="Payment status" value={invoice ? formatStatus(invoice.status) : "No invoice issued"} />
+        </CustomerSummaryList>
+      </CustomerCard>
+
+      <CustomerCard className={styles.detailCard} title="Payment">
+        {invoice ? (
+          <>
+            <CustomerNotice
+              title={invoice.balanceMinor > 0 ? "Invoice available" : "Payment up to date"}
+              description={
+                invoice.balanceMinor > 0
+                  ? "Your invoice has an outstanding balance. Open it to review the current amount and payment status."
+                  : "There is no outstanding balance on this invoice."
+              }
+              tone={invoice.balanceMinor > 0 ? "warning" : "success"}
+            />
+            <div className={styles.detailActions}>
+              <a className={styles.primaryButton} href={"/portal/invoices/" + encodeURIComponent(invoice.id)}>
+                View invoice
+              </a>
+            </div>
+          </>
+        ) : (
+          <CustomerNotice
+            title="No invoice yet"
+            description="If payment is required, the business will make an invoice or payment option available in your account."
+            tone="info"
+          />
+        )}
+      </CustomerCard>
     </div>
   );
 }
@@ -250,62 +375,93 @@ function InvoiceView({
   }
 
   return (
-    <section className="plain-card">
-      <div className={styles.sectionHeader}>
-        <div>
-          <p className="label">Invoice</p>
-          <h2>{formatMinorMoney(invoice.totalMinor, invoice.currency)}</h2>
-        </div>
-        <span className={"status-pill " + statusTone(invoice.status)}>{invoice.status.replaceAll("_", " ")}</span>
+    <CustomerCard
+      className={styles.detailCard}
+      title={formatMinorMoney(invoice.totalMinor, invoice.currency)}
+      eyebrow="Invoice total"
+      action={<Status value={invoice.status} />}
+    >
+      <CustomerSummaryList>
+        <CustomerSummaryItem label="Total" value={formatMinorMoney(invoice.totalMinor, invoice.currency)} />
+        <CustomerSummaryItem label="Paid / allocated" value={formatMinorMoney(invoice.allocatedMinor, invoice.currency)} />
+        <CustomerSummaryItem label="Refunded" value={formatMinorMoney(invoice.refundedMinor, invoice.currency)} />
+        <CustomerSummaryItem label="Balance" value={formatMinorMoney(invoice.balanceMinor, invoice.currency)} />
+      </CustomerSummaryList>
+
+      <div className={styles.detailActions}>
+        {invoice.status === "PAID" || invoice.balanceMinor <= 0 ? (
+          <CustomerNotice
+            title="Payment complete"
+            description="This invoice has no outstanding balance."
+            tone="success"
+          />
+        ) : (
+          <CustomerNotice
+            title="Balance outstanding"
+            description="Online payment is not available from this invoice yet. Contact the business if you need help with payment."
+            tone="warning"
+          />
+        )}
       </div>
-      <dl className="summary-list">
-        <div><dt>Total</dt><dd>{formatMinorMoney(invoice.totalMinor, invoice.currency)}</dd></div>
-        <div><dt>Paid / allocated</dt><dd>{formatMinorMoney(invoice.allocatedMinor, invoice.currency)}</dd></div>
-        <div><dt>Refunded</dt><dd>{formatMinorMoney(invoice.refundedMinor, invoice.currency)}</dd></div>
-        <div><dt>Balance</dt><dd>{formatMinorMoney(invoice.balanceMinor, invoice.currency)}</dd></div>
-      </dl>
-      {invoice.status === "PAID" ? (
-        <p>Payment is recorded as paid.</p>
-      ) : (
-        <p>Payment remains outstanding until the invoice ledger records a verified or staff-recorded payment.</p>
-      )}
-    </section>
+    </CustomerCard>
   );
 }
 
 function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
+  const columns = [
+    {
+      id: "channel",
+      header: "Channel",
+      cell: (consent: CustomerPortalConsent) => <DataCellStack primary={formatStatus(consent.channel)} secondary={formatStatus(consent.purpose)} />,
+      priority: "primary" as const,
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (consent: CustomerPortalConsent) => <Status value={consent.status} />,
+      priority: "primary" as const,
+    },
+    {
+      id: "recorded",
+      header: "Recorded",
+      cell: (consent: CustomerPortalConsent) => formatWhen(consent.recordedAt),
+      priority: "secondary" as const,
+    },
+  ];
+
   return (
     <div className={styles.stack}>
-      <section className="plain-card">
-        <h2>Communication preferences</h2>
+      <CustomerCard title="Communication preferences">
         {data.consents.length === 0 ? (
-          <p>No communication preferences are recorded yet.</p>
+          <CustomerEmptyState
+            title="No preferences recorded"
+            description="Your saved communication preferences will appear here when they are available."
+          />
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead><tr><th>Channel</th><th>Purpose</th><th>Status</th><th>Recorded</th></tr></thead>
-              <tbody>
-                {data.consents.map((consent) => (
-                  <tr key={consent.id}>
-                    <td>{consent.channel}</td>
-                    <td>{consent.purpose}</td>
-                    <td>{consent.status}</td>
-                    <td>{formatWhen(consent.recordedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className={styles.customerTable}>
+            <DataTable
+              caption="Communication preferences"
+              columns={columns}
+              rows={data.consents}
+              getRowKey={(consent) => consent.id}
+              renderMobileRow={(consent) => (
+                <DataCellStack
+                  primary={formatStatus(consent.channel) + " · " + formatStatus(consent.status)}
+                  secondary={formatStatus(consent.purpose) + " · " + formatWhen(consent.recordedAt)}
+                />
+              )}
+            />
           </div>
         )}
-      </section>
-      <section className="plain-card">
-        <button className="button-secondary" type="button" disabled>
-          Update communication preferences
-        </button>
-        <p className="form-note">
-          Preference changes are not available from the portal yet. Your saved preferences remain unchanged.
-        </p>
-      </section>
+      </CustomerCard>
+
+      <CustomerCard title="Changes">
+        <CustomerNotice
+          title="Preference changes aren't available online yet"
+          description="Your saved preferences remain unchanged. Contact the business if you need to update them."
+          tone="info"
+        />
+      </CustomerCard>
     </div>
   );
 }
@@ -340,6 +496,20 @@ const moduleTitle: Record<CustomerModule, string> = {
   preferences: "Communication preferences",
 };
 
+const moduleDescription: Record<CustomerModule, string> = {
+  overview: "Keep track of quotes, bookings, invoices and the next steps for your services.",
+  properties: "Review the addresses and service notes linked to your account.",
+  quote: "Review the current quote, price and available next action.",
+  booking: "Review the confirmed service time and related payment status.",
+  invoice: "Review the latest invoice balance and payment status.",
+  preferences: "Review the communication preferences currently saved on your account.",
+};
+
+function activeSection(module: CustomerModule): "overview" | "properties" | "preferences" | "detail" {
+  if (module === "overview" || module === "properties" || module === "preferences") return module;
+  return "detail";
+}
+
 export async function CustomerProductRoute({
   module,
   resourceId,
@@ -347,36 +517,33 @@ export async function CustomerProductRoute({
   error,
 }: CustomerProductRouteProps) {
   const result = await loadCustomerPortalSnapshot();
+  const businessName = result.ok ? result.value.workspace.name : "Customer portal";
+  const customerName = result.ok ? result.value.customer.displayName : undefined;
 
   return (
-    <main className="site-shell">
-      <header className="site-header" aria-label="Customer portal navigation">
-        <a className="brand-lockup" href="/portal">
-          <span className="brand-mark" aria-hidden="true">SD</span>
-          <span>{result.ok ? result.value.workspace.name : "Customer portal"}</span>
-        </a>
-        <CustomerNavigation />
-      </header>
+    <CustomerPortalShell
+      businessName={businessName}
+      customerName={customerName}
+      activeSection={activeSection(module)}
+    >
+      <CustomerPageHeader
+        eyebrow="Customer account"
+        title={moduleTitle[module]}
+        description={moduleDescription[module]}
+        backHref={module === "quote" || module === "booking" || module === "invoice" ? "/portal" : undefined}
+        backLabel="Account overview"
+      />
 
-      <section className="section-card">
-        <div className="section-heading compact">
-          <p className="eyebrow">Customer portal</p>
-          <h1>{moduleTitle[module]}</h1>
-          {result.ok && <p className="lead">Welcome, {result.value.customer.displayName}.</p>}
-        </div>
+      <Notice notice={notice} error={error} />
 
-        <Notice notice={notice} error={error} />
-
-        {result.ok ? (
-          renderModule(module, result.value, resourceId)
-        ) : (
-          <section className="plain-card">
-            <span className="status-pill attention">{result.kind.replaceAll("_", " ")}</span>
-            <h2>{result.kind === "authentication" ? "Sign in required" : "Portal unavailable"}</h2>
-            <p>{result.message}</p>
-          </section>
-        )}
-      </section>
-    </main>
+      {result.ok ? (
+        renderModule(module, result.value, resourceId)
+      ) : (
+        <CustomerEmptyState
+          title={result.kind === "authentication" ? "Sign in required" : "Customer account unavailable"}
+          description={result.message}
+        />
+      )}
+    </CustomerPortalShell>
   );
 }
