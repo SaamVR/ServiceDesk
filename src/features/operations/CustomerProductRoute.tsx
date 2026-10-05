@@ -16,6 +16,7 @@ import {
 import {
   acceptCustomerPortalQuote,
   holdCustomerPortalSlot,
+  launchCustomerInvoiceSandboxCheckout,
   loadCustomerPortalSnapshot,
   updateCustomerCommunicationPreference,
   type CustomerPortalActionResult,
@@ -437,6 +438,17 @@ function InvoiceView({
     return <EmptyState title="Invoice not found" detail="This invoice is not available in your account." />;
   }
 
+  const selectedInvoiceId = invoice.id;
+
+  async function openSandboxCheckout() {
+    "use server";
+    const launched = await launchCustomerInvoiceSandboxCheckout(selectedInvoiceId);
+    if (!launched.ok) {
+      redirect(`/portal/invoices/${encodeURIComponent(selectedInvoiceId)}?error=${encodeURIComponent(launched.message)}`);
+    }
+    redirect(launched.checkoutPath);
+  }
+
   return (
     <CustomerCard
       className={styles.detailCard}
@@ -459,11 +471,18 @@ function InvoiceView({
             tone="success"
           />
         ) : (
-          <CustomerNotice
-            title="Balance outstanding"
-            description="Online payment is not available from this invoice yet. Contact the business if you need help with payment."
-            tone="warning"
-          />
+          <div className={styles.stack}>
+            <CustomerNotice
+              title="Sandbox payment available"
+              description="This project currently uses a Stripe-style SANDBOX/DEMO payment flow. No real money is charged. Paid status changes only after the signed sandbox webhook is verified and applied by ServiceDesk Core."
+              tone="warning"
+            />
+            <form action={openSandboxCheckout}>
+              <button className={styles.primaryButton} type="submit">
+                Open sandbox payment
+              </button>
+            </form>
+          </div>
         )}
       </div>
     </CustomerCard>

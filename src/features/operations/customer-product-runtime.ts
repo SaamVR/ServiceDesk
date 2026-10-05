@@ -2,9 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { ActorContext, QuoteDTO, SlotDTO } from "@/contracts";
-import type { SupabaseRpcClient } from "@/server/core/payment-application-postgres";
+import { createPostgresPaymentApplicationFacadeMethods, type SupabaseRpcClient } from "@/server/core/payment-application-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
 import { createCustomerBookingFactory } from "@/features/schedule/customer-booking-boundary";
+import { FixtureStripePaymentAdapter, signStripeFixturePayload } from "@/server/integrations/payments/adapter";
+import { createPaymentWebhookApplicationStore } from "@/server/integrations/payments/core-application-bridge";
+import { handleStripePaymentWebhook } from "@/server/api-handlers/provider-stripe";
 
 type Row = Record<string, unknown>;
 
@@ -108,6 +111,29 @@ export type CustomerPortalResult =
 
 export type CustomerPortalActionResult =
   | { ok: true; message: string }
+  | { ok: false; message: string };
+
+export interface CustomerSandboxCheckoutSession {
+  id: string;
+  invoiceId: string;
+  quoteId: string;
+  amountMinor: number;
+  currency: string;
+  status: "OPEN" | "APPLIED" | "DUPLICATE" | "PAYMENT_REVIEW" | "EXPIRED" | "CANCELLED";
+  expiresAt: string;
+  currentInvoiceBalanceMinor: number;
+  invoiceStatus: string;
+  workspaceName: string;
+  customerName: string;
+  workspaceTimezone: string;
+}
+
+export type CustomerSandboxCheckoutResult =
+  | { ok: true; value: CustomerSandboxCheckoutSession }
+  | { ok: false; message: string };
+
+export type CustomerSandboxCheckoutLaunchResult =
+  | { ok: true; checkoutPath: string }
   | { ok: false; message: string };
 
 interface ResolvedCustomer {
@@ -619,4 +645,307 @@ export async function updateCustomerCommunicationPreference(input: {
       ? "Communication preference enabled."
       : "Communication preference revoked.",
   };
+}
+
+async function loadCustomerOwnedInvoiceContext(resolved: ResolvedCustomer, invoiceId: string) {
+  const invoiceResult = await resolved.service
+    .from("invoices")
+    .select("*")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", invoiceId)
+    .maybeSingle();
+  if (invoiceResult.error || !invoiceResult.data) {
+    return { ok: false as const, message: "This invoice is no longer available." };
+  }
+
+  const invoiceRow = invoiceResult.data as Row;
+  const quoteId = textValue(invoiceRow, "quote_id");
+  if (!quoteId) {
+    return { ok: false as const, message: "This invoice is not linked to a payable quote." };
+  }
+
+  const quoteResult = await resolved.service
+    .from("quotes")
+    .select("*")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (quoteResult.error || !quoteResult.data) {
+    return { ok: false as const, message: "The quote linked to this invoice is no longer available." };
+  }
+
+  const quote = mapQuote(quoteResult.data as Row, resolved.workspace.id);
+  const requestResult = await resolved.service
+    .from("requests")
+    .select("id,customer_id")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", quote.requestId)
+    .maybeSingle();
+  if (requestResult.error || !requestResult.data || requestResult.data.customer_id !== resolved.customer.id) {
+    return { ok: false as const, message: "This invoice is not linked to your customer account." };
+  }
+
+  return {
+    ok: true as const,
+    invoice: {
+      id: String(invoiceRow.id),
+      status: String(invoiceRow.status),
+      balanceMinor: numberValue(invoiceRow, "balance_minor"),
+      currency: String(invoiceRow.currency),
+    },
+    quote,
+  };
+}
+
+export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): Promise<CustomerSandboxCheckoutLaunchResult> {
+  const resolved = await resolveCustomer();
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
+  if (!context.ok) return context;
+  if (context.invoice.status === "VOID") return { ok: false, message: "This invoice is void and cannot be paid." };
+  if (context.invoice.status === "PAID" || context.invoice.balanceMinor <= 0) {
+    return { ok: false, message: "This invoice has no outstanding balance." };
+  }
+  if (context.invoice.currency !== context.quote.currency) {
+    return { ok: false, message: "Invoice and quote currency do not match. Payment requires staff review." };
+  }
+
+  const now = new Date();
+  const existing = await resolved.value.service
+    .from("sandbox_checkout_sessions")
+    .select("id,amount_minor,currency,status,expires_at")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("customer_id", resolved.value.customer.id)
+    .eq("invoice_id", context.invoice.id)
+    .eq("status", "OPEN")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!existing.error && existing.data) {
+    const expiresAt = new Date(String(existing.data.expires_at)).getTime();
+    if (
+      Number(existing.data.amount_minor) === context.invoice.balanceMinor
+      && String(existing.data.currency) === context.invoice.currency
+      && Number.isFinite(expiresAt)
+      && expiresAt > now.getTime()
+    ) {
+      return { ok: true, checkoutPath: `/portal/sandbox-checkout/${encodeURIComponent(String(existing.data.id))}` };
+    }
+  }
+
+  const sessionId = crypto.randomUUID();
+  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
+  const inserted = await resolved.value.service
+    .from("sandbox_checkout_sessions")
+    .insert({
+      id: sessionId,
+      workspace_id: resolved.value.workspace.id,
+      customer_id: resolved.value.customer.id,
+      quote_id: context.quote.id,
+      invoice_id: context.invoice.id,
+      purpose: "BALANCE",
+      amount_minor: context.invoice.balanceMinor,
+      currency: context.invoice.currency,
+      status: "OPEN",
+      expires_at: expiresAt,
+      updated_at: now.toISOString(),
+    });
+  if (inserted.error) {
+    return { ok: false, message: "Sandbox checkout could not be opened. Try again." };
+  }
+
+  return { ok: true, checkoutPath: `/portal/sandbox-checkout/${encodeURIComponent(sessionId)}` };
+}
+
+export async function loadCustomerSandboxCheckout(sessionId: string): Promise<CustomerSandboxCheckoutResult> {
+  const resolved = await resolveCustomer();
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const sessionResult = await resolved.value.service
+    .from("sandbox_checkout_sessions")
+    .select("*")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("customer_id", resolved.value.customer.id)
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (sessionResult.error || !sessionResult.data) {
+    return { ok: false, message: "This sandbox checkout session is not available." };
+  }
+
+  const row = sessionResult.data as Row;
+  let status = String(row.status) as CustomerSandboxCheckoutSession["status"];
+  const expiresAt = String(row.expires_at);
+  if (status === "OPEN" && Date.parse(expiresAt) <= Date.now()) {
+    status = "EXPIRED";
+    await resolved.value.service
+      .from("sandbox_checkout_sessions")
+      .update({ status: "EXPIRED", updated_at: new Date().toISOString() })
+      .eq("workspace_id", resolved.value.workspace.id)
+      .eq("id", sessionId)
+      .eq("status", "OPEN");
+  }
+
+  const context = await loadCustomerOwnedInvoiceContext(resolved.value, String(row.invoice_id));
+  if (!context.ok) return context;
+
+  return {
+    ok: true,
+    value: {
+      id: String(row.id),
+      invoiceId: String(row.invoice_id),
+      quoteId: String(row.quote_id),
+      amountMinor: numberValue(row, "amount_minor"),
+      currency: String(row.currency),
+      status,
+      expiresAt,
+      currentInvoiceBalanceMinor: context.invoice.balanceMinor,
+      invoiceStatus: context.invoice.status,
+      workspaceName: resolved.value.workspace.name,
+      customerName: resolved.value.customer.displayName,
+      workspaceTimezone: resolved.value.workspace.timezone,
+    },
+  };
+}
+
+export async function completeCustomerSandboxCheckout(sessionId: string): Promise<CustomerPortalActionResult & { invoiceId?: string }> {
+  const resolved = await resolveCustomer();
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const sessionResult = await resolved.value.service
+    .from("sandbox_checkout_sessions")
+    .select("*")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("customer_id", resolved.value.customer.id)
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (sessionResult.error || !sessionResult.data) {
+    return { ok: false, message: "This sandbox checkout session is not available." };
+  }
+
+  const session = sessionResult.data as Row;
+  const invoiceId = String(session.invoice_id);
+  const sessionStatus = String(session.status);
+  if (sessionStatus === "APPLIED" || sessionStatus === "DUPLICATE") {
+    return { ok: true, invoiceId, message: "Sandbox payment has already been verified and applied." };
+  }
+  if (sessionStatus !== "OPEN") {
+    return { ok: false, invoiceId, message: "This sandbox checkout session is no longer open." };
+  }
+
+  const now = new Date();
+  if (Date.parse(String(session.expires_at)) <= now.getTime()) {
+    await resolved.value.service
+      .from("sandbox_checkout_sessions")
+      .update({ status: "EXPIRED", updated_at: now.toISOString() })
+      .eq("workspace_id", resolved.value.workspace.id)
+      .eq("id", sessionId)
+      .eq("status", "OPEN");
+    return { ok: false, invoiceId, message: "This sandbox checkout session expired. Open a new payment session from the invoice." };
+  }
+
+  const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
+  if (!context.ok) return { ok: false, invoiceId, message: context.message };
+  const sessionAmount = numberValue(session, "amount_minor");
+  const sessionCurrency = String(session.currency);
+  if (
+    context.invoice.status === "VOID"
+    || context.invoice.status === "PAID"
+    || context.invoice.balanceMinor <= 0
+  ) {
+    return { ok: false, invoiceId, message: "The invoice is already closed. No sandbox payment was applied." };
+  }
+  if (context.invoice.balanceMinor !== sessionAmount || context.invoice.currency !== sessionCurrency) {
+    await resolved.value.service
+      .from("sandbox_checkout_sessions")
+      .update({ status: "CANCELLED", updated_at: now.toISOString() })
+      .eq("workspace_id", resolved.value.workspace.id)
+      .eq("id", sessionId)
+      .eq("status", "OPEN");
+    return { ok: false, invoiceId, message: "The invoice balance changed. Open a new sandbox payment session for the current balance." };
+  }
+
+  const compactId = sessionId.replaceAll("-", "");
+  const providerAccountId = "acct_servicedesk_internal_sandbox";
+  const providerEventId = `evt_sd_demo_${compactId}`;
+  const providerTransactionId = `pi_sd_demo_${compactId}`;
+  const nowIso = now.toISOString();
+  const payload = JSON.stringify({
+    id: providerEventId,
+    account: providerAccountId,
+    type: "checkout.session.completed",
+    created: Math.floor(now.getTime() / 1000),
+    data: {
+      object: {
+        id: `cs_sd_demo_${compactId}`,
+        amount_total: sessionAmount,
+        currency: sessionCurrency.toLowerCase(),
+        payment_intent: providerTransactionId,
+        metadata: {
+          workspaceId: resolved.value.workspace.id,
+          quoteId: context.quote.id,
+          invoiceId,
+          purpose: "BALANCE",
+        },
+      },
+    },
+  });
+
+  const fixtureSecret = `internal-demo-${crypto.randomUUID()}`;
+  const adapter = new FixtureStripePaymentAdapter(fixtureSecret, providerAccountId, () => nowIso);
+  const signature = signStripeFixturePayload(payload, fixtureSecret, Math.floor(now.getTime() / 1000));
+  const core = createPostgresPaymentApplicationFacadeMethods(resolved.value.rpc);
+  const handled = await handleStripePaymentWebhook({
+    rawBody: payload,
+    headers: { "stripe-signature": signature },
+    adapter,
+    store: createPaymentWebhookApplicationStore(core),
+  });
+
+  let result: string | undefined;
+  try {
+    result = handled.body ? String((JSON.parse(handled.body) as { result?: unknown }).result ?? "") : undefined;
+  } catch {
+    result = undefined;
+  }
+
+  if (handled.statusCode === 200 && (result === "APPLIED" || result === "DUPLICATE")) {
+    await resolved.value.service
+      .from("sandbox_checkout_sessions")
+      .update({
+        status: result,
+        provider_event_id: providerEventId,
+        provider_transaction_id: providerTransactionId,
+        completed_at: nowIso,
+        updated_at: nowIso,
+      })
+      .eq("workspace_id", resolved.value.workspace.id)
+      .eq("id", sessionId)
+      .eq("status", "OPEN");
+    return {
+      ok: true,
+      invoiceId,
+      message: result === "APPLIED"
+        ? "Sandbox payment verified and applied to the invoice."
+        : "Sandbox payment was already applied; no duplicate charge was recorded.",
+    };
+  }
+
+  if (handled.body?.includes("requested review")) {
+    await resolved.value.service
+      .from("sandbox_checkout_sessions")
+      .update({
+        status: "PAYMENT_REVIEW",
+        provider_event_id: providerEventId,
+        provider_transaction_id: providerTransactionId,
+        updated_at: nowIso,
+      })
+      .eq("workspace_id", resolved.value.workspace.id)
+      .eq("id", sessionId)
+      .eq("status", "OPEN");
+    return { ok: false, invoiceId, message: "The verified sandbox payment requires staff review. The invoice was not marked paid." };
+  }
+
+  return { ok: false, invoiceId, message: "Sandbox payment verification could not be completed. The invoice was not changed." };
 }

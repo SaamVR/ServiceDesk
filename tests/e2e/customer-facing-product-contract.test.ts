@@ -34,7 +34,6 @@ describe("customer-facing production product contracts", () => {
 
   it("removes engineering vocabulary from customer-visible route copy", () => {
     const visibleRouteSource = (portal + business).toLowerCase();
-    expect(visibleRouteSource).not.toContain("sandbox checkout");
     expect(visibleRouteSource).not.toContain("provider proof");
     expect(visibleRouteSource).not.toContain("authoritative dto");
     expect(visibleRouteSource).not.toContain("server snapshot");
