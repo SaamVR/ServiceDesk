@@ -11,8 +11,8 @@ describe("V2 invoices operational workspace", () => {
 
     expect(page).toContain("invoice?: string");
     expect(page).toContain("selectedInvoiceId={query.invoice}");
-    expect(route).toContain('data.invoices.find((invoice) => invoice.id === selectedInvoiceId)');
-    expect(route).toContain("selectedRowKey={selectedInvoice.id}");
+    expect(route).toContain('orderedInvoices.find((invoice) => invoice.id === selectedInvoiceId)');
+    expect(route).toContain('selected ? styles.financeQueueSelected : ""');
     expect(route).toContain('href={"?invoice=" + encodeURIComponent(invoice.id)}');
   });
 
