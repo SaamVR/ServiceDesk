@@ -30,12 +30,12 @@ describe("V2 professional module title hierarchy", () => {
     }
   });
   it("keeps workspace eyebrows semantically distinct from their task titles", () => {
-    expect(route).toContain('<p className={styles.crmEyebrow}>CRM</p>');
+    expect(route).toContain('<p className={styles.crmEyebrow}>Customer directory</p>');
     expect(route).toContain('<p className={styles.scheduleEyebrow}>Operations planning</p>');
-    expect(route).toContain('<p className={styles.adminEyebrow}>Insights</p>');
-    expect(route).not.toContain('<p className={styles.crmEyebrow}>Customer records</p>');
+    expect(route).toContain('<p className={styles.adminEyebrow}>Performance summary</p>');
+    expect(route).not.toContain('<p className={styles.crmEyebrow}>CRM</p>');
     expect(route).not.toContain('<p className={styles.scheduleEyebrow}>Planning & dispatch</p>');
-    expect(route).not.toContain('<p className={styles.adminEyebrow}>Business performance</p>');
+    expect(route).not.toContain('<p className={styles.adminEyebrow}>Insights</p>');
   });
 
 });
