@@ -110,8 +110,12 @@ function InboxView({
   workspaceSlug: string;
   selectedConversationId?: string;
 }) {
+  const orderedConversations = [...data.conversations].sort((left, right) =>
+    Date.parse(right.lastMessageAt ?? "1970-01-01T00:00:00.000Z")
+    - Date.parse(left.lastMessageAt ?? "1970-01-01T00:00:00.000Z"),
+  );
   const selected =
-    data.conversations.find((item) => item.id === selectedConversationId) ?? data.conversations[0];
+    orderedConversations.find((item) => item.id === selectedConversationId) ?? orderedConversations[0];
   if (!selected) {
     return <EmptyState title="Inbox is clear" detail="No customer conversations are stored for this workspace yet." />;
   }
@@ -121,7 +125,17 @@ function InboxView({
   const property = request?.propertyId
     ? data.properties.find((item) => item.id === request.propertyId)
     : undefined;
-  const messages = data.messages.filter((item) => item.conversationId === selected.id);
+  const messages = data.messages
+    .filter((item) => item.conversationId === selected.id)
+    .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
+  const lastMessageByConversation = new Map(
+    orderedConversations.map((conversation) => {
+      const latest = data.messages
+        .filter((message) => message.conversationId === conversation.id)
+        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
+      return [conversation.id, latest] as const;
+    }),
+  );
 
   async function handover(formData: FormData) {
     "use server";
@@ -152,108 +166,168 @@ function InboxView({
   const replySupported = selected.channel === "WHATSAPP" || selected.channel === "EMAIL";
 
   return (
-    <SplitWorkspace
-      ariaLabel="Customer conversations"
-      mobileFocus="detail"
-      list={
-        <WorkspacePane
-          title="Conversations"
-          description={data.conversations.length + " active thread" + (data.conversations.length === 1 ? "" : "s")}
-        >
-          <WorkspaceList ariaLabel="Conversation list">
-            {data.conversations.map((conversation) => {
-              const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
-              return (
-                <WorkspaceListItem
-                  href={"?conversation=" + encodeURIComponent(conversation.id)}
-                  selected={conversation.id === selected.id}
-                  ariaLabel={(threadCustomer?.displayName ?? "Customer") + " " + conversation.channel + " conversation"}
-                  key={conversation.id}
-                >
-                  <DataCellStack
-                    primary={threadCustomer?.displayName ?? "Customer"}
-                    secondary={conversation.channel + " · " + (conversation.handoverActive ? "Human takeover" : "Open")}
-                  />
-                </WorkspaceListItem>
-              );
-            })}
-          </WorkspaceList>
-        </WorkspacePane>
-      }
-      detail={
-        <WorkspacePane
-          title={customer?.displayName ?? "Customer conversation"}
-          description={selected.channel + " conversation"}
-          actions={
+    <section className={styles.inboxWorkspace} aria-label="Customer conversations">
+      <aside className={styles.inboxListPane} aria-label="Conversation list">
+        <header className={styles.inboxPaneHeader}>
+          <div>
+            <p className={styles.inboxEyebrow}>Inbox</p>
+            <h2>Conversations</h2>
+            <p>{orderedConversations.length} active thread{orderedConversations.length === 1 ? "" : "s"}</p>
+          </div>
+        </header>
+        <div className={styles.conversationList} role="list">
+          {orderedConversations.map((conversation) => {
+            const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
+            const latest = lastMessageByConversation.get(conversation.id);
+            const selectedThread = conversation.id === selected.id;
+            return (
+              <a
+                className={`${styles.conversationItem} ${selectedThread ? styles.conversationSelected : ""}`.trim()}
+                href={"?conversation=" + encodeURIComponent(conversation.id)}
+                aria-current={selectedThread ? "page" : undefined}
+                aria-label={(threadCustomer?.displayName ?? "Customer") + " " + conversation.channel + " conversation"}
+                role="listitem"
+                key={conversation.id}
+              >
+                <span className={styles.conversationAvatar} aria-hidden="true">
+                  {(threadCustomer?.displayName ?? "Customer").slice(0, 1).toUpperCase()}
+                </span>
+                <span className={styles.conversationCopy}>
+                  <span className={styles.conversationTopline}>
+                    <strong>{threadCustomer?.displayName ?? "Customer"}</strong>
+                    <small>{formatWhen(conversation.lastMessageAt, data.workspace.timezone)}</small>
+                  </span>
+                  <span className={styles.conversationPreview}>{latest?.body ?? (latest?.mediaReference ? "Media message" : "No messages yet")}</span>
+                  <span className={styles.conversationMeta}>
+                    <span>{conversation.channel}</span>
+                    {conversation.handoverActive ? <span className={styles.takeoverDot}>Human takeover</span> : <span>Open</span>}
+                  </span>
+                </span>
+              </a>
+            );
+          })}
+        </div>
+      </aside>
+
+      <section className={styles.inboxThreadPane} aria-label={customer?.displayName ?? "Customer conversation"}>
+        <header className={styles.threadHeader}>
+          <div className={styles.threadIdentity}>
+            <span className={styles.threadAvatar} aria-hidden="true">{(customer?.displayName ?? "C").slice(0, 1).toUpperCase()}</span>
+            <span>
+              <h2>{customer?.displayName ?? "Customer conversation"}</h2>
+              <p>{selected.channel} · {request?.serviceLabel ?? "No request linked"}</p>
+            </span>
+          </div>
+          <div className={styles.threadActions}>
+            <StatusBadge tone={selected.handoverActive ? "warning" : "success"}>
+              {selected.handoverActive ? "Human takeover" : "Open"}
+            </StatusBadge>
             <form action={handover}>
               <input type="hidden" name="conversationId" value={selected.id} />
               <input type="hidden" name="active" value={selected.handoverActive ? "false" : "true"} />
               <button className="app-button-secondary" type="submit">
-                {selected.handoverActive ? "Release takeover" : "Take over"}
+                {selected.handoverActive ? "Release" : "Take over"}
               </button>
             </form>
-          }
-        >
-          <div className={styles.timeline}>
-            {messages.length === 0 ? (
-              <AppEmptyState title="No messages yet" description="This conversation does not contain any stored messages." />
-            ) : (
-              messages.map((message) => (
-                <article className={styles.message} key={message.id}>
-                  <div>
-                    <strong>{message.direction === "INBOUND" ? customer?.displayName ?? "Customer" : message.senderKind}</strong>
-                    <p>{message.body ?? "Media message"}</p>
-                  </div>
-                  <small>
-                    {formatWhen(message.createdAt, data.workspace.timezone)} · {message.deliveryState ? message.deliveryState.replaceAll("_", " ") : "Received"}
-                  </small>
-                </article>
-              ))
-            )}
           </div>
+        </header>
 
-          <form action={reply}>
-            <input type="hidden" name="conversationId" value={selected.id} />
-            <FormSection
-              title="Reply"
-              description={replySupported
-                ? "Queued messages keep their stored delivery state until the channel reports a later status."
-                : "Replies are not available for this conversation channel."}
-            >
-              <FormField id="reply-body" label="Message" required>
-                {({ id, describedBy, invalid }) => (
-                  <TextArea
-                    id={id}
-                    name="body"
-                    rows={4}
-                    placeholder="Write a customer reply"
-                    disabled={!replySupported}
-                    required
-                    describedBy={describedBy}
-                    invalid={invalid}
-                  />
-                )}
-              </FormField>
-              <FormActions>
-                <button className="app-button-primary" type="submit" disabled={!replySupported}>
-                  Queue reply
-                </button>
-              </FormActions>
-            </FormSection>
-          </form>
-        </WorkspacePane>
-      }
-      context={
-        <WorkspacePane title="Customer context" description={request?.serviceLabel ?? "No request linked"}>
-          <dl className="summary-list">
-            <div><dt>Request</dt><dd>{request?.status ?? "None"}</dd></div>
-            <div><dt>Property</dt><dd>{property?.label ?? "None"}</dd></div>
-            <div><dt>Address</dt><dd>{property?.address ?? "Not available"}</dd></div>
-            <div><dt>Delivery</dt><dd>Stored per message</dd></div>
-          </dl>
-        </WorkspacePane>
-      }
-    />
+        <div className={styles.messageTimeline} aria-label="Message history">
+          {messages.length === 0 ? (
+            <div className={styles.inboxEmpty}>
+              <span aria-hidden="true">—</span>
+              <div><strong>No messages yet</strong><p>This conversation does not contain any stored messages.</p></div>
+            </div>
+          ) : (
+            messages.map((message) => {
+              const outbound = message.direction === "OUTBOUND";
+              const internal = message.direction === "INTERNAL";
+              const sender = message.direction === "INBOUND"
+                ? customer?.displayName ?? "Customer"
+                : message.senderKind === "STAFF"
+                  ? "Staff"
+                  : message.senderKind;
+              return (
+                <article
+                  className={`${styles.messageBubbleRow} ${outbound ? styles.messageOutbound : internal ? styles.messageInternal : styles.messageInbound}`}
+                  key={message.id}
+                >
+                  <div className={styles.messageBubble}>
+                    <div className={styles.messageSender}>
+                      <strong>{sender}</strong>
+                      <span>{formatWhen(message.createdAt, data.workspace.timezone)}</span>
+                    </div>
+                    <p>{message.body ?? "Media message"}</p>
+                    {message.deliveryState ? (
+                      <small className={styles.deliveryState}>{message.deliveryState.replaceAll("_", " ").toLowerCase()}</small>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </div>
+
+        <form action={reply} className={styles.replyComposer}>
+          <input type="hidden" name="conversationId" value={selected.id} />
+          <FormField id="reply-body" label="Reply" required>
+            {({ id, describedBy, invalid }) => (
+              <TextArea
+                id={id}
+                name="body"
+                rows={3}
+                placeholder={replySupported ? "Write a reply…" : "Replies are unavailable for this channel"}
+                disabled={!replySupported}
+                required
+                describedBy={describedBy}
+                invalid={invalid}
+              />
+            )}
+          </FormField>
+          <div className={styles.composerFooter}>
+            <span>{replySupported ? `Reply via ${selected.channel}` : "Read-only conversation"}</span>
+            <button className="app-button-primary" type="submit" disabled={!replySupported}>
+              Queue reply
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <aside className={styles.inboxContextPane} aria-label="Customer context">
+        <header className={styles.inboxPaneHeader}>
+          <div>
+            <p className={styles.inboxEyebrow}>Customer context</p>
+            <h2>{customer?.displayName ?? "Customer"}</h2>
+            <p>{request?.serviceLabel ?? "No request linked"}</p>
+          </div>
+        </header>
+
+        <div className={styles.contextSection}>
+          <span className={styles.contextLabel}>Request</span>
+          <strong>{request?.serviceLabel ?? "No linked request"}</strong>
+          <div className={styles.contextRow}>
+            <span>Status</span>
+            <StatusBadge tone={request ? statusBadgeTone(request.status) : "neutral"}>{request?.status.replaceAll("_", " ") ?? "None"}</StatusBadge>
+          </div>
+          {request?.requestedStartAt ? <div className={styles.contextRow}><span>Requested</span><strong>{formatWhen(request.requestedStartAt, data.workspace.timezone)}</strong></div> : null}
+        </div>
+
+        <div className={styles.contextSection}>
+          <span className={styles.contextLabel}>Property</span>
+          <strong>{property?.label ?? "No property linked"}</strong>
+          <p>{property?.address ?? "Address not available"}</p>
+          {property?.accessNotes ? <div className={styles.contextNote}><span>Access</span><p>{property.accessNotes}</p></div> : null}
+          {property?.serviceNotes ? <div className={styles.contextNote}><span>Service</span><p>{property.serviceNotes}</p></div> : null}
+        </div>
+
+        <div className={styles.contextSection}>
+          <span className={styles.contextLabel}>Conversation</span>
+          <div className={styles.contextRow}><span>Channel</span><strong>{selected.channel}</strong></div>
+          <div className={styles.contextRow}><span>Messages</span><strong>{messages.length}</strong></div>
+          <div className={styles.contextRow}><span>Delivery</span><strong>Stored per message</strong></div>
+        </div>
+      </aside>
+    </section>
   );
 }
 

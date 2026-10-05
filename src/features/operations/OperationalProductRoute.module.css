@@ -39,3 +39,188 @@
   padding: 0.85rem 0;
   border-bottom: 1px solid var(--border, #e4e7eb);
 }
+
+/* Professional shared inbox workspace. */
+.inboxWorkspace {
+  min-height: 680px;
+  display: grid;
+  grid-template-columns: 280px minmax(420px, 1fr) 290px;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.inboxListPane,
+.inboxThreadPane,
+.inboxContextPane {
+  min-width: 0;
+  min-height: 0;
+  background: var(--app-surface);
+}
+
+.inboxListPane { border-right: 1px solid var(--app-border); background: #fbfcfd; }
+.inboxThreadPane { display: grid; grid-template-rows: auto minmax(280px, 1fr) auto; }
+.inboxContextPane { border-left: 1px solid var(--app-border); background: #fbfcfd; }
+
+.inboxPaneHeader,
+.threadHeader {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.inboxEyebrow {
+  margin: 0 !important;
+  color: var(--app-text-subtle) !important;
+  font-size: .63rem !important;
+  font-weight: 760;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.inboxPaneHeader h2,
+.threadHeader h2 {
+  margin: 2px 0 0;
+  color: var(--app-text);
+  font-size: .9rem;
+  letter-spacing: -.012em;
+}
+
+.inboxPaneHeader p:last-child,
+.threadHeader p {
+  margin: 2px 0 0;
+  color: var(--app-text-muted);
+  font-size: .68rem;
+}
+
+.conversationList {
+  max-height: 720px;
+  overflow-y: auto;
+}
+
+.conversationItem {
+  min-width: 0;
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--app-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.conversationItem:hover { background: var(--app-surface-muted); text-decoration: none; }
+.conversationSelected { position: relative; background: var(--app-accent-soft); }
+.conversationSelected::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--app-accent); }
+
+.conversationAvatar,
+.threadAvatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: #edf0f2;
+  color: #4e5964;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.conversationSelected .conversationAvatar,
+.threadAvatar { background: var(--app-accent); color: #fff; }
+.conversationCopy { min-width: 0; display: grid; gap: 3px; }
+.conversationTopline { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.conversationTopline strong { overflow: hidden; color: var(--app-text); font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+.conversationTopline small { flex: 0 0 auto; color: var(--app-text-subtle); font-size: .58rem; }
+.conversationPreview { overflow: hidden; color: var(--app-text-muted); font-size: .68rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.conversationMeta { display: flex; align-items: center; gap: 6px; color: var(--app-text-subtle); font-size: .59rem; }
+.takeoverDot { color: var(--app-warning); font-weight: 680; }
+
+.threadIdentity { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.threadIdentity > span:last-child { min-width: 0; }
+.threadIdentity h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.threadActions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.threadActions form { margin: 0; }
+
+.messageTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-height: 320px;
+  max-height: 590px;
+  overflow-y: auto;
+  padding: 18px 20px;
+  background: #f7f8fa;
+}
+
+.messageBubbleRow { display: flex; }
+.messageOutbound { justify-content: flex-end; }
+.messageInternal { justify-content: center; }
+.messageBubble { width: fit-content; max-width: min(76%, 620px); padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 10px 10px 10px 3px; background: var(--app-surface); box-shadow: 0 1px 1px rgb(16 24 40 / 3%); }
+.messageOutbound .messageBubble { border-color: #cde1da; border-radius: 10px 10px 3px 10px; background: #eff8f4; }
+.messageInternal .messageBubble { max-width: 86%; border-style: dashed; background: #f1f3f5; }
+.messageSender { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.messageSender strong { color: var(--app-text); font-size: .66rem; }
+.messageSender span { color: var(--app-text-subtle); font-size: .57rem; }
+.messageBubble p { margin: 0; color: var(--app-text); font-size: .75rem; line-height: 1.48; white-space: pre-wrap; }
+.deliveryState { display: block; margin-top: 5px; color: var(--app-text-subtle); font-size: .58rem; text-align: right; text-transform: capitalize; }
+
+.inboxEmpty { min-height: 240px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--app-text-muted); }
+.inboxEmpty > span { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--app-border-strong); border-radius: 50%; }
+.inboxEmpty strong { color: var(--app-text); font-size: .78rem; }
+.inboxEmpty p { margin: 2px 0 0; font-size: .68rem; }
+
+.replyComposer {
+  display: grid;
+  gap: 7px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+.replyComposer :global(.app-form-field) { margin: 0; }
+.replyComposer textarea { min-height: 72px; resize: vertical; }
+.composerFooter { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.composerFooter > span { color: var(--app-text-subtle); font-size: .62rem; }
+
+.contextSection { display: grid; gap: 7px; padding: 13px 14px; border-bottom: 1px solid var(--app-border); }
+.contextLabel { color: var(--app-text-subtle); font-size: .61rem; font-weight: 760; letter-spacing: .07em; text-transform: uppercase; }
+.contextSection > strong { color: var(--app-text); font-size: .77rem; }
+.contextSection > p { margin: 0; color: var(--app-text-muted); font-size: .68rem; line-height: 1.45; }
+.contextRow { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+.contextRow > span:first-child { color: var(--app-text-muted); font-size: .66rem; }
+.contextRow > strong { max-width: 62%; color: var(--app-text); font-size: .66rem; text-align: right; }
+.contextNote { padding: 8px 9px; border-radius: 7px; background: var(--app-surface-muted); }
+.contextNote > span { color: var(--app-text-subtle); font-size: .59rem; font-weight: 730; text-transform: uppercase; }
+.contextNote p { margin: 3px 0 0; color: var(--app-text); font-size: .67rem; line-height: 1.42; }
+
+@media (max-width: 1180px) {
+  .inboxWorkspace { grid-template-columns: 250px minmax(0, 1fr); }
+  .inboxContextPane { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-left: 0; border-top: 1px solid var(--app-border); }
+  .inboxContextPane > .inboxPaneHeader { grid-column: 1 / -1; }
+  .contextSection { border-bottom: 0; border-right: 1px solid var(--app-border); }
+  .contextSection:last-child { border-right: 0; }
+}
+
+@media (max-width: 760px) {
+  .inboxWorkspace { min-height: 0; grid-template-columns: 1fr; overflow: visible; border: 0; background: transparent; box-shadow: none; gap: 10px; }
+  .inboxListPane,.inboxThreadPane,.inboxContextPane { border: 1px solid var(--app-border); border-radius: 10px; overflow: hidden; }
+  .conversationList { max-height: 260px; }
+  .inboxThreadPane { grid-template-rows: auto minmax(300px, auto) auto; }
+  .messageTimeline { max-height: 520px; padding: 14px 12px; }
+  .messageBubble { max-width: 88%; }
+  .inboxContextPane { grid-column: auto; display: block; }
+  .contextSection { border-right: 0; border-bottom: 1px solid var(--app-border); }
+  .threadHeader { align-items: flex-start; flex-direction: column; }
+  .threadActions { width: 100%; justify-content: space-between; }
+  .composerFooter { align-items: stretch; flex-direction: column; }
+  .composerFooter .app-button-primary { width: 100%; }
+}
