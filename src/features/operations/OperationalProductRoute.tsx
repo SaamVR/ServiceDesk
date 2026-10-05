@@ -67,6 +67,16 @@ function formatWhen(value?: string) {
     : new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+function formatDateOnly(value?: string) {
+  if (!value) return "Not specified";
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return value;
+  const [, year, month, day] = match;
+  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeZone: "UTC" }).format(
+    new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))),
+  );
+}
+
 function statusTone(status: string) {
   if (["PAID", "COMPLETED", "RESOLVED", "DELIVERED", "READ", "CONNECTED", "ACTIVE"].includes(status)) {
     return "success";
@@ -245,6 +255,9 @@ function InboxView({
       <h3>{request?.serviceLabel ?? "No request linked"}</h3>
       <dl className="summary-list">
         <div><dt>Request</dt><dd>{request?.status ?? "None"}</dd></div>
+        <div><dt>Email</dt><dd>{customer?.primaryEmail ?? "Not provided"}</dd></div>
+        <div><dt>Phone</dt><dd>{customer?.primaryPhone ?? "Not provided"}</dd></div>
+        <div><dt>Preferred date</dt><dd>{formatDateOnly(request?.preferredDate)}</dd></div>
         <div><dt>Property</dt><dd>{property?.label ?? "None"}</dd></div>
         <div><dt>Address</dt><dd>{property?.address ?? "Not available"}</dd></div>
         <div><dt>Delivery</dt><dd>Shown per message</dd></div>
@@ -293,9 +306,15 @@ function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
             cell: (customer) => (
               <DataCellStack
                 primary={customer.displayName}
-                secondary={customer.leadSource ? "Lead source · " + customer.leadSource : undefined}
+                secondary={customer.primaryEmail ?? customer.primaryPhone ?? (customer.leadSource ? "Lead source · " + customer.leadSource : undefined)}
               />
             ),
+          },
+          {
+            id: "contact",
+            header: "Contact",
+            priority: "secondary",
+            cell: (customer) => customer.primaryEmail ?? customer.primaryPhone ?? "—",
           },
           {
             id: "properties",
@@ -320,6 +339,8 @@ function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
           <DataCellStack
             primary={customer.displayName}
             secondary={
+              (customer.primaryEmail ?? customer.primaryPhone ?? "No contact") +
+              " · " +
               customer.propertyCount +
               " propert" +
               (customer.propertyCount === 1 ? "y" : "ies") +
@@ -387,61 +408,98 @@ function RequestsView({
     );
   }
 
+  const requestRows = data.requests.map((request) => {
+    const customer = data.customers.find((item) => item.id === request.customerId);
+    const currentQuote = data.quotes.find(
+      (item) => item.requestId === request.id && item.status !== "SUPERSEDED",
+    );
+    return { request, customer, currentQuote };
+  });
+
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Service</th>
-            <th>Customer</th>
-            <th>Status</th>
-            <th>Requested</th>
-            <th>Home</th>
-            <th>Quote</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.requests.map((request) => {
-            const customer = data.customers.find((item) => item.id === request.customerId);
-            const currentQuote = data.quotes.find((item) => item.requestId === request.id && item.status !== "SUPERSEDED");
+    <DataTable
+      caption="Service requests"
+      rows={requestRows}
+      getRowKey={(row) => row.request.id}
+      columns={[
+        {
+          id: "service",
+          header: "Service",
+          priority: "primary",
+          cell: ({ request, customer }) => (
+            <DataCellStack
+              primary={request.serviceLabel}
+              secondary={customer?.displayName ?? "Visitor enquiry"}
+            />
+          ),
+        },
+        {
+          id: "contact",
+          header: "Contact",
+          priority: "secondary",
+          cell: ({ customer }) => customer?.primaryEmail ?? customer?.primaryPhone ?? "—",
+        },
+        {
+          id: "status",
+          header: "Status",
+          cell: ({ request }) => (
+            <StatusBadge tone={statusTone(request.status) === "attention" ? "warning" : statusTone(request.status) === "success" ? "success" : "neutral"}>
+              {request.status.replaceAll("_", " ")}
+            </StatusBadge>
+          ),
+        },
+        {
+          id: "preferred",
+          header: "Preferred date",
+          cell: ({ request }) =>
+            request.requestedStartAt
+              ? formatWhen(request.requestedStartAt)
+              : formatDateOnly(request.preferredDate),
+        },
+        {
+          id: "home",
+          header: "Home",
+          priority: "optional",
+          cell: ({ request }) =>
+            (request.bedrooms ?? "—") + " bed · " + (request.bathrooms ?? "—") + " bath",
+        },
+        {
+          id: "quote",
+          header: "Quote",
+          cell: ({ request, currentQuote }) => {
             const canCalculate =
               Boolean(request.serviceCode) &&
               request.bedrooms !== undefined &&
               request.bathrooms !== undefined &&
               !["BOOKED", "LOST", "CLOSED"].includes(request.status);
-            return (
-              <tr key={request.id}>
-                <td>
-                  <strong>{request.serviceLabel}</strong>
-                </td>
-                <td>{customer?.displayName ?? "Visitor enquiry"}</td>
-                <td>
-                  <span className={"status-pill " + statusTone(request.status)}>
-                    {request.status.replaceAll("_", " ")}
-                  </span>
-                </td>
-                <td>{formatWhen(request.requestedStartAt)}</td>
-                <td>
-                  {request.bedrooms ?? "—"} bed · {request.bathrooms ?? "—"} bath
-                </td>
-                <td>
-                  {currentQuote ? (
-                    <span>{currentQuote.status.replaceAll("_", " ")} · v{currentQuote.version}</span>
-                  ) : (
-                    <form action={calculateQuote}>
-                      <input type="hidden" name="requestId" value={request.id} />
-                      <button className="button-secondary" type="submit" disabled={!canCalculate}>
-                        Calculate quote
-                      </button>
-                    </form>
-                  )}
-                </td>
-              </tr>
+            return currentQuote ? (
+              <span>{currentQuote.status.replaceAll("_", " ")}</span>
+            ) : (
+              <form action={calculateQuote}>
+                <input type="hidden" name="requestId" value={request.id} />
+                <button className="app-button-secondary" type="submit" disabled={!canCalculate}>
+                  Calculate quote
+                </button>
+              </form>
             );
-          })}
-        </tbody>
-      </table>
-    </div>
+          },
+        },
+      ]}
+      renderMobileRow={({ request, customer, currentQuote }) => (
+        <div className="app-data-cell-stack">
+          <strong>{request.serviceLabel}</strong>
+          <span>{customer?.displayName ?? "Visitor enquiry"}</span>
+          <span>
+            {request.status.replaceAll("_", " ")} · {
+              request.requestedStartAt
+                ? formatWhen(request.requestedStartAt)
+                : formatDateOnly(request.preferredDate)
+            }
+          </span>
+          <span>{currentQuote ? "Quote " + currentQuote.status.replaceAll("_", " ") : "No quote yet"}</span>
+        </div>
+      )}
+    />
   );
 }
 
