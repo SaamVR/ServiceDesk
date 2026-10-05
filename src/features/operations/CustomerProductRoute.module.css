@@ -219,3 +219,17 @@
     border-left: 0;
   }
 }
+
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: 3px solid var(--app-accent, #176b53);
+  outline-offset: 2px;
+}
+
+@media (max-width: 650px) {
+  .primaryButton,
+  .secondaryButton {
+    min-height: 44px;
+  }
+}
