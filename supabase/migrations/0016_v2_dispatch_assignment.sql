@@ -38,7 +38,7 @@ begin
   -- Serialize the same logical command so repeated submits converge on one idempotency record.
   perform pg_advisory_xact_lock(
     hashtext(v_workspace::text),
-    hashtext('visit.assign_crew:' || v_idempotency)
+    hashtext('assign_visit_crew:' || v_idempotency)
   );
 
   select * into v_existing
