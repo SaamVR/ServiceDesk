@@ -24,32 +24,32 @@ export const customerModuleConfig: Record<
 > = {
   overview: {
     label: "Portal",
-    description: "Customer-scoped summary of quote, booking and invoice state.",
+    description: "Summary of your quotes, bookings and invoices.",
     primarySurface: "portal-overview",
   },
   properties: {
     label: "Properties",
-    description: "Property and recurring-visit preferences.",
+    description: "Properties and recurring service preferences.",
     primarySurface: "property-recurring",
   },
   quote: {
     label: "Quote",
-    description: "Current quote version, validity and acceptance boundary.",
+    description: "Current quote, validity and acceptance status.",
     primarySurface: "quote-current",
   },
   booking: {
     label: "Booking",
-    description: "Slot hold, payment state, Calendar freshness and visit confirmation.",
+    description: "Booking time, payment status and visit confirmation.",
     primarySurface: "checkout-state",
   },
   invoice: {
     label: "Invoice",
-    description: "Invoice allocation, balance and receipt visibility boundary.",
+    description: "Invoice balance, payment allocation and receipt status.",
     primarySurface: "invoice-ledger",
   },
   preferences: {
     label: "Preferences",
-    description: "Communication channel, consent and provider availability.",
+    description: "Saved communication preferences and consent status.",
     primarySurface: "communication-preferences",
   },
 };
