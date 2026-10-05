@@ -1,15 +1,20 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffInvoicesPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffInvoicesPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspace: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { workspace } = await params;
-
+  const query = await searchParams;
   return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="invoices"
-      workspaceLabel={workspace}
-      title="Invoice ledger workspace."
-      description="Manual collection and receipt state wait for accepted invoice/payment server boundaries."
+    <OperationalProductRoute
+      workspaceSlug={workspace}
+      module="invoices"
+      notice={query.notice}
+      error={query.error}
     />
   );
 }
