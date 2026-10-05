@@ -13,7 +13,17 @@ import {
   type OperationalActionResult,
   type OperationalStaffSnapshot,
 } from "./operational-product-runtime";
-import { PageHeader, Panel } from "@/components/product";
+import {
+  DataCellStack,
+  DataTable,
+  PageHeader,
+  Panel,
+  SplitWorkspace,
+  StatusBadge,
+  WorkspaceList,
+  WorkspaceListItem,
+  WorkspacePane,
+} from "@/components/product";
 import { staffModuleConfig, type StaffModule } from "./staff-modules";
 import { formatMinorMoney } from "./view-models";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
@@ -135,122 +145,121 @@ function InboxView({
 
   const replySupported = selected.channel === "WHATSAPP" || selected.channel === "EMAIL";
 
-  return (
-    <div className={styles.inboxGrid}>
-      <aside className={styles.threadList}>
-        <p className="label">Conversations</p>
+  const list = (
+    <WorkspacePane
+      title="Conversations"
+      description={data.conversations.length + " active thread" + (data.conversations.length === 1 ? "" : "s")}
+    >
+      <WorkspaceList ariaLabel="Customer conversations">
         {data.conversations.map((conversation) => {
           const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
           return (
-            <a
-              className={conversation.id === selected.id ? styles.activeThread : styles.thread}
+            <WorkspaceListItem
               href={"?conversation=" + encodeURIComponent(conversation.id)}
+              selected={conversation.id === selected.id}
+              ariaLabel={"Open conversation with " + (threadCustomer?.displayName ?? "customer")}
               key={conversation.id}
             >
-              <strong>{threadCustomer?.displayName ?? "Customer"}</strong>
-              <span>
-                {conversation.channel} · {conversation.handoverActive ? "Human takeover" : "Open"}
-              </span>
-            </a>
+              <DataCellStack
+                primary={threadCustomer?.displayName ?? "Customer"}
+                secondary={conversation.channel + " · " + (conversation.handoverActive ? "Taken over" : "Shared")}
+              />
+            </WorkspaceListItem>
           );
         })}
-      </aside>
+      </WorkspaceList>
+    </WorkspacePane>
+  );
 
-      <section className={styles.conversation}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <p className="label">{selected.channel} conversation</p>
-            <h2>{customer?.displayName ?? "Customer conversation"}</h2>
-          </div>
-          <span className={"status-pill " + (selected.handoverActive ? "attention" : "neutral")}>
-            {selected.handoverActive ? "Human takeover active" : "Shared inbox"}
-          </span>
-        </div>
+  const detail = (
+    <WorkspacePane
+      title={customer?.displayName ?? "Customer conversation"}
+      description={selected.channel + " conversation"}
+      actions={
+        <StatusBadge tone={selected.handoverActive ? "warning" : "neutral"}>
+          {selected.handoverActive ? "Human takeover" : "Shared inbox"}
+        </StatusBadge>
+      }
+    >
+      <div className={styles.timeline}>
+        {messages.length === 0 ? (
+          <p>No messages are stored in this conversation yet.</p>
+        ) : (
+          messages.map((message) => (
+            <article className={styles.message} key={message.id}>
+              <div>
+                <strong>
+                  {message.direction === "INBOUND"
+                    ? customer?.displayName ?? "Customer"
+                    : message.senderKind}
+                </strong>
+                <p>{message.body ?? "Media message"}</p>
+              </div>
+              <small>
+                {formatWhen(message.createdAt)} ·{" "}
+                {message.deliveryState
+                  ? message.deliveryState.replaceAll("_", " ")
+                  : "Received"}
+              </small>
+            </article>
+          ))
+        )}
+      </div>
 
-        <div className={styles.timeline}>
-          {messages.length === 0 ? (
-            <p>No messages are stored in this conversation yet.</p>
-          ) : (
-            messages.map((message) => (
-              <article className={styles.message} key={message.id}>
-                <div>
-                  <strong>
-                    {message.direction === "INBOUND"
-                      ? customer?.displayName ?? "Customer"
-                      : message.senderKind}
-                  </strong>
-                  <p>{message.body ?? "Media message"}</p>
-                </div>
-                <small>
-                  {formatWhen(message.createdAt)} ·{" "}
-                  {message.deliveryState
-                    ? message.deliveryState.replaceAll("_", " ")
-                    : "Received"}
-                </small>
-              </article>
-            ))
-          )}
-        </div>
-
-        <div className={styles.actions}>
-          <form action={handover}>
-            <input type="hidden" name="conversationId" value={selected.id} />
-            <input
-              type="hidden"
-              name="active"
-              value={selected.handoverActive ? "false" : "true"}
-            />
-            <button className="button-secondary" type="submit">
-              {selected.handoverActive ? "Release takeover" : "Take over conversation"}
-            </button>
-          </form>
-        </div>
-
-        <form action={reply} className={styles.replyForm}>
+      <div className={styles.actions}>
+        <form action={handover}>
           <input type="hidden" name="conversationId" value={selected.id} />
-          <label htmlFor="reply-body">Reply</label>
-          <textarea
-            id="reply-body"
-            name="body"
-            rows={4}
-            placeholder="Write a customer reply"
-            disabled={!replySupported}
-            required
-          />
-          <button className="button-primary" type="submit" disabled={!replySupported}>
-            Queue reply
+          <input type="hidden" name="active" value={selected.handoverActive ? "false" : "true"} />
+          <button className="app-button-secondary" type="submit">
+            {selected.handoverActive ? "Release takeover" : "Take over conversation"}
           </button>
-          <p className="form-note">
-            {replySupported
-              ? "The message is queued for sending. Queued does not mean delivered; the delivery status updates when the channel reports it."
-              : "Replies are not available for this conversation channel."}
-          </p>
         </form>
-      </section>
+      </div>
 
-      <aside className={styles.context}>
-        <p className="label">Customer context</p>
-        <h3>{request?.serviceLabel ?? "No request linked"}</h3>
-        <dl className="summary-list">
-          <div>
-            <dt>Request</dt>
-            <dd>{request?.status ?? "None"}</dd>
-          </div>
-          <div>
-            <dt>Property</dt>
-            <dd>{property?.label ?? "None"}</dd>
-          </div>
-          <div>
-            <dt>Address</dt>
-            <dd>{property?.address ?? "Not available"}</dd>
-          </div>
-          <div>
-            <dt>Delivery</dt>
-            <dd>Each message retains its stored delivery state</dd>
-          </div>
-        </dl>
-      </aside>
-    </div>
+      <form action={reply} className={styles.replyForm}>
+        <input type="hidden" name="conversationId" value={selected.id} />
+        <label htmlFor="reply-body">Reply</label>
+        <textarea
+          className="app-textarea"
+          id="reply-body"
+          name="body"
+          rows={4}
+          placeholder="Write a customer reply"
+          disabled={!replySupported}
+          required
+        />
+        <button className="app-button-primary" type="submit" disabled={!replySupported}>
+          Queue reply
+        </button>
+        <p className="form-note">
+          {replySupported
+            ? "Queued messages update when the channel reports their delivery status."
+            : "Replies are not available for this conversation channel."}
+        </p>
+      </form>
+    </WorkspacePane>
+  );
+
+  const context = (
+    <WorkspacePane title="Customer context">
+      <h3>{request?.serviceLabel ?? "No request linked"}</h3>
+      <dl className="summary-list">
+        <div><dt>Request</dt><dd>{request?.status ?? "None"}</dd></div>
+        <div><dt>Property</dt><dd>{property?.label ?? "None"}</dd></div>
+        <div><dt>Address</dt><dd>{property?.address ?? "Not available"}</dd></div>
+        <div><dt>Delivery</dt><dd>Shown per message</dd></div>
+      </dl>
+    </WorkspacePane>
+  );
+
+  return (
+    <SplitWorkspace
+      list={list}
+      detail={detail}
+      context={context}
+      mobileFocus={selectedConversationId ? "detail" : "list"}
+      ariaLabel="Shared customer inbox"
+    />
   );
 }
 
@@ -264,49 +273,91 @@ function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
     );
   }
 
+  const customerRows = data.customers.map((customer) => ({
+    ...customer,
+    propertyCount: data.properties.filter((item) => item.customerId === customer.id).length,
+    requestCount: data.requests.filter((item) => item.customerId === customer.id).length,
+  }));
+
   return (
     <div className={styles.stack}>
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Customer</th>
-              <th>Properties</th>
-              <th>Requests</th>
-              <th>Lead source</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.customers.map((customer) => (
-              <tr key={customer.id}>
-                <td>
-                  <strong>{customer.displayName}</strong>
-                </td>
-                <td>{data.properties.filter((item) => item.customerId === customer.id).length}</td>
-                <td>{data.requests.filter((item) => item.customerId === customer.id).length}</td>
-                <td>{customer.leadSource ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        caption="Customers"
+        rows={customerRows}
+        getRowKey={(customer) => customer.id}
+        columns={[
+          {
+            id: "customer",
+            header: "Customer",
+            priority: "primary",
+            cell: (customer) => (
+              <DataCellStack
+                primary={customer.displayName}
+                secondary={customer.leadSource ? "Lead source · " + customer.leadSource : undefined}
+              />
+            ),
+          },
+          {
+            id: "properties",
+            header: "Properties",
+            align: "end",
+            cell: (customer) => customer.propertyCount,
+          },
+          {
+            id: "requests",
+            header: "Requests",
+            align: "end",
+            cell: (customer) => customer.requestCount,
+          },
+          {
+            id: "source",
+            header: "Lead source",
+            priority: "optional",
+            cell: (customer) => customer.leadSource ?? "—",
+          },
+        ]}
+        renderMobileRow={(customer) => (
+          <DataCellStack
+            primary={customer.displayName}
+            secondary={
+              customer.propertyCount +
+              " propert" +
+              (customer.propertyCount === 1 ? "y" : "ies") +
+              " · " +
+              customer.requestCount +
+              " request" +
+              (customer.requestCount === 1 ? "" : "s")
+            }
+          />
+        )}
+      />
 
-      {data.customers.slice(0, 8).map((customer) => (
-        <section className="plain-card" key={customer.id}>
-          <h3>{customer.displayName}</h3>
-          {data.properties
-            .filter((item) => item.customerId === customer.id)
-            .map((property) => (
-              <div key={property.id}>
-                <p>
-                  <strong>{property.label}</strong> · {property.address}
-                </p>
-                {property.accessNotes && <p>Access: {property.accessNotes}</p>}
-                {property.serviceNotes && <p>Service notes: {property.serviceNotes}</p>}
-              </div>
-            ))}
-        </section>
-      ))}
+      <Panel>
+        <div className={styles.sectionHeader}>
+          <div>
+            <p className="label">Properties</p>
+            <h2>Customer service locations</h2>
+          </div>
+          <span className="app-status app-status-neutral">{data.properties.length} total</span>
+        </div>
+        {data.properties.length === 0 ? (
+          <p>No customer properties are stored yet.</p>
+        ) : (
+          <div className="app-workspace-list" role="list" aria-label="Customer properties">
+            {data.properties.slice(0, 12).map((property) => {
+              const owner = data.customers.find((item) => item.id === property.customerId);
+              return (
+                <div className="app-workspace-list-item" role="listitem" key={property.id}>
+                  <DataCellStack
+                    primary={property.label}
+                    secondary={(owner?.displayName ?? "Customer") + " · " + property.address}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Panel>
     </div>
   );
 }
