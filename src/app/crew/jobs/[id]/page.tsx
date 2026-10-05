@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { CrewActionButton } from "@/features/crew/CrewActionButton";
 import { CrewJobDetailV2 } from "@/features/crew/CrewFieldAppV2";
 import { CrewRouteUnavailable } from "@/features/crew/CrewRouteUnavailable";
 import {
@@ -8,6 +9,7 @@ import {
   transitionCrewProductVisit,
 } from "@/features/crew/crew-product-runtime";
 import { getCrewOperableTransitionAction } from "@/features/crew/server-boundary";
+import { canCrewEditChecklist, canCrewReportIssue } from "@/features/crew/field-action-policy";
 import { buildCrewEvidenceGate } from "@/features/crew/v2-field-models";
 import styles from "@/features/crew/CrewFieldAppV2.module.css";
 
@@ -45,6 +47,8 @@ export default async function CrewJobPage({
   const transitionEnabled = Boolean(
     nextAction && (nextAction !== "SUBMIT_REVIEW" || evidenceGate.canSubmitReview),
   );
+  const checklistEditable = canCrewEditChecklist(job.visit.status);
+  const issueReportable = canCrewReportIssue(job.visit.status);
 
   async function transition(formData: FormData) {
     "use server";
@@ -107,17 +111,22 @@ export default async function CrewJobPage({
       <input type="hidden" name="visitId" value={job.visit.id} />
       <input type="hidden" name="expectedVersion" value={job.visit.version} />
       <input type="hidden" name="action" value={nextAction} />
-      <button className="app-button-primary" type="submit" disabled={!transitionEnabled}>
+      <CrewActionButton
+        className="app-button-primary"
+        type="submit"
+        disabled={!transitionEnabled}
+        pendingLabel="Saving…"
+      >
         {nextAction === "EN_ROUTE"
           ? "Mark en route"
           : nextAction === "START"
             ? "Start job"
             : "Send for review"}
-      </button>
+      </CrewActionButton>
     </form>
   ) : undefined;
 
-  const issueControl = (
+  const issueControl = issueReportable ? (
     <details className={styles.issueDisclosure}>
       <summary>Report issue</summary>
       <form action={reportIssue} className={styles.issueForm}>
@@ -125,10 +134,12 @@ export default async function CrewJobPage({
         <input type="hidden" name="expectedVisitVersion" value={job.visit.version} />
         <label htmlFor="crew-issue">What happened?</label>
         <textarea id="crew-issue" name="issue" rows={3} maxLength={2000} required />
-        <button className="app-button-secondary" type="submit">Send to dispatch</button>
+        <CrewActionButton className="app-button-secondary" type="submit" pendingLabel="Sending…">
+          Send to dispatch
+        </CrewActionButton>
       </form>
     </details>
-  );
+  ) : undefined;
 
   return (
     <main className="app-content" aria-label="Crew job">
@@ -140,17 +151,19 @@ export default async function CrewJobPage({
           transition: transitionControl,
           reportIssue: issueControl,
           refresh: <a className="app-button-secondary" href={"/crew/jobs/" + encodeURIComponent(job.visit.id)}>Refresh job</a>,
-          renderChecklistControl: (item) => (
-            <form action={updateChecklist}>
-              <input type="hidden" name="visitId" value={job.visit.id} />
-              <input type="hidden" name="expectedVisitVersion" value={job.visit.version} />
-              <input type="hidden" name="itemKey" value={item.itemKey} />
-              <input type="hidden" name="completed" value={item.completed ? "false" : "true"} />
-              <button className="app-button-secondary" type="submit">
-                {item.completed ? "Reopen" : "Done"}
-              </button>
-            </form>
-          ),
+          renderChecklistControl: checklistEditable
+            ? (item) => (
+                <form action={updateChecklist}>
+                  <input type="hidden" name="visitId" value={job.visit.id} />
+                  <input type="hidden" name="expectedVisitVersion" value={job.visit.version} />
+                  <input type="hidden" name="itemKey" value={item.itemKey} />
+                  <input type="hidden" name="completed" value={item.completed ? "false" : "true"} />
+                  <CrewActionButton className="app-button-secondary" type="submit" pendingLabel="Saving…">
+                    {item.completed ? "Reopen" : "Done"}
+                  </CrewActionButton>
+                </form>
+              )
+            : undefined,
         }}
       />
     </main>

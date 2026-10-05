@@ -21,8 +21,9 @@ describe("V2 field production copy and route truth", () => {
   it("does not claim durable offline support", () => {
     const sync = source("src/features/crew/sync-state.ts");
     expect(sync).toContain("SESSION_MEMORY_ONLY");
-    expect(sync).toContain("keep this screen open");
+    expect(sync).toContain("Changes need a connection");
     expect(sync).not.toContain("full offline");
     expect(sync).not.toContain("works offline");
+    expect(sync).not.toContain("offline mode");
   });
 });

@@ -45,6 +45,19 @@ describe("V2 crew production runtime contract", () => {
     expect(runtime).not.toContain('"COMPLETE"');
   });
 
+  it("preflights stale assignment/version and field-action policy before mutable checklist or issue writes", () => {
+    const runtime = source("src/features/crew/crew-product-runtime.ts");
+    const page = source("src/app/crew/jobs/[id]/page.tsx");
+    expect(runtime).toContain("verifyCrewVisitMutationState");
+    expect(runtime).toContain('select("id,workspace_id,crew_id,status,version")');
+    expect(runtime).toContain("canCrewEditChecklist");
+    expect(runtime).toContain("canCrewReportIssue");
+    expect(runtime).toContain("CREW_ASSIGNMENT_CHANGED");
+    expect(page).toContain("checklistEditable");
+    expect(page).toContain("issueReportable");
+    expect(page).toContain("CrewActionButton");
+  });
+
   it("wires the real crew pages to product runtime rather than fixtures", () => {
     const today = source("src/app/crew/today/page.tsx");
     const job = source("src/app/crew/jobs/[id]/page.tsx");

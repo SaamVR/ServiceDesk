@@ -249,4 +249,4 @@ export function syncStatusLabel(state: CrewSyncState): string {
 }
 
 export const crewOfflineCapabilityNotice =
-  "If your connection drops, keep this screen open until pending changes are saved.";
+  "Changes need a connection. If saving fails, reconnect and refresh before trying again.";

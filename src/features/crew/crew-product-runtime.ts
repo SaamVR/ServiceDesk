@@ -11,6 +11,7 @@ import type {
 } from "@/contracts";
 import type { VisitAction } from "@/server/core/facade";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
+import { canCrewEditChecklist, canCrewReportIssue } from "./field-action-policy";
 import type { SupabaseRpcClient } from "@/server/core/payment-application-postgres";
 import {
   createCrewFieldReadFactory,
@@ -511,6 +512,63 @@ export async function loadCrewJobProduct(visitId: string, now: string) {
     : fail("server", result.code, result.message);
 }
 
+async function verifyCrewVisitMutationState(
+  resolved: ResolvedCrewActor,
+  visitId: string,
+  expectedVersion: number,
+  allowed: (status: VisitDTO["status"]) => boolean,
+): Promise<CrewProductActionResult | undefined> {
+  const result = await resolved.service
+    .from("visits")
+    .select("id,workspace_id,crew_id,status,version")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", visitId)
+    .maybeSingle();
+
+  if (result.error) {
+    return {
+      ok: false,
+      code: "CREW_VISIT_REFRESH_CHECK_FAILED",
+      message: "The latest job status could not be checked. Refresh before trying again.",
+      refreshRequired: true,
+      retryable: false,
+    };
+  }
+  if (!result.data) {
+    return {
+      ok: false,
+      code: "CREW_VISIT_NOT_FOUND",
+      message: "This job is no longer available.",
+      refreshRequired: true,
+      retryable: false,
+    };
+  }
+
+  const row = result.data as Row;
+  const currentCrewId = textValue(row, "crew_id");
+  if (!currentCrewId || !resolved.crewIds.includes(currentCrewId)) {
+    return {
+      ok: false,
+      code: "CREW_ASSIGNMENT_CHANGED",
+      message: "This job is no longer assigned to your crew. Refresh to see the latest work.",
+      refreshRequired: true,
+      retryable: false,
+    };
+  }
+
+  const currentVersion = numberValue(row, "version", -1);
+  if (currentVersion !== expectedVersion) {
+    return actionFailure("VERSION_CONFLICT", "This job changed.");
+  }
+
+  const currentStatus = visitStatus(row.status);
+  if (!allowed(currentStatus)) {
+    return actionFailure("VISIT_STATE_INVALID", "This field action is no longer available.");
+  }
+
+  return undefined;
+}
+
 function actionFailure(code: string, message: string): CrewProductActionResult {
   const refreshRequired = [
     "VERSION_CONFLICT",
@@ -568,6 +626,14 @@ export async function setCrewProductChecklistItem(input: {
   const resolved = await resolveCrewActor({ visitId: input.visitId });
   if (!resolved.ok) return { ok: false, code: resolved.code, message: resolved.message, refreshRequired: true };
 
+  const preflight = await verifyCrewVisitMutationState(
+    resolved.value,
+    input.visitId,
+    input.expectedVisitVersion,
+    canCrewEditChecklist,
+  );
+  if (preflight) return preflight;
+
   const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
   const now = new Date().toISOString();
   const result = await facade.setVisitChecklistItem(
@@ -597,6 +663,14 @@ export async function reportCrewProductIssue(input: {
 
   const resolved = await resolveCrewActor({ visitId: input.visitId });
   if (!resolved.ok) return { ok: false, code: resolved.code, message: resolved.message, refreshRequired: true };
+
+  const preflight = await verifyCrewVisitMutationState(
+    resolved.value,
+    input.visitId,
+    input.expectedVisitVersion,
+    canCrewReportIssue,
+  );
+  if (preflight) return preflight;
 
   const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
   const now = new Date().toISOString();
