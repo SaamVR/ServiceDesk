@@ -12,8 +12,8 @@ declare
   v_actor_role text := p_input->>'actorRole';
   v_actor_user uuid := nullif(p_input->>'actorUserId','')::uuid;
   v_customer uuid := nullif(p_input->>'customerId','')::uuid;
-  v_channel text;
-  v_purpose text;
+  v_channel text := upper(trim(p_input->>'channel'));
+  v_purpose text := trim(p_input->>'purpose');
   v_status text := upper(trim(p_input->>'status'));
   v_expected_consent uuid := nullif(p_input->>'expectedConsentId','')::uuid;
   v_idempotency text := nullif(trim(p_input->>'idempotencyKey'), '');
@@ -27,6 +27,10 @@ begin
      or v_actor_user is null
      or v_customer is null
      or v_idempotency is null
+     or v_channel not in ('WHATSAPP','EMAIL','SMS')
+     or v_purpose is null
+     or length(v_purpose) = 0
+     or length(v_purpose) > 120
      or v_status not in ('GRANTED','REVOKED')
      or v_expected_consent is null then
     return jsonb_build_object('ok', false, 'code', 'CUSTOMER_CONSENT_INPUT_INVALID');
@@ -42,19 +46,6 @@ begin
   ) then
     return jsonb_build_object('ok', false, 'code', 'CUSTOMER_SCOPE_REQUIRED');
   end if;
-
-  select * into v_previous
-  from public.communication_consents
-  where workspace_id = v_workspace
-    and customer_id = v_customer
-    and id = v_expected_consent;
-
-  if not found then
-    return jsonb_build_object('ok', false, 'code', 'CONSENT_VERSION_CONFLICT');
-  end if;
-
-  v_channel := v_previous.channel;
-  v_purpose := v_previous.purpose;
 
   perform pg_advisory_xact_lock(
     hashtext(v_workspace::text),
@@ -102,6 +93,7 @@ begin
   where workspace_id = v_workspace
     and customer_id = v_customer
     and channel = v_channel
+    and purpose = v_purpose
   order by recorded_at desc, created_at desc
   limit 1;
 
@@ -225,4 +217,4 @@ revoke all on function public.servicedesk_record_customer_consent(jsonb) from au
 grant execute on function public.servicedesk_record_customer_consent(jsonb) to service_role;
 
 comment on function public.servicedesk_record_customer_consent(jsonb) is
-  'Trusted service-role customer self-service channel-consent command. Derives the channel from the expected current consent, verifies customer/workspace ownership, appends consent history, records audit evidence, and is idempotent.';
+  'Trusted service-role customer self-service consent command. Verifies customer/workspace ownership, appends consent history, records audit evidence, and is idempotent.';
