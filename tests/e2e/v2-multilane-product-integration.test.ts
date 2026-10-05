@@ -124,6 +124,11 @@ describe("V2 multilane production integration", () => {
     expect(migration).toContain("revoke all on function public.servicedesk_create_public_enquiry(jsonb) from anon");
     expect(migration).toContain("grant execute on function public.servicedesk_create_public_enquiry(jsonb) to service_role");
 
+    const rateLimitMigration = source("supabase/migrations/0017a_v2_public_enquiry_rate_limit.sql");
+    expect(rateLimitMigration).toContain("PUBLIC_ENQUIRY_RATE_LIMITED");
+    expect(rateLimitMigration).toContain("created_at >= v_now - interval '1 hour'");
+    expect(rateLimitMigration).toContain(">= 5");
+
     expect(staffRuntime).toContain('.from("customer_contacts")');
     expect(staffRuntime).toContain("primaryEmail");
     expect(staffRuntime).toContain("primaryPhone");
