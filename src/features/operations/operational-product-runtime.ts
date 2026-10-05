@@ -231,7 +231,7 @@ async function resolveStaffActor(workspaceSlug: string): Promise<
       ok: false,
       kind: "configuration",
       message:
-        "This workspace is not connected to its production data service yet. Configure the server-side Supabase URL, anonymous key and service-role key before operating live records.",
+        "Workspace data is temporarily unavailable. Check the workspace connection in Settings or try again shortly.",
     };
   }
 
@@ -409,7 +409,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
 
   const failedRead = tableReads.find((result) => result.error);
   if (failedRead?.error) {
-    return { ok: false, kind: "server", message: "Operational records could not be loaded from PostgreSQL." };
+    return { ok: false, kind: "server", message: "Workspace records could not be loaded. Try again shortly, or check the workspace connection in Settings." };
   }
 
   const [
