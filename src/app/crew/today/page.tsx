@@ -1,13 +1,31 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { CrewFieldError, CrewTodayV2 } from "@/features/crew/CrewFieldAppV2";
+import { loadCrewToday } from "@/features/crew/crew-product-runtime";
 
-export default function CrewTodayPage() {
+export default async function CrewTodayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ workspace?: string }>;
+}) {
+  const query = await searchParams;
+  const now = new Date().toISOString();
+  const result = await loadCrewToday(query.workspace, now);
+
+  if (!result.ok) {
+    return (
+      <CrewFieldError
+        title={result.kind === "authentication" ? "Crew sign-in required" : "Crew workspace unavailable"}
+        message={result.message}
+      />
+    );
+  }
+
   return (
-    <OperationalFixtureRoute
-      surface="crew"
-      crewModule="today"
-      workspaceLabel="Crew workspace"
-      title="Today list for assigned cleaning visits."
-      description="Crew sees assigned jobs only, with network-required V1 status and a safe path into the job detail workflow."
+    <CrewTodayV2
+      jobs={result.value.jobs}
+      now={now}
+      timeZone={result.value.workspace.timeZone}
+      workspaceSlug={result.value.workspace.slug}
+      workspaceName={result.value.workspace.name}
     />
   );
 }
