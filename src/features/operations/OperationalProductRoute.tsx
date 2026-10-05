@@ -1,7 +1,4 @@
 import { redirect } from "next/navigation";
-import { PlatformBillingPreview } from "@/features/billing/PlatformBillingPreview";
-import { ReportsPreview } from "@/features/reports/ReportsPreview";
-import { OwnerSettingsPreview } from "@/features/settings/OwnerSettingsPreview";
 import {
   applyOperationalManualPayment,
   applyOperationalQualityAction,
@@ -241,8 +238,8 @@ function InboxView({
           </button>
           <p className="form-note">
             {replySupported
-              ? "The message is queued through the authoritative outbound boundary. Provider acceptance is not shown as delivery."
-              : "This conversation channel does not have a supported outbound reply command."}
+              ? "The message is queued for sending. Queued does not mean delivered; the delivery status updates when the channel reports it."
+              : "Replies are not available for this conversation channel."}
           </p>
         </form>
       </section>
@@ -587,8 +584,8 @@ function ScheduleView({
           })
         )}
         <p className="form-note">
-          A hold is authoritative only after the server accepts it. Holding a slot does not create
-          payment or a confirmed visit.
+          ServiceDesk rechecks availability when you hold a slot. Holding a slot does not create
+          a payment or a confirmed visit.
         </p>
       </section>
 
@@ -970,12 +967,175 @@ function AutomationsView({ data }: { data: OperationalStaffSnapshot }) {
             className="button-secondary"
             type="button"
             disabled
-            title="No accepted V1 recovery command exists."
+            title="Recovery must be handled manually from the related record."
           >
             Run recovery
           </button>
         </section>
       ))}
+    </div>
+  );
+}
+
+
+function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
+  const snapshot = data.reporting;
+  if (!snapshot) {
+    return <EmptyState title="Reports unavailable" detail="Reporting data is temporarily unavailable." />;
+  }
+  const conversion =
+    snapshot.conversionRateBps === undefined
+      ? "—"
+      : (snapshot.conversionRateBps / 100).toFixed(1) + "%";
+  const currency = snapshot.currency ?? "USD";
+  const cards = [
+    ["Requests", String(snapshot.requestCount)],
+    ["Booked", String(snapshot.bookedRequestCount)],
+    ["Conversion", conversion],
+    ["Collected", formatMinorMoney(snapshot.collectedMinor, currency)],
+    ["Outstanding", formatMinorMoney(snapshot.outstandingMinor, currency)],
+    ["Scheduled service", Math.round(snapshot.scheduledServiceMinutes / 60) + "h"],
+    ["Open attention", String(snapshot.openAttentionCount)],
+    ["Quality cases", String(snapshot.unresolvedQualityCount)],
+  ];
+  return (
+    <div className={styles.stack}>
+      <section className="plain-card">
+        <div className={styles.sectionHeader}>
+          <div>
+            <p className="label">Performance</p>
+            <h2>Business activity</h2>
+          </div>
+          <span className="status-pill neutral">
+            {snapshot.from ? formatWhen(snapshot.from) : "Rolling period"} – {snapshot.to ? formatWhen(snapshot.to) : "Now"}
+          </span>
+        </div>
+        <div className="metric-grid">
+          {cards.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </div>
+        <p className="form-note">Updated {formatWhen(snapshot.generatedAt)}.</p>
+      </section>
+    </div>
+  );
+}
+
+function BillingView({ data }: { data: OperationalStaffSnapshot }) {
+  const snapshot = data.platformBilling;
+  if (!snapshot) {
+    return <EmptyState title="Platform billing unavailable" detail="Subscription information is temporarily unavailable." />;
+  }
+  const subscription = snapshot.subscription;
+  return (
+    <div className={styles.stack}>
+      <section className="plain-card">
+        <div className={styles.sectionHeader}>
+          <div>
+            <p className="label">ServiceDesk subscription</p>
+            <h2>{subscription.plan} · {subscription.status.replaceAll("_", " ")}</h2>
+          </div>
+          <span className={"status-pill " + statusTone(subscription.status)}>
+            {subscription.providerMode === "SANDBOX" ? "Sandbox billing" : "Live billing"}
+          </span>
+        </div>
+        {subscription.providerMode === "SANDBOX" && (
+          <p>Platform subscription billing is running in sandbox mode and does not represent a live charge.</p>
+        )}
+        <dl className="summary-list">
+          <div><dt>Trial ends</dt><dd>{formatWhen(subscription.trialEndsAt)}</dd></div>
+          <div><dt>Current period ends</dt><dd>{formatWhen(subscription.currentPeriodEndsAt)}</dd></div>
+        </dl>
+      </section>
+      <section className="plain-card">
+        <h2>Usage</h2>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead><tr><th>Metric</th><th>Used</th><th>Limit</th><th>Status</th></tr></thead>
+            <tbody>
+              {snapshot.usage.map((row) => (
+                <tr key={row.metric}>
+                  <td>{row.metric.replaceAll("_", " ").toLowerCase()}</td>
+                  <td>{row.used}</td>
+                  <td>{row.limit ?? "Unlimited"}</td>
+                  <td>{row.state.replaceAll("_", " ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="plain-card">
+        <h2>Customer payments are separate</h2>
+        <p>
+          Cleaning invoices and customer payment balances stay in Invoices. They do not change the
+          ServiceDesk subscription shown here.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function SettingsView({ data }: { data: OperationalStaffSnapshot }) {
+  const snapshot = data.ownerSettings;
+  if (!snapshot) {
+    return <EmptyState title="Settings unavailable" detail="Workspace settings are temporarily unavailable." />;
+  }
+  return (
+    <div className={styles.stack}>
+      <section className="plain-card">
+        <h2>Service catalog</h2>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead><tr><th>Service</th><th>Code</th><th>Status</th></tr></thead>
+            <tbody>
+              {snapshot.services.map((service) => (
+                <tr key={service.code}>
+                  <td><strong>{service.label}</strong></td>
+                  <td>{service.code}</td>
+                  <td>{service.enabled ? "Enabled" : "Disabled"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="plain-card">
+        <h2>Team</h2>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead><tr><th>Member</th><th>Role</th><th>Status</th></tr></thead>
+            <tbody>
+              {snapshot.members.map((member) => (
+                <tr key={member.userId}>
+                  <td>{member.userId.slice(0, 8)}…</td>
+                  <td>{member.role}</td>
+                  <td>{member.active ? "Active" : "Inactive"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="plain-card">
+        <div className={styles.sectionHeader}>
+          <div><p className="label">Invitations</p><h2>{snapshot.invitations.filter((invite) => invite.state === "PENDING").length} pending</h2></div>
+        </div>
+        {snapshot.invitations.length === 0 ? <p>No invitations.</p> : snapshot.invitations.map((invite) => (
+          <p key={invite.id}>{invite.role} · {invite.state.replaceAll("_", " ")} · created {formatWhen(invite.createdAt)}</p>
+        ))}
+        <p className="form-note">Invitation links and tokens are never displayed here.</p>
+      </section>
+      <section className="plain-card">
+        <h2>Integrations</h2>
+        <p>Connection status is not available from this settings read yet. Provider credentials remain private.</p>
+        <button className="button-secondary" type="button" disabled title="Integration settings require a workspace integration-status read.">
+          Manage integrations
+        </button>
+      </section>
     </div>
   );
 }
@@ -1012,40 +1172,11 @@ function renderModule(
     case "automations":
       return <AutomationsView data={data} />;
     case "reports":
-      return data.reporting ? (
-        <ReportsPreview snapshot={data.reporting} sourceLabel="SERVER_SNAPSHOT" />
-      ) : (
-        <EmptyState
-          title="Reports unavailable"
-          detail="The reporting read did not return an authoritative snapshot."
-        />
-      );
+      return <ReportsView data={data} />;
     case "billing":
-      return data.platformBilling ? (
-        <PlatformBillingPreview
-          snapshot={data.platformBilling}
-          customerInvoice={data.invoices[0]}
-        />
-      ) : (
-        <EmptyState
-          title="Platform billing unavailable"
-          detail="The platform billing read did not return an authoritative snapshot."
-        />
-      );
+      return <BillingView data={data} />;
     case "settings":
-      return data.ownerSettings ? (
-        <OwnerSettingsPreview
-          embedded
-          snapshot={data.ownerSettings}
-          integrations={[]}
-          sourceLabel="SERVER_SNAPSHOT"
-        />
-      ) : (
-        <EmptyState
-          title="Settings unavailable"
-          detail="The owner settings read did not return an authoritative snapshot."
-        />
-      );
+      return <SettingsView data={data} />;
   }
 }
 
