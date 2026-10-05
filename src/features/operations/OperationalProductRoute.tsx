@@ -350,7 +350,7 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
     <section className={styles.crmWorkspace} aria-label="Customer relationship workspace">
       <header className={styles.crmToolbar}>
         <div>
-          <p className={styles.crmEyebrow}>CRM</p>
+          <p className={styles.crmEyebrow}>Customer directory</p>
           <h2>Customer records</h2>
           <p>{orderedCustomers.length} customer{orderedCustomers.length === 1 ? "" : "s"} · linked properties and service history</p>
         </div>
@@ -660,7 +660,7 @@ function QuotesView({
     <section className={styles.salesWorkspace} aria-label="Quote workspace">
       <header className={styles.salesToolbar}>
         <div>
-          <p className={styles.salesEyebrow}>Sales pipeline</p>
+          <p className={styles.salesEyebrow}>Quote workspace</p>
           <h2>Quote pipeline</h2>
           <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} awaiting customer</p>
         </div>
@@ -1032,7 +1032,7 @@ function JobsView({
     <section className={styles.jobsWorkspace} aria-label="Field jobs workspace">
       <header className={styles.jobsToolbar}>
         <div>
-          <p className={styles.jobsEyebrow}>Field operations</p>
+          <p className={styles.jobsEyebrow}>Work queue</p>
           <h2>Field operations queue</h2>
           <p>{activeVisits.length} active · {unassigned} unassigned · {pendingReview} awaiting review</p>
         </div>
@@ -1428,7 +1428,7 @@ function QualityView({
     <section className={styles.qualityWorkspace} aria-label="Quality review workspace">
       <header className={styles.qualityToolbar}>
         <div>
-          <p className={styles.qualityEyebrow}>Service quality</p>
+          <p className={styles.qualityEyebrow}>Issue management</p>
           <h2>Quality review queue</h2>
           <p>{openCount} open · {reviewCount} in review · {resolvedCount} resolved</p>
         </div>
@@ -1696,7 +1696,7 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
     <section className={styles.reportsWorkspace} aria-label="Operations reporting workspace">
       <header className={styles.adminPageHeader}>
         <div>
-          <p className={styles.adminEyebrow}>Insights</p>
+          <p className={styles.adminEyebrow}>Performance summary</p>
           <h2>Business performance</h2>
           <p>
             {snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period"}
