@@ -15,6 +15,7 @@ import type { QualityCaseAction } from "@/server/core/facade";
 import { createPostgresManualPaymentQualityFacadeMethods } from "@/server/core/manual-quality-postgres";
 import type { SupabaseRpcClient } from "@/server/core/payment-application-postgres";
 import { createPostgresReportingPlatformFacadeMethods } from "@/server/core/reporting-platform-postgres";
+import { createPostgresRecurrenceFacadeMethods } from "@/server/core/recurrence-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
 
@@ -59,17 +60,21 @@ export interface OperationalQuote {
   depositMinor: number;
   balanceMinor: number;
   durationMinutes: number;
+  bufferMinutes: number;
   validUntil?: string;
 }
 
 export interface OperationalVisit {
   id: string;
+  workspaceId: string;
   requestId: string;
   quoteId: string;
   crewId?: string;
   status: string;
-  startAt?: string;
+  startAt: string;
   endAt?: string;
+  serviceMinutes: number;
+  bufferMinutes: number;
   version: number;
 }
 
@@ -109,6 +114,7 @@ export interface OperationalRecurrence {
   frequency: string;
   status: string;
   nextOccurrenceOn?: string;
+  version: number;
 }
 
 export interface OperationalStaffSnapshot {
@@ -125,9 +131,11 @@ export interface OperationalStaffSnapshot {
   attentionItems: OperationalAttention[];
   qualityCases: OperationalQualityCase[];
   recurrenceRules: OperationalRecurrence[];
+  crews: Array<{ id: string; name: string; active: boolean }>;
   capacitySlots: Array<{ id: string; crewId: string; startAt: string; endAt: string; capacityMinutes: number }>;
   slotHolds: Array<{ id: string; slotId: string; quoteId: string; status: string; expiresAt: string }>;
   visitEvidence: Array<{ id: string; visitId: string; kind: string; capturedAt: string; text?: string }>;
+  visitChecklistItems: Array<{ id: string; visitId: string; itemKey: string; completed: boolean; note?: string; version: number }>;
   reporting?: ReportingSnapshotDTO;
   platformBilling?: PlatformBillingSnapshotDTO;
   ownerSettings?: OwnerSettingsSnapshotDTO;
@@ -138,6 +146,31 @@ export type OperationalRuntimeResult =
   | { ok: false; kind: "configuration" | "authentication" | "authorization" | "not_found" | "server"; message: string };
 
 export type OperationalActionResult = { ok: true; message: string } | { ok: false; message: string };
+
+function safeCoreFailure(
+  result: { ok: false; code: string; message: string },
+  fallback: string,
+): OperationalActionResult {
+  if (result.code === "VERSION_CONFLICT") {
+    return { ok: false, message: "This record changed since you opened it. Refresh and try again." };
+  }
+  if (result.code === "FORBIDDEN" || result.code.includes("SCOPE_REQUIRED")) {
+    return { ok: false, message: "You do not have permission to perform this action." };
+  }
+  if (result.code.includes("NOT_FOUND")) {
+    return { ok: false, message: "This record is no longer available. Refresh the page." };
+  }
+  if (result.code.includes("STATE_INVALID") || result.code.includes("NOT_ACCEPTED") || result.code.includes("NOT_SENT")) {
+    return { ok: false, message: "This action is no longer available for the current status. Refresh the page." };
+  }
+  if (result.code.includes("EVIDENCE_REQUIRED")) {
+    return { ok: false, message: "Add the required before and after evidence before continuing." };
+  }
+  if (result.code.includes("ALREADY_HELD")) {
+    return { ok: false, message: "That slot was just taken. Choose another available time." };
+  }
+  return { ok: false, message: fallback };
+}
 
 interface ResolvedStaffActor {
   workspace: { id: string; slug: string; name: string };
@@ -348,9 +381,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       .limit(300),
     service.from("quality_cases").select("*").eq("workspace_id", workspace.id).order("updated_at", { ascending: false }).limit(300),
     service.from("recurrence_rules").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(100),
+    service.from("crews").select("id,name,active").eq("workspace_id", workspace.id).order("name", { ascending: true }).limit(100),
     service.from("capacity_slots").select("*").eq("workspace_id", workspace.id).order("starts_at", { ascending: true }).limit(300),
     service.from("slot_holds").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(300),
     service.from("visit_evidence").select("*").eq("workspace_id", workspace.id).order("captured_at", { ascending: false }).limit(1000),
+    service.from("visit_checklist_items").select("*").eq("workspace_id", workspace.id).order("updated_at", { ascending: false }).limit(1000),
   ]);
 
   const failedRead = tableReads.find((result) => result.error);
@@ -371,9 +406,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     attentionRows,
     qualityRows,
     recurrenceRows,
+    crewRows,
     capacityRows,
     holdRows,
     evidenceRows,
+    checklistRows,
   ] = tableReads.map((result) => rows(result.data));
 
   const serviceById = new Map(serviceRows.map((row) => [String(row.id), row]));
@@ -420,20 +457,28 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     depositMinor: numberValue(row, "deposit_minor"),
     balanceMinor: numberValue(row, "balance_minor"),
     durationMinutes: numberValue(row, "duration_minutes"),
+    bufferMinutes: numberValue(row, "buffer_minutes"),
     validUntil: textValue(row, "valid_until"),
   }));
-  const visits: OperationalVisit[] = visitRows.map((row) => ({
-    id: String(row.id),
-    requestId: String(row.request_id),
-    quoteId: String(row.quote_id),
-    crewId: textValue(row, "crew_id"),
-    status: String(
-      row.status === "SCHEDULED" ? "CONFIRMED" : row.status === "NEEDS_REVIEW" ? "PENDING_REVIEW" : row.status,
-    ),
-    startAt: textValue(row, "starts_at"),
-    endAt: textValue(row, "ends_at"),
-    version: numberValue(row, "version", 1),
-  }));
+  const quoteById = new Map(quotes.map((quote) => [quote.id, quote]));
+  const visits: OperationalVisit[] = visitRows.map((row) => {
+    const quote = quoteById.get(String(row.quote_id));
+    return {
+      id: String(row.id),
+      workspaceId: workspace.id,
+      requestId: String(row.request_id),
+      quoteId: String(row.quote_id),
+      crewId: textValue(row, "crew_id"),
+      status: String(
+        row.status === "SCHEDULED" ? "CONFIRMED" : row.status === "NEEDS_REVIEW" ? "PENDING_REVIEW" : row.status,
+      ),
+      startAt: String(row.starts_at),
+      endAt: textValue(row, "ends_at"),
+      serviceMinutes: quote?.durationMinutes ?? 0,
+      bufferMinutes: quote?.bufferMinutes ?? 0,
+      version: numberValue(row, "version", 1),
+    };
+  });
 
   const reportingFacade = createPostgresReportingPlatformFacadeMethods(rpc);
   const now = new Date();
@@ -487,6 +532,12 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         frequency: String(row.frequency),
         status: String(row.status),
         nextOccurrenceOn: textValue(row, "next_occurrence_on"),
+        version: numberValue(row, "version", 1),
+      })),
+      crews: crewRows.map((row) => ({
+        id: String(row.id),
+        name: String(row.name ?? "Crew"),
+        active: Boolean(row.active),
       })),
       capacitySlots: capacityRows.map((row) => ({
         id: String(row.id),
@@ -508,6 +559,14 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         kind: String(row.kind),
         capturedAt: String(row.captured_at),
         text: textValue(row, "text"),
+      })),
+      visitChecklistItems: checklistRows.map((row) => ({
+        id: String(row.id),
+        visitId: String(row.visit_id),
+        itemKey: String(row.item_key),
+        completed: Boolean(row.completed),
+        note: textValue(row, "note"),
+        version: numberValue(row, "version", 1),
       })),
       reporting: reportingResult.ok ? reportingResult.value : undefined,
       platformBilling: billingResult.ok ? billingResult.value : undefined,
@@ -547,7 +606,7 @@ export async function toggleInboxHandover(
   );
   return result.ok
     ? { ok: true, message: active ? "Human takeover is active." : "Human takeover was released." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not update human takeover. Refresh and try again.");
 }
 
 export async function enqueueInboxReply(
@@ -578,7 +637,7 @@ export async function enqueueInboxReply(
   );
   return result.ok
     ? { ok: true, message: "Reply queued. Delivery state will update from provider callbacks." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not queue the reply. Check the conversation and try again.");
 }
 
 export async function sendOperationalQuote(
@@ -603,7 +662,7 @@ export async function sendOperationalQuote(
   });
   return result.ok
     ? { ok: true, message: "Quote send command accepted. Provider delivery remains tracked separately." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not send the quote. Refresh the quote and try again.");
 }
 
 export async function applyOperationalManualPayment(
@@ -641,7 +700,7 @@ export async function applyOperationalManualPayment(
   );
   return result.ok
     ? { ok: true, message: "Manual payment recorded on the invoice." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not record the payment. Check the invoice and try again.");
 }
 
 export async function applyOperationalQualityAction(
@@ -677,7 +736,7 @@ export async function applyOperationalQualityAction(
       expectedVersion: Number(current.data.version),
     },
   );
-  return result.ok ? { ok: true, message: "Quality case updated." } : { ok: false, message: result.message };
+  return result.ok ? { ok: true, message: "Quality case updated." } : safeCoreFailure(result, "Could not update the quality case. Refresh and try again.");
 }
 
 
@@ -691,7 +750,7 @@ export async function calculateOperationalQuote(
   const result = await facade.calculateQuote(resolved.value.actor, requestId);
   return result.ok
     ? { ok: true, message: "Quote calculated and saved." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not calculate the quote. Check the request details and try again.");
 }
 
 export async function holdOperationalSlot(
@@ -720,7 +779,7 @@ export async function holdOperationalSlot(
   );
   return result.ok
     ? { ok: true, message: "Slot held until " + result.value.expiresAt + ". Payment is still pending." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not hold that slot. Refresh availability and try again.");
 }
 
 export async function transitionOperationalVisit(
@@ -750,5 +809,100 @@ export async function transitionOperationalVisit(
   );
   return result.ok
     ? { ok: true, message: "Visit moved to " + result.value.status.replaceAll("_", " ").toLowerCase() + "." }
-    : { ok: false, message: result.message };
+    : safeCoreFailure(result, "Could not update the job status. Refresh the job and try again.");
+}
+
+
+export async function addOperationalVisitNote(
+  workspaceSlug: string,
+  visitId: string,
+  kind: "TIME_MATERIAL_NOTE" | "INCIDENT_NOTE",
+  note: string,
+): Promise<OperationalActionResult> {
+  const trimmed = note.trim();
+  if (!trimmed) return { ok: false, message: "Add a note before saving." };
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const current = await resolved.value.service
+    .from("visits")
+    .select("id,version")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("id", visitId)
+    .maybeSingle();
+  if (current.error || !current.data) return { ok: false, message: "The visit is no longer available." };
+  const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
+  const result = await facade.addVisitEvidence(
+    resolved.value.actor,
+    visitId,
+    { kind, text: trimmed, capturedAt: new Date().toISOString() },
+    {
+      idempotencyKey: "visit-note-" + crypto.randomUUID(),
+      now: new Date().toISOString(),
+      expectedVersion: Number(current.data.version),
+    },
+  );
+  return result.ok ? { ok: true, message: kind === "INCIDENT_NOTE" ? "Incident recorded." : "Job note saved." } : safeCoreFailure(result, "Could not save the field note. Refresh and try again.");
+}
+
+export async function setOperationalChecklistItem(
+  workspaceSlug: string,
+  visitId: string,
+  itemKey: string,
+  completed: boolean,
+  note?: string,
+): Promise<OperationalActionResult> {
+  const key = itemKey.trim();
+  if (!key) return { ok: false, message: "Checklist item name is required." };
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const current = await resolved.value.service
+    .from("visits")
+    .select("id,version")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("id", visitId)
+    .maybeSingle();
+  if (current.error || !current.data) return { ok: false, message: "The visit is no longer available." };
+  const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
+  const result = await facade.setVisitChecklistItem(
+    resolved.value.actor,
+    visitId,
+    { itemKey: key, completed, note: note?.trim() || undefined },
+    {
+      idempotencyKey: "visit-checklist-" + crypto.randomUUID(),
+      now: new Date().toISOString(),
+      expectedVersion: Number(current.data.version),
+    },
+  );
+  return result.ok ? { ok: true, message: "Checklist updated." } : safeCoreFailure(result, "Could not update the checklist. Refresh and try again.");
+}
+
+
+export async function applyOperationalRecurrenceAction(
+  workspaceSlug: string,
+  ruleId: string,
+  action: "PAUSE" | "RESUME" | "SKIP_NEXT",
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const current = await resolved.value.service
+    .from("recurrence_rules")
+    .select("id,version,status")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("id", ruleId)
+    .maybeSingle();
+  if (current.error || !current.data) return { ok: false, message: "The recurring service rule is no longer available." };
+  const facade = createPostgresRecurrenceFacadeMethods(resolved.value.rpc);
+  const result = await facade.applyRecurrenceRuleAction(
+    resolved.value.actor,
+    ruleId,
+    action,
+    {
+      idempotencyKey: "recurrence-" + crypto.randomUUID(),
+      now: new Date().toISOString(),
+      expectedVersion: Number(current.data.version),
+    },
+  );
+  return result.ok
+    ? { ok: true, message: action === "PAUSE" ? "Recurring service paused." : action === "RESUME" ? "Recurring service resumed." : "Next occurrence skipped." }
+    : safeCoreFailure(result, "Could not update the recurring service. Refresh and try again.");
 }
