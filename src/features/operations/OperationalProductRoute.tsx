@@ -363,59 +363,75 @@ function RequestsView({
   }
 
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Service</th>
-            <th>Customer</th>
-            <th>Status</th>
-            <th>Requested</th>
-            <th>Home</th>
-            <th>Quote</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.requests.map((request) => {
-            const customer = data.customers.find((item) => item.id === request.customerId);
-            const currentQuote = data.quotes.find((item) => item.requestId === request.id && item.status !== "SUPERSEDED");
-            const canCalculate =
-              Boolean(request.serviceCode) &&
-              request.bedrooms !== undefined &&
-              request.bathrooms !== undefined &&
-              !["BOOKED", "LOST", "CLOSED"].includes(request.status);
-            return (
-              <tr key={request.id}>
-                <td>
-                  <strong>{request.serviceLabel}</strong>
-                </td>
-                <td>{customer?.displayName ?? "Visitor enquiry"}</td>
-                <td>
-                  <span className={"status-pill " + statusTone(request.status)}>
-                    {request.status.replaceAll("_", " ")}
-                  </span>
-                </td>
-                <td>{formatWhen(request.requestedStartAt)}</td>
-                <td>
-                  {request.bedrooms ?? "—"} bed · {request.bathrooms ?? "—"} bath
-                </td>
-                <td>
-                  {currentQuote ? (
-                    <span>{currentQuote.status.replaceAll("_", " ")} · v{currentQuote.version}</span>
-                  ) : (
-                    <form action={calculateQuote}>
-                      <input type="hidden" name="requestId" value={request.id} />
-                      <button className="button-secondary" type="submit" disabled={!canCalculate}>
-                        Calculate quote
-                      </button>
-                    </form>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className={styles.stack}>
+      <OperationsToolbar
+        context={<ToolbarResultCount count={data.requests.length} label="requests" />}
+      />
+      <DataTable<OperationalRequest>
+        caption="Request queue"
+        rows={data.requests}
+        getRowKey={(request) => request.id}
+        columns={[
+          {
+            id: "service",
+            header: "Service",
+            priority: "primary",
+            cell: (request) => (
+              <DataCellStack
+                primary={request.serviceLabel}
+                secondary={data.customers.find((item) => item.id === request.customerId)?.displayName ?? "Visitor enquiry"}
+              />
+            ),
+          },
+          {
+            id: "status",
+            header: "Status",
+            cell: (request) => <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>,
+          },
+          {
+            id: "requested",
+            header: "Requested",
+            cell: (request) => formatWhen(request.requestedStartAt),
+          },
+          {
+            id: "home",
+            header: "Home",
+            priority: "optional",
+            cell: (request) => (request.bedrooms ?? "—") + " bed · " + (request.bathrooms ?? "—") + " bath",
+          },
+          {
+            id: "quote",
+            header: "Quote",
+            priority: "primary",
+            cell: (request) => {
+              const currentQuote = data.quotes.find((item) => item.requestId === request.id && item.status !== "SUPERSEDED");
+              const canCalculate =
+                Boolean(request.serviceCode) &&
+                request.bedrooms !== undefined &&
+                request.bathrooms !== undefined &&
+                !["BOOKED", "LOST", "CLOSED"].includes(request.status);
+              return currentQuote ? (
+                <DataCellStack primary={currentQuote.status.replaceAll("_", " ")} secondary={"Version " + currentQuote.version} />
+              ) : (
+                <RowActions label={"Actions for " + request.serviceLabel}>
+                  <form action={calculateQuote}>
+                    <input type="hidden" name="requestId" value={request.id} />
+                    <button className="app-button-secondary" type="submit" disabled={!canCalculate}>
+                      Calculate quote
+                    </button>
+                  </form>
+                </RowActions>
+              );
+            },
+          },
+        ]}
+        renderMobileRow={(request) => (
+          <DataCellStack
+            primary={request.serviceLabel}
+            secondary={request.status.replaceAll("_", " ") + " · " + formatWhen(request.requestedStartAt)}
+          />
+        )}
+      />
     </div>
   );
 }
@@ -437,53 +453,71 @@ function QuotesView({
   }
 
   if (data.quotes.length === 0) {
-    return <EmptyState title="No quotes yet" detail="Calculated and persisted quotes will appear here." />;
+    return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." />;
   }
 
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Request</th>
-            <th>Version</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Validity</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.quotes.map((quote) => (
-            <tr key={quote.id}>
-              <td>
-                {data.requests.find((item) => item.id === quote.requestId)?.serviceLabel ??
-                  "Request"}
-              </td>
-              <td>v{quote.version}</td>
-              <td>{formatMinorMoney(quote.totalMinor, quote.currency)}</td>
-              <td>
-                <span className={"status-pill " + statusTone(quote.status)}>
-                  {quote.status.replaceAll("_", " ")}
-                </span>
-              </td>
-              <td>{formatWhen(quote.validUntil)}</td>
-              <td>
+    <div className={styles.stack}>
+      <OperationsToolbar
+        context={<ToolbarResultCount count={data.quotes.length} label="quotes" />}
+      />
+      <DataTable<OperationalQuote>
+        caption="Quotes"
+        rows={data.quotes}
+        getRowKey={(quote) => quote.id}
+        columns={[
+          {
+            id: "request",
+            header: "Request",
+            priority: "primary",
+            cell: (quote) => (
+              <DataCellStack
+                primary={data.requests.find((item) => item.id === quote.requestId)?.serviceLabel ?? "Request"}
+                secondary={"Version " + quote.version}
+              />
+            ),
+          },
+          {
+            id: "total",
+            header: "Total",
+            cell: (quote) => formatMinorMoney(quote.totalMinor, quote.currency),
+          },
+          {
+            id: "status",
+            header: "Status",
+            cell: (quote) => <StatusBadge tone={statusBadgeTone(quote.status)}>{quote.status.replaceAll("_", " ")}</StatusBadge>,
+          },
+          {
+            id: "validity",
+            header: "Valid until",
+            priority: "optional",
+            cell: (quote) => formatWhen(quote.validUntil),
+          },
+          {
+            id: "action",
+            header: "Action",
+            priority: "primary",
+            cell: (quote) => (
+              <RowActions label={"Actions for quote " + quote.id}>
                 {quote.status === "APPROVED" ? (
                   <form action={sendQuote}>
                     <input type="hidden" name="quoteId" value={quote.id} />
-                    <button className="button-secondary" type="submit">
-                      Send quote
-                    </button>
+                    <button className="app-button-secondary" type="submit">Send quote</button>
                   </form>
                 ) : (
-                  <span>{quote.status === "SENT" ? "Awaiting customer" : "No staff action"}</span>
+                  <span>{quote.status === "SENT" ? "Awaiting customer" : "No action available"}</span>
                 )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </RowActions>
+            ),
+          },
+        ]}
+        renderMobileRow={(quote) => (
+          <DataCellStack
+            primary={formatMinorMoney(quote.totalMinor, quote.currency)}
+            secondary={quote.status.replaceAll("_", " ") + " · v" + quote.version}
+          />
+        )}
+      />
     </div>
   );
 }
