@@ -117,8 +117,8 @@ describe("V2 operational product routing", () => {
   it("adopts W1 primitives and W3 dispatch components without duplicating their logic", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
     const adapter = source("src/features/operations/dispatch-product-adapter.ts");
-    expect(route).toContain("DataTable");
-    expect(route).toContain("OperationsToolbar");
+    expect(route).toContain("PageHeader");
+    expect(route).toContain("StatusBadge");
     expect(route).toContain("FeedbackBanner");
     expect(route).toContain("FormGrid");
     expect(route).toContain("DispatcherIntelligence");
