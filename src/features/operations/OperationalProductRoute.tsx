@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import {
+  addOperationalVisitNote,
   applyOperationalManualPayment,
   applyOperationalQualityAction,
   calculateOperationalQuote,
@@ -7,6 +8,7 @@ import {
   holdOperationalSlot,
   loadOperationalStaffSnapshot,
   sendOperationalQuote,
+  setOperationalChecklistItem,
   toggleInboxHandover,
   transitionOperationalVisit,
   type OperationalActionResult,
@@ -702,6 +704,32 @@ function JobsView({
     actionRedirect(workspaceSlug, "jobs", result);
   }
 
+  async function saveVisitNote(formData: FormData) {
+    "use server";
+    const kind = String(formData.get("kind") ?? "TIME_MATERIAL_NOTE") === "INCIDENT_NOTE"
+      ? "INCIDENT_NOTE"
+      : "TIME_MATERIAL_NOTE";
+    const result = await addOperationalVisitNote(
+      workspaceSlug,
+      String(formData.get("visitId") ?? ""),
+      kind,
+      String(formData.get("note") ?? ""),
+    );
+    actionRedirect(workspaceSlug, "jobs", result);
+  }
+
+  async function saveChecklistItem(formData: FormData) {
+    "use server";
+    const result = await setOperationalChecklistItem(
+      workspaceSlug,
+      String(formData.get("visitId") ?? ""),
+      String(formData.get("itemKey") ?? ""),
+      String(formData.get("completed") ?? "") === "true",
+      String(formData.get("note") ?? ""),
+    );
+    actionRedirect(workspaceSlug, "jobs", result);
+  }
+
   const nextAction = (status: string) => {
     if (status === "CONFIRMED") return { action: "ASSIGN" as const, label: "Confirm crew assignment" };
     if (status === "ASSIGNED") return { action: "EN_ROUTE" as const, label: "Mark en route" };
@@ -716,66 +744,189 @@ function JobsView({
   }
 
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Start</th>
-            <th>Service</th>
-            <th>Crew</th>
-            <th>Status</th>
-            <th>Evidence</th>
-            <th>Next action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.visits.map((visit) => {
-            const action = nextAction(visit.status);
-            const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
-            const reviewEvidenceReady =
-              evidence.some((item) => item.kind === "BEFORE_PHOTO") &&
-              evidence.some((item) => item.kind === "AFTER_PHOTO");
-            return (
-              <tr key={visit.id}>
-                <td>{formatWhen(visit.startAt)}</td>
-                <td>{data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}</td>
-                <td>{visit.crewId ? "Assigned" : "Unassigned"}</td>
-                <td>
-                  <span className={"status-pill " + statusTone(visit.status)}>
-                    {visit.status.replaceAll("_", " ")}
-                  </span>
-                </td>
-                <td>{evidence.length} item{evidence.length === 1 ? "" : "s"}</td>
-                <td>
-                  {action ? (
-                    <form action={transitionVisit}>
-                      <input type="hidden" name="visitId" value={visit.id} />
-                      <button
-                        className="button-secondary"
-                        name="action"
-                        value={action.action}
-                        disabled={
-                          (action.action === "ASSIGN" && !visit.crewId) ||
-                          (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
-                        }
-                        title={
-                          action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
+    <div className={styles.stack}>
+      <OperationsToolbar
+        context={<ToolbarResultCount count={data.visits.length} label="jobs" />}
+      />
+      <DataTable<OperationalVisit>
+        caption="Jobs"
+        rows={data.visits}
+        getRowKey={(visit) => visit.id}
+        columns={[
+          {
+            id: "visit",
+            header: "Job",
+            priority: "primary",
+            cell: (visit) => (
+              <DataCellStack
+                primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
+                secondary={formatWhen(visit.startAt)}
+              />
+            ),
+          },
+          {
+            id: "crew",
+            header: "Crew",
+            cell: (visit) => visit.crewId ? data.crews.find((crew) => crew.id === visit.crewId)?.name ?? "Assigned crew" : "Unassigned",
+          },
+          {
+            id: "status",
+            header: "Status",
+            cell: (visit) => <StatusBadge tone={statusBadgeTone(visit.status)}>{visit.status.replaceAll("_", " ")}</StatusBadge>,
+          },
+          {
+            id: "field",
+            header: "Field record",
+            priority: "optional",
+            cell: (visit) => {
+              const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
+              const checklist = data.visitChecklistItems.filter((item) => item.visitId === visit.id);
+              return evidence.length + " evidence · " + checklist.filter((item) => item.completed).length + "/" + checklist.length + " checklist";
+            },
+          },
+          {
+            id: "action",
+            header: "Next action",
+            priority: "primary",
+            cell: (visit) => {
+              const action = nextAction(visit.status);
+              const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
+              const reviewEvidenceReady =
+                evidence.some((item) => item.kind === "BEFORE_PHOTO") &&
+                evidence.some((item) => item.kind === "AFTER_PHOTO");
+              return action ? (
+                <RowActions label={"Actions for job " + visit.id}>
+                  <form action={transitionVisit}>
+                    <input type="hidden" name="visitId" value={visit.id} />
+                    <button
+                      className="app-button-secondary"
+                      name="action"
+                      value={action.action}
+                      disabled={
+                        (action.action === "ASSIGN" && !visit.crewId) ||
+                        (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
+                      }
+                      title={
+                        action.action === "ASSIGN" && !visit.crewId
+                          ? "Choose a crew before confirming assignment."
+                          : action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
                             ? "Add both before and after evidence before submitting for review."
                             : undefined
-                        }
-                      >
-                        {action.label}
-                      </button>
-                    </form>
+                      }
+                    >
+                      {action.label}
+                    </button>
+                  </form>
+                </RowActions>
+              ) : <span>No lifecycle action</span>;
+            },
+          },
+        ]}
+        renderMobileRow={(visit) => (
+          <DataCellStack
+            primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
+            secondary={visit.status.replaceAll("_", " ") + " · " + formatWhen(visit.startAt)}
+          />
+        )}
+      />
+
+      {data.visits
+        .filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status))
+        .slice(0, 6)
+        .map((visit) => {
+          const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
+          const checklist = data.visitChecklistItems.filter((item) => item.visitId === visit.id);
+          return (
+            <Panel key={visit.id}>
+              <SectionHeader
+                title={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Service visit"}
+                description={formatWhen(visit.startAt) + " · " + visit.status.replaceAll("_", " ")}
+                action={<StatusBadge tone={statusBadgeTone(visit.status)}>{visit.status.replaceAll("_", " ")}</StatusBadge>}
+              />
+
+              <div className="app-grid app-grid-two">
+                <FormSection
+                  title="Field notes"
+                  description="Save time, material or incident notes directly to the job record."
+                >
+                  <form action={saveVisitNote}>
+                    <input type="hidden" name="visitId" value={visit.id} />
+                    <FormGrid columns={1}>
+                      <FormField id={"job-note-kind-" + visit.id} label="Note type">
+                        {({ id, describedBy, invalid }) => (
+                          <SelectInput id={id} name="kind" defaultValue="TIME_MATERIAL_NOTE" describedBy={describedBy} invalid={invalid}>
+                            <option value="TIME_MATERIAL_NOTE">Time / material note</option>
+                            <option value="INCIDENT_NOTE">Incident</option>
+                          </SelectInput>
+                        )}
+                      </FormField>
+                      <FormField id={"job-note-" + visit.id} label="Note" required>
+                        {({ id, describedBy, invalid }) => (
+                          <TextArea id={id} name="note" rows={3} required describedBy={describedBy} invalid={invalid} placeholder="Add a field note" />
+                        )}
+                      </FormField>
+                    </FormGrid>
+                    <FormActions>
+                      <button className="app-button-secondary" type="submit">Save note</button>
+                    </FormActions>
+                  </form>
+                  {evidence.length ? (
+                    <div className="app-row-list">
+                      {evidence.slice(0, 5).map((item) => (
+                        <article className="app-row" key={item.id}>
+                          <div>
+                            <h3>{item.kind.replaceAll("_", " ")}</h3>
+                            <p>{item.text ?? "Photo evidence"}</p>
+                          </div>
+                          <div className="app-row-meta"><span>{formatWhen(item.capturedAt)}</span></div>
+                        </article>
+                      ))}
+                    </div>
                   ) : (
-                    <span>No lifecycle action</span>
+                    <AppEmptyState title="No field evidence yet" description="Before/after photos are added from the authorized crew workflow; staff can record notes here." />
                   )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                </FormSection>
+
+                <FormSection
+                  title="Checklist"
+                  description="Record or update a named checklist item for this visit."
+                >
+                  <form action={saveChecklistItem}>
+                    <input type="hidden" name="visitId" value={visit.id} />
+                    <input type="hidden" name="completed" value="true" />
+                    <FormGrid columns={1}>
+                      <FormField id={"checklist-key-" + visit.id} label="Item" required>
+                        {({ id, describedBy, invalid }) => (
+                          <TextInput id={id} name="itemKey" required describedBy={describedBy} invalid={invalid} placeholder="e.g. kitchen" />
+                        )}
+                      </FormField>
+                      <FormField id={"checklist-note-" + visit.id} label="Note">
+                        {({ id, describedBy, invalid }) => (
+                          <TextInput id={id} name="note" describedBy={describedBy} invalid={invalid} placeholder="Optional note" />
+                        )}
+                      </FormField>
+                    </FormGrid>
+                    <FormActions>
+                      <button className="app-button-secondary" type="submit">Mark complete</button>
+                    </FormActions>
+                  </form>
+                  {checklist.length ? (
+                    <div className="app-row-list">
+                      {checklist.map((item) => (
+                        <article className="app-row" key={item.id}>
+                          <div><h3>{item.itemKey}</h3><p>{item.note ?? "No note"}</p></div>
+                          <StatusBadge tone={item.completed ? "success" : "neutral"}>{item.completed ? "Complete" : "Open"}</StatusBadge>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <AppEmptyState title="No checklist items yet" description="Checklist items saved for this job will appear here." />
+                  )}
+                </FormSection>
+              </div>
+            </Panel>
+          );
+        })}
     </div>
   );
 }
