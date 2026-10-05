@@ -69,9 +69,13 @@ async function main() {
   assert.equal(live.ok, false);
   if (!live.ok) assert.equal(live.code, "PAYMENT_LIVE_MODE_REJECTED");
 
-  const balanceMissingInvoice = await handler.execute({ quote, hold, purpose: "BALANCE", successUrl: "https://app.example.test/success", cancelUrl: "https://app.example.test/cancel" });
+  const balanceMissingInvoice = await handler.execute({ quote, purpose: "BALANCE", balanceMinor: 7500, successUrl: "https://app.example.test/success", cancelUrl: "https://app.example.test/cancel" });
   assert.equal(balanceMissingInvoice.ok, false);
   if (!balanceMissingInvoice.ok) assert.equal(balanceMissingInvoice.code, "PAYMENT_INVOICE_REFERENCE_MISSING");
+
+  const balanceWithoutHold = await handler.execute({ quote, purpose: "BALANCE", invoiceId: "invoice_1", balanceMinor: 6100, successUrl: "https://app.example.test/success", cancelUrl: "https://app.example.test/cancel" });
+  assert.equal(balanceWithoutHold.ok, true);
+  if (balanceWithoutHold.ok) assert.equal(balanceWithoutHold.value.amountMinor, 6100);
 
   const preflight = buildE10BSandboxCheckoutPreflight({ quoteAccepted: true, activeHold: true, sandboxCheckoutCommandAvailable: true, webhookCoreBridgeAvailable: true, mode: "SANDBOX" });
   assert.equal(preflight.pass, true);
