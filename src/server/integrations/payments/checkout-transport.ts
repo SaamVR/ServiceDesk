@@ -38,7 +38,7 @@ export interface RedactedStripeCheckoutRequestSummary {
 
 function amountFor(input: CheckoutInput): number {
   if (input.purpose === "DEPOSIT") return input.quote.depositMinor;
-  if (input.purpose === "BALANCE") return input.quote.balanceMinor;
+  if (input.purpose === "BALANCE") return input.balanceMinor ?? 0;
   return input.quote.totalMinor;
 }
 
@@ -60,7 +60,7 @@ function buildCheckoutBody(input: CheckoutInput, amountMinor: number): URLSearch
   body.set("mode", "payment");
   body.set("success_url", input.successUrl);
   body.set("cancel_url", input.cancelUrl);
-  body.set("client_reference_id", input.hold.holdId);
+  body.set("client_reference_id", input.hold?.holdId ?? input.invoiceId ?? input.quote.id);
   body.set("line_items[0][quantity]", "1");
   body.set("line_items[0][price_data][currency]", input.quote.currency.toLowerCase());
   body.set("line_items[0][price_data][unit_amount]", String(amountMinor));
@@ -69,8 +69,9 @@ function buildCheckoutBody(input: CheckoutInput, amountMinor: number): URLSearch
   const metadata: Record<string, string> = {
     workspaceId: input.quote.workspaceId,
     quoteId: input.quote.id,
-    holdId: input.hold.holdId,
     purpose: input.purpose,
+    ...(input.hold ? { holdId: input.hold.holdId } : {}),
+    ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
   };
 
   for (const [key, value] of Object.entries(metadata)) {
@@ -164,8 +165,16 @@ export async function createStripeCheckoutSession(
     return { ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED", message: "Payment checkout configuration is incomplete." };
   }
 
-  if (input.hold.workspaceId !== input.quote.workspaceId || input.hold.quoteId !== input.quote.id) {
-    return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Hold and quote do not share workspace/quote scope." };
+  if (input.purpose === "DEPOSIT") {
+    if (!input.hold) {
+      return { ok: false, code: "PAYMENT_HOLD_REFERENCE_MISSING", message: "Deposit checkout requires an authoritative hold." };
+    }
+    if (input.hold.workspaceId !== input.quote.workspaceId || input.hold.quoteId !== input.quote.id) {
+      return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Hold and quote do not share workspace/quote scope." };
+    }
+  }
+  if (input.purpose === "BALANCE" && (!input.invoiceId?.trim() || !Number.isInteger(input.balanceMinor) || (input.balanceMinor ?? 0) <= 0)) {
+    return { ok: false, code: "PAYMENT_INVOICE_BALANCE_INVALID", message: "Balance checkout requires invoiceId and the current authoritative invoice balance." };
   }
 
   if (!validateHttpsUrl(input.successUrl) || !validateHttpsUrl(input.cancelUrl)) {
@@ -185,7 +194,7 @@ export async function createStripeCheckoutSession(
     const headers: Record<string, string> = {
       authorization: `Bearer ${config.secretKey}`,
       "content-type": "application/x-www-form-urlencoded",
-      "idempotency-key": `checkout:${input.quote.workspaceId}:${input.hold.holdId}:${input.purpose}`,
+      "idempotency-key": `checkout:${input.quote.workspaceId}:${input.hold?.holdId ?? input.invoiceId ?? input.quote.id}:${input.purpose}`,
     };
     if (config.connectedAccountId) headers["stripe-account"] = config.connectedAccountId;
 

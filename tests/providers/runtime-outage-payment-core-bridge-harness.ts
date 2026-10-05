@@ -90,14 +90,14 @@ async function main(): Promise<void> {
   assert.equal(missingBalanceVerified.ok, false);
   if (!missingBalanceVerified.ok) assert.equal(missingBalanceVerified.code, "PAYMENT_INVOICE_REFERENCE_MISSING");
 
-  const fixtureCheckout = await adapter.createCheckout({ hold, quote, purpose: "BALANCE", invoiceId: "invoice-456", successUrl: "https://example.com/s", cancelUrl: "https://example.com/c" });
+  const fixtureCheckout = await adapter.createCheckout({ quote, purpose: "BALANCE", invoiceId: "invoice-456", balanceMinor: 15000, successUrl: "https://example.com/s", cancelUrl: "https://example.com/c" });
   assert.equal(fixtureCheckout.ok, true);
   if (fixtureCheckout.ok) assert.equal(fixtureCheckout.value.metadata?.invoiceId, "invoice-456");
 
   let capturedBody = "";
   const stripeCheckout = await createStripeCheckoutSession(
     { apiBaseUrl: "https://api.stripe.test/v1", secretKey: "sk_test_x", providerAccountId, mode: "SANDBOX", now: () => now },
-    { hold, quote, purpose: "BALANCE", invoiceId: "invoice-456", successUrl: "https://example.com/s", cancelUrl: "https://example.com/c" },
+    { quote, purpose: "BALANCE", invoiceId: "invoice-456", balanceMinor: 15000, successUrl: "https://example.com/s", cancelUrl: "https://example.com/c" },
     async (request) => { capturedBody = request.body; return { status: 200, body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.test/cs_test_123" }) }; },
   );
   assert.equal(stripeCheckout.ok, true);

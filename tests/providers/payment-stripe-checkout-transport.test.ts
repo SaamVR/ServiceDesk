@@ -71,7 +71,7 @@ describe("Stripe checkout transport", () => {
     let captured: Parameters<StripeCheckoutHttpTransport>[0] | undefined;
     const result = await createStripeCheckoutSession(
       { ...config, connectedAccountId: "acct_connected" },
-      checkoutInput({ purpose: "BALANCE", invoiceId: "invoice-1" }),
+      checkoutInput({ hold: undefined, purpose: "BALANCE", invoiceId: "invoice-1", balanceMinor: 17300 }),
       async (request) => {
         captured = request;
         return { status: 200, body: JSON.stringify({ id: "cs_test_balance", url: "https://checkout.stripe.test/cs_test_balance" }) };
@@ -80,9 +80,11 @@ describe("Stripe checkout transport", () => {
 
     expect(result.ok).toBe(true);
     const body = new URLSearchParams(captured?.body ?? "");
-    expect(body.get("line_items[0][price_data][unit_amount]")).toBe("25500");
+    expect(body.get("line_items[0][price_data][unit_amount]")).toBe("17300");
     expect(captured?.headers["stripe-account"]).toBe("acct_connected");
     expect(body.get("metadata[invoiceId]")).toBe("invoice-1");
+    expect(body.get("metadata[holdId]")).toBeNull();
+    expect(captured?.headers["idempotency-key"]).toBe("checkout:ws-clearnest:invoice-1:BALANCE");
   });
 
   test("rejects scope mismatch and unsafe checkout URLs before provider call", async () => {
