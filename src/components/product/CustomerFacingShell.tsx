@@ -323,4 +323,3 @@ export function CustomerListRow({
   );
 }
 
-export const customerFacingStyles = styles;
