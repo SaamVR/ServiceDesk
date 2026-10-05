@@ -20,8 +20,8 @@ import {
   type OperationalVisit,
 } from "./operational-product-runtime";
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
-import { EmptyState as AppEmptyState, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
-import { DataCellStack, DataTable, RowActions } from "@/components/product/DataTable";
+import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
+import { DataCellStack, DataTable } from "@/components/product/DataTable";
 import { OperationsToolbar, ToolbarResultCount } from "@/components/product/WorkspacePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
