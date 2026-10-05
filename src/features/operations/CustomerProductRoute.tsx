@@ -16,6 +16,7 @@ import {
 import {
   acceptCustomerPortalQuote,
   holdCustomerPortalSlot,
+  launchCustomerDepositSandboxCheckout,
   launchCustomerInvoiceSandboxCheckout,
   loadCustomerPortalSnapshot,
   updateCustomerCommunicationPreference,
@@ -264,6 +265,7 @@ function QuoteView({
     && (hold.status === "CONFIRMED" || Date.parse(hold.expiresAt) > Date.parse(data.loadedAt))
   );
   const bookingSlots = data.bookingSlots.filter((slot) => slot.quoteId === quote.id).slice(0, 8);
+  const activeHoldId = activeHold?.id;
 
   async function acceptQuote() {
     "use server";
