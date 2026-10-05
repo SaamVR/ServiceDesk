@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import {
   applyOperationalManualPayment,
   applyOperationalQualityAction,
+  assignOperationalCrew,
   calculateOperationalQuote,
   enqueueInboxReply,
   holdOperationalSlot,
@@ -15,6 +16,9 @@ import {
 import { PageHeader, Panel } from "@/components/product";
 import { staffModuleConfig, type StaffModule } from "./staff-modules";
 import { formatMinorMoney } from "./view-models";
+import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
+import { buildDispatchRecommendations, type DispatchSnapshot } from "@/features/dispatch/recommendations";
+import { buildCrewDayTimeline } from "@/features/dispatch/timeline";
 import styles from "./OperationalProductRoute.module.css";
 
 interface OperationalProductRouteProps {
@@ -475,6 +479,17 @@ function ScheduleView({
     actionRedirect(workspaceSlug, "schedule", result);
   }
 
+  async function approveCrew(formData: FormData) {
+    "use server";
+    const result = await assignOperationalCrew(
+      workspaceSlug,
+      String(formData.get("visitId") ?? ""),
+      String(formData.get("crewId") ?? ""),
+      Number(formData.get("expectedVersion") ?? 0),
+    );
+    actionRedirect(workspaceSlug, "schedule", result);
+  }
+
   const now = Date.now();
   const week = now + 7 * 24 * 60 * 60 * 1000;
   const upcoming = data.visits.filter((visit) => {
@@ -496,6 +511,49 @@ function ScheduleView({
       .filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now)
       .map((hold) => hold.slotId),
   );
+
+  const dispatchSnapshot: DispatchSnapshot = {
+    visits: data.visits.flatMap((visit) => {
+      if (!visit.startAt) return [];
+      const request = data.requests.find((item) => item.id === visit.requestId);
+      const quote = data.quotes.find((item) => item.id === visit.quoteId);
+      const derivedMinutes = visit.endAt
+        ? Math.max(0, Math.round((Date.parse(visit.endAt) - Date.parse(visit.startAt)) / 60000))
+        : 0;
+      return [{
+        id: visit.id,
+        workspaceId: data.workspace.id,
+        requestId: visit.requestId,
+        quoteId: visit.quoteId,
+        crewId: visit.crewId,
+        status: visit.status as DispatchSnapshot["visits"][number]["status"],
+        startAt: visit.startAt,
+        serviceMinutes: quote?.durationMinutes ?? Math.max(0, derivedMinutes - (quote?.bufferMinutes ?? 0)),
+        bufferMinutes: quote?.bufferMinutes ?? 0,
+        version: visit.version,
+        serviceCode: request?.serviceCode,
+      }];
+    }),
+    crews: data.crews.map((crew) => ({
+      id: crew.id,
+      active: crew.active,
+    })),
+    attentionItems: data.attentionItems.map((item) => ({
+      id: item.id,
+      workspaceId: data.workspace.id,
+      type: item.type,
+      severity: item.severity,
+      status: item.status as "OPEN" | "ACKNOWLEDGED" | "RESOLVED",
+      resourceType: item.resourceType,
+      resourceId: item.resourceId,
+      ownerUserId: item.ownerUserId,
+      dueAt: item.dueAt,
+      summary: item.summary,
+    })),
+  };
+  const recommendations = buildDispatchRecommendations(dispatchSnapshot);
+  const timeline = buildCrewDayTimeline(dispatchSnapshot);
+  const crewLabels = Object.fromEntries(data.crews.map((crew) => [crew.id, crew.name]));
 
   return (
     <div className={styles.stack}>
@@ -520,7 +578,7 @@ function ScheduleView({
                   <tr key={visit.id}>
                     <td>{formatWhen(visit.startAt)}</td>
                     <td>{data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}</td>
-                    <td>{visit.crewId ? "Assigned" : "Unassigned"}</td>
+                    <td>{visit.crewId ? crewLabels[visit.crewId] ?? "Assigned" : "Unassigned"}</td>
                     <td>{visit.status.replaceAll("_", " ")}</td>
                   </tr>
                 ))}
@@ -529,6 +587,15 @@ function ScheduleView({
           </div>
         )}
       </section>
+
+      <DispatcherIntelligence
+        recommendations={recommendations}
+        timeline={timeline}
+        approvalCommandAvailable
+        approvalAction={approveCrew}
+        timeZone={data.workspace.timeZone}
+        crewLabels={crewLabels}
+      />
 
       <section className="plain-card">
         <h2>Accepted quotes awaiting booking</h2>
