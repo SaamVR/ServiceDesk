@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { EmptyState, MetricStrip, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { buildStaffModuleHref } from "@/features/operations/staff-modules";
-import type { WorkspaceSnapshot } from "@/server/core/facade";
+import type { OperationalStaffSnapshot } from "./operational-product-runtime";
+import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { formatMinorMoney } from "./view-models";
 
 function attentionTone(severity: "INFO" | "WARNING" | "CRITICAL") {
@@ -17,9 +18,14 @@ function readable(value: string) {
 export function StaffOverviewDashboard({
   workspace,
   snapshot,
+  errorMessage,
 }: {
   workspace: string;
-  snapshot?: WorkspaceSnapshot;
+  snapshot?: Pick<
+    OperationalStaffSnapshot,
+    "requests" | "quotes" | "visits" | "invoices" | "attentionItems" | "qualityCases"
+  >;
+  errorMessage?: string;
 }) {
   if (!snapshot) {
     return (
@@ -30,9 +36,10 @@ export function StaffOverviewDashboard({
           description="Your operational workspace for enquiries, scheduling, payments and service quality."
         />
         <Panel>
-          <EmptyState
+          <FeedbackBanner
             title="Workspace activity is unavailable"
-            description="We could not load workspace activity for this view. Try again after the operational data connection is available."
+            description={errorMessage ?? "We could not load current workspace activity. Refresh the page or try again shortly."}
+            tone="danger"
           />
         </Panel>
       </>
