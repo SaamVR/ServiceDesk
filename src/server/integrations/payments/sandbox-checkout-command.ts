@@ -13,9 +13,10 @@ export interface AuthoritativeCheckoutHold {
 
 export interface SandboxCheckoutCommand {
   quote: QuoteDTO;
-  hold: AuthoritativeCheckoutHold;
+  hold?: AuthoritativeCheckoutHold;
   purpose: SandboxCheckoutPurpose;
   invoiceId?: string;
+  balanceMinor?: number;
   successUrl: string;
   cancelUrl: string;
   requestedMode?: ProviderMode;
@@ -56,7 +57,7 @@ function isHttpsProductRedirect(value: string): boolean {
 }
 
 function amountFor(command: SandboxCheckoutCommand): number {
-  return command.purpose === "DEPOSIT" ? command.quote.depositMinor : command.quote.balanceMinor;
+  return command.purpose === "DEPOSIT" ? command.quote.depositMinor : (command.balanceMinor ?? 0);
 }
 
 function validateCommand(command: SandboxCheckoutCommand, now: string): Result<true> {
@@ -66,22 +67,32 @@ function validateCommand(command: SandboxCheckoutCommand, now: string): Result<t
   if (command.purpose !== "DEPOSIT" && command.purpose !== "BALANCE") {
     return { ok: false, code: "PAYMENT_PURPOSE_INVALID", message: "Only DEPOSIT and BALANCE checkout purposes are supported by the Product-facing boundary." };
   }
-  if (command.hold.workspaceId !== command.quote.workspaceId || command.hold.quoteId !== command.quote.id) {
-    return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Authoritative hold and quote scope do not match." };
+  if (command.purpose === "DEPOSIT") {
+    if (!command.hold) {
+      return { ok: false, code: "PAYMENT_HOLD_REFERENCE_MISSING", message: "Deposit checkout requires an authoritative active hold." };
+    }
+    if (command.hold.workspaceId !== command.quote.workspaceId || command.hold.quoteId !== command.quote.id) {
+      return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Authoritative hold and quote scope do not match." };
+    }
+    if (command.quote.status !== "ACCEPTED") {
+      return { ok: false, code: "QUOTE_NOT_ACCEPTED", message: "Deposit checkout requires an ACCEPTED quote." };
+    }
+    const expiresAt = new Date(command.hold.expiresAt).getTime();
+    const nowMs = new Date(now).getTime();
+    if (!Number.isFinite(expiresAt) || !Number.isFinite(nowMs)) {
+      return { ok: false, code: "PAYMENT_HOLD_EXPIRY_INVALID", message: "Checkout hold expiry timestamp is invalid." };
+    }
+    if (expiresAt <= nowMs) {
+      return { ok: false, code: "PAYMENT_HOLD_EXPIRED", message: "Checkout hold has expired." };
+    }
   }
-  if (command.purpose === "DEPOSIT" && command.quote.status !== "ACCEPTED") {
-    return { ok: false, code: "QUOTE_NOT_ACCEPTED", message: "Deposit checkout requires an ACCEPTED quote." };
-  }
-  if (command.purpose === "BALANCE" && !command.invoiceId?.trim()) {
-    return { ok: false, code: "PAYMENT_INVOICE_REFERENCE_MISSING", message: "Balance checkout requires an authoritative invoiceId." };
-  }
-  const expiresAt = new Date(command.hold.expiresAt).getTime();
-  const nowMs = new Date(now).getTime();
-  if (!Number.isFinite(expiresAt) || !Number.isFinite(nowMs)) {
-    return { ok: false, code: "PAYMENT_HOLD_EXPIRY_INVALID", message: "Checkout hold expiry timestamp is invalid." };
-  }
-  if (expiresAt <= nowMs) {
-    return { ok: false, code: "PAYMENT_HOLD_EXPIRED", message: "Checkout hold has expired." };
+  if (command.purpose === "BALANCE") {
+    if (!command.invoiceId?.trim()) {
+      return { ok: false, code: "PAYMENT_INVOICE_REFERENCE_MISSING", message: "Balance checkout requires an authoritative invoiceId." };
+    }
+    if (!Number.isInteger(command.balanceMinor) || (command.balanceMinor ?? 0) <= 0) {
+      return { ok: false, code: "PAYMENT_INVOICE_BALANCE_INVALID", message: "Balance checkout requires the current authoritative invoice balance." };
+    }
   }
   if (!isHttpsProductRedirect(command.successUrl) || !isHttpsProductRedirect(command.cancelUrl)) {
     return { ok: false, code: "CHECKOUT_REDIRECT_URL_INVALID", message: "Checkout redirect URLs must be HTTPS and must not contain embedded credentials." };
@@ -116,12 +127,13 @@ function sanitizeEvidence(evidence: RedactedProviderEvidence): Result<RedactedPr
 
 function toCheckoutInput(command: SandboxCheckoutCommand) {
   return {
-    hold: command.hold,
+    ...(command.hold ? { hold: command.hold } : {}),
     quote: command.quote,
     purpose: command.purpose,
     successUrl: command.successUrl,
     cancelUrl: command.cancelUrl,
     ...(command.invoiceId ? { invoiceId: command.invoiceId } : {}),
+    ...(command.balanceMinor !== undefined ? { balanceMinor: command.balanceMinor } : {}),
   };
 }
 
