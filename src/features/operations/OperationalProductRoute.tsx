@@ -16,8 +16,6 @@ import {
   updateOperationalServiceCatalogItem,
   type OperationalActionResult,
   type OperationalAttention,
-  type OperationalCustomer,
-  type OperationalInvoice,
   type OperationalStaffSnapshot,
   type OperationalVisit,
 } from "./operational-product-runtime";
@@ -331,147 +329,138 @@ function InboxView({
 
 function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSnapshot; selectedCustomerId?: string }) {
   if (data.customers.length === 0) {
-    return (
-      <EmptyState
-        title="No customers yet"
-        detail="Customers will appear here after enquiries are linked to a customer record."
-      />
-    );
+    return <EmptyState title="No customers yet" detail="Customers will appear here after enquiries are linked to a customer record." />;
   }
 
-  const selectedCustomer =
-    data.customers.find((customer) => customer.id === selectedCustomerId) ??
-    data.customers[0];
-  const selectedProperties = data.properties.filter(
-    (property) => property.customerId === selectedCustomer.id,
-  );
-  const selectedRequests = data.requests.filter(
-    (request) => request.customerId === selectedCustomer.id,
-  );
+  const orderedCustomers = [...data.customers].sort((left, right) => left.displayName.localeCompare(right.displayName));
+  const selectedCustomer = orderedCustomers.find((customer) => customer.id === selectedCustomerId) ?? orderedCustomers[0];
+  const selectedProperties = data.properties.filter((property) => property.customerId === selectedCustomer.id);
+  const selectedRequests = data.requests
+    .filter((request) => request.customerId === selectedCustomer.id)
+    .sort((left, right) => Date.parse(right.createdAt ?? "1970-01-01T00:00:00.000Z") - Date.parse(left.createdAt ?? "1970-01-01T00:00:00.000Z"));
+  const selectedRequestIds = new Set(selectedRequests.map((request) => request.id));
+  const selectedQuotes = data.quotes.filter((quote) => selectedRequestIds.has(quote.requestId));
+  const selectedQuoteIds = new Set(selectedQuotes.map((quote) => quote.id));
+  const selectedInvoices = data.invoices.filter((invoice) => invoice.quoteId && selectedQuoteIds.has(invoice.quoteId));
+  const openInvoices = selectedInvoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
+  const openInvoiceTotal = openInvoices.reduce((sum, invoice) => sum + invoice.balanceMinor, 0);
+  const openInvoiceCurrency = openInvoices.length > 0 && openInvoices.every((invoice) => invoice.currency === openInvoices[0].currency)
+    ? openInvoices[0].currency
+    : undefined;
+  const activeRequests = selectedRequests.filter((request) => !["CLOSED", "LOST"].includes(request.status));
 
   return (
-    <div className={styles.stack}>
-      <OperationsToolbar
-        context={<ToolbarResultCount count={data.customers.length} label="customers" />}
-      />
-      <DataTable<OperationalCustomer>
-        caption="Customers"
-        rows={data.customers}
-        getRowKey={(customer) => customer.id}
-        selectedRowKey={selectedCustomer.id}
-        columns={[
-          {
-            id: "customer",
-            header: "Customer",
-            priority: "primary",
-            cell: (customer) => <DataCellStack primary={customer.displayName} secondary={customer.leadSource ?? "Lead source not recorded"} />,
-          },
-          {
-            id: "properties",
-            header: "Properties",
-            cell: (customer) => data.properties.filter((item) => item.customerId === customer.id).length,
-          },
-          {
-            id: "requests",
-            header: "Requests",
-            cell: (customer) => data.requests.filter((item) => item.customerId === customer.id).length,
-          },
-          {
-            id: "action",
-            header: "Action",
-            priority: "primary",
-            cell: (customer) => (
-              <a
-                className="app-button-secondary"
-                href={"?customer=" + encodeURIComponent(customer.id)}
-                aria-current={customer.id === selectedCustomer.id ? "page" : undefined}
-              >
-                {customer.id === selectedCustomer.id ? "Viewing" : "Open"}
-              </a>
-            ),
-          },
-        ]}
-        renderMobileRow={(customer) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={customer.displayName}
-              secondary={
-                data.properties.filter((item) => item.customerId === customer.id).length +
-                " properties · " +
-                data.requests.filter((item) => item.customerId === customer.id).length +
-                " requests"
-              }
-            />
-            <a
-              className="app-button-secondary"
-              href={"?customer=" + encodeURIComponent(customer.id)}
-              aria-current={customer.id === selectedCustomer.id ? "page" : undefined}
-            >
-              {customer.id === selectedCustomer.id ? "Viewing" : "Open"}
-            </a>
-          </div>
-        )}
-      />
-
-      <Panel>
-        <SectionHeader
-          title={selectedCustomer.displayName}
-          description={selectedCustomer.leadSource ? "Lead source: " + selectedCustomer.leadSource : "Customer details"}
-        />
-        <div className="app-grid app-grid-two">
-          <section>
-            <h3>Properties</h3>
-            {selectedProperties.length === 0 ? (
-              <AppEmptyState title="No properties" description="No property is linked to this customer yet." />
-            ) : (
-              <div className="app-row-list">
-                {selectedProperties.map((property) => (
-                  <article className="app-row" key={property.id}>
-                    <div>
-                      <h3>{property.label}</h3>
-                      <p>{property.address || "Address not recorded"}</p>
-                      {property.serviceNotes ? <p>Service: {property.serviceNotes}</p> : null}
-                    </div>
-                    <div className="app-row-meta">
-                      <span>{property.accessNotes ? "Access notes saved" : "No access notes"}</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section>
-            <h3>Recent requests</h3>
-            {selectedRequests.length === 0 ? (
-              <AppEmptyState title="No requests" description="No service request is linked to this customer yet." />
-            ) : (
-              <div className="app-row-list">
-                {selectedRequests.slice(0, 8).map((request) => {
-                  const quote = data.quotes.find(
-                    (item) => item.requestId === request.id && item.status !== "SUPERSEDED",
-                  );
-                  return (
-                    <article className="app-row" key={request.id}>
-                      <div>
-                        <h3>{request.serviceLabel}</h3>
-                        <p>{formatWhen(request.requestedStartAt, data.workspace.timezone)}</p>
-                      </div>
-                      <div className="app-row-meta">
-                        <StatusBadge tone={statusBadgeTone(request.status)}>
-                          {request.status.replaceAll("_", " ")}
-                        </StatusBadge>
-                        <span>{quote ? "Quote " + quote.status.replaceAll("_", " ").toLowerCase() : "No quote yet"}</span>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+    <section className={styles.crmWorkspace} aria-label="Customer relationship workspace">
+      <header className={styles.crmToolbar}>
+        <div>
+          <p className={styles.crmEyebrow}>Customer records</p>
+          <h2>Customers</h2>
+          <p>{orderedCustomers.length} customer{orderedCustomers.length === 1 ? "" : "s"} · linked properties and service history</p>
         </div>
-      </Panel>
-    </div>
+      </header>
+
+      <div className={styles.crmSplit}>
+        <aside className={styles.crmQueue} aria-label="Customer list">
+          {orderedCustomers.map((customer) => {
+            const properties = data.properties.filter((item) => item.customerId === customer.id).length;
+            const requests = data.requests.filter((item) => item.customerId === customer.id).length;
+            const selected = customer.id === selectedCustomer.id;
+            return (
+              <a
+                className={`${styles.crmQueueItem} ${selected ? styles.crmQueueSelected : ""}`.trim()}
+                href={"?customer=" + encodeURIComponent(customer.id)}
+                aria-current={selected ? "page" : undefined}
+                key={customer.id}
+              >
+                <span className={styles.crmAvatar} aria-hidden="true">{customer.displayName.slice(0, 1).toUpperCase()}</span>
+                <span className={styles.crmQueueCopy}>
+                  <strong>{customer.displayName}</strong>
+                  <small>{customer.leadSource ?? "Lead source not recorded"}</small>
+                  <span>{properties} propert{properties === 1 ? "y" : "ies"} · {requests} request{requests === 1 ? "" : "s"}</span>
+                </span>
+              </a>
+            );
+          })}
+        </aside>
+
+        <article className={styles.crmDetail}>
+          <header className={styles.crmDetailHeader}>
+            <div className={styles.crmIdentity}>
+              <span className={styles.crmDetailAvatar} aria-hidden="true">{selectedCustomer.displayName.slice(0, 1).toUpperCase()}</span>
+              <span>
+                <p className={styles.crmEyebrow}>Customer</p>
+                <h2>{selectedCustomer.displayName}</h2>
+                <p>{selectedCustomer.leadSource ? `Lead source · ${selectedCustomer.leadSource}` : "Lead source not recorded"}</p>
+              </span>
+            </div>
+            <div className={styles.crmActions}>
+              <a className="app-button-secondary" href={buildStaffModuleHref(data.workspace.slug, "inbox")}>Open inbox</a>
+              <a className="app-button-primary" href={buildStaffModuleHref(data.workspace.slug, "requests")}>View requests</a>
+            </div>
+          </header>
+
+          <section className={styles.crmMetrics} aria-label="Customer account summary">
+            <div><span>Properties</span><strong>{selectedProperties.length}</strong></div>
+            <div><span>Active requests</span><strong>{activeRequests.length}</strong></div>
+            <div><span>Quotes</span><strong>{selectedQuotes.length}</strong></div>
+            <div><span>Open balance</span><strong>{openInvoiceCurrency ? formatMinorMoney(openInvoiceTotal, openInvoiceCurrency) : openInvoices.length ? "Multiple currencies" : "—"}</strong></div>
+          </section>
+
+          <div className={styles.crmDetailGrid}>
+            <section className={styles.crmSection}>
+              <div className={styles.crmSectionHeader}>
+                <div><p className={styles.crmSectionEyebrow}>Locations</p><h3>Properties</h3></div>
+                <span>{selectedProperties.length}</span>
+              </div>
+              {selectedProperties.length === 0 ? (
+                <div className={styles.crmEmpty}><strong>No properties</strong><p>No property is linked to this customer yet.</p></div>
+              ) : (
+                <div className={styles.propertyCards}>
+                  {selectedProperties.map((property) => (
+                    <article className={styles.propertyCard} key={property.id}>
+                      <div className={styles.propertyCardHead}>
+                        <span className={styles.propertyIcon} aria-hidden="true">⌂</span>
+                        <div><strong>{property.label}</strong><p>{property.address || "Address not recorded"}</p></div>
+                      </div>
+                      {property.accessNotes ? <div className={styles.crmNote}><span>Access</span><p>{property.accessNotes}</p></div> : null}
+                      {property.serviceNotes ? <div className={styles.crmNote}><span>Service notes</span><p>{property.serviceNotes}</p></div> : null}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className={styles.crmSection}>
+              <div className={styles.crmSectionHeader}>
+                <div><p className={styles.crmSectionEyebrow}>Activity</p><h3>Recent service requests</h3></div>
+                <span>{selectedRequests.length}</span>
+              </div>
+              {selectedRequests.length === 0 ? (
+                <div className={styles.crmEmpty}><strong>No requests</strong><p>No service request is linked to this customer yet.</p></div>
+              ) : (
+                <div className={styles.crmActivityList}>
+                  {selectedRequests.slice(0, 8).map((request) => {
+                    const quote = selectedQuotes.find((item) => item.requestId === request.id && item.status !== "SUPERSEDED");
+                    return (
+                      <a className={styles.crmActivityRow} href={`/app/${encodeURIComponent(data.workspace.slug)}/requests?request=${encodeURIComponent(request.id)}`} key={request.id}>
+                        <span className={styles.crmActivityCopy}>
+                          <strong>{request.serviceLabel}</strong>
+                          <small>{formatWhen(request.requestedStartAt, data.workspace.timezone)}</small>
+                        </span>
+                        <span className={styles.crmActivityMeta}>
+                          <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>
+                          <small>{quote ? `Quote ${quote.status.replaceAll("_", " ").toLowerCase()}` : "No quote"}</small>
+                        </span>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+        </article>
+      </div>
+    </section>
   );
 }
 
@@ -1338,227 +1327,150 @@ function InvoicesView({
     const amount = String(formData.get("amount") ?? "").trim();
     const match = amount.match(/^(\d+)(?:\.(\d{1,2}))?$/);
     if (!match) {
-      actionRedirect(
-        workspaceSlug,
-        "invoices",
-        {
-          ok: false,
-          message: "Enter a valid payment amount.",
-        },
-        "invoice=" + encodeURIComponent(invoiceId) + "&",
-      );
+      actionRedirect(workspaceSlug, "invoices", { ok: false, message: "Enter a valid payment amount." }, "invoice=" + encodeURIComponent(invoiceId) + "&");
     }
-    const amountMinor =
-      Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
+    const amountMinor = Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
     const methodRaw = String(formData.get("method") ?? "OTHER");
-    const method =
-      methodRaw === "CASH" || methodRaw === "BANK_TRANSFER" ? methodRaw : "OTHER";
-    const result = await applyOperationalManualPayment(
-      workspaceSlug,
-      invoiceId,
-      amountMinor,
-      method,
-      String(formData.get("reference") ?? ""),
-    );
-    actionRedirect(
-      workspaceSlug,
-      "invoices",
-      result,
-      "invoice=" + encodeURIComponent(invoiceId) + "&",
-    );
+    const method = methodRaw === "CASH" || methodRaw === "BANK_TRANSFER" ? methodRaw : "OTHER";
+    const result = await applyOperationalManualPayment(workspaceSlug, invoiceId, amountMinor, method, String(formData.get("reference") ?? ""));
+    actionRedirect(workspaceSlug, "invoices", result, "invoice=" + encodeURIComponent(invoiceId) + "&");
   }
 
   if (data.invoices.length === 0) {
-    return (
-      <EmptyState title="No invoices yet" detail="Invoices will appear after billable visits are created." />
-    );
+    return <EmptyState title="No invoices yet" detail="Invoices will appear after billable visits are created." />;
   }
 
-  const selectedInvoice =
-    data.invoices.find((invoice) => invoice.id === selectedInvoiceId) ??
-    data.invoices[0];
-  const selectedInvoiceQuote = data.quotes.find(
-    (quote) => quote.id === selectedInvoice.quoteId,
-  );
-  const selectedInvoiceRequest = data.requests.find(
-    (request) => request.id === selectedInvoiceQuote?.requestId,
-  );
-  const selectedInvoiceCustomer = data.customers.find(
-    (customer) => customer.id === selectedInvoiceRequest?.customerId,
-  );
-  const selectedInvoiceCanRecordPayment =
-    selectedInvoice.balanceMinor > 0 && selectedInvoice.status !== "VOID";
+  const orderedInvoices = [...data.invoices].sort((left, right) => {
+    const leftOpen = left.balanceMinor > 0 && left.status !== "VOID" ? 0 : 1;
+    const rightOpen = right.balanceMinor > 0 && right.status !== "VOID" ? 0 : 1;
+    return leftOpen - rightOpen || right.balanceMinor - left.balanceMinor;
+  });
+  const selectedInvoice = orderedInvoices.find((invoice) => invoice.id === selectedInvoiceId) ?? orderedInvoices[0];
+  const selectedInvoiceQuote = data.quotes.find((quote) => quote.id === selectedInvoice.quoteId);
+  const selectedInvoiceRequest = data.requests.find((request) => request.id === selectedInvoiceQuote?.requestId);
+  const selectedInvoiceCustomer = data.customers.find((customer) => customer.id === selectedInvoiceRequest?.customerId);
+  const selectedInvoiceProperty = data.properties.find((property) => property.id === selectedInvoiceRequest?.propertyId);
+  const selectedInvoiceCanRecordPayment = selectedInvoice.balanceMinor > 0 && selectedInvoice.status !== "VOID";
+  const openInvoices = orderedInvoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
+  const paidInvoices = orderedInvoices.filter((invoice) => invoice.status === "PAID").length;
 
   return (
-    <div className={styles.stack}>
-      <OperationsToolbar
-        context={<ToolbarResultCount count={data.invoices.length} label="invoices" />}
-      />
-      <DataTable<OperationalInvoice>
-        caption="Invoices"
-        rows={data.invoices}
-        getRowKey={(invoice) => invoice.id}
-        selectedRowKey={selectedInvoice.id}
-        columns={[
-          {
-            id: "invoice",
-            header: "Invoice",
-            priority: "primary",
-            cell: (invoice) => <DataCellStack primary={invoice.id.slice(0, 8)} secondary={invoice.status.replaceAll("_", " ")} />,
-          },
-          {
-            id: "total",
-            header: "Total",
-            cell: (invoice) => formatMinorMoney(invoice.totalMinor, invoice.currency),
-          },
-          {
-            id: "paid",
-            header: "Paid / allocated",
-            cell: (invoice) => formatMinorMoney(invoice.allocatedMinor, invoice.currency),
-          },
-          {
-            id: "balance",
-            header: "Balance",
-            priority: "primary",
-            cell: (invoice) => formatMinorMoney(invoice.balanceMinor, invoice.currency),
-          },
-          {
-            id: "status",
-            header: "Status",
-            cell: (invoice) => <StatusBadge tone={statusBadgeTone(invoice.status)}>{invoice.status.replaceAll("_", " ")}</StatusBadge>,
-          },
-          {
-            id: "action",
-            header: "Action",
-            priority: "primary",
-            cell: (invoice) => (
+    <section className={styles.financeWorkspace} aria-label="Invoice collection workspace">
+      <header className={styles.financeToolbar}>
+        <div>
+          <p className={styles.financeEyebrow}>Customer finance</p>
+          <h2>Invoices</h2>
+          <p>{openInvoices.length} open balance{openInvoices.length === 1 ? "" : "s"} · {paidInvoices} paid</p>
+        </div>
+        <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "reports")}>Open reports</a>
+      </header>
+
+      <div className={styles.financeSplit}>
+        <aside className={styles.financeQueue} aria-label="Invoice list">
+          {orderedInvoices.map((invoice) => {
+            const quote = data.quotes.find((item) => item.id === invoice.quoteId);
+            const request = data.requests.find((item) => item.id === quote?.requestId);
+            const customer = data.customers.find((item) => item.id === request?.customerId);
+            const selected = invoice.id === selectedInvoice.id;
+            return (
               <a
-                className="app-button-secondary"
+                className={`${styles.financeQueueItem} ${selected ? styles.financeQueueSelected : ""}`.trim()}
                 href={"?invoice=" + encodeURIComponent(invoice.id)}
-                aria-current={invoice.id === selectedInvoice.id ? "page" : undefined}
+                aria-current={selected ? "page" : undefined}
+                key={invoice.id}
               >
-                {invoice.id === selectedInvoice.id ? "Viewing" : "Open"}
+                <span className={styles.financeQueueTop}>
+                  <strong>{customer?.displayName ?? "Customer"}</strong>
+                  <StatusBadge tone={statusBadgeTone(invoice.status)}>{invoice.status.replaceAll("_", " ")}</StatusBadge>
+                </span>
+                <span className={styles.financeQueueService}>{request?.serviceLabel ?? "Service invoice"}</span>
+                <span className={styles.financeQueueMoney}>
+                  <span>{formatMinorMoney(invoice.balanceMinor, invoice.currency)} due</span>
+                  <small>Invoice {invoice.id.slice(0, 8)}</small>
+                </span>
               </a>
-            ),
-          },
-        ]}
-        renderMobileRow={(invoice) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due"}
-              secondary={invoice.status.replaceAll("_", " ") + " · invoice " + invoice.id.slice(0, 8)}
-            />
-            <a
-              className="app-button-secondary"
-              href={"?invoice=" + encodeURIComponent(invoice.id)}
-              aria-current={invoice.id === selectedInvoice.id ? "page" : undefined}
-            >
-              {invoice.id === selectedInvoice.id ? "Viewing" : "Open"}
-            </a>
-          </div>
-        )}
-      />
+            );
+          })}
+        </aside>
 
-      <Panel>
-        <SectionHeader
-          title={"Invoice " + selectedInvoice.id.slice(0, 8)}
-          description={
-            (selectedInvoiceCustomer?.displayName ?? "Customer unavailable") +
-            " · " +
-            (selectedInvoiceRequest?.serviceLabel ?? "Service invoice")
-          }
-          action={
-            <StatusBadge tone={statusBadgeTone(selectedInvoice.status)}>
-              {selectedInvoice.status.replaceAll("_", " ")}
-            </StatusBadge>
-          }
-        />
+        <article className={styles.financeDetail}>
+          <header className={styles.financeDetailHeader}>
+            <div>
+              <p className={styles.financeEyebrow}>Invoice {selectedInvoice.id.slice(0, 8)}</p>
+              <h2>{selectedInvoiceCustomer?.displayName ?? "Customer unavailable"}</h2>
+              <p>{selectedInvoiceRequest?.serviceLabel ?? "Service invoice"} · {selectedInvoiceProperty?.label ?? "Property not linked"}</p>
+            </div>
+            <StatusBadge tone={statusBadgeTone(selectedInvoice.status)}>{selectedInvoice.status.replaceAll("_", " ")}</StatusBadge>
+          </header>
 
-        <div className="app-grid app-grid-two">
-          <section>
-            <h3>Balance</h3>
-            <dl className="summary-list">
-              <div><dt>Total</dt><dd>{formatMinorMoney(selectedInvoice.totalMinor, selectedInvoice.currency)}</dd></div>
-              <div><dt>Paid / allocated</dt><dd>{formatMinorMoney(selectedInvoice.allocatedMinor, selectedInvoice.currency)}</dd></div>
-              <div><dt>Refunded</dt><dd>{formatMinorMoney(selectedInvoice.refundedMinor, selectedInvoice.currency)}</dd></div>
-              <div><dt>Outstanding</dt><dd>{formatMinorMoney(selectedInvoice.balanceMinor, selectedInvoice.currency)}</dd></div>
-            </dl>
+          <section className={styles.invoiceHero} aria-label="Invoice balance summary">
+            <div className={styles.invoiceBalance}>
+              <span>Outstanding balance</span>
+              <strong>{formatMinorMoney(selectedInvoice.balanceMinor, selectedInvoice.currency)}</strong>
+              <small>{selectedInvoice.status === "PAID" ? "Paid in full" : selectedInvoice.status === "VOID" ? "Invoice void" : "Current amount still to collect"}</small>
+            </div>
+            <div><span>Invoice total</span><strong>{formatMinorMoney(selectedInvoice.totalMinor, selectedInvoice.currency)}</strong></div>
+            <div><span>Allocated</span><strong>{formatMinorMoney(selectedInvoice.allocatedMinor, selectedInvoice.currency)}</strong></div>
+            <div><span>Refunded</span><strong>{formatMinorMoney(selectedInvoice.refundedMinor, selectedInvoice.currency)}</strong></div>
           </section>
 
-          {selectedInvoiceCanRecordPayment ? (
-            <FormSection
-              title="Record manual payment"
-              description="Use this only for payment received outside the online checkout flow."
-            >
-              <form action={manualPayment}>
-                <input type="hidden" name="invoiceId" value={selectedInvoice.id} />
-                <FormGrid columns={2}>
-                  <FormField id={"payment-amount-" + selectedInvoice.id} label="Amount" required>
-                    {({ id, describedBy, invalid }) => (
-                      <TextInput
-                        id={id}
-                        name="amount"
-                        type="text"
-                        defaultValue={(selectedInvoice.balanceMinor / 100).toFixed(2)}
-                        required
-                        describedBy={describedBy}
-                        invalid={invalid}
-                      />
-                    )}
-                  </FormField>
-                  <FormField id={"payment-method-" + selectedInvoice.id} label="Method" required>
-                    {({ id, describedBy, invalid }) => (
-                      <SelectInput
-                        id={id}
-                        name="method"
-                        defaultValue="BANK_TRANSFER"
-                        required
-                        describedBy={describedBy}
-                        invalid={invalid}
-                      >
-                        <option value="BANK_TRANSFER">Bank transfer</option>
-                        <option value="CASH">Cash</option>
-                        <option value="OTHER">Other</option>
-                      </SelectInput>
-                    )}
-                  </FormField>
-                  <FormField id={"payment-reference-" + selectedInvoice.id} label="Reference" required>
-                    {({ id, describedBy, invalid }) => (
-                      <TextInput
-                        id={id}
-                        name="reference"
-                        placeholder="Bank reference or receipt number"
-                        required
-                        describedBy={describedBy}
-                        invalid={invalid}
-                      />
-                    )}
-                  </FormField>
-                </FormGrid>
-                <FormActions>
-                  <button className="app-button-primary" type="submit">Apply payment</button>
-                </FormActions>
-                <p className="app-field-help">
-                  Records an offline/manual payment only. It does not simulate online settlement.
-                </p>
-              </form>
-            </FormSection>
-          ) : (
-            <section>
-              <h3>Payment action</h3>
-              <AppEmptyState
-                title={selectedInvoice.status === "VOID" ? "Invoice void" : "Nothing outstanding"}
-                description={
-                  selectedInvoice.status === "VOID"
-                    ? "Manual payment cannot be recorded on a void invoice."
-                    : "This invoice has no balance requiring a manual payment."
-                }
-              />
+          <div className={styles.financeDetailGrid}>
+            <section className={styles.financeSection}>
+              <div className={styles.financeSectionHeader}>
+                <div><p className={styles.financeSectionEyebrow}>Invoice context</p><h3>Customer & service</h3></div>
+              </div>
+              <dl className={styles.financeSummary}>
+                <div><dt>Customer</dt><dd>{selectedInvoiceCustomer?.displayName ?? "Unavailable"}</dd></div>
+                <div><dt>Service</dt><dd>{selectedInvoiceRequest?.serviceLabel ?? "Service invoice"}</dd></div>
+                <div><dt>Property</dt><dd>{selectedInvoiceProperty?.label ?? "Not linked"}</dd></div>
+                <div><dt>Quote</dt><dd>{selectedInvoiceQuote ? `v${selectedInvoiceQuote.version} · ${selectedInvoiceQuote.status.replaceAll("_", " ")}` : "Unavailable"}</dd></div>
+              </dl>
+              {selectedInvoiceCanRecordPayment ? (
+                <div className={styles.sandboxInfo}>
+                  <strong>Customer online payment</strong>
+                  <p>Eligible open invoices can be paid from the customer portal using the ServiceDesk SANDBOX checkout. Paid state changes only after verified payment application.</p>
+                </div>
+              ) : null}
             </section>
-          )}
-        </div>
-      </Panel>
-    </div>
+
+            <section className={styles.financeSection}>
+              <div className={styles.financeSectionHeader}>
+                <div><p className={styles.financeSectionEyebrow}>Collection</p><h3>{selectedInvoiceCanRecordPayment ? "Record offline payment" : "Payment status"}</h3></div>
+              </div>
+              {selectedInvoiceCanRecordPayment ? (
+                <form action={manualPayment} className={styles.paymentForm}>
+                  <input type="hidden" name="invoiceId" value={selectedInvoice.id} />
+                  <FormGrid columns={2}>
+                    <FormField id={"payment-amount-" + selectedInvoice.id} label="Amount" required>
+                      {({ id, describedBy, invalid }) => <TextInput id={id} name="amount" type="text" defaultValue={(selectedInvoice.balanceMinor / 100).toFixed(2)} required describedBy={describedBy} invalid={invalid} />}
+                    </FormField>
+                    <FormField id={"payment-method-" + selectedInvoice.id} label="Method" required>
+                      {({ id, describedBy, invalid }) => (
+                        <SelectInput id={id} name="method" defaultValue="BANK_TRANSFER" required describedBy={describedBy} invalid={invalid}>
+                          <option value="BANK_TRANSFER">Bank transfer</option>
+                          <option value="CASH">Cash</option>
+                          <option value="OTHER">Other</option>
+                        </SelectInput>
+                      )}
+                    </FormField>
+                    <FormField id={"payment-reference-" + selectedInvoice.id} label="Reference" required>
+                      {({ id, describedBy, invalid }) => <TextInput id={id} name="reference" placeholder="Bank reference or receipt number" required describedBy={describedBy} invalid={invalid} />}
+                    </FormField>
+                  </FormGrid>
+                  <button className="app-button-primary" type="submit">Record payment</button>
+                  <p>Use this only for money already received outside the online checkout flow. It does not simulate online settlement.</p>
+                </form>
+              ) : (
+                <div className={styles.financeClosedState}>
+                  <span aria-hidden="true">✓</span>
+                  <div><strong>{selectedInvoice.status === "VOID" ? "Invoice void" : "Nothing outstanding"}</strong><p>{selectedInvoice.status === "VOID" ? "Payments cannot be recorded on this invoice." : "This invoice has no outstanding balance."}</p></div>
+                </div>
+              )}
+            </section>
+          </div>
+        </article>
+      </div>
+    </section>
   );
 }
 

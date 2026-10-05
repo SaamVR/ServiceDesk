@@ -11,8 +11,8 @@ describe("V2 customers operational workspace", () => {
 
     expect(page).toContain("customer?: string");
     expect(page).toContain("selectedCustomerId={query.customer}");
-    expect(route).toContain('data.customers.find((customer) => customer.id === selectedCustomerId)');
-    expect(route).toContain("selectedRowKey={selectedCustomer.id}");
+    expect(route).toContain('orderedCustomers.find((customer) => customer.id === selectedCustomerId)');
+    expect(route).toContain('selected ? styles.crmQueueSelected : ""');
   });
 
   it("renders one customer context instead of expanding many customer panels", () => {
