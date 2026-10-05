@@ -34,6 +34,7 @@ interface OperationalProductRouteProps {
   workspaceSlug: string;
   module: Exclude<StaffModule, "overview">;
   selectedConversationId?: string;
+  selectedQualityCaseId?: string;
   notice?: string;
   error?: string;
 }
@@ -1100,9 +1101,11 @@ function InvoicesView({
 function QualityView({
   data,
   workspaceSlug,
+  selectedQualityCaseId,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
+  selectedQualityCaseId?: string;
 }) {
   async function qualityAction(formData: FormData) {
     "use server";
@@ -1118,13 +1121,19 @@ function QualityView({
         message: "Unsupported quality action.",
       });
     }
+    const qualityCaseId = String(formData.get("qualityCaseId") ?? "");
     const result = await applyOperationalQualityAction(
       workspaceSlug,
-      String(formData.get("qualityCaseId") ?? ""),
+      qualityCaseId,
       action,
       String(formData.get("resolutionNote") ?? ""),
     );
-    actionRedirect(workspaceSlug, "quality", result);
+    actionRedirect(
+      workspaceSlug,
+      "quality",
+      result,
+      "case=" + encodeURIComponent(qualityCaseId) + "&",
+    );
   }
 
   if (data.qualityCases.length === 0) {
@@ -1136,71 +1145,125 @@ function QualityView({
     );
   }
 
-  return (
-    <div className={styles.stack}>
-      {data.qualityCases.map((qualityCase) => {
-        const visit = data.visits.find((item) => item.id === qualityCase.visitId);
-        return (
-          <section className="plain-card" key={qualityCase.id}>
-            <div className={styles.sectionHeader}>
-              <div>
-                <p className="label">Quality case</p>
-                <h2>{qualityCase.summary}</h2>
-              </div>
-              <span className={"status-pill " + statusTone(qualityCase.state)}>
-                {qualityCase.state.replaceAll("_", " ")}
-              </span>
-            </div>
-            <dl className="summary-list">
-              <div>
-                <dt>Visit</dt>
-                <dd>{visit ? formatWhen(visit.startAt) : "Visit unavailable"}</dd>
-              </div>
-              <div>
-                <dt>Score</dt>
-                <dd>{qualityCase.feedbackScore ?? "Not scored"}</dd>
-              </div>
-              <div>
-                <dt>Deadline</dt>
-                <dd>{formatWhen(qualityCase.dueAt)}</dd>
-              </div>
-              <div>
-                <dt>Review request</dt>
-                <dd>{qualityCase.reviewRequestState.replaceAll("_", " ")}</dd>
-              </div>
-            </dl>
+  const selected =
+    data.qualityCases.find((qualityCase) => qualityCase.id === selectedQualityCaseId) ??
+    data.qualityCases[0];
+  const visit = data.visits.find((item) => item.id === selected.visitId);
+  const evidence = data.visitEvidence.filter((item) => item.visitId === selected.visitId);
 
-            <form action={qualityAction} className={styles.actions}>
-              <input type="hidden" name="qualityCaseId" value={qualityCase.id} />
-              {qualityCase.state === "OPEN" && (
-                <>
-                  <button className="button-secondary" name="action" value="ASSIGN">
-                    Assign to me
-                  </button>
-                  <button className="button-secondary" name="action" value="START_REVIEW">
-                    Start review
-                  </button>
-                </>
+  const actions = (
+    <form action={qualityAction}>
+      <input type="hidden" name="qualityCaseId" value={selected.id} />
+      <RowActions label="Quality case actions">
+        {selected.state === "OPEN" ? (
+          <>
+            <button className="app-button-secondary" name="action" value="ASSIGN">Assign to me</button>
+            <button className="app-button-secondary" name="action" value="START_REVIEW">Start review</button>
+          </>
+        ) : null}
+        {selected.state === "RESOLVED" && selected.reviewRequestState === "ELIGIBLE" ? (
+          <button className="app-button-secondary" name="action" value="REQUEST_REVIEW">Request customer review</button>
+        ) : null}
+      </RowActions>
+    </form>
+  );
+
+  return (
+    <SplitWorkspace
+      ariaLabel="Quality review workspace"
+      mobileFocus="detail"
+      list={
+        <WorkspacePane
+          title="Quality queue"
+          description={data.qualityCases.length + " case" + (data.qualityCases.length === 1 ? "" : "s")}
+        >
+          <WorkspaceList ariaLabel="Quality cases">
+            {data.qualityCases.map((qualityCase) => (
+              <WorkspaceListItem
+                key={qualityCase.id}
+                href={"?case=" + encodeURIComponent(qualityCase.id)}
+                selected={qualityCase.id === selected.id}
+                ariaLabel={qualityCase.summary}
+              >
+                <DataCellStack
+                  primary={qualityCase.summary}
+                  secondary={qualityCase.state.replaceAll("_", " ") + " · " + formatWhen(qualityCase.dueAt)}
+                />
+              </WorkspaceListItem>
+            ))}
+          </WorkspaceList>
+        </WorkspacePane>
+      }
+      detail={
+        <WorkspacePane
+          title={selected.summary}
+          description={"Quality case · " + selected.state.replaceAll("_", " ")}
+          actions={actions}
+        >
+          <div className="app-grid app-grid-two">
+            <dl className="summary-list">
+              <div><dt>Visit</dt><dd>{visit ? formatWhen(visit.startAt) : "Visit unavailable"}</dd></div>
+              <div><dt>Score</dt><dd>{selected.feedbackScore ?? "Not scored"}</dd></div>
+              <div><dt>Deadline</dt><dd>{formatWhen(selected.dueAt)}</dd></div>
+              <div><dt>Review request</dt><dd>{selected.reviewRequestState.replaceAll("_", " ")}</dd></div>
+              <div><dt>Owner</dt><dd>{selected.ownerUserId ? "Assigned" : "Unassigned"}</dd></div>
+            </dl>
+            <div>
+              <h3>Field evidence</h3>
+              {evidence.length ? (
+                <div className="app-row-list">
+                  {evidence.map((item) => (
+                    <article className="app-row" key={item.id}>
+                      <div><strong>{item.kind.replaceAll("_", " ")}</strong><p>{item.text ?? "Photo evidence"}</p></div>
+                      <span>{formatWhen(item.capturedAt)}</span>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <AppEmptyState title="No evidence recorded" description="No field evidence is currently linked to this visit." />
               )}
-              {qualityCase.state === "IN_REVIEW" && (
-                <>
-                  <input name="resolutionNote" placeholder="Resolution note" required />
-                  <button className="button-primary" name="action" value="RESOLVE">
-                    Resolve case
-                  </button>
-                </>
-              )}
-              {qualityCase.state === "RESOLVED" &&
-                qualityCase.reviewRequestState === "ELIGIBLE" && (
-                  <button className="button-secondary" name="action" value="REQUEST_REVIEW">
-                    Request customer review
-                  </button>
-                )}
+            </div>
+          </div>
+
+          {selected.state === "IN_REVIEW" ? (
+            <form action={qualityAction}>
+              <input type="hidden" name="qualityCaseId" value={selected.id} />
+              <FormSection title="Resolve case" description="Record the resolution before closing this quality issue.">
+                <FormField id={"quality-resolution-" + selected.id} label="Resolution note" required>
+                  {({ id, describedBy, invalid }) => (
+                    <TextArea
+                      id={id}
+                      name="resolutionNote"
+                      rows={4}
+                      required
+                      describedBy={describedBy}
+                      invalid={invalid}
+                      placeholder="Describe what was resolved"
+                    />
+                  )}
+                </FormField>
+                <FormActions>
+                  <button className="app-button-primary" name="action" value="RESOLVE">Resolve case</button>
+                </FormActions>
+              </FormSection>
             </form>
-          </section>
-        );
-      })}
-    </div>
+          ) : null}
+        </WorkspacePane>
+      }
+      context={
+        <WorkspacePane title="Visit context" description={visit?.status.replaceAll("_", " ") ?? "Visit unavailable"}>
+          {visit ? (
+            <dl className="summary-list">
+              <div><dt>Start</dt><dd>{formatWhen(visit.startAt)}</dd></div>
+              <div><dt>Crew</dt><dd>{visit.crewId ? data.crews.find((crew) => crew.id === visit.crewId)?.name ?? "Assigned" : "Unassigned"}</dd></div>
+              <div><dt>Evidence</dt><dd>{evidence.length}</dd></div>
+            </dl>
+          ) : (
+            <AppEmptyState title="Visit unavailable" description="The linked visit could not be found in the current workspace data." />
+          )}
+        </WorkspacePane>
+      }
+    />
   );
 }
 
@@ -1428,6 +1491,7 @@ function renderModule(
   data: OperationalStaffSnapshot,
   workspaceSlug: string,
   selectedConversationId?: string,
+  selectedQualityCaseId?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -1451,7 +1515,7 @@ function renderModule(
     case "invoices":
       return <InvoicesView data={data} workspaceSlug={workspaceSlug} />;
     case "quality":
-      return <QualityView data={data} workspaceSlug={workspaceSlug} />;
+      return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} />;
     case "automations":
       return <AutomationsView data={data} />;
     case "reports":
@@ -1467,6 +1531,7 @@ export async function OperationalProductRoute({
   workspaceSlug,
   module,
   selectedConversationId,
+  selectedQualityCaseId,
   notice,
   error,
 }: OperationalProductRouteProps) {
@@ -1484,7 +1549,7 @@ export async function OperationalProductRoute({
       <Notice notice={notice} error={error} />
 
       {result.ok ? (
-        renderModule(module, result.value, workspaceSlug, selectedConversationId)
+        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedQualityCaseId)
       ) : (
         <Panel>
           <FeedbackBanner
