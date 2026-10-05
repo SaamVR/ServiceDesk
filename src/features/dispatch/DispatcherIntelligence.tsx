@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { MetricStrip, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { formatOperationalTime, resolveOperationalTimeZone } from "@/features/crew/time-format";
 import type { DispatchAssignmentAvailability } from "./assignment-boundary";
+import type { DispatchStaffDataQualityIssue } from "./staff-integration";
 import type {
   DispatchCandidateRecommendation,
   DispatchConflictCode,
@@ -38,12 +39,14 @@ export function DispatcherIntelligence({
     label: "Assignment unavailable",
     disabledReason: "Crew changes are not available from this screen yet.",
   },
+  dataQualityIssues = [],
   renderApprovalControl,
 }: {
   recommendations: readonly DispatchVisitRecommendation[];
   timeline?: readonly DispatchCrewDayLane[];
   workspaceTimeZone?: string;
   assignmentAvailability?: DispatchAssignmentAvailability;
+  dataQualityIssues?: readonly DispatchStaffDataQualityIssue[];
   renderApprovalControl?: (input: DispatcherApprovalControlInput) => ReactNode;
 }) {
   const resolvedTimeZone = resolveOperationalTimeZone(workspaceTimeZone);
@@ -63,7 +66,26 @@ export function DispatcherIntelligence({
         { label: "Unassigned", value: recommendations.length },
         { label: "Suggested", value: eligible },
         { label: "Conflicts", value: collisions, tone: collisions > 0 ? "attention" : "default" },
+        ...(dataQualityIssues.length > 0
+          ? [{ label: "Needs data", value: dataQualityIssues.length, tone: "attention" as const }]
+          : []),
       ]} />
+
+      {dataQualityIssues.length > 0 ? (
+        <Panel>
+          <SectionHeader
+            title="Jobs needing schedule data"
+            description="These jobs are excluded from crew suggestions until their scheduling data is complete."
+          />
+          <ul className={styles.attention}>
+            {dataQualityIssues.map((item) => (
+              <li key={item.visitId + ":" + item.code}>
+                <strong>{item.visitId}</strong> · {item.message}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      ) : null}
 
       {recommendations.length === 0 ? (
         <Panel>

@@ -14,6 +14,13 @@ describe("V2 dispatcher product UI contract", () => {
     expect(ui).not.toContain("NOT_SCORED_NO_GEOGRAPHY");
   });
 
+  it("surfaces adapter data-quality blockers instead of silently hiding omitted jobs", () => {
+    const ui = source("src/features/dispatch/DispatcherIntelligence.tsx");
+    expect(ui).toContain("dataQualityIssues");
+    expect(ui).toContain("Jobs needing schedule data");
+    expect(ui).toContain("excluded from crew suggestions");
+  });
+
   it("keeps recommendation authority out of local UI mutation", () => {
     const ui = source("src/features/dispatch/DispatcherIntelligence.tsx");
     expect(ui).not.toContain("setVisit");

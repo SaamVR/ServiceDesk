@@ -46,6 +46,18 @@ describe("V2 crew conflict recovery", () => {
     expect(state.retryAvailable).toBe(false);
   });
 
+  it("treats a changed crew assignment as an invalid action that requires refresh", () => {
+    let state = createCrewSyncState(true);
+    state = reduceCrewSyncState(state, { type: "QUEUE_OPERATION", operation });
+    state = reduceCrewSyncState(state, crewCommandFailureToSyncEvent(operation.id, {
+      code: "CREW_ASSIGNMENT_CHANGED",
+      message: "This job moved to another crew.",
+    }));
+
+    expect(state.status).toBe("ACTION_NO_LONGER_VALID");
+    expect(state.retryAvailable).toBe(false);
+  });
+
   it("allows retry only for explicitly retryable transient failures", () => {
     let state = createCrewSyncState(true);
     state = reduceCrewSyncState(state, { type: "QUEUE_OPERATION", operation });
