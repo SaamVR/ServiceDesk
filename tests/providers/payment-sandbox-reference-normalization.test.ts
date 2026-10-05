@@ -61,18 +61,20 @@ describe("Stripe sandbox payment reference normalization", () => {
     expect(verified.ok).toBe(true);
     if (verified.ok) expect(verified.value.event.invoiceId).toBe("invoice-456");
     expect(rejected).toMatchObject({ ok: false, code: "PAYMENT_INVOICE_REFERENCE_MISSING" });
-    await expect(adapter.createCheckout({ hold, quote, purpose: "BALANCE", successUrl: "https://example.com/s", cancelUrl: "https://example.com/c" })).resolves.toMatchObject({ ok: false, code: "PAYMENT_INVOICE_REFERENCE_MISSING" });
+    await expect(adapter.createCheckout({ quote, purpose: "BALANCE", balanceMinor: 15000, successUrl: "https://example.com/s", cancelUrl: "https://example.com/c" })).resolves.toMatchObject({ ok: false, code: "PAYMENT_INVOICE_REFERENCE_MISSING" });
   });
 
   test("carries balance invoice metadata through Stripe-style checkout request", async () => {
     let body = "";
     const result = await createStripeCheckoutSession(
       { apiBaseUrl: "https://api.stripe.test/v1", secretKey: "sk_test_x", providerAccountId, mode: "SANDBOX", now: () => now },
-      { hold, quote, purpose: "BALANCE", invoiceId: "invoice-456", successUrl: "https://example.com/s", cancelUrl: "https://example.com/c" },
+      { quote, purpose: "BALANCE", invoiceId: "invoice-456", balanceMinor: 9200, successUrl: "https://example.com/s", cancelUrl: "https://example.com/c" },
       async (request) => { body = request.body; return { status: 200, body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.test/cs_test_123" }) }; },
     );
     expect(result.ok).toBe(true);
     expect(body).toContain("metadata%5BinvoiceId%5D=invoice-456");
+    expect(body).not.toContain("metadata%5BholdId%5D");
+    expect(body).toContain("line_items%5B0%5D%5Bprice_data%5D%5Bunit_amount%5D=9200");
     if (result.ok) expect(result.value.metadata?.invoiceId).toBe("invoice-456");
   });
 });
