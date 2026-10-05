@@ -13,7 +13,10 @@ import {
   type OperationalStaffSnapshot,
 } from "./operational-product-runtime";
 import { staffModuleConfig, type StaffModule } from "./staff-modules";
-import { EmptyState as AppEmptyState, PageHeader, Panel } from "@/components/product/PagePrimitives";
+import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
+import { DataCellStack, DataTable, RowActions } from "@/components/product/DataTable";
+import { OperationsToolbar, SplitWorkspace, ToolbarResultCount, WorkspaceList, WorkspaceListItem, WorkspacePane } from "@/components/product/WorkspacePrimitives";
+import { FormActions, FormField, FormGrid, FormSection, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
@@ -135,121 +138,108 @@ function InboxView({
   const replySupported = selected.channel === "WHATSAPP" || selected.channel === "EMAIL";
 
   return (
-    <div className={styles.inboxGrid}>
-      <aside className={styles.threadList}>
-        <p className="label">Conversations</p>
-        {data.conversations.map((conversation) => {
-          const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
-          return (
-            <a
-              className={conversation.id === selected.id ? styles.activeThread : styles.thread}
-              href={"?conversation=" + encodeURIComponent(conversation.id)}
-              key={conversation.id}
-            >
-              <strong>{threadCustomer?.displayName ?? "Customer"}</strong>
-              <span>
-                {conversation.channel} · {conversation.handoverActive ? "Human takeover" : "Open"}
-              </span>
-            </a>
-          );
-        })}
-      </aside>
-
-      <section className={styles.conversation}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <p className="label">{selected.channel} conversation</p>
-            <h2>{customer?.displayName ?? "Customer conversation"}</h2>
+    <SplitWorkspace
+      ariaLabel="Customer conversations"
+      mobileFocus="detail"
+      list={
+        <WorkspacePane
+          title="Conversations"
+          description={data.conversations.length + " active thread" + (data.conversations.length === 1 ? "" : "s")}
+        >
+          <WorkspaceList ariaLabel="Conversation list">
+            {data.conversations.map((conversation) => {
+              const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
+              return (
+                <WorkspaceListItem
+                  href={"?conversation=" + encodeURIComponent(conversation.id)}
+                  selected={conversation.id === selected.id}
+                  ariaLabel={(threadCustomer?.displayName ?? "Customer") + " " + conversation.channel + " conversation"}
+                  key={conversation.id}
+                >
+                  <DataCellStack
+                    primary={threadCustomer?.displayName ?? "Customer"}
+                    secondary={conversation.channel + " · " + (conversation.handoverActive ? "Human takeover" : "Open")}
+                  />
+                </WorkspaceListItem>
+              );
+            })}
+          </WorkspaceList>
+        </WorkspacePane>
+      }
+      detail={
+        <WorkspacePane
+          title={customer?.displayName ?? "Customer conversation"}
+          description={selected.channel + " conversation"}
+          actions={
+            <form action={handover}>
+              <input type="hidden" name="conversationId" value={selected.id} />
+              <input type="hidden" name="active" value={selected.handoverActive ? "false" : "true"} />
+              <button className="app-button-secondary" type="submit">
+                {selected.handoverActive ? "Release takeover" : "Take over"}
+              </button>
+            </form>
+          }
+        >
+          <div className={styles.timeline}>
+            {messages.length === 0 ? (
+              <AppEmptyState title="No messages yet" description="This conversation does not contain any stored messages." />
+            ) : (
+              messages.map((message) => (
+                <article className={styles.message} key={message.id}>
+                  <div>
+                    <strong>{message.direction === "INBOUND" ? customer?.displayName ?? "Customer" : message.senderKind}</strong>
+                    <p>{message.body ?? "Media message"}</p>
+                  </div>
+                  <small>
+                    {formatWhen(message.createdAt)} · {message.deliveryState ? message.deliveryState.replaceAll("_", " ") : "Received"}
+                  </small>
+                </article>
+              ))
+            )}
           </div>
-          <span className={"status-pill " + (selected.handoverActive ? "attention" : "neutral")}>
-            {selected.handoverActive ? "Human takeover active" : "Shared inbox"}
-          </span>
-        </div>
 
-        <div className={styles.timeline}>
-          {messages.length === 0 ? (
-            <p>No messages are stored in this conversation yet.</p>
-          ) : (
-            messages.map((message) => (
-              <article className={styles.message} key={message.id}>
-                <div>
-                  <strong>
-                    {message.direction === "INBOUND"
-                      ? customer?.displayName ?? "Customer"
-                      : message.senderKind}
-                  </strong>
-                  <p>{message.body ?? "Media message"}</p>
-                </div>
-                <small>
-                  {formatWhen(message.createdAt)} ·{" "}
-                  {message.deliveryState
-                    ? message.deliveryState.replaceAll("_", " ")
-                    : "Received"}
-                </small>
-              </article>
-            ))
-          )}
-        </div>
-
-        <div className={styles.actions}>
-          <form action={handover}>
+          <form action={reply}>
             <input type="hidden" name="conversationId" value={selected.id} />
-            <input
-              type="hidden"
-              name="active"
-              value={selected.handoverActive ? "false" : "true"}
-            />
-            <button className="button-secondary" type="submit">
-              {selected.handoverActive ? "Release takeover" : "Take over conversation"}
-            </button>
+            <FormSection
+              title="Reply"
+              description={replySupported
+                ? "Queued messages keep their stored delivery state until the channel reports a later status."
+                : "Replies are not available for this conversation channel."}
+            >
+              <FormField id="reply-body" label="Message" required>
+                {({ id, describedBy, invalid }) => (
+                  <TextArea
+                    id={id}
+                    name="body"
+                    rows={4}
+                    placeholder="Write a customer reply"
+                    disabled={!replySupported}
+                    required
+                    describedBy={describedBy}
+                    invalid={invalid}
+                  />
+                )}
+              </FormField>
+              <FormActions>
+                <button className="app-button-primary" type="submit" disabled={!replySupported}>
+                  Queue reply
+                </button>
+              </FormActions>
+            </FormSection>
           </form>
-        </div>
-
-        <form action={reply} className={styles.replyForm}>
-          <input type="hidden" name="conversationId" value={selected.id} />
-          <label htmlFor="reply-body">Reply</label>
-          <textarea
-            id="reply-body"
-            name="body"
-            rows={4}
-            placeholder="Write a customer reply"
-            disabled={!replySupported}
-            required
-          />
-          <button className="button-primary" type="submit" disabled={!replySupported}>
-            Queue reply
-          </button>
-          <p className="form-note">
-            {replySupported
-              ? "The message is queued for sending. Queued does not mean delivered; the delivery status updates when the channel reports it."
-              : "Replies are not available for this conversation channel."}
-          </p>
-        </form>
-      </section>
-
-      <aside className={styles.context}>
-        <p className="label">Customer context</p>
-        <h3>{request?.serviceLabel ?? "No request linked"}</h3>
-        <dl className="summary-list">
-          <div>
-            <dt>Request</dt>
-            <dd>{request?.status ?? "None"}</dd>
-          </div>
-          <div>
-            <dt>Property</dt>
-            <dd>{property?.label ?? "None"}</dd>
-          </div>
-          <div>
-            <dt>Address</dt>
-            <dd>{property?.address ?? "Not available"}</dd>
-          </div>
-          <div>
-            <dt>Delivery</dt>
-            <dd>Each message retains its stored delivery state</dd>
-          </div>
-        </dl>
-      </aside>
-    </div>
+        </WorkspacePane>
+      }
+      context={
+        <WorkspacePane title="Customer context" description={request?.serviceLabel ?? "No request linked"}>
+          <dl className="summary-list">
+            <div><dt>Request</dt><dd>{request?.status ?? "None"}</dd></div>
+            <div><dt>Property</dt><dd>{property?.label ?? "None"}</dd></div>
+            <div><dt>Address</dt><dd>{property?.address ?? "Not available"}</dd></div>
+            <div><dt>Delivery</dt><dd>Stored per message</dd></div>
+          </dl>
+        </WorkspacePane>
+      }
+    />
   );
 }
 
