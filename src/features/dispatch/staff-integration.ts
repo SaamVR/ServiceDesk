@@ -136,10 +136,22 @@ export function buildDispatchStaffSnapshot(
       dataQualityIssues.push(issue(visit.id, "INVALID_SCHEDULE_WINDOW", "Job end time is not after its start time."));
       continue;
     }
+    if (
+      totalMinutes !== undefined
+      && quotedServiceMinutes !== undefined
+      && quotedServiceMinutes > totalMinutes
+    ) {
+      dataQualityIssues.push(issue(
+        visit.id,
+        "INVALID_SCHEDULE_WINDOW",
+        "Scheduled window is shorter than the quoted service duration.",
+      ));
+      continue;
+    }
 
     const bufferMinutes = totalMinutes === undefined
       ? 0
-      : Math.max(0, totalMinutes - serviceMinutes);
+      : totalMinutes - serviceMinutes;
     const request = requestById.get(visit.requestId);
 
     visits.push({

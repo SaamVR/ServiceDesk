@@ -83,6 +83,32 @@ describe("V2 dispatch staff snapshot adapter", () => {
     ]);
   });
 
+  it("rejects a schedule window shorter than the quoted service duration", () => {
+    const result = buildDispatchStaffSnapshot({
+      workspaceId: "ws_1",
+      visits: [{
+        id: "visit_short_window",
+        requestId: "req_1",
+        quoteId: "quote_1",
+        status: "CONFIRMED",
+        startAt: "2026-10-05T09:00:00.000Z",
+        endAt: "2026-10-05T10:00:00.000Z",
+        version: 1,
+      }],
+      requests: [{ id: "req_1", serviceCode: "MOVE_OUT" }],
+      quotes: [{ id: "quote_1", durationMinutes: 120 }],
+      crews: [],
+    });
+
+    expect(result.snapshot.visits).toEqual([]);
+    expect(result.dataQualityIssues).toEqual([
+      expect.objectContaining({
+        visitId: "visit_short_window",
+        code: "INVALID_SCHEDULE_WINDOW",
+      }),
+    ]);
+  });
+
   it("filters candidate crews to the selected workspace before recommendations are built", () => {
     const result = buildDispatchStaffSnapshot({
       workspaceId: "ws_1",

@@ -100,7 +100,7 @@ async function resolveCrewActor(input: {
     return fail(
       "configuration",
       "CREW_RUNTIME_NOT_CONFIGURED",
-      "Crew workspace data is not connected on this deployment.",
+      "Crew jobs are temporarily unavailable. Try again later or contact dispatch.",
     );
   }
 

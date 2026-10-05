@@ -18,6 +18,12 @@ describe("V2 field production copy and route truth", () => {
     }
   });
 
+  it("keeps deployment and architecture wording out of crew-facing runtime errors", () => {
+    const runtime = source("src/features/crew/crew-product-runtime.ts");
+    expect(runtime).not.toContain("not connected on this deployment");
+    expect(runtime).toContain("Crew jobs are temporarily unavailable");
+  });
+
   it("does not claim durable offline support", () => {
     const sync = source("src/features/crew/sync-state.ts");
     expect(sync).toContain("SESSION_MEMORY_ONLY");
