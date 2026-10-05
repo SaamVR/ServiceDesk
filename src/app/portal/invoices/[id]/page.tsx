@@ -1,15 +1,13 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { CustomerProductRoute } from "@/features/operations/CustomerProductRoute";
 
-export default async function PortalInvoicePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PortalInvoicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { id } = await params;
-
-  return (
-    <OperationalFixtureRoute
-      surface="customer"
-      customerModule="invoice"
-      resourceLabel={`invoice ${id}`}
-      title="Invoice ledger and receipt boundary."
-      description="Final receipt visibility is driven by authoritative invoice state, not a mocked checkout screen."
-    />
-  );
+  const query = await searchParams;
+  return <CustomerProductRoute module="invoice" resourceId={id} notice={query.notice} error={query.error} />;
 }
