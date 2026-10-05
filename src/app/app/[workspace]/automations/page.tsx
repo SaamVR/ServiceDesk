@@ -1,15 +1,20 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
-export default async function StaffAutomationsPage({ params }: { params: Promise<{ workspace: string }> }) {
+export default async function StaffAutomationsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspace: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
+}) {
   const { workspace } = await params;
-
+  const query = await searchParams;
   return (
-    <OperationalFixtureRoute
-      surface="staff"
-      staffModule="automations"
-      workspaceLabel={workspace}
-      title="Automation recovery queue."
-      description="Recovery actions remain preview-only until durable commands and provider evidence exist."
+    <OperationalProductRoute
+      workspaceSlug={workspace}
+      module="automations"
+      notice={query.notice}
+      error={query.error}
     />
   );
 }
