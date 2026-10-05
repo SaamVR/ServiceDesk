@@ -524,50 +524,77 @@ function QuotesView({
   }
 
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Request</th>
-            <th>Version</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Validity</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.quotes.map((quote) => (
-            <tr key={quote.id}>
-              <td>
-                {data.requests.find((item) => item.id === quote.requestId)?.serviceLabel ??
-                  "Request"}
-              </td>
-              <td>v{quote.version}</td>
-              <td>{formatMinorMoney(quote.totalMinor, quote.currency)}</td>
-              <td>
-                <span className={"status-pill " + statusTone(quote.status)}>
-                  {quote.status.replaceAll("_", " ")}
-                </span>
-              </td>
-              <td>{formatWhen(quote.validUntil)}</td>
-              <td>
-                {quote.status === "APPROVED" ? (
-                  <form action={sendQuote}>
-                    <input type="hidden" name="quoteId" value={quote.id} />
-                    <button className="button-secondary" type="submit">
-                      Send quote
-                    </button>
-                  </form>
-                ) : (
-                  <span>{quote.status === "SENT" ? "Awaiting customer" : "No staff action"}</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      caption="Quotes"
+      rows={data.quotes}
+      getRowKey={(quote) => quote.id}
+      columns={[
+        {
+          id: "request",
+          header: "Service",
+          priority: "primary",
+          cell: (quote) => {
+            const request = data.requests.find((item) => item.id === quote.requestId);
+            const customer = request?.customerId
+              ? data.customers.find((item) => item.id === request.customerId)
+              : undefined;
+            return (
+              <DataCellStack
+                primary={request?.serviceLabel ?? "Service quote"}
+                secondary={customer?.displayName}
+              />
+            );
+          },
+        },
+        {
+          id: "total",
+          header: "Total",
+          align: "end",
+          cell: (quote) => formatMinorMoney(quote.totalMinor, quote.currency),
+        },
+        {
+          id: "status",
+          header: "Status",
+          cell: (quote) => (
+            <StatusBadge tone={statusTone(quote.status) === "success" ? "success" : statusTone(quote.status) === "attention" ? "warning" : "neutral"}>
+              {quote.status.replaceAll("_", " ")}
+            </StatusBadge>
+          ),
+        },
+        {
+          id: "validity",
+          header: "Valid until",
+          priority: "optional",
+          cell: (quote) => formatWhen(quote.validUntil),
+        },
+        {
+          id: "action",
+          header: "Next action",
+          cell: (quote) =>
+            quote.status === "APPROVED" ? (
+              <form action={sendQuote}>
+                <input type="hidden" name="quoteId" value={quote.id} />
+                <button className="app-button-secondary" type="submit">Send quote</button>
+              </form>
+            ) : (
+              <span>{quote.status === "SENT" ? "Awaiting customer" : "—"}</span>
+            ),
+        },
+      ]}
+      renderMobileRow={(quote) => {
+        const request = data.requests.find((item) => item.id === quote.requestId);
+        return (
+          <DataCellStack
+            primary={request?.serviceLabel ?? "Service quote"}
+            secondary={
+              formatMinorMoney(quote.totalMinor, quote.currency) +
+              " · " +
+              quote.status.replaceAll("_", " ")
+            }
+          />
+        );
+      }}
+    />
   );
 }
 
@@ -809,11 +836,11 @@ function JobsView({
   }
 
   const nextAction = (status: string) => {
-    if (status === "CONFIRMED") return { action: "ASSIGN" as const, label: "Confirm crew assignment" };
+    if (status === "CONFIRMED") return { action: "ASSIGN" as const, label: "Confirm assignment" };
     if (status === "ASSIGNED") return { action: "EN_ROUTE" as const, label: "Mark en route" };
     if (status === "EN_ROUTE") return { action: "START" as const, label: "Start job" };
     if (status === "IN_PROGRESS") return { action: "SUBMIT_REVIEW" as const, label: "Submit for review" };
-    if (status === "PENDING_REVIEW") return { action: "COMPLETE" as const, label: "Complete after review" };
+    if (status === "PENDING_REVIEW") return { action: "COMPLETE" as const, label: "Complete job" };
     return undefined;
   };
 
@@ -821,68 +848,93 @@ function JobsView({
     return <EmptyState title="No jobs yet" detail="Paid and scheduled visits will appear here." />;
   }
 
+  const rows = data.visits.map((visit) => {
+    const request = data.requests.find((item) => item.id === visit.requestId);
+    const crew = visit.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
+    const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
+    const reviewEvidenceReady =
+      evidence.some((item) => item.kind === "BEFORE_PHOTO") &&
+      evidence.some((item) => item.kind === "AFTER_PHOTO");
+    return { visit, request, crew, evidence, reviewEvidenceReady, action: nextAction(visit.status) };
+  });
+
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Start</th>
-            <th>Service</th>
-            <th>Crew</th>
-            <th>Status</th>
-            <th>Evidence</th>
-            <th>Next action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.visits.map((visit) => {
-            const action = nextAction(visit.status);
-            const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
-            const reviewEvidenceReady =
-              evidence.some((item) => item.kind === "BEFORE_PHOTO") &&
-              evidence.some((item) => item.kind === "AFTER_PHOTO");
-            return (
-              <tr key={visit.id}>
-                <td>{formatWhen(visit.startAt)}</td>
-                <td>{data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}</td>
-                <td>{visit.crewId ? "Assigned" : "Unassigned"}</td>
-                <td>
-                  <span className={"status-pill " + statusTone(visit.status)}>
-                    {visit.status.replaceAll("_", " ")}
-                  </span>
-                </td>
-                <td>{evidence.length} item{evidence.length === 1 ? "" : "s"}</td>
-                <td>
-                  {action ? (
-                    <form action={transitionVisit}>
-                      <input type="hidden" name="visitId" value={visit.id} />
-                      <button
-                        className="button-secondary"
-                        name="action"
-                        value={action.action}
-                        disabled={
-                          (action.action === "ASSIGN" && !visit.crewId) ||
-                          (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
-                        }
-                        title={
-                          action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
-                            ? "Add both before and after evidence before submitting for review."
-                            : undefined
-                        }
-                      >
-                        {action.label}
-                      </button>
-                    </form>
-                  ) : (
-                    <span>No lifecycle action</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      caption="Jobs"
+      rows={rows}
+      getRowKey={(row) => row.visit.id}
+      columns={[
+        {
+          id: "job",
+          header: "Job",
+          priority: "primary",
+          cell: ({ visit, request }) => (
+            <DataCellStack
+              primary={request?.serviceLabel ?? "Service visit"}
+              secondary={formatWhen(visit.startAt)}
+            />
+          ),
+        },
+        {
+          id: "crew",
+          header: "Crew",
+          cell: ({ crew }) => crew?.name ?? "Unassigned",
+        },
+        {
+          id: "status",
+          header: "Status",
+          cell: ({ visit }) => (
+            <StatusBadge tone={statusTone(visit.status) === "success" ? "success" : statusTone(visit.status) === "attention" ? "warning" : "neutral"}>
+              {visit.status.replaceAll("_", " ")}
+            </StatusBadge>
+          ),
+        },
+        {
+          id: "evidence",
+          header: "Evidence",
+          priority: "optional",
+          cell: ({ evidence }) => evidence.length + " item" + (evidence.length === 1 ? "" : "s"),
+        },
+        {
+          id: "action",
+          header: "Next action",
+          cell: ({ visit, action, reviewEvidenceReady }) =>
+            action ? (
+              <form action={transitionVisit}>
+                <input type="hidden" name="visitId" value={visit.id} />
+                <button
+                  className="app-button-secondary"
+                  name="action"
+                  value={action.action}
+                  disabled={
+                    (action.action === "ASSIGN" && !visit.crewId) ||
+                    (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
+                  }
+                  title={
+                    action.action === "ASSIGN" && !visit.crewId
+                      ? "Assign a crew from Schedule first."
+                      : action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
+                        ? "Add both before and after evidence before submitting for review."
+                        : undefined
+                  }
+                >
+                  {action.label}
+                </button>
+              </form>
+            ) : (
+              <span>—</span>
+            ),
+        },
+      ]}
+      renderMobileRow={({ visit, request, crew, action }) => (
+        <div className="app-data-cell-stack">
+          <strong>{request?.serviceLabel ?? "Service visit"}</strong>
+          <span>{formatWhen(visit.startAt)}</span>
+          <span>{crew?.name ?? "Unassigned"} · {visit.status.replaceAll("_", " ")}</span>
+          <span>{action?.label ?? "No action required"}</span>
+        </div>
+      )}
+    />
   );
 }
 
