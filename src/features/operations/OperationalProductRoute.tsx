@@ -12,7 +12,8 @@ import {
   type OperationalActionResult,
   type OperationalStaffSnapshot,
 } from "./operational-product-runtime";
-import { buildStaffModuleHref, staffModuleConfig, staffNavigationGroups, type StaffModule } from "./staff-modules";
+import { PageHeader, Panel } from "@/components/product";
+import { staffModuleConfig, type StaffModule } from "./staff-modules";
 import { formatMinorMoney } from "./view-models";
 import styles from "./OperationalProductRoute.module.css";
 
@@ -60,27 +61,6 @@ function statusTone(status: string) {
     return "attention";
   }
   return "pending";
-}
-
-function StaffNavigation({ workspaceSlug, module }: { workspaceSlug: string; module: StaffModule }) {
-  return (
-    <nav className="site-nav grouped" aria-label="Workspace navigation">
-      {staffNavigationGroups.map((group) => (
-        <div className="nav-group" key={group.label}>
-          <span>{group.label}</span>
-          {group.modules.map((item) => (
-            <a
-              href={buildStaffModuleHref(workspaceSlug, item)}
-              aria-current={item === module ? "page" : undefined}
-              key={item}
-            >
-              {staffModuleConfig[item].label}
-            </a>
-          ))}
-        </div>
-      ))}
-    </nav>
-  );
 }
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
@@ -1221,40 +1201,28 @@ export async function OperationalProductRoute({
   const config = staffModuleConfig[module];
 
   return (
-    <main className="site-shell">
-      <header className="site-header" aria-label="Staff workspace navigation">
-        <a className="brand-lockup" href="/">
-          <span className="brand-mark" aria-hidden="true">
-            SD
+    <>
+      <PageHeader
+        eyebrow={config.group}
+        title={config.label}
+        description={config.description}
+      />
+
+      <Notice notice={notice} error={error} />
+
+      {result.ok ? (
+        renderModule(module, result.value, workspaceSlug, selectedConversationId)
+      ) : (
+        <Panel>
+          <span className="app-status app-status-warning">
+            {result.kind.replaceAll("_", " ")}
           </span>
-          <span>{result.ok ? result.value.workspace.name : workspaceSlug}</span>
-        </a>
-        <StaffNavigation workspaceSlug={workspaceSlug} module={module} />
-      </header>
-
-      <section className="section-card">
-        <div className="section-heading compact">
-          <p className="eyebrow">{config.group} · live workspace</p>
-          <h1>{config.label}</h1>
-          <p className="lead">{config.description}</p>
-        </div>
-
-        <Notice notice={notice} error={error} />
-
-        {result.ok ? (
-          renderModule(module, result.value, workspaceSlug, selectedConversationId)
-        ) : (
-          <section className="plain-card">
-            <span className="status-pill attention">
-              {result.kind.replaceAll("_", " ")}
-            </span>
-            <h2>
-              {result.kind === "authentication" ? "Staff sign-in required" : "Workspace unavailable"}
-            </h2>
-            <p>{result.message}</p>
-          </section>
-        )}
-      </section>
-    </main>
+          <h2>
+            {result.kind === "authentication" ? "Staff sign-in required" : "Workspace unavailable"}
+          </h2>
+          <p>{result.message}</p>
+        </Panel>
+      )}
+    </>
   );
 }
