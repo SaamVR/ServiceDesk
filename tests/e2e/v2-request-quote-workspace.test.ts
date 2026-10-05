@@ -11,8 +11,8 @@ describe("V2 request and quote operational workspaces", () => {
 
     expect(page).toContain("request?: string");
     expect(page).toContain("selectedRequestId={query.request}");
-    expect(route).toContain('data.requests.find((request) => request.id === selectedRequestId)');
-    expect(route).toContain("selectedRowKey={selectedRequest.id}");
+    expect(route).toContain('orderedRequests.find((request) => request.id === selectedRequestId)');
+    expect(route).toContain('selected ? styles.salesQueueSelected : ""');
     expect(route).toContain('href={"?request=" + encodeURIComponent(request.id)}');
     expect(route).toContain('"request=" + encodeURIComponent(requestId) + "&"');
   });
@@ -23,8 +23,8 @@ describe("V2 request and quote operational workspaces", () => {
 
     expect(page).toContain("quote?: string");
     expect(page).toContain("selectedQuoteId={query.quote}");
-    expect(route).toContain('data.quotes.find((quote) => quote.id === selectedQuoteId)');
-    expect(route).toContain("selectedRowKey={selectedQuote.id}");
+    expect(route).toContain('orderedQuotes.find((quote) => quote.id === selectedQuoteId)');
+    expect(route).toContain('selected ? styles.salesQueueSelected : ""');
     expect(route).toContain('href={"?quote=" + encodeURIComponent(quote.id)}');
     expect(route).toContain('"quote=" + encodeURIComponent(quoteId) + "&"');
   });
