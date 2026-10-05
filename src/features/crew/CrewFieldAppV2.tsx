@@ -3,15 +3,27 @@ import { buildCrewJobDetailView, buildCrewTodayJobs } from "./v2-field-models";
 import { crewOfflineCapabilityNotice } from "./sync-state";
 import styles from "./CrewFieldAppV2.module.css";
 
-export function CrewTodayV2({ jobs, now }: { jobs: readonly CrewTodayJobInput[]; now: string }) {
-  const view = buildCrewTodayJobs(jobs, now);
+export function CrewTodayV2({
+  jobs,
+  now,
+  timeZone,
+  workspaceSlug,
+  workspaceName,
+}: {
+  jobs: readonly CrewTodayJobInput[];
+  now: string;
+  timeZone: string;
+  workspaceSlug?: string;
+  workspaceName?: string;
+}) {
+  const view = buildCrewTodayJobs(jobs, now, timeZone);
   return (
     <section className={styles.shell} aria-labelledby="crew-today-heading">
       <header className={styles.topbar}>
         <div>
-          <p className={styles.eyebrow}>Crew field app · assigned work only</p>
+          <p className={styles.eyebrow}>{workspaceName ?? "Crew"} · assigned jobs</p>
           <h1 id="crew-today-heading">Today</h1>
-          <p className={styles.muted}>Authoritative visit status stays on the server. Local changes are never treated as confirmed until sync succeeds.</p>
+          <p className={styles.muted}>Your assigned work for today. Changes are confirmed once they sync.</p>
         </div>
       </header>
       <div className={styles.jobs}>
@@ -27,7 +39,16 @@ export function CrewTodayV2({ jobs, now }: { jobs: readonly CrewTodayJobInput[];
             {job.operationalException ? <p className={styles.danger}>Attention: {job.operationalException.replaceAll("_", " ").toLowerCase()}</p> : null}
             {job.highPriorityNotes.length > 0 ? <ul className={styles.notes}>{job.highPriorityNotes.map((note) => <li key={note}>{note}</li>)}</ul> : null}
             <div className={styles.progress} aria-label={job.progressPercent + "% visit progress"}><span style={{ width: job.progressPercent + "%" }} /></div>
-            <a className={styles.action} href={"/crew/jobs/" + encodeURIComponent(job.visitId)}>{job.nextActionLabel}</a>
+            <a
+              className={styles.action}
+              href={
+                "/crew/jobs/" +
+                encodeURIComponent(job.visitId) +
+                (workspaceSlug ? "?workspace=" + encodeURIComponent(workspaceSlug) : "")
+              }
+            >
+              {job.nextActionLabel}
+            </a>
           </article>
         ))}
       </div>
@@ -36,13 +57,21 @@ export function CrewTodayV2({ jobs, now }: { jobs: readonly CrewTodayJobInput[];
   );
 }
 
-export function CrewJobDetailV2({ job }: { job: CrewJobDetailInput }) {
-  const view = buildCrewJobDetailView(job);
+export function CrewJobDetailV2({
+  job,
+  timeZone,
+  workspaceName,
+}: {
+  job: CrewJobDetailInput;
+  timeZone: string;
+  workspaceName?: string;
+}) {
+  const view = buildCrewJobDetailView(job, timeZone);
   return (
     <section className={styles.shell} aria-labelledby="crew-job-heading">
       <header className={styles.topbar}>
         <div>
-          <p className={styles.eyebrow}>Visit {view.visitId} · version {view.version}</p>
+          <p className={styles.eyebrow}>{workspaceName ?? "Crew job"} · Visit {view.visitId}</p>
           <h1 id="crew-job-heading">{view.serviceLabel}</h1>
           <p>{view.timeWindowLabel} · {view.locationLabel}</p>
           {view.customerLabel ? <p className={styles.muted}>{view.customerLabel}</p> : null}
@@ -79,8 +108,8 @@ export function CrewJobDetailV2({ job }: { job: CrewJobDetailInput }) {
         <article className={styles.panel}>
           <p className={styles.label}>Review handoff</p>
           <h2>{view.nextActionLabel}</h2>
-          <p>{view.evidenceGate.canSubmitReview ? "Required evidence is present; server transition may be submitted." : view.evidenceGate.blocker}</p>
-          <p className={styles.muted}>Crew cannot mark a visit complete. Dispatcher/owner completion remains authoritative after review.</p>
+          <p>{view.evidenceGate.canSubmitReview ? "Required evidence is ready. You can submit this job for review." : view.evidenceGate.blocker}</p>
+          <p className={styles.muted}>After submission, the office reviews and completes the job.</p>
         </article>
       </div>
 
