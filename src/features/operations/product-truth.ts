@@ -21,6 +21,29 @@ export function buildUpcomingVisits<T extends StartableVisit>(
     });
 }
 
+export function formatWorkspaceDateTime(
+  value: string | undefined,
+  timeZone: string,
+  locale = "en",
+): string {
+  if (!value) return "Not scheduled";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const format = (zone: string) =>
+    new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: zone,
+    }).format(date);
+
+  try {
+    return format(timeZone);
+  } catch {
+    return format("UTC");
+  }
+}
+
 export interface InvoiceBalanceLike {
   status: string;
   currency: string;
