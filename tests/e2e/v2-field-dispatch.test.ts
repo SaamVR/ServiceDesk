@@ -163,7 +163,7 @@ describe("V2 dispatch recommendations", () => {
     expect(eligible[0]!.routeEfficiency).toBe("NOT_SCORED_NO_GEOGRAPHY");
   });
 
-  it("requires dispatcher/owner approval and still refuses authoritative mutation without a Core assignment command", () => {
+  it("requires dispatcher/owner approval and produces an immutable command intent", () => {
     const [recommendation] = buildDispatchRecommendations(dispatchSnapshot());
     const crewCandidate = recommendation!.candidates.find((candidate) => candidate.candidateCrewId === "crew_b")!;
 
@@ -180,14 +180,13 @@ describe("V2 dispatch recommendations", () => {
     })).toEqual({
       ok: true,
       value: {
-        status: "APPROVAL_RECORDED_NOT_MUTATED",
+        status: "READY_FOR_AUTHORITATIVE_COMMAND",
         visitId: targetVisit.id,
         candidateCrewId: "crew_b",
         expectedVersion: targetVisit.version,
         approvedByRole: "DISPATCHER",
         humanApprovalRequired: true,
-        mutationReady: false,
-        blocker: "AUTHORITATIVE_CREW_ASSIGNMENT_COMMAND_MISSING",
+        mutationReady: true,
       },
     });
   });
