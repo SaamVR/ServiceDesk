@@ -969,78 +969,130 @@ function InvoicesView({
     );
   }
 
+  const outstanding = data.invoices.filter(
+    (invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID",
+  );
+
   return (
     <div className={styles.stack}>
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Invoice</th>
-              <th>Total</th>
-              <th>Paid / allocated</th>
-              <th>Balance</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.invoices.map((invoice) => (
-              <tr key={invoice.id}>
-                <td>{invoice.id.slice(0, 8)}</td>
-                <td>{formatMinorMoney(invoice.totalMinor, invoice.currency)}</td>
-                <td>{formatMinorMoney(invoice.allocatedMinor, invoice.currency)}</td>
-                <td>{formatMinorMoney(invoice.balanceMinor, invoice.currency)}</td>
-                <td>
-                  <span className={"status-pill " + statusTone(invoice.status)}>
-                    {invoice.status.replaceAll("_", " ")}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <OperationsToolbar
+        context={<ToolbarResultCount count={data.invoices.length} label="invoices" />}
+      />
+      <DataTable<OperationalInvoice>
+        caption="Invoices"
+        rows={data.invoices}
+        getRowKey={(invoice) => invoice.id}
+        columns={[
+          {
+            id: "invoice",
+            header: "Invoice",
+            priority: "primary",
+            cell: (invoice) => <DataCellStack primary={invoice.id.slice(0, 8)} secondary={invoice.status.replaceAll("_", " ")} />,
+          },
+          {
+            id: "total",
+            header: "Total",
+            cell: (invoice) => formatMinorMoney(invoice.totalMinor, invoice.currency),
+          },
+          {
+            id: "paid",
+            header: "Paid / allocated",
+            cell: (invoice) => formatMinorMoney(invoice.allocatedMinor, invoice.currency),
+          },
+          {
+            id: "balance",
+            header: "Balance",
+            priority: "primary",
+            cell: (invoice) => formatMinorMoney(invoice.balanceMinor, invoice.currency),
+          },
+          {
+            id: "status",
+            header: "Status",
+            cell: (invoice) => <StatusBadge tone={statusBadgeTone(invoice.status)}>{invoice.status.replaceAll("_", " ")}</StatusBadge>,
+          },
+        ]}
+        renderMobileRow={(invoice) => (
+          <DataCellStack
+            primary={formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due"}
+            secondary={invoice.status.replaceAll("_", " ") + " · invoice " + invoice.id.slice(0, 8)}
+          />
+        )}
+      />
 
-      {data.invoices
-        .filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID")
-        .slice(0, 6)
-        .map((invoice) => (
-          <form action={manualPayment} className="plain-card" key={invoice.id}>
-            <h3>
-              Record manual payment · {formatMinorMoney(invoice.balanceMinor, invoice.currency)} due
-            </h3>
-            <input type="hidden" name="invoiceId" value={invoice.id} />
-            <div className={styles.formGrid}>
-              <label>
-                Amount
-                <input
-                  name="amount"
-                  inputMode="decimal"
-                  defaultValue={(invoice.balanceMinor / 100).toFixed(2)}
-                  required
-                />
-              </label>
-              <label>
-                Method
-                <select name="method" defaultValue="BANK_TRANSFER">
-                  <option value="BANK_TRANSFER">Bank transfer</option>
-                  <option value="CASH">Cash</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </label>
-              <label>
-                Reference
-                <input name="reference" placeholder="Bank reference or receipt number" required />
-              </label>
-            </div>
-            <button className="button-secondary" type="submit">
-              Apply payment
-            </button>
-            <p className="form-note">
-              This records an offline/manual payment only. It does not simulate Stripe or provider
-              settlement.
-            </p>
-          </form>
-        ))}
+      {outstanding.length ? (
+        <Panel>
+          <SectionHeader
+            title="Record manual payment"
+            description="Use this only for payment received outside the online checkout flow."
+          />
+          <div className="app-grid app-grid-two">
+            {outstanding.slice(0, 6).map((invoice) => (
+              <FormSection
+                key={invoice.id}
+                title={formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due"}
+                description={"Invoice " + invoice.id.slice(0, 8)}
+              >
+                <form action={manualPayment}>
+                  <input type="hidden" name="invoiceId" value={invoice.id} />
+                  <FormGrid columns={2}>
+                    <FormField id={"payment-amount-" + invoice.id} label="Amount" required>
+                      {({ id, describedBy, invalid }) => (
+                        <TextInput
+                          id={id}
+                          name="amount"
+                          type="text"
+                          defaultValue={(invoice.balanceMinor / 100).toFixed(2)}
+                          required
+                          describedBy={describedBy}
+                          invalid={invalid}
+                        />
+                      )}
+                    </FormField>
+                    <FormField id={"payment-method-" + invoice.id} label="Method" required>
+                      {({ id, describedBy, invalid }) => (
+                        <SelectInput
+                          id={id}
+                          name="method"
+                          defaultValue="BANK_TRANSFER"
+                          required
+                          describedBy={describedBy}
+                          invalid={invalid}
+                        >
+                          <option value="BANK_TRANSFER">Bank transfer</option>
+                          <option value="CASH">Cash</option>
+                          <option value="OTHER">Other</option>
+                        </SelectInput>
+                      )}
+                    </FormField>
+                    <FormField id={"payment-reference-" + invoice.id} label="Reference" required>
+                      {({ id, describedBy, invalid }) => (
+                        <TextInput
+                          id={id}
+                          name="reference"
+                          placeholder="Bank reference or receipt number"
+                          required
+                          describedBy={describedBy}
+                          invalid={invalid}
+                        />
+                      )}
+                    </FormField>
+                  </FormGrid>
+                  <FormActions>
+                    <button className="app-button-secondary" type="submit">Apply payment</button>
+                  </FormActions>
+                  <p className="app-field-help">
+                    Records an offline/manual payment only. It does not simulate online settlement.
+                  </p>
+                </form>
+              </FormSection>
+            ))}
+          </div>
+        </Panel>
+      ) : (
+        <Panel>
+          <AppEmptyState title="Nothing outstanding" description="There are no invoice balances requiring payment." />
+        </Panel>
+      )}
     </div>
   );
 }
