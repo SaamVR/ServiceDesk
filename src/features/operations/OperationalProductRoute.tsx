@@ -573,39 +573,55 @@ function ScheduleView({
         timeline={dispatch.timeline}
         approvalCommandAvailable={false}
       />
-      <section className="plain-card">
-        <div className={styles.sectionHeader}>
-          <div>
-            <p className="label">Next 7 days</p>
-            <h2>{upcoming.length} scheduled visits</h2>
-          </div>
-          <span className="status-pill neutral">{unscheduled.length} unscheduled</span>
-        </div>
-        {upcoming.length === 0 ? (
-          <p>No visits are scheduled in the next seven days.</p>
-        ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr><th>Start</th><th>Service</th><th>Crew</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                {upcoming.map((visit) => (
-                  <tr key={visit.id}>
-                    <td>{formatWhen(visit.startAt)}</td>
-                    <td>{data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}</td>
-                    <td>{visit.crewId ? "Assigned" : "Unassigned"}</td>
-                    <td>{visit.status.replaceAll("_", " ")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <Panel>
+        <SectionHeader
+          title="Next 7 days"
+          description={upcoming.length + " scheduled visit" + (upcoming.length === 1 ? "" : "s") + " · " + unscheduled.length + " unscheduled"}
+        />
+        <DataTable<OperationalVisit>
+          caption="Upcoming scheduled visits"
+          rows={upcoming}
+          getRowKey={(visit) => visit.id}
+          emptyTitle="No visits scheduled"
+          emptyDescription="No visits are scheduled in the next seven days."
+          columns={[
+            {
+              id: "start",
+              header: "Start",
+              priority: "primary",
+              cell: (visit) => formatWhen(visit.startAt),
+            },
+            {
+              id: "service",
+              header: "Service",
+              priority: "primary",
+              cell: (visit) => data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit",
+            },
+            {
+              id: "crew",
+              header: "Crew",
+              cell: (visit) => visit.crewId ? data.crews.find((crew) => crew.id === visit.crewId)?.name ?? "Assigned crew" : "Unassigned",
+            },
+            {
+              id: "status",
+              header: "Status",
+              cell: (visit) => <StatusBadge tone={statusBadgeTone(visit.status)}>{visit.status.replaceAll("_", " ")}</StatusBadge>,
+            },
+          ]}
+          renderMobileRow={(visit) => (
+            <DataCellStack
+              primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
+              secondary={formatWhen(visit.startAt) + " · " + visit.status.replaceAll("_", " ")}
+            />
+          )}
+        />
+      </Panel>
 
-      <section className="plain-card">
-        <h2>Accepted quotes awaiting booking</h2>
+      <Panel>
+        <SectionHeader
+          title="Accepted quotes awaiting booking"
+          description="Choose only from current capacity; holding a slot never implies payment."
+        />
         {acceptedQuotes.length === 0 ? (
           <p>No accepted quotes are waiting for a slot.</p>
         ) : (
@@ -646,7 +662,7 @@ function ScheduleView({
                       <form action={holdSlot} key={slot.id}>
                         <input type="hidden" name="quoteId" value={quote.id} />
                         <input type="hidden" name="slotId" value={slot.id} />
-                        <button className="button-secondary" type="submit">
+                        <button className="app-button-secondary" type="submit">
                           Hold {formatWhen(slot.startAt)}
                         </button>
                       </form>
@@ -657,25 +673,30 @@ function ScheduleView({
             );
           })
         )}
-        <p className="form-note">
+        <p className="app-field-help">
           ServiceDesk rechecks availability when you hold a slot. Holding a slot does not create
           a payment or a confirmed visit.
         </p>
-      </section>
+      </Panel>
 
-      <section className="plain-card">
-        <h2>Unscheduled work</h2>
+      <Panel>
+        <SectionHeader title="Unscheduled work" description="Open requests without a visit." />
         {unscheduled.length === 0 ? (
-          <p>No open requests are waiting for a visit.</p>
+          <AppEmptyState title="No unscheduled work" description="No open requests are waiting for a visit." />
         ) : (
-          unscheduled.slice(0, 20).map((request) => (
-            <p key={request.id}>
-              <strong>{request.serviceLabel}</strong> · {request.status.replaceAll("_", " ")} ·
-              requested {formatWhen(request.requestedStartAt)}
-            </p>
-          ))
+          <div className="app-row-list">
+            {unscheduled.slice(0, 20).map((request) => (
+              <article className="app-row" key={request.id}>
+                <div>
+                  <h3>{request.serviceLabel}</h3>
+                  <p>Requested {formatWhen(request.requestedStartAt)}</p>
+                </div>
+                <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>
+              </article>
+            ))}
+          </div>
         )}
-      </section>
+      </Panel>
     </div>
   );
 }
