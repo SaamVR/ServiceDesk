@@ -10,7 +10,12 @@ import {
   toggleInboxHandover,
   transitionOperationalVisit,
   type OperationalActionResult,
+  type OperationalCustomer,
+  type OperationalInvoice,
+  type OperationalQuote,
+  type OperationalRequest,
   type OperationalStaffSnapshot,
+  type OperationalVisit,
 } from "./operational-product-runtime";
 import { staffModuleConfig, type StaffModule } from "./staff-modules";
 import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
@@ -67,6 +72,16 @@ function statusTone(status: string) {
     return "attention";
   }
   return "pending";
+}
+
+function statusBadgeTone(status: string): "neutral" | "success" | "warning" | "danger" | "info" {
+  if (["PAID", "COMPLETED", "RESOLVED", "DELIVERED", "READ", "CONNECTED", "ACTIVE", "ACCEPTED"].includes(status)) {
+    return "success";
+  }
+  if (["FAILED", "BLOCKED", "VOID", "CANCELLED"].includes(status)) return "danger";
+  if (["PAYMENT_REVIEW", "REAUTH_REQUIRED", "PENDING_REVIEW", "PAST_DUE"].includes(status)) return "warning";
+  if (["SENT", "QUEUED", "RUNNING", "IN_PROGRESS", "EN_ROUTE"].includes(status)) return "info";
+  return "neutral";
 }
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
@@ -255,46 +270,68 @@ function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
 
   return (
     <div className={styles.stack}>
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Customer</th>
-              <th>Properties</th>
-              <th>Requests</th>
-              <th>Lead source</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.customers.map((customer) => (
-              <tr key={customer.id}>
-                <td>
-                  <strong>{customer.displayName}</strong>
-                </td>
-                <td>{data.properties.filter((item) => item.customerId === customer.id).length}</td>
-                <td>{data.requests.filter((item) => item.customerId === customer.id).length}</td>
-                <td>{customer.leadSource ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <OperationsToolbar
+        context={<ToolbarResultCount count={data.customers.length} label="customers" />}
+      />
+      <DataTable<OperationalCustomer>
+        caption="Customers"
+        rows={data.customers}
+        getRowKey={(customer) => customer.id}
+        columns={[
+          {
+            id: "customer",
+            header: "Customer",
+            priority: "primary",
+            cell: (customer) => <DataCellStack primary={customer.displayName} secondary={customer.leadSource ?? "Lead source not recorded"} />,
+          },
+          {
+            id: "properties",
+            header: "Properties",
+            cell: (customer) => data.properties.filter((item) => item.customerId === customer.id).length,
+          },
+          {
+            id: "requests",
+            header: "Requests",
+            cell: (customer) => data.requests.filter((item) => item.customerId === customer.id).length,
+          },
+        ]}
+        renderMobileRow={(customer) => (
+          <DataCellStack
+            primary={customer.displayName}
+            secondary={
+              data.properties.filter((item) => item.customerId === customer.id).length +
+              " properties · " +
+              data.requests.filter((item) => item.customerId === customer.id).length +
+              " requests"
+            }
+          />
+        )}
+      />
 
       {data.customers.slice(0, 8).map((customer) => (
-        <section className="plain-card" key={customer.id}>
-          <h3>{customer.displayName}</h3>
-          {data.properties
-            .filter((item) => item.customerId === customer.id)
-            .map((property) => (
-              <div key={property.id}>
-                <p>
-                  <strong>{property.label}</strong> · {property.address}
-                </p>
-                {property.accessNotes && <p>Access: {property.accessNotes}</p>}
-                {property.serviceNotes && <p>Service notes: {property.serviceNotes}</p>}
-              </div>
-            ))}
-        </section>
+        <Panel key={customer.id}>
+          <SectionHeader title={customer.displayName} description="Property context" />
+          {data.properties.filter((item) => item.customerId === customer.id).length === 0 ? (
+            <AppEmptyState title="No properties" description="No property is linked to this customer yet." />
+          ) : (
+            <div className="app-row-list">
+              {data.properties
+                .filter((item) => item.customerId === customer.id)
+                .map((property) => (
+                  <article className="app-row" key={property.id}>
+                    <div>
+                      <h3>{property.label}</h3>
+                      <p>{property.address || "Address not recorded"}</p>
+                      {property.serviceNotes ? <p>Service: {property.serviceNotes}</p> : null}
+                    </div>
+                    <div className="app-row-meta">
+                      <span>{property.accessNotes ? "Access notes saved" : "No access notes"}</span>
+                    </div>
+                  </article>
+                ))}
+            </div>
+          )}
+        </Panel>
       ))}
     </div>
   );
