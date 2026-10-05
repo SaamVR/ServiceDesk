@@ -59,6 +59,7 @@ export interface OperationalQuote {
   depositMinor: number;
   balanceMinor: number;
   durationMinutes: number;
+  bufferMinutes: number;
   validUntil?: string;
 }
 
@@ -429,6 +430,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     depositMinor: numberValue(row, "deposit_minor"),
     balanceMinor: numberValue(row, "balance_minor"),
     durationMinutes: numberValue(row, "duration_minutes"),
+    bufferMinutes: numberValue(row, "buffer_minutes"),
     validUntil: textValue(row, "valid_until"),
   }));
   const quoteById = new Map(quotes.map((quote) => [quote.id, quote]));
@@ -446,7 +448,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       startAt: String(row.starts_at),
       endAt: textValue(row, "ends_at"),
       serviceMinutes: quote?.durationMinutes ?? 0,
-      bufferMinutes: quote ? Math.max(0, numberValue(quoteRows.find((candidate) => String(candidate.id) === quote.id) ?? {}, "buffer_minutes")) : 0,
+      bufferMinutes: quote?.bufferMinutes ?? 0,
       version: numberValue(row, "version", 1),
     };
   });
