@@ -351,7 +351,7 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
       <header className={styles.crmToolbar}>
         <div>
           <p className={styles.crmEyebrow}>Customer records</p>
-          <h2>Customers</h2>
+          <h2>Customer records</h2>
           <p>{orderedCustomers.length} customer{orderedCustomers.length === 1 ? "" : "s"} · linked properties and service history</p>
         </div>
       </header>
@@ -513,7 +513,7 @@ function RequestsView({
       <header className={styles.salesToolbar}>
         <div>
           <p className={styles.salesEyebrow}>Intake queue</p>
-          <h2>Requests</h2>
+          <h2>Request pipeline</h2>
           <p>{orderedRequests.length} total · {reviewRequests} need review · {requestsWithoutQuote} without quote</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "inbox")}>Open inbox</a>
@@ -661,7 +661,7 @@ function QuotesView({
       <header className={styles.salesToolbar}>
         <div>
           <p className={styles.salesEyebrow}>Sales pipeline</p>
-          <h2>Quotes</h2>
+          <h2>Quote pipeline</h2>
           <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} awaiting customer</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "requests")}>Open requests</a>
@@ -814,7 +814,7 @@ function ScheduleView({
       <header className={styles.scheduleHeader}>
         <div>
           <p className={styles.scheduleEyebrow}>Planning & dispatch</p>
-          <h2>Schedule</h2>
+          <h2>Planning &amp; dispatch</h2>
           <p>Plan the next seven days, place accepted work into capacity, and confirm crew assignments.</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open jobs</a>
@@ -1033,7 +1033,7 @@ function JobsView({
       <header className={styles.jobsToolbar}>
         <div>
           <p className={styles.jobsEyebrow}>Field operations</p>
-          <h2>Jobs</h2>
+          <h2>Field operations queue</h2>
           <p>{activeVisits.length} active · {unassigned} unassigned · {pendingReview} awaiting review</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "schedule")}>Open dispatch</a>
@@ -1259,7 +1259,7 @@ function InvoicesView({
       <header className={styles.financeToolbar}>
         <div>
           <p className={styles.financeEyebrow}>Customer finance</p>
-          <h2>Invoices</h2>
+          <h2>Collections &amp; invoices</h2>
           <p>{openInvoices.length} open balance{openInvoices.length === 1 ? "" : "s"} · {paidInvoices} paid</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "reports")}>Open reports</a>
@@ -1429,7 +1429,7 @@ function QualityView({
       <header className={styles.qualityToolbar}>
         <div>
           <p className={styles.qualityEyebrow}>Service quality</p>
-          <h2>Quality</h2>
+          <h2>Quality review queue</h2>
           <p>{openCount} open · {reviewCount} in review · {resolvedCount} resolved</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open jobs</a>
@@ -1582,7 +1582,7 @@ function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapsh
     return (
       <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
         <header className={styles.recoveryHeader}>
-          <div><p className={styles.recoveryEyebrow}>Human recovery</p><h2>Automations</h2><p>Operational exceptions that need a person before workflow can safely continue.</p></div>
+          <div><p className={styles.recoveryEyebrow}>Human recovery</p><h2>Recovery queue</h2><p>Operational exceptions that need a person before workflow can safely continue.</p></div>
         </header>
         <div className={styles.recoveryClear}><span aria-hidden="true">✓</span><div><strong>No recovery work</strong><p>There are no open attention items requiring human intervention.</p></div></div>
       </section>
@@ -1608,7 +1608,7 @@ function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapsh
       <header className={styles.recoveryHeader}>
         <div>
           <p className={styles.recoveryEyebrow}>Human recovery</p>
-          <h2>Automations</h2>
+          <h2>Recovery queue</h2>
           <p>Operational exceptions, failed handoffs and review items that require explicit human action.</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "overview")}>Back to overview</a>
@@ -1697,7 +1697,7 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
       <header className={styles.adminPageHeader}>
         <div>
           <p className={styles.adminEyebrow}>Business performance</p>
-          <h2>Reports</h2>
+          <h2>Business performance</h2>
           <p>
             {snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period"}
             {" – "}
@@ -1844,7 +1844,7 @@ function BillingView({ data }: { data: OperationalStaffSnapshot }) {
       <header className={styles.adminPageHeader}>
         <div>
           <p className={styles.adminEyebrow}>Account & plan</p>
-          <h2>Billing</h2>
+          <h2>Subscription &amp; usage</h2>
           <p>ServiceDesk subscription billing and platform usage.</p>
         </div>
         <StatusBadge tone={subscription.providerMode === "SANDBOX" ? "warning" : statusBadgeTone(subscription.status)}>
@@ -1985,7 +1985,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
       <header className={styles.adminPageHeader}>
         <div>
           <p className={styles.adminEyebrow}>Workspace settings console</p>
-          <h2>Settings</h2>
+          <h2>Workspace administration</h2>
           <p>{data.workspace.name} · {data.actor.role.toLowerCase()} access</p>
         </div>
       </header>
