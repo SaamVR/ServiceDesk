@@ -115,14 +115,16 @@ export type CustomerPortalActionResult =
 
 export interface CustomerSandboxCheckoutSession {
   id: string;
-  invoiceId: string;
+  purpose: "DEPOSIT" | "BALANCE";
+  invoiceId?: string;
+  holdId?: string;
   quoteId: string;
   amountMinor: number;
   currency: string;
   status: "OPEN" | "APPLIED" | "DUPLICATE" | "PAYMENT_REVIEW" | "EXPIRED" | "CANCELLED";
   expiresAt: string;
-  currentInvoiceBalanceMinor: number;
-  invoiceStatus: string;
+  currentAmountMinor: number;
+  resourceStatus: string;
   workspaceName: string;
   customerName: string;
   workspaceTimezone: string;
@@ -647,6 +649,31 @@ export async function updateCustomerCommunicationPreference(input: {
   };
 }
 
+async function loadCustomerOwnedQuoteContext(resolved: ResolvedCustomer, quoteId: string) {
+  const quoteResult = await resolved.service
+    .from("quotes")
+    .select("*")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (quoteResult.error || !quoteResult.data) {
+    return { ok: false as const, message: "This quote is no longer available." };
+  }
+
+  const quote = mapQuote(quoteResult.data as Row, resolved.workspace.id);
+  const requestResult = await resolved.service
+    .from("requests")
+    .select("id,customer_id")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", quote.requestId)
+    .maybeSingle();
+  if (requestResult.error || !requestResult.data || requestResult.data.customer_id !== resolved.customer.id) {
+    return { ok: false as const, message: "This quote is not linked to your customer account." };
+  }
+
+  return { ok: true as const, quote };
+}
+
 async function loadCustomerOwnedInvoiceContext(resolved: ResolvedCustomer, invoiceId: string) {
   const invoiceResult = await resolved.service
     .from("invoices")
@@ -664,26 +691,11 @@ async function loadCustomerOwnedInvoiceContext(resolved: ResolvedCustomer, invoi
     return { ok: false as const, message: "This invoice is not linked to a payable quote." };
   }
 
-  const quoteResult = await resolved.service
-    .from("quotes")
-    .select("*")
-    .eq("workspace_id", resolved.workspace.id)
-    .eq("id", quoteId)
-    .maybeSingle();
-  if (quoteResult.error || !quoteResult.data) {
-    return { ok: false as const, message: "The quote linked to this invoice is no longer available." };
+  const quoteContext = await loadCustomerOwnedQuoteContext(resolved, quoteId);
+  if (!quoteContext.ok) {
+    return { ok: false as const, message: "The quote linked to this invoice is not available to your account." };
   }
-
-  const quote = mapQuote(quoteResult.data as Row, resolved.workspace.id);
-  const requestResult = await resolved.service
-    .from("requests")
-    .select("id,customer_id")
-    .eq("workspace_id", resolved.workspace.id)
-    .eq("id", quote.requestId)
-    .maybeSingle();
-  if (requestResult.error || !requestResult.data || requestResult.data.customer_id !== resolved.customer.id) {
-    return { ok: false as const, message: "This invoice is not linked to your customer account." };
-  }
+  const quote = quoteContext.quote;
 
   return {
     ok: true as const,
@@ -695,6 +707,94 @@ async function loadCustomerOwnedInvoiceContext(resolved: ResolvedCustomer, invoi
     },
     quote,
   };
+}
+
+export async function launchCustomerDepositSandboxCheckout(
+  quoteId: string,
+  holdId: string,
+): Promise<CustomerSandboxCheckoutLaunchResult> {
+  const resolved = await resolveCustomer();
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const quoteContext = await loadCustomerOwnedQuoteContext(resolved.value, quoteId);
+  if (!quoteContext.ok) return quoteContext;
+  const quote = quoteContext.quote;
+  if (quote.status !== "ACCEPTED") {
+    return { ok: false, message: "Accept the quote before opening deposit checkout." };
+  }
+  if (!Number.isInteger(quote.depositMinor) || quote.depositMinor <= 0) {
+    return { ok: false, message: "This quote does not have a payable deposit amount." };
+  }
+
+  const holdResult = await resolved.value.service
+    .from("slot_holds")
+    .select("id,quote_id,status,expires_at")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("id", holdId)
+    .eq("quote_id", quote.id)
+    .maybeSingle();
+  if (holdResult.error || !holdResult.data) {
+    return { ok: false, message: "The selected service-time hold is no longer available." };
+  }
+
+  const now = new Date();
+  const holdExpiresAt = new Date(String(holdResult.data.expires_at)).getTime();
+  if (
+    String(holdResult.data.status) !== "HELD"
+    || !Number.isFinite(holdExpiresAt)
+    || holdExpiresAt <= now.getTime()
+  ) {
+    return { ok: false, message: "This service-time hold expired or is no longer payable. Choose a service time again." };
+  }
+
+  const existing = await resolved.value.service
+    .from("sandbox_checkout_sessions")
+    .select("id,amount_minor,currency,status,expires_at")
+    .eq("workspace_id", resolved.value.workspace.id)
+    .eq("customer_id", resolved.value.customer.id)
+    .eq("quote_id", quote.id)
+    .eq("hold_id", holdId)
+    .eq("purpose", "DEPOSIT")
+    .eq("status", "OPEN")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!existing.error && existing.data) {
+    const expiresAt = new Date(String(existing.data.expires_at)).getTime();
+    if (
+      Number(existing.data.amount_minor) === quote.depositMinor
+      && String(existing.data.currency) === quote.currency
+      && Number.isFinite(expiresAt)
+      && expiresAt > now.getTime()
+      && expiresAt <= holdExpiresAt
+    ) {
+      return { ok: true, checkoutPath: `/portal/sandbox-checkout/${encodeURIComponent(String(existing.data.id))}` };
+    }
+  }
+
+  const sessionId = crypto.randomUUID();
+  const expiresAt = new Date(Math.min(now.getTime() + 30 * 60 * 1000, holdExpiresAt)).toISOString();
+  const inserted = await resolved.value.service
+    .from("sandbox_checkout_sessions")
+    .insert({
+      id: sessionId,
+      workspace_id: resolved.value.workspace.id,
+      customer_id: resolved.value.customer.id,
+      quote_id: quote.id,
+      hold_id: holdId,
+      purpose: "DEPOSIT",
+      amount_minor: quote.depositMinor,
+      currency: quote.currency,
+      status: "OPEN",
+      expires_at: expiresAt,
+      updated_at: now.toISOString(),
+    });
+  if (inserted.error) {
+    return { ok: false, message: "Sandbox deposit checkout could not be opened. Try again." };
+  }
+
+  return { ok: true, checkoutPath: `/portal/sandbox-checkout/${encodeURIComponent(sessionId)}` };
 }
 
 export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): Promise<CustomerSandboxCheckoutLaunchResult> {
@@ -775,6 +875,10 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
   }
 
   const row = sessionResult.data as Row;
+  const purpose = String(row.purpose) === "DEPOSIT" ? "DEPOSIT" : "BALANCE";
+  const quoteId = String(row.quote_id);
+  const invoiceId = textValue(row, "invoice_id");
+  const holdId = textValue(row, "hold_id");
   let status = String(row.status) as CustomerSandboxCheckoutSession["status"];
   const expiresAt = String(row.expires_at);
   if (status === "OPEN" && Date.parse(expiresAt) <= Date.now()) {
@@ -787,21 +891,49 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
       .eq("status", "OPEN");
   }
 
-  const context = await loadCustomerOwnedInvoiceContext(resolved.value, String(row.invoice_id));
-  if (!context.ok) return context;
+  let currentAmountMinor: number;
+  let resourceStatus: string;
+
+  if (purpose === "DEPOSIT") {
+    const quoteContext = await loadCustomerOwnedQuoteContext(resolved.value, quoteId);
+    if (!quoteContext.ok) return quoteContext;
+    if (!holdId) return { ok: false, message: "This deposit checkout is missing its service-time hold." };
+
+    const holdResult = await resolved.value.service
+      .from("slot_holds")
+      .select("id,status,expires_at,quote_id")
+      .eq("workspace_id", resolved.value.workspace.id)
+      .eq("id", holdId)
+      .eq("quote_id", quoteId)
+      .maybeSingle();
+    if (holdResult.error || !holdResult.data) {
+      return { ok: false, message: "The service-time hold linked to this deposit is no longer available." };
+    }
+
+    currentAmountMinor = quoteContext.quote.depositMinor;
+    resourceStatus = String(holdResult.data.status);
+  } else {
+    if (!invoiceId) return { ok: false, message: "This balance checkout is missing its invoice reference." };
+    const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
+    if (!context.ok) return context;
+    currentAmountMinor = context.invoice.balanceMinor;
+    resourceStatus = context.invoice.status;
+  }
 
   return {
     ok: true,
     value: {
       id: String(row.id),
-      invoiceId: String(row.invoice_id),
-      quoteId: String(row.quote_id),
+      purpose,
+      ...(invoiceId ? { invoiceId } : {}),
+      ...(holdId ? { holdId } : {}),
+      quoteId,
       amountMinor: numberValue(row, "amount_minor"),
       currency: String(row.currency),
       status,
       expiresAt,
-      currentInvoiceBalanceMinor: context.invoice.balanceMinor,
-      invoiceStatus: context.invoice.status,
+      currentAmountMinor,
+      resourceStatus,
       workspaceName: resolved.value.workspace.name,
       customerName: resolved.value.customer.displayName,
       workspaceTimezone: resolved.value.workspace.timezone,
@@ -809,7 +941,9 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
   };
 }
 
-export async function completeCustomerSandboxCheckout(sessionId: string): Promise<CustomerPortalActionResult & { invoiceId?: string }> {
+export async function completeCustomerSandboxCheckout(
+  sessionId: string,
+): Promise<CustomerPortalActionResult & { invoiceId?: string; quoteId?: string }> {
   const resolved = await resolveCustomer();
   if (!resolved.ok) return { ok: false, message: resolved.message };
 
@@ -825,52 +959,131 @@ export async function completeCustomerSandboxCheckout(sessionId: string): Promis
   }
 
   const session = sessionResult.data as Row;
-  const invoiceId = String(session.invoice_id);
+  const purpose = String(session.purpose) === "DEPOSIT" ? "DEPOSIT" : "BALANCE";
+  const quoteId = String(session.quote_id);
+  const invoiceId = textValue(session, "invoice_id");
+  const holdId = textValue(session, "hold_id");
+  const refs = { quoteId, ...(invoiceId ? { invoiceId } : {}) };
   const sessionStatus = String(session.status);
+
   if (sessionStatus === "APPLIED" || sessionStatus === "DUPLICATE") {
-    return { ok: true, invoiceId, message: "Sandbox payment has already been verified and applied." };
+    return { ok: true, ...refs, message: "Sandbox payment has already been verified and applied." };
   }
   if (sessionStatus !== "OPEN") {
-    return { ok: false, invoiceId, message: "This sandbox checkout session is no longer open." };
+    return { ok: false, ...refs, message: "This sandbox checkout session is no longer open." };
   }
 
   const now = new Date();
+  const nowIso = now.toISOString();
   if (Date.parse(String(session.expires_at)) <= now.getTime()) {
     await resolved.value.service
       .from("sandbox_checkout_sessions")
-      .update({ status: "EXPIRED", updated_at: now.toISOString() })
+      .update({ status: "EXPIRED", updated_at: nowIso })
       .eq("workspace_id", resolved.value.workspace.id)
       .eq("id", sessionId)
       .eq("status", "OPEN");
-    return { ok: false, invoiceId, message: "This sandbox checkout session expired. Open a new payment session from the invoice." };
+    return {
+      ok: false,
+      ...refs,
+      message: purpose === "DEPOSIT"
+        ? "This sandbox deposit session expired. Choose a service time again."
+        : "This sandbox checkout session expired. Open a new payment session from the invoice.",
+    };
   }
 
-  const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
-  if (!context.ok) return { ok: false, invoiceId, message: context.message };
   const sessionAmount = numberValue(session, "amount_minor");
   const sessionCurrency = String(session.currency);
-  if (
-    context.invoice.status === "VOID"
-    || context.invoice.status === "PAID"
-    || context.invoice.balanceMinor <= 0
-  ) {
-    return { ok: false, invoiceId, message: "The invoice is already closed. No sandbox payment was applied." };
-  }
-  if (context.invoice.balanceMinor !== sessionAmount || context.invoice.currency !== sessionCurrency) {
-    await resolved.value.service
-      .from("sandbox_checkout_sessions")
-      .update({ status: "CANCELLED", updated_at: now.toISOString() })
+  let metadata: Record<string, string>;
+  let successMessage: string;
+  let duplicateMessage: string;
+
+  if (purpose === "DEPOSIT") {
+    const quoteContext = await loadCustomerOwnedQuoteContext(resolved.value, quoteId);
+    if (!quoteContext.ok) return { ok: false, ...refs, message: quoteContext.message };
+    if (!holdId) return { ok: false, ...refs, message: "This deposit checkout is missing its service-time hold." };
+
+    const holdResult = await resolved.value.service
+      .from("slot_holds")
+      .select("id,quote_id,status,expires_at")
       .eq("workspace_id", resolved.value.workspace.id)
-      .eq("id", sessionId)
-      .eq("status", "OPEN");
-    return { ok: false, invoiceId, message: "The invoice balance changed. Open a new sandbox payment session for the current balance." };
+      .eq("id", holdId)
+      .eq("quote_id", quoteId)
+      .maybeSingle();
+    if (holdResult.error || !holdResult.data) {
+      return { ok: false, ...refs, message: "The service-time hold linked to this deposit is no longer available." };
+    }
+
+    const holdExpiresAt = Date.parse(String(holdResult.data.expires_at));
+    const staleDeposit =
+      quoteContext.quote.status !== "ACCEPTED"
+      || String(holdResult.data.status) !== "HELD"
+      || !Number.isFinite(holdExpiresAt)
+      || holdExpiresAt <= now.getTime()
+      || quoteContext.quote.depositMinor !== sessionAmount
+      || quoteContext.quote.currency !== sessionCurrency;
+
+    if (staleDeposit) {
+      await resolved.value.service
+        .from("sandbox_checkout_sessions")
+        .update({ status: "CANCELLED", updated_at: nowIso })
+        .eq("workspace_id", resolved.value.workspace.id)
+        .eq("id", sessionId)
+        .eq("status", "OPEN");
+      return {
+        ok: false,
+        ...refs,
+        message: "The quote, deposit amount or service-time hold changed. Return to the quote and start again.",
+      };
+    }
+
+    metadata = {
+      workspaceId: resolved.value.workspace.id,
+      quoteId,
+      holdId,
+      purpose: "DEPOSIT",
+    };
+    successMessage = "Sandbox deposit verified. Your booking and invoice were created by ServiceDesk Core.";
+    duplicateMessage = "This sandbox deposit was already applied; no duplicate payment or booking was created.";
+  } else {
+    if (!invoiceId) return { ok: false, ...refs, message: "This balance checkout is missing its invoice reference." };
+
+    const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
+    if (!context.ok) return { ok: false, ...refs, message: context.message };
+    if (
+      context.invoice.status === "VOID"
+      || context.invoice.status === "PAID"
+      || context.invoice.balanceMinor <= 0
+    ) {
+      return { ok: false, ...refs, message: "The invoice is already closed. No sandbox payment was applied." };
+    }
+    if (context.invoice.balanceMinor !== sessionAmount || context.invoice.currency !== sessionCurrency) {
+      await resolved.value.service
+        .from("sandbox_checkout_sessions")
+        .update({ status: "CANCELLED", updated_at: nowIso })
+        .eq("workspace_id", resolved.value.workspace.id)
+        .eq("id", sessionId)
+        .eq("status", "OPEN");
+      return {
+        ok: false,
+        ...refs,
+        message: "The invoice balance changed. Open a new sandbox payment session for the current balance.",
+      };
+    }
+
+    metadata = {
+      workspaceId: resolved.value.workspace.id,
+      quoteId: context.quote.id,
+      invoiceId,
+      purpose: "BALANCE",
+    };
+    successMessage = "Sandbox payment verified and applied to the invoice.";
+    duplicateMessage = "Sandbox payment was already applied; no duplicate charge was recorded.";
   }
 
   const compactId = sessionId.replaceAll("-", "");
   const providerAccountId = "acct_servicedesk_internal_sandbox";
   const providerEventId = `evt_sd_demo_${compactId}`;
   const providerTransactionId = `pi_sd_demo_${compactId}`;
-  const nowIso = now.toISOString();
   const payload = JSON.stringify({
     id: providerEventId,
     account: providerAccountId,
@@ -882,12 +1095,7 @@ export async function completeCustomerSandboxCheckout(sessionId: string): Promis
         amount_total: sessionAmount,
         currency: sessionCurrency.toLowerCase(),
         payment_intent: providerTransactionId,
-        metadata: {
-          workspaceId: resolved.value.workspace.id,
-          quoteId: context.quote.id,
-          invoiceId,
-          purpose: "BALANCE",
-        },
+        metadata,
       },
     },
   });
@@ -925,10 +1133,8 @@ export async function completeCustomerSandboxCheckout(sessionId: string): Promis
       .eq("status", "OPEN");
     return {
       ok: true,
-      invoiceId,
-      message: result === "APPLIED"
-        ? "Sandbox payment verified and applied to the invoice."
-        : "Sandbox payment was already applied; no duplicate charge was recorded.",
+      ...refs,
+      message: result === "APPLIED" ? successMessage : duplicateMessage,
     };
   }
 
@@ -944,8 +1150,20 @@ export async function completeCustomerSandboxCheckout(sessionId: string): Promis
       .eq("workspace_id", resolved.value.workspace.id)
       .eq("id", sessionId)
       .eq("status", "OPEN");
-    return { ok: false, invoiceId, message: "The verified sandbox payment requires staff review. The invoice was not marked paid." };
+    return {
+      ok: false,
+      ...refs,
+      message: purpose === "DEPOSIT"
+        ? "The verified sandbox deposit requires staff review. The booking was not confirmed automatically."
+        : "The verified sandbox payment requires staff review. The invoice was not marked paid.",
+    };
   }
 
-  return { ok: false, invoiceId, message: "Sandbox payment verification could not be completed. The invoice was not changed." };
+  return {
+    ok: false,
+    ...refs,
+    message: purpose === "DEPOSIT"
+      ? "Sandbox deposit verification could not be completed. The booking was not confirmed."
+      : "Sandbox payment verification could not be completed. The invoice was not changed.",
+  };
 }
