@@ -166,11 +166,12 @@ function QuoteView({
   if (!quote) return <EmptyState title="Quote not found" detail="This quote is not available in your account." />;
 
   const request = data.requests.find((item) => item.id === quote.requestId);
+  const selectedQuoteId = quote.id;
 
   async function acceptQuote() {
     "use server";
-    const result = await acceptCustomerPortalQuote(quote.id);
-    actionRedirect("/portal/quotes/" + encodeURIComponent(quote.id), result);
+    const result = await acceptCustomerPortalQuote(selectedQuoteId);
+    actionRedirect("/portal/quotes/" + encodeURIComponent(selectedQuoteId), result);
   }
 
   return (
