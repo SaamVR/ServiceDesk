@@ -15,6 +15,8 @@ import {
 import { staffModuleConfig, type StaffModule } from "./staff-modules";
 import { EmptyState as AppEmptyState, PageHeader, Panel } from "@/components/product/PagePrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
+import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
+import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatMinorMoney } from "./view-models";
 import styles from "./OperationalProductRoute.module.css";
 
@@ -497,9 +499,15 @@ function ScheduleView({
       .filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now)
       .map((hold) => hold.slotId),
   );
+  const dispatch = buildOperationalDispatchIntelligence(data);
 
   return (
     <div className={styles.stack}>
+      <DispatcherIntelligence
+        recommendations={dispatch.recommendations}
+        timeline={dispatch.timeline}
+        approvalCommandAvailable={false}
+      />
       <section className="plain-card">
         <div className={styles.sectionHeader}>
           <div>
