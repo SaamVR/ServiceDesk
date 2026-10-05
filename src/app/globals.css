@@ -1913,3 +1913,103 @@ p { color: var(--muted); }
 .app-topbar-actions { flex: 0 0 auto; }
 .app-topbar-context { overflow: hidden; }
 .app-sidebar-nav { min-width: 0; }
+
+
+/* Authenticated-route cleanup for legacy V1 presentation wrappers.
+   Feature semantics stay owned by Worker 2; this only normalizes shared chrome. */
+.app-shell .section-heading.compact .lead {
+  max-width: 720px;
+  margin-bottom: 0;
+  color: var(--app-text-muted);
+  font-size: .86rem;
+  line-height: 1.5;
+}
+
+.app-shell .eyebrow,
+.app-shell .label {
+  color: var(--app-text-muted);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+.app-shell .mini-panel,
+.app-shell .plain-card,
+.app-shell .state-card,
+.app-shell .tri-pane-preview > *,
+.app-shell .inbox-preview > * {
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.app-shell .mini-panel h2,
+.app-shell .plain-card h2 {
+  margin-bottom: 6px;
+  color: var(--app-text);
+  font-size: .96rem;
+  line-height: 1.3;
+  letter-spacing: -.012em;
+}
+
+.app-shell .mini-panel h3,
+.app-shell .plain-card h3,
+.app-shell .state-card h3 {
+  color: var(--app-text);
+  font-size: .84rem;
+  letter-spacing: -.005em;
+}
+
+.app-shell .mini-panel p,
+.app-shell .plain-card p,
+.app-shell .state-card p {
+  font-size: .77rem;
+  line-height: 1.5;
+}
+
+.app-shell .button-primary,
+.app-shell .button-secondary {
+  min-height: 36px;
+  border-radius: var(--app-radius-sm);
+  padding: 0 12px;
+  font-size: .79rem;
+  font-weight: 700;
+}
+
+.app-shell .list-row {
+  margin-bottom: 6px;
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 9px 10px;
+  background: var(--app-surface);
+  font-size: .77rem;
+}
+
+.app-shell .list-row:hover:not(:disabled) {
+  background: var(--app-surface-subtle);
+}
+
+.app-shell .list-row.active {
+  border-color: #afd0c5;
+  background: var(--app-accent-soft);
+}
+
+.app-shell .status-pill {
+  min-height: 22px;
+  padding: 1px 7px;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.app-shell .staff-workspace-stack {
+  gap: 14px;
+}
+
+.app-shell .staff-workspace-stack > .mini-panel:first-child {
+  padding: 15px 17px;
+  background: var(--app-surface);
+}
+
+.app-shell .staff-workspace-stack > .mini-panel:first-child > .status-pill {
+  margin-bottom: 7px;
+}
