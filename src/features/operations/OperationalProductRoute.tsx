@@ -17,12 +17,9 @@ import {
   type OperationalActionResult,
   type OperationalAttention,
   type OperationalStaffSnapshot,
-  type OperationalVisit,
 } from "./operational-product-runtime";
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
 import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
-import { DataCellStack, DataTable } from "@/components/product/DataTable";
-import { OperationsToolbar, ToolbarResultCount } from "@/components/product/WorkspacePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
@@ -1580,92 +1577,97 @@ function attentionResourceHref(workspaceSlug: string, item: OperationalAttention
 }
 
 function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot; workspaceSlug: string }) {
-  if (data.attentionItems.length === 0) {
+  const openItems = data.attentionItems.filter((item) => item.status !== "RESOLVED");
+  if (openItems.length === 0) {
     return (
-      <EmptyState
-        title="No recovery work"
-        detail="There are no open attention items requiring human intervention."
-      />
+      <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
+        <header className={styles.recoveryHeader}>
+          <div><p className={styles.recoveryEyebrow}>Human recovery</p><h2>Automations</h2><p>Operational exceptions that need a person before workflow can safely continue.</p></div>
+        </header>
+        <div className={styles.recoveryClear}><span aria-hidden="true">✓</span><div><strong>No recovery work</strong><p>There are no open attention items requiring human intervention.</p></div></div>
+      </section>
     );
   }
 
+  const severityWeight = { CRITICAL: 0, WARNING: 1, INFO: 2 } as const;
+  const sorted = [...openItems].sort((left, right) => {
+    const severity = severityWeight[left.severity] - severityWeight[right.severity];
+    if (severity !== 0) return severity;
+    const leftDue = left.dueAt ? Date.parse(left.dueAt) : Number.MAX_SAFE_INTEGER;
+    const rightDue = right.dueAt ? Date.parse(right.dueAt) : Number.MAX_SAFE_INTEGER;
+    return leftDue - rightDue;
+  });
+  const critical = openItems.filter((item) => item.severity === "CRITICAL").length;
+  const warning = openItems.filter((item) => item.severity === "WARNING").length;
+  const unassigned = openItems.filter((item) => !item.ownerUserId).length;
+  const now = Date.parse(data.loadedAt);
+  const overdue = openItems.filter((item) => item.dueAt && Date.parse(item.dueAt) < now).length;
+
   return (
-    <div className={styles.stack}>
-      <OperationsToolbar
-        context={<ToolbarResultCount count={data.attentionItems.length} label="attention items" />}
-      />
-      <DataTable<OperationalAttention>
-        caption="Operational recovery queue"
-        rows={data.attentionItems}
-        getRowKey={(item) => item.id}
-        columns={[
-          {
-            id: "issue",
-            header: "Issue",
-            priority: "primary",
-            cell: (item) => <DataCellStack primary={item.summary} secondary={item.type.replaceAll("_", " ")} />,
-          },
-          {
-            id: "severity",
-            header: "Severity",
-            cell: (item) => (
-              <StatusBadge tone={item.severity === "CRITICAL" ? "danger" : item.severity === "WARNING" ? "warning" : "info"}>
-                {item.severity}
-              </StatusBadge>
-            ),
-          },
-          {
-            id: "resource",
-            header: "Resource",
-            cell: (item) => item.resourceType,
-          },
-          {
-            id: "owner",
-            header: "Owner",
-            cell: (item) => item.ownerUserId ? "Assigned" : "Unassigned",
-          },
-          {
-            id: "due",
-            header: "Due",
-            priority: "optional",
-            cell: (item) => formatWhen(item.dueAt, data.workspace.timezone),
-          },
-          {
-            id: "action",
-            header: "Action",
-            priority: "primary",
-            cell: (item) => {
+    <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
+      <header className={styles.recoveryHeader}>
+        <div>
+          <p className={styles.recoveryEyebrow}>Human recovery</p>
+          <h2>Automations</h2>
+          <p>Operational exceptions, failed handoffs and review items that require explicit human action.</p>
+        </div>
+        <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "overview")}>Back to overview</a>
+      </header>
+
+      <section className={styles.recoveryMetrics} aria-label="Recovery queue summary">
+        <div className={critical ? styles.recoveryCriticalMetric : undefined}><span>Critical</span><strong>{critical}</strong><small>Highest priority</small></div>
+        <div className={warning ? styles.recoveryWarningMetric : undefined}><span>Warnings</span><strong>{warning}</strong><small>Needs attention</small></div>
+        <div className={overdue ? styles.recoveryWarningMetric : undefined}><span>Overdue</span><strong>{overdue}</strong><small>Past due time</small></div>
+        <div><span>Unassigned</span><strong>{unassigned}</strong><small>No owner yet</small></div>
+      </section>
+
+      <div className={styles.recoveryLayout}>
+        <section className={styles.recoveryQueue} aria-labelledby="recovery-queue-heading">
+          <div className={styles.recoverySectionHeader}>
+            <div><p className={styles.recoverySectionEyebrow}>Priority queue</p><h3 id="recovery-queue-heading">Needs intervention</h3><p>Highest severity and nearest deadline first.</p></div>
+            <StatusBadge tone={critical ? "danger" : warning ? "warning" : "info"}>{openItems.length} open</StatusBadge>
+          </div>
+          <div className={styles.recoveryList}>
+            {sorted.map((item) => {
               const href = attentionResourceHref(workspaceSlug, item);
-              return href ? (
-                <a className="app-button-secondary" href={href}>Open related record</a>
-              ) : (
-                <span className="app-field-help" title="This attention item has no supported deep link yet.">
-                  Reference only
-                </span>
+              const pastDue = Boolean(item.dueAt && Date.parse(item.dueAt) < now);
+              return (
+                <article className={styles.recoveryItem} key={item.id}>
+                  <span className={`${styles.recoverySeverity} ${styles[`recoverySeverity_${item.severity.toLowerCase()}`]}`} aria-hidden="true" />
+                  <div className={styles.recoveryItemBody}>
+                    <div className={styles.recoveryItemTop}>
+                      <span>
+                        <strong>{item.summary}</strong>
+                        <small>{item.type.replaceAll("_", " ").toLowerCase()}</small>
+                      </span>
+                      <StatusBadge tone={item.severity === "CRITICAL" ? "danger" : item.severity === "WARNING" ? "warning" : "info"}>{item.severity.toLowerCase()}</StatusBadge>
+                    </div>
+                    <div className={styles.recoveryMeta}>
+                      <span><b>Resource</b>{item.resourceType.replaceAll("_", " ").toLowerCase()}</span>
+                      <span><b>Owner</b>{item.ownerUserId ? "Assigned" : "Unassigned"}</span>
+                      <span className={pastDue ? styles.recoveryPastDue : undefined}><b>Due</b>{item.dueAt ? formatWhen(item.dueAt, data.workspace.timezone) : "No deadline"}</span>
+                    </div>
+                    <div className={styles.recoveryActionRow}>
+                      {href ? <a className="app-button-primary" href={href}>Open related record</a> : <span className={styles.recoveryReferenceOnly}>Reference only · no supported product action</span>}
+                    </div>
+                  </div>
+                </article>
               );
-            },
-          },
-        ]}
-        renderMobileRow={(item) => {
-          const href = attentionResourceHref(workspaceSlug, item);
-          return (
-            <div>
-              <DataCellStack primary={item.summary} secondary={item.severity + " · " + item.resourceType} />
-              {href ? (
-                <div className="app-row-actions">
-                  <a className="app-button-secondary" href={href}>Open related record</a>
-                </div>
-              ) : null}
-            </div>
-          );
-        }}
-      />
-      <FeedbackBanner
-        title="Recovery remains human-owned"
-        description="This queue surfaces persisted operational attention. No generic recovery mutation exists, so ServiceDesk does not invent a workflow-builder action."
-        tone="info"
-      />
-    </div>
+            })}
+          </div>
+        </section>
+
+        <aside className={styles.recoveryPolicy} aria-label="Recovery policy">
+          <div className={styles.recoveryPolicyHeader}><p className={styles.recoverySectionEyebrow}>Safety boundary</p><h3>Recovery remains human-owned</h3></div>
+          <p>This queue surfaces persisted operational attention. ServiceDesk does not invent a generic recovery mutation where the domain has no accepted command.</p>
+          <div className={styles.recoveryPolicySteps}>
+            <div><span>1</span><p><strong>Open the related record</strong><small>Review the persisted customer, job, invoice or quality state.</small></p></div>
+            <div><span>2</span><p><strong>Use the domain action</strong><small>Resolve the issue from the product surface that owns that state.</small></p></div>
+            <div><span>3</span><p><strong>Keep audit truth intact</strong><small>No hidden “retry everything” action is introduced here.</small></p></div>
+          </div>
+        </aside>
+      </div>
+    </section>
   );
 }
 
