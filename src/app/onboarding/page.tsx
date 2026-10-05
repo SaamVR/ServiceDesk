@@ -1,12 +1,10 @@
-import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
+import { OnboardingProductRoute } from "@/features/onboarding/OnboardingProductRoute";
 
-export default function OnboardingPage() {
-  return (
-    <OperationalFixtureRoute
-      surface="onboarding"
-      workspaceLabel="BrightRoom Services"
-      title="Onboarding readiness before go-live."
-      description="Owner setup, provider readiness and policy checks are labelled as pending until configuration evidence exists."
-    />
-  );
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ workspace?: string }>;
+}) {
+  const query = await searchParams;
+  return <OnboardingProductRoute workspaceSlug={query.workspace} />;
 }

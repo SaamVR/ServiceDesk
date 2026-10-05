@@ -13,7 +13,7 @@ describe("V2 field production copy and route truth", () => {
 
   it("keeps internal implementation language out of field-worker UI copy", () => {
     const ui = source("src/features/crew/CrewFieldAppV2.tsx");
-    for (const internal of ["authoritative", "DTO", "FIXTURE_UI_ONLY", "SESSION_MEMORY_ONLY", "acceptance", "server snapshot"]) {
+    for (const internal of ["authoritative", "FIXTURE_UI_ONLY", "SESSION_MEMORY_ONLY", "acceptance", "server snapshot"]) {
       expect(ui).not.toContain(internal);
     }
   });

@@ -40,7 +40,7 @@ describe("Product server boundary recovery", () => {
       expect(operationalRoute, token).toContain(token);
     }
 
-    for (const path of [
+    const productionRoutes = [
       "src/app/b/[slug]/page.tsx",
       "src/app/b/[slug]/enquire/page.tsx",
       "src/app/b/[slug]/book/page.tsx",
@@ -55,11 +55,12 @@ describe("Product server boundary recovery", () => {
       "src/app/app/[workspace]/settings/page.tsx",
       "src/app/app/[workspace]/jobs/page.tsx",
       "src/app/onboarding/page.tsx",
-      "src/app/tour/page.tsx",
-    ]) {
-      expect(source(path), path).toContain("OperationalFixtureRoute");
-      expect(source(path), path).not.toContain('OperationalRoute"');
+    ];
+    for (const path of productionRoutes) {
+      expect(source(path), path).not.toContain("OperationalFixtureRoute");
     }
+
+    expect(source("src/app/tour/page.tsx")).toContain("OperationalFixtureRoute");
   });
 
   it("keeps Product action factories away from Core repositories and provider adapters", () => {
