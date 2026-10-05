@@ -2013,3 +2013,49 @@ p { color: var(--muted); }
 .app-shell .staff-workspace-stack > .mini-panel:first-child > .status-pill {
   margin-bottom: 7px;
 }
+
+
+/* Cycle 3 realistic data-density hardening. */
+.app-data-table th,
+.app-data-table td {
+  max-width: 34rem;
+}
+
+.app-data-table td {
+  overflow-wrap: anywhere;
+}
+
+.app-data-table td > a,
+.app-data-table td > button {
+  max-width: 100%;
+}
+
+.app-data-table td code,
+.app-data-table td samp {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.app-row-actions > a,
+.app-row-actions > button {
+  min-height: 32px;
+}
+
+@media (max-width: 700px) {
+  .app-data-mobile .app-data-cell-stack strong,
+  .app-data-mobile .app-data-cell-stack > span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .app-data-mobile-card {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 430px) {
+  .app-row-actions > a,
+  .app-row-actions > button {
+    min-height: 44px;
+  }
+}

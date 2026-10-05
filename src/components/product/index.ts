@@ -1,3 +1,4 @@
+export * from "./CustomerFacingShell";
 export * from "./AppDialog";
 export * from "./DataTable";
 export * from "./FeedbackPrimitives";
