@@ -102,9 +102,15 @@ describe("E10B sandbox checkout command", () => {
     expect(missingInvoice.ok).toBe(false);
     if (!missingInvoice.ok) expect(missingInvoice.code).toBe("PAYMENT_INVOICE_REFERENCE_MISSING");
 
-    const balance = await handler().execute({ ...baseCommand, purpose: "BALANCE", invoiceId: "inv_1" });
+    const balance = await handler().execute({
+      ...baseCommand,
+      hold: undefined,
+      purpose: "BALANCE",
+      invoiceId: "inv_1",
+      balanceMinor: 6200,
+    });
     expect(balance.ok).toBe(true);
-    if (balance.ok) expect(balance.value.amountMinor).toBe(7500);
+    if (balance.ok) expect(balance.value.amountMinor).toBe(6200);
   });
 
   it("keeps provider preflight contract-only", () => {
