@@ -350,7 +350,7 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
     <section className={styles.crmWorkspace} aria-label="Customer relationship workspace">
       <header className={styles.crmToolbar}>
         <div>
-          <p className={styles.crmEyebrow}>Customer records</p>
+          <p className={styles.crmEyebrow}>CRM</p>
           <h2>Customer records</h2>
           <p>{orderedCustomers.length} customer{orderedCustomers.length === 1 ? "" : "s"} · linked properties and service history</p>
         </div>
@@ -813,7 +813,7 @@ function ScheduleView({
     <section className={styles.scheduleWorkspace} aria-label="Scheduling and dispatch workspace">
       <header className={styles.scheduleHeader}>
         <div>
-          <p className={styles.scheduleEyebrow}>Planning & dispatch</p>
+          <p className={styles.scheduleEyebrow}>Operations planning</p>
           <h2>Planning &amp; dispatch</h2>
           <p>Plan the next seven days, place accepted work into capacity, and confirm crew assignments.</p>
         </div>
@@ -1696,7 +1696,7 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
     <section className={styles.reportsWorkspace} aria-label="Operations reporting workspace">
       <header className={styles.adminPageHeader}>
         <div>
-          <p className={styles.adminEyebrow}>Business performance</p>
+          <p className={styles.adminEyebrow}>Insights</p>
           <h2>Business performance</h2>
           <p>
             {snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period"}

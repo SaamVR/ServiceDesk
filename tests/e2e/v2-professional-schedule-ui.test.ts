@@ -7,7 +7,8 @@ describe("V2 professional schedule UI", () => {
   it("combines dispatch, seven-day planning and booking capacity", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
     expect(route).toContain("Scheduling and dispatch workspace");
-    expect(route).toContain("Planning & dispatch");
+    expect(route).toContain("Operations planning");
+    expect(route).toContain("<h2>Planning &amp; dispatch</h2>");
     expect(route).toContain("DispatcherIntelligence");
     expect(route).toContain("Next 7 days");
     expect(route).toContain("Accepted work awaiting a slot");
