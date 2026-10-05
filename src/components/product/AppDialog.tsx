@@ -50,6 +50,9 @@ export function AppDialog({
         onClose();
       }}
       onClose={onClose}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) onClose();
+      }}
     >
       <div className="app-dialog-surface">
         <header className="app-dialog-header">
