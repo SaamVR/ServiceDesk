@@ -268,7 +268,7 @@ returns jsonb
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
   v_actor_user uuid := nullif(p_input->>'actorUserId','')::uuid;
@@ -361,7 +361,7 @@ returns jsonb
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
   v_actor_user uuid := nullif(p_input->>'actorUserId','')::uuid;
@@ -425,7 +425,7 @@ returns jsonb
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
   v_actor_user uuid := nullif(p_input->>'actorUserId','')::uuid;
@@ -507,7 +507,7 @@ returns jsonb
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
   v_event_id uuid := nullif(p_input->>'eventId','')::uuid;
