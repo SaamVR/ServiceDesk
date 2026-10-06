@@ -90,6 +90,95 @@
   font-size: .78rem;
 }
 
+.accountingPanel {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+}
+
+.accountingBody {
+  display: grid;
+  gap: 10px;
+}
+
+.accountingConnection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.accountingConnection > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.accountingConnection span,
+.accountingMetrics span {
+  color: var(--app-text-muted);
+  font-size: .54rem;
+}
+
+.accountingConnection strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: .72rem;
+  text-transform: capitalize;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountingMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.accountingMetrics > div {
+  display: grid;
+  gap: 2px;
+  padding: 9px 11px;
+  border-right: 1px solid var(--app-border);
+  background: var(--app-surface-subtle);
+}
+
+.accountingMetrics > div:last-child {
+  border-right: 0;
+}
+
+.accountingMetrics strong {
+  color: var(--app-text);
+  font-size: .72rem;
+}
+
+.accountingNote,
+.accountingEmpty p {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: .58rem;
+  line-height: 1.5;
+}
+
+.accountingEmpty {
+  display: grid;
+  gap: 3px;
+  padding: 12px 13px;
+  border: 1px dashed var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-subtle);
+}
+
+.accountingEmpty strong {
+  color: var(--app-text);
+  font-size: .66rem;
+}
+
 .composer,
 .drafts {
   display: grid;
@@ -349,21 +438,25 @@
   }
 
   .headerMetrics,
-  .totals {
+  .totals,
+  .accountingMetrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .headerMetrics span:nth-child(2),
-  .totals > div:nth-child(2) {
+  .totals > div:nth-child(2),
+  .accountingMetrics > div:nth-child(2) {
     border-right: 0;
   }
 
   .headerMetrics span:nth-child(-n + 2),
-  .totals > div:nth-child(-n + 2) {
+  .totals > div:nth-child(-n + 2),
+  .accountingMetrics > div:nth-child(-n + 2) {
     border-bottom: 1px solid var(--app-border);
   }
 
   .sectionHeading,
+  .accountingConnection,
   .formFooter,
   .draftFooter,
   .collection {
@@ -392,18 +485,21 @@
 
 @media (max-width: 430px) {
   .headerMetrics,
-  .totals {
+  .totals,
+  .accountingMetrics {
     grid-template-columns: 1fr;
   }
 
   .headerMetrics span,
-  .totals > div {
+  .totals > div,
+  .accountingMetrics > div {
     border-right: 0;
     border-bottom: 1px solid var(--app-border);
   }
 
   .headerMetrics span:last-child,
-  .totals > div:last-child {
+  .totals > div:last-child,
+  .accountingMetrics > div:last-child {
     border-bottom: 0;
   }
 
