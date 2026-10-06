@@ -26,4 +26,19 @@ describe("accessibility and responsive evidence contracts", () => {
     expect(serialized).not.toContain("LIVE receipt");
     expect(serialized).not.toContain("Delivered proof");
   });
+  it("provides a keyboard skip path into the staff workspace", () => {
+    const shell = readFileSync(join(process.cwd(), "src/components/product/StaffAppShell.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(shell).toContain('href="#app-main-content"');
+    expect(shell).toContain('id="app-main-content"');
+    expect(shell).toContain("tabIndex={-1}");
+    expect(css).toContain(".app-skip-link:focus-visible");
+  });
+
+  it("uses the defined hover token for authenticated entry controls", () => {
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(css).toContain(".app-auth-entry-link:hover { background: var(--app-accent-hover)");
+    expect(css).not.toContain("var(--app-accent-strong)");
+  });
+
 });
