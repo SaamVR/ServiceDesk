@@ -30,7 +30,7 @@ export function MarketingShell({
           <span className="brand-mark" aria-hidden="true">SD</span>
           <span>ServiceDesk AI</span>
         </Link>
-        <nav className="site-nav" aria-label="Primary">
+        <nav className="site-nav site-primary-nav" aria-label="Primary">
           {productRoutes.slice(1, 6).map((route) => (
             <Link key={route.href} href={route.href}>{route.label}</Link>
           ))}

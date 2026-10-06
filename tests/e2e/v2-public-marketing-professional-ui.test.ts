@@ -51,6 +51,16 @@ describe("V2 professional public product presentation", () => {
     expect(shell).not.toContain('primaryHref = "/tour"');
   });
 
+  it("keeps every primary marketing destination visible on narrow screens", () => {
+    const shell = source("src/components/shell/MarketingShell.tsx");
+    const css = source("src/app/globals.css");
+    expect(shell).toContain('className="site-nav site-primary-nav"');
+    expect(css).toContain(".site-primary-nav {");
+    expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr));");
+    expect(css).toContain(".site-primary-nav a:last-child");
+    expect(css).toContain("grid-column: 1 / -1");
+  });
+
   it("has dedicated responsive hero composition instead of relying on the global h1 scale", () => {
     const css = source("src/app/globals.css");
     expect(css).toContain(".marketing-hero-copy h1");
