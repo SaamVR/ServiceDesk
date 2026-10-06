@@ -141,6 +141,7 @@ describe("V2 operational integration health", () => {
     expect(health.find((item) => item.provider === "EMAIL_INBOUND")).toMatchObject({
       configurationState: "CONFIGURED",
       verificationState: "PROVIDER_VERIFIED",
+      source: "CONTROLLED_PROVIDER_RECEIPT",
     });
     const serialized = JSON.stringify(health);
     expect(serialized).not.toContain("receipt:redacted:email-1");
