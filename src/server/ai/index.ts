@@ -11,3 +11,4 @@ export * from "./guarded-orchestrator";
 export * from "./tool-orchestration";
 export * from "./owner-context";
 export * from "./action-audit";
+export * from "./photo-intake";
