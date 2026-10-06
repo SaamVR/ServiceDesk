@@ -39,7 +39,7 @@ create table if not exists public.accounting_reconciliation_records (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (workspace_id, id),
-  unique (workspace_id, integration_id, entity_type, local_resource_id),
+  unique (workspace_id, integration_id, entity_type, local_resource_kind, local_resource_id),
   unique (workspace_id, integration_id, idempotency_key),
   foreign key (workspace_id, integration_id)
     references public.accounting_integrations(workspace_id, id) on delete cascade,
