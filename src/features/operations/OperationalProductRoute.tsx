@@ -2189,6 +2189,55 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
           </div>
         </section>
       </div>
+
+      <section className={styles.attributionPanel} aria-label="Referral attribution">
+        <div className={styles.adminCardHeader}>
+          <div>
+            <p className={styles.adminSectionEyebrow}>Growth attribution</p>
+            <h3>Referral → paid job</h3>
+          </div>
+          <StatusBadge tone={data.referralAttribution ? "info" : "neutral"}>
+            {data.referralAttribution ? data.referralAttribution.rows.length + " codes" : "Unavailable"}
+          </StatusBadge>
+        </div>
+
+        {!data.referralAttribution ? (
+          <div className={styles.settingsEmpty}>
+            <strong>Referral attribution is not available in this environment</strong>
+            <p>The core business report remains available above. No referral conversion claim is being inferred.</p>
+          </div>
+        ) : data.referralAttribution.rows.length === 0 ? (
+          <div className={styles.settingsEmpty}>
+            <strong>No referral events in this period</strong>
+            <p>Stored referral touches and paid-job conversion events will appear here when recorded.</p>
+          </div>
+        ) : (
+          <div className={styles.attributionRows}>
+            {data.referralAttribution.rows.map((row) => (
+              <article key={row.referralCodeId}>
+                <div>
+                  <strong>{row.label}</strong>
+                  <span>{row.code} · {row.active ? "active" : "inactive"}</span>
+                </div>
+                <dl>
+                  <div><dt>Touches</dt><dd>{row.touchCount}</dd></div>
+                  <div><dt>Paid jobs</dt><dd>{row.paidJobCount}</dd></div>
+                  <div><dt>First touch</dt><dd>{formatWhen(row.firstTouchAt, data.workspace.timezone)}</dd></div>
+                  <div><dt>Last touch</dt><dd>{formatWhen(row.lastTouchAt, data.workspace.timezone)}</dd></div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <div className={styles.attributionDisclosure}>
+          <span aria-hidden="true">i</span>
+          <p>
+            {data.referralAttribution?.disclosure
+              ?? "Attribution is directional, not perfect. ServiceDesk does not claim that a recorded touch caused a paid job."}
+          </p>
+        </div>
+      </section>
     </section>
   );
 }
