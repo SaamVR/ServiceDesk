@@ -74,7 +74,7 @@ describe("photo classification execution", () => {
     expect(p.recordSuggestion).toHaveBeenCalledWith(expect.objectContaining({
       categoryCode: "DEEP",
       confidenceBasisPoints: 8100,
-      idempotencyKey: "photo-classification:asset-1:vision:controlled",
+      idempotencyKey: expect.stringMatching(/^photo-classification:asset-1:[a-f0-9]{24}$/),
     }));
   });
 
@@ -102,6 +102,26 @@ describe("photo classification execution", () => {
     })).toMatchObject({
       ok: true,
       value: { state: "HUMAN_REVIEW_ONLY", reasonCode: "PHOTO_AI_BUSINESS_TRUTH_FORBIDDEN" },
+    });
+    expect(p.recordSuggestion).not.toHaveBeenCalled();
+  });
+
+  it("routes thrown provider failures to human review without recording them", async () => {
+    const p = port();
+    const classifier = {
+      classifierRef: "vision:controlled",
+      classify: vi.fn().mockRejectedValue(new Error("provider unavailable")),
+    };
+    expect(await executeRequestPhotoClassification({
+      classifier,
+      port: p,
+      workspaceId: "workspace-1",
+      requestId: "request-1",
+      photoAssetId: "asset-1",
+      now: "2026-10-07T00:00:00.000Z",
+    })).toEqual({
+      ok: true,
+      value: { state: "HUMAN_REVIEW_ONLY", reasonCode: "PHOTO_AI_PROVIDER_FAILURE" },
     });
     expect(p.recordSuggestion).not.toHaveBeenCalled();
   });
