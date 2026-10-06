@@ -66,8 +66,10 @@ export function validateInboundControlledProof(input: {
   if (manifest.evidenceKind !== "CONTROLLED_PROVIDER_RECEIPT") {
     return { allowed: false, code: "PROOF_NOT_CONTROLLED_PROVIDER_RECEIPT" };
   }
-  if (!manifest.redactedProviderReceipt?.trim() || manifest.redactedProviderReceipt.trim().length < 6) {
-    return { allowed: false, code: "PROOF_RECEIPT_MISSING" };
+  const receipt = manifest.redactedProviderReceipt?.trim() ?? "";
+  if (!receipt) return { allowed: false, code: "PROOF_RECEIPT_MISSING" };
+  if (!/^(?:receipt|provider-receipt):redacted:[A-Za-z0-9._:-]{3,160}$/.test(receipt)) {
+    return { allowed: false, code: "PROOF_MALFORMED" };
   }
   if (containsSecretMaterial(manifest)) return { allowed: false, code: "PROOF_SECRET_MATERIAL" };
 
@@ -76,7 +78,8 @@ export function validateInboundControlledProof(input: {
   if (!Number.isFinite(captured) || !Number.isFinite(current)) {
     return { allowed: false, code: "PROOF_TIMESTAMP_INVALID" };
   }
-  const ageHours = Math.abs(current - captured) / 3_600_000;
+  if (captured > current + 5 * 60_000) return { allowed: false, code: "PROOF_TIMESTAMP_INVALID" };
+  const ageHours = (current - captured) / 3_600_000;
   if (ageHours > (input.maxAgeHours ?? 24)) return { allowed: false, code: "PROOF_STALE" };
 
   return { allowed: true, code: "PROOF_ACCEPTED" };
