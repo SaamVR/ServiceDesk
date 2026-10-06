@@ -22,7 +22,7 @@ export interface OperationalIntegrationHealth {
   verificationState: EvidenceState | "CONFIGURATION_BLOCKED";
   missingConfiguration: string[];
   canRunControlledProof: boolean;
-  source: "SERVER_CONFIGURATION_PRESENCE" | "INTERNAL_SANDBOX";
+  source: "SERVER_CONFIGURATION_PRESENCE" | "INTERNAL_SANDBOX" | "CONTROLLED_PROVIDER_RECEIPT";
   message: string;
 }
 
@@ -104,7 +104,7 @@ function inboundReadiness(
     verificationState: providerVerified ? "PROVIDER_VERIFIED" : "IMPLEMENTED",
     missingConfiguration,
     canRunControlledProof: configurationState === "CONFIGURED",
-    source: "SERVER_CONFIGURATION_PRESENCE",
+    source: providerVerified ? "CONTROLLED_PROVIDER_RECEIPT" : "SERVER_CONFIGURATION_PRESENCE",
     message: providerVerified
       ? "Signed inbound route configuration and fresh controlled provider proof are valid for this exact build."
       : configurationState === "CONFIGURED"
