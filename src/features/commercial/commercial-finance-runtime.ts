@@ -3,6 +3,7 @@ import type {
   AccountingReconciliationSnapshotDTO,
   CommercialDirectCostSnapshotDTO,
   CommercialProfitabilitySnapshotDTO,
+  WorkspaceTaxProfileSnapshotDTO,
   CommercialBillingDraftDTO,
   CommercialBillingLineDTO,
   CommercialPortfolioSnapshotDTO,
@@ -11,6 +12,7 @@ import { createPostgresAccountingReconciliationReader } from "@/server/core/acco
 import { createPostgresCommercialBillingCommands } from "@/server/core/commercial-billing-postgres";
 import { createPostgresCommercialDirectCostPort } from "@/server/core/commercial-direct-cost-postgres";
 import { createPostgresCommercialProfitabilityReader } from "@/server/core/commercial-profitability-postgres";
+import { createPostgresTaxProfilePort, type UpsertTaxProfileInput } from "@/server/core/tax-profile-postgres";
 import { createPostgresCommercialPortfolioReader } from "@/server/core/commercial-read-postgres";
 import { resolveStaffActor } from "@/features/operations/operational-product-runtime";
 
@@ -41,6 +43,9 @@ export interface CommercialFinanceSnapshot {
   directCostsReady: boolean;
   profitability?: CommercialProfitabilitySnapshotDTO;
   profitabilityReady: boolean;
+  taxProfiles?: WorkspaceTaxProfileSnapshotDTO;
+  taxProfilesReady: boolean;
+  canManageTax: boolean;
 }
 
 export type CommercialFinanceLoadResult =
@@ -185,7 +190,7 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
   }
 
   const profitabilityRange = currentMonthRange(resolved.value.workspace.timezone);
-  const [draftRead, lineRead, invoiceRead, accountingResult, directCostResult, profitabilityResult] = await Promise.all([
+  const [draftRead, lineRead, invoiceRead, accountingResult, directCostResult, profitabilityResult, taxProfileResult] = await Promise.all([
     resolved.value.service
       .from("commercial_billing_drafts")
       .select("*")
@@ -211,6 +216,8 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
       .readCommercialDirectCostSnapshot(resolved.value.actor),
     createPostgresCommercialProfitabilityReader(resolved.value.rpc)
       .readCommercialProfitabilitySnapshot(resolved.value.actor, profitabilityRange),
+    createPostgresTaxProfilePort(resolved.value.rpc)
+      .readTaxProfileSnapshot(resolved.value.actor),
   ]);
 
   const billingReady = !draftRead.error && !lineRead.error && !invoiceRead.error;
@@ -247,6 +254,9 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
       directCostsReady: directCostResult.ok,
       profitability: profitabilityResult.ok ? profitabilityResult.value : undefined,
       profitabilityReady: profitabilityResult.ok,
+      taxProfiles: taxProfileResult.ok ? taxProfileResult.value : undefined,
+      taxProfilesReady: taxProfileResult.ok,
+      canManageTax: resolved.value.actor.role === "OWNER",
     },
   };
 }
@@ -317,4 +327,68 @@ export async function finalizeCommercialBillingDraft(
       ? "This commercial invoice was already issued."
       : "Commercial invoice issued. Payment remains outstanding until an authoritative payment is recorded.",
   };
+}
+
+function taxRejected(code: string, fallback: string): CommercialFinanceActionResult {
+  if (code === "FORBIDDEN") return { ok: false, message: "Owner access is required to manage tax configuration." };
+  if (code === "TAX_PROFILE_VERSION_CONFLICT") return { ok: false, message: "This tax profile changed since the page loaded. Refresh before continuing." };
+  if (code === "TAX_PROFILE_LOCKED" || code === "TAX_PROFILE_REVIEW_STATE_INVALID") {
+    return { ok: false, message: "Reviewed or retired tax profiles cannot be edited. Create a new draft for a changed policy." };
+  }
+  if (code.includes("CONFLICT")) return { ok: false, message: "A conflicting tax profile already exists for this jurisdiction and tax code." };
+  return { ok: false, message: fallback };
+}
+
+export async function saveWorkspaceTaxProfile(
+  workspaceSlug: string,
+  input: Omit<UpsertTaxProfileInput, "now">,
+): Promise<CommercialFinanceActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const result = await createPostgresTaxProfilePort(resolved.value.rpc).upsertTaxProfile(
+    resolved.value.actor,
+    { ...input, now: new Date().toISOString() },
+  );
+  if (!result.ok) return taxRejected(result.code, "The tax profile draft could not be saved.");
+  return { ok: true, message: "Tax profile saved as a reference-only draft." };
+}
+
+export async function reviewWorkspaceTaxProfile(
+  workspaceSlug: string,
+  profileId: string,
+  expectedVersion: number,
+  reviewAttestation: string,
+): Promise<CommercialFinanceActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const result = await createPostgresTaxProfilePort(resolved.value.rpc).reviewTaxProfile(
+    resolved.value.actor,
+    {
+      profileId,
+      expectedVersion,
+      accountantReviewConfirmed: true,
+      reviewAttestation,
+      now: new Date().toISOString(),
+    },
+  );
+  if (!result.ok) return taxRejected(result.code, "The tax review could not be recorded.");
+  return { ok: true, message: "Tax profile review recorded. Automatic tax application remains off." };
+}
+
+export async function retireWorkspaceTaxProfile(
+  workspaceSlug: string,
+  profileId: string,
+  expectedVersion: number,
+): Promise<CommercialFinanceActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const result = await createPostgresTaxProfilePort(resolved.value.rpc).retireTaxProfile(
+    resolved.value.actor,
+    { profileId, expectedVersion, now: new Date().toISOString() },
+  );
+  if (!result.ok) return taxRejected(result.code, "The tax profile could not be retired.");
+  return { ok: true, message: "Tax profile retired. Existing financial records were not recalculated." };
 }

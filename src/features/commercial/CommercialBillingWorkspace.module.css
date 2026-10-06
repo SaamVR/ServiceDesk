@@ -432,6 +432,114 @@
   font-size: .66rem;
 }
 
+.taxPanel {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+}
+
+.taxBody,
+.taxProfileList,
+.taxCreateForm {
+  display: grid;
+  gap: 10px;
+}
+
+.taxMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.taxMeta span,
+.taxProfileDetails span {
+  color: var(--app-text-muted);
+  font-size: .56rem;
+}
+
+.taxMeta strong {
+  color: var(--app-text);
+}
+
+.taxProfile {
+  display: grid;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-subtle);
+}
+
+.taxProfileHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.taxProfileHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.taxProfileHeader strong {
+  color: var(--app-text);
+  font-size: .66rem;
+}
+
+.taxProfileHeader span {
+  color: var(--app-text-muted);
+  font-size: .55rem;
+}
+
+.taxProfileDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+
+.taxReviewForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.taxRetireForm {
+  justify-self: start;
+}
+
+.taxCreateForm {
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border);
+}
+
+.taxEmpty {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px dashed var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-subtle);
+}
+
+.taxEmpty strong {
+  color: var(--app-text);
+  font-size: .66rem;
+}
+
+.taxEmpty p,
+.taxNote {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: .58rem;
+  line-height: 1.5;
+}
+
 .composer,
 .drafts {
   display: grid;
@@ -711,6 +819,7 @@
   .sectionHeading,
   .accountingConnection,
   .profitabilityTitle,
+  .taxProfileHeader,
   .accountingBackfill,
   .formFooter,
   .draftFooter,
@@ -758,7 +867,8 @@
     justify-content: flex-start;
   }
 
-  .paymentForm {
+  .paymentForm,
+  .taxReviewForm {
     grid-template-columns: 1fr;
   }
 }
@@ -788,7 +898,8 @@
   }
 
   .profitabilityCoverage,
-  .profitabilityAdjustments > div {
+  .profitabilityAdjustments > div,
+  .taxProfileDetails {
     display: grid;
   }
 
