@@ -2672,6 +2672,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                 <p>Existing operations remain available. No campaign send is being implied or queued.</p>
               </div>
             ) : (
+              <>
               <div className={styles.growthSettingsGrid}>
                 <section className={styles.growthSettingsPane}>
                   <div>
@@ -2784,6 +2785,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                 <span aria-hidden="true">i</span>
                 <p><strong>Saved policy is not a send.</strong> No customer message is queued from this screen. Provider delivery remains separately configured and evidenced.</p>
               </div>
+              </>
             )}
           </section>
 
