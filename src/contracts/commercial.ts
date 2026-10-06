@@ -137,3 +137,15 @@ export interface CommercialExceptionCaseDTO {
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
 }
+export interface CommercialPortfolioSnapshotDTO {
+  workspaceId: string;
+  feature: WorkspaceFeatureFlagDTO;
+  organizations: CommercialOrganizationDTO[];
+  contacts: CommercialPortfolioContactDTO[];
+  sites: CommercialSiteDTO[];
+  contracts: CommercialContractDTO[];
+  contractVersions: CommercialContractVersionDTO[];
+  contractSites: CommercialContractSiteDTO[];
+  servicePlans: CommercialSiteServicePlanDTO[];
+  exceptionCases: CommercialExceptionCaseDTO[];
+}
