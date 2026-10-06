@@ -88,6 +88,7 @@ begin
   where workspace_id = v_workspace
     and integration_id = v_integration.id
     and entity_type = v_entity
+    and local_resource_kind = v_kind
     and local_resource_id = v_resource
   for update;
 
@@ -132,7 +133,7 @@ begin
     set local_resource_kind = v_kind,
         local_version = v_local_version,
         external_id = coalesce(v_external_id, external_id),
-        external_version = v_external_version,
+        external_version = coalesce(v_external_version, external_version),
         sync_owner = v_owner,
         state = v_state,
         last_error_code = case when v_state in ('CONFLICT','ERROR') then v_error else null end,
