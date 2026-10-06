@@ -69,6 +69,35 @@ export interface OperationalRequest {
   createdAt?: string;
 }
 
+export interface OperationalPhotoAsset {
+  id: string;
+  requestId: string;
+  source: "CUSTOMER_UPLOAD" | "WHATSAPP_MEDIA_REFERENCE";
+  contentType: "image/jpeg" | "image/png" | "image/webp";
+  byteSize: number;
+  consentStatus: "GRANTED" | "REVOKED";
+  processingOptOut: boolean;
+  retentionUntil: string;
+  state: "AVAILABLE" | "RETIRED" | "DELETED";
+  version: number;
+  createdAt: string;
+}
+
+export interface OperationalPhotoSuggestion {
+  id: string;
+  requestId: string;
+  photoAssetId: string;
+  classifierRef: string;
+  categoryCode: string;
+  proposedAddOnCode?: string;
+  confidenceBasisPoints: number;
+  rationale?: string;
+  followUpQuestions: string[];
+  state: "PENDING_REVIEW" | "ACCEPTED" | "REJECTED" | "EXPIRED";
+  version: number;
+  generatedAt: string;
+}
+
 export interface OperationalQuote {
   id: string;
   requestId: string;
@@ -154,6 +183,9 @@ export interface OperationalStaffSnapshot {
   properties: OperationalProperty[];
   requests: OperationalRequest[];
   quotes: OperationalQuote[];
+  photoReviewAvailable?: boolean;
+  photoAssets?: OperationalPhotoAsset[];
+  photoSuggestions?: OperationalPhotoSuggestion[];
   visits: OperationalVisit[];
   invoices: OperationalInvoice[];
   conversations: ConversationDTO[];
@@ -436,6 +468,24 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     service.from("visit_checklist_items").select("*").eq("workspace_id", workspace.id).order("updated_at", { ascending: false }).limit(1000),
   ]);
 
+  const [photoAssetRead, photoSuggestionRead] = await Promise.all([
+    service
+      .from("request_photo_assets")
+      .select("id,request_id,source,content_type,byte_size,consent_status,processing_opt_out,retention_until,state,version,created_at")
+      .eq("workspace_id", workspace.id)
+      .order("created_at", { ascending: false })
+      .limit(300),
+    service
+      .from("request_photo_suggestions")
+      .select("id,request_id,photo_asset_id,classifier_ref,category_code,proposed_addon_code,confidence_basis_points,rationale,follow_up_questions,state,version,generated_at")
+      .eq("workspace_id", workspace.id)
+      .order("generated_at", { ascending: false })
+      .limit(500),
+  ]);
+  const photoReviewAvailable = !photoAssetRead.error && !photoSuggestionRead.error;
+  const photoAssetRows = photoReviewAvailable ? rows(photoAssetRead.data) : [];
+  const photoSuggestionRows = photoReviewAvailable ? rows(photoSuggestionRead.data) : [];
+
   const failedRead = tableReads.find((result) => result.error);
   if (failedRead?.error) {
     return { ok: false, kind: "server", message: "Workspace records could not be loaded. Try again shortly, or check the workspace connection in Settings." };
@@ -553,6 +603,38 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     bufferMinutes: numberValue(row, "buffer_minutes"),
     validUntil: textValue(row, "valid_until"),
   }));
+  const photoAssets: OperationalPhotoAsset[] = photoAssetRows
+    .filter((row) => ["CUSTOMER_UPLOAD", "WHATSAPP_MEDIA_REFERENCE"].includes(String(row.source)))
+    .map((row) => ({
+      id: String(row.id),
+      requestId: String(row.request_id),
+      source: String(row.source) as OperationalPhotoAsset["source"],
+      contentType: String(row.content_type) as OperationalPhotoAsset["contentType"],
+      byteSize: numberValue(row, "byte_size"),
+      consentStatus: String(row.consent_status) as OperationalPhotoAsset["consentStatus"],
+      processingOptOut: Boolean(row.processing_opt_out),
+      retentionUntil: String(row.retention_until),
+      state: String(row.state) as OperationalPhotoAsset["state"],
+      version: numberValue(row, "version", 1),
+      createdAt: String(row.created_at),
+    }));
+  const photoSuggestions: OperationalPhotoSuggestion[] = photoSuggestionRows.map((row) => ({
+    id: String(row.id),
+    requestId: String(row.request_id),
+    photoAssetId: String(row.photo_asset_id),
+    classifierRef: String(row.classifier_ref),
+    categoryCode: String(row.category_code),
+    proposedAddOnCode: textValue(row, "proposed_addon_code"),
+    confidenceBasisPoints: numberValue(row, "confidence_basis_points"),
+    rationale: textValue(row, "rationale"),
+    followUpQuestions: Array.isArray(row.follow_up_questions)
+      ? row.follow_up_questions.filter((item): item is string => typeof item === "string")
+      : [],
+    state: String(row.state) as OperationalPhotoSuggestion["state"],
+    version: numberValue(row, "version", 1),
+    generatedAt: String(row.generated_at),
+  }));
+
   const quoteById = new Map(quotes.map((quote) => [quote.id, quote]));
   const visits: OperationalVisit[] = visitRows.map((row) => {
     const quote = quoteById.get(String(row.quote_id));
@@ -593,6 +675,9 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       properties,
       requests,
       quotes,
+      photoReviewAvailable,
+      photoAssets,
+      photoSuggestions,
       visits,
       invoices: invoiceRows.map((row) => mapInvoice(row, workspace.id)),
       conversations: conversationRows.map((row) => mapConversation(row, workspace.id)),
@@ -1299,5 +1384,56 @@ export async function resolveOperationalConversationIdentity(
     message: data.duplicate === true
       ? "Conversation identity was already linked."
       : "Verified customer identity linked. Human takeover remains active for review.",
+  };
+}
+
+export async function reviewOperationalPhotoSuggestion(
+  workspaceSlug: string,
+  suggestionId: string,
+  decision: "ACCEPTED" | "REJECTED",
+  expectedVersion: number,
+): Promise<OperationalActionResult> {
+  if (!suggestionId.trim() || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+    return { ok: false, message: "The photo suggestion state is no longer valid. Refresh and try again." };
+  }
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>(
+    "servicedesk_review_request_photo_suggestion",
+    {
+      p_input: {
+        workspaceId: resolved.value.workspace.id,
+        actorUserId: resolved.value.actor.userId,
+        actorRole: resolved.value.actor.role,
+        suggestionId,
+        expectedVersion,
+        decision,
+        now: new Date().toISOString(),
+      },
+    },
+  );
+  if (error) return { ok: false, message: "Photo suggestion review could not be saved. Try again." };
+  if (!data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "VERSION_CONFLICT") {
+      return { ok: false, message: "This photo suggestion changed since the page loaded. Refresh and try again." };
+    }
+    if (code === "PHOTO_PROCESSING_NOT_ALLOWED") {
+      return { ok: false, message: "This photo is no longer eligible for processing because consent, opt-out, retention, or access state changed." };
+    }
+    if (code === "PHOTO_REVIEW_STATE_INVALID") {
+      return { ok: false, message: "This photo suggestion has already been reviewed or expired." };
+    }
+    return { ok: false, message: "Photo suggestion review was rejected. Refresh the request and try again." };
+  }
+  const quoteRevisionRequired = data.quoteRevisionRequired === true;
+  return {
+    ok: true,
+    message: decision === "REJECTED"
+      ? "Photo suggestion rejected. No request or quote value was changed."
+      : quoteRevisionRequired
+        ? "Suggestion accepted for review. The accepted quote is unchanged; create an explicit quote revision before any price change."
+        : "Suggestion accepted for review. No request or quote price was changed automatically.",
   };
 }
