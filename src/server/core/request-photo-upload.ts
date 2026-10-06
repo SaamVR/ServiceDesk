@@ -83,9 +83,11 @@ export function requestPhotoObjectPath(input: {
 
 export async function readBoundedRequestPhotoBody(
   request: Request,
+  maxBytes = REQUEST_PHOTO_MAX_BYTES,
 ): Promise<Result<Uint8Array>> {
+  const boundedMax = Math.max(12, Math.min(maxBytes, REQUEST_PHOTO_MAX_BYTES));
   const declaredLength = Number(request.headers.get("content-length"));
-  if (Number.isFinite(declaredLength) && declaredLength > REQUEST_PHOTO_MAX_BYTES) {
+  if (Number.isFinite(declaredLength) && declaredLength > boundedMax) {
     return fail("REQUEST_PHOTO_SIZE_INVALID", "Photo must be no larger than 20 MiB.");
   }
   if (!request.body) {
@@ -99,7 +101,7 @@ export async function readBoundedRequestPhotoBody(
     const chunk = await reader.read();
     if (chunk.done) break;
     total += chunk.value.byteLength;
-    if (total > REQUEST_PHOTO_MAX_BYTES) {
+    if (total > boundedMax) {
       await reader.cancel();
       return fail("REQUEST_PHOTO_SIZE_INVALID", "Photo must be no larger than 20 MiB.");
     }
