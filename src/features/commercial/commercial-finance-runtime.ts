@@ -134,6 +134,22 @@ function rejected(code: string, fallback: string): CommercialFinanceActionResult
   if (code === "COMMERCIAL_BILLING_VERSION_CONFLICT") {
     return { ok: false, message: "This billing draft changed since the page loaded. Refresh before making another change." };
   }
+  if (code === "COMMERCIAL_ADJUSTMENT_EXCEPTION_NOT_RESOLVED") {
+    return { ok: false, message: "Resolve the commercial exception before adding its financial adjustment." };
+  }
+  if (code === "COMMERCIAL_ADJUSTMENT_NOT_REQUESTED") {
+    return { ok: false, message: "This resolved exception does not contain an approved credit or charge request." };
+  }
+  if (
+    code === "COMMERCIAL_ADJUSTMENT_CONTRACT_VERSION_MISMATCH" ||
+    code === "COMMERCIAL_ADJUSTMENT_CONTRACT_MISMATCH" ||
+    code === "COMMERCIAL_ADJUSTMENT_CURRENCY_MISMATCH"
+  ) {
+    return { ok: false, message: "This adjustment does not belong to the selected contract draft." };
+  }
+  if (code === "COMMERCIAL_ADJUSTMENT_ALREADY_INCLUDED") {
+    return { ok: false, message: "This adjustment is already included in another active or issued commercial bill." };
+  }
   if (code === "COMMERCIAL_BILLING_CONTRACT_NO_LONGER_ISSUABLE") {
     return { ok: false, message: "The contract is no longer eligible for invoice issue. Review the contract status first." };
   }
@@ -216,6 +232,34 @@ export async function createCommercialBillingDraft(
     message: result.value.duplicate
       ? "The existing commercial billing draft is already available below."
       : "Commercial billing draft created from completed, review-cleared visits.",
+  };
+}
+
+export async function addCommercialBillingAdjustment(
+  workspaceSlug: string,
+  draftId: string,
+  exceptionCaseId: string,
+  expectedVersion: number,
+): Promise<CommercialFinanceActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const result = await createPostgresCommercialBillingCommands(resolved.value.rpc).addCommercialBillingAdjustment(
+    resolved.value.actor,
+    {
+      draftId,
+      exceptionCaseId,
+      expectedVersion,
+      now: new Date().toISOString(),
+    },
+  );
+  if (!result.ok) return rejected(result.code, "The commercial adjustment could not be added.");
+
+  return {
+    ok: true,
+    message: result.value.duplicate
+      ? "This adjustment is already included in the draft."
+      : "Resolved commercial adjustment added to the invoice draft.",
   };
 }
 
