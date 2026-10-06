@@ -8,6 +8,8 @@ describe("V2 Inbox verified identity resolution product", () => {
   it("exposes a retry action without a customer picker", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
     expect(route).toContain("Resolve verified identity");
+    expect(route).toContain('selected.channel === "WHATSAPP" || selected.channel === "EMAIL"');
+    expect(route).toContain("!customer && identityResolutionSupported");
     expect(route).toContain("Only an exact, unique verified contact match can be linked.");
     expect(route).not.toContain('name="customerId"');
   });
