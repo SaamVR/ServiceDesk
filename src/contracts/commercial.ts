@@ -149,3 +149,44 @@ export interface CommercialPortfolioSnapshotDTO {
   servicePlans: CommercialSiteServicePlanDTO[];
   exceptionCases: CommercialExceptionCaseDTO[];
 }
+
+export type CommercialBillingDraftState = "DRAFT" | "FINALIZED" | "VOID";
+export type CommercialBillingLineState = "INCLUDED" | "EXCLUDED";
+export type CommercialBillingLineSource = "VISIT" | "ADJUSTMENT";
+export type CommercialBillingDirection = "CHARGE" | "CREDIT";
+
+export interface CommercialBillingLineDTO {
+  id: string;
+  workspaceId: string;
+  draftId: string;
+  sourceType: CommercialBillingLineSource;
+  visitId?: string;
+  exceptionCaseId?: string;
+  direction: CommercialBillingDirection;
+  amountMinor: number;
+  currency: CurrencyCode;
+  state: CommercialBillingLineState;
+  descriptionSnapshot: Record<string, unknown>;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
+
+export interface CommercialBillingDraftDTO {
+  id: string;
+  workspaceId: string;
+  organizationId: string;
+  contractId: string;
+  contractVersionId: string;
+  periodStart: string;
+  periodEnd: string;
+  state: CommercialBillingDraftState;
+  currency: CurrencyCode;
+  chargeMinor: number;
+  creditMinor: number;
+  netTotalMinor: number;
+  invoiceId?: string;
+  version: number;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+  lines: CommercialBillingLineDTO[];
+}
