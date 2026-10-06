@@ -17,6 +17,13 @@ export interface CreateCommercialBillingDraftInput {
   now: string;
 }
 
+export interface AddCommercialBillingAdjustmentInput {
+  draftId: string;
+  exceptionCaseId: string;
+  expectedVersion: number;
+  now: string;
+}
+
 export interface SetCommercialBillingLineStateInput {
   draftId: string;
   lineId: string;
@@ -44,6 +51,10 @@ export interface CommercialBillingCommandPort {
   createCommercialBillingDraft(
     ctx: ActorContext,
     input: CreateCommercialBillingDraftInput,
+  ): Promise<Result<CommercialBillingDraftOutcome>>;
+  addCommercialBillingAdjustment(
+    ctx: ActorContext,
+    input: AddCommercialBillingAdjustmentInput,
   ): Promise<Result<CommercialBillingDraftOutcome>>;
   setCommercialBillingLineState(
     ctx: ActorContext,
@@ -209,6 +220,44 @@ export function createPostgresCommercialBillingCommands(client: SupabaseRpcClien
       });
       if (error) return fail(error.code ?? "COMMERCIAL_BILLING_RPC_ERROR", error.message);
       if (!data || data.ok === false) return rpcFailure(data, "COMMERCIAL_BILLING_CREATE_REJECTED");
+
+      try {
+        return {
+          ok: true,
+          value: {
+            draft: mapDraft(data.draft, ctx.workspaceId),
+            duplicate: boolean(data, "duplicate"),
+          },
+        };
+      } catch (error) {
+        return fail("COMMERCIAL_BILLING_RPC_MALFORMED", error instanceof Error ? error.message : "Malformed commercial billing response.");
+      }
+    },
+
+    async addCommercialBillingAdjustment(ctx, input) {
+      if (!authorized(ctx)) return fail("FORBIDDEN", "Owner or dispatcher access is required for commercial billing.");
+      if (
+        !input.draftId ||
+        !input.exceptionCaseId ||
+        !Number.isSafeInteger(input.expectedVersion) ||
+        input.expectedVersion <= 0
+      ) {
+        return fail("COMMERCIAL_ADJUSTMENT_INPUT_INVALID", "Commercial billing adjustment input is invalid.");
+      }
+
+      const { data, error } = await client.rpc<RpcRow>("servicedesk_add_commercial_billing_adjustment", {
+        p_input: {
+          workspaceId: ctx.workspaceId,
+          actorUserId: ctx.userId,
+          actorRole: ctx.role,
+          draftId: input.draftId,
+          exceptionCaseId: input.exceptionCaseId,
+          expectedVersion: input.expectedVersion,
+          now: input.now,
+        },
+      });
+      if (error) return fail(error.code ?? "COMMERCIAL_BILLING_RPC_ERROR", error.message);
+      if (!data || data.ok === false) return rpcFailure(data, "COMMERCIAL_ADJUSTMENT_REJECTED");
 
       try {
         return {
