@@ -1,12 +1,14 @@
 import type {
   AccountingBackfillPlanDTO,
   AccountingReconciliationSnapshotDTO,
+  CommercialDirectCostSnapshotDTO,
   CommercialBillingDraftDTO,
   CommercialBillingLineDTO,
   CommercialPortfolioSnapshotDTO,
 } from "@/contracts";
 import { createPostgresAccountingReconciliationReader } from "@/server/core/accounting-reconciliation-postgres";
 import { createPostgresCommercialBillingCommands } from "@/server/core/commercial-billing-postgres";
+import { createPostgresCommercialDirectCostPort } from "@/server/core/commercial-direct-cost-postgres";
 import { createPostgresCommercialPortfolioReader } from "@/server/core/commercial-read-postgres";
 import { resolveStaffActor } from "@/features/operations/operational-product-runtime";
 
@@ -33,6 +35,8 @@ export interface CommercialFinanceSnapshot {
   accounting?: AccountingReconciliationSnapshotDTO;
   accountingBackfill?: AccountingBackfillPlanDTO;
   accountingReady: boolean;
+  directCosts?: CommercialDirectCostSnapshotDTO;
+  directCostsReady: boolean;
 }
 
 export type CommercialFinanceLoadResult =
@@ -160,7 +164,7 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
     return { ok: false, message: "Commercial operations are not enabled for this workspace." };
   }
 
-  const [draftRead, lineRead, invoiceRead, accountingResult] = await Promise.all([
+  const [draftRead, lineRead, invoiceRead, accountingResult, directCostResult] = await Promise.all([
     resolved.value.service
       .from("commercial_billing_drafts")
       .select("*")
@@ -182,6 +186,8 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
       .limit(100),
     createPostgresAccountingReconciliationReader(resolved.value.rpc)
       .readAccountingReconciliationSnapshot(resolved.value.actor),
+    createPostgresCommercialDirectCostPort(resolved.value.rpc)
+      .readCommercialDirectCostSnapshot(resolved.value.actor),
   ]);
 
   const billingReady = !draftRead.error && !lineRead.error && !invoiceRead.error;
@@ -214,6 +220,8 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
       accounting: accountingResult.ok ? accountingResult.value : undefined,
       accountingBackfill: accountingBackfillResult?.ok ? accountingBackfillResult.value : undefined,
       accountingReady: accountingResult.ok,
+      directCosts: directCostResult.ok ? directCostResult.value : undefined,
+      directCostsReady: directCostResult.ok,
     },
   };
 }
