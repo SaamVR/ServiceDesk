@@ -78,7 +78,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
   const result = await loadCommercialFinanceSnapshot(workspaceSlug);
   if (!result.ok) return null;
 
-  const { portfolio, drafts, invoices, billingReady, accounting, accountingReady, timeZone } = result.value;
+  const { portfolio, drafts, invoices, billingReady, accounting, accountingBackfill, accountingReady, timeZone } = result.value;
   if (!portfolio.feature.enabled) return null;
 
   const contracts = portfolio.contracts.filter((contract) => contract.status === "ACTIVE");
@@ -205,6 +205,20 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
               <div><span>Errors</span><strong>{accounting?.errorCount ?? 0}</strong></div>
               <div><span>Tracked</span><strong>{accounting?.records.length ?? 0}</strong></div>
             </div>
+            {accountingBackfill ? (
+              <div className={styles.accountingBackfill}>
+                <div>
+                  <span>Dry-run backfill</span>
+                  <strong>{accountingBackfill.candidateCount} candidate{accountingBackfill.candidateCount === 1 ? "" : "s"}</strong>
+                </div>
+                <div className={styles.accountingBackfillStats}>
+                  <span>{accountingBackfill.currentCount} current</span>
+                  <span>{accountingBackfill.pendingCount} pending</span>
+                  <span>{accountingBackfill.blockedCount} blocked</span>
+                </div>
+                <p>This plan is read-only. No accounting records have been sent by the backfill planner.</p>
+              </div>
+            ) : null}
             <p className={styles.accountingNote}>
               {accountingIssueCount > 0
                 ? "Reconciliation needs review before affected records should be treated as synchronized."
