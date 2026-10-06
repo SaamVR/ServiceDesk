@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Result } from "../../contracts";
 import {
   classifyRequestPhoto,
@@ -74,7 +75,18 @@ export async function executeRequestPhotoClassification(input: {
   });
   if (!context.ok) return context;
 
-  const classified = await classifyRequestPhoto(input.classifier, context.value.request);
+  let classified: Awaited<ReturnType<typeof classifyRequestPhoto>>;
+  try {
+    classified = await classifyRequestPhoto(input.classifier, context.value.request);
+  } catch {
+    return {
+      ok: true,
+      value: {
+        state: "HUMAN_REVIEW_ONLY",
+        reasonCode: "PHOTO_AI_PROVIDER_FAILURE",
+      },
+    };
+  }
   if (!classified.ok) {
     return {
       ok: true,
@@ -85,6 +97,10 @@ export async function executeRequestPhotoClassification(input: {
     };
   }
 
+  const classifierDigest = createHash("sha256")
+    .update(context.value.classifierRef, "utf8")
+    .digest("hex")
+    .slice(0, 24);
   const recorded = await input.port.recordSuggestion({
     workspaceId: input.workspaceId,
     requestId: input.requestId,
@@ -93,7 +109,7 @@ export async function executeRequestPhotoClassification(input: {
     idempotencyKey: [
       "photo-classification",
       input.photoAssetId,
-      context.value.classifierRef,
+      classifierDigest,
     ].join(":"),
     generatedAt: input.now,
     ...classified.value,
