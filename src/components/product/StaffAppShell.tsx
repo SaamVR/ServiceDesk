@@ -104,6 +104,7 @@ export function StaffAppShell({
 
   return (
     <div className="app-shell">
+      <a className="app-skip-link" href="#app-main-content">Skip to main content</a>
       <aside className="app-sidebar">
         <Link className="app-brand" href={buildStaffModuleHref(workspace, "overview")} aria-label={`${workspaceName} overview`}>
           <span className="app-brand-mark" aria-hidden="true">S</span>
@@ -159,7 +160,7 @@ export function StaffAppShell({
           </div>
         </header>
 
-        <main className="app-content" aria-label={`${pageLabel} workspace`}>{children}</main>
+        <main id="app-main-content" className="app-content" aria-label={`${pageLabel} workspace`} tabIndex={-1}>{children}</main>
       </div>
     </div>
   );
