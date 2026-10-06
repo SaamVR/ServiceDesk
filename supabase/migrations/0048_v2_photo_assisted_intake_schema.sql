@@ -79,6 +79,11 @@ create index if not exists request_photo_suggestions_asset_idx
 alter table public.request_photo_assets enable row level security;
 alter table public.request_photo_suggestions enable row level security;
 
+revoke all on table public.request_photo_assets from public, anon, authenticated;
+revoke all on table public.request_photo_suggestions from public, anon, authenticated;
+grant select on table public.request_photo_assets to authenticated, service_role;
+grant select on table public.request_photo_suggestions to authenticated, service_role;
+
 drop policy if exists request_photo_assets_staff_select on public.request_photo_assets;
 create policy request_photo_assets_staff_select
 on public.request_photo_assets
