@@ -2385,6 +2385,45 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     actionRedirect(workspaceSlug, "settings", result);
   }
 
+  async function referralCodeAction(formData: FormData) {
+    "use server";
+    const result = await upsertOperationalReferralCode(workspaceSlug, {
+      code: String(formData.get("code") ?? ""),
+      label: String(formData.get("label") ?? ""),
+      active: String(formData.get("active") ?? "") === "on",
+      startsAt: String(formData.get("startsAt") ?? "") || undefined,
+      endsAt: String(formData.get("endsAt") ?? "") || undefined,
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=growth&");
+  }
+
+  async function retentionCampaignAction(formData: FormData) {
+    "use server";
+    const rawChannel = String(formData.get("channel") ?? "");
+    const rawPurpose = String(formData.get("purpose") ?? "");
+    const rawStatus = String(formData.get("status") ?? "");
+    if ((rawChannel !== "EMAIL" && rawChannel !== "WHATSAPP")
+        || !["FOLLOW_UP", "REVIEW_REQUEST", "REFERRAL_NUDGE"].includes(rawPurpose)
+        || !["DRAFT", "ACTIVE", "PAUSED", "COMPLETED"].includes(rawStatus)) {
+      actionRedirect(workspaceSlug, "settings", { ok: false, message: "Campaign settings are invalid." }, "section=growth&");
+    }
+    const result = await upsertOperationalRetentionCampaign(workspaceSlug, {
+      name: String(formData.get("name") ?? ""),
+      channel: rawChannel,
+      purpose: rawPurpose as "FOLLOW_UP" | "REVIEW_REQUEST" | "REFERRAL_NUDGE",
+      status: rawStatus as "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED",
+      templateKey: String(formData.get("templateKey") ?? "") || undefined,
+      subject: String(formData.get("subject") ?? "") || undefined,
+      bodyText: String(formData.get("bodyText") ?? ""),
+      bodyHtml: String(formData.get("bodyHtml") ?? "") || undefined,
+      dailyCap: Number(formData.get("dailyCap") ?? 100),
+      perCustomerCap: Number(formData.get("perCustomerCap") ?? 1),
+      quietHoursStart: String(formData.get("quietHoursStart") ?? "") || undefined,
+      quietHoursEnd: String(formData.get("quietHoursEnd") ?? "") || undefined,
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=growth&");
+  }
+
   const activeServices = data.serviceCatalog.filter((service) => service.active).length;
   const activeMembers = snapshot.members.filter((member) => member.active).length;
   const pendingInvitations = snapshot.invitations.filter((invite) => invite.state === "PENDING").length;
@@ -2426,6 +2465,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
           <a href="#services">Services</a>
           <a href="#team">Team & access</a>
           <a href="#recurrence">Recurring services</a>
+          <a href="#growth">Growth & retention</a>
           <a href="#integrations">Integrations</a>
         </nav>
 
@@ -2612,6 +2652,143 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                     </form>
                   </article>
                 ))}
+              </div>
+            )}
+          </section>
+
+          <section className={styles.settingsCard} id="growth">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Growth & retention</p>
+                <h3>Referral and campaign governance</h3>
+                <p>Manage stored referral codes and opt-in retention campaign policy. Creating or editing a campaign never queues a customer message.</p>
+              </div>
+              <StatusBadge tone={data.retentionAvailable ? "info" : "neutral"}>
+                {data.retentionAvailable ? (data.retentionCampaigns ?? []).filter((item) => item.status === "ACTIVE").length + " active campaigns" : "Unavailable"}
+              </StatusBadge>
+            </div>
+
+            {!data.retentionAvailable ? (
+              <div className={styles.settingsEmpty}>
+                <strong>Retention governance is not available in this environment</strong>
+                <p>Existing operations remain available. No campaign send is being implied or queued.</p>
+              </div>
+            ) : (
+              <div className={styles.growthSettingsGrid}>
+                <section className={styles.growthSettingsPane}>
+                  <div>
+                    <p className={styles.adminSectionEyebrow}>Referral attribution</p>
+                    <h4>Referral codes</h4>
+                    <p className={styles.adminHelp}>Codes create stored touch evidence. Reports show directional first/last-touch attribution, not guaranteed causality.</p>
+                  </div>
+
+                  {data.actor.role === "OWNER" ? (
+                    <form action={referralCodeAction} className={styles.growthForm}>
+                      <label>
+                        <span>Code</span>
+                        <input className="app-input" name="code" placeholder="NEIGHBOR10" maxLength={40} required />
+                      </label>
+                      <label>
+                        <span>Label</span>
+                        <input className="app-input" name="label" placeholder="Neighbor referral" maxLength={120} required />
+                      </label>
+                      <div className={styles.growthFormRow}>
+                        <label><span>Starts</span><input className="app-input" name="startsAt" type="datetime-local" /></label>
+                        <label><span>Ends</span><input className="app-input" name="endsAt" type="datetime-local" /></label>
+                      </div>
+                      <label className={styles.settingToggle}>
+                        <input name="active" type="checkbox" defaultChecked />
+                        <span><strong>Active</strong><small>Accept new touches for this code.</small></span>
+                      </label>
+                      <button className="app-button-primary" type="submit">Save referral code</button>
+                    </form>
+                  ) : null}
+
+                  <div className={styles.growthRows}>
+                    {(data.referralAttribution?.rows ?? []).map((row) => (
+                      <article key={row.referralCodeId}>
+                        <span><strong>{row.label}</strong><small>{row.code}</small></span>
+                        <span><b>{row.touchCount}</b> touches · <b>{row.paidJobCount}</b> paid jobs</span>
+                        <StatusBadge tone={row.active ? "success" : "neutral"}>{row.active ? "Active" : "Inactive"}</StatusBadge>
+                      </article>
+                    ))}
+                    {(data.referralAttribution?.rows ?? []).length === 0 ? (
+                      <div className={styles.settingsEmpty}><strong>No referral codes</strong><p>Create a code to begin storing referral touches.</p></div>
+                    ) : null}
+                  </div>
+                </section>
+
+                <section className={styles.growthSettingsPane}>
+                  <div>
+                    <p className={styles.adminSectionEyebrow}>Retention policy</p>
+                    <h4>Campaigns</h4>
+                    <p className={styles.adminHelp}>Dispatch rechecks latest opt-in, staff suppression, verified contact, quiet hours and caps after queueing and immediately before provider execution.</p>
+                  </div>
+
+                  {data.actor.role === "OWNER" ? (
+                    <form action={retentionCampaignAction} className={styles.growthForm}>
+                      <label><span>Name</span><input className="app-input" name="name" placeholder="30-day follow-up" maxLength={120} required /></label>
+                      <div className={styles.growthFormRow}>
+                        <label>
+                          <span>Channel</span>
+                          <select className="app-input" name="channel" defaultValue="WHATSAPP">
+                            <option value="WHATSAPP">WhatsApp</option>
+                            <option value="EMAIL">Email</option>
+                          </select>
+                        </label>
+                        <label>
+                          <span>Purpose</span>
+                          <select className="app-input" name="purpose" defaultValue="FOLLOW_UP">
+                            <option value="FOLLOW_UP">Follow-up</option>
+                            <option value="REVIEW_REQUEST">Review request</option>
+                            <option value="REFERRAL_NUDGE">Referral nudge</option>
+                          </select>
+                        </label>
+                        <label>
+                          <span>Status</span>
+                          <select className="app-input" name="status" defaultValue="DRAFT">
+                            <option value="DRAFT">Draft</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="PAUSED">Paused</option>
+                          </select>
+                        </label>
+                      </div>
+                      <label><span>Template key (optional)</span><input className="app-input" name="templateKey" maxLength={120} /></label>
+                      <label><span>Email subject (required for Email)</span><input className="app-input" name="subject" maxLength={200} /></label>
+                      <label><span>Message text</span><textarea className="app-textarea" name="bodyText" maxLength={4000} required /></label>
+                      <label><span>Email HTML (required for Email)</span><textarea className="app-textarea" name="bodyHtml" maxLength={12000} /></label>
+                      <div className={styles.growthFormRow}>
+                        <label><span>Daily cap</span><input className="app-input" name="dailyCap" type="number" min={1} max={10000} defaultValue={100} required /></label>
+                        <label><span>Per-customer cap</span><input className="app-input" name="perCustomerCap" type="number" min={1} max={100} defaultValue={1} required /></label>
+                      </div>
+                      <div className={styles.growthFormRow}>
+                        <label><span>Quiet from</span><input className="app-input" name="quietHoursStart" type="time" /></label>
+                        <label><span>Quiet until</span><input className="app-input" name="quietHoursEnd" type="time" /></label>
+                      </div>
+                      <button className="app-button-primary" type="submit">Save campaign policy</button>
+                    </form>
+                  ) : null}
+
+                  <div className={styles.growthRows}>
+                    {(data.retentionCampaigns ?? []).map((campaign) => (
+                      <article key={campaign.id}>
+                        <span><strong>{campaign.name}</strong><small>{campaign.channel.toLowerCase()} · {campaign.purpose.replaceAll("_", " ").toLowerCase()}</small></span>
+                        <span><b>{campaign.dailyCap}</b>/day · <b>{campaign.perCustomerCap}</b>/customer</span>
+                        <StatusBadge tone={campaign.status === "ACTIVE" ? "success" : campaign.status === "PAUSED" ? "warning" : "neutral"}>
+                          {campaign.status.toLowerCase()}
+                        </StatusBadge>
+                      </article>
+                    ))}
+                    {(data.retentionCampaigns ?? []).length === 0 ? (
+                      <div className={styles.settingsEmpty}><strong>No campaigns</strong><p>Create a draft policy before any retention message can be queued.</p></div>
+                    ) : null}
+                  </div>
+                </section>
+              </div>
+
+              <div className={styles.integrationProofNote}>
+                <span aria-hidden="true">i</span>
+                <p><strong>Saved policy is not a send.</strong> No customer message is queued from this screen. Provider delivery remains separately configured and evidenced.</p>
               </div>
             )}
           </section>
