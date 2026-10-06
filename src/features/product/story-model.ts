@@ -92,23 +92,27 @@ export const lifecycleSteps = [
 export const integrationCards = [
   {
     title: "WhatsApp Cloud API",
-    state: "Awaiting Chat 2 controlled provider receipt",
-    detail: "Inbox UI separates provider accepted, delivered and read states. No accepted-as-delivered shortcut.",
+    state: "Provider verification pending",
+    tone: "pending",
+    detail: "The shared inbox keeps accepted, delivered and read states separate so delivery status is never overstated.",
   },
   {
     title: "Google Calendar",
-    state: "Awaiting Chat 2 OAuth and event lifecycle proof",
-    detail: "Schedule UI shows availability freshness, stale-calendar blocking and external-busy conflicts.",
+    state: "Provider verification pending",
+    tone: "pending",
+    detail: "Scheduling checks availability freshness, blocks stale calendar state and respects external busy conflicts.",
   },
   {
     title: "Payments",
-    state: "Sandbox only until verified payment receipt exists",
-    detail: "Checkout panels label test mode and never display paid receipts until callback evidence is verified.",
+    state: "Sandbox mode",
+    tone: "attention",
+    detail: "Checkout stays clearly labelled as sandbox until verified payment callbacks are enabled for live use.",
   },
   {
     title: "AI assistant",
-    state: "Bounded to approved tools and handover state",
-    detail: "AI can draft, summarize and explain; it cannot set price, paid state, role or slot authority.",
+    state: "Policy bounded",
+    tone: "success",
+    detail: "AI can draft, summarize and explain while price, payment, permissions and slot authority remain deterministic.",
   },
 ] as const;
 
