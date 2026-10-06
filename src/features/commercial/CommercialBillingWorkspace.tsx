@@ -78,7 +78,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
   const result = await loadCommercialFinanceSnapshot(workspaceSlug);
   if (!result.ok) return null;
 
-  const { portfolio, drafts, invoices, billingReady, accounting, accountingBackfill, accountingReady, timeZone } = result.value;
+  const { portfolio, drafts, invoices, billingReady, accounting, accountingBackfill, accountingReady, directCosts, directCostsReady, timeZone } = result.value;
   if (!portfolio.feature.enabled) return null;
 
   const contracts = portfolio.contracts.filter((contract) => contract.status === "ACTIVE");
@@ -97,6 +97,19 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
     : primaryAccounting?.status === "AUTH_EXPIRED" || primaryAccounting?.status === "ERROR"
       ? "danger"
       : "warning";
+  const directCostCurrencies = directCosts
+    ? Array.from(new Set(directCosts.totals.map((total) => total.currency)))
+    : [];
+  const directCostSummaries = directCostCurrencies.map((currency) => ({
+    currency,
+    estimatedMinor: directCosts?.totals
+      .filter((total) => total.currency === currency && total.basis === "ESTIMATED")
+      .reduce((sum, total) => sum + total.netMinor, 0) ?? 0,
+    actualMinor: directCosts?.totals
+      .filter((total) => total.currency === currency && total.basis === "ACTUAL")
+      .reduce((sum, total) => sum + total.netMinor, 0) ?? 0,
+  }));
+  const directCostReversalCount = directCosts?.entries.filter((entry) => entry.direction === "REVERSAL").length ?? 0;
 
   async function createDraftAction(formData: FormData) {
     "use server";
@@ -223,6 +236,48 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
               {accountingIssueCount > 0
                 ? "Reconciliation needs review before affected records should be treated as synchronized."
                 : "Only normalized IDs, versions and reconciliation state are tracked here; provider credentials are not shown."}
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section className={styles.costPanel} aria-label="Commercial direct cost provenance">
+        <div className={styles.sectionHeading}>
+          <div>
+            <p className={styles.sectionEyebrow}>Cost provenance</p>
+            <h3>Direct costs</h3>
+          </div>
+          <p>Track labor, supplies and travel separately as estimated or actual inputs before margin reporting.</p>
+        </div>
+
+        {!directCostsReady ? (
+          <div className={styles.costEmpty}>
+            <strong>Direct cost reporting is not available yet.</strong>
+            <p>Contract billing continues normally; no cost or profitability value is being inferred.</p>
+          </div>
+        ) : (directCosts?.entries.length ?? 0) === 0 ? (
+          <div className={styles.costEmpty}>
+            <strong>No commercial direct costs recorded yet.</strong>
+            <p>Cost totals remain empty until auditable labor, supplies or travel entries are recorded.</p>
+          </div>
+        ) : (
+          <div className={styles.costBody}>
+            <div className={styles.costMeta}>
+              <span><strong>{directCosts?.entries.length ?? 0}</strong> entries</span>
+              <span><strong>{directCostReversalCount}</strong> reversals</span>
+              <span><strong>{directCostCurrencies.length}</strong> currencies</span>
+            </div>
+            <div className={styles.costSummaryGrid}>
+              {directCostSummaries.map((summary) => (
+                <div className={styles.costSummaryRow} key={summary.currency}>
+                  <strong>{summary.currency}</strong>
+                  <span>Estimated {money(summary.estimatedMinor, summary.currency)}</span>
+                  <span>Actual {money(summary.actualMinor, summary.currency)}</span>
+                </div>
+              ))}
+            </div>
+            <p className={styles.costNote}>
+              Reversal entries preserve the original cost history. These are operational cost inputs only; ServiceDesk does not infer or certify tax treatment.
             </p>
           </div>
         )}
