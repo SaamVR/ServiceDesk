@@ -8,3 +8,4 @@ export * from "./accounting";
 export * from "./tax";
 export * from "./voice";
 export * from "./inbound-operations";
+export * from "./photo-intake";

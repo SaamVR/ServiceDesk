@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
   addOperationalVisitNote,
@@ -10,6 +11,7 @@ import {
   holdOperationalSlot,
   loadOperationalStaffSnapshot,
   resolveOperationalConversationIdentity,
+  reviewOperationalPhotoSuggestion,
   sendOperationalQuote,
   setOperationalChecklistItem,
   setOperationalVoiceCallbackState,
@@ -612,6 +614,26 @@ function RequestsView({
     );
   }
 
+  async function reviewPhotoSuggestion(formData: FormData) {
+    "use server";
+    const requestId = String(formData.get("requestId") ?? "");
+    const suggestionId = String(formData.get("suggestionId") ?? "");
+    const expectedVersion = Number(formData.get("expectedVersion") ?? 0);
+    const decision = String(formData.get("decision")) === "ACCEPTED" ? "ACCEPTED" : "REJECTED";
+    const result = await reviewOperationalPhotoSuggestion(
+      workspaceSlug,
+      suggestionId,
+      decision,
+      expectedVersion,
+    );
+    actionRedirect(
+      workspaceSlug,
+      "requests",
+      result,
+      "request=" + encodeURIComponent(requestId) + "&",
+    );
+  }
+
   if (data.requests.length === 0) {
     return <EmptyState title="No requests in the queue" detail="New enquiries will appear here as persisted requests." />;
   }
@@ -624,6 +646,11 @@ function RequestsView({
   const selectedRequestCustomer = data.customers.find((customer) => customer.id === selectedRequest.customerId);
   const selectedRequestProperty = data.properties.find((property) => property.id === selectedRequest.propertyId);
   const selectedRequestQuote = data.quotes.find((quote) => quote.requestId === selectedRequest.id && quote.status !== "SUPERSEDED");
+  const selectedPhotoAssets = (data.photoAssets ?? []).filter((asset) => asset.requestId === selectedRequest.id);
+  const selectedPhotoSuggestions = (data.photoSuggestions ?? [])
+    .filter((suggestion) => suggestion.requestId === selectedRequest.id)
+    .sort((left, right) => Date.parse(right.generatedAt) - Date.parse(left.generatedAt));
+  const pendingPhotoSuggestions = selectedPhotoSuggestions.filter((suggestion) => suggestion.state === "PENDING_REVIEW");
   const selectedRequestCanCalculate = Boolean(selectedRequest.serviceCode)
     && selectedRequest.bedrooms !== undefined
     && selectedRequest.bathrooms !== undefined
@@ -775,6 +802,121 @@ function RequestsView({
                     {!selectedRequestCanCalculate ? <span>Complete the missing intake details before pricing.</span> : <span>Uses the current authoritative pricing rules.</span>}
                   </form>
                 </>
+              )}
+            </section>
+
+            <section className={styles.salesSection}>
+              <div className={styles.salesSectionHeader}>
+                <div>
+                  <p className={styles.salesSectionEyebrow}>Photo-assisted intake</p>
+                  <h3>{pendingPhotoSuggestions.length > 0 ? "Human review required" : "No pending photo suggestions"}</h3>
+                </div>
+                <StatusBadge tone={pendingPhotoSuggestions.length > 0 ? "warning" : "neutral"}>
+                  {pendingPhotoSuggestions.length} pending
+                </StatusBadge>
+              </div>
+
+              {data.photoReviewAvailable === false ? (
+                <FeedbackBanner
+                  title="Photo review is not available in this environment"
+                  description="The V2 photo-intake tables are not available yet. Existing request and quote workflows continue unchanged."
+                  tone="info"
+                />
+              ) : selectedPhotoAssets.length === 0 ? (
+                <div className={styles.crmEmpty}>
+                  <strong>No customer photos</strong>
+                  <p>Photos with explicit processing consent will appear here for staff review.</p>
+                </div>
+              ) : (
+                <div className={styles.photoReviewGrid}>
+                  {selectedPhotoAssets.map((asset) => {
+                    const suggestions = selectedPhotoSuggestions.filter((item) => item.photoAssetId === asset.id);
+                    const latestSuggestion = suggestions[0];
+                    const processable = asset.state === "AVAILABLE"
+                      && asset.consentStatus === "GRANTED"
+                      && !asset.processingOptOut
+                      && Date.parse(asset.retentionUntil) > Date.now();
+                    return (
+                      <article className={styles.photoReviewCard} key={asset.id}>
+                        <div className={styles.photoPreviewFrame}>
+                          {processable ? (
+                            <Image
+                              alt="Customer-provided request photo for staff review"
+                              className={styles.photoPreview}
+                              height={420}
+                              src={"/api/request-photos/" + encodeURIComponent(asset.id) + "?workspace=" + encodeURIComponent(workspaceSlug)}
+                              unoptimized
+                              width={640}
+                            />
+                          ) : (
+                            <div className={styles.photoPreviewUnavailable}>
+                              <strong>Image unavailable</strong>
+                              <span>Consent, opt-out, retention, or asset state no longer permits review.</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className={styles.photoReviewBody}>
+                          <div className={styles.photoReviewMeta}>
+                            <span>{asset.source === "CUSTOMER_UPLOAD" ? "Customer upload" : "WhatsApp media"}</span>
+                            <span>{Math.max(1, Math.round(asset.byteSize / 1024))} KB</span>
+                            <span>Retain until {formatWhen(asset.retentionUntil, data.workspace.timezone)}</span>
+                          </div>
+                          {latestSuggestion ? (
+                            <>
+                              <div className={styles.photoSuggestionHeader}>
+                                <div>
+                                  <span>AI suggestion</span>
+                                  <strong>{latestSuggestion.categoryCode.replaceAll("_", " ")}</strong>
+                                </div>
+                                <StatusBadge tone={latestSuggestion.state === "PENDING_REVIEW" ? "warning" : statusBadgeTone(latestSuggestion.state)}>
+                                  {latestSuggestion.state.replaceAll("_", " ")}
+                                </StatusBadge>
+                              </div>
+                              <dl className={styles.salesSummary}>
+                                <div><dt>Confidence</dt><dd>{(latestSuggestion.confidenceBasisPoints / 100).toFixed(0)}%</dd></div>
+                                <div><dt>Classifier</dt><dd>{latestSuggestion.classifierRef}</dd></div>
+                                <div><dt>Suggested add-on</dt><dd>{latestSuggestion.proposedAddOnCode?.replaceAll("_", " ") ?? "None"}</dd></div>
+                              </dl>
+                              {latestSuggestion.rationale ? (
+                                <div className={styles.salesNote}><span>Why it was suggested</span><p>{latestSuggestion.rationale}</p></div>
+                              ) : null}
+                              {latestSuggestion.followUpQuestions.length > 0 ? (
+                                <div className={styles.photoQuestions}>
+                                  <strong>Follow-up questions</strong>
+                                  <ul>{latestSuggestion.followUpQuestions.map((question) => <li key={question}>{question}</li>)}</ul>
+                                </div>
+                              ) : null}
+                              {latestSuggestion.state === "PENDING_REVIEW" ? (
+                                <form action={reviewPhotoSuggestion} className={styles.photoReviewActions}>
+                                  <input name="requestId" type="hidden" value={selectedRequest.id} />
+                                  <input name="suggestionId" type="hidden" value={latestSuggestion.id} />
+                                  <input name="expectedVersion" type="hidden" value={latestSuggestion.version} />
+                                  <button className="app-button-primary" name="decision" type="submit" value="ACCEPTED">Accept for review</button>
+                                  <button className="app-button-secondary" name="decision" type="submit" value="REJECTED">Reject suggestion</button>
+                                </form>
+                              ) : null}
+                              <p className={styles.photoSafetyNote}>
+                                AI is advisory. Accepting this suggestion does not alter request fields, pricing, an accepted quote, invoice, or payment.
+                              </p>
+                              {selectedRequestQuote?.status === "ACCEPTED" && latestSuggestion.state === "PENDING_REVIEW" ? (
+                                <FeedbackBanner
+                                  title="Accepted quote is protected"
+                                  description="If this suggestion should affect price or scope, create a separate explicit quote revision. This review cannot change the accepted quote."
+                                  tone="warning"
+                                />
+                              ) : null}
+                            </>
+                          ) : (
+                            <div className={styles.crmEmpty}>
+                              <strong>No AI suggestion recorded</strong>
+                              <p>The source photo remains available for human inspection. No classification result is being implied.</p>
+                            </div>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               )}
             </section>
           </div>
