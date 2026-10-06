@@ -163,7 +163,12 @@ function InboxView({
     );
   }
 
-  const replySupported = selected.channel === "WHATSAPP" || selected.channel === "EMAIL";
+  const relatedConversations = customer
+    ? orderedConversations.filter((conversation) =>
+        conversation.id !== selected.id && conversation.customerId === customer.id)
+    : [];
+  const participantLabel = customer?.displayName ?? "Unverified sender";
+  const replySupported = (selected.channel === "WHATSAPP" || selected.channel === "EMAIL") && Boolean(customer);
 
   return (
     <section className={styles.inboxWorkspace} aria-label="Customer conversations">
@@ -185,16 +190,16 @@ function InboxView({
                 className={`${styles.conversationItem} ${selectedThread ? styles.conversationSelected : ""}`.trim()}
                 href={"?conversation=" + encodeURIComponent(conversation.id)}
                 aria-current={selectedThread ? "page" : undefined}
-                aria-label={(threadCustomer?.displayName ?? "Customer") + " " + conversation.channel + " conversation"}
+                aria-label={(threadCustomer?.displayName ?? "Unverified sender") + " " + conversation.channel + " conversation"}
                 role="listitem"
                 key={conversation.id}
               >
                 <span className={styles.conversationAvatar} aria-hidden="true">
-                  {(threadCustomer?.displayName ?? "Customer").slice(0, 1).toUpperCase()}
+                  {(threadCustomer?.displayName ?? "Unverified sender").slice(0, 1).toUpperCase()}
                 </span>
                 <span className={styles.conversationCopy}>
                   <span className={styles.conversationTopline}>
-                    <strong>{threadCustomer?.displayName ?? "Customer"}</strong>
+                    <strong>{threadCustomer?.displayName ?? "Unverified sender"}</strong>
                     <small>{formatWhen(conversation.lastMessageAt, data.workspace.timezone)}</small>
                   </span>
                   <span className={styles.conversationPreview}>{latest?.body ?? (latest?.mediaReference ? "Media message" : "No messages yet")}</span>
@@ -209,12 +214,12 @@ function InboxView({
         </div>
       </aside>
 
-      <section className={styles.inboxThreadPane} aria-label={customer?.displayName ?? "Customer conversation"}>
+      <section className={styles.inboxThreadPane} aria-label={customer ? customer.displayName + " conversation" : "Unverified sender conversation"}>
         <header className={styles.threadHeader}>
           <div className={styles.threadIdentity}>
-            <span className={styles.threadAvatar} aria-hidden="true">{(customer?.displayName ?? "C").slice(0, 1).toUpperCase()}</span>
+            <span className={styles.threadAvatar} aria-hidden="true">{participantLabel.slice(0, 1).toUpperCase()}</span>
             <span>
-              <h2>{customer?.displayName ?? "Customer conversation"}</h2>
+              <h2>{participantLabel}</h2>
               <p>{selected.channel} · {request?.serviceLabel ?? "No request linked"}</p>
             </span>
           </div>
@@ -232,6 +237,14 @@ function InboxView({
           </div>
         </header>
 
+        {!customer ? (
+          <FeedbackBanner
+            title="Identity review required"
+            description="This sender is not attached to exactly one verified customer contact. Review the handover before replying or linking service history."
+            tone="warning"
+          />
+        ) : null}
+
         <div className={styles.messageTimeline} aria-label="Message history">
           {messages.length === 0 ? (
             <div className={styles.inboxEmpty}>
@@ -243,7 +256,7 @@ function InboxView({
               const outbound = message.direction === "OUTBOUND";
               const internal = message.direction === "INTERNAL";
               const sender = message.direction === "INBOUND"
-                ? customer?.displayName ?? "Customer"
+                ? participantLabel
                 : message.senderKind === "STAFF"
                   ? "Staff"
                   : message.senderKind;
@@ -276,7 +289,7 @@ function InboxView({
                 id={id}
                 name="body"
                 rows={3}
-                placeholder={replySupported ? "Write a reply…" : "Replies are unavailable for this channel"}
+                placeholder={replySupported ? "Write a reply…" : !customer ? "Verify and link this sender before replying" : "Replies are unavailable for this channel"}
                 disabled={!replySupported}
                 required
                 describedBy={describedBy}
@@ -285,7 +298,7 @@ function InboxView({
             )}
           </FormField>
           <div className={styles.composerFooter}>
-            <span>{replySupported ? `Reply via ${selected.channel}` : "Read-only conversation"}</span>
+            <span>{replySupported ? `Reply via ${selected.channel}` : !customer ? "Identity must be verified before reply" : "Read-only conversation"}</span>
             <button className="app-button-primary" type="submit" disabled={!replySupported}>
               Queue reply
             </button>
@@ -297,8 +310,8 @@ function InboxView({
         <header className={styles.inboxPaneHeader}>
           <div>
             <p className={styles.inboxEyebrow}>Customer context</p>
-            <h2>{customer?.displayName ?? "Customer"}</h2>
-            <p>{request?.serviceLabel ?? "No request linked"}</p>
+            <h2>{participantLabel}</h2>
+            <p>{customer ? request?.serviceLabel ?? "No request linked" : "No customer record linked"}</p>
           </div>
         </header>
 
@@ -326,6 +339,23 @@ function InboxView({
           <div className={styles.contextRow}><span>Messages</span><strong>{messages.length}</strong></div>
           <div className={styles.contextRow}><span>Delivery</span><strong>Stored per message</strong></div>
         </div>
+
+        {customer && relatedConversations.length > 0 ? (
+          <div className={styles.contextSection}>
+            <span className={styles.contextLabel}>Other channels</span>
+            <div className={styles.relatedChannels}>
+              {relatedConversations.map((conversation) => (
+                <a
+                  href={"?conversation=" + encodeURIComponent(conversation.id)}
+                  key={conversation.id}
+                >
+                  <strong>{conversation.channel}</strong>
+                  <span>{formatWhen(conversation.lastMessageAt, data.workspace.timezone)}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </aside>
     </section>
   );
