@@ -163,12 +163,24 @@ begin
     returning * into v_conv;
   end if;
 
-  if v_contact_count > 1 then
+  if v_contact_count <> 1 then
+    update public.conversations
+    set handover_active = true,
+        handover_owner_revision = handover_owner_revision + 1,
+        updated_at = now()
+    where workspace_id = v_workspace and id = v_conv.id
+    returning * into v_conv;
+
     insert into public.attention_items(
       workspace_id, type, resource_type, resource_id, severity, status, summary, created_at, updated_at
     ) values (
       v_workspace, 'INBOUND_IDENTITY', 'conversation', v_conv.id,
-      'WARNING', 'OPEN', 'Inbound email matches multiple verified customer contacts.', now(), now()
+      'WARNING', 'OPEN',
+      case
+        when v_contact_count = 0 then 'Inbound email has no verified customer match.'
+        else 'Inbound email matches multiple verified customer contacts.'
+      end,
+      now(), now()
     )
     on conflict (workspace_id, type, resource_type, resource_id) where status = 'OPEN'
     do update set summary = excluded.summary, updated_at = excluded.updated_at;
@@ -188,7 +200,9 @@ begin
   returning * into v_msg;
 
   update public.conversations
-  set version = version + 1,
+  set customer_id = coalesce(customer_id, v_customer_id),
+      request_id = coalesce(request_id, v_request_id),
+      version = version + 1,
       last_message_at = v_occurred,
       updated_at = now()
   where workspace_id = v_workspace and id = v_conv.id
