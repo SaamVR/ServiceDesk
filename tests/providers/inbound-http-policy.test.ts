@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   INBOUND_RETRY_AFTER_SECONDS,
@@ -7,6 +9,16 @@ import {
 } from "../../src/server/api-handlers/inbound-http-policy";
 
 describe("inbound webhook HTTP recovery policy", () => {
+  it("streams request bodies instead of buffering before enforcing the limit", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src/server/api-handlers/inbound-http-policy.ts"),
+      "utf8",
+    );
+    expect(source).toContain("request.body.getReader()");
+    expect(source).toContain("totalBytes += chunk.value.byteLength");
+    expect(source).not.toContain("request.text()");
+  });
+
   it("rejects declared oversized payloads with 413", async () => {
     const request = new Request("https://example.test/inbound", {
       method: "POST",
