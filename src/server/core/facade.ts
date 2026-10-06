@@ -16,7 +16,7 @@ export interface VerifiedPaymentApplicationOutcome {
 export interface InboundMessageEvent {
   receiptKey: string;
   workspaceId: string;
-  channel: "WHATSAPP";
+  channel: "WHATSAPP" | "EMAIL";
   providerAccountId: string;
   providerMessageId: string;
   senderRef: string;
