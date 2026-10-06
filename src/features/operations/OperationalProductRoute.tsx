@@ -23,6 +23,7 @@ import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBa
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
+import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatWorkspaceDateTime } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
@@ -2127,7 +2128,13 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
 
               <div>
                 <h4>Invitations</h4>
-                {snapshot.invitations.length === 0 ? (
+                {data.actor.role === "OWNER" ? (
+                  <TeamInvitationManager
+                    workspaceSlug={workspaceSlug}
+                    timeZone={data.workspace.timezone}
+                    invitations={snapshot.invitations}
+                  />
+                ) : snapshot.invitations.length === 0 ? (
                   <div className={styles.settingsEmpty}>
                     <strong>No invitations</strong>
                     <p>No team invitations are recorded.</p>
@@ -2138,8 +2145,8 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                       <article key={invite.id}>
                         <span className={styles.memberAvatar} aria-hidden="true">+</span>
                         <span>
-                          <strong>{invite.role.toLowerCase()}</strong>
-                          <small>Created {formatWhen(invite.createdAt, data.workspace.timezone)}</small>
+                          <strong>{invite.email ?? invite.role.toLowerCase()}</strong>
+                          <small>{invite.role.toLowerCase()} · Created {formatWhen(invite.createdAt, data.workspace.timezone)}</small>
                         </span>
                         <StatusBadge tone={invite.state === "PENDING" ? "warning" : invite.state === "ACCEPTED" ? "success" : "neutral"}>
                           {invite.state.toLowerCase()}
@@ -2148,7 +2155,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                     ))}
                   </div>
                 )}
-                <p className={styles.adminHelp}>Private credentials and invitation tokens are never displayed.</p>
+                <p className={styles.adminHelp}>Private credentials and invitation token hashes are never displayed in settings data.</p>
               </div>
             </div>
           </section>

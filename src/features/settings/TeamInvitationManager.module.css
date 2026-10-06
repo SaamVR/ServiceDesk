@@ -1,0 +1,171 @@
+.manager {
+  display: grid;
+  gap: 14px;
+}
+
+.inviteForm {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, .45fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface-subtle);
+}
+
+.inviteForm label {
+  display: grid;
+  gap: 6px;
+  color: var(--app-text-muted);
+  font-size: .64rem;
+  font-weight: 720;
+}
+
+.inviteForm button { min-height: 40px; }
+
+.success,
+.error {
+  display: grid;
+  gap: 4px;
+  border-radius: 9px;
+  padding: 11px 12px;
+}
+
+.success {
+  background: var(--app-accent-soft);
+  color: var(--app-accent-hover);
+}
+
+.error {
+  background: #fff0f0;
+  color: #8e2828;
+}
+
+.success p,
+.error p {
+  margin: 0;
+  color: inherit;
+  font-size: .65rem;
+}
+
+.inviteLinkActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.inviteLinkActions code {
+  overflow: hidden;
+  max-width: 100%;
+  padding: 5px 7px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 72%);
+  color: inherit;
+  font-size: .58rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invitationList {
+  display: grid;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.invitationRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.invitationRow:last-child { border-bottom: 0; }
+
+.inviteMark {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  font-weight: 800;
+}
+
+.inviteCopy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.inviteCopy strong,
+.inviteCopy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inviteCopy strong {
+  color: var(--app-text);
+  font-size: .68rem;
+}
+
+.inviteCopy small {
+  color: var(--app-text-muted);
+  font-size: .58rem;
+}
+
+.state {
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  font-size: .55rem;
+  font-weight: 760;
+  text-transform: capitalize;
+}
+
+.state_pending {
+  background: #fff7df;
+  color: #8a5a00;
+}
+
+.state_accepted {
+  background: var(--app-accent-soft);
+  color: var(--app-accent-hover);
+}
+
+.empty { padding: 18px 14px; }
+
+.empty strong {
+  color: var(--app-text);
+  font-size: .7rem;
+}
+
+.empty p,
+.help {
+  margin: 2px 0 0;
+  color: var(--app-text-muted);
+  font-size: .6rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .inviteForm { grid-template-columns: 1fr; }
+  .invitationRow { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .invitationRow form { grid-column: 2 / -1; }
+}
+
+@media (max-width: 430px) {
+  .invitationRow { grid-template-columns: 28px minmax(0, 1fr); }
+  .state { grid-column: 2; justify-self: start; }
+  .invitationRow form { grid-column: 2; }
+}
