@@ -43,7 +43,7 @@ describe("V2 team invitation lifecycle migration", () => {
   });
 
   it("revalidates owner authority for issue/revoke and account email for acceptance", () => {
-    expect(occurrences("v_actor_role <> 'OWNER'")).toBe(2);
+    expect(occurrences("OWNER_SCOPE_REQUIRED")).toBe(2);
     expect(sql).toContain("and role = 'OWNER'");
     expect(sql).toContain("lower(v_invitation.email::text) <> v_user_email");
     expect(sql).toContain("email_confirmed_at");
