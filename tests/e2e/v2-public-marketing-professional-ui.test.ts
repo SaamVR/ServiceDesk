@@ -51,6 +51,17 @@ describe("V2 professional public product presentation", () => {
     expect(shell).not.toContain('primaryHref = "/tour"');
   });
 
+  it("gives existing users a direct sign-in entry without consuming a primary marketing slot", () => {
+    const shell = source("src/components/shell/MarketingShell.tsx");
+    const css = source("src/app/globals.css");
+    expect(shell).toContain('className="site-auth-link"');
+    expect(shell).toContain('href="/auth/sign-in"');
+    expect(shell).toContain(">Sign in</Link>");
+    expect(css).toContain(".site-auth-link {");
+    expect(css).toContain("grid-column: 2;");
+    expect(css).toContain("grid-row: 1;");
+  });
+
   it("keeps every primary marketing destination visible on narrow screens", () => {
     const shell = source("src/components/shell/MarketingShell.tsx");
     const css = source("src/app/globals.css");

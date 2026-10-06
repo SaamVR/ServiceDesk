@@ -143,15 +143,19 @@ export function StaffAppShell({
 
           <div className="app-topbar-actions">
             <Link className="app-topbar-link" href={buildStaffModuleHref(workspace, "inbox")}>Inbox</Link>
-            <Link className="app-account-link" href={buildStaffModuleHref(workspace, "settings")} aria-label="Open account and workspace settings">
-              <span className="app-avatar" aria-hidden="true">SD</span>
-              <span>Account</span>
-            </Link>
             {signedIn ? (
-              <form className="app-signout-form" action="/auth/sign-out" method="post">
-                <button className="app-topbar-link app-signout-button" type="submit">Sign out</button>
-              </form>
-            ) : null}
+              <>
+                <Link className="app-account-link" href={buildStaffModuleHref(workspace, "settings")} aria-label="Open account and workspace settings">
+                  <span className="app-avatar" aria-hidden="true">SD</span>
+                  <span>Account</span>
+                </Link>
+                <form className="app-signout-form" action="/auth/sign-out" method="post">
+                  <button className="app-topbar-link app-signout-button" type="submit">Sign out</button>
+                </form>
+              </>
+            ) : (
+              <Link className="app-auth-entry-link" href={"/auth/sign-in?next=" + encodeURIComponent(pathname)}>Sign in</Link>
+            )}
           </div>
         </header>
 

@@ -53,6 +53,9 @@ describe("V2 authentication product", () => {
     expect(layout).toContain("signedIn={signedIn}");
     expect(staff).toContain("signedIn ? (");
     expect(staff).toContain('action="/auth/sign-out"');
+    expect(staff).toContain('className="app-auth-entry-link"');
+    expect(staff).toContain('href={"/auth/sign-in?next=" + encodeURIComponent(pathname)}');
+    expect(staff).toContain(">Sign in</Link>");
     expect(customer).toContain("authenticationRequired ? (");
     expect(customer).toContain('action="/auth/sign-out"');
     expect(customerRoute).toContain('result.kind === "authentication"');
