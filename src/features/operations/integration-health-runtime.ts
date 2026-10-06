@@ -6,6 +6,11 @@ import {
   type ProviderMode,
   type V1Provider,
 } from "@/server/integrations/readiness/provider-readiness";
+import {
+  parseInboundControlledProof,
+  validateInboundControlledProof,
+  type InboundProofChannel,
+} from "@/server/integrations/readiness/inbound-proof";
 
 export type OperationalIntegrationProvider = V1Provider | "EMAIL_INBOUND" | "VOICE_INBOUND";
 
@@ -41,8 +46,9 @@ function truthy(env: RuntimeEnvironment, ...keys: string[]): boolean {
 }
 
 function inboundReadiness(
-  provider: "EMAIL_INBOUND" | "VOICE_INBOUND",
+  provider: InboundProofChannel,
   env: RuntimeEnvironment,
+  now: string,
 ): OperationalIntegrationHealth {
   const isEmail = provider === "EMAIL_INBOUND";
   const requirements = [
@@ -73,21 +79,39 @@ function inboundReadiness(
     : missingConfiguration.length > 0
       ? "PARTIAL"
       : "CONFIGURED";
+  const proofJson = env[isEmail
+    ? "SERVICEDESK_EMAIL_INBOUND_PROOF_JSON"
+    : "SERVICEDESK_VOICE_INBOUND_PROOF_JSON"];
+  const expectedBuildSha = (
+    env.SERVICEDESK_BUILD_SHA
+    ?? env.RENDER_GIT_COMMIT
+    ?? env.VERCEL_GIT_COMMIT_SHA
+    ?? ""
+  ).trim();
+  const proof = validateInboundControlledProof({
+    channel: provider,
+    manifest: parseInboundControlledProof(proofJson),
+    expectedBuildSha,
+    now,
+  });
+  const providerVerified = configurationState === "CONFIGURED" && proof.allowed;
 
   return {
     provider,
     label: isEmail ? "Email inbound" : "Voice inbound",
     mode: "LIVE",
     configurationState,
-    verificationState: "IMPLEMENTED",
+    verificationState: providerVerified ? "PROVIDER_VERIFIED" : "IMPLEMENTED",
     missingConfiguration,
     canRunControlledProof: configurationState === "CONFIGURED",
     source: "SERVER_CONFIGURATION_PRESENCE",
-    message: configurationState === "CONFIGURED"
-      ? "Signed inbound route configuration is present. Controlled provider proof is still required before provider verification."
-      : configurationState === "PARTIAL"
-        ? `Inbound route configuration is partial; ${missingConfiguration.length} requirement${missingConfiguration.length === 1 ? "" : "s"} remain.`
-        : "Inbound route is implemented but no server-side webhook routing configuration is present.",
+    message: providerVerified
+      ? "Signed inbound route configuration and fresh controlled provider proof are valid for this exact build."
+      : configurationState === "CONFIGURED"
+        ? "Signed inbound route configuration is present. Controlled provider proof is still required before provider verification."
+        : configurationState === "PARTIAL"
+          ? `Inbound route configuration is partial; ${missingConfiguration.length} requirement${missingConfiguration.length === 1 ? "" : "s"} remain.`
+          : "Inbound route is implemented but no server-side webhook routing configuration is present.",
   };
 }
 
@@ -172,6 +196,7 @@ function messageFor(input: {
 
 export function buildOperationalIntegrationHealth(
   env: RuntimeEnvironment = process.env,
+  now = new Date().toISOString(),
 ): OperationalIntegrationHealth[] {
   const reports = buildV1ProviderReadinessRegistry(
     (["WHATSAPP", "GOOGLE_CALENDAR", "PAYMENT", "EMAIL", "WEBHOOK_N8N", "AI"] as V1Provider[]).map((provider) => ({
@@ -202,7 +227,7 @@ export function buildOperationalIntegrationHealth(
 
   return [
     ...providerHealth,
-    inboundReadiness("EMAIL_INBOUND", env),
-    inboundReadiness("VOICE_INBOUND", env),
+    inboundReadiness("EMAIL_INBOUND", env, now),
+    inboundReadiness("VOICE_INBOUND", env, now),
   ];
 }
