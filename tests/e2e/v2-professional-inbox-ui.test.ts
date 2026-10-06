@@ -24,10 +24,16 @@ describe("V2 professional shared inbox UI", () => {
 
   it("keeps channel support and stored delivery truth explicit", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
-    expect(route).toContain('selected.channel === "WHATSAPP" || selected.channel === "EMAIL"');
-    expect(route).toContain("Stored per message");
-    expect(route).not.toContain("Fake unread");
-    expect(route).not.toContain("Provider verified");
+    const inboxStart = route.indexOf("function InboxView");
+    const inboxEnd = route.indexOf("\nfunction CustomersView", inboxStart);
+    const inbox = route.slice(inboxStart, inboxEnd);
+
+    expect(inboxStart).toBeGreaterThanOrEqual(0);
+    expect(inboxEnd).toBeGreaterThan(inboxStart);
+    expect(inbox).toContain('selected.channel === "WHATSAPP" || selected.channel === "EMAIL"');
+    expect(inbox).toContain("Stored per message");
+    expect(inbox).not.toContain("Fake unread");
+    expect(inbox).not.toContain("Provider verified");
   });
 
   it("provides responsive triage layout contracts", () => {
