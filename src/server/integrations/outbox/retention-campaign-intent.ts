@@ -41,13 +41,19 @@ export function createRetentionCampaignIntentResolver(
         },
       );
       if (error) {
-        return fail(error.code ?? "RETENTION_INTENT_RPC_ERROR", "Retention campaign intent could not be resolved.");
+        return fail("RETENTION_INTENT_RETRYABLE", "Retention campaign intent could not be resolved from current database truth.");
       }
       if (!data || data.ok !== true) {
-        return fail(String(data?.code ?? "RETENTION_INTENT_RPC_REJECTED"), "Retention campaign intent was rejected.");
+        return fail(
+          "RETENTION_INTENT_RETRYABLE",
+          "Retention campaign eligibility could not be verified from current database truth.",
+        );
       }
       if (data.allowed !== true) {
-        return fail(String(data.code ?? "RETENTION_CAMPAIGN_SUPPRESSED"), "Retention campaign is no longer eligible.");
+        const suppression = typeof data.code === "string" && data.code.trim()
+          ? data.code
+          : "RETENTION_CAMPAIGN_SUPPRESSED";
+        return fail("RETENTION_SUPPRESSED:" + suppression, "Retention campaign is no longer eligible.");
       }
 
       try {
