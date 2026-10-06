@@ -664,3 +664,178 @@
     border-bottom: 1px solid var(--app-border);
   }
 }
+
+
+.contactPolicyBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+.contactPolicyActions {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+.contactPolicyActions form {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.attributionPanel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+.attributionRows {
+  display: grid;
+  gap: 8px;
+}
+.attributionRows article {
+  display: grid;
+  grid-template-columns: minmax(160px, .75fr) minmax(0, 1.25fr);
+  align-items: center;
+  gap: 16px;
+  padding: 11px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface-subtle);
+}
+.attributionRows article > div {
+  display: grid;
+  gap: 3px;
+}
+.attributionRows article > div span {
+  color: var(--app-text-muted);
+  font-size: .68rem;
+}
+.attributionRows dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.attributionRows dl div {
+  display: grid;
+  gap: 2px;
+}
+.attributionRows dt {
+  color: var(--app-text-muted);
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.attributionRows dd {
+  margin: 0;
+  font-size: .76rem;
+  font-weight: 700;
+}
+.attributionDisclosure {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-subtle);
+}
+.attributionDisclosure p {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: .7rem;
+  line-height: 1.5;
+}
+
+.growthSettingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.growthSettingsPane {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-subtle);
+}
+.growthSettingsPane h4 {
+  margin: 2px 0 0;
+}
+.growthForm {
+  display: grid;
+  gap: 9px;
+}
+.growthForm > label,
+.growthFormRow > label {
+  display: grid;
+  gap: 5px;
+}
+.growthForm > label > span,
+.growthFormRow > label > span {
+  color: var(--app-text-muted);
+  font-size: .67rem;
+  font-weight: 650;
+}
+.growthFormRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.growthRows {
+  display: grid;
+  gap: 7px;
+}
+.growthRows article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+.growthRows article > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+.growthRows small,
+.growthRows article > span:nth-child(2) {
+  color: var(--app-text-muted);
+  font-size: .66rem;
+}
+
+@media(max-width: 900px) {
+  .growthSettingsGrid {
+    grid-template-columns: 1fr;
+  }
+  .attributionRows article {
+    grid-template-columns: 1fr;
+  }
+  .attributionRows dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media(max-width: 620px) {
+  .contactPolicyActions {
+    justify-items: stretch;
+  }
+  .contactPolicyActions form {
+    justify-content: flex-start;
+  }
+  .growthFormRow,
+  .attributionRows dl {
+    grid-template-columns: 1fr;
+  }
+  .growthRows article {
+    grid-template-columns: 1fr;
+  }
+}

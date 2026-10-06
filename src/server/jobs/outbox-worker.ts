@@ -1,6 +1,7 @@
 import type { OutboxExecutionOutcome, OutboxExecutionPort, Result } from "../../contracts";
 import type { ClaimedDurableOutboxEvent, DurableOutboxRepository } from "./outbox-repository";
 import { decideOutboxPersistence } from "./outbox-retry";
+import type { OutboxExecutionGuard } from "./outbox-execution-guard";
 
 export interface RunOutboxBatchInput {
   repository: DurableOutboxRepository;
@@ -12,6 +13,7 @@ export interface RunOutboxBatchInput {
   limit: number;
   baseDelaySeconds?: number;
   maxDelaySeconds?: number;
+  guard?: OutboxExecutionGuard;
 }
 
 export interface OutboxBatchItemSummary {
@@ -47,11 +49,39 @@ export async function runOutboxBatch(input: RunOutboxBatchInput): Promise<Result
 
   for (const event of claimed.value) {
     let outcome: OutboxExecutionOutcome;
-    try {
-      const executed = await input.executor.execute(event);
-      outcome = executed.ok ? executed.value : executorInfrastructureFailure(event, input.now);
-    } catch {
-      outcome = executorInfrastructureFailure(event, input.now);
+    if (input.guard) {
+      try {
+        const checked = await input.guard.check(event, input.now);
+        if (!checked.ok) {
+          outcome = {
+            outcome: "RETRYABLE_FAILURE",
+            failedAt: input.now,
+            code: "OUTBOX_GUARD_ERROR",
+          };
+        } else if (!checked.value.allowed) {
+          outcome = {
+            outcome: "SUPPRESSED",
+            failedAt: input.now,
+            code: checked.value.code ?? "OUTBOX_SUPPRESSED",
+          };
+        } else {
+          const executed = await input.executor.execute(event);
+          outcome = executed.ok ? executed.value : executorInfrastructureFailure(event, input.now);
+        }
+      } catch {
+        outcome = {
+          outcome: "RETRYABLE_FAILURE",
+          failedAt: input.now,
+          code: "OUTBOX_GUARD_ERROR",
+        };
+      }
+    } else {
+      try {
+        const executed = await input.executor.execute(event);
+        outcome = executed.ok ? executed.value : executorInfrastructureFailure(event, input.now);
+      } catch {
+        outcome = executorInfrastructureFailure(event, input.now);
+      }
     }
 
     const decision = decideOutboxPersistence({

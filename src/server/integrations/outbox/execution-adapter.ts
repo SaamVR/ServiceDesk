@@ -14,6 +14,30 @@ function terminal(code: string, at: string): Result<OutboxExecutionOutcome> {
   return { ok: true, value: { outcome: "TERMINAL_FAILURE", failedAt: at, code } };
 }
 
+function resolverFailureOutcome(code: string, at: string): Result<OutboxExecutionOutcome> {
+  if (code.startsWith("RETENTION_SUPPRESSED:")) {
+    return {
+      ok: true,
+      value: {
+        outcome: "SUPPRESSED",
+        failedAt: at,
+        code: code.slice("RETENTION_SUPPRESSED:".length) || "RETENTION_CAMPAIGN_SUPPRESSED",
+      },
+    };
+  }
+  if (code === "RETENTION_INTENT_RETRYABLE") {
+    return {
+      ok: true,
+      value: {
+        outcome: "RETRYABLE_FAILURE",
+        failedAt: at,
+        code,
+      },
+    };
+  }
+  return terminal(code || "OUTBOX_INTENT_RESOLUTION_FAILED", at);
+}
+
 export function mapCommittedDispatchToExecutionOutcome(outcome: CommittedOutboxDispatchOutcome, now: () => string): OutboxExecutionOutcome {
   if (outcome.outcome === "ACCEPTED") {
     return { outcome: "SENT", completedAt: outcome.acceptedAt, providerReference: outcome.providerMessageId };
@@ -36,7 +60,7 @@ export class ConnectorOutboxExecutionPort implements OutboxExecutionPort {
 
   async execute(event: ClaimedOutboxEvent): Promise<Result<OutboxExecutionOutcome>> {
     const resolved = await this.options.resolver.resolve(event);
-    if (!resolved.ok) return terminal(resolved.code || "OUTBOX_INTENT_RESOLUTION_FAILED", this.now());
+    if (!resolved.ok) return resolverFailureOutcome(resolved.code, this.now());
 
     const validated = validateResolvedOutboxJob(event, resolved.value);
     if (!validated.ok) return terminal(validated.code, this.now());

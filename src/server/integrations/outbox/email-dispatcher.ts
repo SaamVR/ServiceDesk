@@ -14,6 +14,7 @@ const purposeMap: Record<OutboxJob["purpose"], TransactionalEmailPurpose> = {
   STAFF_ALERT: "QUOTE_READY",
   CUSTOMER_REPLY: "CUSTOMER_REPLY",
   CALENDAR_VISIT: "VISIT_REMINDER",
+  RETENTION_CAMPAIGN: "RETENTION_CAMPAIGN",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
