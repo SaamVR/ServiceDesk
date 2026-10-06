@@ -8,6 +8,7 @@ import {
 } from "@/components/product";
 import { applyOperationalManualPayment } from "@/features/operations/operational-product-runtime";
 import {
+  addCommercialBillingAdjustment,
   createCommercialBillingDraft,
   finalizeCommercialBillingDraft,
   loadCommercialFinanceSnapshot,
@@ -89,6 +90,13 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
   const period = currentMonth(timeZone);
   const openDrafts = drafts.filter((draft) => draft.state === "DRAFT");
   const finalizedDrafts = drafts.filter((draft) => draft.state === "FINALIZED");
+  const includedAdjustmentCaseIds = new Set(
+    drafts.flatMap((draft) =>
+      draft.lines
+        .filter((line) => line.sourceType === "ADJUSTMENT" && line.state === "INCLUDED" && line.exceptionCaseId)
+        .map((line) => line.exceptionCaseId as string),
+    ),
+  );
 
   async function createDraftAction(formData: FormData) {
     "use server";
@@ -97,6 +105,17 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
       String(formData.get("contractVersionId") ?? ""),
       String(formData.get("periodStart") ?? ""),
       String(formData.get("periodEnd") ?? ""),
+    );
+    redirectResult(workspaceSlug, actionResult);
+  }
+
+  async function adjustmentAction(formData: FormData) {
+    "use server";
+    const actionResult = await addCommercialBillingAdjustment(
+      workspaceSlug,
+      String(formData.get("draftId") ?? ""),
+      String(formData.get("exceptionCaseId") ?? ""),
+      Number(formData.get("expectedVersion")),
     );
     redirectResult(workspaceSlug, actionResult);
   }
@@ -242,6 +261,24 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
                   const invoice = invoices.find((item) => item.commercialBillingDraftId === draft.id);
                   const included = draft.lines.filter((line) => line.state === "INCLUDED");
                   const excluded = draft.lines.length - included.length;
+                  const draftAdjustmentCaseIds = new Set(
+                    draft.lines
+                      .filter((line) => line.exceptionCaseId)
+                      .map((line) => line.exceptionCaseId as string),
+                  );
+                  const eligibleAdjustments = draft.state === "DRAFT"
+                    ? portfolio.exceptionCases.filter((exceptionCase) =>
+                        exceptionCase.state === "RESOLVED" &&
+                        exceptionCase.contractVersionId === draft.contractVersionId &&
+                        exceptionCase.organizationId === draft.organizationId &&
+                        exceptionCase.contractId === draft.contractId &&
+                        exceptionCase.requestedAdjustmentKind !== undefined &&
+                        exceptionCase.requestedAdjustmentMinor !== undefined &&
+                        exceptionCase.requestedAdjustmentCurrency === draft.currency &&
+                        !includedAdjustmentCaseIds.has(exceptionCase.id) &&
+                        !draftAdjustmentCaseIds.has(exceptionCase.id),
+                      )
+                    : [];
 
                   return (
                     <article className={styles.draftCard} key={draft.id}>
@@ -271,11 +308,21 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
                           const siteId = typeof line.descriptionSnapshot.siteId === "string" ? line.descriptionSnapshot.siteId : undefined;
                           const site = portfolio.sites.find((item) => item.id === siteId);
                           const visitWhen = formatVisitWhen(line.descriptionSnapshot.visitStartsAt, timeZone);
+                          const isAdjustment = line.sourceType === "ADJUSTMENT";
+                          const exceptionType = typeof line.descriptionSnapshot.exceptionType === "string"
+                            ? line.descriptionSnapshot.exceptionType.replaceAll("_", " ").toLowerCase()
+                            : "commercial exception";
                           return (
                             <div className={styles.line} key={line.id}>
                               <div className={styles.lineCopy}>
-                                <strong>{site?.siteCode ?? "Contract site"} · {visitWhen}</strong>
-                                <span>Visit {line.visitId?.slice(0, 8) ?? "adjustment"} · {String(line.descriptionSnapshot.rateSource ?? "contract").replaceAll("_", " ").toLowerCase()}</span>
+                                <strong>
+                                  {site?.siteCode ?? "Contract site"} · {isAdjustment ? "Policy adjustment" : visitWhen}
+                                </strong>
+                                <span>
+                                  {isAdjustment
+                                    ? exceptionType + " · case " + (line.exceptionCaseId?.slice(0, 8) ?? "unknown")
+                                    : "Visit " + (line.visitId?.slice(0, 8) ?? "unknown") + " · " + String(line.descriptionSnapshot.rateSource ?? "contract").replaceAll("_", " ").toLowerCase()}
+                                </span>
                               </div>
                               <span className={styles.lineAmount}>{line.direction === "CREDIT" ? "−" : ""}{money(line.amountMinor, line.currency)}</span>
                               <StatusBadge tone={line.state === "INCLUDED" ? "success" : "neutral"}>{line.state.toLowerCase()}</StatusBadge>
@@ -292,6 +339,45 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
                           );
                         })}
                       </div>
+
+                      {eligibleAdjustments.length > 0 ? (
+                        <section className={styles.adjustments} aria-label="Resolved commercial adjustments">
+                          <div className={styles.adjustmentsHeader}>
+                            <div>
+                              <strong>Resolved adjustments</strong>
+                              <span>Review approved exception credits or charges before invoice issue.</span>
+                            </div>
+                            <small>{eligibleAdjustments.length} available</small>
+                          </div>
+                          <div className={styles.adjustmentList}>
+                            {eligibleAdjustments.map((exceptionCase) => {
+                              const site = portfolio.sites.find((item) => item.id === exceptionCase.siteId);
+                              const kind = exceptionCase.requestedAdjustmentKind ?? "CHARGE";
+                              const amount = exceptionCase.requestedAdjustmentMinor ?? 0;
+                              const currency = exceptionCase.requestedAdjustmentCurrency ?? draft.currency;
+                              return (
+                                <div className={styles.adjustmentItem} key={exceptionCase.id}>
+                                  <div className={styles.adjustmentCopy}>
+                                    <strong>{site?.siteCode ?? "Contract site"} · {exceptionCase.type.replaceAll("_", " ").toLowerCase()}</strong>
+                                    <span>{exceptionCase.summary}</span>
+                                  </div>
+                                  <span className={styles.adjustmentAmount}>
+                                    {kind === "CREDIT" ? "−" : "+"}{money(amount, currency)}
+                                  </span>
+                                  <form action={adjustmentAction}>
+                                    <input type="hidden" name="draftId" value={draft.id} />
+                                    <input type="hidden" name="exceptionCaseId" value={exceptionCase.id} />
+                                    <input type="hidden" name="expectedVersion" value={draft.version} />
+                                    <button className="app-button-secondary" type="submit">
+                                      Add {kind.toLowerCase()}
+                                    </button>
+                                  </form>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      ) : null}
 
                       {draft.state === "DRAFT" ? (
                         <footer className={styles.draftFooter}>
