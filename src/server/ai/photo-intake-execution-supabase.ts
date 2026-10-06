@@ -85,9 +85,10 @@ export function createSupabasePhotoIntakeExecutionPort(
         bytes,
       });
       if (!validated.ok) return validated;
+      const registeredByteSize = Number(asset.byte_size);
       if (
-        typeof asset.byte_size === "number"
-        && asset.byte_size !== validated.value.bytes.byteLength
+        !Number.isFinite(registeredByteSize)
+        || registeredByteSize !== validated.value.bytes.byteLength
       ) {
         return fail("PHOTO_STORAGE_SIZE_MISMATCH", "Stored photo size no longer matches registered metadata.");
       }
