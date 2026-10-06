@@ -53,24 +53,38 @@ export function CustomerPortalShell({
           ))}
         </nav>
 
-        <div className={styles.accountContext} aria-label="Signed-in customer">
-          <span className={styles.accountAvatar} aria-hidden="true">{initials(customerName ?? "Customer")}</span>
-          <span>
-            <small>Signed in as</small>
-            <strong>{customerName ?? "Customer"}</strong>
-          </span>
-        </div>
+        {customerName ? (
+          <div className={styles.accountActions}>
+            <div className={styles.accountContext} aria-label="Signed-in customer">
+              <span className={styles.accountAvatar} aria-hidden="true">{initials(customerName)}</span>
+              <span>
+                <small>Signed in as</small>
+                <strong>{customerName}</strong>
+              </span>
+            </div>
+            <form action="/auth/sign-out" method="post">
+              <button className={styles.signOutButton} type="submit">Sign out</button>
+            </form>
+          </div>
+        ) : (
+          <a className={styles.signInLink} href={"/auth/sign-in?next=" + encodeURIComponent("/portal")}>Sign in</a>
+        )}
 
         <details className={styles.mobileNav}>
           <summary>Menu</summary>
           <div className={styles.mobileNavPanel}>
-            <div className={styles.mobileAccount}>
-              <span className={styles.accountAvatar} aria-hidden="true">{initials(customerName ?? "Customer")}</span>
-              <span>
-                <small>Signed in as</small>
-                <strong>{customerName ?? "Customer"}</strong>
-              </span>
-            </div>
+            {customerName ? (
+              <div className={styles.mobileAccount}>
+                <span className={styles.accountAvatar} aria-hidden="true">{initials(customerName)}</span>
+                <span>
+                  <small>Signed in as</small>
+                  <strong>{customerName}</strong>
+                </span>
+                <form action="/auth/sign-out" method="post">
+                  <button className={styles.signOutButton} type="submit">Sign out</button>
+                </form>
+              </div>
+            ) : null}
             <nav aria-label="Customer account mobile navigation">
               {nav.map((item) => (
                 <a
