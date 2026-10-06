@@ -72,6 +72,70 @@ describe("commercial billing postgres commands", () => {
     expect(result).toMatchObject({ ok: false, code: "COMMERCIAL_BILLING_RPC_MALFORMED" });
   });
 
+
+  it("adds a resolved commercial adjustment through the authoritative RPC", async () => {
+    const adjusted = draft({
+      chargeMinor: 30000,
+      netTotalMinor: 30000,
+      version: 2,
+      lines: [
+        ...draft().lines,
+        {
+          id: "line-adjustment",
+          workspaceId: "workspace-1",
+          draftId: "draft-1",
+          sourceType: "ADJUSTMENT",
+          exceptionCaseId: "exception-1",
+          direction: "CHARGE",
+          amountMinor: 5000,
+          currency: "USD",
+          state: "INCLUDED",
+          descriptionSnapshot: { exceptionType: "EXTRA_WORK", sourceCaseVersion: 3 },
+          createdAt: "2026-10-31T00:00:00.000Z",
+          updatedAt: "2026-10-31T00:00:00.000Z",
+        },
+      ],
+    });
+    const rpc = vi.fn().mockResolvedValue({
+      data: { ok: true, duplicate: false, draft: adjusted },
+      error: null,
+    });
+    const commands = createPostgresCommercialBillingCommands({ rpc } as SupabaseRpcClient);
+    const result = await commands.addCommercialBillingAdjustment(ctx, {
+      draftId: "draft-1",
+      exceptionCaseId: "exception-1",
+      expectedVersion: 1,
+      now: "2026-10-31T00:00:00.000Z",
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { duplicate: false, draft: { version: 2, chargeMinor: 30000 } },
+    });
+    expect(rpc).toHaveBeenCalledWith("servicedesk_add_commercial_billing_adjustment", {
+      p_input: expect.objectContaining({
+        workspaceId: "workspace-1",
+        draftId: "draft-1",
+        exceptionCaseId: "exception-1",
+        expectedVersion: 1,
+      }),
+    });
+  });
+
+  it("rejects malformed commercial adjustment input before the RPC", async () => {
+    const rpc = vi.fn();
+    const commands = createPostgresCommercialBillingCommands({ rpc } as SupabaseRpcClient);
+    const result = await commands.addCommercialBillingAdjustment(ctx, {
+      draftId: "draft-1",
+      exceptionCaseId: "",
+      expectedVersion: 1,
+      now: "2026-10-31T00:00:00.000Z",
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "COMMERCIAL_ADJUSTMENT_INPUT_INVALID" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("finalizes into the ordinary invoice shape without synthesizing payment state", async () => {
     const finalized = draft({ state: "FINALIZED", invoiceId: "invoice-1", version: 2 });
     const rpc = vi.fn().mockResolvedValue({
