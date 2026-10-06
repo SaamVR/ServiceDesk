@@ -68,10 +68,10 @@ export function validateInboundControlledProof(input: {
   }
   const receipt = manifest.redactedProviderReceipt?.trim() ?? "";
   if (!receipt) return { allowed: false, code: "PROOF_RECEIPT_MISSING" };
+  if (containsSecretMaterial(manifest)) return { allowed: false, code: "PROOF_SECRET_MATERIAL" };
   if (!/^(?:receipt|provider-receipt):redacted:[A-Za-z0-9._:-]{3,160}$/.test(receipt)) {
     return { allowed: false, code: "PROOF_MALFORMED" };
   }
-  if (containsSecretMaterial(manifest)) return { allowed: false, code: "PROOF_SECRET_MATERIAL" };
 
   const captured = Date.parse(manifest.capturedAt);
   const current = Date.parse(input.now);
