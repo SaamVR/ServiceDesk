@@ -70,7 +70,6 @@ export function createPostgresVoiceMissedCallCommandPort(
         );
       }
     },
-,
     async setVoiceCallbackState(ctx, input) {
       if (!ctx.userId || !["OWNER", "DISPATCHER"].includes(ctx.role)) {
         return fail("FORBIDDEN", "Owner or dispatcher access is required to update callback tasks.");
