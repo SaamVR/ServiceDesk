@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { uiStateScenarios, tourScenarios } from "../../src/features/product/story-model";
 
