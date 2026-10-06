@@ -194,7 +194,10 @@ export function createPostgresConversationFacadeMethods(
 ): Pick<ServiceDeskFacade, "applyInboundMessage" | "setConversationHandover" | "enqueueConversationReply" | "readWorkspaceSnapshot"> {
   return {
     async applyInboundMessage(event: InboundMessageEvent): Promise<Result<InboundMessageApplicationOutcome>> {
-      const { data, error } = await client.rpc<RpcRow>("servicedesk_apply_inbound_message", { p_event: event });
+      const rpcName = event.channel === "EMAIL"
+        ? "servicedesk_apply_inbound_email_message"
+        : "servicedesk_apply_inbound_message";
+      const { data, error } = await client.rpc<RpcRow>(rpcName, { p_event: event });
       return asResult(data, error, "INBOUND_RPC_ERROR", (row) => {
         const messageRow = asRow(row.message) ?? (row.messageId || row.message_id ? row : undefined);
         return {

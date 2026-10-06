@@ -22,6 +22,9 @@ function validInbound(event: InboundMessageEvent): Result<true> {
   if (time.ok === false) return time;
   if (event.contentKind === "UNSUPPORTED") return failClosed("INBOUND_CONTENT_UNSUPPORTED", "Inbound content kind is not business-processable.");
   if (event.contentKind === "TEXT" && !nonblank(event.text)) return failClosed("INBOUND_TEXT_REQUIRED", "Text inbound message requires nonblank text.");
+  if (event.channel === "EMAIL" && event.contentKind === "MEDIA_REFERENCE") {
+    return failClosed("INBOUND_EMAIL_MEDIA_UNSUPPORTED", "Inbound email attachments are not supported by this intake boundary yet.");
+  }
   if (event.contentKind === "MEDIA_REFERENCE" && !event.media?.providerMediaId) return failClosed("INBOUND_MEDIA_REF_REQUIRED", "Media inbound message requires a provider media reference.");
   return { ok: true, value: true };
 }
@@ -37,7 +40,8 @@ async function resolveConversation(tx: ConversationTransaction, event: InboundMe
   const threadId = providerThreadId(event.channel, event.providerAccountId, event.senderRef);
   const existing = await tx.findConversationByProviderThread(event.workspaceId, event.channel, threadId);
   if (existing) return ensureConversationWorkspace(existing, event.workspaceId);
-  const contact = await tx.findCustomerByContact(event.workspaceId, "WHATSAPP", event.senderRef);
+  const contactChannel = event.channel === "EMAIL" ? "EMAIL" : "WHATSAPP";
+  const contact = await tx.findCustomerByContact(event.workspaceId, contactChannel, event.senderRef);
   const request = contact ? await tx.findUnambiguousActiveRequest(event.workspaceId, contact.customerId) : undefined;
   return tx.insertConversation({
     id: tx.nextConversationId(), workspaceId: event.workspaceId, requestId: request?.id, customerId: contact?.customerId,

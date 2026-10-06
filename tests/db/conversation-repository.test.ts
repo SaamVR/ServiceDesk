@@ -4,6 +4,7 @@ import { conversationToDTO, messageToDTO, providerThreadId } from "../../src/dom
 describe("conversation repository contracts", () => {
   it("derives stable provider thread identity", () => {
     expect(providerThreadId("WHATSAPP", "acct_1", "+15550000001")).toBe("WHATSAPP:acct_1:+15550000001");
+    expect(providerThreadId("EMAIL", "mailbox_1", " Person@Example.COM ")).toBe("EMAIL:mailbox_1:person@example.com");
   });
 
   it("maps conversation and message records to public DTOs without leaking receipt metadata", () => {
