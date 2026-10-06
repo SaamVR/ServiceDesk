@@ -61,9 +61,19 @@ describe("V2 retention campaign dispatch governance", () => {
       "servicedesk_queue_retention_campaign_message",
       "servicedesk_resolve_retention_campaign_intent",
     ]) {
-      expect(sql).toContain(`grant execute on function public.${fn}(jsonb) to service_role`);
+      expect(sql).toMatch(new RegExp(`grant execute on function public\\.${fn}\\(jsonb\\)\\\\s+to service_role`));
     }
     expect(sql).toContain("v_actor_role <> 'OWNER'");
     expect(sql).toContain("servicedesk_require_staff");
   });
+
+  it("uses valid dollar-quoted PL/pgSQL bodies for every campaign function", () => {
+    expect(sql).not.toMatch(/\bas \$\s*\ndeclare/);
+    expect(sql).not.toMatch(/\n\$;\s*(?:\n|$)/);
+    const bodies = sql.match(/\bas \$\$/g) ?? [];
+    const terminators = sql.match(/\$\$;/g) ?? [];
+    expect(bodies.length).toBe(5);
+    expect(terminators.length).toBe(5);
+  });
+
 });
