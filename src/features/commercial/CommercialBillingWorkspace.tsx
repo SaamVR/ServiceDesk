@@ -78,7 +78,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
   const result = await loadCommercialFinanceSnapshot(workspaceSlug);
   if (!result.ok) return null;
 
-  const { portfolio, drafts, invoices, billingReady, timeZone } = result.value;
+  const { portfolio, drafts, invoices, billingReady, accounting, accountingReady, timeZone } = result.value;
   if (!portfolio.feature.enabled) return null;
 
   const contracts = portfolio.contracts.filter((contract) => contract.status === "ACTIVE");
@@ -89,6 +89,14 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
   const period = currentMonth(timeZone);
   const openDrafts = drafts.filter((draft) => draft.state === "DRAFT");
   const finalizedDrafts = drafts.filter((draft) => draft.state === "FINALIZED");
+  const accountingIntegrations = accounting?.integrations ?? [];
+  const primaryAccounting = accountingIntegrations[0];
+  const accountingIssueCount = (accounting?.conflictCount ?? 0) + (accounting?.errorCount ?? 0);
+  const accountingTone = primaryAccounting?.status === "READY"
+    ? accountingIssueCount > 0 ? "warning" : "success"
+    : primaryAccounting?.status === "AUTH_EXPIRED" || primaryAccounting?.status === "ERROR"
+      ? "danger"
+      : "warning";
 
   async function createDraftAction(formData: FormData) {
     "use server";
@@ -160,6 +168,51 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
           <span><strong>{finalizedDrafts.length}</strong> issued</span>
         </div>
       </header>
+
+      <section className={styles.accountingPanel} aria-label="Accounting reconciliation">
+        <div className={styles.sectionHeading}>
+          <div>
+            <p className={styles.sectionEyebrow}>Reconciliation</p>
+            <h3>Accounting sync</h3>
+          </div>
+          <p>ServiceDesk keeps invoice and payment truth authoritative while external accounting state is reconciled explicitly.</p>
+        </div>
+
+        {!accountingReady ? (
+          <div className={styles.accountingEmpty}>
+            <strong>Accounting reconciliation is not available yet.</strong>
+            <p>Contract billing continues normally; no external accounting export is being attempted.</p>
+          </div>
+        ) : accountingIntegrations.length === 0 ? (
+          <div className={styles.accountingEmpty}>
+            <strong>No accounting provider is connected.</strong>
+            <p>External export remains off until an accounting provider is explicitly configured.</p>
+          </div>
+        ) : (
+          <div className={styles.accountingBody}>
+            <div className={styles.accountingConnection}>
+              <div>
+                <span>Provider</span>
+                <strong>{primaryAccounting?.provider.replace(/[_-]+/g, " ")}</strong>
+              </div>
+              <StatusBadge tone={accountingTone}>
+                {(primaryAccounting?.status ?? "DISCONNECTED").toLowerCase().replace("_", " ")}
+              </StatusBadge>
+            </div>
+            <div className={styles.accountingMetrics}>
+              <div><span>Pending</span><strong>{accounting?.pendingCount ?? 0}</strong></div>
+              <div><span>Conflicts</span><strong>{accounting?.conflictCount ?? 0}</strong></div>
+              <div><span>Errors</span><strong>{accounting?.errorCount ?? 0}</strong></div>
+              <div><span>Tracked</span><strong>{accounting?.records.length ?? 0}</strong></div>
+            </div>
+            <p className={styles.accountingNote}>
+              {accountingIssueCount > 0
+                ? "Reconciliation needs review before affected records should be treated as synchronized."
+                : "Only normalized IDs, versions and reconciliation state are tracked here; provider credentials are not shown."}
+            </p>
+          </div>
+        )}
+      </section>
 
       {!billingReady ? (
         <div className={styles.readiness}>
