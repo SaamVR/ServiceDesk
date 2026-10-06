@@ -731,14 +731,15 @@ begin
     ), '[]'::jsonb),
     'messages', coalesce((select jsonb_agg(jsonb_build_object(
       'id', m.id, 'workspaceId', m.workspace_id, 'conversationId', m.conversation_id, 'direction', m.direction,
-      'channel', m.channel, 'content', m.content, 'providerMessageId', m.provider_message_id, 'createdAt', m.created_at
+      'senderKind', m.sender_kind, 'providerMessageId', m.provider_message_id, 'body', m.body,
+      'mediaReference', m.media_reference, 'deliveryState', m.delivery_state, 'createdAt', m.created_at
     ) order by m.created_at asc)
       from public.messages m join public.conversations c on c.workspace_id = m.workspace_id and c.id = m.conversation_id
       where m.workspace_id = v_workspace and (v_customer_filter is null or c.customer_id = v_customer_filter) and (v_conversation_filter is null or m.conversation_id = v_conversation_filter)
     ), '[]'::jsonb),
     'recurrenceRules', coalesce((select jsonb_agg(public.servicedesk_recurrence_rule_json(rr) order by rr.created_at desc)
       from public.recurrence_rules rr join public.requests r on r.workspace_id = rr.workspace_id and r.id = rr.request_id
-      where rr.workspace_id = v_workspace and (v_customer_filter is null or r.customer_id = v_customer_filter)
+      where rr.workspace_id = v_workspace and (v_customer_filter is null or r.customer_id = v_customer_filter) and (v_request_filter is null or rr.request_id = v_request_filter)
     ), '[]'::jsonb),
     'visitEvidence', coalesce((select jsonb_agg(jsonb_build_object(
       'id', ve.id, 'workspaceId', ve.workspace_id, 'visitId', ve.visit_id, 'kind', ve.kind,
@@ -752,12 +753,12 @@ begin
       'id', ci.id, 'workspaceId', ci.workspace_id, 'visitId', ci.visit_id, 'itemKey', ci.item_key,
       'completed', ci.completed, 'note', ci.note, 'updatedByUserId', ci.updated_by_user_id,
       'updatedAt', ci.updated_at, 'version', ci.version
-    ) order by ci.updated_at desc)
+    ) order by ci.item_key asc)
       from public.visit_checklist_items ci join public.visits v on v.workspace_id = ci.workspace_id and v.id = ci.visit_id join public.requests r on r.workspace_id = v.workspace_id and r.id = v.request_id
       where ci.workspace_id = v_workspace and (v_customer_filter is null or r.customer_id = v_customer_filter) and (v_visit_filter is null or ci.visit_id = v_visit_filter)
     ), '[]'::jsonb),
     'attentionItems', case when v_staff then coalesce((select jsonb_agg(public.servicedesk_attention_item_json(ai) order by ai.created_at desc)
-      from public.attention_items ai where ai.workspace_id = v_workspace and ai.status = 'OPEN'), '[]'::jsonb) else '[]'::jsonb end,
+      from public.attention_items ai where ai.workspace_id = v_workspace), '[]'::jsonb) else '[]'::jsonb end,
     'qualityCases', case when v_staff then coalesce((select jsonb_agg(public.servicedesk_quality_case_json(qc) order by qc.updated_at desc)
       from public.quality_cases qc where qc.workspace_id = v_workspace and (v_visit_filter is null or qc.visit_id = v_visit_filter)), '[]'::jsonb) else '[]'::jsonb end
   );
