@@ -48,6 +48,9 @@ export interface OperationalRequest {
   bedrooms?: number;
   bathrooms?: number;
   requestedStartAt?: string;
+  sourceChannel?: string;
+  callbackRequired?: boolean;
+  callbackContactRef?: string;
   version: number;
   createdAt?: string;
 }
@@ -455,6 +458,9 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   }));
   const requests: OperationalRequest[] = requestRows.map((row) => {
     const serviceRow = row.service_id ? serviceById.get(String(row.service_id)) : undefined;
+    const structured = row.structured_fields && typeof row.structured_fields === "object" && !Array.isArray(row.structured_fields)
+      ? row.structured_fields as Row
+      : {};
     return {
       id: String(row.id),
       customerId: textValue(row, "customer_id"),
@@ -467,6 +473,9 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       bedrooms: typeof row.bedrooms === "number" ? row.bedrooms : undefined,
       bathrooms: typeof row.bathrooms === "number" ? row.bathrooms : undefined,
       requestedStartAt: textValue(row, "requested_start_at"),
+      sourceChannel: textValue(structured, "sourceChannel"),
+      callbackRequired: structured.callbackRequired === true,
+      callbackContactRef: textValue(structured, "callbackContactRef"),
       version: numberValue(row, "version", 1),
       createdAt: textValue(row, "created_at"),
     };
