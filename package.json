@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:domain": "vitest run tests/domain",
     "test:db": "vitest run tests/db",
-    "check": "pnpm typecheck && pnpm test && pnpm lint"
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
+    "check:rc": "pnpm check && pnpm build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
