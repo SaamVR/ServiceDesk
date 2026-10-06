@@ -8,7 +8,7 @@ describe("email inbound Next route", () => {
   it("uses server-only config and authoritative Postgres conversation facade", () => {
     expect(route).toContain("readEmailInboundRuntimeConfig()");
     expect(route).toContain("createPostgresConversationFacadeMethods");
-    expect(route).toContain("SUPABASE_SERVICE_ROLE_KEY").not;
+    expect(route).not.toContain("process.env");
     expect(route).not.toContain("console.log");
   });
 
