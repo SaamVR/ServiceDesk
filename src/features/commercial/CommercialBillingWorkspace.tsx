@@ -78,7 +78,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
   const result = await loadCommercialFinanceSnapshot(workspaceSlug);
   if (!result.ok) return null;
 
-  const { portfolio, drafts, invoices, billingReady, accounting, accountingBackfill, accountingReady, directCosts, directCostsReady, timeZone } = result.value;
+  const { portfolio, drafts, invoices, billingReady, accounting, accountingBackfill, accountingReady, directCosts, directCostsReady, profitability, profitabilityReady, timeZone } = result.value;
   if (!portfolio.feature.enabled) return null;
 
   const contracts = portfolio.contracts.filter((contract) => contract.status === "ACTIVE");
@@ -110,6 +110,16 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
       .reduce((sum, total) => sum + total.netMinor, 0) ?? 0,
   }));
   const directCostReversalCount = directCosts?.entries.filter((entry) => entry.direction === "REVERSAL").length ?? 0;
+  const profitabilityRows = profitability?.rows ?? [];
+  const profitabilityAdjustmentLines = profitability?.unattributedAdjustments
+    .reduce((sum, item) => sum + item.lineCount, 0) ?? 0;
+  const profitabilityWarningCount = profitabilityRows.reduce(
+    (sum, row) => sum + row.unresolvedRateCount + row.partialPaymentVisitCount,
+    0,
+  ) + (profitability?.partialPaymentInvoiceCount ?? 0);
+  const profitabilityPeriod = profitability?.fromDate && profitability?.toDate
+    ? profitability.fromDate + " → " + profitability.toDate
+    : "Recorded period";
 
   async function createDraftAction(formData: FormData) {
     "use server";
@@ -278,6 +288,98 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
             </div>
             <p className={styles.costNote}>
               Reversal entries preserve the original cost history. These are operational cost inputs only; ServiceDesk does not infer or certify tax treatment.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section className={styles.profitabilityPanel} aria-label="Commercial profitability">
+        <div className={styles.sectionHeading}>
+          <div>
+            <p className={styles.sectionEyebrow}>Recorded margin</p>
+            <h3>Site &amp; service profitability</h3>
+          </div>
+          <p>{profitabilityPeriod}. Values use recorded direct costs only and do not certify tax or complete profitability.</p>
+        </div>
+
+        {!profitabilityReady ? (
+          <div className={styles.profitabilityEmpty}>
+            <strong>Profitability reporting is not available yet.</strong>
+            <p>Billing and direct-cost capture continue normally; no margin is being inferred.</p>
+          </div>
+        ) : profitabilityRows.length === 0 ? (
+          <div className={styles.profitabilityEmpty}>
+            <strong>No contract activity is available for this period.</strong>
+            <p>Margins appear after contract-backed visits and explicit rate/cost inputs exist.</p>
+          </div>
+        ) : (
+          <div className={styles.profitabilityBody}>
+            <div className={styles.profitabilityMeta}>
+              <span><strong>{profitabilityRows.length}</strong> site/service rows</span>
+              <span><strong>{profitabilityWarningCount}</strong> completeness flags</span>
+              <span><strong>{profitabilityAdjustmentLines}</strong> unattributed adjustments</span>
+            </div>
+            <div className={styles.profitabilityList}>
+              {profitabilityRows.map((row) => {
+                const hasCoverageGap =
+                  row.unresolvedRateCount > 0
+                  || row.estimatedCostedVisitCount < row.quotedVisitCount
+                  || row.actualCostedCompletedVisitCount < row.completedVisitCount;
+                const hasPaymentGap = row.partialPaymentVisitCount > 0;
+                return (
+                  <article className={styles.profitabilityRow} key={row.siteId + ":" + row.serviceId + ":" + row.currency}>
+                    <div className={styles.profitabilityTitle}>
+                      <div>
+                        <strong>{row.siteCode ?? "Contract site"} · {row.serviceName}</strong>
+                        <span>{row.serviceCode} · {row.currency}</span>
+                      </div>
+                      <StatusBadge tone={hasCoverageGap || hasPaymentGap ? "warning" : "success"}>
+                        {hasCoverageGap || hasPaymentGap ? "review coverage" : "recorded"}
+                      </StatusBadge>
+                    </div>
+                    <div className={styles.profitabilityMetrics}>
+                      <div>
+                        <span>Quoted / contract</span>
+                        <strong>{money(row.quotedRevenueMinor, row.currency)}</strong>
+                        <small>Recorded margin {money(row.recordedQuotedMarginMinor, row.currency)}</small>
+                      </div>
+                      <div>
+                        <span>Completed</span>
+                        <strong>{money(row.completedRevenueMinor, row.currency)}</strong>
+                        <small>Recorded margin {money(row.recordedCompletedMarginMinor, row.currency)}</small>
+                      </div>
+                      <div>
+                        <span>Paid exactly</span>
+                        <strong>{money(row.paidRevenueMinor, row.currency)}</strong>
+                        <small>Recorded margin {money(row.recordedPaidMarginMinor, row.currency)}</small>
+                      </div>
+                    </div>
+                    <div className={styles.profitabilityCoverage}>
+                      <span>Estimated cost coverage {row.estimatedCostedVisitCount}/{row.quotedVisitCount} visits</span>
+                      <span>Actual cost coverage {row.actualCostedCompletedVisitCount}/{row.completedVisitCount} completed</span>
+                      <span>Paid cost coverage {row.actualCostedPaidVisitCount}/{row.paidVisitCount} paid</span>
+                      {row.unresolvedRateCount > 0 ? <span>{row.unresolvedRateCount} unresolved rate{row.unresolvedRateCount === 1 ? "" : "s"}</span> : null}
+                      {row.partialPaymentVisitCount > 0 ? <span>{row.partialPaymentVisitCount} partial-payment visit{row.partialPaymentVisitCount === 1 ? "" : "s"} excluded</span> : null}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            {profitability?.unattributedAdjustments.length ? (
+              <div className={styles.profitabilityAdjustments}>
+                <strong>Adjustments kept outside service margin</strong>
+                <div>
+                  {profitability.unattributedAdjustments.map((adjustment) => (
+                    <span key={adjustment.currency}>
+                      {adjustment.currency}: {adjustment.lineCount} line{adjustment.lineCount === 1 ? "" : "s"} · finalized {money(adjustment.finalizedNetMinor, adjustment.currency)} · paid {money(adjustment.paidNetMinor, adjustment.currency)}
+                    </span>
+                  ))}
+                </div>
+                <p>Credits or charges without a service-level attribution are not distributed across services.</p>
+              </div>
+            ) : null}
+            <p className={styles.profitabilityNote}>
+              Partial collections are not prorated across sites or services. Missing cost entries remain coverage gaps rather than assumed zero cost.
             </p>
           </div>
         )}
