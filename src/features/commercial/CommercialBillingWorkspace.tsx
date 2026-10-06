@@ -295,7 +295,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
 
                       {draft.state === "DRAFT" ? (
                         <footer className={styles.draftFooter}>
-                          <p>Issuing locks the current included lines and creates an ordinary outstanding ServiceDesk invoice.</p>
+                          <p>Issuing locks the current included lines and creates an ordinary ServiceDesk invoice. It does not record payment; the balance remains outstanding until payment is recorded.</p>
                           <form action={finalizeAction}>
                             <input type="hidden" name="draftId" value={draft.id} />
                             <input type="hidden" name="expectedVersion" value={draft.version} />
