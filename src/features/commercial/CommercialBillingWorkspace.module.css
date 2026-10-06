@@ -56,7 +56,7 @@
 .sectionEyebrow {
   margin: 0 !important;
   color: var(--app-accent-hover) !important;
-  font-size: .58rem !important;
+  font-size: .66rem !important;
   font-weight: 800;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -78,7 +78,7 @@
   padding: 9px 10px;
   border-right: 1px solid var(--app-border);
   color: var(--app-text-muted);
-  font-size: .55rem;
+  font-size: .65rem;
 }
 
 .headerMetrics span:last-child {
@@ -120,7 +120,7 @@
 .accountingConnection span,
 .accountingMetrics span {
   color: var(--app-text-muted);
-  font-size: .54rem;
+  font-size: .64rem;
 }
 
 .accountingConnection strong {
@@ -176,7 +176,7 @@
 
 .accountingBackfill span {
   color: var(--app-text-muted);
-  font-size: .54rem;
+  font-size: .64rem;
 }
 
 .accountingBackfill strong {
@@ -195,7 +195,7 @@
   grid-column: 1 / -1;
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .56rem;
+  font-size: .65rem;
   line-height: 1.45;
 }
 
@@ -203,7 +203,7 @@
 .accountingEmpty p {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .58rem;
+  font-size: .66rem;
   line-height: 1.5;
 }
 
@@ -244,7 +244,7 @@
 .costMeta span,
 .costSummaryRow span {
   color: var(--app-text-muted);
-  font-size: .56rem;
+  font-size: .65rem;
 }
 
 .costMeta strong,
@@ -290,7 +290,7 @@
 .costNote {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .58rem;
+  font-size: .66rem;
   line-height: 1.5;
 }
 
@@ -318,7 +318,7 @@
 .profitabilityCoverage span,
 .profitabilityAdjustments span {
   color: var(--app-text-muted);
-  font-size: .56rem;
+  font-size: .65rem;
 }
 
 .profitabilityMeta strong {
@@ -360,7 +360,7 @@
 
 .profitabilityTitle span {
   color: var(--app-text-muted);
-  font-size: .55rem;
+  font-size: .65rem;
 }
 
 .profitabilityMetrics {
@@ -386,7 +386,7 @@
 .profitabilityMetrics span,
 .profitabilityMetrics small {
   color: var(--app-text-muted);
-  font-size: .52rem;
+  font-size: .64rem;
 }
 
 .profitabilityMetrics strong {
@@ -423,7 +423,7 @@
 .profitabilityNote {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .58rem;
+  font-size: .66rem;
   line-height: 1.5;
 }
 
@@ -457,7 +457,7 @@
 .taxMeta span,
 .taxProfileDetails span {
   color: var(--app-text-muted);
-  font-size: .56rem;
+  font-size: .65rem;
 }
 
 .taxMeta strong {
@@ -493,7 +493,7 @@
 
 .taxProfileHeader span {
   color: var(--app-text-muted);
-  font-size: .55rem;
+  font-size: .65rem;
 }
 
 .taxProfileDetails {
@@ -536,7 +536,7 @@
 .taxNote {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .58rem;
+  font-size: .66rem;
   line-height: 1.5;
 }
 
@@ -593,7 +593,7 @@
 .draftFooter p,
 .collection p {
   max-width: 720px;
-  font-size: .58rem;
+  font-size: .66rem;
 }
 
 .readiness,
@@ -649,7 +649,7 @@
 .draftHeader p {
   margin: 0;
   color: var(--app-accent-hover);
-  font-size: .55rem;
+  font-size: .65rem;
   font-weight: 760;
 }
 
@@ -662,7 +662,7 @@
 
 .draftHeader span {
   color: var(--app-text-muted);
-  font-size: .58rem;
+  font-size: .66rem;
 }
 
 .totals {
@@ -687,7 +687,7 @@
 
 .totals span {
   color: var(--app-text-muted);
-  font-size: .54rem;
+  font-size: .64rem;
 }
 
 .totals strong {
@@ -735,7 +735,7 @@
 
 .lineCopy span {
   color: var(--app-text-muted);
-  font-size: .55rem;
+  font-size: .65rem;
 }
 
 .lineAmount {

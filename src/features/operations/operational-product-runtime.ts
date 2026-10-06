@@ -19,6 +19,7 @@ import { createPostgresReportingPlatformFacadeMethods } from "@/server/core/repo
 import { createPostgresRecurrenceFacadeMethods } from "@/server/core/recurrence-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
+import { createPostgresVoiceMissedCallCommandPort } from "@/server/core/voice-missed-call-postgres";
 import { buildOperationalIntegrationHealth, type OperationalIntegrationHealth } from "./integration-health-runtime";
 
 type Row = Record<string, unknown>;
@@ -51,6 +52,8 @@ export interface OperationalRequest {
   sourceChannel?: string;
   callbackRequired?: boolean;
   callbackContactRef?: string;
+  callbackIntakeId?: string;
+  callbackState?: "PENDING" | "RESOLVED";
   version: number;
   createdAt?: string;
 }
@@ -476,6 +479,10 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       sourceChannel: textValue(structured, "sourceChannel"),
       callbackRequired: structured.callbackRequired === true,
       callbackContactRef: textValue(structured, "callbackContactRef"),
+      callbackIntakeId: textValue(structured, "voiceCallIntakeId"),
+      callbackState: structured.callbackState === "RESOLVED"
+        ? "RESOLVED"
+        : structured.callbackRequired === true ? "PENDING" : undefined,
       version: numberValue(row, "version", 1),
       createdAt: textValue(row, "created_at"),
     };
@@ -1144,3 +1151,38 @@ export async function revokeOperationalTeamInvitation(
   return { ok: true, message: "Invitation revoked." };
 }
 
+export async function setOperationalVoiceCallbackState(
+  workspaceSlug: string,
+  intakeId: string,
+  state: "PENDING" | "RESOLVED",
+): Promise<OperationalActionResult> {
+  const id = intakeId.trim();
+  if (!id || !["PENDING", "RESOLVED"].includes(state)) {
+    return { ok: false, message: "The callback task is no longer available." };
+  }
+
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const result = await createPostgresVoiceMissedCallCommandPort(resolved.value.rpc)
+    .setVoiceCallbackState(resolved.value.actor, {
+      intakeId: id,
+      state,
+      now: new Date().toISOString(),
+    });
+
+  if (!result.ok) {
+    if (result.code === "VOICE_CALLBACK_NOT_FOUND" || result.code === "VOICE_CALLBACK_REQUEST_NOT_LINKED") {
+      return { ok: false, message: "The callback task is no longer available. Refresh the request." };
+    }
+    if (result.code === "FORBIDDEN") {
+      return { ok: false, message: "You do not have permission to update this callback task." };
+    }
+    return { ok: false, message: "The callback task could not be updated. Refresh and try again." };
+  }
+
+  return {
+    ok: true,
+    message: state === "RESOLVED" ? "Callback marked complete." : "Callback reopened.",
+  };
+}
