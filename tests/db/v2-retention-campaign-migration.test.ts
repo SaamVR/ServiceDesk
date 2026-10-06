@@ -61,7 +61,7 @@ describe("V2 retention campaign dispatch governance", () => {
       "servicedesk_queue_retention_campaign_message",
       "servicedesk_resolve_retention_campaign_intent",
     ]) {
-      expect(sql).toMatch(new RegExp(`grant execute on function public\\.${fn}\\(jsonb\\)\\\\s+to service_role`));
+      expect(sql).toMatch(new RegExp(`grant execute on function public\\.${fn}\\(jsonb\\)\\s+to service_role`));
     }
     expect(sql).toContain("v_actor_role <> 'OWNER'");
     expect(sql).toContain("servicedesk_require_staff");
