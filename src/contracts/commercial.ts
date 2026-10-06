@@ -190,3 +190,40 @@ export interface CommercialBillingDraftDTO {
   updatedAt: ISODateTime;
   lines: CommercialBillingLineDTO[];
 }
+
+export type CommercialDirectCostCategory = "LABOR" | "SUPPLIES" | "TRAVEL";
+export type CommercialDirectCostBasis = "ESTIMATED" | "ACTUAL";
+export type CommercialDirectCostDirection = "COST" | "REVERSAL";
+export type CommercialDirectCostSourceKind = "MANUAL" | "CREW_RATE" | "SUPPLY" | "TRAVEL";
+
+export interface CommercialDirectCostDTO {
+  id: string;
+  workspaceId: string;
+  visitId: string;
+  contractVersionId: string;
+  siteId: string;
+  serviceId: string;
+  category: CommercialDirectCostCategory;
+  basis: CommercialDirectCostBasis;
+  direction: CommercialDirectCostDirection;
+  amountMinor: number;
+  currency: CurrencyCode;
+  sourceKind: CommercialDirectCostSourceKind;
+  sourceReference?: string;
+  reversesEntryId?: string;
+  occurredAt: ISODateTime;
+  createdAt: ISODateTime;
+}
+
+export interface CommercialDirectCostTotalDTO {
+  currency: CurrencyCode;
+  category: CommercialDirectCostCategory;
+  basis: CommercialDirectCostBasis;
+  netMinor: number;
+}
+
+export interface CommercialDirectCostSnapshotDTO {
+  workspaceId: string;
+  entries: CommercialDirectCostDTO[];
+  totals: CommercialDirectCostTotalDTO[];
+}
