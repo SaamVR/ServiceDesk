@@ -759,3 +759,69 @@ a.customerRow:hover {
     min-height: 44px;
   }
 }
+
+
+.accountArea {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 10px;
+}
+
+.accountArea form,
+.mobileAccount form {
+  margin: 0;
+}
+
+.signOutButton,
+.signInLink {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 9px;
+  background: transparent;
+  color: var(--app-text-muted, #626b76);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.signOutButton:hover,
+.signInLink:hover {
+  background: var(--app-surface-muted, #f1f3f5);
+  color: var(--app-text, #171a1f);
+  text-decoration: none;
+}
+
+.signInLink {
+  justify-self: end;
+  border: 1px solid var(--app-border-strong, #ccd2d8);
+  background: white;
+}
+
+.signOutButton:focus-visible,
+.signInLink:focus-visible {
+  outline: 3px solid var(--app-accent, #176b53);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .accountArea,
+  .signInLink {
+    display: none;
+  }
+
+  .mobileAccount {
+    flex-wrap: wrap;
+  }
+
+  .mobileAccount form {
+    margin-left: auto;
+  }
+}

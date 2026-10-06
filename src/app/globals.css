@@ -2059,3 +2059,14 @@ p { color: var(--muted); }
     min-height: 44px;
   }
 }
+
+
+.app-signout-form {
+  margin: 0;
+}
+
+.app-signout-button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}

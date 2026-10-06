@@ -30,7 +30,6 @@ import { FormActions, FormField, FormGrid, FormSection, SelectInput, TextArea, T
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
-import { formatWorkspaceDateTime } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
 import styles from "./OperationalProductRoute.module.css";
 
@@ -38,12 +37,7 @@ interface OperationalProductRouteProps {
   workspaceSlug: string;
   module: Exclude<StaffModule, "overview">;
   selectedConversationId?: string;
-  selectedCustomerId?: string;
-  selectedRequestId?: string;
-  selectedQuoteId?: string;
   selectedQualityCaseId?: string;
-  selectedJobId?: string;
-  selectedInvoiceId?: string;
   notice?: string;
   error?: string;
 }
@@ -68,8 +62,12 @@ function actionRedirect(
   );
 }
 
-function formatWhen(value: string | undefined, timeZone: string) {
-  return formatWorkspaceDateTime(value, timeZone);
+function formatWhen(value?: string) {
+  if (!value) return "Not scheduled";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 function statusBadgeTone(status: string): "neutral" | "success" | "warning" | "danger" | "info" {
@@ -204,7 +202,7 @@ function InboxView({
                     <p>{message.body ?? "Media message"}</p>
                   </div>
                   <small>
-                    {formatWhen(message.createdAt, data.workspace.timezone)} · {message.deliveryState ? message.deliveryState.replaceAll("_", " ") : "Received"}
+                    {formatWhen(message.createdAt)} · {message.deliveryState ? message.deliveryState.replaceAll("_", " ") : "Received"}
                   </small>
                 </article>
               ))
@@ -256,7 +254,7 @@ function InboxView({
   );
 }
 
-function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSnapshot; selectedCustomerId?: string }) {
+function CustomersView({ data }: { data: OperationalStaffSnapshot }) {
   if (data.customers.length === 0) {
     return (
       <EmptyState
@@ -265,16 +263,6 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
       />
     );
   }
-
-  const selectedCustomer =
-    data.customers.find((customer) => customer.id === selectedCustomerId) ??
-    data.customers[0];
-  const selectedProperties = data.properties.filter(
-    (property) => property.customerId === selectedCustomer.id,
-  );
-  const selectedRequests = data.requests.filter(
-    (request) => request.customerId === selectedCustomer.id,
-  );
 
   return (
     <div className={styles.stack}>
@@ -285,7 +273,6 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
         caption="Customers"
         rows={data.customers}
         getRowKey={(customer) => customer.id}
-        selectedRowKey={selectedCustomer.id}
         columns={[
           {
             id: "customer",
@@ -303,56 +290,30 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
             header: "Requests",
             cell: (customer) => data.requests.filter((item) => item.customerId === customer.id).length,
           },
-          {
-            id: "action",
-            header: "Action",
-            priority: "primary",
-            cell: (customer) => (
-              <a
-                className="app-button-secondary"
-                href={"?customer=" + encodeURIComponent(customer.id)}
-                aria-current={customer.id === selectedCustomer.id ? "page" : undefined}
-              >
-                {customer.id === selectedCustomer.id ? "Viewing" : "Open"}
-              </a>
-            ),
-          },
         ]}
         renderMobileRow={(customer) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={customer.displayName}
-              secondary={
-                data.properties.filter((item) => item.customerId === customer.id).length +
-                " properties · " +
-                data.requests.filter((item) => item.customerId === customer.id).length +
-                " requests"
-              }
-            />
-            <a
-              className="app-button-secondary"
-              href={"?customer=" + encodeURIComponent(customer.id)}
-              aria-current={customer.id === selectedCustomer.id ? "page" : undefined}
-            >
-              {customer.id === selectedCustomer.id ? "Viewing" : "Open"}
-            </a>
-          </div>
+          <DataCellStack
+            primary={customer.displayName}
+            secondary={
+              data.properties.filter((item) => item.customerId === customer.id).length +
+              " properties · " +
+              data.requests.filter((item) => item.customerId === customer.id).length +
+              " requests"
+            }
+          />
         )}
       />
 
-      <Panel>
-        <SectionHeader
-          title={selectedCustomer.displayName}
-          description={selectedCustomer.leadSource ? "Lead source: " + selectedCustomer.leadSource : "Customer details"}
-        />
-        <div className="app-grid app-grid-two">
-          <section>
-            <h3>Properties</h3>
-            {selectedProperties.length === 0 ? (
-              <AppEmptyState title="No properties" description="No property is linked to this customer yet." />
-            ) : (
-              <div className="app-row-list">
-                {selectedProperties.map((property) => (
+      {data.customers.slice(0, 8).map((customer) => (
+        <Panel key={customer.id}>
+          <SectionHeader title={customer.displayName} description="Property context" />
+          {data.properties.filter((item) => item.customerId === customer.id).length === 0 ? (
+            <AppEmptyState title="No properties" description="No property is linked to this customer yet." />
+          ) : (
+            <div className="app-row-list">
+              {data.properties
+                .filter((item) => item.customerId === customer.id)
+                .map((property) => (
                   <article className="app-row" key={property.id}>
                     <div>
                       <h3>{property.label}</h3>
@@ -364,40 +325,10 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
                     </div>
                   </article>
                 ))}
-              </div>
-            )}
-          </section>
-
-          <section>
-            <h3>Recent requests</h3>
-            {selectedRequests.length === 0 ? (
-              <AppEmptyState title="No requests" description="No service request is linked to this customer yet." />
-            ) : (
-              <div className="app-row-list">
-                {selectedRequests.slice(0, 8).map((request) => {
-                  const quote = data.quotes.find(
-                    (item) => item.requestId === request.id && item.status !== "SUPERSEDED",
-                  );
-                  return (
-                    <article className="app-row" key={request.id}>
-                      <div>
-                        <h3>{request.serviceLabel}</h3>
-                        <p>{formatWhen(request.requestedStartAt, data.workspace.timezone)}</p>
-                      </div>
-                      <div className="app-row-meta">
-                        <StatusBadge tone={statusBadgeTone(request.status)}>
-                          {request.status.replaceAll("_", " ")}
-                        </StatusBadge>
-                        <span>{quote ? "Quote " + quote.status.replaceAll("_", " ").toLowerCase() : "No quote yet"}</span>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        </div>
-      </Panel>
+            </div>
+          )}
+        </Panel>
+      ))}
     </div>
   );
 }
@@ -405,25 +336,17 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
 function RequestsView({
   data,
   workspaceSlug,
-  selectedRequestId,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
-  selectedRequestId?: string;
 }) {
   async function calculateQuote(formData: FormData) {
     "use server";
-    const requestId = String(formData.get("requestId") ?? "");
     const result = await calculateOperationalQuote(
       workspaceSlug,
-      requestId,
+      String(formData.get("requestId") ?? ""),
     );
-    actionRedirect(
-      workspaceSlug,
-      "requests",
-      result,
-      "request=" + encodeURIComponent(requestId) + "&",
-    );
+    actionRedirect(workspaceSlug, "requests", result);
   }
 
   if (data.requests.length === 0) {
@@ -435,24 +358,6 @@ function RequestsView({
     );
   }
 
-  const selectedRequest =
-    data.requests.find((request) => request.id === selectedRequestId) ??
-    data.requests[0];
-  const selectedRequestCustomer = data.customers.find(
-    (customer) => customer.id === selectedRequest.customerId,
-  );
-  const selectedRequestProperty = data.properties.find(
-    (property) => property.id === selectedRequest.propertyId,
-  );
-  const selectedRequestQuote = data.quotes.find(
-    (quote) => quote.requestId === selectedRequest.id && quote.status !== "SUPERSEDED",
-  );
-  const selectedRequestCanCalculate =
-    Boolean(selectedRequest.serviceCode) &&
-    selectedRequest.bedrooms !== undefined &&
-    selectedRequest.bathrooms !== undefined &&
-    !["BOOKED", "LOST", "CLOSED"].includes(selectedRequest.status);
-
   return (
     <div className={styles.stack}>
       <OperationsToolbar
@@ -462,7 +367,6 @@ function RequestsView({
         caption="Request queue"
         rows={data.requests}
         getRowKey={(request) => request.id}
-        selectedRowKey={selectedRequest.id}
         columns={[
           {
             id: "service",
@@ -483,7 +387,7 @@ function RequestsView({
           {
             id: "requested",
             header: "Requested",
-            cell: (request) => formatWhen(request.requestedStartAt, data.workspace.timezone),
+            cell: (request) => formatWhen(request.requestedStartAt),
           },
           {
             id: "home",
@@ -516,92 +420,14 @@ function RequestsView({
               );
             },
           },
-          {
-            id: "action",
-            header: "Action",
-            priority: "primary",
-            cell: (request) => (
-              <a
-                className="app-button-secondary"
-                href={"?request=" + encodeURIComponent(request.id)}
-                aria-current={request.id === selectedRequest.id ? "page" : undefined}
-              >
-                {request.id === selectedRequest.id ? "Viewing" : "Open"}
-              </a>
-            ),
-          },
         ]}
         renderMobileRow={(request) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={request.serviceLabel}
-              secondary={request.status.replaceAll("_", " ") + " · " + formatWhen(request.requestedStartAt, data.workspace.timezone)}
-            />
-            <a
-              className="app-button-secondary"
-              href={"?request=" + encodeURIComponent(request.id)}
-              aria-current={request.id === selectedRequest.id ? "page" : undefined}
-            >
-              {request.id === selectedRequest.id ? "Viewing" : "Open"}
-            </a>
-          </div>
+          <DataCellStack
+            primary={request.serviceLabel}
+            secondary={request.status.replaceAll("_", " ") + " · " + formatWhen(request.requestedStartAt)}
+          />
         )}
       />
-
-      <Panel>
-        <SectionHeader
-          title={selectedRequest.serviceLabel}
-          description={
-            (selectedRequestCustomer?.displayName ?? "Visitor enquiry") +
-            " · " +
-            formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)
-          }
-          action={
-            <StatusBadge tone={statusBadgeTone(selectedRequest.status)}>
-              {selectedRequest.status.replaceAll("_", " ")}
-            </StatusBadge>
-          }
-        />
-
-        <div className="app-grid app-grid-two">
-          <section>
-            <h3>Request details</h3>
-            <dl className="summary-list">
-              <div><dt>Customer</dt><dd>{selectedRequestCustomer?.displayName ?? "Visitor enquiry"}</dd></div>
-              <div><dt>Property</dt><dd>{selectedRequestProperty?.label ?? "Not linked"}</dd></div>
-              <div><dt>Address</dt><dd>{selectedRequestProperty?.address ?? "Not available"}</dd></div>
-              <div><dt>Home</dt><dd>{(selectedRequest.bedrooms ?? "—") + " bed · " + (selectedRequest.bathrooms ?? "—") + " bath"}</dd></div>
-            </dl>
-          </section>
-
-          <section>
-            <h3>Quote</h3>
-            {selectedRequestQuote ? (
-              <div className="app-row-list">
-                <article className="app-row">
-                  <div>
-                    <h3>{formatMinorMoney(selectedRequestQuote.totalMinor, selectedRequestQuote.currency)}</h3>
-                    <p>Version {selectedRequestQuote.version}</p>
-                  </div>
-                  <StatusBadge tone={statusBadgeTone(selectedRequestQuote.status)}>
-                    {selectedRequestQuote.status.replaceAll("_", " ")}
-                  </StatusBadge>
-                </article>
-              </div>
-            ) : (
-              <div className={styles.actions}>
-                <p>No quote has been calculated for this request yet.</p>
-                <form action={calculateQuote}>
-                  <input type="hidden" name="requestId" value={selectedRequest.id} />
-                  <button className="app-button-secondary" type="submit" disabled={!selectedRequestCanCalculate}>
-                    Calculate quote
-                  </button>
-                </form>
-              </div>
-            )}
-          </section>
-        </div>
-      </Panel>
     </div>
   );
 }
@@ -609,43 +435,22 @@ function RequestsView({
 function QuotesView({
   data,
   workspaceSlug,
-  selectedQuoteId,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
-  selectedQuoteId?: string;
 }) {
   async function sendQuote(formData: FormData) {
     "use server";
-    const quoteId = String(formData.get("quoteId") ?? "");
     const result = await sendOperationalQuote(
       workspaceSlug,
-      quoteId,
+      String(formData.get("quoteId") ?? ""),
     );
-    actionRedirect(
-      workspaceSlug,
-      "quotes",
-      result,
-      "quote=" + encodeURIComponent(quoteId) + "&",
-    );
+    actionRedirect(workspaceSlug, "quotes", result);
   }
 
   if (data.quotes.length === 0) {
     return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." />;
   }
-
-  const selectedQuote =
-    data.quotes.find((quote) => quote.id === selectedQuoteId) ??
-    data.quotes[0];
-  const selectedQuoteRequest = data.requests.find(
-    (request) => request.id === selectedQuote.requestId,
-  );
-  const selectedQuoteCustomer = data.customers.find(
-    (customer) => customer.id === selectedQuoteRequest?.customerId,
-  );
-  const selectedQuoteProperty = data.properties.find(
-    (property) => property.id === selectedQuoteRequest?.propertyId,
-  );
 
   return (
     <div className={styles.stack}>
@@ -656,7 +461,6 @@ function QuotesView({
         caption="Quotes"
         rows={data.quotes}
         getRowKey={(quote) => quote.id}
-        selectedRowKey={selectedQuote.id}
         columns={[
           {
             id: "request",
@@ -683,7 +487,7 @@ function QuotesView({
             id: "validity",
             header: "Valid until",
             priority: "optional",
-            cell: (quote) => formatWhen(quote.validUntil, data.workspace.timezone),
+            cell: (quote) => formatWhen(quote.validUntil),
           },
           {
             id: "action",
@@ -691,81 +495,25 @@ function QuotesView({
             priority: "primary",
             cell: (quote) => (
               <RowActions label={"Actions for quote " + quote.id}>
-                <a
-                  className="app-button-secondary"
-                  href={"?quote=" + encodeURIComponent(quote.id)}
-                  aria-current={quote.id === selectedQuote.id ? "page" : undefined}
-                >
-                  {quote.id === selectedQuote.id ? "Viewing" : "Open"}
-                </a>
                 {quote.status === "APPROVED" ? (
                   <form action={sendQuote}>
                     <input type="hidden" name="quoteId" value={quote.id} />
                     <button className="app-button-secondary" type="submit">Send quote</button>
                   </form>
-                ) : quote.status === "SENT" ? (
-                  <span>Awaiting customer</span>
-                ) : null}
+                ) : (
+                  <span>{quote.status === "SENT" ? "Awaiting customer" : "No action available"}</span>
+                )}
               </RowActions>
             ),
           },
         ]}
         renderMobileRow={(quote) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={formatMinorMoney(quote.totalMinor, quote.currency)}
-              secondary={quote.status.replaceAll("_", " ") + " · v" + quote.version}
-            />
-            <a
-              className="app-button-secondary"
-              href={"?quote=" + encodeURIComponent(quote.id)}
-              aria-current={quote.id === selectedQuote.id ? "page" : undefined}
-            >
-              {quote.id === selectedQuote.id ? "Viewing" : "Open"}
-            </a>
-          </div>
+          <DataCellStack
+            primary={formatMinorMoney(quote.totalMinor, quote.currency)}
+            secondary={quote.status.replaceAll("_", " ") + " · v" + quote.version}
+          />
         )}
       />
-
-      <Panel>
-        <SectionHeader
-          title={selectedQuoteRequest?.serviceLabel ?? "Service quote"}
-          description={
-            (selectedQuoteCustomer?.displayName ?? "Customer unavailable") +
-            " · " +
-            (selectedQuoteProperty?.label ?? "No property linked")
-          }
-          action={
-            <StatusBadge tone={statusBadgeTone(selectedQuote.status)}>
-              {selectedQuote.status.replaceAll("_", " ")}
-            </StatusBadge>
-          }
-        />
-
-        <dl className="summary-list">
-          <div><dt>Total</dt><dd>{formatMinorMoney(selectedQuote.totalMinor, selectedQuote.currency)}</dd></div>
-          <div><dt>Deposit</dt><dd>{formatMinorMoney(selectedQuote.depositMinor, selectedQuote.currency)}</dd></div>
-          <div><dt>Balance</dt><dd>{formatMinorMoney(selectedQuote.balanceMinor, selectedQuote.currency)}</dd></div>
-          <div><dt>Service time</dt><dd>{selectedQuote.durationMinutes + " min + " + selectedQuote.bufferMinutes + " min buffer"}</dd></div>
-          <div><dt>Version</dt><dd>{selectedQuote.version}</dd></div>
-          <div><dt>Valid until</dt><dd>{formatWhen(selectedQuote.validUntil, data.workspace.timezone)}</dd></div>
-        </dl>
-
-        <div className={styles.actions}>
-          {selectedQuote.status === "APPROVED" ? (
-            <form action={sendQuote}>
-              <input type="hidden" name="quoteId" value={selectedQuote.id} />
-              <button className="app-button-primary" type="submit">Send quote</button>
-            </form>
-          ) : selectedQuote.status === "SENT" ? (
-            <p>Waiting for the customer to accept or decline this quote.</p>
-          ) : selectedQuote.status === "ACCEPTED" ? (
-            <p>Accepted. Continue scheduling from the Schedule workspace.</p>
-          ) : (
-            <p>No staff action is available for this quote in its current state.</p>
-          )}
-        </div>
-      </Panel>
     </div>
   );
 }
@@ -857,7 +605,7 @@ function ScheduleView({
               id: "start",
               header: "Start",
               priority: "primary",
-              cell: (visit) => formatWhen(visit.startAt, data.workspace.timezone),
+              cell: (visit) => formatWhen(visit.startAt),
             },
             {
               id: "service",
@@ -879,7 +627,7 @@ function ScheduleView({
           renderMobileRow={(visit) => (
             <DataCellStack
               primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-              secondary={formatWhen(visit.startAt, data.workspace.timezone) + " · " + visit.status.replaceAll("_", " ")}
+              secondary={formatWhen(visit.startAt) + " · " + visit.status.replaceAll("_", " ")}
             />
           )}
         />
@@ -921,7 +669,7 @@ function ScheduleView({
                   {" · "}{quote.durationMinutes} min
                 </p>
                 {activeHold ? (
-                  <p>Slot held until {formatWhen(activeHold.expiresAt, data.workspace.timezone)}. Payment remains pending.</p>
+                  <p>Slot held until {formatWhen(activeHold.expiresAt)}. Payment remains pending.</p>
                 ) : candidates.length === 0 ? (
                   <p>No capacity slot currently fits this quote.</p>
                 ) : (
@@ -931,7 +679,7 @@ function ScheduleView({
                         <input type="hidden" name="quoteId" value={quote.id} />
                         <input type="hidden" name="slotId" value={slot.id} />
                         <button className="app-button-secondary" type="submit">
-                          Hold {formatWhen(slot.startAt, data.workspace.timezone)}
+                          Hold {formatWhen(slot.startAt)}
                         </button>
                       </form>
                     ))}
@@ -957,7 +705,7 @@ function ScheduleView({
               <article className="app-row" key={request.id}>
                 <div>
                   <h3>{request.serviceLabel}</h3>
-                  <p>Requested {formatWhen(request.requestedStartAt, data.workspace.timezone)}</p>
+                  <p>Requested {formatWhen(request.requestedStartAt)}</p>
                 </div>
                 <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>
               </article>
@@ -972,11 +720,9 @@ function ScheduleView({
 function JobsView({
   data,
   workspaceSlug,
-  selectedJobId,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
-  selectedJobId?: string;
 }) {
   async function transitionVisit(formData: FormData) {
     "use server";
@@ -989,18 +735,12 @@ function JobsView({
     if (!["ASSIGN", "EN_ROUTE", "START", "SUBMIT_REVIEW", "COMPLETE"].includes(action)) {
       actionRedirect(workspaceSlug, "jobs", { ok: false, message: "Unsupported visit action." });
     }
-    const visitId = String(formData.get("visitId") ?? "");
     const result = await transitionOperationalVisit(
       workspaceSlug,
-      visitId,
+      String(formData.get("visitId") ?? ""),
       action,
     );
-    actionRedirect(
-      workspaceSlug,
-      "jobs",
-      result,
-      "job=" + encodeURIComponent(visitId) + "&",
-    );
+    actionRedirect(workspaceSlug, "jobs", result);
   }
 
   async function saveVisitNote(formData: FormData) {
@@ -1008,37 +748,25 @@ function JobsView({
     const kind = String(formData.get("kind") ?? "TIME_MATERIAL_NOTE") === "INCIDENT_NOTE"
       ? "INCIDENT_NOTE"
       : "TIME_MATERIAL_NOTE";
-    const visitId = String(formData.get("visitId") ?? "");
     const result = await addOperationalVisitNote(
       workspaceSlug,
-      visitId,
+      String(formData.get("visitId") ?? ""),
       kind,
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(
-      workspaceSlug,
-      "jobs",
-      result,
-      "job=" + encodeURIComponent(visitId) + "&",
-    );
+    actionRedirect(workspaceSlug, "jobs", result);
   }
 
   async function saveChecklistItem(formData: FormData) {
     "use server";
-    const visitId = String(formData.get("visitId") ?? "");
     const result = await setOperationalChecklistItem(
       workspaceSlug,
-      visitId,
+      String(formData.get("visitId") ?? ""),
       String(formData.get("itemKey") ?? ""),
       String(formData.get("completed") ?? "") === "true",
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(
-      workspaceSlug,
-      "jobs",
-      result,
-      "job=" + encodeURIComponent(visitId) + "&",
-    );
+    actionRedirect(workspaceSlug, "jobs", result);
   }
 
   const nextAction = (status: string) => {
@@ -1054,16 +782,6 @@ function JobsView({
     return <EmptyState title="No jobs yet" detail="Paid and scheduled visits will appear here." />;
   }
 
-  const activeVisits = data.visits.filter(
-    (visit) => !["COMPLETED", "CANCELLED"].includes(visit.status),
-  );
-  const selectedVisit =
-    data.visits.find((visit) => visit.id === selectedJobId) ??
-    activeVisits[0] ??
-    data.visits[0];
-  const selectedEvidence = data.visitEvidence.filter((item) => item.visitId === selectedVisit.id);
-  const selectedChecklist = data.visitChecklistItems.filter((item) => item.visitId === selectedVisit.id);
-
   return (
     <div className={styles.stack}>
       <OperationsToolbar
@@ -1073,7 +791,6 @@ function JobsView({
         caption="Jobs"
         rows={data.visits}
         getRowKey={(visit) => visit.id}
-        selectedRowKey={selectedVisit.id}
         columns={[
           {
             id: "visit",
@@ -1082,7 +799,7 @@ function JobsView({
             cell: (visit) => (
               <DataCellStack
                 primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-                secondary={formatWhen(visit.startAt, data.workspace.timezone)}
+                secondary={formatWhen(visit.startAt)}
               />
             ),
           },
@@ -1108,7 +825,7 @@ function JobsView({
           },
           {
             id: "action",
-            header: "Actions",
+            header: "Next action",
             priority: "primary",
             cell: (visit) => {
               const action = nextAction(visit.status);
@@ -1116,199 +833,139 @@ function JobsView({
               const reviewEvidenceReady =
                 evidence.some((item) => item.kind === "BEFORE_PHOTO") &&
                 evidence.some((item) => item.kind === "AFTER_PHOTO");
-              return (
+              return action ? (
                 <RowActions label={"Actions for job " + visit.id}>
-                  <a
-                    className="app-button-secondary"
-                    href={"?job=" + encodeURIComponent(visit.id)}
-                    aria-current={visit.id === selectedVisit.id ? "page" : undefined}
-                  >
-                    {visit.id === selectedVisit.id ? "Viewing" : "Open"}
-                  </a>
-                  {action ? (
-                    <form action={transitionVisit}>
-                      <input type="hidden" name="visitId" value={visit.id} />
-                      <button
-                        className="app-button-secondary"
-                        name="action"
-                        value={action.action}
-                        disabled={
-                          (action.action === "ASSIGN" && !visit.crewId) ||
-                          (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
-                        }
-                        title={
-                          action.action === "ASSIGN" && !visit.crewId
-                            ? "Choose a crew before confirming assignment."
-                            : action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
-                              ? "Add both before and after evidence before submitting for review."
-                              : undefined
-                        }
-                      >
-                        {action.label}
-                      </button>
-                    </form>
-                  ) : null}
+                  <form action={transitionVisit}>
+                    <input type="hidden" name="visitId" value={visit.id} />
+                    <button
+                      className="app-button-secondary"
+                      name="action"
+                      value={action.action}
+                      disabled={
+                        (action.action === "ASSIGN" && !visit.crewId) ||
+                        (action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady)
+                      }
+                      title={
+                        action.action === "ASSIGN" && !visit.crewId
+                          ? "Choose a crew before confirming assignment."
+                          : action.action === "SUBMIT_REVIEW" && !reviewEvidenceReady
+                            ? "Add both before and after evidence before submitting for review."
+                            : undefined
+                      }
+                    >
+                      {action.label}
+                    </button>
+                  </form>
                 </RowActions>
-              );
+              ) : <span>No lifecycle action</span>;
             },
           },
         ]}
         renderMobileRow={(visit) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
-              secondary={visit.status.replaceAll("_", " ") + " · " + formatWhen(visit.startAt, data.workspace.timezone)}
-            />
-            <a
-              className="app-button-secondary"
-              href={"?job=" + encodeURIComponent(visit.id)}
-              aria-current={visit.id === selectedVisit.id ? "page" : undefined}
-            >
-              {visit.id === selectedVisit.id ? "Viewing" : "Open"}
-            </a>
-          </div>
+          <DataCellStack
+            primary={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Visit"}
+            secondary={visit.status.replaceAll("_", " ") + " · " + formatWhen(visit.startAt)}
+          />
         )}
       />
 
-      <Panel>
-        <SectionHeader
-          title={data.requests.find((item) => item.id === selectedVisit.requestId)?.serviceLabel ?? "Service visit"}
-          description={
-            formatWhen(selectedVisit.startAt, data.workspace.timezone) +
-            " · " +
-            (selectedVisit.crewId
-              ? data.crews.find((crew) => crew.id === selectedVisit.crewId)?.name ?? "Assigned crew"
-              : "Unassigned")
-          }
-          action={
-            <StatusBadge tone={statusBadgeTone(selectedVisit.status)}>
-              {selectedVisit.status.replaceAll("_", " ")}
-            </StatusBadge>
-          }
-        />
-
-        <div className="app-grid app-grid-two">
-          <FormSection
-            title="Field notes & evidence"
-            description="Keep the selected job focused while reviewing its field record."
-          >
-            <form action={saveVisitNote}>
-              <input type="hidden" name="visitId" value={selectedVisit.id} />
-              <FormGrid columns={1}>
-                <FormField id={"job-note-kind-" + selectedVisit.id} label="Note type">
-                  {({ id, describedBy, invalid }) => (
-                    <SelectInput
-                      id={id}
-                      name="kind"
-                      defaultValue="TIME_MATERIAL_NOTE"
-                      describedBy={describedBy}
-                      invalid={invalid}
-                    >
-                      <option value="TIME_MATERIAL_NOTE">Time / material note</option>
-                      <option value="INCIDENT_NOTE">Incident</option>
-                    </SelectInput>
-                  )}
-                </FormField>
-                <FormField id={"job-note-" + selectedVisit.id} label="Note" required>
-                  {({ id, describedBy, invalid }) => (
-                    <TextArea
-                      id={id}
-                      name="note"
-                      rows={3}
-                      required
-                      describedBy={describedBy}
-                      invalid={invalid}
-                      placeholder="Add a field note"
-                    />
-                  )}
-                </FormField>
-              </FormGrid>
-              <FormActions>
-                <button className="app-button-secondary" type="submit">Save note</button>
-              </FormActions>
-            </form>
-
-            {selectedEvidence.length ? (
-              <div className="app-row-list">
-                {selectedEvidence.slice(0, 8).map((item) => (
-                  <article className="app-row" key={item.id}>
-                    <div>
-                      <h3>{item.kind.replaceAll("_", " ")}</h3>
-                      <p>{item.text ?? "Photo evidence"}</p>
-                    </div>
-                    <div className="app-row-meta"><span>{formatWhen(item.capturedAt, data.workspace.timezone)}</span></div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <AppEmptyState
-                title="No field evidence yet"
-                description="Before/after photos are added from the crew workflow; staff can record notes here."
+      {data.visits
+        .filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status))
+        .slice(0, 6)
+        .map((visit) => {
+          const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
+          const checklist = data.visitChecklistItems.filter((item) => item.visitId === visit.id);
+          return (
+            <Panel key={visit.id}>
+              <SectionHeader
+                title={data.requests.find((item) => item.id === visit.requestId)?.serviceLabel ?? "Service visit"}
+                description={formatWhen(visit.startAt) + " · " + visit.status.replaceAll("_", " ")}
+                action={<StatusBadge tone={statusBadgeTone(visit.status)}>{visit.status.replaceAll("_", " ")}</StatusBadge>}
               />
-            )}
-          </FormSection>
 
-          <FormSection
-            title="Checklist"
-            description="Review and update checklist items for the selected job only."
-          >
-            <form action={saveChecklistItem}>
-              <input type="hidden" name="visitId" value={selectedVisit.id} />
-              <input type="hidden" name="completed" value="true" />
-              <FormGrid columns={1}>
-                <FormField id={"checklist-key-" + selectedVisit.id} label="Item" required>
-                  {({ id, describedBy, invalid }) => (
-                    <TextInput
-                      id={id}
-                      name="itemKey"
-                      required
-                      describedBy={describedBy}
-                      invalid={invalid}
-                      placeholder="e.g. kitchen"
-                    />
-                  )}
-                </FormField>
-                <FormField id={"checklist-note-" + selectedVisit.id} label="Note">
-                  {({ id, describedBy, invalid }) => (
-                    <TextInput
-                      id={id}
-                      name="note"
-                      describedBy={describedBy}
-                      invalid={invalid}
-                      placeholder="Optional note"
-                    />
-                  )}
-                </FormField>
-              </FormGrid>
-              <FormActions>
-                <button className="app-button-secondary" type="submit">Mark complete</button>
-              </FormActions>
-            </form>
-
-            {selectedChecklist.length ? (
-              <div className="app-row-list">
-                {selectedChecklist.map((item) => (
-                  <article className="app-row" key={item.id}>
-                    <div>
-                      <h3>{item.itemKey}</h3>
-                      <p>{item.note ?? "No note"}</p>
+              <div className="app-grid app-grid-two">
+                <FormSection
+                  title="Field notes"
+                  description="Save time, material or incident notes directly to the job record."
+                >
+                  <form action={saveVisitNote}>
+                    <input type="hidden" name="visitId" value={visit.id} />
+                    <FormGrid columns={1}>
+                      <FormField id={"job-note-kind-" + visit.id} label="Note type">
+                        {({ id, describedBy, invalid }) => (
+                          <SelectInput id={id} name="kind" defaultValue="TIME_MATERIAL_NOTE" describedBy={describedBy} invalid={invalid}>
+                            <option value="TIME_MATERIAL_NOTE">Time / material note</option>
+                            <option value="INCIDENT_NOTE">Incident</option>
+                          </SelectInput>
+                        )}
+                      </FormField>
+                      <FormField id={"job-note-" + visit.id} label="Note" required>
+                        {({ id, describedBy, invalid }) => (
+                          <TextArea id={id} name="note" rows={3} required describedBy={describedBy} invalid={invalid} placeholder="Add a field note" />
+                        )}
+                      </FormField>
+                    </FormGrid>
+                    <FormActions>
+                      <button className="app-button-secondary" type="submit">Save note</button>
+                    </FormActions>
+                  </form>
+                  {evidence.length ? (
+                    <div className="app-row-list">
+                      {evidence.slice(0, 5).map((item) => (
+                        <article className="app-row" key={item.id}>
+                          <div>
+                            <h3>{item.kind.replaceAll("_", " ")}</h3>
+                            <p>{item.text ?? "Photo evidence"}</p>
+                          </div>
+                          <div className="app-row-meta"><span>{formatWhen(item.capturedAt)}</span></div>
+                        </article>
+                      ))}
                     </div>
-                    <StatusBadge tone={item.completed ? "success" : "neutral"}>
-                      {item.completed ? "Complete" : "Open"}
-                    </StatusBadge>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <AppEmptyState
-                title="No checklist items yet"
-                description="Checklist items saved for this job will appear here."
-              />
-            )}
-          </FormSection>
-        </div>
-      </Panel>
+                  ) : (
+                    <AppEmptyState title="No field evidence yet" description="Before/after photos are added from the authorized crew workflow; staff can record notes here." />
+                  )}
+                </FormSection>
 
+                <FormSection
+                  title="Checklist"
+                  description="Record or update a named checklist item for this visit."
+                >
+                  <form action={saveChecklistItem}>
+                    <input type="hidden" name="visitId" value={visit.id} />
+                    <input type="hidden" name="completed" value="true" />
+                    <FormGrid columns={1}>
+                      <FormField id={"checklist-key-" + visit.id} label="Item" required>
+                        {({ id, describedBy, invalid }) => (
+                          <TextInput id={id} name="itemKey" required describedBy={describedBy} invalid={invalid} placeholder="e.g. kitchen" />
+                        )}
+                      </FormField>
+                      <FormField id={"checklist-note-" + visit.id} label="Note">
+                        {({ id, describedBy, invalid }) => (
+                          <TextInput id={id} name="note" describedBy={describedBy} invalid={invalid} placeholder="Optional note" />
+                        )}
+                      </FormField>
+                    </FormGrid>
+                    <FormActions>
+                      <button className="app-button-secondary" type="submit">Mark complete</button>
+                    </FormActions>
+                  </form>
+                  {checklist.length ? (
+                    <div className="app-row-list">
+                      {checklist.map((item) => (
+                        <article className="app-row" key={item.id}>
+                          <div><h3>{item.itemKey}</h3><p>{item.note ?? "No note"}</p></div>
+                          <StatusBadge tone={item.completed ? "success" : "neutral"}>{item.completed ? "Complete" : "Open"}</StatusBadge>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <AppEmptyState title="No checklist items yet" description="Checklist items saved for this job will appear here." />
+                  )}
+                </FormSection>
+              </div>
+            </Panel>
+          );
+        })}
     </div>
   );
 }
@@ -1316,27 +973,19 @@ function JobsView({
 function InvoicesView({
   data,
   workspaceSlug,
-  selectedInvoiceId,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
-  selectedInvoiceId?: string;
 }) {
   async function manualPayment(formData: FormData) {
     "use server";
-    const invoiceId = String(formData.get("invoiceId") ?? "");
     const amount = String(formData.get("amount") ?? "").trim();
     const match = amount.match(/^(\d+)(?:\.(\d{1,2}))?$/);
     if (!match) {
-      actionRedirect(
-        workspaceSlug,
-        "invoices",
-        {
-          ok: false,
-          message: "Enter a valid payment amount.",
-        },
-        "invoice=" + encodeURIComponent(invoiceId) + "&",
-      );
+      actionRedirect(workspaceSlug, "invoices", {
+        ok: false,
+        message: "Enter a valid payment amount.",
+      });
     }
     const amountMinor =
       Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
@@ -1345,17 +994,12 @@ function InvoicesView({
       methodRaw === "CASH" || methodRaw === "BANK_TRANSFER" ? methodRaw : "OTHER";
     const result = await applyOperationalManualPayment(
       workspaceSlug,
-      invoiceId,
+      String(formData.get("invoiceId") ?? ""),
       amountMinor,
       method,
       String(formData.get("reference") ?? ""),
     );
-    actionRedirect(
-      workspaceSlug,
-      "invoices",
-      result,
-      "invoice=" + encodeURIComponent(invoiceId) + "&",
-    );
+    actionRedirect(workspaceSlug, "invoices", result);
   }
 
   if (data.invoices.length === 0) {
@@ -1364,20 +1008,9 @@ function InvoicesView({
     );
   }
 
-  const selectedInvoice =
-    data.invoices.find((invoice) => invoice.id === selectedInvoiceId) ??
-    data.invoices[0];
-  const selectedInvoiceQuote = data.quotes.find(
-    (quote) => quote.id === selectedInvoice.quoteId,
+  const outstanding = data.invoices.filter(
+    (invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID",
   );
-  const selectedInvoiceRequest = data.requests.find(
-    (request) => request.id === selectedInvoiceQuote?.requestId,
-  );
-  const selectedInvoiceCustomer = data.customers.find(
-    (customer) => customer.id === selectedInvoiceRequest?.customerId,
-  );
-  const selectedInvoiceCanRecordPayment =
-    selectedInvoice.balanceMinor > 0 && selectedInvoice.status !== "VOID";
 
   return (
     <div className={styles.stack}>
@@ -1388,7 +1021,6 @@ function InvoicesView({
         caption="Invoices"
         rows={data.invoices}
         getRowKey={(invoice) => invoice.id}
-        selectedRowKey={selectedInvoice.id}
         columns={[
           {
             id: "invoice",
@@ -1417,137 +1049,89 @@ function InvoicesView({
             header: "Status",
             cell: (invoice) => <StatusBadge tone={statusBadgeTone(invoice.status)}>{invoice.status.replaceAll("_", " ")}</StatusBadge>,
           },
-          {
-            id: "action",
-            header: "Action",
-            priority: "primary",
-            cell: (invoice) => (
-              <a
-                className="app-button-secondary"
-                href={"?invoice=" + encodeURIComponent(invoice.id)}
-                aria-current={invoice.id === selectedInvoice.id ? "page" : undefined}
-              >
-                {invoice.id === selectedInvoice.id ? "Viewing" : "Open"}
-              </a>
-            ),
-          },
         ]}
         renderMobileRow={(invoice) => (
-          <div className="app-row">
-            <DataCellStack
-              primary={formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due"}
-              secondary={invoice.status.replaceAll("_", " ") + " · invoice " + invoice.id.slice(0, 8)}
-            />
-            <a
-              className="app-button-secondary"
-              href={"?invoice=" + encodeURIComponent(invoice.id)}
-              aria-current={invoice.id === selectedInvoice.id ? "page" : undefined}
-            >
-              {invoice.id === selectedInvoice.id ? "Viewing" : "Open"}
-            </a>
-          </div>
+          <DataCellStack
+            primary={formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due"}
+            secondary={invoice.status.replaceAll("_", " ") + " · invoice " + invoice.id.slice(0, 8)}
+          />
         )}
       />
 
-      <Panel>
-        <SectionHeader
-          title={"Invoice " + selectedInvoice.id.slice(0, 8)}
-          description={
-            (selectedInvoiceCustomer?.displayName ?? "Customer unavailable") +
-            " · " +
-            (selectedInvoiceRequest?.serviceLabel ?? "Service invoice")
-          }
-          action={
-            <StatusBadge tone={statusBadgeTone(selectedInvoice.status)}>
-              {selectedInvoice.status.replaceAll("_", " ")}
-            </StatusBadge>
-          }
-        />
-
-        <div className="app-grid app-grid-two">
-          <section>
-            <h3>Balance</h3>
-            <dl className="summary-list">
-              <div><dt>Total</dt><dd>{formatMinorMoney(selectedInvoice.totalMinor, selectedInvoice.currency)}</dd></div>
-              <div><dt>Paid / allocated</dt><dd>{formatMinorMoney(selectedInvoice.allocatedMinor, selectedInvoice.currency)}</dd></div>
-              <div><dt>Refunded</dt><dd>{formatMinorMoney(selectedInvoice.refundedMinor, selectedInvoice.currency)}</dd></div>
-              <div><dt>Outstanding</dt><dd>{formatMinorMoney(selectedInvoice.balanceMinor, selectedInvoice.currency)}</dd></div>
-            </dl>
-          </section>
-
-          {selectedInvoiceCanRecordPayment ? (
-            <FormSection
-              title="Record manual payment"
-              description="Use this only for payment received outside the online checkout flow."
-            >
-              <form action={manualPayment}>
-                <input type="hidden" name="invoiceId" value={selectedInvoice.id} />
-                <FormGrid columns={2}>
-                  <FormField id={"payment-amount-" + selectedInvoice.id} label="Amount" required>
-                    {({ id, describedBy, invalid }) => (
-                      <TextInput
-                        id={id}
-                        name="amount"
-                        type="text"
-                        defaultValue={(selectedInvoice.balanceMinor / 100).toFixed(2)}
-                        required
-                        describedBy={describedBy}
-                        invalid={invalid}
-                      />
-                    )}
-                  </FormField>
-                  <FormField id={"payment-method-" + selectedInvoice.id} label="Method" required>
-                    {({ id, describedBy, invalid }) => (
-                      <SelectInput
-                        id={id}
-                        name="method"
-                        defaultValue="BANK_TRANSFER"
-                        required
-                        describedBy={describedBy}
-                        invalid={invalid}
-                      >
-                        <option value="BANK_TRANSFER">Bank transfer</option>
-                        <option value="CASH">Cash</option>
-                        <option value="OTHER">Other</option>
-                      </SelectInput>
-                    )}
-                  </FormField>
-                  <FormField id={"payment-reference-" + selectedInvoice.id} label="Reference" required>
-                    {({ id, describedBy, invalid }) => (
-                      <TextInput
-                        id={id}
-                        name="reference"
-                        placeholder="Bank reference or receipt number"
-                        required
-                        describedBy={describedBy}
-                        invalid={invalid}
-                      />
-                    )}
-                  </FormField>
-                </FormGrid>
-                <FormActions>
-                  <button className="app-button-primary" type="submit">Apply payment</button>
-                </FormActions>
-                <p className="app-field-help">
-                  Records an offline/manual payment only. It does not simulate online settlement.
-                </p>
-              </form>
-            </FormSection>
-          ) : (
-            <section>
-              <h3>Payment action</h3>
-              <AppEmptyState
-                title={selectedInvoice.status === "VOID" ? "Invoice void" : "Nothing outstanding"}
-                description={
-                  selectedInvoice.status === "VOID"
-                    ? "Manual payment cannot be recorded on a void invoice."
-                    : "This invoice has no balance requiring a manual payment."
-                }
-              />
-            </section>
-          )}
-        </div>
-      </Panel>
+      {outstanding.length ? (
+        <Panel>
+          <SectionHeader
+            title="Record manual payment"
+            description="Use this only for payment received outside the online checkout flow."
+          />
+          <div className="app-grid app-grid-two">
+            {outstanding.slice(0, 6).map((invoice) => (
+              <FormSection
+                key={invoice.id}
+                title={formatMinorMoney(invoice.balanceMinor, invoice.currency) + " due"}
+                description={"Invoice " + invoice.id.slice(0, 8)}
+              >
+                <form action={manualPayment}>
+                  <input type="hidden" name="invoiceId" value={invoice.id} />
+                  <FormGrid columns={2}>
+                    <FormField id={"payment-amount-" + invoice.id} label="Amount" required>
+                      {({ id, describedBy, invalid }) => (
+                        <TextInput
+                          id={id}
+                          name="amount"
+                          type="text"
+                          defaultValue={(invoice.balanceMinor / 100).toFixed(2)}
+                          required
+                          describedBy={describedBy}
+                          invalid={invalid}
+                        />
+                      )}
+                    </FormField>
+                    <FormField id={"payment-method-" + invoice.id} label="Method" required>
+                      {({ id, describedBy, invalid }) => (
+                        <SelectInput
+                          id={id}
+                          name="method"
+                          defaultValue="BANK_TRANSFER"
+                          required
+                          describedBy={describedBy}
+                          invalid={invalid}
+                        >
+                          <option value="BANK_TRANSFER">Bank transfer</option>
+                          <option value="CASH">Cash</option>
+                          <option value="OTHER">Other</option>
+                        </SelectInput>
+                      )}
+                    </FormField>
+                    <FormField id={"payment-reference-" + invoice.id} label="Reference" required>
+                      {({ id, describedBy, invalid }) => (
+                        <TextInput
+                          id={id}
+                          name="reference"
+                          placeholder="Bank reference or receipt number"
+                          required
+                          describedBy={describedBy}
+                          invalid={invalid}
+                        />
+                      )}
+                    </FormField>
+                  </FormGrid>
+                  <FormActions>
+                    <button className="app-button-secondary" type="submit">Apply payment</button>
+                  </FormActions>
+                  <p className="app-field-help">
+                    Records an offline/manual payment only. It does not simulate online settlement.
+                  </p>
+                </form>
+              </FormSection>
+            ))}
+          </div>
+        </Panel>
+      ) : (
+        <Panel>
+          <AppEmptyState title="Nothing outstanding" description="There are no invoice balances requiring payment." />
+        </Panel>
+      )}
     </div>
   );
 }
@@ -1641,7 +1225,7 @@ function QualityView({
               >
                 <DataCellStack
                   primary={qualityCase.summary}
-                  secondary={qualityCase.state.replaceAll("_", " ") + " · " + formatWhen(qualityCase.dueAt, data.workspace.timezone)}
+                  secondary={qualityCase.state.replaceAll("_", " ") + " · " + formatWhen(qualityCase.dueAt)}
                 />
               </WorkspaceListItem>
             ))}
@@ -1656,9 +1240,9 @@ function QualityView({
         >
           <div className="app-grid app-grid-two">
             <dl className="summary-list">
-              <div><dt>Visit</dt><dd>{visit ? formatWhen(visit.startAt, data.workspace.timezone) : "Visit unavailable"}</dd></div>
+              <div><dt>Visit</dt><dd>{visit ? formatWhen(visit.startAt) : "Visit unavailable"}</dd></div>
               <div><dt>Score</dt><dd>{selected.feedbackScore ?? "Not scored"}</dd></div>
-              <div><dt>Deadline</dt><dd>{formatWhen(selected.dueAt, data.workspace.timezone)}</dd></div>
+              <div><dt>Deadline</dt><dd>{formatWhen(selected.dueAt)}</dd></div>
               <div><dt>Review request</dt><dd>{selected.reviewRequestState.replaceAll("_", " ")}</dd></div>
               <div><dt>Owner</dt><dd>{selected.ownerUserId ? "Assigned" : "Unassigned"}</dd></div>
             </dl>
@@ -1669,7 +1253,7 @@ function QualityView({
                   {evidence.map((item) => (
                     <article className="app-row" key={item.id}>
                       <div><strong>{item.kind.replaceAll("_", " ")}</strong><p>{item.text ?? "Photo evidence"}</p></div>
-                      <span>{formatWhen(item.capturedAt, data.workspace.timezone)}</span>
+                      <span>{formatWhen(item.capturedAt)}</span>
                     </article>
                   ))}
                 </div>
@@ -1708,7 +1292,7 @@ function QualityView({
         <WorkspacePane title="Visit context" description={visit?.status.replaceAll("_", " ") ?? "Visit unavailable"}>
           {visit ? (
             <dl className="summary-list">
-              <div><dt>Start</dt><dd>{formatWhen(visit.startAt, data.workspace.timezone)}</dd></div>
+              <div><dt>Start</dt><dd>{formatWhen(visit.startAt)}</dd></div>
               <div><dt>Crew</dt><dd>{visit.crewId ? data.crews.find((crew) => crew.id === visit.crewId)?.name ?? "Assigned" : "Unassigned"}</dd></div>
               <div><dt>Evidence</dt><dd>{evidence.length}</dd></div>
             </dl>
@@ -1770,7 +1354,7 @@ function AutomationsView({ data }: { data: OperationalStaffSnapshot }) {
             id: "due",
             header: "Due",
             priority: "optional",
-            cell: (item) => formatWhen(item.dueAt, data.workspace.timezone),
+            cell: (item) => formatWhen(item.dueAt),
           },
           {
             id: "action",
@@ -1827,7 +1411,7 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
       <Panel>
         <SectionHeader
           title="Operations"
-          description={(snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period") + " – " + (snapshot.to ? formatWhen(snapshot.to, data.workspace.timezone) : "Now")}
+          description={(snapshot.from ? formatWhen(snapshot.from) : "Rolling period") + " – " + (snapshot.to ? formatWhen(snapshot.to) : "Now")}
         />
         <div className="app-grid app-grid-two">
           <div className="app-row-list">
@@ -1839,7 +1423,7 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
             <article className="app-row"><div><h3>Unresolved quality</h3><p>{snapshot.unresolvedQualityCount}</p></div></article>
           </div>
         </div>
-        <p className="app-field-help">Updated {formatWhen(snapshot.generatedAt, data.workspace.timezone)}.</p>
+        <p className="app-field-help">Updated {formatWhen(snapshot.generatedAt)}.</p>
       </Panel>
     </div>
   );
@@ -1871,8 +1455,8 @@ function BillingView({ data }: { data: OperationalStaffSnapshot }) {
           />
         ) : null}
         <dl className="summary-list">
-          <div><dt>Trial ends</dt><dd>{formatWhen(subscription.trialEndsAt, data.workspace.timezone)}</dd></div>
-          <div><dt>Current period ends</dt><dd>{formatWhen(subscription.currentPeriodEndsAt, data.workspace.timezone)}</dd></div>
+          <div><dt>Trial ends</dt><dd>{formatWhen(subscription.trialEndsAt)}</dd></div>
+          <div><dt>Current period ends</dt><dd>{formatWhen(subscription.currentPeriodEndsAt)}</dd></div>
         </dl>
       </Panel>
 
@@ -1962,7 +1546,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
           <div className="app-row-list">
             {snapshot.invitations.map((invite) => (
               <article className="app-row" key={invite.id}>
-                <div><h3>{invite.role}</h3><p>Created {formatWhen(invite.createdAt, data.workspace.timezone)}</p></div>
+                <div><h3>{invite.role}</h3><p>Created {formatWhen(invite.createdAt)}</p></div>
                 <StatusBadge tone={invite.state === "PENDING" ? "warning" : invite.state === "ACCEPTED" ? "success" : "neutral"}>
                   {invite.state}
                 </StatusBadge>
@@ -2021,12 +1605,7 @@ function renderModule(
   data: OperationalStaffSnapshot,
   workspaceSlug: string,
   selectedConversationId?: string,
-  selectedCustomerId?: string,
-  selectedRequestId?: string,
-  selectedQuoteId?: string,
   selectedQualityCaseId?: string,
-  selectedJobId?: string,
-  selectedInvoiceId?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -2038,17 +1617,17 @@ function renderModule(
         />
       );
     case "customers":
-      return <CustomersView data={data} selectedCustomerId={selectedCustomerId} />;
+      return <CustomersView data={data} />;
     case "requests":
-      return <RequestsView data={data} workspaceSlug={workspaceSlug} selectedRequestId={selectedRequestId} />;
+      return <RequestsView data={data} workspaceSlug={workspaceSlug} />;
     case "quotes":
-      return <QuotesView data={data} workspaceSlug={workspaceSlug} selectedQuoteId={selectedQuoteId} />;
+      return <QuotesView data={data} workspaceSlug={workspaceSlug} />;
     case "schedule":
       return <ScheduleView data={data} workspaceSlug={workspaceSlug} />;
     case "jobs":
-      return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} />;
+      return <JobsView data={data} workspaceSlug={workspaceSlug} />;
     case "invoices":
-      return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} />;
+      return <InvoicesView data={data} workspaceSlug={workspaceSlug} />;
     case "quality":
       return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} />;
     case "automations":
@@ -2066,12 +1645,7 @@ export async function OperationalProductRoute({
   workspaceSlug,
   module,
   selectedConversationId,
-  selectedCustomerId,
-  selectedRequestId,
-  selectedQuoteId,
   selectedQualityCaseId,
-  selectedJobId,
-  selectedInvoiceId,
   notice,
   error,
 }: OperationalProductRouteProps) {
@@ -2089,13 +1663,31 @@ export async function OperationalProductRoute({
       <Notice notice={notice} error={error} />
 
       {result.ok ? (
-        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId)
+        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedQualityCaseId)
       ) : (
         <Panel>
           <FeedbackBanner
             title={result.kind === "authentication" ? "Staff sign-in required" : "Workspace unavailable"}
             description={result.message}
             tone={result.kind === "authentication" ? "warning" : "danger"}
+            action={
+              result.kind === "authentication" ? (
+                <a
+                  className="app-button-primary"
+                  href={
+                    "/auth/sign-in?next=" +
+                    encodeURIComponent(
+                      "/app/" +
+                        encodeURIComponent(workspaceSlug) +
+                        "/" +
+                        module,
+                    )
+                  }
+                >
+                  Sign in
+                </a>
+              ) : undefined
+            }
           />
         </Panel>
       )}

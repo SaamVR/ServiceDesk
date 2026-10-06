@@ -38,6 +38,23 @@ export async function OnboardingProductRoute({
                 : "Onboarding unavailable"
             }
             description={result.message}
+            action={
+              result.kind === "authentication" ? (
+                <Link
+                  className="app-button-primary"
+                  href={
+                    "/auth/sign-in?next=" +
+                    encodeURIComponent(
+                      workspaceSlug
+                        ? "/onboarding?workspace=" + encodeURIComponent(workspaceSlug)
+                        : "/onboarding",
+                    )
+                  }
+                >
+                  Sign in
+                </Link>
+              ) : undefined
+            }
           />
         </Panel>
       </main>
