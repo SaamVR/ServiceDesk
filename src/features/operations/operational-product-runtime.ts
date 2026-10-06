@@ -468,17 +468,23 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     displayName: textValue(row, "display_name") ?? "Unnamed customer",
     leadSource: textValue(row, "lead_source"),
   }));
-  const verifiedIdentityCounts = new Map<string, number>();
+  const activeCustomerIds = new Set(customers.map((customer) => customer.id));
+  const verifiedIdentityCustomers = new Map<string, Set<string>>();
   for (const row of contactRows) {
-    if (!textValue(row, "verified_at")) continue;
+    const customerId = String(row.customer_id);
+    if (!activeCustomerIds.has(customerId) || !textValue(row, "verified_at")) continue;
     const kind = String(row.kind);
     const rawValue = String(row.value ?? "").trim();
     if ((kind !== "EMAIL" && kind !== "PHONE") || !rawValue) continue;
     const identityKey = kind + ":" + (kind === "EMAIL" ? rawValue.toLowerCase() : rawValue);
-    verifiedIdentityCounts.set(identityKey, (verifiedIdentityCounts.get(identityKey) ?? 0) + 1);
+    const customerIds = verifiedIdentityCustomers.get(identityKey) ?? new Set<string>();
+    customerIds.add(customerId);
+    verifiedIdentityCustomers.set(identityKey, customerIds);
   }
   const customerContacts: OperationalCustomerContact[] = contactRows
-    .filter((row) => row.kind === "EMAIL" || row.kind === "PHONE")
+    .filter((row) =>
+      activeCustomerIds.has(String(row.customer_id))
+      && (row.kind === "EMAIL" || row.kind === "PHONE"))
     .map((row) => {
       const kind = String(row.kind) as OperationalCustomerContact["kind"];
       const value = String(row.value ?? "").trim();
@@ -491,7 +497,9 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         isPrimary: Boolean(row.is_primary),
         isBilling: Boolean(row.is_billing),
         verifiedAt: textValue(row, "verified_at"),
-        identityConflictCount: textValue(row, "verified_at") ? verifiedIdentityCounts.get(identityKey) ?? 0 : 0,
+        identityConflictCount: textValue(row, "verified_at")
+          ? verifiedIdentityCustomers.get(identityKey)?.size ?? 0
+          : 0,
       };
     });
   const properties: OperationalProperty[] = propertyRows.map((row) => ({
