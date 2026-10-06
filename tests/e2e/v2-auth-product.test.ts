@@ -43,12 +43,19 @@ describe("V2 authentication product", () => {
     expect(onboarding).toContain("/auth/sign-in?next=");
   });
 
-  it("offers sign out from authenticated staff and customer shells", () => {
+  it("offers session-aware sign out from staff and customer shells", () => {
+    const layout = source("src/app/app/[workspace]/layout.tsx");
     const staff = source("src/components/product/StaffAppShell.tsx");
     const customer = source("src/components/product/CustomerFacingShell.tsx");
+    const customerRoute = source("src/features/operations/CustomerProductRoute.tsx");
 
+    expect(layout).toContain("hasAuthenticatedSession");
+    expect(layout).toContain("signedIn={signedIn}");
+    expect(staff).toContain("signedIn ? (");
     expect(staff).toContain('action="/auth/sign-out"');
+    expect(customer).toContain("authenticationRequired ? (");
     expect(customer).toContain('action="/auth/sign-out"');
+    expect(customerRoute).toContain('result.kind === "authentication"');
   });
 
 });
