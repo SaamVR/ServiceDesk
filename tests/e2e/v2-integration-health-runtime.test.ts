@@ -116,4 +116,58 @@ describe("V2 operational integration health", () => {
     expect(JSON.stringify(health)).not.toContain("email-secret");
   });
 
+
+  it("promotes only a configured inbound route with fresh controlled proof bound to the current build", () => {
+    const buildSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const proof = JSON.stringify({
+      channel: "EMAIL_INBOUND",
+      operation: "SIGNED_INBOUND_CAPTURE",
+      route: "/api/providers/email/inbound",
+      buildSha,
+      capturedAt: "2026-10-07T00:00:00.000Z",
+      redactedProviderReceipt: "receipt:redacted:email-1",
+      result: "PASS",
+      evidenceKind: "CONTROLLED_PROVIDER_RECEIPT",
+    });
+    const health = buildOperationalIntegrationHealth({
+      SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role",
+      SERVICEDESK_EMAIL_WEBHOOK_SECRET: "email-secret",
+      SERVICEDESK_EMAIL_ACCOUNT_WORKSPACE_MAP: "{\"mailbox\":\"workspace\"}",
+      SERVICEDESK_BUILD_SHA: buildSha,
+      SERVICEDESK_EMAIL_INBOUND_PROOF_JSON: proof,
+    }, "2026-10-07T01:00:00.000Z");
+
+    expect(health.find((item) => item.provider === "EMAIL_INBOUND")).toMatchObject({
+      configurationState: "CONFIGURED",
+      verificationState: "PROVIDER_VERIFIED",
+    });
+    const serialized = JSON.stringify(health);
+    expect(serialized).not.toContain("receipt:redacted:email-1");
+    expect(serialized).not.toContain("email-secret");
+  });
+
+  it("keeps stale or build-mismatched inbound evidence at IMPLEMENTED", () => {
+    const proof = JSON.stringify({
+      channel: "VOICE_INBOUND",
+      operation: "SIGNED_INBOUND_CAPTURE",
+      route: "/api/providers/voice/inbound",
+      buildSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      capturedAt: "2026-10-01T00:00:00.000Z",
+      redactedProviderReceipt: "receipt:redacted:voice-1",
+      result: "PASS",
+      evidenceKind: "CONTROLLED_PROVIDER_RECEIPT",
+    });
+    const health = buildOperationalIntegrationHealth({
+      SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role",
+      SERVICEDESK_VOICE_WEBHOOK_SECRET: "voice-secret",
+      SERVICEDESK_VOICE_ACCOUNT_WORKSPACE_MAP: "{\"voice\":\"workspace\"}",
+      SERVICEDESK_BUILD_SHA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      SERVICEDESK_VOICE_INBOUND_PROOF_JSON: proof,
+    }, "2026-10-07T01:00:00.000Z");
+
+    expect(health.find((item) => item.provider === "VOICE_INBOUND")?.verificationState).toBe("IMPLEMENTED");
+  });
+
 });
