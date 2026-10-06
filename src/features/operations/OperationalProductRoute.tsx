@@ -409,7 +409,7 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
     ? openInvoices[0].currency
     : undefined;
   const activeRequests = selectedRequests.filter((request) => !["CLOSED", "LOST"].includes(request.status));
-  const selectedContacts = data.customerContacts.filter((contact) => contact.customerId === selectedCustomer.id);
+  const selectedContacts = (data.customerContacts ?? []).filter((contact) => contact.customerId === selectedCustomer.id);
   const verifiedContacts = selectedContacts.filter((contact) => Boolean(contact.verifiedAt));
   const conflictingContacts = selectedContacts.filter((contact) => contact.identityConflictCount > 1);
 
