@@ -2157,7 +2157,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                     ))}
                   </div>
                 )}
-                <p className={styles.adminHelp}>Private credentials and invitation token hashes are never displayed in settings data.</p>
+                <p className={styles.adminHelp}>Private credentials and invitation tokens are never displayed; invitation token hashes remain server-only.</p>
               </div>
             </div>
           </section>
