@@ -11,6 +11,9 @@ import {
   createCommercialBillingDraft,
   finalizeCommercialBillingDraft,
   loadCommercialFinanceSnapshot,
+  retireWorkspaceTaxProfile,
+  reviewWorkspaceTaxProfile,
+  saveWorkspaceTaxProfile,
   setCommercialBillingLineState,
   type CommercialFinanceActionResult,
 } from "./commercial-finance-runtime";
@@ -67,6 +70,16 @@ function formatVisitWhen(value: unknown, timeZone: string) {
   }).format(date);
 }
 
+function parseRateBasisPoints(value: string): number | undefined {
+  const normalized = value.trim();
+  if (!/^\d{1,3}(?:\.\d{1,2})?$/.test(normalized)) return undefined;
+  const percent = Number(normalized);
+  const basisPoints = Math.round(percent * 100);
+  return Number.isSafeInteger(basisPoints) && basisPoints >= 0 && basisPoints <= 10000
+    ? basisPoints
+    : undefined;
+}
+
 function parseAmountMinor(value: string): number | undefined {
   const match = value.trim().match(/^(\d+)(?:\.(\d{1,2}))?$/);
   if (!match) return undefined;
@@ -78,7 +91,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
   const result = await loadCommercialFinanceSnapshot(workspaceSlug);
   if (!result.ok) return null;
 
-  const { portfolio, drafts, invoices, billingReady, accounting, accountingBackfill, accountingReady, directCosts, directCostsReady, profitability, profitabilityReady, timeZone } = result.value;
+  const { portfolio, drafts, invoices, billingReady, accounting, accountingBackfill, accountingReady, directCosts, directCostsReady, profitability, profitabilityReady, taxProfiles, taxProfilesReady, canManageTax, timeZone } = result.value;
   if (!portfolio.feature.enabled) return null;
 
   const contracts = portfolio.contracts.filter((contract) => contract.status === "ACTIVE");
@@ -120,6 +133,53 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
   const profitabilityPeriod = profitability?.fromDate && profitability?.toDate
     ? profitability.fromDate + " → " + profitability.toDate
     : "Recorded period";
+  const activeTaxProfiles = taxProfiles?.profiles.filter((profile) => profile.status !== "RETIRED") ?? [];
+  const reviewedTaxProfiles = activeTaxProfiles.filter((profile) => profile.status === "REVIEWED");
+  const draftTaxProfiles = activeTaxProfiles.filter((profile) => profile.status === "DRAFT");
+
+  async function saveTaxProfileAction(formData: FormData) {
+    "use server";
+    const rateBasisPoints = parseRateBasisPoints(String(formData.get("ratePercent") ?? ""));
+    if (rateBasisPoints === undefined) {
+      redirectResult(workspaceSlug, { ok: false, message: "Enter a tax rate between 0 and 100 percent." });
+    }
+    const provenanceKind = String(formData.get("provenanceKind") ?? "");
+    if (!["ACCOUNTANT_GUIDANCE", "TAX_AUTHORITY", "ACCOUNTING_SYSTEM", "OTHER"].includes(provenanceKind)) {
+      redirectResult(workspaceSlug, { ok: false, message: "Choose a valid tax provenance source." });
+    }
+    const actionResult = await saveWorkspaceTaxProfile(workspaceSlug, {
+      jurisdictionCode: String(formData.get("jurisdictionCode") ?? ""),
+      taxCode: String(formData.get("taxCode") ?? ""),
+      rateBasisPoints,
+      priceIncludesTax: String(formData.get("priceIncludesTax") ?? "false") === "true",
+      provenanceKind: provenanceKind as "ACCOUNTANT_GUIDANCE" | "TAX_AUTHORITY" | "ACCOUNTING_SYSTEM" | "OTHER",
+      provenanceReference: String(formData.get("provenanceReference") ?? ""),
+      effectiveFrom: String(formData.get("effectiveFrom") ?? ""),
+      effectiveTo: String(formData.get("effectiveTo") ?? "") || undefined,
+    });
+    redirectResult(workspaceSlug, actionResult);
+  }
+
+  async function reviewTaxProfileAction(formData: FormData) {
+    "use server";
+    const actionResult = await reviewWorkspaceTaxProfile(
+      workspaceSlug,
+      String(formData.get("profileId") ?? ""),
+      Number(formData.get("expectedVersion")),
+      String(formData.get("reviewAttestation") ?? ""),
+    );
+    redirectResult(workspaceSlug, actionResult);
+  }
+
+  async function retireTaxProfileAction(formData: FormData) {
+    "use server";
+    const actionResult = await retireWorkspaceTaxProfile(
+      workspaceSlug,
+      String(formData.get("profileId") ?? ""),
+      Number(formData.get("expectedVersion")),
+    );
+    redirectResult(workspaceSlug, actionResult);
+  }
 
   async function createDraftAction(formData: FormData) {
     "use server";
@@ -381,6 +441,143 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
             <p className={styles.profitabilityNote}>
               Partial collections are not prorated across sites or services. Missing cost entries remain coverage gaps rather than assumed zero cost.
             </p>
+          </div>
+        )}
+      </section>
+
+      <section className={styles.taxPanel} aria-label="Tax configuration governance">
+        <div className={styles.sectionHeading}>
+          <div>
+            <p className={styles.sectionEyebrow}>Tax governance</p>
+            <h3>Reviewed tax configuration</h3>
+          </div>
+          <p>Reference-only configuration with explicit provenance. Existing quote and invoice tax values remain authoritative.</p>
+        </div>
+
+        {!taxProfilesReady ? (
+          <div className={styles.taxEmpty}>
+            <strong>Tax configuration is not available yet.</strong>
+            <p>No tax value is being inferred or applied.</p>
+          </div>
+        ) : (
+          <div className={styles.taxBody}>
+            <div className={styles.taxMeta}>
+              <span><strong>{reviewedTaxProfiles.length}</strong> reviewed</span>
+              <span><strong>{draftTaxProfiles.length}</strong> awaiting review</span>
+              <span><strong>Off</strong> automatic application</span>
+            </div>
+
+            {activeTaxProfiles.length === 0 ? (
+              <div className={styles.taxEmpty}>
+                <strong>No governed tax profile is configured.</strong>
+                <p>A zero tax amount already present in V1 records is not treated as a workspace tax policy.</p>
+              </div>
+            ) : (
+              <div className={styles.taxProfileList}>
+                {activeTaxProfiles.map((profile) => (
+                  <article className={styles.taxProfile} key={profile.id}>
+                    <div className={styles.taxProfileHeader}>
+                      <div>
+                        <strong>{profile.jurisdictionCode} · {profile.taxCode}</strong>
+                        <span>{(profile.rateBasisPoints / 100).toFixed(2)}% · {profile.priceIncludesTax ? "tax included" : "tax added separately"}</span>
+                      </div>
+                      <StatusBadge tone={profile.status === "REVIEWED" ? "success" : "warning"}>
+                        {profile.status.toLowerCase()}
+                      </StatusBadge>
+                    </div>
+                    <div className={styles.taxProfileDetails}>
+                      <span>{profile.provenanceKind.replaceAll("_", " ").toLowerCase()}</span>
+                      <span>{profile.provenanceReference}</span>
+                      <span>Effective {profile.effectiveFrom}{profile.effectiveTo ? " → " + profile.effectiveTo : ""}</span>
+                    </div>
+                    {canManageTax && profile.status === "DRAFT" ? (
+                      <form action={reviewTaxProfileAction} className={styles.taxReviewForm}>
+                        <input type="hidden" name="profileId" value={profile.id} />
+                        <input type="hidden" name="expectedVersion" value={profile.version} />
+                        <FormField id={"tax-review-" + profile.id} label="Review attestation" required>
+                          {({ id, describedBy, invalid }) => (
+                            <TextInput
+                              id={id}
+                              name="reviewAttestation"
+                              placeholder="Record the accountant/authority review basis"
+                              required
+                              describedBy={describedBy}
+                              invalid={invalid}
+                            />
+                          )}
+                        </FormField>
+                        <button className="app-button-primary" type="submit">Record review</button>
+                      </form>
+                    ) : null}
+                    {canManageTax ? (
+                      <form action={retireTaxProfileAction} className={styles.taxRetireForm}>
+                        <input type="hidden" name="profileId" value={profile.id} />
+                        <input type="hidden" name="expectedVersion" value={profile.version} />
+                        <button className="app-button-secondary" type="submit">Retire profile</button>
+                      </form>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            )}
+
+            {canManageTax ? (
+              <form action={saveTaxProfileAction} className={styles.taxCreateForm}>
+                <div className={styles.sectionHeading}>
+                  <div>
+                    <p className={styles.sectionEyebrow}>Owner control</p>
+                    <h3>Create reference-only tax draft</h3>
+                  </div>
+                  <p>Saving a draft never changes existing quotes, invoices, payments or accounting exports.</p>
+                </div>
+                <FormGrid columns={3}>
+                  <FormField id="tax-jurisdiction" label="Jurisdiction" required>
+                    {({ id, describedBy, invalid }) => <TextInput id={id} name="jurisdictionCode" placeholder="e.g. US-CA" required describedBy={describedBy} invalid={invalid} />}
+                  </FormField>
+                  <FormField id="tax-code" label="Tax code" required>
+                    {({ id, describedBy, invalid }) => <TextInput id={id} name="taxCode" placeholder="Configured code" required describedBy={describedBy} invalid={invalid} />}
+                  </FormField>
+                  <FormField id="tax-rate" label="Rate %" required>
+                    {({ id, describedBy, invalid }) => <TextInput id={id} name="ratePercent" placeholder="0.00" required describedBy={describedBy} invalid={invalid} />}
+                  </FormField>
+                  <FormField id="tax-price-mode" label="Price treatment" required>
+                    {({ id, describedBy, invalid }) => (
+                      <SelectInput id={id} name="priceIncludesTax" defaultValue="false" required describedBy={describedBy} invalid={invalid}>
+                        <option value="false">Tax added separately</option>
+                        <option value="true">Tax included in price</option>
+                      </SelectInput>
+                    )}
+                  </FormField>
+                  <FormField id="tax-provenance-kind" label="Provenance" required>
+                    {({ id, describedBy, invalid }) => (
+                      <SelectInput id={id} name="provenanceKind" defaultValue="ACCOUNTANT_GUIDANCE" required describedBy={describedBy} invalid={invalid}>
+                        <option value="ACCOUNTANT_GUIDANCE">Accountant guidance</option>
+                        <option value="TAX_AUTHORITY">Tax authority</option>
+                        <option value="ACCOUNTING_SYSTEM">Accounting system</option>
+                        <option value="OTHER">Other documented source</option>
+                      </SelectInput>
+                    )}
+                  </FormField>
+                  <FormField id="tax-provenance-reference" label="Source reference" required>
+                    {({ id, describedBy, invalid }) => <TextInput id={id} name="provenanceReference" placeholder="Document, policy or source reference" required describedBy={describedBy} invalid={invalid} />}
+                  </FormField>
+                  <FormField id="tax-effective-from" label="Effective from" required>
+                    {({ id, describedBy, invalid }) => <TextInput id={id} name="effectiveFrom" type="date" required describedBy={describedBy} invalid={invalid} />}
+                  </FormField>
+                  <FormField id="tax-effective-to" label="Effective to">
+                    {({ id, describedBy, invalid }) => <TextInput id={id} name="effectiveTo" type="date" describedBy={describedBy} invalid={invalid} />}
+                  </FormField>
+                </FormGrid>
+                <div className={styles.formFooter}>
+                  <p>Review must be recorded separately before this profile is treated as reviewed configuration.</p>
+                  <button className="app-button-primary" type="submit">Save tax draft</button>
+                </div>
+              </form>
+            ) : (
+              <p className={styles.taxNote}>Dispatcher access is read-only. An owner must manage tax configuration and record review.</p>
+            )}
+
+            <p className={styles.taxNote}>ServiceDesk reports this configuration but does not certify tax correctness. Automatic tax application remains off.</p>
           </div>
         )}
       </section>
