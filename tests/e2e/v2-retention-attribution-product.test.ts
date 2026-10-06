@@ -24,7 +24,7 @@ describe("V2 retention and attribution operational product", () => {
     expect(runtime).toContain("latestConsentByCustomerChannel");
     expect(runtime).toContain("if (latestConsentByCustomerChannel.has(key)) continue");
     expect(runtime).toContain('channel === "EMAIL"');
-    expect(runtime).toContain('channel === "WHATSAPP"');
+    expect(runtime).toContain('channel !== "WHATSAPP"');
   });
 
   it("keeps internal retention holds separate from customer opt-in", () => {
