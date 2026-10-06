@@ -494,3 +494,30 @@
   color: var(--app-text-muted);
   font-size: .66rem;
 }
+
+
+.identityReview {
+  display: grid;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+.identityReview form {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-subtle);
+}
+.identityReview form > span {
+  color: var(--app-text-muted);
+  font-size: .67rem;
+  line-height: 1.4;
+}
+@media(max-width:760px) {
+  .identityReview form {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
