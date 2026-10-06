@@ -14,6 +14,19 @@ describe("V2 authentication product", () => {
     expect(normalizeReturnPath("/auth/sign-out")).toBe("/portal");
   });
 
+  it("refreshes Supabase SSR sessions through the Next.js 16 proxy", () => {
+    const entry = source("src/proxy.ts");
+    const proxy = source("src/features/auth/session-proxy.ts");
+
+    expect(entry).toContain("export async function proxy");
+    expect(entry).toContain("refreshAuthSession(request)");
+    expect(proxy).toContain("auth.auth.getClaims()");
+    expect(proxy).toContain("request.cookies.set");
+    expect(proxy).toContain("response.cookies.set");
+    expect(proxy).toContain('Cache-Control", "private, no-store"');
+    expect(proxy).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+  });
+
   it("uses Supabase password auth with cookie-backed SSR sessions", () => {
     const action = source("src/app/auth/sign-in/actions.ts");
     expect(action).toContain("createServerClient");

@@ -21,7 +21,7 @@ export async function hasAuthenticatedSession() {
         return cookieStore.getAll();
       },
       setAll() {
-        // Session refresh remains owned by the application auth layer.
+        // src/proxy.ts owns refresh-token rotation and response cookie writes.
       },
     },
   });
