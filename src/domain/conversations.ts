@@ -86,8 +86,9 @@ export interface ConversationOutboxRecord {
   createdAt: string;
 }
 
-export function providerThreadId(provider: "WHATSAPP", providerAccountId: string, senderRef: string): string {
-  return `${provider}:${providerAccountId.trim()}:${senderRef.trim()}`;
+export function providerThreadId(provider: "WHATSAPP" | "EMAIL", providerAccountId: string, senderRef: string): string {
+  const normalizedSender = provider === "EMAIL" ? senderRef.trim().toLowerCase() : senderRef.trim();
+  return `${provider}:${providerAccountId.trim()}:${normalizedSender}`;
 }
 
 export function conversationToDTO(record: ConversationRecord): ConversationDTO {
