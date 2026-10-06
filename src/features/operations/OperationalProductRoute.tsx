@@ -68,6 +68,10 @@ function formatWhen(value: string | undefined, timeZone: string) {
   return formatWorkspaceDateTime(value, timeZone);
 }
 
+function requestDisplayLabel(request: OperationalStaffSnapshot["requests"][number]) {
+  return request.sourceChannel === "VOICE" ? "Missed call" : request.serviceLabel;
+}
+
 function statusBadgeTone(status: string): "neutral" | "success" | "warning" | "danger" | "info" {
   if (["PAID", "COMPLETED", "RESOLVED", "DELIVERED", "READ", "CONNECTED", "ACTIVE", "ACCEPTED"].includes(status)) {
     return "success";
@@ -443,7 +447,7 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
                     return (
                       <a className={styles.crmActivityRow} href={`/app/${encodeURIComponent(data.workspace.slug)}/requests?request=${encodeURIComponent(request.id)}`} key={request.id}>
                         <span className={styles.crmActivityCopy}>
-                          <strong>{request.serviceLabel}</strong>
+                          <strong>{requestDisplayLabel(request)}</strong>
                           <small>{formatWhen(request.requestedStartAt, data.workspace.timezone)}</small>
                         </span>
                         <span className={styles.crmActivityMeta}>
@@ -538,7 +542,11 @@ function RequestsView({
                   <strong>{request.serviceLabel}</strong>
                   <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>
                 </span>
-                <span className={styles.salesQueueCustomer}>{requestCustomer?.displayName ?? "Visitor enquiry"}</span>
+                <span className={styles.salesQueueCustomer}>
+                  {request.sourceChannel === "VOICE"
+                    ? request.callbackRequired ? "Callback required" : "Voice enquiry"
+                    : requestCustomer?.displayName ?? "Visitor enquiry"}
+                </span>
                 <span className={styles.salesQueueMeta}>
                   <span>{formatWhen(request.requestedStartAt, data.workspace.timezone)}</span>
                   <span>{currentQuote ? `Quote ${currentQuote.status.replaceAll("_", " ").toLowerCase()}` : "No quote"}</span>
@@ -552,8 +560,14 @@ function RequestsView({
           <header className={styles.salesDetailHeader}>
             <div>
               <p className={styles.salesEyebrow}>Request</p>
-              <h2>{selectedRequest.serviceLabel}</h2>
-              <p>{selectedRequestCustomer?.displayName ?? "Visitor enquiry"} · {formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)}</p>
+              <h2>{requestDisplayLabel(selectedRequest)}</h2>
+              <p>
+                {selectedRequest.sourceChannel === "VOICE"
+                  ? "Anonymous caller · staff callback required"
+                  : selectedRequestCustomer?.displayName ?? "Visitor enquiry"}
+                {" · "}
+                {formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)}
+              </p>
             </div>
             <StatusBadge tone={statusBadgeTone(selectedRequest.status)}>{selectedRequest.status.replaceAll("_", " ")}</StatusBadge>
           </header>
@@ -574,6 +588,10 @@ function RequestsView({
                 <div><dt>Address</dt><dd>{selectedRequestProperty?.address ?? "Not available"}</dd></div>
                 <div><dt>Home</dt><dd>{(selectedRequest.bedrooms ?? "—") + " bed · " + (selectedRequest.bathrooms ?? "—") + " bath"}</dd></div>
                 <div><dt>Requested</dt><dd>{formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)}</dd></div>
+                {selectedRequest.sourceChannel ? <div><dt>Source</dt><dd>{selectedRequest.sourceChannel.toLowerCase()}</dd></div> : null}
+                {selectedRequest.callbackRequired ? (
+                  <div><dt>Callback contact</dt><dd>{selectedRequest.callbackContactRef ?? "Not available"}</dd></div>
+                ) : null}
               </dl>
               {selectedRequestProperty?.accessNotes ? (
                 <div className={styles.salesNote}><span>Access</span><p>{selectedRequestProperty.accessNotes}</p></div>

@@ -6,3 +6,4 @@ export * from "./outbox";
 export * from "./commercial";
 export * from "./accounting";
 export * from "./tax";
+export * from "./voice";
