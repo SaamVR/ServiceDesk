@@ -186,7 +186,8 @@ function InboxView({
         conversation.id !== selected.id && conversation.customerId === customer.id)
     : [];
   const participantLabel = customer?.displayName ?? "Unverified sender";
-  const replySupported = (selected.channel === "WHATSAPP" || selected.channel === "EMAIL") && Boolean(customer);
+  const identityResolutionSupported = selected.channel === "WHATSAPP" || selected.channel === "EMAIL";
+  const replySupported = identityResolutionSupported && Boolean(customer);
 
   return (
     <section className={styles.inboxWorkspace} aria-label="Customer conversations">
@@ -255,7 +256,7 @@ function InboxView({
           </div>
         </header>
 
-        {!customer ? (
+        {!customer && identityResolutionSupported ? (
           <div className={styles.identityReview}>
             <FeedbackBanner
               title="Identity review required"
