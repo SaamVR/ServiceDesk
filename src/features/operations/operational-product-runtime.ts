@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
@@ -159,6 +160,10 @@ export type OperationalRuntimeResult =
   | { ok: false; kind: "configuration" | "authentication" | "authorization" | "not_found" | "server"; message: string };
 
 export type OperationalActionResult = { ok: true; message: string } | { ok: false; message: string };
+
+export type OperationalInvitationActionResult =
+  | { ok: true; message: string; invitePath: string }
+  | { ok: false; message: string };
 
 function safeCoreFailure(
   result: { ok: false; code: string; message: string },
@@ -1028,3 +1033,105 @@ export async function updateOperationalServiceCatalogItem(
 
   return { ok: true, message: "Service catalog updated." };
 }
+
+export async function createOperationalTeamInvitation(
+  workspaceSlug: string,
+  input: { email: string; role: "OWNER" | "DISPATCHER" | "CREW" },
+): Promise<OperationalInvitationActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only workspace owners can invite team members." };
+  }
+
+  const email = input.email.trim().toLowerCase();
+  if (!email || email.length > 254 || !email.includes("@")) {
+    return { ok: false, message: "Enter a valid email address." };
+  }
+  if (!["OWNER", "DISPATCHER", "CREW"].includes(input.role)) {
+    return { ok: false, message: "Choose a valid workspace role." };
+  }
+
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_create_team_invitation", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      email,
+      role: input.role,
+      tokenHash,
+      now: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    },
+  });
+
+  if (error) {
+    return { ok: false, message: "The invitation could not be created. Try again." };
+  }
+  if (!data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "MEMBER_ALREADY_ACTIVE") {
+      return { ok: false, message: "That email already belongs to an active workspace member." };
+    }
+    if (code === "OWNER_SCOPE_REQUIRED") {
+      return { ok: false, message: "Only workspace owners can invite team members." };
+    }
+    if (code === "INVITATION_EMAIL_INVALID") {
+      return { ok: false, message: "Enter a valid email address." };
+    }
+    return { ok: false, message: "The invitation could not be created. Check the details and try again." };
+  }
+
+  return {
+    ok: true,
+    message: "Invitation created. Share the secure link with the invited team member.",
+    invitePath: "/auth/invitations/" + encodeURIComponent(token),
+  };
+}
+
+export async function revokeOperationalTeamInvitation(
+  workspaceSlug: string,
+  invitationId: string,
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only workspace owners can revoke team invitations." };
+  }
+
+  const id = invitationId.trim();
+  if (!id) return { ok: false, message: "The invitation is no longer available." };
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_revoke_team_invitation", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      invitationId: id,
+      now: new Date().toISOString(),
+    },
+  });
+
+  if (error) return { ok: false, message: "The invitation could not be revoked. Try again." };
+  if (!data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "INVITATION_ALREADY_ACCEPTED") {
+      return { ok: false, message: "This invitation has already been accepted." };
+    }
+    if (code === "INVITATION_NOT_FOUND") {
+      return { ok: false, message: "This invitation is no longer available." };
+    }
+    if (code === "OWNER_SCOPE_REQUIRED") {
+      return { ok: false, message: "Only workspace owners can revoke team invitations." };
+    }
+    return { ok: false, message: "The invitation could not be revoked. Refresh and try again." };
+  }
+
+  return { ok: true, message: "Invitation revoked." };
+}
+
