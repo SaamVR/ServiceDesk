@@ -196,7 +196,7 @@ function safeCoreFailure(
   return { ok: false, message: fallback };
 }
 
-interface ResolvedStaffActor {
+export interface ResolvedStaffActor {
   workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
   service: SupabaseClient;
@@ -227,7 +227,7 @@ function runtimeConfig() {
   return { url, anonKey, serviceRoleKey };
 }
 
-async function resolveStaffActor(workspaceSlug: string): Promise<
+export async function resolveStaffActor(workspaceSlug: string): Promise<
   { ok: true; value: ResolvedStaffActor } | Extract<OperationalRuntimeResult, { ok: false }>
 > {
   const config = runtimeConfig();
