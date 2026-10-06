@@ -1,3 +1,4 @@
+import { inboundWebhookResponse, readBoundedWebhookBody } from "@/server/api-handlers/inbound-http-policy";
 import { createClient } from "@supabase/supabase-js";
 import { handleEmailInboundWebhook } from "@/server/api-handlers/provider-email-inbound";
 import { createPostgresConversationFacadeMethods } from "@/server/core/conversation-postgres";
@@ -12,7 +13,15 @@ export async function POST(request: Request) {
     return new Response("Email inbound is not configured.", { status: 503 });
   }
 
-  const rawBody = await request.text();
+  const bounded = await readBoundedWebhookBody(request);
+  if (!bounded.ok) {
+    return inboundWebhookResponse({
+      statusCode: bounded.statusCode,
+      body: bounded.body,
+      retryable: false,
+    });
+  }
+  const rawBody = bounded.rawBody;
   const service = createClient(config.value.supabaseUrl, config.value.serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -26,8 +35,5 @@ export async function POST(request: Request) {
     store,
   });
 
-  return new Response(result.body, {
-    status: result.statusCode,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
-  });
+  return inboundWebhookResponse(result);
 }
