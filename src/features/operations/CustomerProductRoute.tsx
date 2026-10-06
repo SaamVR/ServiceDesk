@@ -676,6 +676,7 @@ export async function CustomerProductRoute({
     <CustomerPortalShell
       businessName={businessName}
       customerName={customerName}
+      authenticationRequired={!result.ok && result.kind === "authentication"}
       activeSection={activeSection(module)}
     >
       <CustomerPageHeader
