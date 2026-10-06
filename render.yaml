@@ -31,3 +31,7 @@ services:
         sync: false
       - key: SERVICEDESK_VOICE_INBOUND_PROOF_JSON
         sync: false
+      - key: SERVICEDESK_REQUEST_PHOTO_BUCKET
+        sync: false
+      - key: SERVICEDESK_REQUEST_PHOTO_RETENTION_DAYS
+        sync: false
