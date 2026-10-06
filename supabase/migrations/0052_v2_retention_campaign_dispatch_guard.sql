@@ -517,7 +517,7 @@ declare
   v_campaign public.retention_campaigns%rowtype;
   v_customer uuid;
   v_recipient text;
-  v_contact_count integer;
+  v_contact_count bigint;
 begin
   v_eligibility := public.servicedesk_check_retention_campaign_dispatch_eligibility(
     jsonb_build_object('workspaceId', v_workspace, 'eventId', v_event_id, 'now', v_now)
