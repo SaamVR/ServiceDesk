@@ -81,8 +81,38 @@ begin
     return jsonb_build_object('ok', false, 'code', 'IDENTITY_SENDER_REF_NOT_FOUND');
   end if;
 
-  select count(distinct cc.customer_id), min(cc.customer_id)
-  into v_match_count, v_customer_id
+  select count(*)
+  into v_match_count
+  from (
+    select distinct cc.customer_id
+    from public.customer_contacts cc
+    join public.customers c
+      on c.workspace_id = cc.workspace_id
+     and c.id = cc.customer_id
+    where cc.workspace_id = v_workspace
+      and cc.verified_at is not null
+      and c.archived_at is null
+      and (
+        (v_conv.channel = 'EMAIL'
+          and cc.kind = 'EMAIL'
+          and lower(trim(cc.value)) = v_sender_ref)
+        or
+        (v_conv.channel = 'WHATSAPP'
+          and cc.kind = 'PHONE'
+          and trim(cc.value) = v_sender_ref)
+      )
+  ) matches;
+
+  if v_match_count = 0 then
+    return jsonb_build_object('ok', false, 'code', 'IDENTITY_VERIFIED_MATCH_NOT_FOUND');
+  end if;
+
+  if v_match_count > 1 then
+    return jsonb_build_object('ok', false, 'code', 'IDENTITY_VERIFIED_MATCH_AMBIGUOUS');
+  end if;
+
+  select cc.customer_id
+  into v_customer_id
   from public.customer_contacts cc
   join public.customers c
     on c.workspace_id = cc.workspace_id
@@ -98,15 +128,8 @@ begin
       (v_conv.channel = 'WHATSAPP'
         and cc.kind = 'PHONE'
         and trim(cc.value) = v_sender_ref)
-    );
-
-  if v_match_count = 0 then
-    return jsonb_build_object('ok', false, 'code', 'IDENTITY_VERIFIED_MATCH_NOT_FOUND');
-  end if;
-
-  if v_match_count > 1 then
-    return jsonb_build_object('ok', false, 'code', 'IDENTITY_VERIFIED_MATCH_AMBIGUOUS');
-  end if;
+    )
+  limit 1;
 
   if v_conv.request_id is not null then
     select customer_id into v_request_customer
