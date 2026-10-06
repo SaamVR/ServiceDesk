@@ -79,3 +79,49 @@ export function requestPhotoObjectPath(input: {
   }
   return `${input.workspaceId}/${input.requestId}/${input.assetToken}.${input.extension}`;
 }
+
+
+export async function readBoundedRequestPhotoBody(
+  request: Request,
+): Promise<Result<Uint8Array>> {
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > REQUEST_PHOTO_MAX_BYTES) {
+    return fail("REQUEST_PHOTO_SIZE_INVALID", "Photo must be no larger than 20 MiB.");
+  }
+  if (!request.body) {
+    return fail("REQUEST_PHOTO_BODY_MISSING", "Photo bytes are missing.");
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    total += chunk.value.byteLength;
+    if (total > REQUEST_PHOTO_MAX_BYTES) {
+      await reader.cancel();
+      return fail("REQUEST_PHOTO_SIZE_INVALID", "Photo must be no larger than 20 MiB.");
+    }
+    chunks.push(chunk.value);
+  }
+  if (total === 0) return fail("REQUEST_PHOTO_BODY_MISSING", "Photo bytes are missing.");
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { ok: true, value: bytes };
+}
+
+export function isSameOriginPhotoUpload(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  try {
+    return new URL(origin).origin === new URL(request.url).origin;
+  } catch {
+    return false;
+  }
+}
