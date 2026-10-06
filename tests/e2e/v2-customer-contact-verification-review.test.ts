@@ -24,6 +24,10 @@ describe("V2 customer contact verification review", () => {
 
   it("normalizes Email identity only for duplicate detection and preserves exact Phone identity", () => {
     expect(runtime).toContain('kind === "EMAIL" ? rawValue.toLowerCase() : rawValue');
+    expect(runtime).toContain("verifiedIdentityCustomers");
+    expect(runtime).toContain("customerIds.add(customerId)");
+    expect(runtime).toContain("activeCustomerIds.has(customerId)");
+    expect(runtime).toContain("verifiedIdentityCustomers.get(identityKey)?.size");
     expect(runtime).toContain("identityConflictCount");
   });
 
