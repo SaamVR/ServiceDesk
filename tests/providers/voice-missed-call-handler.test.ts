@@ -1,7 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { handleVoiceMissedCallWebhook } from "../../src/server/api-handlers/provider-voice";
-import type { VoiceMissedCallCommandPort } from "../../src/server/core/voice-missed-call-postgres";
 
 const secret = "voice-test-secret";
 const payload = {
@@ -34,7 +33,7 @@ describe("voice missed-call webhook handler", () => {
       headers: { "x-servicedesk-voice-signature": signature(rawBody) },
       webhookSecret: secret,
       receivedAt: "2026-10-07T01:00:02.000Z",
-      store: { applyMissedVoiceCall } as VoiceMissedCallCommandPort,
+      store: { applyMissedVoiceCall },
     });
 
     expect(result).toEqual({
@@ -62,7 +61,7 @@ describe("voice missed-call webhook handler", () => {
       headers: { "x-servicedesk-voice-signature": "sha256=00" },
       webhookSecret: secret,
       receivedAt: "2026-10-07T01:00:02.000Z",
-      store: { applyMissedVoiceCall } as VoiceMissedCallCommandPort,
+      store: { applyMissedVoiceCall },
     });
 
     expect(result).toMatchObject({ statusCode: 401, acknowledged: false, retryable: false });
@@ -77,7 +76,7 @@ describe("voice missed-call webhook handler", () => {
       headers: { "x-servicedesk-voice-signature": signature(rawBody) },
       webhookSecret: secret,
       receivedAt: "2026-10-07T01:00:02.000Z",
-      store: { applyMissedVoiceCall } as VoiceMissedCallCommandPort,
+      store: { applyMissedVoiceCall },
     });
 
     expect(result).toMatchObject({ statusCode: 400, acknowledged: false, retryable: false });
@@ -97,7 +96,7 @@ describe("voice missed-call webhook handler", () => {
       headers: { "x-servicedesk-voice-signature": signature(rawBody) },
       webhookSecret: secret,
       receivedAt: "2026-10-07T01:00:02.000Z",
-      store: { applyMissedVoiceCall } as VoiceMissedCallCommandPort,
+      store: { applyMissedVoiceCall },
     });
 
     expect(result).toMatchObject({ statusCode: 503, acknowledged: false, retryable: true });
