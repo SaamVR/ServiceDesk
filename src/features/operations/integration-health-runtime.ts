@@ -84,7 +84,7 @@ function inboundReadiness(
     canRunControlledProof: configurationState === "CONFIGURED",
     source: "SERVER_CONFIGURATION_PRESENCE",
     message: configurationState === "CONFIGURED"
-      ? "Signed inbound route configuration is present. A controlled external provider receipt is still required before provider verification."
+      ? "Signed inbound route configuration is present. Controlled provider proof is still required before provider verification."
       : configurationState === "PARTIAL"
         ? `Inbound route configuration is partial; ${missingConfiguration.length} requirement${missingConfiguration.length === 1 ? "" : "s"} remain.`
         : "Inbound route is implemented but no server-side webhook routing configuration is present.",
