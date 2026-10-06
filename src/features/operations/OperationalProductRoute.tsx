@@ -11,6 +11,7 @@ import {
   loadOperationalStaffSnapshot,
   sendOperationalQuote,
   setOperationalChecklistItem,
+  setOperationalVoiceCallbackState,
   toggleInboxHandover,
   transitionOperationalVisit,
   updateOperationalServiceCatalogItem,
@@ -476,6 +477,24 @@ function RequestsView({
   workspaceSlug: string;
   selectedRequestId?: string;
 }) {
+  async function updateVoiceCallback(formData: FormData) {
+    "use server";
+    const requestId = String(formData.get("requestId") ?? "");
+    const intakeId = String(formData.get("intakeId") ?? "");
+    const state = String(formData.get("state") ?? "");
+    const result = await setOperationalVoiceCallbackState(
+      workspaceSlug,
+      intakeId,
+      state === "RESOLVED" ? "RESOLVED" : "PENDING",
+    );
+    actionRedirect(
+      workspaceSlug,
+      "requests",
+      result,
+      "request=" + encodeURIComponent(requestId) + "&",
+    );
+  }
+
   async function calculateQuote(formData: FormData) {
     "use server";
     const requestId = String(formData.get("requestId") ?? "");
@@ -539,7 +558,7 @@ function RequestsView({
                 key={request.id}
               >
                 <span className={styles.salesQueueTop}>
-                  <strong>{request.serviceLabel}</strong>
+                  <strong>{requestDisplayLabel(request)}</strong>
                   <StatusBadge tone={statusBadgeTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusBadge>
                 </span>
                 <span className={styles.salesQueueCustomer}>
@@ -563,7 +582,9 @@ function RequestsView({
               <h2>{requestDisplayLabel(selectedRequest)}</h2>
               <p>
                 {selectedRequest.sourceChannel === "VOICE"
-                  ? "Anonymous caller · staff callback required"
+                  ? selectedRequest.callbackRequired
+                    ? "Anonymous caller · staff callback required"
+                    : "Anonymous caller · callback completed"
                   : selectedRequestCustomer?.displayName ?? "Visitor enquiry"}
                 {" · "}
                 {formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)}
@@ -589,10 +610,29 @@ function RequestsView({
                 <div><dt>Home</dt><dd>{(selectedRequest.bedrooms ?? "—") + " bed · " + (selectedRequest.bathrooms ?? "—") + " bath"}</dd></div>
                 <div><dt>Requested</dt><dd>{formatWhen(selectedRequest.requestedStartAt, data.workspace.timezone)}</dd></div>
                 {selectedRequest.sourceChannel ? <div><dt>Source</dt><dd>{selectedRequest.sourceChannel.toLowerCase()}</dd></div> : null}
-                {selectedRequest.callbackRequired ? (
+                {selectedRequest.sourceChannel === "VOICE" ? (
                   <div><dt>Callback contact</dt><dd>{selectedRequest.callbackContactRef ?? "Not available"}</dd></div>
                 ) : null}
               </dl>
+              {selectedRequest.sourceChannel === "VOICE" && selectedRequest.callbackIntakeId ? (
+                <form action={updateVoiceCallback} className={styles.salesPrimaryAction}>
+                  <input type="hidden" name="requestId" value={selectedRequest.id} />
+                  <input type="hidden" name="intakeId" value={selectedRequest.callbackIntakeId} />
+                  <input
+                    type="hidden"
+                    name="state"
+                    value={selectedRequest.callbackRequired ? "RESOLVED" : "PENDING"}
+                  />
+                  <button className="app-button-secondary" type="submit">
+                    {selectedRequest.callbackRequired ? "Mark callback complete" : "Reopen callback"}
+                  </button>
+                  <span>
+                    {selectedRequest.callbackRequired
+                      ? "Completing the callback resolves its operations attention item."
+                      : "Reopening the callback puts the request back in the attention queue."}
+                  </span>
+                </form>
+              ) : null}
               {selectedRequestProperty?.accessNotes ? (
                 <div className={styles.salesNote}><span>Access</span><p>{selectedRequestProperty.accessNotes}</p></div>
               ) : null}
