@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { VoiceMissedCallCommandPort } from "../core/voice-missed-call-postgres";
 import { normalizeMissedVoiceCall } from "../integrations/voice/missed-call-normalization";
 
@@ -14,6 +14,7 @@ export interface VoiceMissedCallWebhookInput {
   headers: Record<string, string | undefined>;
   webhookSecret: string;
   receivedAt: string;
+  workspaceByProviderAccountId: Readonly<Record<string, string>>;
   store: Pick<VoiceMissedCallCommandPort, "applyMissedVoiceCall">;
 }
 
@@ -24,9 +25,10 @@ function header(headers: Record<string, string | undefined>, name: string): stri
 }
 
 function verifySignature(rawBody: string, signatureHeader: string | undefined, secret: string): boolean {
-  if (!signatureHeader?.startsWith("sha256=")) return false;
+  if (!secret || !signatureHeader?.startsWith("sha256=")) return false;
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
   const received = signatureHeader.slice("sha256=".length);
+  if (!/^[a-f0-9]{64}$/i.test(received)) return false;
   const expectedBuffer = Buffer.from(expected, "hex");
   const receivedBuffer = Buffer.from(received, "hex");
   return expectedBuffer.length === receivedBuffer.length && timingSafeEqual(expectedBuffer, receivedBuffer);
@@ -45,10 +47,16 @@ export async function handleVoiceMissedCallWebhook(
     };
   }
 
-  let parsed: unknown;
+  let parsed: Record<string, unknown> | undefined;
   try {
-    parsed = JSON.parse(input.rawBody);
+    const candidate = JSON.parse(input.rawBody) as unknown;
+    parsed = candidate && typeof candidate === "object" && !Array.isArray(candidate)
+      ? candidate as Record<string, unknown>
+      : undefined;
   } catch {
+    parsed = undefined;
+  }
+  if (!parsed) {
     return {
       statusCode: 400,
       body: "Malformed voice webhook JSON.",
@@ -57,7 +65,25 @@ export async function handleVoiceMissedCallWebhook(
     };
   }
 
-  const normalized = normalizeMissedVoiceCall(parsed, input.receivedAt);
+  const providerAccountId = typeof parsed.providerAccountId === "string"
+    ? parsed.providerAccountId.trim()
+    : "";
+  const workspaceId = input.workspaceByProviderAccountId[providerAccountId];
+  if (!providerAccountId || !workspaceId) {
+    return {
+      statusCode: 400,
+      body: "VOICE_ACCOUNT_UNMAPPED: Provider account is not mapped to an authorized workspace.",
+      acknowledged: false,
+      retryable: false,
+    };
+  }
+
+  const normalized = normalizeMissedVoiceCall({
+    ...parsed,
+    workspaceId,
+    providerAccountId,
+    rawProviderEventRef: "voice-webhook:sha256:" + createHash("sha256").update(input.rawBody).digest("hex"),
+  }, input.receivedAt);
   if (!normalized.ok) {
     return {
       statusCode: 400,
