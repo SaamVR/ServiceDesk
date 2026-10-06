@@ -150,7 +150,7 @@ export interface OperationalStaffSnapshot {
   workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
   customers: OperationalCustomer[];
-  customerContacts: OperationalCustomerContact[];
+  customerContacts?: OperationalCustomerContact[];
   properties: OperationalProperty[];
   requests: OperationalRequest[];
   quotes: OperationalQuote[];
