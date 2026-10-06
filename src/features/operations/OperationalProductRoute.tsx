@@ -9,6 +9,7 @@ import {
   enqueueInboxReply,
   holdOperationalSlot,
   loadOperationalStaffSnapshot,
+  resolveOperationalConversationIdentity,
   sendOperationalQuote,
   setOperationalChecklistItem,
   setOperationalVoiceCallbackState,
@@ -150,6 +151,23 @@ function InboxView({
     );
   }
 
+  async function resolveIdentity(formData: FormData) {
+    "use server";
+    const conversationId = String(formData.get("conversationId") ?? "");
+    const expectedVersion = Number(formData.get("expectedVersion") ?? 0);
+    const result = await resolveOperationalConversationIdentity(
+      workspaceSlug,
+      conversationId,
+      expectedVersion,
+    );
+    actionRedirect(
+      workspaceSlug,
+      "inbox",
+      result,
+      "conversation=" + encodeURIComponent(conversationId) + "&",
+    );
+  }
+
   async function reply(formData: FormData) {
     "use server";
     const conversationId = String(formData.get("conversationId") ?? "");
@@ -238,11 +256,19 @@ function InboxView({
         </header>
 
         {!customer ? (
-          <FeedbackBanner
-            title="Identity review required"
-            description="This sender is not attached to exactly one verified customer contact. Review the handover before replying or linking service history."
-            tone="warning"
-          />
+          <div className={styles.identityReview}>
+            <FeedbackBanner
+              title="Identity review required"
+              description="This sender is not attached to exactly one verified customer contact. Review verified customer contact data before retrying identity resolution."
+              tone="warning"
+            />
+            <form action={resolveIdentity}>
+              <input type="hidden" name="conversationId" value={selected.id} />
+              <input type="hidden" name="expectedVersion" value={selected.version} />
+              <button className="app-button-secondary" type="submit">Resolve verified identity</button>
+              <span>Only an exact, unique verified contact match can be linked. Human takeover stays active.</span>
+            </form>
+          </div>
         ) : null}
 
         <div className={styles.messageTimeline} aria-label="Message history">
