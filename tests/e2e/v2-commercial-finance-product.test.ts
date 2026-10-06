@@ -41,7 +41,7 @@ describe("V2 commercial finance product workspace", () => {
   it("keeps payment truth explicit and does not present saved-method charging as available", () => {
     const workspace = source("src/features/commercial/CommercialBillingWorkspace.tsx");
     expect(workspace).toContain("Draft creation never charges a payment method or marks an invoice paid.");
-    expect(workspace).toContain("Payment remains outstanding");
+    expect(workspace).toContain("It does not record payment");\n    expect(workspace).toContain("remains outstanding until payment is recorded");
     expect(workspace).toContain("money already received outside the online checkout flow");
     expect(workspace).not.toContain("Charge card");
     expect(workspace).not.toContain("saved payment method");
