@@ -1,0 +1,21 @@
+services:
+  - type: web
+    runtime: node
+    name: servicedesk-v2-rc
+    repo: https://github.com/SaamVR/ServiceDesk
+    branch: feat/servicedesk-v2-multilane-20261006
+    region: virginia
+    plan: free
+    autoDeployTrigger: off
+    buildCommand: corepack enable && corepack prepare pnpm@10.17.1 --activate && pnpm install --frozen-lockfile && pnpm check:rc
+    startCommand: pnpm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.20.0
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
