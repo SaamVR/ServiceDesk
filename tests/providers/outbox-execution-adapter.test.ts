@@ -20,4 +20,68 @@ describe("connector outbox execution port", () => {
     expect(result).toEqual({ ok: true, value: { outcome: "TERMINAL_FAILURE", failedAt: now(), code: "OUTBOX_INTENT_IDEMPOTENCY_MISMATCH" } });
     expect(called).toBe(false);
   });
+
+  test("maps retention resolver suppression to SUPPRESSED without calling a provider", async () => {
+    let called = false;
+    const port = new ConnectorOutboxExecutionPort({
+      now,
+      resolver: {
+        async resolve() {
+          return {
+            ok: false,
+            code: "RETENTION_SUPPRESSED:RECIPIENT_OPTED_OUT",
+            message: "No longer eligible.",
+          };
+        },
+      },
+      dispatchers: {
+        EMAIL: {
+          async dispatch() {
+            called = true;
+            throw new Error("should not call");
+          },
+        },
+      },
+    });
+    const campaignEvent = {
+      ...event,
+      topic: "retention.campaign",
+      payload: { campaignId: "campaign-1", customerId: "customer-1", channel: "EMAIL" },
+    };
+    await expect(port.execute(campaignEvent)).resolves.toEqual({
+      ok: true,
+      value: { outcome: "SUPPRESSED", failedAt: now(), code: "RECIPIENT_OPTED_OUT" },
+    });
+    expect(called).toBe(false);
+  });
+
+  test("maps retention resolver infrastructure failure to retryable without calling a provider", async () => {
+    let called = false;
+    const port = new ConnectorOutboxExecutionPort({
+      now,
+      resolver: {
+        async resolve() {
+          return {
+            ok: false,
+            code: "RETENTION_INTENT_RETRYABLE",
+            message: "Current database truth unavailable.",
+          };
+        },
+      },
+      dispatchers: {
+        EMAIL: {
+          async dispatch() {
+            called = true;
+            throw new Error("should not call");
+          },
+        },
+      },
+    });
+    await expect(port.execute({ ...event, topic: "retention.campaign" })).resolves.toEqual({
+      ok: true,
+      value: { outcome: "RETRYABLE_FAILURE", failedAt: now(), code: "RETENTION_INTENT_RETRYABLE" },
+    });
+    expect(called).toBe(false);
+  });
+
 });
