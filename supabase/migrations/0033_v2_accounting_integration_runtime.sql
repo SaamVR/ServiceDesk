@@ -81,7 +81,7 @@ begin
     update public.accounting_integrations
     set status = v_status,
         default_sync_owner = v_owner,
-        last_success_at = case when v_status = 'READY' then coalesce(last_success_at, v_now) else last_success_at end,
+        last_success_at = last_success_at,
         last_error_code = case when v_status in ('AUTH_EXPIRED','ERROR') then v_error else null end,
         version = version + 1,
         updated_at = v_now
@@ -93,7 +93,7 @@ begin
       version, created_at, updated_at
     ) values (
       v_workspace, v_provider, v_status, v_owner,
-      case when v_status = 'READY' then v_now else null end,
+      null,
       case when v_status in ('AUTH_EXPIRED','ERROR') then v_error else null end,
       1, v_now, v_now
     )
