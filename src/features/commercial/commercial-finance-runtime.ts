@@ -1,4 +1,5 @@
 import type {
+  AccountingBackfillPlanDTO,
   AccountingReconciliationSnapshotDTO,
   CommercialBillingDraftDTO,
   CommercialBillingLineDTO,
@@ -30,6 +31,7 @@ export interface CommercialFinanceSnapshot {
   invoices: CommercialFinanceInvoice[];
   billingReady: boolean;
   accounting?: AccountingReconciliationSnapshotDTO;
+  accountingBackfill?: AccountingBackfillPlanDTO;
   accountingReady: boolean;
 }
 
@@ -189,6 +191,17 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
     ? rows(invoiceRead.data).map(mapInvoice).filter((invoice): invoice is CommercialFinanceInvoice => Boolean(invoice))
     : [];
 
+  const readyAccountingIntegration = accountingResult.ok
+    ? accountingResult.value.integrations.find((integration) => integration.status === "READY")
+    : undefined;
+  const accountingBackfillResult = readyAccountingIntegration
+    ? await createPostgresAccountingReconciliationReader(resolved.value.rpc).planAccountingBackfill(
+        resolved.value.actor,
+        readyAccountingIntegration.provider,
+        100,
+      )
+    : undefined;
+
   return {
     ok: true,
     value: {
@@ -199,6 +212,7 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
       invoices,
       billingReady,
       accounting: accountingResult.ok ? accountingResult.value : undefined,
+      accountingBackfill: accountingBackfillResult?.ok ? accountingBackfillResult.value : undefined,
       accountingReady: accountingResult.ok,
     },
   };
