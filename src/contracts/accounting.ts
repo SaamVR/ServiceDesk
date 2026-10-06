@@ -53,3 +53,24 @@ export interface AccountingReconciliationSnapshotDTO {
   conflictCount: number;
   errorCount: number;
 }
+
+export type AccountingBackfillReason = "UNTRACKED" | "LOCAL_VERSION_ADVANCED";
+
+export interface AccountingBackfillCandidateDTO {
+  entityType: AccountingEntityType;
+  localResourceKind: AccountingLocalResourceKind;
+  localResourceId: string;
+  localVersion: number;
+  reason: AccountingBackfillReason;
+}
+
+export interface AccountingBackfillPlanDTO {
+  workspaceId: string;
+  provider: string;
+  dryRun: true;
+  candidateCount: number;
+  blockedCount: number;
+  pendingCount: number;
+  currentCount: number;
+  candidates: AccountingBackfillCandidateDTO[];
+}
