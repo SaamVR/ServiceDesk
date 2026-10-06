@@ -195,10 +195,11 @@ function mapBackfillCandidate(row: RpcRow): AccountingBackfillCandidateDTO {
 
 function mapBackfillPlan(value: unknown, workspaceId: string, provider: string): AccountingBackfillPlanDTO {
   const row = object(value, "plan");
+  if (row.dryRun !== true) throw new Error("Accounting backfill plan was not marked as a dry run.");
   const plan: AccountingBackfillPlanDTO = {
     workspaceId: string(row, "workspaceId"),
     provider: string(row, "provider"),
-    dryRun: row.dryRun === true,
+    dryRun: true,
     candidateCount: number(row, "candidateCount"),
     blockedCount: number(row, "blockedCount"),
     pendingCount: number(row, "pendingCount"),
@@ -206,7 +207,6 @@ function mapBackfillPlan(value: unknown, workspaceId: string, provider: string):
     candidates: list(row.candidates, "candidates").map(mapBackfillCandidate),
   };
 
-  if (!plan.dryRun) throw new Error("Accounting backfill plan was not marked as a dry run.");
   if (plan.workspaceId !== workspaceId || plan.provider !== provider) {
     throw new Error("Accounting backfill plan crossed workspace or provider scope.");
   }
