@@ -23,6 +23,7 @@ import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBa
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
+import { CommercialBillingWorkspace } from "@/features/commercial/CommercialBillingWorkspace";
 import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatWorkspaceDateTime } from "./product-truth";
@@ -1237,11 +1238,12 @@ function InvoicesView({
     actionRedirect(workspaceSlug, "invoices", result, "invoice=" + encodeURIComponent(invoiceId) + "&");
   }
 
-  if (data.invoices.length === 0) {
-    return <EmptyState title="No invoices yet" detail="Invoices will appear after billable visits are created." />;
+  const customerInvoices = data.invoices.filter((invoice) => Boolean(invoice.quoteId));
+  if (customerInvoices.length === 0) {
+    return <EmptyState title="No customer invoices yet" detail="Quote-backed customer invoices will appear here after billable visits are created. Commercial contract invoices are managed above." />;
   }
 
-  const orderedInvoices = [...data.invoices].sort((left, right) => {
+  const orderedInvoices = [...customerInvoices].sort((left, right) => {
     const leftOpen = left.balanceMinor > 0 && left.status !== "VOID" ? 0 : 1;
     const rightOpen = right.balanceMinor > 0 && right.status !== "VOID" ? 0 : 1;
     return leftOpen - rightOpen || right.balanceMinor - left.balanceMinor;
@@ -2353,7 +2355,10 @@ export async function OperationalProductRoute({
       <Notice notice={notice} error={error} />
 
       {result.ok ? (
-        renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId)
+        <>
+          {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
+          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId)}
+        </>
       ) : (
         <Panel>
           <FeedbackBanner
