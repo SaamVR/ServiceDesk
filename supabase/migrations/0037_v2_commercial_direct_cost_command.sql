@@ -118,7 +118,7 @@ begin
     return jsonb_build_object('ok', false, 'code', 'COMMERCIAL_DIRECT_COST_IDEMPOTENCY_CONFLICT');
   end if;
 
-  select v.*,
+  select v,
          sp.contract_version_id,
          cs.site_id,
          cs.service_id,
