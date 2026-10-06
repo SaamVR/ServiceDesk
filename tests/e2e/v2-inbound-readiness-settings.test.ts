@@ -32,4 +32,11 @@ describe("V2 inbound readiness Settings product", () => {
     expect(route).toContain("data.integrations.map");
     expect(route).toContain("Secret values are never exposed.");
   });
+
+  it("renders provider-verified evidence distinctly from configuration readiness", () => {
+    expect(route).toContain('integration.verificationState === "PROVIDER_VERIFIED"');
+    expect(route).toContain('"Provider verified"');
+    expect(route).toContain('"success" as const');
+  });
+
 });
