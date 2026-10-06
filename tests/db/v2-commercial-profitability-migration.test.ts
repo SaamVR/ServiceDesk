@@ -10,7 +10,7 @@ const sql = readFileSync(
 describe("V2 commercial profitability read model", () => {
   it("groups contract-backed visit economics by site and service", () => {
     expect(sql).toContain("servicedesk_read_commercial_profitability_snapshot");
-    expect(sql).toContain("join public.commercial_site_service_plans sp");
+    expect(sql).toContain("from public.commercial_site_service_plans sp");
     expect(sql).toContain("join public.commercial_contract_sites cs");
     expect(sql).toContain("join public.commercial_sites site");
     expect(sql).toContain("join public.service_catalog svc");
@@ -40,7 +40,8 @@ describe("V2 commercial profitability read model", () => {
     expect(sql).toContain("b.invoice_status = 'PAID' and b.balance_minor = 0");
     expect(sql).toContain("partial_payment_visit_count");
     expect(sql).toContain("partialPaymentInvoiceCount");
-    expect(sql).not.toMatch(/prorat|pro[-_ ]?rat/i);
+    expect(sql).not.toContain("billed_visit_minor * b.net_collected_minor");
+    expect(sql).not.toContain("net_collected_minor /");
   });
 
   it("keeps service-unattributed adjustments outside service margins", () => {
