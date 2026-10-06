@@ -214,9 +214,11 @@ export interface TeamMemberDTO {
 
 export interface TeamInvitationDTO {
   id: string;
+  email?: string;
   role: "OWNER" | "DISPATCHER" | "CREW";
   state: "PENDING" | "ACCEPTED" | "REVOKED";
   createdAt: ISODateTime;
+  expiresAt?: ISODateTime;
 }
 
 export interface OwnerSettingsSnapshotDTO {
