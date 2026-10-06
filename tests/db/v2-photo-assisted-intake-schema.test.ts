@@ -48,10 +48,12 @@ describe("V2 photo-assisted intake schema", () => {
   it("grants only read access for Data API review paths", () => {
     expect(sql).toContain("revoke all on table public.request_photo_assets from public, anon, authenticated");
     expect(sql).toContain("revoke all on table public.request_photo_suggestions from public, anon, authenticated");
-    expect(sql).toContain("grant select on table public.request_photo_assets to authenticated, service_role");
-    expect(sql).toContain("grant select on table public.request_photo_suggestions to authenticated, service_role");
-    expect(sql).not.toContain("grant insert on table public.request_photo_assets");
-    expect(sql).not.toContain("grant update on table public.request_photo_suggestions");
+    expect(sql).toContain("grant select on table public.request_photo_assets to authenticated");
+    expect(sql).toContain("grant select on table public.request_photo_suggestions to authenticated");
+    expect(sql).toContain("grant select, insert, update, delete on table public.request_photo_assets to service_role");
+    expect(sql).toContain("grant select, insert, update, delete on table public.request_photo_suggestions to service_role");
+    expect(sql).not.toContain("grant insert on table public.request_photo_assets to authenticated");
+    expect(sql).not.toContain("grant update on table public.request_photo_suggestions to authenticated");
   });
 
 });
