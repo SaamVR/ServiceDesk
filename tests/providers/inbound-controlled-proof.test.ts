@@ -73,6 +73,21 @@ describe("controlled inbound proof validation", () => {
     }).code).toBe("PROOF_SECRET_MATERIAL");
   });
 
+  it("rejects unredacted receipt references and implausibly future timestamps", () => {
+    expect(validateInboundControlledProof({
+      channel: "EMAIL_INBOUND",
+      manifest: manifest({ redactedProviderReceipt: "provider-message-123" }) as never,
+      expectedBuildSha: buildSha,
+      now,
+    }).code).toBe("PROOF_MALFORMED");
+    expect(validateInboundControlledProof({
+      channel: "EMAIL_INBOUND",
+      manifest: manifest({ capturedAt: "2026-10-07T00:10:01.000Z" }) as never,
+      expectedBuildSha: buildSha,
+      now,
+    }).code).toBe("PROOF_TIMESTAMP_INVALID");
+  });
+
   it("does not accept proof when the current build identity is unavailable", () => {
     expect(validateInboundControlledProof({
       channel: "EMAIL_INBOUND",
