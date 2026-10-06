@@ -687,6 +687,24 @@ p { color: var(--muted); }
     scrollbar-width: thin;
   }
 
+  .site-primary-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 8px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .site-primary-nav a {
+    min-height: 38px;
+    padding: 0 8px;
+    border-radius: 8px;
+  }
+
+  .site-primary-nav a:last-child {
+    grid-column: 1 / -1;
+  }
+
   .site-nav a {
     min-height: 44px;
     display: inline-flex;
