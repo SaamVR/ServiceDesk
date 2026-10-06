@@ -18,8 +18,8 @@ export function MarketingShell({
   title,
   description,
   children,
-  primaryHref = "/tour",
-  primaryLabel = "Explore product",
+  primaryHref = "/features",
+  primaryLabel = "Explore platform",
   secondaryHref = "/contact",
   secondaryLabel = "Book a walkthrough",
 }: MarketingShellProps) {
@@ -37,17 +37,23 @@ export function MarketingShell({
         </nav>
       </header>
 
-      <section className="hero-grid section-card">
-        <div className="stack-lg">
+      <section className="hero-grid section-card marketing-hero">
+        <div className="stack-lg marketing-hero-copy">
           <p className="eyebrow">{eyebrow}</p>
           <h1>{title}</h1>
           <p className="lead">{description}</p>
+          <ul className="hero-capabilities" aria-label="Core ServiceDesk capabilities">
+            <li>Structured intake</li>
+            <li>Versioned quotes</li>
+            <li>Human-approved dispatch</li>
+            <li>Field proof & invoicing</li>
+          </ul>
           <div className="action-row">
             <Link className="button-primary" href={primaryHref}>{primaryLabel}</Link>
             <Link className="button-secondary" href={secondaryHref}>{secondaryLabel}</Link>
           </div>
         </div>
-        <div className="interface-card" aria-label="Operational interface preview">
+        <div className="interface-card marketing-hero-card" aria-label="ServiceDesk operational interface">
           <div className="browser-bar" aria-hidden="true"><span /><span /><span /></div>
           <div className="split-preview">
             <div>

@@ -15,7 +15,7 @@ export function BenefitGrid() {
     <section className="grid-section" aria-labelledby="benefits-heading">
       <div className="section-heading">
         <p className="eyebrow">Operational benefits</p>
-        <h2 id="benefits-heading">One record for the full cleaning lifecycle.</h2>
+        <h2 id="benefits-heading">One operating system for the cleaning lifecycle.</h2>
       </div>
       <div className="card-grid three">
         {operationalBenefits.map((benefit) => (
@@ -33,9 +33,9 @@ export function LifecycleProof() {
   return (
     <section className="section-card" aria-labelledby="lifecycle-heading">
       <div className="section-heading compact">
-        <p className="eyebrow">Workflow proof</p>
+        <p className="eyebrow">Connected workflow</p>
         <h2 id="lifecycle-heading">From first message to paid repeat visit.</h2>
-        <p>Every step below maps to a stored request, quote, visit, invoice, delivery or attention record.</p>
+        <p>Each step stays connected to the same customer and service record, so staff always know what changed and what needs action.</p>
       </div>
       <ol className="timeline-list">
         {lifecycleSteps.map((step, index) => (
@@ -49,13 +49,13 @@ export function LifecycleProof() {
   );
 }
 
-export function FixturePricingCard() {
+export function PricingControlCard() {
   return (
-    <section className="section-card two-column" aria-labelledby="pricing-fixture-heading">
+    <section className="section-card two-column" aria-labelledby="pricing-control-heading">
       <div>
-        <p className="eyebrow">Frozen pricing fixture</p>
-        <h2 id="pricing-fixture-heading">Move-out clean quote stays deterministic.</h2>
-        <p>No AI output sets the price. The UI displays the quote snapshot returned by the core facade.</p>
+        <p className="eyebrow">Deterministic pricing</p>
+        <h2 id="pricing-control-heading">Quotes stay predictable, versioned and auditable.</h2>
+        <p>Configured pricing rules—not AI output—set the quote. Staff and customers see the same amount, deposit, duration and balance.</p>
       </div>
       <dl className="metric-grid">
         <div><dt>Total</dt><dd>$340</dd></div>
@@ -71,16 +71,15 @@ export function IntegrationStatusGrid() {
   return (
     <section className="grid-section" aria-labelledby="integrations-heading">
       <div className="section-heading">
-        <p className="eyebrow">Integration boundaries</p>
-        <h2 id="integrations-heading">Provider states are visible and conservative.</h2>
-        <p>Real receipts appear only after Chat 2 verifies controlled provider evidence.</p>
+        <p className="eyebrow">Connected services</p>
+        <h2 id="integrations-heading">Provider status stays clear at a glance.</h2>
+        <p>Configuration, sandbox and verification states stay explicit so operators know which connected workflows are ready for live use.</p>
       </div>
       <div className="card-grid two">
         {integrationCards.map((card) => (
           <article className="plain-card" key={card.title}>
-            <span className="status-pill pending">Configuration blocked</span>
+            <span className={`status-pill ${card.tone}`}>{card.state}</span>
             <h3>{card.title}</h3>
-            <p><strong>{card.state}</strong></p>
             <p>{card.detail}</p>
           </article>
         ))}
@@ -94,7 +93,7 @@ export function CustomerJourneyPreview() {
     <section className="section-card" aria-labelledby="customer-heading">
       <div className="section-heading compact">
         <p className="eyebrow">Customer/business workspace</p>
-        <h2 id="customer-heading">The customer can see what the business knows.</h2>
+        <h2 id="customer-heading">Customers see the same operational truth as your team.</h2>
       </div>
       <div className="card-grid three">
         {customerJourneyCards.map((card) => (
@@ -114,8 +113,8 @@ export function StaffWorkspacePreview() {
     <section className="section-card" aria-labelledby="staff-heading">
       <div className="section-heading compact">
         <p className="eyebrow">Staff app</p>
-        <h2 id="staff-heading">Attention before dashboards.</h2>
-        <p>Charts and reports are downstream of stored records; urgent work appears first.</p>
+        <h2 id="staff-heading">Work the exceptions first.</h2>
+        <p>The overview prioritizes work that needs a decision before reporting and analytics.</p>
       </div>
       <div className="tri-pane-preview" aria-label="Staff inbox tri-pane preview">
         <aside>
@@ -145,13 +144,13 @@ export function CrewWorkspacePreview() {
     <section className="section-card two-column" aria-labelledby="crew-heading">
       <div>
         <p className="eyebrow">Crew mobile workspace</p>
-        <h2 id="crew-heading">A field view that is action-first.</h2>
+        <h2 id="crew-heading">Field work stays action-first.</h2>
         <p>Today cards surface the next safe status action; proof, checklist, time and incidents stay grouped under the job.</p>
       </div>
       <div className="mobile-preview" aria-label="Crew mobile job preview">
         <p className="label">Today · 09:00</p>
         <h3>Move-out clean · SW11</h3>
-        <button className="button-primary full" disabled type="button">Start travel · preview</button>
+        <button className="button-primary full" disabled type="button">Start travel</button>
         <ul className="check-list">
           {crewActions.slice(2).map((action) => <li key={action}>{action}</li>)}
         </ul>

@@ -3,7 +3,7 @@ import {
   BenefitGrid,
   CustomerJourneyPreview,
   CrewWorkspacePreview,
-  FixturePricingCard,
+  PricingControlCard,
   IntegrationStatusGrid,
   LifecycleProof,
   StaffWorkspacePreview,
@@ -12,12 +12,12 @@ import {
 export default function HomePage() {
   return (
     <MarketingShell
-      title="Run cleaning enquiries, quotes, crews and payments from one operational workspace."
-      description="ServiceDesk AI V1 is the working operations product for residential cleaning companies: customer intake, deterministic quotes, slot holds, deposit status, dispatch, crew proof, invoices and recovery states."
+      title="Run cleaning operations from enquiry to paid job."
+      description="ServiceDesk AI connects customer intake, quoting, scheduling, crew execution, payments, quality and recovery in one operational workspace for residential cleaning teams."
     >
       <BenefitGrid />
       <LifecycleProof />
-      <FixturePricingCard />
+      <PricingControlCard />
       <CustomerJourneyPreview />
       <StaffWorkspacePreview />
       <CrewWorkspacePreview />
