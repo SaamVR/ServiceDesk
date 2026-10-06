@@ -633,6 +633,137 @@ begin
 end;
 $$;
 
+
+-- The existing workspace snapshot joined invoices through quotes, which would hide legitimate
+-- commercial invoices from staff. Keep customer visibility quote-scoped while allowing staff to
+-- read every workspace invoice, including commercial consolidated invoices.
+create or replace function public.servicedesk_read_workspace_snapshot(p_input jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  v_workspace uuid := (p_input->>'workspaceId')::uuid;
+  v_actor_role text := p_input->>'actorRole';
+  v_actor_user uuid := nullif(p_input->>'actorUserId','')::uuid;
+  v_customer_filter uuid := nullif(p_input->>'customerId','')::uuid;
+  v_request_filter uuid := nullif(p_input->>'requestId','')::uuid;
+  v_visit_filter uuid := nullif(p_input->>'visitId','')::uuid;
+  v_invoice_filter uuid := nullif(p_input->>'invoiceId','')::uuid;
+  v_conversation_filter uuid := nullif(p_input->>'conversationId','')::uuid;
+  v_staff boolean;
+  v_customer_id uuid;
+begin
+  if v_workspace is null or v_actor_user is null or v_actor_role is null then
+    return jsonb_build_object('ok', false, 'code', 'SNAPSHOT_INVALID');
+  end if;
+
+  v_staff := v_actor_role in ('OWNER','DISPATCHER') and exists (
+    select 1 from public.memberships
+    where workspace_id = v_workspace and user_id = v_actor_user and status = 'ACTIVE' and role in ('OWNER','DISPATCHER')
+  );
+
+  if not v_staff then
+    select id into v_customer_id
+    from public.customers
+    where workspace_id = v_workspace and auth_user_id = v_actor_user and archived_at is null;
+    if v_actor_role <> 'CUSTOMER' or v_customer_id is null then
+      return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+    end if;
+    if v_customer_filter is not null and v_customer_filter <> v_customer_id then
+      return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+    end if;
+    v_customer_filter := v_customer_id;
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'requests', coalesce((select jsonb_agg(jsonb_build_object(
+      'id', r.id, 'workspaceId', r.workspace_id, 'customerId', r.customer_id, 'propertyId', r.property_id,
+      'serviceCode', sc.code, 'status', r.status::text, 'bedrooms', r.bedrooms, 'bathrooms', r.bathrooms,
+      'requestedStartAt', r.requested_start_at, 'version', r.version, 'createdAt', r.created_at, 'updatedAt', r.updated_at
+    ) order by r.created_at desc)
+      from public.requests r left join public.service_catalog sc on sc.workspace_id = r.workspace_id and sc.id = r.service_id
+      where r.workspace_id = v_workspace and (v_customer_filter is null or r.customer_id = v_customer_filter) and (v_request_filter is null or r.id = v_request_filter)
+    ), '[]'::jsonb),
+    'quotes', coalesce((select jsonb_agg(jsonb_build_object(
+      'id', q.id, 'workspaceId', q.workspace_id, 'requestId', q.request_id, 'version', q.version, 'status', q.status::text,
+      'currency', q.currency, 'subtotalMinor', q.subtotal_minor, 'taxMinor', q.tax_minor, 'totalMinor', q.total_minor,
+      'depositMinor', q.deposit_minor, 'balanceMinor', q.balance_minor, 'durationMinutes', q.duration_minutes,
+      'bufferMinutes', q.buffer_minutes, 'rateVersion', q.rate_version, 'validUntil', q.valid_until
+    ) order by q.created_at desc)
+      from public.quotes q join public.requests r on r.workspace_id = q.workspace_id and r.id = q.request_id
+      where q.workspace_id = v_workspace and (v_customer_filter is null or r.customer_id = v_customer_filter) and (v_request_filter is null or q.request_id = v_request_filter)
+    ), '[]'::jsonb),
+    'visits', coalesce((select jsonb_agg(jsonb_build_object(
+      'id', v.id, 'workspaceId', v.workspace_id, 'requestId', v.request_id, 'quoteId', v.quote_id, 'crewId', v.crew_id,
+      'status', case v.status when 'SCHEDULED' then 'CONFIRMED' when 'NEEDS_REVIEW' then 'PENDING_REVIEW' else v.status::text end,
+      'startAt', v.starts_at, 'serviceMinutes', coalesce(q.duration_minutes, greatest(0, floor(extract(epoch from (v.ends_at - v.starts_at)) / 60)::int)),
+      'bufferMinutes', coalesce(q.buffer_minutes, 0), 'version', v.version
+    ) order by v.starts_at desc)
+      from public.visits v left join public.quotes q on q.workspace_id = v.workspace_id and q.id = v.quote_id
+      join public.requests r on r.workspace_id = v.workspace_id and r.id = v.request_id
+      where v.workspace_id = v_workspace and (v_customer_filter is null or r.customer_id = v_customer_filter) and (v_visit_filter is null or v.id = v_visit_filter)
+    ), '[]'::jsonb),
+    'invoices', case when v_staff then
+      coalesce((select jsonb_agg(public.servicedesk_invoice_json(i) order by i.created_at desc)
+        from public.invoices i
+        where i.workspace_id = v_workspace and (v_invoice_filter is null or i.id = v_invoice_filter)
+      ), '[]'::jsonb)
+    else
+      coalesce((select jsonb_agg(public.servicedesk_invoice_json(i) order by i.created_at desc)
+        from public.invoices i
+        join public.quotes q on q.workspace_id = i.workspace_id and q.id = i.quote_id
+        join public.requests r on r.workspace_id = q.workspace_id and r.id = q.request_id
+        where i.workspace_id = v_workspace
+          and r.customer_id = v_customer_filter
+          and (v_invoice_filter is null or i.id = v_invoice_filter)
+      ), '[]'::jsonb)
+    end,
+    'conversations', coalesce((select jsonb_agg(jsonb_build_object(
+      'id', c.id, 'workspaceId', c.workspace_id, 'requestId', c.request_id, 'customerId', c.customer_id,
+      'channel', c.channel, 'assignedUserId', c.assigned_user_id, 'handoverActive', c.handover_active,
+      'version', c.version, 'lastMessageAt', c.last_message_at
+    ) order by c.updated_at desc)
+      from public.conversations c
+      where c.workspace_id = v_workspace and (v_customer_filter is null or c.customer_id = v_customer_filter) and (v_conversation_filter is null or c.id = v_conversation_filter)
+    ), '[]'::jsonb),
+    'messages', coalesce((select jsonb_agg(jsonb_build_object(
+      'id', m.id, 'workspaceId', m.workspace_id, 'conversationId', m.conversation_id, 'direction', m.direction,
+      'channel', m.channel, 'content', m.content, 'providerMessageId', m.provider_message_id, 'createdAt', m.created_at
+    ) order by m.created_at asc)
+      from public.messages m join public.conversations c on c.workspace_id = m.workspace_id and c.id = m.conversation_id
+      where m.workspace_id = v_workspace and (v_customer_filter is null or c.customer_id = v_customer_filter) and (v_conversation_filter is null or m.conversation_id = v_conversation_filter)
+    ), '[]'::jsonb),
+    'recurrenceRules', coalesce((select jsonb_agg(public.servicedesk_recurrence_rule_json(rr) order by rr.created_at desc)
+      from public.recurrence_rules rr join public.requests r on r.workspace_id = rr.workspace_id and r.id = rr.request_id
+      where rr.workspace_id = v_workspace and (v_customer_filter is null or r.customer_id = v_customer_filter)
+    ), '[]'::jsonb),
+    'visitEvidence', coalesce((select jsonb_agg(jsonb_build_object(
+      'id', ve.id, 'workspaceId', ve.workspace_id, 'visitId', ve.visit_id, 'kind', ve.kind,
+      'mediaReference', ve.media_reference, 'text', ve.text, 'capturedAt', ve.captured_at,
+      'submittedByUserId', ve.submitted_by_user_id, 'createdAt', ve.created_at
+    ) order by ve.created_at desc)
+      from public.visit_evidence ve join public.visits v on v.workspace_id = ve.workspace_id and v.id = ve.visit_id join public.requests r on r.workspace_id = v.workspace_id and r.id = v.request_id
+      where ve.workspace_id = v_workspace and (v_customer_filter is null or r.customer_id = v_customer_filter) and (v_visit_filter is null or ve.visit_id = v_visit_filter)
+    ), '[]'::jsonb),
+    'visitChecklistItems', coalesce((select jsonb_agg(jsonb_build_object(
+      'id', ci.id, 'workspaceId', ci.workspace_id, 'visitId', ci.visit_id, 'itemKey', ci.item_key,
+      'completed', ci.completed, 'note', ci.note, 'updatedByUserId', ci.updated_by_user_id,
+      'updatedAt', ci.updated_at, 'version', ci.version
+    ) order by ci.updated_at desc)
+      from public.visit_checklist_items ci join public.visits v on v.workspace_id = ci.workspace_id and v.id = ci.visit_id join public.requests r on r.workspace_id = v.workspace_id and r.id = v.request_id
+      where ci.workspace_id = v_workspace and (v_customer_filter is null or r.customer_id = v_customer_filter) and (v_visit_filter is null or ci.visit_id = v_visit_filter)
+    ), '[]'::jsonb),
+    'attentionItems', case when v_staff then coalesce((select jsonb_agg(public.servicedesk_attention_item_json(ai) order by ai.created_at desc)
+      from public.attention_items ai where ai.workspace_id = v_workspace and ai.status = 'OPEN'), '[]'::jsonb) else '[]'::jsonb end,
+    'qualityCases', case when v_staff then coalesce((select jsonb_agg(public.servicedesk_quality_case_json(qc) order by qc.updated_at desc)
+      from public.quality_cases qc where qc.workspace_id = v_workspace and (v_visit_filter is null or qc.visit_id = v_visit_filter)), '[]'::jsonb) else '[]'::jsonb end
+  );
+end;
+$;
+
 revoke all on function public.servicedesk_commercial_billing_draft_json(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.servicedesk_recalculate_commercial_billing_draft(uuid, uuid, timestamptz) from public, anon, authenticated;
 revoke all on function public.servicedesk_create_commercial_billing_draft(jsonb) from public, anon, authenticated;
