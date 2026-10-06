@@ -79,7 +79,7 @@ function inboundReadiness(
     label: isEmail ? "Email inbound" : "Voice inbound",
     mode: "LIVE",
     configurationState,
-    verificationState: configurationState === "CONFIGURED" ? "IMPLEMENTED" : "CONFIGURATION_BLOCKED",
+    verificationState: "IMPLEMENTED",
     missingConfiguration,
     canRunControlledProof: configurationState === "CONFIGURED",
     source: "SERVER_CONFIGURATION_PRESENCE",
