@@ -1,8 +1,10 @@
 import type {
+  AccountingReconciliationSnapshotDTO,
   CommercialBillingDraftDTO,
   CommercialBillingLineDTO,
   CommercialPortfolioSnapshotDTO,
 } from "@/contracts";
+import { createPostgresAccountingReconciliationReader } from "@/server/core/accounting-reconciliation-postgres";
 import { createPostgresCommercialBillingCommands } from "@/server/core/commercial-billing-postgres";
 import { createPostgresCommercialPortfolioReader } from "@/server/core/commercial-read-postgres";
 import { resolveStaffActor } from "@/features/operations/operational-product-runtime";
@@ -27,6 +29,8 @@ export interface CommercialFinanceSnapshot {
   drafts: CommercialBillingDraftDTO[];
   invoices: CommercialFinanceInvoice[];
   billingReady: boolean;
+  accounting?: AccountingReconciliationSnapshotDTO;
+  accountingReady: boolean;
 }
 
 export type CommercialFinanceLoadResult =
@@ -154,7 +158,7 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
     return { ok: false, message: "Commercial operations are not enabled for this workspace." };
   }
 
-  const [draftRead, lineRead, invoiceRead] = await Promise.all([
+  const [draftRead, lineRead, invoiceRead, accountingResult] = await Promise.all([
     resolved.value.service
       .from("commercial_billing_drafts")
       .select("*")
@@ -174,6 +178,8 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
       .not("commercial_billing_draft_id", "is", null)
       .order("created_at", { ascending: false })
       .limit(100),
+    createPostgresAccountingReconciliationReader(resolved.value.rpc)
+      .readAccountingReconciliationSnapshot(resolved.value.actor),
   ]);
 
   const billingReady = !draftRead.error && !lineRead.error && !invoiceRead.error;
@@ -192,6 +198,8 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
       drafts,
       invoices,
       billingReady,
+      accounting: accountingResult.ok ? accountingResult.value : undefined,
+      accountingReady: accountingResult.ok,
     },
   };
 }
