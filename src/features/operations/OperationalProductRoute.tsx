@@ -2407,7 +2407,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     }
     const result = await upsertOperationalRetentionCampaign(workspaceSlug, {
       name: String(formData.get("name") ?? ""),
-      channel: rawChannel,
+      channel: rawChannel as "EMAIL" | "WHATSAPP",
       purpose: rawPurpose as "FOLLOW_UP" | "REVIEW_REQUEST" | "REFERRAL_NUDGE",
       status: rawStatus as "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED",
       templateKey: String(formData.get("templateKey") ?? "") || undefined,
