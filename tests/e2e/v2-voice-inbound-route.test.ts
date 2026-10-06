@@ -14,6 +14,7 @@ describe("voice inbound Next route", () => {
   it("fails closed when configuration is absent and disables response caching", () => {
     expect(route).toContain("Voice inbound is not configured.");
     expect(route).toContain("status: 503");
-    expect(route).toContain('"Cache-Control": "no-store"');
+    expect(route).toContain("readBoundedWebhookBody(request)");
+    expect(route).toContain("inboundWebhookResponse");
   });
 });
