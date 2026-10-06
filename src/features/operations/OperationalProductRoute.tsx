@@ -651,6 +651,7 @@ function RequestsView({
     .filter((suggestion) => suggestion.requestId === selectedRequest.id)
     .sort((left, right) => Date.parse(right.generatedAt) - Date.parse(left.generatedAt));
   const pendingPhotoSuggestions = selectedPhotoSuggestions.filter((suggestion) => suggestion.state === "PENDING_REVIEW");
+  const snapshotNow = Date.parse(data.loadedAt);
   const selectedRequestCanCalculate = Boolean(selectedRequest.serviceCode)
     && selectedRequest.bedrooms !== undefined
     && selectedRequest.bathrooms !== undefined
@@ -835,7 +836,7 @@ function RequestsView({
                     const processable = asset.state === "AVAILABLE"
                       && asset.consentStatus === "GRANTED"
                       && !asset.processingOptOut
-                      && Date.parse(asset.retentionUntil) > Date.now();
+                      && Date.parse(asset.retentionUntil) > snapshotNow;
                     return (
                       <article className={styles.photoReviewCard} key={asset.id}>
                         <div className={styles.photoPreviewFrame}>
