@@ -2391,8 +2391,6 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
       code: String(formData.get("code") ?? ""),
       label: String(formData.get("label") ?? ""),
       active: String(formData.get("active") ?? "") === "on",
-      startsAt: String(formData.get("startsAt") ?? "") || undefined,
-      endsAt: String(formData.get("endsAt") ?? "") || undefined,
     });
     actionRedirect(workspaceSlug, "settings", result, "section=growth&");
   }
@@ -2692,10 +2690,6 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         <span>Label</span>
                         <input className="app-input" name="label" placeholder="Neighbor referral" maxLength={120} required />
                       </label>
-                      <div className={styles.growthFormRow}>
-                        <label><span>Starts</span><input className="app-input" name="startsAt" type="datetime-local" /></label>
-                        <label><span>Ends</span><input className="app-input" name="endsAt" type="datetime-local" /></label>
-                      </div>
                       <label className={styles.settingToggle}>
                         <input name="active" type="checkbox" defaultChecked />
                         <span><strong>Active</strong><small>Accept new touches for this code.</small></span>
