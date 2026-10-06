@@ -694,6 +694,16 @@ export async function CustomerProductRoute({
         <CustomerEmptyState
           title={result.kind === "authentication" ? "Sign in required" : "Customer account unavailable"}
           description={result.message}
+          action={
+            result.kind === "authentication" ? (
+              <a
+                className={styles.primaryButton}
+                href={"/auth/sign-in?next=" + encodeURIComponent("/portal")}
+              >
+                Sign in
+              </a>
+            ) : undefined
+          }
         />
       )}
     </CustomerPortalShell>
