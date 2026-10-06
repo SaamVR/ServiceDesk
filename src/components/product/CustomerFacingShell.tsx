@@ -16,11 +16,13 @@ function initials(value: string) {
 export function CustomerPortalShell({
   businessName,
   customerName,
+  authenticationRequired = false,
   activeSection,
   children,
 }: {
   businessName: string;
   customerName?: string;
+  authenticationRequired?: boolean;
   activeSection: "overview" | "properties" | "preferences" | "detail";
   children: ReactNode;
 }) {
@@ -66,9 +68,9 @@ export function CustomerPortalShell({
               <button className={styles.signOutButton} type="submit">Sign out</button>
             </form>
           </div>
-        ) : (
+        ) : authenticationRequired ? (
           <a className={styles.signInLink} href={"/auth/sign-in?next=" + encodeURIComponent("/portal")}>Sign in</a>
-        )}
+        ) : null}
 
         <details className={styles.mobileNav}>
           <summary>Menu</summary>
