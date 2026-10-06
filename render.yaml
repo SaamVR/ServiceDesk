@@ -27,3 +27,7 @@ services:
         sync: false
       - key: SERVICEDESK_VOICE_ACCOUNT_WORKSPACE_MAP
         sync: false
+      - key: SERVICEDESK_EMAIL_INBOUND_PROOF_JSON
+        sync: false
+      - key: SERVICEDESK_VOICE_INBOUND_PROOF_JSON
+        sync: false
