@@ -19,7 +19,7 @@ declare
   v_conv public.conversations%rowtype;
   v_sender_ref text;
   v_customer_id uuid;
-  v_match_count integer;
+  v_match_count bigint;
   v_request_customer uuid;
 begin
   if v_workspace is null
