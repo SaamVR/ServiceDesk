@@ -1186,3 +1186,64 @@ export async function setOperationalVoiceCallbackState(
     message: state === "RESOLVED" ? "Callback marked complete." : "Callback reopened.",
   };
 }
+
+export async function resolveOperationalConversationIdentity(
+  workspaceSlug: string,
+  conversationId: string,
+  expectedVersion: number,
+): Promise<OperationalActionResult> {
+  const id = conversationId.trim();
+  if (!id || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+    return { ok: false, message: "The conversation identity state is no longer valid. Refresh and try again." };
+  }
+
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>(
+    "servicedesk_resolve_conversation_verified_identity",
+    {
+      p_input: {
+        workspaceId: resolved.value.workspace.id,
+        actorUserId: resolved.value.actor.userId,
+        actorRole: resolved.value.actor.role,
+        conversationId: id,
+        expectedVersion,
+        now: new Date().toISOString(),
+      },
+    },
+  );
+
+  if (error) {
+    return { ok: false, message: "Verified identity could not be rechecked. Try again." };
+  }
+  if (!data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "VERSION_CONFLICT") {
+      return { ok: false, message: "This conversation changed since the page loaded. Refresh and try again." };
+    }
+    if (code === "IDENTITY_VERIFIED_MATCH_NOT_FOUND") {
+      return { ok: false, message: "No verified customer contact matches this sender yet." };
+    }
+    if (code === "IDENTITY_VERIFIED_MATCH_AMBIGUOUS") {
+      return { ok: false, message: "More than one verified customer matches this sender. Resolve the duplicate contact records first." };
+    }
+    if (code === "IDENTITY_REQUEST_CUSTOMER_CONFLICT") {
+      return { ok: false, message: "The linked request belongs to a different customer. Resolve that conflict before linking this conversation." };
+    }
+    if (code === "IDENTITY_SENDER_REF_NOT_FOUND") {
+      return { ok: false, message: "This conversation has no persisted inbound sender identity to verify." };
+    }
+    if (code === "FORBIDDEN") {
+      return { ok: false, message: "You do not have permission to resolve conversation identity." };
+    }
+    return { ok: false, message: "Verified identity could not be resolved. Review the customer contact data and try again." };
+  }
+
+  return {
+    ok: true,
+    message: data.duplicate === true
+      ? "Conversation identity was already linked."
+      : "Verified customer identity linked. Human takeover remains active for review.",
+  };
+}
