@@ -77,3 +77,42 @@ export function assertCommercialServicePlan(input: CommercialServicePlanInput): 
     }
   }
 }
+
+export interface CommercialBillingPeriodInput {
+  periodStart: string;
+  periodEnd: string;
+}
+
+export function assertCommercialBillingPeriod(input: CommercialBillingPeriodInput): void {
+  if (!isIsoDate(input.periodStart) || !isIsoDate(input.periodEnd)) {
+    throw new Error("Commercial billing period must use ISO calendar dates.");
+  }
+  if (input.periodEnd < input.periodStart) {
+    throw new Error("Commercial billing period end cannot precede its start.");
+  }
+}
+
+export interface FixedPerVisitRate {
+  billingModel: "FIXED_PER_VISIT";
+  amountMinor: number;
+}
+
+export function resolveCommercialFixedPerVisitRate(
+  contractRate: Record<string, unknown>,
+  siteOverride?: Record<string, unknown>,
+): FixedPerVisitRate {
+  const candidate =
+    siteOverride && siteOverride.billingModel !== undefined
+      ? siteOverride
+      : contractRate;
+  if (candidate.billingModel !== "FIXED_PER_VISIT") {
+    throw new Error("Commercial billing requires an explicit FIXED_PER_VISIT rate.");
+  }
+  if (!Number.isSafeInteger(candidate.amountMinor) || Number(candidate.amountMinor) <= 0) {
+    throw new Error("Commercial fixed-per-visit amount must be a positive integer in minor currency units.");
+  }
+  return {
+    billingModel: "FIXED_PER_VISIT",
+    amountMinor: Number(candidate.amountMinor),
+  };
+}
