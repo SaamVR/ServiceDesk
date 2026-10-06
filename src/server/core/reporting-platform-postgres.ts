@@ -106,9 +106,11 @@ function mapOwnerSettings(value: unknown): OwnerSettingsSnapshotDTO {
     })),
     invitations: rows(src.invitations).map((invitation) => ({
       id: expectString(invitation.id, "invitation.id"),
+      email: maybeString(invitation.email),
       role: expectString(invitation.role, "invitation.role") as OwnerSettingsSnapshotDTO["invitations"][number]["role"],
       state: expectString(invitation.state, "invitation.state") as OwnerSettingsSnapshotDTO["invitations"][number]["state"],
       createdAt: expectString(invitation.createdAt, "invitation.createdAt"),
+      expiresAt: maybeString(invitation.expiresAt),
     })),
   };
 }
