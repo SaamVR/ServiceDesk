@@ -227,3 +227,45 @@ export interface CommercialDirectCostSnapshotDTO {
   entries: CommercialDirectCostDTO[];
   totals: CommercialDirectCostTotalDTO[];
 }
+
+export interface CommercialProfitabilityRowDTO {
+  siteId: string;
+  siteCode?: string;
+  serviceId: string;
+  serviceCode: string;
+  serviceName: string;
+  currency: CurrencyCode;
+  quotedVisitCount: number;
+  completedVisitCount: number;
+  paidVisitCount: number;
+  unresolvedRateCount: number;
+  estimatedCostedVisitCount: number;
+  actualCostedCompletedVisitCount: number;
+  actualCostedPaidVisitCount: number;
+  partialPaymentVisitCount: number;
+  quotedRevenueMinor: number;
+  completedRevenueMinor: number;
+  paidRevenueMinor: number;
+  recordedEstimatedCostMinor: number;
+  recordedActualCompletedCostMinor: number;
+  recordedActualPaidCostMinor: number;
+  recordedQuotedMarginMinor: number;
+  recordedCompletedMarginMinor: number;
+  recordedPaidMarginMinor: number;
+}
+
+export interface CommercialProfitabilityAdjustmentTotalDTO {
+  currency: CurrencyCode;
+  finalizedNetMinor: number;
+  paidNetMinor: number;
+  lineCount: number;
+}
+
+export interface CommercialProfitabilitySnapshotDTO {
+  workspaceId: string;
+  fromDate?: string;
+  toDate?: string;
+  rows: CommercialProfitabilityRowDTO[];
+  unattributedAdjustments: CommercialProfitabilityAdjustmentTotalDTO[];
+  partialPaymentInvoiceCount: number;
+}
