@@ -409,6 +409,9 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
     ? openInvoices[0].currency
     : undefined;
   const activeRequests = selectedRequests.filter((request) => !["CLOSED", "LOST"].includes(request.status));
+  const selectedContacts = (data.customerContacts ?? []).filter((contact) => contact.customerId === selectedCustomer.id);
+  const verifiedContacts = selectedContacts.filter((contact) => Boolean(contact.verifiedAt));
+  const conflictingContacts = selectedContacts.filter((contact) => contact.identityConflictCount > 1);
 
   return (
     <section className={styles.crmWorkspace} aria-label="Customer relationship workspace">
@@ -465,6 +468,51 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
             <div><span>Active requests</span><strong>{activeRequests.length}</strong></div>
             <div><span>Quotes</span><strong>{selectedQuotes.length}</strong></div>
             <div><span>Open balance</span><strong>{openInvoiceCurrency ? formatMinorMoney(openInvoiceTotal, openInvoiceCurrency) : openInvoices.length ? "Multiple currencies" : "—"}</strong></div>
+          </section>
+
+          <section className={styles.contactReview} aria-label="Customer contact identity review">
+            <div className={styles.crmSectionHeader}>
+              <div>
+                <p className={styles.crmSectionEyebrow}>Identity</p>
+                <h3>Contact verification</h3>
+              </div>
+              <span>{verifiedContacts.length}/{selectedContacts.length} verified</span>
+            </div>
+            {selectedContacts.length === 0 ? (
+              <div className={styles.crmEmpty}>
+                <strong>No contact identities</strong>
+                <p>Add and verify a contact through the accepted customer-data workflow before linking provider conversations.</p>
+              </div>
+            ) : (
+              <div className={styles.contactRows}>
+                {selectedContacts.map((contact) => {
+                  const conflict = contact.identityConflictCount > 1;
+                  const verified = Boolean(contact.verifiedAt);
+                  return (
+                    <article className={styles.contactRow} key={contact.id}>
+                      <div className={styles.contactIdentity}>
+                        <strong>{contact.value}</strong>
+                        <span>{contact.kind.toLowerCase()} {contact.isPrimary ? "· primary" : ""} {contact.isBilling ? "· billing" : ""}</span>
+                      </div>
+                      <StatusBadge tone={conflict ? "danger" : verified ? "success" : "warning"}>
+                        {conflict ? "Identity conflict" : verified ? "Verified" : "Needs verification"}
+                      </StatusBadge>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+            {conflictingContacts.length > 0 ? (
+              <FeedbackBanner
+                title="Duplicate verified identity detected"
+                description="At least one verified email or phone value is attached to more than one active customer. Resolve the duplicate customer-contact records before using automatic identity linking."
+                tone="danger"
+              />
+            ) : (
+              <p className={styles.contactReviewNote}>
+                Verification status is evidence-backed customer data. This screen is review-only and cannot mark a contact verified.
+              </p>
+            )}
           </section>
 
           <div className={styles.crmDetailGrid}>

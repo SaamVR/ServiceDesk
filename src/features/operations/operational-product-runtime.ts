@@ -30,6 +30,17 @@ export interface OperationalCustomer {
   leadSource?: string;
 }
 
+export interface OperationalCustomerContact {
+  id: string;
+  customerId: string;
+  kind: "EMAIL" | "PHONE";
+  value: string;
+  isPrimary: boolean;
+  isBilling: boolean;
+  verifiedAt?: string;
+  identityConflictCount: number;
+}
+
 export interface OperationalProperty {
   id: string;
   customerId: string;
@@ -139,6 +150,7 @@ export interface OperationalStaffSnapshot {
   workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
   customers: OperationalCustomer[];
+  customerContacts?: OperationalCustomerContact[];
   properties: OperationalProperty[];
   requests: OperationalRequest[];
   quotes: OperationalQuote[];
@@ -384,6 +396,12 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       .order("created_at", { ascending: false })
       .limit(200),
     service
+      .from("customer_contacts")
+      .select("id,customer_id,kind,value,is_primary,is_billing,verified_at,created_at")
+      .eq("workspace_id", workspace.id)
+      .order("created_at", { ascending: true })
+      .limit(500),
+    service
       .from("properties")
       .select("*")
       .eq("workspace_id", workspace.id)
@@ -425,6 +443,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
 
   const [
     customerRows,
+    contactRows,
     propertyRows,
     serviceRows,
     requestRows,
@@ -449,6 +468,32 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     displayName: textValue(row, "display_name") ?? "Unnamed customer",
     leadSource: textValue(row, "lead_source"),
   }));
+  const verifiedIdentityCounts = new Map<string, number>();
+  for (const row of contactRows) {
+    if (!textValue(row, "verified_at")) continue;
+    const kind = String(row.kind);
+    const rawValue = String(row.value ?? "").trim();
+    if ((kind !== "EMAIL" && kind !== "PHONE") || !rawValue) continue;
+    const identityKey = kind + ":" + (kind === "EMAIL" ? rawValue.toLowerCase() : rawValue);
+    verifiedIdentityCounts.set(identityKey, (verifiedIdentityCounts.get(identityKey) ?? 0) + 1);
+  }
+  const customerContacts: OperationalCustomerContact[] = contactRows
+    .filter((row) => row.kind === "EMAIL" || row.kind === "PHONE")
+    .map((row) => {
+      const kind = String(row.kind) as OperationalCustomerContact["kind"];
+      const value = String(row.value ?? "").trim();
+      const identityKey = kind + ":" + (kind === "EMAIL" ? value.toLowerCase() : value);
+      return {
+        id: String(row.id),
+        customerId: String(row.customer_id),
+        kind,
+        value,
+        isPrimary: Boolean(row.is_primary),
+        isBilling: Boolean(row.is_billing),
+        verifiedAt: textValue(row, "verified_at"),
+        identityConflictCount: textValue(row, "verified_at") ? verifiedIdentityCounts.get(identityKey) ?? 0 : 0,
+      };
+    });
   const properties: OperationalProperty[] = propertyRows.map((row) => ({
     id: String(row.id),
     customerId: String(row.customer_id),
@@ -536,6 +581,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       workspace,
       actor,
       customers,
+      customerContacts,
       properties,
       requests,
       quotes,
