@@ -14,6 +14,7 @@ describe("email inbound Next route", () => {
 
   it("fails closed when configuration is absent and returns no-store responses", () => {
     expect(route).toContain('status: 503');
-    expect(route).toContain('"Cache-Control": "no-store"');
+    expect(route).toContain("readBoundedWebhookBody(request)");
+    expect(route).toContain("inboundWebhookResponse");
   });
 });
