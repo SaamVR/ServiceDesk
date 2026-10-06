@@ -7,8 +7,10 @@ import {
   type V1Provider,
 } from "@/server/integrations/readiness/provider-readiness";
 
+export type OperationalIntegrationProvider = V1Provider | "EMAIL_INBOUND" | "VOICE_INBOUND";
+
 export interface OperationalIntegrationHealth {
-  provider: V1Provider;
+  provider: OperationalIntegrationProvider;
   label: string;
   mode: ProviderMode;
   configurationState: ConfigurationState;
@@ -36,6 +38,57 @@ function present(env: RuntimeEnvironment, ...keys: string[]): boolean {
 
 function truthy(env: RuntimeEnvironment, ...keys: string[]): boolean {
   return keys.some((key) => ["1", "true", "yes", "ready"].includes((env[key] ?? "").trim().toLowerCase()));
+}
+
+function inboundReadiness(
+  provider: "EMAIL_INBOUND" | "VOICE_INBOUND",
+  env: RuntimeEnvironment,
+): OperationalIntegrationHealth {
+  const isEmail = provider === "EMAIL_INBOUND";
+  const requirements = [
+    {
+      key: "DATABASE_CONNECTION",
+      present: present(env, "SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL")
+        && present(env, "SUPABASE_SERVICE_ROLE_KEY"),
+    },
+    {
+      key: "WEBHOOK_SIGNING_SECRET",
+      present: present(
+        env,
+        isEmail ? "SERVICEDESK_EMAIL_WEBHOOK_SECRET" : "SERVICEDESK_VOICE_WEBHOOK_SECRET",
+      ),
+    },
+    {
+      key: "PROVIDER_ACCOUNT_WORKSPACE_MAP",
+      present: present(
+        env,
+        isEmail ? "SERVICEDESK_EMAIL_ACCOUNT_WORKSPACE_MAP" : "SERVICEDESK_VOICE_ACCOUNT_WORKSPACE_MAP",
+      ),
+    },
+  ];
+  const missingConfiguration = requirements.filter((item) => !item.present).map((item) => item.key);
+  const configuredCount = requirements.length - missingConfiguration.length;
+  const configurationState: ConfigurationState = configuredCount === 0
+    ? "NOT_CONFIGURED"
+    : missingConfiguration.length > 0
+      ? "PARTIAL"
+      : "CONFIGURED";
+
+  return {
+    provider,
+    label: isEmail ? "Email inbound" : "Voice inbound",
+    mode: "LIVE",
+    configurationState,
+    verificationState: "IMPLEMENTED",
+    missingConfiguration,
+    canRunControlledProof: configurationState === "CONFIGURED",
+    source: "SERVER_CONFIGURATION_PRESENCE",
+    message: configurationState === "CONFIGURED"
+      ? "Signed inbound route configuration is present. Controlled provider proof is still required before provider verification."
+      : configurationState === "PARTIAL"
+        ? `Inbound route configuration is partial; ${missingConfiguration.length} requirement${missingConfiguration.length === 1 ? "" : "s"} remain.`
+        : "Inbound route is implemented but no server-side webhook routing configuration is present.",
+  };
 }
 
 function configuredRequirements(provider: V1Provider, env: RuntimeEnvironment): string[] {
@@ -129,7 +182,7 @@ export function buildOperationalIntegrationHealth(
     })),
   );
 
-  return reports.map((report) => ({
+  const providerHealth: OperationalIntegrationHealth[] = reports.map((report) => ({
     provider: report.provider,
     label: labels[report.provider],
     mode: report.mode,
@@ -146,4 +199,10 @@ export function buildOperationalIntegrationHealth(
       missing: report.missingConfiguration,
     }),
   }));
+
+  return [
+    ...providerHealth,
+    inboundReadiness("EMAIL_INBOUND", env),
+    inboundReadiness("VOICE_INBOUND", env),
+  ];
 }
