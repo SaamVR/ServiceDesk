@@ -4,7 +4,7 @@ import { handleVoiceMissedCallWebhook } from "../../src/server/api-handlers/prov
 
 const secret = "voice-test-secret";
 const payload = {
-  workspaceId: "workspace-1",
+  workspaceId: "payload-workspace-must-not-win",
   providerAccountId: "voice-account-1",
   providerCallId: "call-123",
   callerRef: "+15551234567",
@@ -33,6 +33,7 @@ describe("voice missed-call webhook handler", () => {
       headers: { "x-servicedesk-voice-signature": signature(rawBody) },
       webhookSecret: secret,
       receivedAt: "2026-10-07T01:00:02.000Z",
+      workspaceByProviderAccountId: { "voice-account-1": "workspace-1" },
       store: { applyMissedVoiceCall },
     });
 
@@ -52,6 +53,10 @@ describe("voice missed-call webhook handler", () => {
       callerRef: "+15551234567",
       receivedAt: "2026-10-07T01:00:02.000Z",
     }));
+    const event = applyMissedVoiceCall.mock.calls[0]?.[0];
+    expect(event.workspaceId).not.toBe("payload-workspace-must-not-win");
+    expect(event.rawProviderEventRef).toMatch(/^voice-webhook:sha256:[a-f0-9]{64}$/);
+    expect(event.rawProviderEventRef).not.toContain("+15551234567");
   });
 
   it("rejects invalid signatures without persistence", async () => {
@@ -61,6 +66,7 @@ describe("voice missed-call webhook handler", () => {
       headers: { "x-servicedesk-voice-signature": "sha256=00" },
       webhookSecret: secret,
       receivedAt: "2026-10-07T01:00:02.000Z",
+      workspaceByProviderAccountId: { "voice-account-1": "workspace-1" },
       store: { applyMissedVoiceCall },
     });
 
@@ -76,11 +82,29 @@ describe("voice missed-call webhook handler", () => {
       headers: { "x-servicedesk-voice-signature": signature(rawBody) },
       webhookSecret: secret,
       receivedAt: "2026-10-07T01:00:02.000Z",
+      workspaceByProviderAccountId: { "voice-account-1": "workspace-1" },
       store: { applyMissedVoiceCall },
     });
 
     expect(result).toMatchObject({ statusCode: 400, acknowledged: false, retryable: false });
     expect(result.body).toContain("VOICE_MEDIA_NOT_ALLOWED");
+    expect(applyMissedVoiceCall).not.toHaveBeenCalled();
+  });
+
+  it("rejects unmapped provider accounts before persistence", async () => {
+    const rawBody = JSON.stringify(payload);
+    const applyMissedVoiceCall = vi.fn();
+    const result = await handleVoiceMissedCallWebhook({
+      rawBody,
+      headers: { "x-servicedesk-voice-signature": signature(rawBody) },
+      webhookSecret: secret,
+      receivedAt: "2026-10-07T01:00:02.000Z",
+      workspaceByProviderAccountId: {},
+      store: { applyMissedVoiceCall },
+    });
+
+    expect(result).toMatchObject({ statusCode: 400, acknowledged: false, retryable: false });
+    expect(result.body).toContain("VOICE_ACCOUNT_UNMAPPED");
     expect(applyMissedVoiceCall).not.toHaveBeenCalled();
   });
 
@@ -96,6 +120,7 @@ describe("voice missed-call webhook handler", () => {
       headers: { "x-servicedesk-voice-signature": signature(rawBody) },
       webhookSecret: secret,
       receivedAt: "2026-10-07T01:00:02.000Z",
+      workspaceByProviderAccountId: { "voice-account-1": "workspace-1" },
       store: { applyMissedVoiceCall },
     });
 
