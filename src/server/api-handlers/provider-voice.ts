@@ -14,7 +14,7 @@ export interface VoiceMissedCallWebhookInput {
   headers: Record<string, string | undefined>;
   webhookSecret: string;
   receivedAt: string;
-  store: VoiceMissedCallCommandPort;
+  store: Pick<VoiceMissedCallCommandPort, "applyMissedVoiceCall">;
 }
 
 function header(headers: Record<string, string | undefined>, name: string): string | undefined {
