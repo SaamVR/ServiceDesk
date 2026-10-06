@@ -1600,3 +1600,154 @@ export async function reviewOperationalPhotoSuggestion(
         : "Suggestion accepted for review. No request or quote price was changed automatically.",
   };
 }
+
+export async function upsertOperationalReferralCode(
+  workspaceSlug: string,
+  input: { code: string; label: string; active: boolean; startsAt?: string; endsAt?: string },
+): Promise<OperationalActionResult> {
+  const code = input.code.trim().toUpperCase();
+  const label = input.label.trim();
+  if (!/^[A-Z0-9][A-Z0-9_-]{2,39}$/.test(code) || !label || label.length > 120) {
+    return { ok: false, message: "Referral code or label is invalid." };
+  }
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can manage referral codes." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_upsert_referral_code", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      code,
+      label,
+      active: input.active,
+      startsAt: input.startsAt || undefined,
+      endsAt: input.endsAt || undefined,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "Referral code could not be saved. Check the code and date range." };
+  }
+  return { ok: true, message: "Referral code saved. Attribution remains directional rather than proof of causality." };
+}
+
+export async function upsertOperationalRetentionCampaign(
+  workspaceSlug: string,
+  input: {
+    campaignId?: string;
+    expectedVersion?: number;
+    name: string;
+    channel: "EMAIL" | "WHATSAPP";
+    purpose: "FOLLOW_UP" | "REVIEW_REQUEST" | "REFERRAL_NUDGE";
+    status: "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED";
+    templateKey?: string;
+    subject?: string;
+    bodyText: string;
+    bodyHtml?: string;
+    dailyCap: number;
+    perCustomerCap: number;
+    quietHoursStart?: string;
+    quietHoursEnd?: string;
+  },
+): Promise<OperationalActionResult> {
+  if (!input.name.trim() || !input.bodyText.trim()
+      || !Number.isInteger(input.dailyCap) || input.dailyCap < 1 || input.dailyCap > 10000
+      || !Number.isInteger(input.perCustomerCap) || input.perCustomerCap < 1 || input.perCustomerCap > 100) {
+    return { ok: false, message: "Campaign name, message and send caps are required." };
+  }
+  if (input.channel === "EMAIL" && (!input.subject?.trim() || !input.bodyHtml?.trim())) {
+    return { ok: false, message: "Email campaigns require a subject and HTML body." };
+  }
+  if (Boolean(input.quietHoursStart) !== Boolean(input.quietHoursEnd)) {
+    return { ok: false, message: "Quiet hours require both a start and end time." };
+  }
+
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can manage retention campaigns." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_upsert_retention_campaign", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      campaignId: input.campaignId || undefined,
+      expectedVersion: input.expectedVersion,
+      name: input.name.trim(),
+      channel: input.channel,
+      purpose: input.purpose,
+      status: input.status,
+      templateKey: input.templateKey?.trim() || undefined,
+      subject: input.subject?.trim() || undefined,
+      bodyText: input.bodyText.trim(),
+      bodyHtml: input.bodyHtml?.trim() || undefined,
+      dailyCap: input.dailyCap,
+      perCustomerCap: input.perCustomerCap,
+      quietHoursStart: input.quietHoursStart || undefined,
+      quietHoursEnd: input.quietHoursEnd || undefined,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error) return { ok: false, message: "Retention campaign could not be saved." };
+  if (!data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "VERSION_CONFLICT") {
+      return { ok: false, message: "This campaign changed since the page loaded. Refresh and try again." };
+    }
+    return { ok: false, message: "Retention campaign was rejected by the policy boundary." };
+  }
+  return {
+    ok: true,
+    message: input.status === "ACTIVE"
+      ? "Campaign activated. Every queued message will still recheck consent, suppression, quiet hours and caps at dispatch time."
+      : "Campaign saved. No customer message was queued.",
+  };
+}
+
+export async function setOperationalCustomerRetentionControl(
+  workspaceSlug: string,
+  input: {
+    customerId: string;
+    channel: "EMAIL" | "WHATSAPP";
+    status: "ACTIVE" | "PAUSED" | "SUPPRESSED";
+    reasonCode?: string;
+    untilAt?: string;
+  },
+): Promise<OperationalActionResult> {
+  if (!input.customerId.trim()) return { ok: false, message: "Customer is required." };
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_set_customer_retention_control", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      customerId: input.customerId,
+      channel: input.channel,
+      status: input.status,
+      reasonCode: input.reasonCode?.trim().toUpperCase() || undefined,
+      untilAt: input.untilAt || undefined,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "Customer retention status could not be updated." };
+  }
+
+  return {
+    ok: true,
+    message: input.status === "ACTIVE"
+      ? "Internal retention suppression cleared. A current customer opt-in is still required before any campaign can send."
+      : input.status === "PAUSED"
+        ? "Retention messages paused for this channel. Existing queued messages will be suppressed at dispatch time."
+        : "Retention messages suppressed for this channel. Existing queued messages will be suppressed at dispatch time.",
+  };
+}
+
