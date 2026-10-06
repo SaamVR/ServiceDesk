@@ -8,7 +8,8 @@ export type TransactionalEmailPurpose =
   | "PAYMENT_RECEIPT"
   | "PAYMENT_REMINDER"
   | "VISIT_REMINDER"
-  | "CUSTOMER_REPLY";
+  | "CUSTOMER_REPLY"
+  | "RETENTION_CAMPAIGN";
 
 export type EmailSuppressionCode =
   | "RECIPIENT_OPTED_OUT"
