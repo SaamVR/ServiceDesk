@@ -12,7 +12,20 @@ export default async function CrewTodayPage({
   const result = await loadCrewTodayProduct(now, query.workspace);
 
   if (!result.ok) {
-    return <CrewRouteUnavailable page="today" message={result.message} />;
+    const returnPath = query.workspace
+      ? "/crew/today?workspace=" + encodeURIComponent(query.workspace)
+      : "/crew/today";
+    return (
+      <CrewRouteUnavailable
+        page="today"
+        message={result.message}
+        signInHref={
+          result.kind === "authentication"
+            ? "/auth/sign-in?next=" + encodeURIComponent(returnPath)
+            : undefined
+        }
+      />
+    );
   }
 
   return (
