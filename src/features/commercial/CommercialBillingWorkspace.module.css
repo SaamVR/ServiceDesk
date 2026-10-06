@@ -294,6 +294,144 @@
   line-height: 1.5;
 }
 
+.profitabilityPanel {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+}
+
+.profitabilityBody {
+  display: grid;
+  gap: 10px;
+}
+
+.profitabilityMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.profitabilityMeta span,
+.profitabilityCoverage span,
+.profitabilityAdjustments span {
+  color: var(--app-text-muted);
+  font-size: .56rem;
+}
+
+.profitabilityMeta strong {
+  color: var(--app-text);
+}
+
+.profitabilityList {
+  display: grid;
+  gap: 8px;
+}
+
+.profitabilityRow {
+  display: grid;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-subtle);
+}
+
+.profitabilityTitle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profitabilityTitle > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.profitabilityTitle strong,
+.profitabilityAdjustments strong {
+  color: var(--app-text);
+  font-size: .66rem;
+}
+
+.profitabilityTitle span {
+  color: var(--app-text-muted);
+  font-size: .55rem;
+}
+
+.profitabilityMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--app-border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.profitabilityMetrics > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-right: 1px solid var(--app-border);
+}
+
+.profitabilityMetrics > div:last-child {
+  border-right: 0;
+}
+
+.profitabilityMetrics span,
+.profitabilityMetrics small {
+  color: var(--app-text-muted);
+  font-size: .52rem;
+}
+
+.profitabilityMetrics strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: .7rem;
+  text-overflow: ellipsis;
+}
+
+.profitabilityCoverage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+
+.profitabilityAdjustments,
+.profitabilityEmpty {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px dashed var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-subtle);
+}
+
+.profitabilityAdjustments > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+
+.profitabilityAdjustments p,
+.profitabilityEmpty p,
+.profitabilityNote {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: .58rem;
+  line-height: 1.5;
+}
+
+.profitabilityEmpty strong {
+  color: var(--app-text);
+  font-size: .66rem;
+}
+
 .composer,
 .drafts {
   display: grid;
@@ -572,6 +710,7 @@
 
   .sectionHeading,
   .accountingConnection,
+  .profitabilityTitle,
   .accountingBackfill,
   .formFooter,
   .draftFooter,
@@ -587,6 +726,19 @@
 
   .costSummaryRow {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .profitabilityMetrics {
+    grid-template-columns: 1fr;
+  }
+
+  .profitabilityMetrics > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .profitabilityMetrics > div:last-child {
+    border-bottom: 0;
   }
 
   .costSummaryRow strong {
@@ -633,6 +785,11 @@
 
   .costSummaryRow {
     grid-template-columns: 1fr;
+  }
+
+  .profitabilityCoverage,
+  .profitabilityAdjustments > div {
+    display: grid;
   }
 
   .costSummaryRow strong {

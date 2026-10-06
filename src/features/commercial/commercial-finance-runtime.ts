@@ -2,6 +2,7 @@ import type {
   AccountingBackfillPlanDTO,
   AccountingReconciliationSnapshotDTO,
   CommercialDirectCostSnapshotDTO,
+  CommercialProfitabilitySnapshotDTO,
   CommercialBillingDraftDTO,
   CommercialBillingLineDTO,
   CommercialPortfolioSnapshotDTO,
@@ -9,6 +10,7 @@ import type {
 import { createPostgresAccountingReconciliationReader } from "@/server/core/accounting-reconciliation-postgres";
 import { createPostgresCommercialBillingCommands } from "@/server/core/commercial-billing-postgres";
 import { createPostgresCommercialDirectCostPort } from "@/server/core/commercial-direct-cost-postgres";
+import { createPostgresCommercialProfitabilityReader } from "@/server/core/commercial-profitability-postgres";
 import { createPostgresCommercialPortfolioReader } from "@/server/core/commercial-read-postgres";
 import { resolveStaffActor } from "@/features/operations/operational-product-runtime";
 
@@ -37,6 +39,8 @@ export interface CommercialFinanceSnapshot {
   accountingReady: boolean;
   directCosts?: CommercialDirectCostSnapshotDTO;
   directCostsReady: boolean;
+  profitability?: CommercialProfitabilitySnapshotDTO;
+  profitabilityReady: boolean;
 }
 
 export type CommercialFinanceLoadResult =
@@ -46,6 +50,22 @@ export type CommercialFinanceLoadResult =
 export type CommercialFinanceActionResult =
   | { ok: true; message: string; invoiceId?: string }
   | { ok: false; message: string };
+
+function currentMonthRange(timeZone: string): { fromDate: string; toDate: string } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const monthText = String(month).padStart(2, "0");
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return {
+    fromDate: year + "-" + monthText + "-01",
+    toDate: year + "-" + monthText + "-" + String(lastDay).padStart(2, "0"),
+  };
+}
 
 function rows(value: unknown): Row[] {
   return Array.isArray(value)
@@ -164,7 +184,8 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
     return { ok: false, message: "Commercial operations are not enabled for this workspace." };
   }
 
-  const [draftRead, lineRead, invoiceRead, accountingResult, directCostResult] = await Promise.all([
+  const profitabilityRange = currentMonthRange(resolved.value.workspace.timezone);
+  const [draftRead, lineRead, invoiceRead, accountingResult, directCostResult, profitabilityResult] = await Promise.all([
     resolved.value.service
       .from("commercial_billing_drafts")
       .select("*")
@@ -188,6 +209,8 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
       .readAccountingReconciliationSnapshot(resolved.value.actor),
     createPostgresCommercialDirectCostPort(resolved.value.rpc)
       .readCommercialDirectCostSnapshot(resolved.value.actor),
+    createPostgresCommercialProfitabilityReader(resolved.value.rpc)
+      .readCommercialProfitabilitySnapshot(resolved.value.actor, profitabilityRange),
   ]);
 
   const billingReady = !draftRead.error && !lineRead.error && !invoiceRead.error;
@@ -222,6 +245,8 @@ export async function loadCommercialFinanceSnapshot(workspaceSlug: string): Prom
       accountingReady: accountingResult.ok,
       directCosts: directCostResult.ok ? directCostResult.value : undefined,
       directCostsReady: directCostResult.ok,
+      profitability: profitabilityResult.ok ? profitabilityResult.value : undefined,
+      profitabilityReady: profitabilityResult.ok,
     },
   };
 }
