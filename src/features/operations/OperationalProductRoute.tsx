@@ -2385,18 +2385,23 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
             <div className={styles.integrationGrid}>
               {data.integrations.map((integration) => {
                 const readyForProof = integration.configurationState === "CONFIGURED";
+                const providerVerified = integration.verificationState === "PROVIDER_VERIFIED";
                 const statusLabel = integration.provider === "PAYMENT"
                   ? "Sandbox ready"
-                  : readyForProof
-                    ? "Ready for proof"
-                    : integration.configurationState === "PARTIAL"
-                      ? "Partial setup"
-                      : "Setup required";
+                  : providerVerified
+                    ? "Provider verified"
+                    : readyForProof
+                      ? "Ready for proof"
+                      : integration.configurationState === "PARTIAL"
+                        ? "Partial setup"
+                        : "Setup required";
                 const tone = integration.provider === "PAYMENT" || integration.configurationState === "PARTIAL"
                   ? "warning" as const
-                  : readyForProof
-                    ? "info" as const
-                    : "neutral" as const;
+                  : providerVerified
+                    ? "success" as const
+                    : readyForProof
+                      ? "info" as const
+                      : "neutral" as const;
 
                 return (
                   <article className={styles.integrationCard} key={integration.provider}>
