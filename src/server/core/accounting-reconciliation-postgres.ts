@@ -1,4 +1,6 @@
 import type {
+  AccountingBackfillCandidateDTO,
+  AccountingBackfillPlanDTO,
   AccountingIntegrationDTO,
   AccountingIntegrationStatus,
   AccountingLocalResourceKind,
@@ -44,6 +46,11 @@ export interface AccountingReconciliationReader {
   readAccountingReconciliationSnapshot(
     ctx: ActorContext,
   ): Promise<Result<AccountingReconciliationSnapshotDTO>>;
+  planAccountingBackfill(
+    ctx: ActorContext,
+    provider: string,
+    limit?: number,
+  ): Promise<Result<AccountingBackfillPlanDTO>>;
 }
 
 export interface AccountingReconciliationRecorder {
@@ -110,6 +117,7 @@ const localKinds = [
   "COMMERCIAL_BILLING_LINE",
 ] as const;
 const states = ["PENDING", "SYNCED", "CONFLICT", "ERROR"] as const;
+const backfillReasons = ["UNTRACKED", "LOCAL_VERSION_ADVANCED"] as const;
 
 function mapIntegration(row: RpcRow): AccountingIntegrationDTO {
   return {
@@ -175,6 +183,36 @@ function mapSnapshot(value: unknown, workspaceId: string): AccountingReconciliat
   return snapshot;
 }
 
+function mapBackfillCandidate(row: RpcRow): AccountingBackfillCandidateDTO {
+  return {
+    entityType: oneOf(string(row, "entityType"), entityTypes, "entityType"),
+    localResourceKind: oneOf(string(row, "localResourceKind"), localKinds, "localResourceKind"),
+    localResourceId: string(row, "localResourceId"),
+    localVersion: number(row, "localVersion"),
+    reason: oneOf(string(row, "reason"), backfillReasons, "reason"),
+  };
+}
+
+function mapBackfillPlan(value: unknown, workspaceId: string, provider: string): AccountingBackfillPlanDTO {
+  const row = object(value, "plan");
+  const plan: AccountingBackfillPlanDTO = {
+    workspaceId: string(row, "workspaceId"),
+    provider: string(row, "provider"),
+    dryRun: row.dryRun === true,
+    candidateCount: number(row, "candidateCount"),
+    blockedCount: number(row, "blockedCount"),
+    pendingCount: number(row, "pendingCount"),
+    currentCount: number(row, "currentCount"),
+    candidates: list(row.candidates, "candidates").map(mapBackfillCandidate),
+  };
+
+  if (!plan.dryRun) throw new Error("Accounting backfill plan was not marked as a dry run.");
+  if (plan.workspaceId !== workspaceId || plan.provider !== provider) {
+    throw new Error("Accounting backfill plan crossed workspace or provider scope.");
+  }
+  return plan;
+}
+
 function rpcFailure<T>(data: RpcRow | null, fallback: string): Result<T> {
   return fail(
     String(data?.code ?? fallback),
@@ -212,6 +250,41 @@ export function createPostgresAccountingReconciliationReader(
         return fail(
           "ACCOUNTING_RECONCILIATION_READ_MALFORMED",
           error instanceof Error ? error.message : "Malformed accounting reconciliation response.",
+        );
+      }
+    },
+
+    async planAccountingBackfill(ctx, provider, limit = 100) {
+      if (!ctx.userId || !["OWNER", "DISPATCHER"].includes(ctx.role)) {
+        return fail("FORBIDDEN", "Owner or dispatcher access is required for accounting backfill planning.");
+      }
+      if (!/^[a-z0-9][a-z0-9_-]{1,39}$/.test(provider) || !Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
+        return fail("ACCOUNTING_BACKFILL_INPUT_INVALID", "Accounting backfill plan input is invalid.");
+      }
+
+      const { data, error } = await client.rpc<RpcRow>(
+        "servicedesk_plan_accounting_backfill",
+        {
+          p_input: {
+            workspaceId: ctx.workspaceId,
+            actorUserId: ctx.userId,
+            actorRole: ctx.role,
+            provider,
+            limit,
+          },
+        },
+      );
+
+      if (error) return fail(error.code ?? "ACCOUNTING_BACKFILL_READ_ERROR", error.message);
+      if (!data) return fail("ACCOUNTING_BACKFILL_READ_EMPTY", "Accounting backfill planner returned no payload.");
+      if (data.ok === false) return rpcFailure(data, "ACCOUNTING_BACKFILL_REJECTED");
+
+      try {
+        return { ok: true, value: mapBackfillPlan(data.plan, ctx.workspaceId, provider) };
+      } catch (error) {
+        return fail(
+          "ACCOUNTING_BACKFILL_READ_MALFORMED",
+          error instanceof Error ? error.message : "Malformed accounting backfill response.",
         );
       }
     },
