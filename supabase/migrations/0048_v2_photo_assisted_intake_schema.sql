@@ -45,6 +45,7 @@ create table if not exists public.request_photo_suggestions (
     length(trim(classifier_ref)) between 3 and 160
     and classifier_ref !~ E'[\\r\\n]'
   ),
+  idempotency_key text not null check (length(trim(idempotency_key)) between 8 and 200),
   category_code text not null check (category_code ~ '^[A-Z0-9][A-Z0-9_-]{1,63}$'),
   proposed_addon_code text check (
     proposed_addon_code is null
@@ -63,6 +64,7 @@ create table if not exists public.request_photo_suggestions (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (workspace_id, id),
+  unique (workspace_id, idempotency_key),
   foreign key (workspace_id, request_id)
     references public.requests(workspace_id, id) on delete cascade,
   foreign key (workspace_id, photo_asset_id)
