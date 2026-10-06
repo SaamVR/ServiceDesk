@@ -14,8 +14,11 @@ import {
   reviewOperationalPhotoSuggestion,
   sendOperationalQuote,
   setOperationalChecklistItem,
+  setOperationalCustomerRetentionControl,
   setOperationalVoiceCallbackState,
   toggleInboxHandover,
+  upsertOperationalReferralCode,
+  upsertOperationalRetentionCampaign,
   transitionOperationalVisit,
   updateOperationalServiceCatalogItem,
   type OperationalActionResult,
@@ -414,6 +417,33 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
   const selectedContacts = (data.customerContacts ?? []).filter((contact) => contact.customerId === selectedCustomer.id);
   const verifiedContacts = selectedContacts.filter((contact) => Boolean(contact.verifiedAt));
   const conflictingContacts = selectedContacts.filter((contact) => contact.identityConflictCount > 1);
+  const retentionControls = data.retentionControls ?? [];
+  const communicationConsents = data.communicationConsents ?? [];
+
+  async function retentionControlAction(formData: FormData) {
+    "use server";
+    const rawChannel = String(formData.get("channel") ?? "");
+    const rawStatus = String(formData.get("status") ?? "");
+    if ((rawChannel !== "EMAIL" && rawChannel !== "WHATSAPP")
+        || (rawStatus !== "ACTIVE" && rawStatus !== "PAUSED" && rawStatus !== "SUPPRESSED")) {
+      actionRedirect(data.workspace.slug, "customers", {
+        ok: false,
+        message: "Unsupported retention-control change.",
+      }, "customer=" + encodeURIComponent(selectedCustomer.id) + "&");
+    }
+    const result = await setOperationalCustomerRetentionControl(data.workspace.slug, {
+      customerId: selectedCustomer.id,
+      channel: rawChannel,
+      status: rawStatus,
+      reasonCode: rawStatus === "SUPPRESSED" ? "STAFF_SUPPRESSED" : rawStatus === "PAUSED" ? "STAFF_PAUSED" : "STAFF_CLEARED",
+    });
+    actionRedirect(
+      data.workspace.slug,
+      "customers",
+      result,
+      "customer=" + encodeURIComponent(selectedCustomer.id) + "&",
+    );
+  }
 
   return (
     <section className={styles.crmWorkspace} aria-label="Customer relationship workspace">
@@ -490,15 +520,39 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
                 {selectedContacts.map((contact) => {
                   const conflict = contact.identityConflictCount > 1;
                   const verified = Boolean(contact.verifiedAt);
+                  const channel = contact.kind === "EMAIL" ? "EMAIL" : "WHATSAPP";
+                  const consent = communicationConsents.find((item) =>
+                    item.customerId === selectedCustomer.id && item.channel === channel);
+                  const control = retentionControls.find((item) =>
+                    item.customerId === selectedCustomer.id && item.channel === channel);
+                  const retentionStatus = control?.status ?? "ACTIVE";
                   return (
                     <article className={styles.contactRow} key={contact.id}>
                       <div className={styles.contactIdentity}>
                         <strong>{contact.value}</strong>
                         <span>{contact.kind.toLowerCase()} {contact.isPrimary ? "· primary" : ""} {contact.isBilling ? "· billing" : ""}</span>
+                        <div className={styles.contactPolicyBadges}>
+                          <StatusBadge tone={consent?.status === "GRANTED" ? "success" : consent?.status === "REVOKED" ? "danger" : "warning"}>
+                            {consent?.status === "GRANTED" ? "Campaign opt-in" : consent?.status === "REVOKED" ? "Opted out" : "No campaign opt-in"}
+                          </StatusBadge>
+                          <StatusBadge tone={retentionStatus === "ACTIVE" ? "neutral" : retentionStatus === "PAUSED" ? "warning" : "danger"}>
+                            {retentionStatus === "ACTIVE" ? "No internal hold" : retentionStatus === "PAUSED" ? "Retention paused" : "Retention suppressed"}
+                          </StatusBadge>
+                        </div>
                       </div>
-                      <StatusBadge tone={conflict ? "danger" : verified ? "success" : "warning"}>
-                        {conflict ? "Identity conflict" : verified ? "Verified" : "Needs verification"}
-                      </StatusBadge>
+                      <div className={styles.contactPolicyActions}>
+                        <StatusBadge tone={conflict ? "danger" : verified ? "success" : "warning"}>
+                          {conflict ? "Identity conflict" : verified ? "Verified" : "Needs verification"}
+                        </StatusBadge>
+                        {verified && data.retentionAvailable ? (
+                          <form action={retentionControlAction}>
+                            <input name="channel" type="hidden" value={channel} />
+                            <button className="app-button-secondary" name="status" type="submit" value="ACTIVE">Clear hold</button>
+                            <button className="app-button-secondary" name="status" type="submit" value="PAUSED">Pause</button>
+                            <button className="app-button-secondary" name="status" type="submit" value="SUPPRESSED">Suppress</button>
+                          </form>
+                        ) : null}
+                      </div>
                     </article>
                   );
                 })}
@@ -512,7 +566,7 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
               />
             ) : (
               <p className={styles.contactReviewNote}>
-                Verification status is evidence-backed customer data. This screen is review-only and cannot mark a contact verified.
+                Verification status is evidence-backed customer data. Clearing an internal retention hold never grants campaign consent; the latest customer opt-in is still checked at dispatch time.
               </p>
             )}
           </section>
