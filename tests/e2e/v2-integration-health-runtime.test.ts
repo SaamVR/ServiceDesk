@@ -110,7 +110,7 @@ describe("V2 operational integration health", () => {
     expect(health.find((item) => item.provider === "VOICE_INBOUND")).toMatchObject({
       label: "Voice inbound",
       configurationState: "PARTIAL",
-      verificationState: "CONFIGURATION_BLOCKED",
+      verificationState: "IMPLEMENTED",
       canRunControlledProof: false,
     });
     expect(JSON.stringify(health)).not.toContain("email-secret");
