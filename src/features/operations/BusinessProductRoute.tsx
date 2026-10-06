@@ -10,6 +10,7 @@ import { buildBusinessModuleHref, businessNavigation, type BusinessModule } from
 import { loadPublicBusiness, submitPublicEnquiry } from "./public-business-runtime";
 import { FormActions, FormField, FormGrid, FormSection, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import styles from "./BusinessProductRoute.module.css";
+import { PublicEnquiryPhotoUploader } from "@/features/request-intake/PublicEnquiryPhotoUploader";
 
 interface BusinessProductRouteProps {
   slug: string;
@@ -17,6 +18,7 @@ interface BusinessProductRouteProps {
   notice?: string;
   error?: string;
   selectedServiceCode?: string;
+  submittedRequestId?: string;
 }
 
 function serviceInitial(name: string) {
@@ -127,6 +129,7 @@ function EnquiryView({
   notice,
   error,
   selectedServiceCode,
+  submittedRequestId,
 }: {
   slug: string;
   businessName: string;
@@ -134,6 +137,7 @@ function EnquiryView({
   notice?: string;
   error?: string;
   selectedServiceCode?: string;
+  submittedRequestId?: string;
 }) {
   const idempotencyKey = crypto.randomUUID();
   const selectedService = services.some((service) => service.code === selectedServiceCode)
@@ -155,13 +159,19 @@ function EnquiryView({
       message: String(formData.get("message") ?? ""),
       idempotencyKey: String(formData.get("idempotencyKey") ?? ""),
     });
-    const key = result.ok ? "notice" : "error";
+    if (!result.ok) {
+      redirect(
+        buildBusinessModuleHref(slug, "enquire")
+          + "?error="
+          + encodeURIComponent(result.message),
+      );
+    }
     redirect(
-      buildBusinessModuleHref(slug, "enquire") +
-        "?" +
-        key +
-        "=" +
-        encodeURIComponent(result.message),
+      buildBusinessModuleHref(slug, "enquire")
+        + "?notice="
+        + encodeURIComponent(result.message)
+        + "&request="
+        + encodeURIComponent(result.requestId),
     );
   }
 
@@ -239,6 +249,11 @@ function EnquiryView({
             </FormSection>
           </form>
         </CustomerCard>
+        {submittedRequestId && notice ? (
+          <CustomerCard title="Optional photo">
+            <PublicEnquiryPhotoUploader workspaceSlug={slug} requestId={submittedRequestId} />
+          </CustomerCard>
+        ) : null}
       </div>
     </>
   );
@@ -282,7 +297,7 @@ function BookingView({ slug, businessName }: { slug: string; businessName: strin
   );
 }
 
-export async function BusinessProductRoute({ slug, module, notice, error, selectedServiceCode }: BusinessProductRouteProps) {
+export async function BusinessProductRoute({ slug, module, notice, error, selectedServiceCode, submittedRequestId }: BusinessProductRouteProps) {
   const result = await loadPublicBusiness(slug);
   const businessName = result.ok ? result.value.workspace.name : "Service business";
   const homeHref = buildBusinessModuleHref(slug, "home");
@@ -309,6 +324,7 @@ export async function BusinessProductRoute({ slug, module, notice, error, select
             notice={notice}
             error={error}
             selectedServiceCode={selectedServiceCode}
+            submittedRequestId={submittedRequestId}
           />
         ) : (
           <BookingView slug={slug} businessName={result.value.workspace.name} />
