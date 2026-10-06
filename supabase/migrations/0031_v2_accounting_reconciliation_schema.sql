@@ -23,6 +23,8 @@ create table if not exists public.accounting_reconciliation_records (
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
   integration_id uuid not null,
   entity_type text not null check (entity_type in ('CONTACT','INVOICE','PAYMENT','CREDIT')),
+  local_resource_kind text not null
+    check (local_resource_kind in ('COMMERCIAL_ORGANIZATION','INVOICE','VERIFIED_PAYMENT','MANUAL_PAYMENT','COMMERCIAL_BILLING_LINE')),
   local_resource_id uuid not null,
   local_version bigint not null check (local_version > 0),
   external_id text,
@@ -43,6 +45,12 @@ create table if not exists public.accounting_reconciliation_records (
     references public.accounting_integrations(workspace_id, id) on delete cascade,
   check (external_id is null or length(trim(external_id)) between 1 and 240),
   check (external_version is null or length(external_version) <= 240),
+  check (
+    (entity_type = 'CONTACT' and local_resource_kind = 'COMMERCIAL_ORGANIZATION')
+    or (entity_type = 'INVOICE' and local_resource_kind = 'INVOICE')
+    or (entity_type = 'PAYMENT' and local_resource_kind in ('VERIFIED_PAYMENT','MANUAL_PAYMENT'))
+    or (entity_type = 'CREDIT' and local_resource_kind = 'COMMERCIAL_BILLING_LINE')
+  ),
   check (
     (state = 'SYNCED' and external_id is not null and synced_at is not null and last_error_code is null)
     or state <> 'SYNCED'
