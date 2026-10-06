@@ -130,7 +130,8 @@ begin
       'sourceChannel', 'VOICE',
       'sourceKind', 'MISSED_CALL',
       'voiceCallIntakeId', v_intake.id,
-      'callbackRequired', true
+      'callbackRequired', true,
+      'callbackContactRef', v_caller
     ),
     1,
     v_now,
