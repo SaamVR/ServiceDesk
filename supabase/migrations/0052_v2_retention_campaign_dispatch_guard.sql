@@ -354,7 +354,7 @@ begin
 exception when check_violation or invalid_text_representation or datetime_field_overflow then
   return jsonb_build_object('ok', false, 'code', 'RETENTION_CAMPAIGN_INPUT_INVALID');
 end;
-$;
+$$;
 
 create or replace function public.servicedesk_set_customer_retention_control(p_input jsonb)
 returns jsonb
@@ -418,7 +418,7 @@ begin
 exception when check_violation or invalid_text_representation or datetime_field_overflow then
   return jsonb_build_object('ok', false, 'code', 'RETENTION_CONTROL_INPUT_INVALID');
 end;
-$;
+$$;
 
 create or replace function public.servicedesk_queue_retention_campaign_message(p_input jsonb)
 returns jsonb
@@ -500,7 +500,7 @@ exception when unique_violation then
 when invalid_text_representation or datetime_field_overflow then
   return jsonb_build_object('ok', false, 'code', 'RETENTION_QUEUE_INPUT_INVALID');
 end;
-$;
+$$;
 
 create or replace function public.servicedesk_resolve_retention_campaign_intent(p_input jsonb)
 returns jsonb
@@ -577,7 +577,7 @@ begin
 exception when invalid_text_representation or datetime_field_overflow then
   return jsonb_build_object('ok', false, 'code', 'RETENTION_INTENT_INPUT_INVALID');
 end;
-$;
+$$;
 
 revoke all on function public.servicedesk_upsert_retention_campaign(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_set_customer_retention_control(jsonb) from public, anon, authenticated;
