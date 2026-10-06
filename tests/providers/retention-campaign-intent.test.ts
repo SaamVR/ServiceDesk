@@ -68,7 +68,7 @@ describe("retention campaign outbox intent", () => {
     const resolver = createRetentionCampaignIntentResolver({ rpc } as SupabaseRpcClient);
     await expect(resolver.resolve(event)).resolves.toMatchObject({
       ok: false,
-      code: "RECIPIENT_OPTED_OUT",
+      code: "RETENTION_SUPPRESSED:RECIPIENT_OPTED_OUT",
     });
   });
 
@@ -97,4 +97,17 @@ describe("retention campaign outbox intent", () => {
       code: "RETENTION_INTENT_PAYLOAD_MISMATCH",
     });
   });
+
+  it("classifies database lookup failure as retryable without resolving a provider recipient", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "DB_UNAVAILABLE", message: "temporary" },
+    });
+    const resolver = createRetentionCampaignIntentResolver({ rpc } as SupabaseRpcClient);
+    await expect(resolver.resolve(event)).resolves.toMatchObject({
+      ok: false,
+      code: "RETENTION_INTENT_RETRYABLE",
+    });
+  });
+
 });
