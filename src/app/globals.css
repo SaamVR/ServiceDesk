@@ -2195,3 +2195,16 @@ p { color: var(--muted); }
 .app-content {
   padding-top: 24px;
 }
+
+.app-signout-form { margin: 0; }
+.app-signout-button {
+  border: 0;
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
+}
+.app-signout-button:hover { color: var(--app-text); }
+.app-signout-button:focus-visible {
+  outline: 3px solid var(--app-accent);
+  outline-offset: 2px;
+}

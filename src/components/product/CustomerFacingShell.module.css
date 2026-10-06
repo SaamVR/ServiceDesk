@@ -759,3 +759,48 @@ a.customerRow:hover {
     min-height: 44px;
   }
 }
+
+.accountActions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+}
+.accountActions form,
+.mobileAccount form { margin: 0; }
+.signOutButton,
+.signInLink {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border-strong, #ccd2d8);
+  border-radius: 7px;
+  padding: 0 10px;
+  background: white;
+  color: var(--app-text-muted, #626b76);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.signOutButton:hover,
+.signInLink:hover {
+  background: var(--app-surface-muted, #f1f3f5);
+  color: var(--app-text, #171a1f);
+  text-decoration: none;
+}
+.signOutButton:focus-visible,
+.signInLink:focus-visible {
+  outline: 3px solid var(--app-accent, #176b53);
+  outline-offset: 2px;
+}
+@media (max-width: 900px) {
+  .accountActions { display: none; }
+}
+@media (max-width: 620px) {
+  .mobileAccount { flex-wrap: wrap; }
+  .mobileAccount form { margin-left: auto; }
+}

@@ -3,9 +3,11 @@ import { EmptyState, PageHeader, Panel } from "@/components/product/PagePrimitiv
 export function CrewRouteUnavailable({
   page,
   message,
+  signInHref,
 }: {
   page: "today" | "job";
   message?: string;
+  signInHref?: string;
 }) {
   return (
     <main className="app-content" aria-label={page === "today" ? "Crew today" : "Crew job"}>
@@ -20,7 +22,13 @@ export function CrewRouteUnavailable({
           description={message ?? (page === "today"
             ? "Your assigned jobs aren’t available on this screen right now. Try again after signing in, or contact dispatch if this continues."
             : "This job isn’t available on this screen right now. Return to Today or contact dispatch if this continues.")}
-          action={page === "job" ? <a className="app-button-secondary" href="/crew/today">Back to Today</a> : undefined}
+          action={
+            signInHref ? (
+              <a className="app-button-primary" href={signInHref}>Sign in</a>
+            ) : page === "job" ? (
+              <a className="app-button-secondary" href="/crew/today">Back to Today</a>
+            ) : undefined
+          }
         />
       </Panel>
     </main>

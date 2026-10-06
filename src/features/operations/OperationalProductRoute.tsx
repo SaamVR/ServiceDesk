@@ -2353,6 +2353,24 @@ export async function OperationalProductRoute({
             title={result.kind === "authentication" ? "Staff sign-in required" : "Workspace unavailable"}
             description={result.message}
             tone={result.kind === "authentication" ? "warning" : "danger"}
+            action={
+              result.kind === "authentication" ? (
+                <a
+                  className="app-button-primary"
+                  href={
+                    "/auth/sign-in?next=" +
+                    encodeURIComponent(
+                      "/app/" +
+                        encodeURIComponent(workspaceSlug) +
+                        "/" +
+                        module,
+                    )
+                  }
+                >
+                  Sign in
+                </a>
+              ) : undefined
+            }
           />
         </Panel>
       )}

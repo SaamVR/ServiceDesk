@@ -87,7 +87,15 @@ function StaffNavigation({ workspace, mobile = false }: { workspace: string; mob
   );
 }
 
-export function StaffAppShell({ workspace, children }: { workspace: string; children: ReactNode }) {
+export function StaffAppShell({
+  workspace,
+  children,
+  signedIn = true,
+}: {
+  workspace: string;
+  children: ReactNode;
+  signedIn?: boolean;
+}) {
   const pathname = usePathname();
   const currentSegment = pathname.split("/").filter(Boolean).at(-1);
   const currentModule = currentSegment && currentSegment in staffModuleConfig ? currentSegment as StaffModule : "overview";
@@ -139,6 +147,11 @@ export function StaffAppShell({ workspace, children }: { workspace: string; chil
               <span className="app-avatar" aria-hidden="true">SD</span>
               <span>Account</span>
             </Link>
+            {signedIn ? (
+              <form className="app-signout-form" action="/auth/sign-out" method="post">
+                <button className="app-topbar-link app-signout-button" type="submit">Sign out</button>
+              </form>
+            ) : null}
           </div>
         </header>
 

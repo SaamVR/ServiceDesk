@@ -38,7 +38,18 @@ export default async function CrewJobPage({
   const result = await loadCrewJobProduct(id, now);
 
   if (!result.ok) {
-    return <CrewRouteUnavailable page="job" message={result.message} />;
+    return (
+      <CrewRouteUnavailable
+        page="job"
+        message={result.message}
+        signInHref={
+          result.kind === "authentication"
+            ? "/auth/sign-in?next=" +
+              encodeURIComponent("/crew/jobs/" + encodeURIComponent(id))
+            : undefined
+        }
+      />
+    );
   }
 
   const job = result.value.job;
