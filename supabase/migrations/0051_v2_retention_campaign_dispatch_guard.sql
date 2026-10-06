@@ -261,6 +261,338 @@ exception when invalid_text_representation or datetime_field_overflow then
 end;
 $$;
 
+
+
+create or replace function public.servicedesk_upsert_retention_campaign(p_input jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
+  v_actor_user uuid := nullif(p_input->>'actorUserId','')::uuid;
+  v_actor_role text := p_input->>'actorRole';
+  v_campaign_id uuid := nullif(p_input->>'campaignId','')::uuid;
+  v_expected bigint := nullif(p_input->>'expectedVersion','')::bigint;
+  v_name text := trim(p_input->>'name');
+  v_channel text := upper(trim(p_input->>'channel'));
+  v_purpose text := upper(trim(p_input->>'purpose'));
+  v_status text := upper(trim(p_input->>'status'));
+  v_template text := nullif(trim(p_input->>'templateKey'),'');
+  v_subject text := nullif(p_input->>'subject','');
+  v_text text := trim(p_input->>'bodyText');
+  v_html text := nullif(p_input->>'bodyHtml','');
+  v_daily integer := coalesce(nullif(p_input->>'dailyCap','')::integer, 100);
+  v_per_customer integer := coalesce(nullif(p_input->>'perCustomerCap','')::integer, 1);
+  v_quiet_start time := nullif(p_input->>'quietHoursStart','')::time;
+  v_quiet_end time := nullif(p_input->>'quietHoursEnd','')::time;
+  v_now timestamptz := coalesce(nullif(p_input->>'now','')::timestamptz, now());
+  v_row public.retention_campaigns%rowtype;
+begin
+  if v_workspace is null or v_actor_user is null or v_actor_role <> 'OWNER'
+     or v_name is null or v_channel not in ('EMAIL','WHATSAPP')
+     or v_purpose not in ('FOLLOW_UP','REVIEW_REQUEST','REFERRAL_NUDGE')
+     or v_status not in ('DRAFT','ACTIVE','PAUSED','COMPLETED')
+     or v_text is null
+  then
+    return jsonb_build_object('ok', false, 'code', 'RETENTION_CAMPAIGN_INPUT_INVALID');
+  end if;
+
+  if not public.servicedesk_require_staff(v_workspace, v_actor_user, 'OWNER') then
+    return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+  end if;
+
+  if v_channel = 'EMAIL' and (v_subject is null or v_html is null) then
+    return jsonb_build_object('ok', false, 'code', 'RETENTION_CAMPAIGN_EMAIL_CONTENT_REQUIRED');
+  end if;
+
+  if v_campaign_id is null then
+    insert into public.retention_campaigns(
+      workspace_id, name, channel, purpose, status, template_key, subject, body_text, body_html,
+      daily_cap, per_customer_cap, quiet_hours_start, quiet_hours_end, created_by, created_at, updated_at
+    ) values (
+      v_workspace, v_name, v_channel, v_purpose, v_status, v_template, v_subject, v_text, v_html,
+      v_daily, v_per_customer, v_quiet_start, v_quiet_end, v_actor_user, v_now, v_now
+    )
+    returning * into v_row;
+  else
+    update public.retention_campaigns
+    set name = v_name,
+        channel = v_channel,
+        purpose = v_purpose,
+        status = v_status,
+        template_key = v_template,
+        subject = v_subject,
+        body_text = v_text,
+        body_html = v_html,
+        daily_cap = v_daily,
+        per_customer_cap = v_per_customer,
+        quiet_hours_start = v_quiet_start,
+        quiet_hours_end = v_quiet_end,
+        version = version + 1,
+        updated_at = v_now
+    where workspace_id = v_workspace
+      and id = v_campaign_id
+      and version = v_expected
+    returning * into v_row;
+
+    if not found then
+      if exists (select 1 from public.retention_campaigns where workspace_id = v_workspace and id = v_campaign_id) then
+        return jsonb_build_object('ok', false, 'code', 'VERSION_CONFLICT');
+      end if;
+      return jsonb_build_object('ok', false, 'code', 'RETENTION_CAMPAIGN_NOT_FOUND');
+    end if;
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'campaignId', v_row.id,
+    'status', v_row.status,
+    'version', v_row.version
+  );
+exception when check_violation or invalid_text_representation or datetime_field_overflow then
+  return jsonb_build_object('ok', false, 'code', 'RETENTION_CAMPAIGN_INPUT_INVALID');
+end;
+$;
+
+create or replace function public.servicedesk_set_customer_retention_control(p_input jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
+  v_actor_user uuid := nullif(p_input->>'actorUserId','')::uuid;
+  v_actor_role text := p_input->>'actorRole';
+  v_customer uuid := nullif(p_input->>'customerId','')::uuid;
+  v_channel text := upper(trim(p_input->>'channel'));
+  v_status text := upper(trim(p_input->>'status'));
+  v_reason text := nullif(upper(trim(p_input->>'reasonCode')),'');
+  v_until timestamptz := nullif(p_input->>'untilAt','')::timestamptz;
+  v_now timestamptz := coalesce(nullif(p_input->>'now','')::timestamptz, now());
+  v_row public.customer_retention_controls%rowtype;
+begin
+  if v_workspace is null or v_actor_user is null or v_actor_role not in ('OWNER','DISPATCHER')
+     or v_customer is null or v_channel not in ('EMAIL','WHATSAPP')
+     or v_status not in ('ACTIVE','PAUSED','SUPPRESSED')
+  then
+    return jsonb_build_object('ok', false, 'code', 'RETENTION_CONTROL_INPUT_INVALID');
+  end if;
+
+  if not public.servicedesk_require_staff(v_workspace, v_actor_user, v_actor_role) then
+    return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+  end if;
+
+  if not exists (
+    select 1 from public.customers
+    where workspace_id = v_workspace and id = v_customer and archived_at is null
+  ) then
+    return jsonb_build_object('ok', false, 'code', 'CUSTOMER_NOT_FOUND');
+  end if;
+
+  insert into public.customer_retention_controls(
+    workspace_id, customer_id, channel, status, reason_code, until_at,
+    version, updated_by, created_at, updated_at
+  ) values (
+    v_workspace, v_customer, v_channel, v_status, v_reason, v_until,
+    1, v_actor_user, v_now, v_now
+  )
+  on conflict (workspace_id, customer_id, channel) do update
+  set status = excluded.status,
+      reason_code = excluded.reason_code,
+      until_at = excluded.until_at,
+      version = public.customer_retention_controls.version + 1,
+      updated_by = v_actor_user,
+      updated_at = v_now
+  returning * into v_row;
+
+  return jsonb_build_object(
+    'ok', true,
+    'customerId', v_row.customer_id,
+    'channel', v_row.channel,
+    'status', v_row.status,
+    'version', v_row.version
+  );
+exception when check_violation or invalid_text_representation or datetime_field_overflow then
+  return jsonb_build_object('ok', false, 'code', 'RETENTION_CONTROL_INPUT_INVALID');
+end;
+$;
+
+create or replace function public.servicedesk_queue_retention_campaign_message(p_input jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
+  v_actor_user uuid := nullif(p_input->>'actorUserId','')::uuid;
+  v_actor_role text := p_input->>'actorRole';
+  v_campaign uuid := nullif(p_input->>'campaignId','')::uuid;
+  v_customer uuid := nullif(p_input->>'customerId','')::uuid;
+  v_idempotency text := nullif(trim(p_input->>'idempotencyKey'),'');
+  v_now timestamptz := coalesce(nullif(p_input->>'now','')::timestamptz, now());
+  v_channel text;
+  v_event public.outbox_events%rowtype;
+begin
+  if v_workspace is null or v_actor_user is null or v_actor_role <> 'OWNER'
+     or v_campaign is null or v_customer is null or v_idempotency is null
+  then
+    return jsonb_build_object('ok', false, 'code', 'RETENTION_QUEUE_INPUT_INVALID');
+  end if;
+
+  if not public.servicedesk_require_staff(v_workspace, v_actor_user, 'OWNER') then
+    return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+  end if;
+
+  select channel into v_channel
+  from public.retention_campaigns
+  where workspace_id = v_workspace and id = v_campaign and status = 'ACTIVE';
+
+  if not found then
+    return jsonb_build_object('ok', false, 'code', 'CAMPAIGN_NOT_ACTIVE');
+  end if;
+
+  if not exists (
+    select 1 from public.customers
+    where workspace_id = v_workspace and id = v_customer and archived_at is null
+  ) then
+    return jsonb_build_object('ok', false, 'code', 'CUSTOMER_NOT_FOUND');
+  end if;
+
+  select * into v_event
+  from public.outbox_events
+  where workspace_id = v_workspace and idempotency_key = v_idempotency;
+
+  if found then
+    if v_event.topic <> 'retention.campaign'
+       or v_event.payload->>'campaignId' <> v_campaign::text
+       or v_event.payload->>'customerId' <> v_customer::text
+    then
+      return jsonb_build_object('ok', false, 'code', 'IDEMPOTENCY_CONFLICT');
+    end if;
+    return jsonb_build_object('ok', true, 'duplicate', true, 'outboxEventId', v_event.id);
+  end if;
+
+  insert into public.outbox_events(
+    workspace_id, topic, payload, status, attempts, idempotency_key, created_at, updated_at
+  ) values (
+    v_workspace,
+    'retention.campaign',
+    jsonb_build_object(
+      'campaignId', v_campaign,
+      'customerId', v_customer,
+      'channel', v_channel
+    ),
+    'PENDING',
+    0,
+    v_idempotency,
+    v_now,
+    v_now
+  )
+  returning * into v_event;
+
+  return jsonb_build_object('ok', true, 'duplicate', false, 'outboxEventId', v_event.id);
+exception when unique_violation then
+  return jsonb_build_object('ok', false, 'code', 'IDEMPOTENCY_CONFLICT');
+when invalid_text_representation or datetime_field_overflow then
+  return jsonb_build_object('ok', false, 'code', 'RETENTION_QUEUE_INPUT_INVALID');
+end;
+$;
+
+create or replace function public.servicedesk_resolve_retention_campaign_intent(p_input jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
+  v_event_id uuid := nullif(p_input->>'eventId','')::uuid;
+  v_now timestamptz := coalesce(nullif(p_input->>'now','')::timestamptz, now());
+  v_eligibility jsonb;
+  v_event public.outbox_events%rowtype;
+  v_campaign public.retention_campaigns%rowtype;
+  v_customer uuid;
+  v_recipient text;
+  v_contact_count integer;
+begin
+  v_eligibility := public.servicedesk_check_retention_campaign_dispatch_eligibility(
+    jsonb_build_object('workspaceId', v_workspace, 'eventId', v_event_id, 'now', v_now)
+  );
+
+  if coalesce((v_eligibility->>'ok')::boolean, false) is false then
+    return v_eligibility;
+  end if;
+  if coalesce((v_eligibility->>'allowed')::boolean, false) is false then
+    return v_eligibility;
+  end if;
+
+  select * into v_event
+  from public.outbox_events
+  where workspace_id = v_workspace and id = v_event_id and topic = 'retention.campaign';
+
+  v_customer := nullif(v_event.payload->>'customerId','')::uuid;
+
+  select * into v_campaign
+  from public.retention_campaigns
+  where workspace_id = v_workspace
+    and id = nullif(v_event.payload->>'campaignId','')::uuid;
+
+  select count(*), min(c.value)
+  into v_contact_count, v_recipient
+  from public.customer_contacts c
+  where c.workspace_id = v_workspace
+    and c.customer_id = v_customer
+    and c.verified_at is not null
+    and (
+      (v_campaign.channel = 'EMAIL' and c.kind = 'EMAIL')
+      or (v_campaign.channel = 'WHATSAPP' and c.kind = 'PHONE')
+    );
+
+  if v_contact_count <> 1 or v_recipient is null then
+    return jsonb_build_object('ok', true, 'allowed', false, 'code',
+      case when v_contact_count > 1 then 'VERIFIED_CONTACT_AMBIGUOUS' else 'VERIFIED_CONTACT_REQUIRED' end
+    );
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'allowed', true,
+    'eventId', v_event.id,
+    'workspaceId', v_workspace,
+    'campaignId', v_campaign.id,
+    'customerId', v_customer,
+    'channel', v_campaign.channel,
+    'campaignPurpose', v_campaign.purpose,
+    'recipientRef', v_recipient,
+    'templateKey', v_campaign.template_key,
+    'subject', v_campaign.subject,
+    'text', v_campaign.body_text,
+    'html', v_campaign.body_html,
+    'idempotencyKey', v_event.idempotency_key
+  );
+exception when invalid_text_representation or datetime_field_overflow then
+  return jsonb_build_object('ok', false, 'code', 'RETENTION_INTENT_INPUT_INVALID');
+end;
+$;
+
+revoke all on function public.servicedesk_upsert_retention_campaign(jsonb) from public, anon, authenticated;
+revoke all on function public.servicedesk_set_customer_retention_control(jsonb) from public, anon, authenticated;
+revoke all on function public.servicedesk_queue_retention_campaign_message(jsonb) from public, anon, authenticated;
+revoke all on function public.servicedesk_resolve_retention_campaign_intent(jsonb) from public, anon, authenticated;
+grant execute on function public.servicedesk_upsert_retention_campaign(jsonb) to service_role;
+grant execute on function public.servicedesk_set_customer_retention_control(jsonb) to service_role;
+grant execute on function public.servicedesk_queue_retention_campaign_message(jsonb) to service_role;
+grant execute on function public.servicedesk_resolve_retention_campaign_intent(jsonb) to service_role;
+
+comment on function public.servicedesk_queue_retention_campaign_message(jsonb) is
+  'Owner-only queue command. Stores campaign/customer/channel identifiers only; recipient address and message body are resolved authoritatively at dispatch time.';
+comment on function public.servicedesk_resolve_retention_campaign_intent(jsonb) is
+  'Service-role authoritative campaign intent resolution. Re-runs dispatch eligibility and resolves exactly one verified channel contact immediately before provider dispatch.';
+
 revoke all on function public.servicedesk_check_retention_campaign_dispatch_eligibility(jsonb)
 from public, anon, authenticated;
 grant execute on function public.servicedesk_check_retention_campaign_dispatch_eligibility(jsonb)
