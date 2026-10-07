@@ -1263,6 +1263,134 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   };
 }
 
+type OperationalBranchResourceKind =
+  | "conversation"
+  | "request"
+  | "quote"
+  | "invoice"
+  | "quality"
+  | "visit"
+  | "crew"
+  | "capacity"
+  | "recurrence"
+  | "photoSuggestion"
+  | "voiceIntake"
+  | "customer";
+
+async function operationalResourceBranchId(
+  resolved: ResolvedStaffActor,
+  kind: OperationalBranchResourceKind,
+  id: string,
+): Promise<string | undefined> {
+  const workspaceId = resolved.workspace.id;
+
+  if (kind === "quote") {
+    const quote = await resolved.service.from("quotes")
+      .select("request_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (quote.error || !quote.data?.request_id) return undefined;
+    return operationalResourceBranchId(resolved, "request", String(quote.data.request_id));
+  }
+
+  if (kind === "invoice") {
+    const invoice = await resolved.service.from("invoices")
+      .select("visit_id,quote_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (invoice.error || !invoice.data) return undefined;
+    if (invoice.data.visit_id) {
+      return operationalResourceBranchId(resolved, "visit", String(invoice.data.visit_id));
+    }
+    if (invoice.data.quote_id) {
+      return operationalResourceBranchId(resolved, "quote", String(invoice.data.quote_id));
+    }
+    return undefined;
+  }
+
+  if (kind === "quality") {
+    const quality = await resolved.service.from("quality_cases")
+      .select("visit_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (quality.error || !quality.data?.visit_id) return undefined;
+    return operationalResourceBranchId(resolved, "visit", String(quality.data.visit_id));
+  }
+
+  if (kind === "photoSuggestion") {
+    const suggestion = await resolved.service.from("request_photo_suggestions")
+      .select("request_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (suggestion.error || !suggestion.data?.request_id) return undefined;
+    return operationalResourceBranchId(resolved, "request", String(suggestion.data.request_id));
+  }
+
+  if (kind === "voiceIntake") {
+    const intake = await resolved.service.from("voice_call_intakes")
+      .select("request_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (intake.error || !intake.data?.request_id) return undefined;
+    return operationalResourceBranchId(resolved, "request", String(intake.data.request_id));
+  }
+
+  if (kind === "customer") {
+    for (const table of ["properties", "requests", "conversations"] as const) {
+      const found = await resolved.service.from(table)
+        .select("branch_id")
+        .eq("workspace_id", workspaceId)
+        .eq("customer_id", id)
+        .eq("branch_id", resolved.branchScope.selectedBranchId ?? "")
+        .limit(1);
+      if (!found.error && rows(found.data).length > 0) {
+        return resolved.branchScope.selectedBranchId;
+      }
+    }
+    return undefined;
+  }
+
+  const tableByKind = {
+    conversation: "conversations",
+    request: "requests",
+    visit: "visits",
+    crew: "crews",
+    capacity: "capacity_slots",
+    recurrence: "recurrence_rules",
+  } as const;
+  const table = tableByKind[kind as keyof typeof tableByKind];
+  if (!table) return undefined;
+  const found = await resolved.service.from(table)
+    .select("branch_id")
+    .eq("workspace_id", workspaceId)
+    .eq("id", id)
+    .maybeSingle();
+  if (found.error || !found.data) return undefined;
+  return textValue(found.data as Row, "branch_id");
+}
+
+async function requireOperationalBranchResource(
+  resolved: ResolvedStaffActor,
+  kind: OperationalBranchResourceKind,
+  id: string,
+): Promise<OperationalActionResult | undefined> {
+  if (resolved.branchScope.mode !== "BRANCH") return undefined;
+  const selected = resolved.branchScope.selectedBranchId;
+  if (!selected) {
+    return { ok: false, message: "Your active branch scope is no longer valid. Refresh the workspace." };
+  }
+  const resourceBranch = await operationalResourceBranchId(resolved, kind, id);
+  if (!resourceBranch || resourceBranch !== selected) {
+    return { ok: false, message: "This record is not available in your selected branch." };
+  }
+  return undefined;
+}
+
 async function loadConversationForAction(resolved: ResolvedStaffActor, conversationId: string) {
   return resolved.service
     .from("conversations")
