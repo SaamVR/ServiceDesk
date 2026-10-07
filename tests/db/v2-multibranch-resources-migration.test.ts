@@ -59,4 +59,22 @@ describe("V2 multi-branch resources migration", () => {
     expect(sql).toContain("'currency', v_branch_row.currency");
     expect(sql).toContain("'rateVersion', rc.version");
   });
+
+  it("provides owner HQ branch comparison in each branch timezone and native currency", () => {
+    expect(sql).toContain("servicedesk_read_branch_comparison_report");
+    expect(sql).toContain("v_role <> 'OWNER'");
+    expect(sql).toContain("array['OWNER']::public.membership_role[]");
+    expect(sql).toContain("at time zone b.timezone");
+    expect(sql).toContain("'currency', b.currency");
+    expect(sql).toContain("i.currency = b.currency");
+    expect(sql).toContain("'currencyMismatchCount'");
+    expect(sql).toContain("Cross-currency totals are not converted or combined without an explicit FX source.");
+    expect(sql).toContain("grant execute on function public.servicedesk_read_branch_comparison_report(jsonb) to service_role");
+  });
+
+  it("bounds HQ comparison to a finite date window", () => {
+    expect(sql).toContain("(v_to_date - v_from_date) > 366");
+    expect(sql).toContain("BRANCH_REPORT_INPUT_INVALID");
+  });
+
 });
