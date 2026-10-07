@@ -48,6 +48,12 @@ describe("V2 multi-branch foundation", () => {
     expect(sql).toContain("invoices_branch_staff_read");
     expect(sql).toContain("visit_evidence_branch_staff_select");
     expect(sql).toContain("visit_checklist_branch_staff_select");
+    expect(sql).toContain("customers_branch_staff_all");
+    expect(sql).toContain("contacts_branch_staff_all");
+    expect(sql).toContain("consents_branch_staff_all");
+    expect(sql).toContain("conversations_branch_staff_all");
+    expect(sql).toContain("drop policy if exists messages_staff_select");
+    expect(sql).toContain("messages_branch_staff_select");
     expect(sql).toContain("public.has_branch_access");
   });
 
