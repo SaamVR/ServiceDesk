@@ -152,8 +152,8 @@ begin
     return jsonb_build_object('ok', false, 'code', 'BRANCH_ZONE_INPUT_INVALID');
   end if;
 
-  if not public.servicedesk_has_branch_access(
-    v_workspace, v_branch, array['OWNER']::public.membership_role[]
+  if not public.servicedesk_actor_has_branch_access(
+    v_workspace, v_branch, v_actor, v_role, array['OWNER']::public.membership_role[]
   ) then
     return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
   end if;
@@ -230,8 +230,8 @@ begin
     return jsonb_build_object('ok', false, 'code', 'BRANCH_PROVIDER_BINDING_INPUT_INVALID');
   end if;
 
-  if not public.servicedesk_has_branch_access(
-    v_workspace, v_branch, array['OWNER']::public.membership_role[]
+  if not public.servicedesk_actor_has_branch_access(
+    v_workspace, v_branch, v_actor, v_role, array['OWNER']::public.membership_role[]
   ) then
     return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
   end if;
@@ -319,8 +319,8 @@ begin
     return jsonb_build_object('ok', false, 'code', 'BRANCH_PRICE_BOOK_INPUT_INVALID');
   end if;
 
-  if not public.servicedesk_has_branch_access(
-    v_workspace, v_branch, array['OWNER']::public.membership_role[]
+  if not public.servicedesk_actor_has_branch_access(
+    v_workspace, v_branch, v_actor, v_role, array['OWNER']::public.membership_role[]
   ) then
     return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
   end if;
@@ -380,8 +380,8 @@ begin
     return jsonb_build_object('ok', false, 'code', 'BRANCH_RESOURCE_READ_INPUT_INVALID');
   end if;
 
-  if not public.servicedesk_has_branch_access(
-    v_workspace, v_branch, array['OWNER','DISPATCHER']::public.membership_role[]
+  if not public.servicedesk_actor_has_branch_access(
+    v_workspace, v_branch, v_actor, v_role, array['OWNER','DISPATCHER']::public.membership_role[]
   ) then
     return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
   end if;
@@ -480,9 +480,7 @@ begin
     return jsonb_build_object('ok', false, 'code', 'BRANCH_REPORT_INPUT_INVALID');
   end if;
 
-  if not public.has_active_membership(
-    v_workspace, array['OWNER']::public.membership_role[]
-  ) then
+  if not public.servicedesk_actor_is_workspace_owner(v_workspace, v_actor, v_role) then
     return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
   end if;
 
