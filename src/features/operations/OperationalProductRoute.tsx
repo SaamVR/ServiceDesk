@@ -2389,6 +2389,40 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     actionRedirect(workspaceSlug, "settings", result);
   }
 
+  async function createBranchAction(formData: FormData) {
+    "use server";
+    const result = await createOperationalBranch(workspaceSlug, {
+      code: String(formData.get("code") ?? ""),
+      name: String(formData.get("name") ?? ""),
+      timezone: String(formData.get("timezone") ?? ""),
+      currency: String(formData.get("currency") ?? ""),
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=branches&");
+  }
+
+  async function updateBranchAction(formData: FormData) {
+    "use server";
+    const result = await updateOperationalBranch(workspaceSlug, {
+      branchId: String(formData.get("branchId") ?? ""),
+      name: String(formData.get("name") ?? ""),
+      timezone: String(formData.get("timezone") ?? ""),
+      currency: String(formData.get("currency") ?? ""),
+      active: String(formData.get("active") ?? "") === "on",
+      expectedVersion: Number(formData.get("expectedVersion") ?? 0),
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=branches&");
+  }
+
+  async function branchAssignmentAction(formData: FormData) {
+    "use server";
+    const result = await setOperationalBranchAssignment(workspaceSlug, {
+      branchId: String(formData.get("branchId") ?? ""),
+      targetUserId: String(formData.get("targetUserId") ?? ""),
+      active: String(formData.get("active") ?? "") === "true",
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=branches&");
+  }
+
   async function referralCodeAction(formData: FormData) {
     "use server";
     const result = await upsertOperationalReferralCode(workspaceSlug, {
@@ -2467,6 +2501,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
           <a href="#services">Services</a>
           <a href="#team">Team & access</a>
           <a href="#recurrence">Recurring services</a>
+          <a href="#branches">Branches</a>
           <a href="#growth">Growth & retention</a>
           <a href="#integrations">Integrations</a>
         </nav>
@@ -2655,6 +2690,114 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                   </article>
                 ))}
               </div>
+            )}
+          </section>
+
+          <section className={styles.settingsCard} id="branches">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Multi-branch</p>
+                <h3>Branches & access</h3>
+                <p>Branches stay inside this workspace tenant. Owners are company-wide; dispatchers and crew see only explicitly assigned branches.</p>
+              </div>
+              <StatusBadge tone={data.branchScope?.available ? "info" : "neutral"}>
+                {data.branchScope?.available
+                  ? data.branchScope.branches.filter((branch) => branch.active).length + " active"
+                  : "Unavailable"}
+              </StatusBadge>
+            </div>
+
+            {!data.branchScope?.available ? (
+              <div className={styles.settingsEmpty}>
+                <strong>Branch management is not available in this environment</strong>
+                <p>The existing workspace remains usable as one operational scope until the multi-branch migration is applied.</p>
+              </div>
+            ) : (
+              <>
+                {data.actor.role === "OWNER" ? (
+                  <form action={createBranchAction} className={styles.branchCreateForm}>
+                    <div>
+                      <p className={styles.adminSectionEyebrow}>New branch</p>
+                      <strong>Create an operational branch</strong>
+                    </div>
+                    <label><span>Code</span><input className="app-input" name="code" placeholder="NORTH" maxLength={32} required /></label>
+                    <label><span>Name</span><input className="app-input" name="name" placeholder="North branch" maxLength={120} required /></label>
+                    <label><span>IANA timezone</span><input className="app-input" name="timezone" placeholder="America/New_York" required /></label>
+                    <label><span>Currency</span><input className="app-input" name="currency" placeholder="USD" maxLength={3} required /></label>
+                    <button className="app-button-primary" type="submit">Create branch</button>
+                  </form>
+                ) : null}
+
+                <div className={styles.branchAdminList}>
+                  {data.branchScope.branches.map((branch) => (
+                    <article className={styles.branchAdminCard} key={branch.id}>
+                      <div className={styles.branchAdminHeader}>
+                        <span>
+                          <strong>{branch.name}</strong>
+                          <small>{branch.code} · {branch.timezone} · {branch.currency}</small>
+                        </span>
+                        <StatusBadge tone={branch.active ? "success" : "neutral"}>
+                          {branch.isDefault ? "Default" : branch.active ? "Active" : "Inactive"}
+                        </StatusBadge>
+                      </div>
+
+                      {data.actor.role === "OWNER" ? (
+                        <form action={updateBranchAction} className={styles.branchEditForm}>
+                          <input name="branchId" type="hidden" value={branch.id} />
+                          <input name="expectedVersion" type="hidden" value={branch.version} />
+                          <label><span>Name</span><input className="app-input" name="name" defaultValue={branch.name} maxLength={120} required /></label>
+                          <label><span>Timezone</span><input className="app-input" name="timezone" defaultValue={branch.timezone} required /></label>
+                          <label><span>Currency</span><input className="app-input" name="currency" defaultValue={branch.currency} maxLength={3} required /></label>
+                          <label className={styles.settingToggle}>
+                            <input name="active" type="checkbox" defaultChecked={branch.active} disabled={branch.isDefault} />
+                            <span>
+                              <strong>Active</strong>
+                              <small>{branch.isDefault ? "The default branch cannot be deactivated." : "Allow operational use of this branch."}</small>
+                            </span>
+                          </label>
+                          {branch.isDefault && branch.active ? <input name="active" type="hidden" value="on" /> : null}
+                          <button className="app-button-secondary" type="submit">Save branch</button>
+                        </form>
+                      ) : null}
+
+                      {data.actor.role === "OWNER" ? (
+                        <div className={styles.branchAssignments}>
+                          <div>
+                            <strong>Staff access</strong>
+                            <small>Owners are global and are not listed as branch assignments.</small>
+                          </div>
+                          {snapshot.members
+                            .filter((member) => member.active && member.role !== "OWNER")
+                            .map((member, index) => {
+                              const assignment = data.branchScope?.assignments.find((item) =>
+                                item.branchId === branch.id && item.userId === member.userId);
+                              const active = assignment?.active === true;
+                              return (
+                                <form action={branchAssignmentAction} className={styles.branchAssignmentRow} key={member.userId}>
+                                  <input name="branchId" type="hidden" value={branch.id} />
+                                  <input name="targetUserId" type="hidden" value={member.userId} />
+                                  <span>
+                                    <strong>{member.role.toLowerCase()} {index + 1}</strong>
+                                    <small>{active ? "Assigned to this branch" : "No branch access"}</small>
+                                  </span>
+                                  <StatusBadge tone={active ? "success" : "neutral"}>{active ? "Assigned" : "Not assigned"}</StatusBadge>
+                                  <button className="app-button-secondary" name="active" type="submit" value={active ? "false" : "true"}>
+                                    {active ? "Revoke" : "Assign"}
+                                  </button>
+                                </form>
+                              );
+                            })}
+                        </div>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+
+                <div className={styles.integrationProofNote}>
+                  <span aria-hidden="true">i</span>
+                  <p><strong>Workspace isolation is unchanged.</strong> Branch access narrows records inside this tenant; it never authorizes access to another workspace.</p>
+                </div>
+              </>
             )}
           </section>
 
