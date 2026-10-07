@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { resolveStaffActor } from "@/features/operations/operational-product-runtime";
+import {
+  requireOperationalBranchResource,
+  resolveStaffActor,
+} from "@/features/operations/operational-product-runtime";
 import { parseSupabasePhotoStorageRef } from "@/server/core/request-photo-storage";
 
 const responseHeaders = {
@@ -26,7 +29,7 @@ export async function GET(
 
   const asset = await resolved.value.service
     .from("request_photo_assets")
-    .select("id,storage_ref,content_type,consent_status,processing_opt_out,retention_until,state")
+    .select("id,request_id,storage_ref,content_type,consent_status,processing_opt_out,retention_until,state")
     .eq("workspace_id", resolved.value.workspace.id)
     .eq("id", assetId)
     .maybeSingle();
@@ -36,6 +39,7 @@ export async function GET(
   }
 
   const row = asset.data as {
+    request_id?: string;
     storage_ref?: string;
     content_type?: string;
     consent_status?: string;
@@ -43,6 +47,14 @@ export async function GET(
     retention_until?: string;
     state?: string;
   };
+  if (!row.request_id) {
+    return new NextResponse("Photo asset is not available.", { status: 404, headers: responseHeaders });
+  }
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "request", row.request_id);
+  if (branchAccess) {
+    return new NextResponse("Photo asset is not available.", { status: 404, headers: responseHeaders });
+  }
+
   const retainedUntil = row.retention_until ? Date.parse(row.retention_until) : Number.NaN;
   if (
     row.state !== "AVAILABLE"
