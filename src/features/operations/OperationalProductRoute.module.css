@@ -839,3 +839,127 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.branchAdminGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.branchAdminGrid > section {
+  display: grid;
+  align-content: start;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-subtle);
+}
+.branchAdminGrid h4 {
+  margin: 0;
+}
+.branchAdminRows,
+.branchAssignmentRows {
+  display: grid;
+  gap: 7px;
+}
+.branchAdminRows article,
+.branchAssignmentRows form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+.branchAdminRows article > div,
+.branchAssignmentRows form > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.branchAdminRows span,
+.branchAssignmentRows small {
+  color: var(--app-text-muted);
+  font-size: .67rem;
+}
+.branchAssignments {
+  grid-column: 1 / -1;
+}
+.branchComparisonPanel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+.branchComparisonRows {
+  display: grid;
+  gap: 8px;
+}
+.branchComparisonRows article {
+  display: grid;
+  grid-template-columns: minmax(180px, .8fr) minmax(0, 1.5fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface-subtle);
+}
+.branchComparisonIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.branchComparisonIdentity span {
+  color: var(--app-text-muted);
+  font-size: .68rem;
+}
+.branchComparisonRows dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.branchComparisonRows dl div {
+  display: grid;
+  gap: 2px;
+}
+.branchComparisonRows dt {
+  color: var(--app-text-muted);
+  font-size: .62rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.branchComparisonRows dd {
+  margin: 0;
+  font-size: .76rem;
+  font-weight: 700;
+}
+@media(max-width: 960px) {
+  .branchAdminGrid {
+    grid-template-columns: 1fr;
+  }
+  .branchAssignments {
+    grid-column: auto;
+  }
+  .branchComparisonRows article {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+}
+@media(max-width: 620px) {
+  .branchAdminRows article,
+  .branchAssignmentRows form {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .branchComparisonRows dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
