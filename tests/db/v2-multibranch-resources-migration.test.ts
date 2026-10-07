@@ -36,6 +36,8 @@ describe("V2 multi-branch resources migration", () => {
     expect(sql).toContain("servicedesk_upsert_branch_provider_binding");
     expect(sql).toContain("servicedesk_set_branch_price_book");
     expect(sql).toContain("array['OWNER']::public.membership_role[]");
+    expect(sql).toContain("servicedesk_actor_has_branch_access");
+    expect(sql).toContain("servicedesk_actor_is_workspace_owner");
     expect(sql).toContain("v_role <> 'OWNER'");
   });
 
