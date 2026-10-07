@@ -74,4 +74,26 @@ describe("V2 multi-branch core migration", () => {
     expect(sql).not.toContain("drop policy if exists requests_customer_select");
     expect(sql).not.toContain("drop policy if exists conversations_customer_select");
   });
+
+  it("provides owner branch-management commands without making owner access assignment-dependent", () => {
+    expect(sql).toContain("servicedesk_upsert_workspace_branch");
+    expect(sql).toContain("servicedesk_set_branch_membership");
+    expect(sql).toContain("v_role <> 'OWNER'");
+    expect(sql).toContain("DEFAULT_BRANCH_REQUIRED");
+    expect(sql).toContain("OWNER_BRANCH_ASSIGNMENT_NOT_REQUIRED");
+    expect(sql).toContain("STAFF_MEMBERSHIP_NOT_FOUND");
+    expect(sql).toContain("grant execute on function public.servicedesk_upsert_workspace_branch(jsonb) to service_role");
+    expect(sql).toContain("grant execute on function public.servicedesk_set_branch_membership(jsonb) to service_role");
+  });
+
+  it("never permits branch assignment to create or widen workspace membership", () => {
+    const start = sql.indexOf("create or replace function public.servicedesk_set_branch_membership");
+    const end = sql.indexOf("revoke all on function public.servicedesk_upsert_workspace_branch", start);
+    const command = sql.slice(start, end);
+    expect(command).toContain("from public.memberships");
+    expect(command).toContain("status = 'ACTIVE'");
+    expect(command).not.toContain("insert into public.memberships");
+    expect(command).not.toContain("update public.memberships");
+  });
+
 });
