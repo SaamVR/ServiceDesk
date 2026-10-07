@@ -459,14 +459,130 @@ $$;
 -- branch_provider_bindings intentionally has no authenticated SELECT grant/policy:
 -- staff receive only redacted readiness through servicedesk_read_branch_resource_summary.
 
+
+create or replace function public.servicedesk_read_branch_comparison_report(p_input jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
+  v_actor uuid := nullif(p_input->>'actorUserId','')::uuid;
+  v_role text := p_input->>'actorRole';
+  v_from_date date := nullif(p_input->>'fromDate','')::date;
+  v_to_date date := nullif(p_input->>'toDate','')::date;
+begin
+  if v_workspace is null or v_actor is null or v_role <> 'OWNER'
+     or v_from_date is null or v_to_date is null or v_to_date < v_from_date
+     or (v_to_date - v_from_date) > 366
+  then
+    return jsonb_build_object('ok', false, 'code', 'BRANCH_REPORT_INPUT_INVALID');
+  end if;
+
+  if not public.has_active_membership(
+    v_workspace, array['OWNER']::public.membership_role[]
+  ) then
+    return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'fromDate', v_from_date,
+    'toDate', v_to_date,
+    'rows', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'branchId', b.id,
+        'code', b.code,
+        'name', b.name,
+        'timezone', b.timezone,
+        'currency', b.currency,
+        'requestCount', (
+          select count(*)
+          from public.requests r
+          where r.workspace_id = b.workspace_id
+            and r.branch_id = b.id
+            and r.created_at >= (v_from_date::timestamp at time zone b.timezone)
+            and r.created_at < ((v_to_date + 1)::timestamp at time zone b.timezone)
+        ),
+        'scheduledVisitCount', (
+          select count(*)
+          from public.visits v
+          where v.workspace_id = b.workspace_id
+            and v.branch_id = b.id
+            and v.starts_at >= (v_from_date::timestamp at time zone b.timezone)
+            and v.starts_at < ((v_to_date + 1)::timestamp at time zone b.timezone)
+            and v.status <> 'CANCELLED'
+        ),
+        'paidInvoiceCount', (
+          select count(*)
+          from public.invoices i
+          left join public.visits v
+            on v.workspace_id = i.workspace_id and v.id = i.visit_id
+          left join public.quotes q
+            on q.workspace_id = i.workspace_id and q.id = i.quote_id
+          left join public.requests r
+            on r.workspace_id = q.workspace_id and r.id = q.request_id
+          where i.workspace_id = b.workspace_id
+            and coalesce(v.branch_id, r.branch_id) = b.id
+            and i.status = 'PAID'
+            and i.updated_at >= (v_from_date::timestamp at time zone b.timezone)
+            and i.updated_at < ((v_to_date + 1)::timestamp at time zone b.timezone)
+        ),
+        'collectedMinor', (
+          select coalesce(sum(greatest(i.allocated_minor - i.refunded_minor, 0)), 0)
+          from public.invoices i
+          left join public.visits v
+            on v.workspace_id = i.workspace_id and v.id = i.visit_id
+          left join public.quotes q
+            on q.workspace_id = i.workspace_id and q.id = i.quote_id
+          left join public.requests r
+            on r.workspace_id = q.workspace_id and r.id = q.request_id
+          where i.workspace_id = b.workspace_id
+            and coalesce(v.branch_id, r.branch_id) = b.id
+            and i.currency = b.currency
+            and i.status = 'PAID'
+            and i.updated_at >= (v_from_date::timestamp at time zone b.timezone)
+            and i.updated_at < ((v_to_date + 1)::timestamp at time zone b.timezone)
+        ),
+        'currencyMismatchCount', (
+          select count(*)
+          from public.invoices i
+          left join public.visits v
+            on v.workspace_id = i.workspace_id and v.id = i.visit_id
+          left join public.quotes q
+            on q.workspace_id = i.workspace_id and q.id = i.quote_id
+          left join public.requests r
+            on r.workspace_id = q.workspace_id and r.id = q.request_id
+          where i.workspace_id = b.workspace_id
+            and coalesce(v.branch_id, r.branch_id) = b.id
+            and i.currency <> b.currency
+            and i.status = 'PAID'
+            and i.updated_at >= (v_from_date::timestamp at time zone b.timezone)
+            and i.updated_at < ((v_to_date + 1)::timestamp at time zone b.timezone)
+        )
+      ) order by b.code)
+      from public.workspace_branches b
+      where b.workspace_id = v_workspace and b.active
+    ), '[]'::jsonb),
+    'disclosure',
+      'Each branch is measured in its own timezone and native currency. Cross-currency totals are not converted or combined without an explicit FX source.'
+  );
+exception when invalid_text_representation or datetime_field_overflow or invalid_parameter_value then
+  return jsonb_build_object('ok', false, 'code', 'BRANCH_REPORT_INPUT_INVALID');
+end;
+$;
+
 revoke all on function public.servicedesk_upsert_branch_service_zone(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_upsert_branch_provider_binding(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_set_branch_price_book(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_read_branch_resource_summary(jsonb) from public, anon, authenticated;
+revoke all on function public.servicedesk_read_branch_comparison_report(jsonb) from public, anon, authenticated;
 grant execute on function public.servicedesk_upsert_branch_service_zone(jsonb) to service_role;
 grant execute on function public.servicedesk_upsert_branch_provider_binding(jsonb) to service_role;
 grant execute on function public.servicedesk_set_branch_price_book(jsonb) to service_role;
 grant execute on function public.servicedesk_read_branch_resource_summary(jsonb) to service_role;
+grant execute on function public.servicedesk_read_branch_comparison_report(jsonb) to service_role;
 
 comment on table public.branch_provider_bindings is
   'Branch-scoped external resource bindings. resource_ref is an opaque reference only; provider credentials remain outside PostgreSQL.';
