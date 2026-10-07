@@ -839,3 +839,191 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.branchCreateForm {
+  display: grid;
+  grid-template-columns: auto repeat(4, minmax(120px, 1fr)) auto;
+  align-items: end;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-subtle);
+}
+.branchCreateForm > div {
+  display: grid;
+  gap: 2px;
+}
+.branchCreateForm label,
+.branchEditForm label {
+  display: grid;
+  gap: 5px;
+}
+.branchCreateForm label > span,
+.branchEditForm label > span {
+  color: var(--app-text-muted);
+  font-size: .66rem;
+  font-weight: 650;
+}
+.branchAdminList {
+  display: grid;
+  gap: 10px;
+}
+.branchAdminCard {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-subtle);
+}
+.branchAdminHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.branchAdminHeader > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+.branchAdminHeader small {
+  color: var(--app-text-muted);
+  font-size: .68rem;
+}
+.branchEditForm {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr)) minmax(180px, 1.2fr) auto;
+  align-items: end;
+  gap: 9px;
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border);
+}
+.branchAssignments {
+  display: grid;
+  gap: 7px;
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border);
+}
+.branchAssignments > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+.branchAssignments > div:first-child small {
+  color: var(--app-text-muted);
+  font-size: .67rem;
+}
+.branchAssignmentRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+.branchAssignmentRow > span:first-of-type {
+  display: grid;
+  gap: 2px;
+}
+.branchAssignmentRow small {
+  color: var(--app-text-muted);
+  font-size: .65rem;
+}
+
+.branchComparisonPanel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+.branchComparisonRows {
+  display: grid;
+  gap: 8px;
+}
+.branchComparisonRows article {
+  display: grid;
+  grid-template-columns: minmax(170px, .65fr) minmax(0, 1.35fr);
+  gap: 14px;
+  align-items: center;
+  padding: 10px 11px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface-subtle);
+}
+.branchComparisonIdentity {
+  display: grid;
+  gap: 3px;
+}
+.branchComparisonIdentity span {
+  color: var(--app-text-muted);
+  font-size: .66rem;
+}
+.branchComparisonRows dl {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.branchComparisonRows dl div {
+  display: grid;
+  gap: 2px;
+}
+.branchComparisonRows dt {
+  color: var(--app-text-muted);
+  font-size: .6rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.branchComparisonRows dd {
+  margin: 0;
+  font-size: .72rem;
+  font-weight: 700;
+}
+.branchComparisonTotals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.branchComparisonTotals span {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-subtle);
+}
+.branchComparisonTotals small {
+  color: var(--app-text-muted);
+  font-size: .64rem;
+}
+
+@media(max-width: 1100px) {
+  .branchCreateForm,
+  .branchEditForm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .branchComparisonRows article {
+    grid-template-columns: 1fr;
+  }
+  .branchComparisonRows dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media(max-width: 680px) {
+  .branchCreateForm,
+  .branchEditForm,
+  .branchAssignmentRow,
+  .branchComparisonTotals,
+  .branchComparisonRows dl {
+    grid-template-columns: 1fr;
+  }
+  .branchAdminHeader {
+    align-items: flex-start;
+  }
+}
