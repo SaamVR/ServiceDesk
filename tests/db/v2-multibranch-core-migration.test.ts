@@ -96,4 +96,18 @@ describe("V2 multi-branch core migration", () => {
     expect(command).not.toContain("update public.memberships");
   });
 
+
+  it("uses actor-aware authorization for service-role RPCs instead of auth.uid()", () => {
+    expect(sql).toContain("servicedesk_actor_is_workspace_owner");
+    expect(sql).toContain("servicedesk_actor_has_branch_access");
+    expect(sql).toContain("m.user_id = actor_user");
+    expect(sql).toContain("m.role::text = actor_role");
+    expect(sql).toContain("grant execute on function public.servicedesk_actor_has_branch_access");
+    const managementStart = sql.indexOf("create or replace function public.servicedesk_upsert_workspace_branch");
+    const managementEnd = sql.indexOf("alter table public.workspace_branches enable row level security", managementStart);
+    const management = sql.slice(managementStart, managementEnd);
+    expect(management).toContain("servicedesk_actor_is_workspace_owner");
+    expect(management).not.toContain("has_active_membership");
+  });
+
 });
