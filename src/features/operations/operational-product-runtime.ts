@@ -102,11 +102,20 @@ export interface OperationalBranchSummary {
   version: number;
 }
 
+export interface OperationalBranchAssignment {
+  branchId: string;
+  userId: string;
+  role: "OWNER" | "DISPATCHER" | "CREW";
+  active: boolean;
+  version: number;
+}
+
 export interface OperationalBranchScope {
   available: boolean;
   ownerGlobalAccess: boolean;
   selectedBranchId?: string;
   branches: OperationalBranchSummary[];
+  assignments: OperationalBranchAssignment[];
 }
 
 export interface OperationalBranchReportRow {
@@ -423,7 +432,7 @@ async function resolveBranchScope(
   });
 
   if (result.error || !result.data || result.data.ok !== true) {
-    return { available: false, ownerGlobalAccess: actor.role === "OWNER", branches: [] };
+    return { available: false, ownerGlobalAccess: actor.role === "OWNER", branches: [], assignments: [] };
   }
 
   const snapshot = result.data.snapshot && typeof result.data.snapshot === "object" && !Array.isArray(result.data.snapshot)
@@ -431,6 +440,23 @@ async function resolveBranchScope(
     : undefined;
   const branches = snapshot && Array.isArray(snapshot.branches)
     ? snapshot.branches.map(mapBranchScopeRow).filter((value): value is OperationalBranchSummary => Boolean(value))
+    : [];
+  const assignments: OperationalBranchAssignment[] = snapshot && Array.isArray(snapshot.assignments)
+    ? snapshot.assignments.flatMap((value) => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+        const row = value as Row;
+        const branchId = textValue(row, "branchId");
+        const userId = textValue(row, "userId");
+        const role = textValue(row, "role");
+        if (!branchId || !userId || (role !== "OWNER" && role !== "DISPATCHER" && role !== "CREW")) return [];
+        return [{
+          branchId,
+          userId,
+          role,
+          active: row.active === true,
+          version: numberValue(row, "version", 1),
+        }];
+      })
     : [];
   const active = branches.filter((item) => item.active);
   const requested = requestedBranchId
@@ -444,6 +470,7 @@ async function resolveBranchScope(
       ownerGlobalAccess: true,
       selectedBranchId: requested?.id,
       branches,
+      assignments,
     };
   }
 
@@ -456,6 +483,7 @@ async function resolveBranchScope(
     ownerGlobalAccess: false,
     selectedBranchId: selected?.id,
     branches,
+    assignments,
   };
 }
 
@@ -2031,6 +2059,122 @@ export async function upsertOperationalRetentionCampaign(
       ? "Campaign activated. Every queued message will still recheck consent, suppression, quiet hours and caps at dispatch time."
       : "Campaign saved. No customer message was queued.",
   };
+}
+
+export async function createOperationalBranch(
+  workspaceSlug: string,
+  input: { code: string; name: string; timezone: string; currency: string },
+): Promise<OperationalActionResult> {
+  const code = input.code.trim().toUpperCase();
+  const name = input.name.trim();
+  const timezone = input.timezone.trim();
+  const currency = input.currency.trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9_-]{1,31}$/.test(code) || !name || !timezone || !/^[A-Z]{3}$/.test(currency)) {
+    return { ok: false, message: "Check the branch code, name, timezone and currency." };
+  }
+
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only workspace owners can create branches." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_create_workspace_branch", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      code,
+      name,
+      timezone,
+      currency,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    return { ok: false, message: code === "BRANCH_TIMEZONE_INVALID" ? "Use a valid IANA timezone." : "The branch could not be created." };
+  }
+  return { ok: true, message: "Branch created. Assign dispatchers or crew before using it operationally." };
+}
+
+export async function updateOperationalBranch(
+  workspaceSlug: string,
+  input: {
+    branchId: string;
+    name: string;
+    timezone: string;
+    currency: string;
+    active: boolean;
+    expectedVersion: number;
+  },
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only workspace owners can update branches." };
+  }
+  if (!input.branchId || !input.name.trim() || !input.timezone.trim()
+      || !/^[A-Z]{3}$/.test(input.currency.trim().toUpperCase())
+      || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) {
+    return { ok: false, message: "The branch settings are invalid." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_update_workspace_branch", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      branchId: input.branchId,
+      name: input.name.trim(),
+      timezone: input.timezone.trim(),
+      currency: input.currency.trim().toUpperCase(),
+      active: input.active,
+      expectedVersion: input.expectedVersion,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "VERSION_CONFLICT") return { ok: false, message: "This branch changed since the page loaded. Refresh and try again." };
+    if (code === "DEFAULT_BRANCH_CANNOT_DEACTIVATE") return { ok: false, message: "The default branch cannot be deactivated." };
+    if (code === "BRANCH_TIMEZONE_INVALID") return { ok: false, message: "Use a valid IANA timezone." };
+    return { ok: false, message: "The branch could not be updated." };
+  }
+  return { ok: true, message: "Branch settings updated." };
+}
+
+export async function setOperationalBranchAssignment(
+  workspaceSlug: string,
+  input: { branchId: string; targetUserId: string; active: boolean },
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only workspace owners can manage branch assignments." };
+  }
+  if (!input.branchId || !input.targetUserId) {
+    return { ok: false, message: "Choose a branch and team member." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_set_branch_membership", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      branchId: input.branchId,
+      targetUserId: input.targetUserId,
+      active: input.active,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "Branch assignment could not be changed." };
+  }
+  if (data.ownerGlobalAccess === true) {
+    return { ok: true, message: "Workspace owners already have company-wide branch access." };
+  }
+  return { ok: true, message: input.active ? "Team member assigned to branch." : "Team member branch access revoked." };
 }
 
 export async function selectOperationalBranch(
