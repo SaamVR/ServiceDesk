@@ -91,9 +91,28 @@ export interface OperationalReferralAttributionSummary {
   disclosure: string;
 }
 
+export interface OperationalBranchSummary {
+  id: string;
+  code: string;
+  name: string;
+  timezone: string;
+  currency: string;
+  active: boolean;
+  isDefault: boolean;
+  version: number;
+}
+
+export interface OperationalBranchScope {
+  available: boolean;
+  ownerGlobalAccess: boolean;
+  selectedBranchId?: string;
+  branches: OperationalBranchSummary[];
+}
+
 export interface OperationalProperty {
   id: string;
   customerId: string;
+  branchId?: string;
   label: string;
   address: string;
   serviceNotes?: string;
@@ -103,6 +122,7 @@ export interface OperationalProperty {
 export interface OperationalRequest {
   id: string;
   customerId?: string;
+  branchId?: string;
   propertyId?: string;
   serviceCode?: string;
   serviceLabel: string;
@@ -165,6 +185,7 @@ export interface OperationalQuote {
 export interface OperationalVisit {
   id: string;
   workspaceId: string;
+  branchId?: string;
   requestId: string;
   quoteId: string;
   crewId?: string;
@@ -228,6 +249,7 @@ export interface OperationalStaffSnapshot {
   loadedAt: string;
   workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
+  branchScope?: OperationalBranchScope;
   customers: OperationalCustomer[];
   customerContacts?: OperationalCustomerContact[];
   communicationConsents?: OperationalCommunicationConsent[];
@@ -306,6 +328,7 @@ export interface ResolvedStaffActor {
   actor: ActorContext;
   service: SupabaseClient;
   rpc: SupabaseRpcClient;
+  branchScope: OperationalBranchScope;
 }
 
 function textValue(row: Row, key: string): string | undefined {
@@ -330,6 +353,92 @@ function runtimeConfig() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !anonKey || !serviceRoleKey) return undefined;
   return { url, anonKey, serviceRoleKey };
+}
+
+function branchCookieName(workspaceSlug: string): string {
+  return "servicedesk_branch_" + workspaceSlug.toLowerCase().replace(/[^a-z0-9_-]/g, "_").slice(0, 80);
+}
+
+function mapBranchScopeRow(value: unknown): OperationalBranchSummary | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const row = value as Row;
+  const id = textValue(row, "id");
+  const code = textValue(row, "code");
+  const name = textValue(row, "name");
+  const timezone = textValue(row, "timezone");
+  const currency = textValue(row, "currency");
+  if (!id || !code || !name || !timezone || !currency) return undefined;
+  return {
+    id,
+    code,
+    name,
+    timezone,
+    currency,
+    active: row.active === true,
+    isDefault: row.isDefault === true,
+    version: numberValue(row, "version", 1),
+  };
+}
+
+async function resolveBranchScope(
+  rpc: SupabaseRpcClient,
+  workspace: { id: string; slug: string },
+  actor: ActorContext,
+  requestedBranchId?: string,
+): Promise<OperationalBranchScope> {
+  const result = await rpc.rpc<Row>("servicedesk_read_branch_access_snapshot", {
+    p_input: {
+      workspaceId: workspace.id,
+      actorUserId: actor.userId,
+      actorRole: actor.role,
+    },
+  });
+
+  if (result.error || !result.data || result.data.ok !== true) {
+    return { available: false, ownerGlobalAccess: actor.role === "OWNER", branches: [] };
+  }
+
+  const snapshot = result.data.snapshot && typeof result.data.snapshot === "object" && !Array.isArray(result.data.snapshot)
+    ? result.data.snapshot as Row
+    : undefined;
+  const branches = snapshot && Array.isArray(snapshot.branches)
+    ? snapshot.branches.map(mapBranchScopeRow).filter((value): value is OperationalBranchSummary => Boolean(value))
+    : [];
+  const active = branches.filter((item) => item.active);
+  const requested = requestedBranchId
+    ? active.find((item) => item.id === requestedBranchId)
+    : undefined;
+  const ownerGlobalAccess = snapshot?.ownerGlobalAccess === true;
+
+  if (ownerGlobalAccess) {
+    return {
+      available: true,
+      ownerGlobalAccess: true,
+      selectedBranchId: requested?.id,
+      branches,
+    };
+  }
+
+  const selected = requested
+    ?? active.find((item) => item.isDefault)
+    ?? active[0];
+
+  return {
+    available: true,
+    ownerGlobalAccess: false,
+    selectedBranchId: selected?.id,
+    branches,
+  };
+}
+
+function branchContextAllows(
+  scope: OperationalBranchScope,
+  branchId: string | undefined,
+): boolean {
+  if (!scope.available) return true;
+  if (!branchId) return false;
+  if (scope.selectedBranchId) return branchId === scope.selectedBranchId;
+  return scope.ownerGlobalAccess && scope.branches.some((branch) => branch.active && branch.id === branchId);
 }
 
 export async function resolveStaffActor(workspaceSlug: string): Promise<
@@ -414,13 +523,30 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
     role: membership.role,
   };
 
+  const rpc = service as unknown as SupabaseRpcClient;
+  const requestedBranchId = cookieStore.get(branchCookieName(workspaceSlug))?.value;
+  const branchScope = await resolveBranchScope(rpc, workspace, actor, requestedBranchId);
+
+  if (
+    branchScope.available
+    && !branchScope.ownerGlobalAccess
+    && !branchScope.selectedBranchId
+  ) {
+    return {
+      ok: false,
+      kind: "authorization",
+      message: "Your staff account is not assigned to an active branch.",
+    };
+  }
+
   return {
     ok: true,
     value: {
       workspace,
       actor,
       service,
-      rpc: service as unknown as SupabaseRpcClient,
+      rpc,
+      branchScope,
     },
   };
 }
@@ -472,7 +598,7 @@ function mapInvoice(row: Row, workspaceId: string): OperationalInvoice {
 export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promise<OperationalRuntimeResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return resolved;
-  const { workspace, actor, service, rpc } = resolved.value;
+  const { workspace, actor, service, rpc, branchScope } = resolved.value;
 
   const tableReads = await Promise.all([
     service
@@ -680,9 +806,23 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       updatedAt: String(row.updated_at),
     }));
 
-  const properties: OperationalProperty[] = propertyRows.map((row) => ({
+  const scopedPropertyRows = propertyRows.filter((row) =>
+    branchContextAllows(branchScope, textValue(row, "branch_id")));
+  const scopedRequestRows = requestRows.filter((row) =>
+    branchContextAllows(branchScope, textValue(row, "branch_id")));
+  const scopedCrewRows = crewRows.filter((row) =>
+    branchContextAllows(branchScope, textValue(row, "branch_id")));
+  const scopedCapacityRows = capacityRows.filter((row) =>
+    branchContextAllows(branchScope, textValue(row, "branch_id")));
+  const scopedVisitRows = visitRows.filter((row) =>
+    branchContextAllows(branchScope, textValue(row, "branch_id")));
+  const scopedRecurrenceRows = recurrenceRows.filter((row) =>
+    branchContextAllows(branchScope, textValue(row, "branch_id")));
+
+  const properties: OperationalProperty[] = scopedPropertyRows.map((row) => ({
     id: String(row.id),
     customerId: String(row.customer_id),
+    branchId: textValue(row, "branch_id"),
     label: textValue(row, "label") ?? "Property",
     address: [textValue(row, "address_line1"), textValue(row, "city"), textValue(row, "postal_code")]
       .filter(Boolean)
@@ -690,7 +830,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     serviceNotes: textValue(row, "service_notes"),
     accessNotes: textValue(row, "access_notes"),
   }));
-  const requests: OperationalRequest[] = requestRows.map((row) => {
+  const requests: OperationalRequest[] = scopedRequestRows.map((row) => {
     const serviceRow = row.service_id ? serviceById.get(String(row.service_id)) : undefined;
     const structured = row.structured_fields && typeof row.structured_fields === "object" && !Array.isArray(row.structured_fields)
       ? row.structured_fields as Row
@@ -698,6 +838,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     return {
       id: String(row.id),
       customerId: textValue(row, "customer_id"),
+      branchId: textValue(row, "branch_id"),
       propertyId: textValue(row, "property_id"),
       serviceCode: serviceRow ? textValue(serviceRow, "code") : undefined,
       serviceLabel: serviceRow
@@ -718,7 +859,10 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       createdAt: textValue(row, "created_at"),
     };
   });
-  const quotes: OperationalQuote[] = quoteRows.map((row) => ({
+  const visibleRequestIds = new Set(requests.map((request) => request.id));
+  const quotes: OperationalQuote[] = quoteRows
+    .filter((row) => visibleRequestIds.has(String(row.request_id)))
+    .map((row) => ({
     id: String(row.id),
     requestId: String(row.request_id),
     version: numberValue(row, "version", 1),
@@ -764,11 +908,13 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   }));
 
   const quoteById = new Map(quotes.map((quote) => [quote.id, quote]));
-  const visits: OperationalVisit[] = visitRows.map((row) => {
+  const visibleQuoteIds = new Set(quotes.map((quote) => quote.id));
+  const visits: OperationalVisit[] = scopedVisitRows.map((row) => {
     const quote = quoteById.get(String(row.quote_id));
     return {
       id: String(row.id),
       workspaceId: workspace.id,
+      branchId: textValue(row, "branch_id"),
       requestId: String(row.request_id),
       quoteId: String(row.quote_id),
       crewId: textValue(row, "crew_id"),
@@ -828,10 +974,29 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       loadedAt: now.toISOString(),
       workspace,
       actor,
-      customers,
-      customerContacts,
-      communicationConsents,
-      retentionControls,
+      branchScope,
+      customers: branchScope.available && !branchScope.ownerGlobalAccess || branchScope.selectedBranchId
+        ? customers.filter((customer) => {
+            const hasProperty = properties.some((property) => property.customerId === customer.id);
+            const hasRequest = requests.some((request) => request.customerId === customer.id);
+            return hasProperty || hasRequest;
+          })
+        : customers,
+      customerContacts: branchScope.available && (!branchScope.ownerGlobalAccess || branchScope.selectedBranchId)
+        ? customerContacts.filter((contact) =>
+            properties.some((property) => property.customerId === contact.customerId)
+            || requests.some((request) => request.customerId === contact.customerId))
+        : customerContacts,
+      communicationConsents: branchScope.available && (!branchScope.ownerGlobalAccess || branchScope.selectedBranchId)
+        ? communicationConsents.filter((consent) =>
+            properties.some((property) => property.customerId === consent.customerId)
+            || requests.some((request) => request.customerId === consent.customerId))
+        : communicationConsents,
+      retentionControls: branchScope.available && (!branchScope.ownerGlobalAccess || branchScope.selectedBranchId)
+        ? retentionControls.filter((control) =>
+            properties.some((property) => property.customerId === control.customerId)
+            || requests.some((request) => request.customerId === control.customerId))
+        : retentionControls,
       retentionCampaigns,
       retentionAvailable,
       referralAttribution,
@@ -842,9 +1007,23 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       photoAssets,
       photoSuggestions,
       visits,
-      invoices: invoiceRows.map((row) => mapInvoice(row, workspace.id)),
-      conversations: conversationRows.map((row) => mapConversation(row, workspace.id)),
-      messages: messageRows.map((row) => mapMessage(row, workspace.id)),
+      invoices: invoiceRows
+        .filter((row) => visibleQuoteIds.has(String(row.quote_id)))
+        .map((row) => mapInvoice(row, workspace.id)),
+      conversations: conversationRows
+        .filter((row) => {
+          const requestId = textValue(row, "request_id");
+          return requestId ? visibleRequestIds.has(requestId) : !branchScope.available || (branchScope.ownerGlobalAccess && !branchScope.selectedBranchId);
+        })
+        .map((row) => mapConversation(row, workspace.id)),
+      messages: messageRows
+        .filter((row) => {
+          const conversation = conversationRows.find((conversationRow) => String(conversationRow.id) === String(row.conversation_id));
+          if (!conversation) return false;
+          const requestId = textValue(conversation, "request_id");
+          return requestId ? visibleRequestIds.has(requestId) : !branchScope.available || (branchScope.ownerGlobalAccess && !branchScope.selectedBranchId);
+        })
+        .map((row) => mapMessage(row, workspace.id)),
       attentionItems: attentionRows.map((row) => ({
         id: String(row.id),
         type: String(row.type),
@@ -868,7 +1047,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         reviewRequestState: String(row.review_request_state ?? "NOT_ELIGIBLE"),
         version: numberValue(row, "version", 1),
       })),
-      recurrenceRules: recurrenceRows.map((row) => ({
+      recurrenceRules: scopedRecurrenceRows.map((row) => ({
         id: String(row.id),
         requestId: String(row.request_id),
         propertyId: String(row.property_id),
@@ -886,33 +1065,39 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         updatedAt: String(row.updated_at),
       })),
       integrations: buildOperationalIntegrationHealth(),
-      crews: crewRows.map((row) => ({
+      crews: scopedCrewRows.map((row) => ({
         id: String(row.id),
         name: String(row.name ?? "Crew"),
         active: Boolean(row.active),
       })),
-      capacitySlots: capacityRows.map((row) => ({
+      capacitySlots: scopedCapacityRows.map((row) => ({
         id: String(row.id),
         crewId: String(row.crew_id),
         startAt: String(row.starts_at),
         endAt: String(row.ends_at),
         capacityMinutes: numberValue(row, "capacity_minutes"),
       })),
-      slotHolds: holdRows.map((row) => ({
+      slotHolds: holdRows
+        .filter((row) => visibleQuoteIds.has(String(row.quote_id)))
+        .map((row) => ({
         id: String(row.id),
         slotId: String(row.slot_id),
         quoteId: String(row.quote_id),
         status: String(row.status),
         expiresAt: String(row.expires_at),
       })),
-      visitEvidence: evidenceRows.map((row) => ({
+      visitEvidence: evidenceRows
+        .filter((row) => visits.some((visit) => visit.id === String(row.visit_id)))
+        .map((row) => ({
         id: String(row.id),
         visitId: String(row.visit_id),
         kind: String(row.kind),
         capturedAt: String(row.captured_at),
         text: textValue(row, "text"),
       })),
-      visitChecklistItems: checklistRows.map((row) => ({
+      visitChecklistItems: checklistRows
+        .filter((row) => visits.some((visit) => visit.id === String(row.visit_id)))
+        .map((row) => ({
         id: String(row.id),
         visitId: String(row.visit_id),
         itemKey: String(row.item_key),
@@ -1708,6 +1893,88 @@ export async function upsertOperationalRetentionCampaign(
       ? "Campaign activated. Every queued message will still recheck consent, suppression, quiet hours and caps at dispatch time."
       : "Campaign saved. No customer message was queued.",
   };
+}
+
+export async function selectOperationalBranch(
+  workspaceSlug: string,
+  branchId?: string,
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const { branchScope } = resolved.value;
+  if (!branchScope.available) {
+    return { ok: false, message: "Branch management is not available in this environment yet." };
+  }
+
+  const cookieStore = await cookies();
+  const cookieName = branchCookieName(workspaceSlug);
+  if (!branchId) {
+    if (!branchScope.ownerGlobalAccess) {
+      return { ok: false, message: "Only workspace owners can use the all-branches view." };
+    }
+    cookieStore.delete(cookieName);
+    return { ok: true, message: "Showing all authorized branches." };
+  }
+
+  const branch = branchScope.branches.find((item) => item.id === branchId && item.active);
+  if (!branch) {
+    return { ok: false, message: "That branch is not available to your account." };
+  }
+
+  cookieStore.set(cookieName, branch.id, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/app/" + encodeURIComponent(workspaceSlug),
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  return { ok: true, message: "Branch context changed to " + branch.name + "." };
+}
+
+async function ensureOperationalBranchResource(
+  resolved: ResolvedStaffActor,
+  table: "requests" | "visits" | "crews" | "recurrence_rules" | "properties",
+  resourceId: string,
+): Promise<boolean> {
+  if (!resolved.branchScope.available) return true;
+  const result = await resolved.service
+    .from(table)
+    .select("id,branch_id")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", resourceId)
+    .maybeSingle();
+  if (result.error || !result.data) return false;
+  return branchContextAllows(resolved.branchScope, String(result.data.branch_id ?? ""));
+}
+
+async function ensureOperationalQuoteBranch(
+  resolved: ResolvedStaffActor,
+  quoteId: string,
+): Promise<boolean> {
+  if (!resolved.branchScope.available) return true;
+  const quote = await resolved.service
+    .from("quotes")
+    .select("id,request_id")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (quote.error || !quote.data) return false;
+  return ensureOperationalBranchResource(resolved, "requests", String(quote.data.request_id));
+}
+
+async function ensureOperationalInvoiceBranch(
+  resolved: ResolvedStaffActor,
+  invoiceId: string,
+): Promise<boolean> {
+  if (!resolved.branchScope.available) return true;
+  const invoice = await resolved.service
+    .from("invoices")
+    .select("id,quote_id")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", invoiceId)
+    .maybeSingle();
+  if (invoice.error || !invoice.data) return false;
+  return ensureOperationalQuoteBranch(resolved, String(invoice.data.quote_id));
 }
 
 export async function setOperationalCustomerRetentionControl(
