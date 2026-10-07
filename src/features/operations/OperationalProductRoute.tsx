@@ -14,9 +14,11 @@ import {
   reviewOperationalPhotoSuggestion,
   sendOperationalQuote,
   setOperationalChecklistItem,
+  setOperationalBranchMembership,
   setOperationalCustomerRetentionControl,
   setOperationalVoiceCallbackState,
   toggleInboxHandover,
+  upsertOperationalBranch,
   upsertOperationalReferralCode,
   upsertOperationalRetentionCampaign,
   transitionOperationalVisit,
@@ -2190,6 +2192,44 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
         </section>
       </div>
 
+      {data.branchComparison ? (
+        <section className={styles.branchComparisonPanel} aria-label="HQ branch comparison">
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>HQ comparison</p>
+              <h3>Branch performance</h3>
+              <p>{data.branchComparison.fromDate} – {data.branchComparison.toDate}</p>
+            </div>
+            <StatusBadge tone="info">{data.branchComparison.rows.length} branches</StatusBadge>
+          </div>
+          <div className={styles.branchComparisonRows}>
+            {data.branchComparison.rows.map((row) => (
+              <article key={row.branchId}>
+                <div className={styles.branchComparisonIdentity}>
+                  <strong>{row.name}</strong>
+                  <span>{row.code} · {row.timezone} · {row.currency}</span>
+                </div>
+                <dl>
+                  <div><dt>Requests</dt><dd>{row.requestCount}</dd></div>
+                  <div><dt>Visits</dt><dd>{row.scheduledVisitCount}</dd></div>
+                  <div><dt>Paid jobs</dt><dd>{row.paidInvoiceCount}</dd></div>
+                  <div><dt>Collected</dt><dd>{formatMinorMoney(row.collectedMinor, row.currency)}</dd></div>
+                </dl>
+                {row.currencyMismatchCount > 0 ? (
+                  <StatusBadge tone="warning">{row.currencyMismatchCount} currency mismatch</StatusBadge>
+                ) : (
+                  <StatusBadge tone="success">Native currency clean</StatusBadge>
+                )}
+              </article>
+            ))}
+          </div>
+          <div className={styles.attributionDisclosure}>
+            <span aria-hidden="true">i</span>
+            <p>{data.branchComparison.disclosure}</p>
+          </div>
+        </section>
+      ) : null}
+
       <section className={styles.attributionPanel} aria-label="Referral attribution">
         <div className={styles.adminCardHeader}>
           <div>
@@ -2385,6 +2425,30 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     actionRedirect(workspaceSlug, "settings", result);
   }
 
+  async function branchAction(formData: FormData) {
+    "use server";
+    const result = await upsertOperationalBranch(workspaceSlug, {
+      code: String(formData.get("code") ?? ""),
+      name: String(formData.get("name") ?? ""),
+      timezone: String(formData.get("timezone") ?? ""),
+      currency: String(formData.get("currency") ?? ""),
+      active: String(formData.get("active") ?? "") === "on",
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=branches&");
+  }
+
+  async function branchMembershipAction(formData: FormData) {
+    "use server";
+    const rawStatus = String(formData.get("status") ?? "");
+    const status = rawStatus === "REVOKED" ? "REVOKED" : "ACTIVE";
+    const result = await setOperationalBranchMembership(workspaceSlug, {
+      branchId: String(formData.get("branchId") ?? ""),
+      userId: String(formData.get("userId") ?? ""),
+      status,
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=branches&");
+  }
+
   async function referralCodeAction(formData: FormData) {
     "use server";
     const result = await upsertOperationalReferralCode(workspaceSlug, {
@@ -2462,6 +2526,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
         <nav className={styles.settingsNav} aria-label="Settings sections">
           <a href="#services">Services</a>
           <a href="#team">Team & access</a>
+          <a href="#branches">Branches</a>
           <a href="#recurrence">Recurring services</a>
           <a href="#growth">Growth & retention</a>
           <a href="#integrations">Integrations</a>
@@ -2607,6 +2672,108 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                 <p className={styles.adminHelp}>Private credentials and invitation tokens are never displayed; invitation token hashes remain server-only.</p>
               </div>
             </div>
+          </section>
+
+          <section className={styles.settingsCard} id="branches">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Multi-branch</p>
+                <h3>Branches & staff scope</h3>
+                <p>Branches are scoped inside this workspace. Owners see every branch; dispatchers and crew require explicit branch assignments.</p>
+              </div>
+              <StatusBadge tone={data.branchScope?.mode === "LEGACY" ? "neutral" : "info"}>
+                {data.branchScope?.mode === "LEGACY" ? "Not migrated" : (data.branchScope?.branches.length ?? 0) + " active"}
+              </StatusBadge>
+            </div>
+
+            {data.branchScope?.mode === "LEGACY" ? (
+              <div className={styles.settingsEmpty}>
+                <strong>Branch controls are not available in this environment</strong>
+                <p>Existing single-workspace operations continue unchanged until the multi-branch migration is applied.</p>
+              </div>
+            ) : (
+              <div className={styles.branchAdminGrid}>
+                <section>
+                  <h4>Active branches</h4>
+                  <div className={styles.branchAdminRows}>
+                    {(data.branchScope?.branches ?? []).map((branch) => (
+                      <article key={branch.id}>
+                        <div>
+                          <strong>{branch.name}</strong>
+                          <span>{branch.code} · {branch.timezone} · {branch.currency}</span>
+                        </div>
+                        <StatusBadge tone={branch.isDefault ? "success" : "neutral"}>
+                          {branch.isDefault ? "Default" : "Active"}
+                        </StatusBadge>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+
+                {data.actor.role === "OWNER" ? (
+                  <section>
+                    <h4>Add branch</h4>
+                    <form action={branchAction} className={styles.growthForm}>
+                      <div className={styles.growthFormRow}>
+                        <label><span>Code</span><input className="app-input" name="code" placeholder="NORTH" maxLength={40} required /></label>
+                        <label><span>Name</span><input className="app-input" name="name" placeholder="North Branch" maxLength={120} required /></label>
+                      </div>
+                      <div className={styles.growthFormRow}>
+                        <label><span>IANA timezone</span><input className="app-input" name="timezone" placeholder="America/New_York" required /></label>
+                        <label><span>Currency</span><input className="app-input" name="currency" placeholder="USD" minLength={3} maxLength={3} required /></label>
+                      </div>
+                      <label className={styles.settingToggle}>
+                        <input name="active" type="checkbox" defaultChecked />
+                        <span><strong>Active</strong><small>Allow operational records and staff assignments.</small></span>
+                      </label>
+                      <button className="app-button-primary" type="submit">Create branch</button>
+                    </form>
+                  </section>
+                ) : null}
+
+                {data.actor.role === "OWNER" ? (
+                  <section className={styles.branchAssignments}>
+                    <div>
+                      <h4>Dispatcher & crew assignments</h4>
+                      <p className={styles.adminHelp}>Owners are always company-wide and do not need branch assignments.</p>
+                    </div>
+                    {snapshot.members.filter((member) => member.active && member.role !== "OWNER").length === 0 ? (
+                      <div className={styles.settingsEmpty}><strong>No assignable staff</strong><p>Add an active dispatcher or crew member first.</p></div>
+                    ) : (
+                      <div className={styles.branchAssignmentRows}>
+                        {snapshot.members
+                          .filter((member) => member.active && member.role !== "OWNER")
+                          .flatMap((member) => (data.branchScope?.branches ?? []).map((branch) => {
+                            const assignment = (data.branchAssignments ?? []).find((item) =>
+                              item.userId === member.userId && item.branchId === branch.id && item.status === "ACTIVE");
+                            return (
+                              <form action={branchMembershipAction} key={member.userId + ":" + branch.id}>
+                                <input name="userId" type="hidden" value={member.userId} />
+                                <input name="branchId" type="hidden" value={branch.id} />
+                                <span><strong>{member.role.toLowerCase()}</strong><small>{branch.name} · staff {member.userId.slice(0, 8)}</small></span>
+                                <StatusBadge tone={assignment ? "success" : "neutral"}>{assignment ? "Assigned" : "No access"}</StatusBadge>
+                                <button
+                                  className="app-button-secondary"
+                                  name="status"
+                                  type="submit"
+                                  value={assignment ? "REVOKED" : "ACTIVE"}
+                                >
+                                  {assignment ? "Revoke" : "Grant"}
+                                </button>
+                              </form>
+                            );
+                          }))}
+                      </div>
+                    )}
+                  </section>
+                ) : (
+                  <div className={styles.integrationProofNote}>
+                    <span aria-hidden="true">i</span>
+                    <p>Your branch options come from explicit owner-managed assignments. You cannot switch into HQ/all-branch scope.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           <section className={styles.settingsCard} id="recurrence">
