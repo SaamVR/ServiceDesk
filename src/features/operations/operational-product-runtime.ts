@@ -1407,6 +1407,8 @@ export async function toggleInboxHandover(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "conversation", conversationId);
+  if (branchAccess) return branchAccess;
   const current = await loadConversationForAction(resolved.value, conversationId);
   if (current.error || !current.data) return { ok: false, message: "The conversation is no longer available." };
   const facade = createPostgresConversationFacadeMethods(resolved.value.rpc);
@@ -1434,6 +1436,8 @@ export async function enqueueInboxReply(
   if (!trimmed) return { ok: false, message: "Write a reply before sending." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "conversation", conversationId);
+  if (branchAccess) return branchAccess;
   const current = await loadConversationForAction(resolved.value, conversationId);
   if (current.error || !current.data) return { ok: false, message: "The conversation is no longer available." };
   const channel = String(current.data.channel);
@@ -1462,6 +1466,8 @@ export async function sendOperationalQuote(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "quote", quoteId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("quotes")
     .select("id,status,version")
@@ -1494,6 +1500,8 @@ export async function applyOperationalManualPayment(
   if (!reference.trim()) return { ok: false, message: "A payment reference is required." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "invoice", invoiceId);
+  if (branchAccess) return branchAccess;
   const invoice = await resolved.value.service
     .from("invoices")
     .select("id,currency,balance_minor,status")
@@ -1527,6 +1535,8 @@ export async function applyOperationalQualityAction(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "quality", qualityCaseId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("quality_cases")
     .select("id,version")
@@ -1562,6 +1572,8 @@ export async function calculateOperationalQuote(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "request", requestId);
+  if (branchAccess) return branchAccess;
   const facade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc);
   const result = await facade.calculateQuote(resolved.value.actor, requestId);
   return result.ok
@@ -1576,6 +1588,10 @@ export async function holdOperationalSlot(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const quoteBranchAccess = await requireOperationalBranchResource(resolved.value, "quote", quoteId);
+  if (quoteBranchAccess) return quoteBranchAccess;
+  const slotBranchAccess = await requireOperationalBranchResource(resolved.value, "capacity", slotId);
+  if (slotBranchAccess) return slotBranchAccess;
   const quote = await resolved.value.service
     .from("quotes")
     .select("id,status,version")
@@ -1609,6 +1625,10 @@ export async function assignOperationalCrew(
   }
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const visitBranchAccess = await requireOperationalBranchResource(resolved.value, "visit", visitId);
+  if (visitBranchAccess) return visitBranchAccess;
+  const crewBranchAccess = await requireOperationalBranchResource(resolved.value, "crew", crewId);
+  if (crewBranchAccess) return crewBranchAccess;
   const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
   const result = await facade.assignCrew(
     resolved.value.actor,
@@ -1632,6 +1652,8 @@ export async function transitionOperationalVisit(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "visit", visitId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("visits")
     .select("id,version")
@@ -1666,6 +1688,8 @@ export async function addOperationalVisitNote(
   if (!trimmed) return { ok: false, message: "Add a note before saving." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "visit", visitId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("visits")
     .select("id,version")
@@ -1698,6 +1722,8 @@ export async function setOperationalChecklistItem(
   if (!key) return { ok: false, message: "Checklist item name is required." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "visit", visitId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("visits")
     .select("id,version")
@@ -1727,6 +1753,8 @@ export async function applyOperationalRecurrenceAction(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "recurrence", ruleId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("recurrence_rules")
     .select("id,version,status")
@@ -1929,6 +1957,8 @@ export async function setOperationalVoiceCallbackState(
 
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "voiceIntake", id);
+  if (branchAccess) return branchAccess;
 
   const result = await createPostgresVoiceMissedCallCommandPort(resolved.value.rpc)
     .setVoiceCallbackState(resolved.value.actor, {
@@ -1965,6 +1995,8 @@ export async function resolveOperationalConversationIdentity(
 
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "conversation", id);
+  if (branchAccess) return branchAccess;
 
   const { data, error } = await resolved.value.rpc.rpc<Row>(
     "servicedesk_resolve_conversation_verified_identity",
@@ -2025,6 +2057,8 @@ export async function reviewOperationalPhotoSuggestion(
   }
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "photoSuggestion", suggestionId);
+  if (branchAccess) return branchAccess;
 
   const { data, error } = await resolved.value.rpc.rpc<Row>(
     "servicedesk_review_request_photo_suggestion",
@@ -2187,6 +2221,8 @@ export async function setOperationalCustomerRetentionControl(
   if (!input.customerId.trim()) return { ok: false, message: "Customer is required." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "customer", input.customerId);
+  if (branchAccess) return branchAccess;
 
   const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_set_customer_retention_control", {
     p_input: {
