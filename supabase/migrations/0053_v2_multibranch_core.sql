@@ -106,10 +106,70 @@ as $$
   );
 $$;
 
+create or replace function public.servicedesk_actor_is_workspace_owner(
+  target_workspace uuid,
+  actor_user uuid,
+  actor_role text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select actor_role = 'OWNER' and exists (
+    select 1
+    from public.memberships m
+    where m.workspace_id = target_workspace
+      and m.user_id = actor_user
+      and m.status = 'ACTIVE'
+      and m.role = 'OWNER'
+  );
+$;
+
+create or replace function public.servicedesk_actor_has_branch_access(
+  target_workspace uuid,
+  target_branch uuid,
+  actor_user uuid,
+  actor_role text,
+  allowed_roles public.membership_role[] default null
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select exists (
+    select 1
+    from public.memberships m
+    where m.workspace_id = target_workspace
+      and m.user_id = actor_user
+      and m.status = 'ACTIVE'
+      and m.role::text = actor_role
+      and (allowed_roles is null or m.role = any(allowed_roles))
+      and (
+        m.role = 'OWNER'
+        or exists (
+          select 1
+          from public.branch_memberships bm
+          where bm.workspace_id = target_workspace
+            and bm.branch_id = target_branch
+            and bm.user_id = actor_user
+            and bm.status = 'ACTIVE'
+        )
+      )
+  );
+$;
+
 revoke all on function public.servicedesk_default_branch(uuid) from public;
 revoke all on function public.servicedesk_has_branch_access(uuid, uuid, public.membership_role[]) from public;
+revoke all on function public.servicedesk_actor_is_workspace_owner(uuid, uuid, text) from public, anon, authenticated;
+revoke all on function public.servicedesk_actor_has_branch_access(uuid, uuid, uuid, text, public.membership_role[]) from public, anon, authenticated;
 grant execute on function public.servicedesk_default_branch(uuid) to authenticated, service_role;
 grant execute on function public.servicedesk_has_branch_access(uuid, uuid, public.membership_role[]) to authenticated, service_role;
+grant execute on function public.servicedesk_actor_is_workspace_owner(uuid, uuid, text) to service_role;
+grant execute on function public.servicedesk_actor_has_branch_access(uuid, uuid, uuid, text, public.membership_role[]) to service_role;
 
 alter table public.properties add column if not exists branch_id uuid;
 alter table public.requests add column if not exists branch_id uuid;
@@ -389,9 +449,7 @@ begin
     return jsonb_build_object('ok', false, 'code', 'BRANCH_INPUT_INVALID');
   end if;
 
-  if not public.has_active_membership(
-    v_workspace, array['OWNER']::public.membership_role[]
-  ) then
+  if not public.servicedesk_actor_is_workspace_owner(v_workspace, v_actor, v_role) then
     return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
   end if;
 
@@ -477,9 +535,7 @@ begin
     return jsonb_build_object('ok', false, 'code', 'BRANCH_MEMBERSHIP_INPUT_INVALID');
   end if;
 
-  if not public.has_active_membership(
-    v_workspace, array['OWNER']::public.membership_role[]
-  ) then
+  if not public.servicedesk_actor_is_workspace_owner(v_workspace, v_actor, v_role) then
     return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
   end if;
 
