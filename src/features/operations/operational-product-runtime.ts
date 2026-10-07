@@ -1128,6 +1128,7 @@ export async function toggleInboxHandover(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalConversationBranch(resolved.value, conversationId))) return { ok: false, message: "This conversation is outside the active branch context." };
   const current = await loadConversationForAction(resolved.value, conversationId);
   if (current.error || !current.data) return { ok: false, message: "The conversation is no longer available." };
   const facade = createPostgresConversationFacadeMethods(resolved.value.rpc);
@@ -1155,6 +1156,7 @@ export async function enqueueInboxReply(
   if (!trimmed) return { ok: false, message: "Write a reply before sending." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalConversationBranch(resolved.value, conversationId))) return { ok: false, message: "This conversation is outside the active branch context." };
   const current = await loadConversationForAction(resolved.value, conversationId);
   if (current.error || !current.data) return { ok: false, message: "The conversation is no longer available." };
   const channel = String(current.data.channel);
@@ -1183,6 +1185,7 @@ export async function sendOperationalQuote(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalQuoteBranch(resolved.value, quoteId))) return { ok: false, message: "This quote is outside the active branch context." };
   const current = await resolved.value.service
     .from("quotes")
     .select("id,status,version")
@@ -1215,6 +1218,7 @@ export async function applyOperationalManualPayment(
   if (!reference.trim()) return { ok: false, message: "A payment reference is required." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalInvoiceBranch(resolved.value, invoiceId))) return { ok: false, message: "This invoice is outside the active branch context." };
   const invoice = await resolved.value.service
     .from("invoices")
     .select("id,currency,balance_minor,status")
@@ -1248,6 +1252,7 @@ export async function applyOperationalQualityAction(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalQualityBranch(resolved.value, qualityCaseId))) return { ok: false, message: "This quality case is outside the active branch context." };
   const current = await resolved.value.service
     .from("quality_cases")
     .select("id,version")
@@ -1283,6 +1288,7 @@ export async function calculateOperationalQuote(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalBranchResource(resolved.value, "requests", requestId))) return { ok: false, message: "This request is outside the active branch context." };
   const facade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc);
   const result = await facade.calculateQuote(resolved.value.actor, requestId);
   return result.ok
@@ -1297,6 +1303,7 @@ export async function holdOperationalSlot(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalQuoteBranch(resolved.value, quoteId)) || !(await ensureOperationalSlotBranch(resolved.value, slotId))) return { ok: false, message: "This quote or slot is outside the active branch context." };
   const quote = await resolved.value.service
     .from("quotes")
     .select("id,status,version")
@@ -1330,6 +1337,7 @@ export async function assignOperationalCrew(
   }
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalBranchResource(resolved.value, "visits", visitId)) || !(await ensureOperationalBranchResource(resolved.value, "crews", crewId))) return { ok: false, message: "This job or crew is outside the active branch context." };
   const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
   const result = await facade.assignCrew(
     resolved.value.actor,
@@ -1353,6 +1361,7 @@ export async function transitionOperationalVisit(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalBranchResource(resolved.value, "visits", visitId))) return { ok: false, message: "This job is outside the active branch context." };
   const current = await resolved.value.service
     .from("visits")
     .select("id,version")
@@ -1387,6 +1396,7 @@ export async function addOperationalVisitNote(
   if (!trimmed) return { ok: false, message: "Add a note before saving." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalBranchResource(resolved.value, "visits", visitId))) return { ok: false, message: "This job is outside the active branch context." };
   const current = await resolved.value.service
     .from("visits")
     .select("id,version")
@@ -1419,6 +1429,7 @@ export async function setOperationalChecklistItem(
   if (!key) return { ok: false, message: "Checklist item name is required." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalBranchResource(resolved.value, "visits", visitId))) return { ok: false, message: "This job is outside the active branch context." };
   const current = await resolved.value.service
     .from("visits")
     .select("id,version")
@@ -1448,6 +1459,7 @@ export async function applyOperationalRecurrenceAction(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalBranchResource(resolved.value, "recurrence_rules", ruleId))) return { ok: false, message: "This recurring service is outside the active branch context." };
   const current = await resolved.value.service
     .from("recurrence_rules")
     .select("id,version,status")
@@ -1650,6 +1662,7 @@ export async function setOperationalVoiceCallbackState(
 
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalVoiceIntakeBranch(resolved.value, id))) return { ok: false, message: "This callback task is outside the active branch context." };
 
   const result = await createPostgresVoiceMissedCallCommandPort(resolved.value.rpc)
     .setVoiceCallbackState(resolved.value.actor, {
@@ -1686,6 +1699,7 @@ export async function resolveOperationalConversationIdentity(
 
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalConversationBranch(resolved.value, id))) return { ok: false, message: "This conversation is outside the active branch context." };
 
   const { data, error } = await resolved.value.rpc.rpc<Row>(
     "servicedesk_resolve_conversation_verified_identity",
@@ -1746,6 +1760,7 @@ export async function reviewOperationalPhotoSuggestion(
   }
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalPhotoSuggestionBranch(resolved.value, suggestionId))) return { ok: false, message: "This photo suggestion is outside the active branch context." };
 
   const { data, error } = await resolved.value.rpc.rpc<Row>(
     "servicedesk_review_request_photo_suggestion",
@@ -1933,7 +1948,7 @@ export async function selectOperationalBranch(
 
 async function ensureOperationalBranchResource(
   resolved: ResolvedStaffActor,
-  table: "requests" | "visits" | "crews" | "recurrence_rules" | "properties",
+  table: "requests" | "visits" | "crews" | "recurrence_rules" | "properties" | "capacity_slots",
   resourceId: string,
 ): Promise<boolean> {
   if (!resolved.branchScope.available) return true;
@@ -1977,6 +1992,111 @@ async function ensureOperationalInvoiceBranch(
   return ensureOperationalQuoteBranch(resolved, String(invoice.data.quote_id));
 }
 
+async function ensureOperationalSlotBranch(
+  resolved: ResolvedStaffActor,
+  slotId: string,
+): Promise<boolean> {
+  return ensureOperationalBranchResource(resolved, "capacity_slots", slotId);
+}
+
+async function ensureOperationalConversationBranch(
+  resolved: ResolvedStaffActor,
+  conversationId: string,
+): Promise<boolean> {
+  if (!resolved.branchScope.available) return true;
+  const conversation = await resolved.service
+    .from("conversations")
+    .select("id,request_id")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (conversation.error || !conversation.data) return false;
+  const requestId = conversation.data.request_id ? String(conversation.data.request_id) : undefined;
+  if (!requestId) {
+    return resolved.branchScope.ownerGlobalAccess && !resolved.branchScope.selectedBranchId;
+  }
+  return ensureOperationalBranchResource(resolved, "requests", requestId);
+}
+
+async function ensureOperationalQualityBranch(
+  resolved: ResolvedStaffActor,
+  qualityCaseId: string,
+): Promise<boolean> {
+  if (!resolved.branchScope.available) return true;
+  const quality = await resolved.service
+    .from("quality_cases")
+    .select("id,visit_id")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", qualityCaseId)
+    .maybeSingle();
+  if (quality.error || !quality.data) return false;
+  return ensureOperationalBranchResource(resolved, "visits", String(quality.data.visit_id));
+}
+
+async function ensureOperationalPhotoSuggestionBranch(
+  resolved: ResolvedStaffActor,
+  suggestionId: string,
+): Promise<boolean> {
+  if (!resolved.branchScope.available) return true;
+  const suggestion = await resolved.service
+    .from("request_photo_suggestions")
+    .select("id,request_id")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", suggestionId)
+    .maybeSingle();
+  if (suggestion.error || !suggestion.data) return false;
+  return ensureOperationalBranchResource(resolved, "requests", String(suggestion.data.request_id));
+}
+
+async function ensureOperationalCustomerBranch(
+  resolved: ResolvedStaffActor,
+  customerId: string,
+): Promise<boolean> {
+  if (!resolved.branchScope.available) return true;
+  if (resolved.branchScope.ownerGlobalAccess && !resolved.branchScope.selectedBranchId) return true;
+  const branchId = resolved.branchScope.selectedBranchId;
+  if (!branchId) return false;
+  const [property, request] = await Promise.all([
+    resolved.service
+      .from("properties")
+      .select("id")
+      .eq("workspace_id", resolved.workspace.id)
+      .eq("customer_id", customerId)
+      .eq("branch_id", branchId)
+      .limit(1),
+    resolved.service
+      .from("requests")
+      .select("id")
+      .eq("workspace_id", resolved.workspace.id)
+      .eq("customer_id", customerId)
+      .eq("branch_id", branchId)
+      .limit(1),
+  ]);
+  if (property.error || request.error) return false;
+  return (property.data?.length ?? 0) > 0 || (request.data?.length ?? 0) > 0;
+}
+
+async function ensureOperationalVoiceIntakeBranch(
+  resolved: ResolvedStaffActor,
+  intakeId: string,
+): Promise<boolean> {
+  if (!resolved.branchScope.available) return true;
+  if (resolved.branchScope.ownerGlobalAccess && !resolved.branchScope.selectedBranchId) return true;
+  const requests = await resolved.service
+    .from("requests")
+    .select("id,branch_id,structured_fields")
+    .eq("workspace_id", resolved.workspace.id)
+    .limit(500);
+  if (requests.error || !requests.data) return false;
+  const match = requests.data.find((row) => {
+    const structured = row.structured_fields && typeof row.structured_fields === "object" && !Array.isArray(row.structured_fields)
+      ? row.structured_fields as Row
+      : {};
+    return textValue(structured, "voiceCallIntakeId") === intakeId;
+  });
+  return Boolean(match && branchContextAllows(resolved.branchScope, String(match.branch_id ?? "")));
+}
+
 export async function setOperationalCustomerRetentionControl(
   workspaceSlug: string,
   input: {
@@ -1990,6 +2110,7 @@ export async function setOperationalCustomerRetentionControl(
   if (!input.customerId.trim()) return { ok: false, message: "Customer is required." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (!(await ensureOperationalCustomerBranch(resolved.value, input.customerId))) return { ok: false, message: "This customer is outside the active branch context." };
 
   const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_set_customer_retention_control", {
     p_input: {
