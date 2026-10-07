@@ -44,6 +44,8 @@ describe("V2 multi-branch staff product", () => {
     expect(photoRoute).toContain('select("id,request_id,storage_ref');
     expect(photoRoute).toContain('requireOperationalBranchResource(resolved.value, "request", row.request_id)');
     expect(photoRoute.indexOf("requireOperationalBranchResource")).toBeLessThan(photoRoute.indexOf(".storage"));
-    expect(photoRoute).not.toContain("row.storage_ref ??");
+    expect(photoRoute).not.toContain("JSON.stringify(row)");
+    expect(photoRoute).not.toContain('"storageRef"');
+    expect(photoRoute).not.toContain('"storage_ref"');
   });
 });
