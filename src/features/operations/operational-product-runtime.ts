@@ -1374,7 +1374,7 @@ async function operationalResourceBranchId(
   return textValue(found.data as Row, "branch_id");
 }
 
-async function requireOperationalBranchResource(
+export async function requireOperationalBranchResource(
   resolved: ResolvedStaffActor,
   kind: OperationalBranchResourceKind,
   id: string,
