@@ -224,10 +224,26 @@ export interface OperationalServiceCatalogItem {
   updatedAt: string;
 }
 
+export interface OperationalBranch {
+  id: string;
+  code: string;
+  name: string;
+  timezone: string;
+  currency: string;
+  isDefault: boolean;
+}
+
+export interface OperationalBranchScope {
+  mode: "LEGACY" | "ALL" | "BRANCH";
+  branches: OperationalBranch[];
+  selectedBranchId?: string;
+}
+
 export interface OperationalStaffSnapshot {
   loadedAt: string;
   workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
+  branchScope?: OperationalBranchScope;
   customers: OperationalCustomer[];
   customerContacts?: OperationalCustomerContact[];
   communicationConsents?: OperationalCommunicationConsent[];
@@ -302,10 +318,11 @@ function safeCoreFailure(
 }
 
 export interface ResolvedStaffActor {
-  workspace: { id: string; slug: string; name: string; timezone: string };
+  workspace: { id: string; slug: string; name: string; timezone: string; currency: string };
   actor: ActorContext;
   service: SupabaseClient;
   rpc: SupabaseRpcClient;
+  branchScope: OperationalBranchScope;
 }
 
 function textValue(row: Row, key: string): string | undefined {
@@ -332,6 +349,83 @@ function runtimeConfig() {
   return { url, anonKey, serviceRoleKey };
 }
 
+function branchCookieName(workspaceId: string) {
+  return `servicedesk_branch_${workspaceId}`;
+}
+
+function mapBranch(row: Row): OperationalBranch {
+  return {
+    id: String(row.id),
+    code: String(row.code),
+    name: String(row.name),
+    timezone: String(row.timezone),
+    currency: String(row.currency),
+    isDefault: row.is_default === true,
+  };
+}
+
+async function resolveOperationalBranchScope(input: {
+  service: SupabaseClient;
+  workspaceId: string;
+  userId: string;
+  role: "OWNER" | "DISPATCHER";
+  cookieValue?: string;
+}): Promise<
+  | { ok: true; value: OperationalBranchScope }
+  | { ok: false; kind: "authorization" | "server"; message: string }
+> {
+  const branchRead = await input.service
+    .from("workspace_branches")
+    .select("id,code,name,timezone,currency,is_default,active")
+    .eq("workspace_id", input.workspaceId)
+    .eq("active", true)
+    .order("is_default", { ascending: false })
+    .order("code", { ascending: true });
+
+  if (branchRead.error?.code === "42P01") {
+    return { ok: true, value: { mode: "LEGACY", branches: [] } };
+  }
+  if (branchRead.error) {
+    return { ok: false, kind: "server", message: "Branch access could not be loaded." };
+  }
+
+  const allBranches = rows(branchRead.data).map(mapBranch);
+  if (allBranches.length === 0) {
+    return { ok: false, kind: "server", message: "This workspace has no active branch." };
+  }
+
+  if (input.role === "OWNER") {
+    const requested = input.cookieValue?.trim();
+    if (requested && requested !== "ALL" && allBranches.some((branch) => branch.id === requested)) {
+      return { ok: true, value: { mode: "BRANCH", branches: allBranches, selectedBranchId: requested } };
+    }
+    return { ok: true, value: { mode: "ALL", branches: allBranches } };
+  }
+
+  const membershipRead = await input.service
+    .from("branch_memberships")
+    .select("branch_id,status")
+    .eq("workspace_id", input.workspaceId)
+    .eq("user_id", input.userId)
+    .eq("status", "ACTIVE");
+
+  if (membershipRead.error) {
+    return { ok: false, kind: "server", message: "Branch assignment could not be verified." };
+  }
+  const allowed = new Set(rows(membershipRead.data).map((row) => String(row.branch_id)));
+  const branches = allBranches.filter((branch) => allowed.has(branch.id));
+  if (branches.length === 0) {
+    return { ok: false, kind: "authorization", message: "Your dispatcher account has no active branch assignment." };
+  }
+
+  const requested = input.cookieValue?.trim();
+  const selected = requested && branches.some((branch) => branch.id === requested)
+    ? requested
+    : branches.find((branch) => branch.isDefault)?.id ?? branches[0].id;
+
+  return { ok: true, value: { mode: "BRANCH", branches, selectedBranchId: selected } };
+}
+
 export async function resolveStaffActor(workspaceSlug: string): Promise<
   { ok: true; value: ResolvedStaffActor } | Extract<OperationalRuntimeResult, { ok: false }>
 > {
@@ -352,7 +446,7 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
         return cookieStore.getAll();
       },
       setAll() {
-        // Cookie refresh is owned by the future authentication middleware.
+        // Cookie refresh is owned by middleware.
       },
     },
   });
@@ -372,7 +466,7 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
 
   const workspaceResult = await service
     .from("workspaces")
-    .select("id,slug,name,timezone")
+    .select("id,slug,name,timezone,currency")
     .eq("slug", workspaceSlug)
     .maybeSingle();
 
@@ -383,7 +477,13 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
     return { ok: false, kind: "not_found", message: "This workspace does not exist." };
   }
 
-  const workspace = workspaceResult.data as { id: string; slug: string; name: string; timezone: string };
+  const workspace = workspaceResult.data as {
+    id: string;
+    slug: string;
+    name: string;
+    timezone: string;
+    currency: string;
+  };
   const membershipResult = await service
     .from("memberships")
     .select("role,status")
@@ -413,6 +513,14 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
     userId: authData.user.id,
     role: membership.role,
   };
+  const branchScope = await resolveOperationalBranchScope({
+    service,
+    workspaceId: workspace.id,
+    userId: authData.user.id,
+    role: membership.role,
+    cookieValue: cookieStore.get(branchCookieName(workspace.id))?.value,
+  });
+  if (!branchScope.ok) return branchScope;
 
   return {
     ok: true,
@@ -421,8 +529,54 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
       actor,
       service,
       rpc: service as unknown as SupabaseRpcClient,
+      branchScope: branchScope.value,
     },
   };
+}
+
+export async function loadOperationalBranchScope(workspaceSlug: string): Promise<
+  { ok: true; value: { actor: ActorContext; branchScope: OperationalBranchScope } }
+  | { ok: false; kind: "configuration" | "authentication" | "authorization" | "not_found" | "server"; message: string }
+> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return resolved;
+  return {
+    ok: true,
+    value: {
+      actor: resolved.value.actor,
+      branchScope: resolved.value.branchScope,
+    },
+  };
+}
+
+export async function setOperationalBranchScope(
+  workspaceSlug: string,
+  requestedScope: string,
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const { actor, workspace, branchScope } = resolved.value;
+  if (branchScope.mode === "LEGACY") {
+    return { ok: false, message: "Branch controls are not available in this environment yet." };
+  }
+
+  const requested = requestedScope.trim();
+  if (requested === "ALL") {
+    if (actor.role !== "OWNER") {
+      return { ok: false, message: "Only an owner can open the company-wide branch view." };
+    }
+  } else if (!branchScope.branches.some((branch) => branch.id === requested)) {
+    return { ok: false, message: "You do not have access to that branch." };
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(branchCookieName(workspace.id), requested, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/app/",
+  });
+  return { ok: true, message: requested === "ALL" ? "Company-wide view selected." : "Branch view selected." };
 }
 
 function mapConversation(row: Row, workspaceId: string): ConversationDTO {
