@@ -526,26 +526,10 @@ with check (
   )
 );
 
-drop policy if exists messages_staff_all on public.messages;
-create policy messages_branch_staff_all on public.messages
-for all to authenticated
+drop policy if exists messages_staff_select on public.messages;
+create policy messages_branch_staff_select on public.messages
+for select to authenticated
 using (
-  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
-  or exists (
-    select 1
-    from public.conversations c
-    join public.requests r
-      on r.workspace_id = c.workspace_id and r.id = c.request_id
-    where c.workspace_id = messages.workspace_id
-      and c.id = messages.conversation_id
-      and public.has_branch_access(
-        r.workspace_id,
-        r.branch_id,
-        array['DISPATCHER']::public.membership_role[]
-      )
-  )
-)
-with check (
   public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
   or exists (
     select 1
