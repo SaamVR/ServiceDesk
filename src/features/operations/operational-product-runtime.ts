@@ -109,6 +109,33 @@ export interface OperationalBranchScope {
   branches: OperationalBranchSummary[];
 }
 
+export interface OperationalBranchReportRow {
+  branchId: string;
+  code: string;
+  name: string;
+  timezone: string;
+  currency: string;
+  requestCount: number;
+  bookedRequestCount: number;
+  conversionRateBps?: number;
+  collectedMinor: number;
+  outstandingMinor: number;
+  scheduledServiceMinutes: number;
+  scheduledBufferMinutes: number;
+  unresolvedQualityCount: number;
+  generatedAt?: string;
+}
+
+export interface OperationalBranchComparison {
+  branches: OperationalBranchReportRow[];
+  mixedCurrency: boolean;
+  aggregateCurrency?: string;
+  aggregateCollectedMinor?: number;
+  aggregateOutstandingMinor?: number;
+  currencyDisclosure: string;
+  generatedAt: string;
+}
+
 export interface OperationalProperty {
   id: string;
   customerId: string;
@@ -250,6 +277,7 @@ export interface OperationalStaffSnapshot {
   workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
   branchScope?: OperationalBranchScope;
+  branchComparison?: OperationalBranchComparison;
   customers: OperationalCustomer[];
   customerContacts?: OperationalCustomerContact[];
   communicationConsents?: OperationalCommunicationConsent[];
@@ -929,11 +957,63 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     };
   });
 
+  const visibleVisitIds = new Set(visits.map((visit) => visit.id));
+  const scopedInvoiceRows = invoiceRows.filter((row) => visibleQuoteIds.has(String(row.quote_id)));
+  const visibleInvoiceIds = new Set(scopedInvoiceRows.map((row) => String(row.id)));
+  const scopedConversationRows = conversationRows.filter((row) => {
+    const requestId = textValue(row, "request_id");
+    return requestId
+      ? visibleRequestIds.has(requestId)
+      : !branchScope.available || (branchScope.ownerGlobalAccess && !branchScope.selectedBranchId);
+  });
+  const visibleConversationIds = new Set(scopedConversationRows.map((row) => String(row.id)));
+  const scopedQualityRows = qualityRows.filter((row) => visibleVisitIds.has(String(row.visit_id)));
+  const visibleQualityIds = new Set(scopedQualityRows.map((row) => String(row.id)));
+  const scopedAttentionRows = attentionRows.filter((row) => {
+    if (!branchScope.available || (branchScope.ownerGlobalAccess && !branchScope.selectedBranchId)) return true;
+    const resourceType = String(row.resource_type ?? "").toLowerCase();
+    const resourceId = String(row.resource_id ?? "");
+    if (resourceType.includes("request")) return visibleRequestIds.has(resourceId);
+    if (resourceType.includes("quote")) return visibleQuoteIds.has(resourceId);
+    if (resourceType.includes("invoice")) return visibleInvoiceIds.has(resourceId);
+    if (resourceType.includes("visit") || resourceType.includes("job")) return visibleVisitIds.has(resourceId);
+    if (resourceType.includes("conversation")) return visibleConversationIds.has(resourceId);
+    if (resourceType.includes("quality")) return visibleQualityIds.has(resourceId);
+    return false;
+  });
+
   const reportingFacade = createPostgresReportingPlatformFacadeMethods(rpc);
   const now = new Date();
   const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [reportingResult, billingResult, settingsResult, attributionRead] = await Promise.all([
-    reportingFacade.readReportingSnapshot(actor, { from, to: now.toISOString() }),
+  const branchReportingPromise = branchScope.available && branchScope.selectedBranchId
+    ? rpc.rpc<Row>("servicedesk_read_branch_reporting_snapshot", {
+        p_input: {
+          workspaceId: workspace.id,
+          actorUserId: actor.userId,
+          actorRole: actor.role,
+          branchId: branchScope.selectedBranchId,
+          from,
+          to: now.toISOString(),
+        },
+      })
+    : Promise.resolve({ data: null, error: null });
+
+  const branchComparisonPromise = branchScope.available && actor.role === "OWNER"
+    ? rpc.rpc<Row>("servicedesk_read_branch_comparison_snapshot", {
+        p_input: {
+          workspaceId: workspace.id,
+          actorUserId: actor.userId,
+          actorRole: actor.role,
+          from,
+          to: now.toISOString(),
+        },
+      })
+    : Promise.resolve({ data: null, error: null });
+
+  const [reportingResult, billingResult, settingsResult, attributionRead, branchReportingRead, branchComparisonRead] = await Promise.all([
+    branchScope.available && branchScope.selectedBranchId
+      ? Promise.resolve({ ok: false as const, code: "BRANCH_REPORTING_ACTIVE", message: "Branch reporting is loaded separately." })
+      : reportingFacade.readReportingSnapshot(actor, { from, to: now.toISOString() }),
     reportingFacade.readPlatformBillingSnapshot(actor),
     reportingFacade.readOwnerSettingsSnapshot(actor),
     rpc.rpc<Row>("servicedesk_read_referral_attribution_summary", {
@@ -945,7 +1025,61 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         to: now.toISOString(),
       },
     }),
+    branchReportingPromise,
+    branchComparisonPromise,
   ]);
+
+  let reporting = reportingResult.ok ? reportingResult.value : undefined;
+  if (branchReportingRead.data?.ok === true && branchReportingRead.data.snapshot && typeof branchReportingRead.data.snapshot === "object") {
+    const row = branchReportingRead.data.snapshot as Row;
+    reporting = {
+      workspaceId: workspace.id,
+      from: textValue(row, "from"),
+      to: textValue(row, "to"),
+      requestCount: numberValue(row, "requestCount"),
+      bookedRequestCount: numberValue(row, "bookedRequestCount"),
+      conversionRateBps: typeof row.conversionRateBps === "number" ? row.conversionRateBps : undefined,
+      collectedMinor: numberValue(row, "collectedMinor"),
+      outstandingMinor: numberValue(row, "outstandingMinor"),
+      currency: textValue(row, "currency") as ReportingSnapshotDTO["currency"],
+      scheduledServiceMinutes: numberValue(row, "scheduledServiceMinutes"),
+      scheduledBufferMinutes: numberValue(row, "scheduledBufferMinutes"),
+      openAttentionCount: scopedAttentionRows.length,
+      unresolvedQualityCount: numberValue(row, "unresolvedQualityCount"),
+      generatedAt: textValue(row, "generatedAt") ?? now.toISOString(),
+    };
+  }
+
+  let branchComparison: OperationalBranchComparison | undefined;
+  if (branchComparisonRead.data?.ok === true && branchComparisonRead.data.snapshot && typeof branchComparisonRead.data.snapshot === "object") {
+    const snapshot = branchComparisonRead.data.snapshot as Row;
+    const branchRows = Array.isArray(snapshot.branches)
+      ? snapshot.branches.filter((value): value is Row => Boolean(value) && typeof value === "object" && !Array.isArray(value))
+      : [];
+    branchComparison = {
+      branches: branchRows.map((row) => ({
+        branchId: String(row.branchId),
+        code: String(row.code),
+        name: String(row.name),
+        timezone: String(row.timezone),
+        currency: String(row.currency),
+        requestCount: numberValue(row, "requestCount"),
+        bookedRequestCount: numberValue(row, "bookedRequestCount"),
+        conversionRateBps: typeof row.conversionRateBps === "number" ? row.conversionRateBps : undefined,
+        collectedMinor: numberValue(row, "collectedMinor"),
+        outstandingMinor: numberValue(row, "outstandingMinor"),
+        scheduledServiceMinutes: numberValue(row, "scheduledServiceMinutes"),
+        scheduledBufferMinutes: numberValue(row, "scheduledBufferMinutes"),
+        unresolvedQualityCount: numberValue(row, "unresolvedQualityCount"),
+      })),
+      mixedCurrency: snapshot.mixedCurrency === true,
+      aggregateCurrency: textValue(snapshot, "aggregateCurrency"),
+      aggregateCollectedMinor: typeof snapshot.aggregateCollectedMinor === "number" ? snapshot.aggregateCollectedMinor : undefined,
+      aggregateOutstandingMinor: typeof snapshot.aggregateOutstandingMinor === "number" ? snapshot.aggregateOutstandingMinor : undefined,
+      currencyDisclosure: String(snapshot.currencyDisclosure ?? "Branch currencies remain explicit."),
+      generatedAt: String(snapshot.generatedAt ?? now.toISOString()),
+    };
+  }
   let referralAttribution: OperationalReferralAttributionSummary | undefined;
   if (!attributionRead.error && attributionRead.data?.ok === true) {
     const attributionRows = Array.isArray(attributionRead.data.rows)
@@ -975,6 +1109,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       workspace,
       actor,
       branchScope,
+      branchComparison,
       customers: branchScope.available && !branchScope.ownerGlobalAccess || branchScope.selectedBranchId
         ? customers.filter((customer) => {
             const hasProperty = properties.some((property) => property.customerId === customer.id);
@@ -1004,27 +1139,15 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       requests,
       quotes,
       photoReviewAvailable,
-      photoAssets,
-      photoSuggestions,
+      photoAssets: photoAssets.filter((asset) => visibleRequestIds.has(asset.requestId)),
+      photoSuggestions: photoSuggestions.filter((suggestion) => visibleRequestIds.has(suggestion.requestId)),
       visits,
-      invoices: invoiceRows
-        .filter((row) => visibleQuoteIds.has(String(row.quote_id)))
-        .map((row) => mapInvoice(row, workspace.id)),
-      conversations: conversationRows
-        .filter((row) => {
-          const requestId = textValue(row, "request_id");
-          return requestId ? visibleRequestIds.has(requestId) : !branchScope.available || (branchScope.ownerGlobalAccess && !branchScope.selectedBranchId);
-        })
-        .map((row) => mapConversation(row, workspace.id)),
+      invoices: scopedInvoiceRows.map((row) => mapInvoice(row, workspace.id)),
+      conversations: scopedConversationRows.map((row) => mapConversation(row, workspace.id)),
       messages: messageRows
-        .filter((row) => {
-          const conversation = conversationRows.find((conversationRow) => String(conversationRow.id) === String(row.conversation_id));
-          if (!conversation) return false;
-          const requestId = textValue(conversation, "request_id");
-          return requestId ? visibleRequestIds.has(requestId) : !branchScope.available || (branchScope.ownerGlobalAccess && !branchScope.selectedBranchId);
-        })
+        .filter((row) => visibleConversationIds.has(String(row.conversation_id)))
         .map((row) => mapMessage(row, workspace.id)),
-      attentionItems: attentionRows.map((row) => ({
+      attentionItems: scopedAttentionRows.map((row) => ({
         id: String(row.id),
         type: String(row.type),
         severity: String(row.severity) as OperationalAttention["severity"],
@@ -1035,7 +1158,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         dueAt: textValue(row, "due_at"),
         summary: String(row.summary ?? "Attention required"),
       })),
-      qualityCases: qualityRows.map((row) => ({
+      qualityCases: scopedQualityRows.map((row) => ({
         id: String(row.id),
         visitId: String(row.visit_id),
         state: String(row.state),
@@ -1105,7 +1228,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         note: textValue(row, "note"),
         version: numberValue(row, "version", 1),
       })),
-      reporting: reportingResult.ok ? reportingResult.value : undefined,
+      reporting,
       platformBilling: billingResult.ok ? billingResult.value : undefined,
       ownerSettings: settingsResult.ok ? settingsResult.value : undefined,
     },
