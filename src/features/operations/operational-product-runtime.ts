@@ -1130,11 +1130,18 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     };
   }
 
+  const selectedBranch = branchScope.selectedBranchId
+    ? branchScope.branches.find((branch) => branch.id === branchScope.selectedBranchId)
+    : undefined;
+  const displayWorkspace = selectedBranch
+    ? { ...workspace, timezone: selectedBranch.timezone }
+    : workspace;
+
   return {
     ok: true,
     value: {
       loadedAt: now.toISOString(),
-      workspace,
+      workspace: displayWorkspace,
       actor,
       branchScope,
       branchComparison,
