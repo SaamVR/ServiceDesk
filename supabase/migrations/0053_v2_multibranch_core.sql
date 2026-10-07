@@ -362,6 +362,174 @@ create trigger recurrence_rules_branch_guard
 before insert or update of workspace_id, branch_id, request_id, property_id on public.recurrence_rules
 for each row execute function public.servicedesk_apply_branch_defaults_and_consistency();
 
+
+create or replace function public.servicedesk_upsert_workspace_branch(p_input jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
+  v_actor uuid := nullif(p_input->>'actorUserId','')::uuid;
+  v_role text := p_input->>'actorRole';
+  v_branch uuid := nullif(p_input->>'branchId','')::uuid;
+  v_expected bigint := nullif(p_input->>'expectedVersion','')::bigint;
+  v_code text := upper(trim(p_input->>'code'));
+  v_name text := trim(p_input->>'name');
+  v_timezone text := trim(p_input->>'timezone');
+  v_currency char(3) := upper(trim(p_input->>'currency'))::char(3);
+  v_active boolean := coalesce((p_input->>'active')::boolean, true);
+  v_now timestamptz := coalesce(nullif(p_input->>'now','')::timestamptz, now());
+  v_row public.workspace_branches%rowtype;
+begin
+  if v_workspace is null or v_actor is null or v_role <> 'OWNER'
+     or v_code is null or v_name is null or v_timezone is null or v_currency is null
+  then
+    return jsonb_build_object('ok', false, 'code', 'BRANCH_INPUT_INVALID');
+  end if;
+
+  if not public.has_active_membership(
+    v_workspace, array['OWNER']::public.membership_role[]
+  ) then
+    return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+  end if;
+
+  begin
+    perform now() at time zone v_timezone;
+  exception when invalid_parameter_value then
+    return jsonb_build_object('ok', false, 'code', 'BRANCH_TIMEZONE_INVALID');
+  end;
+
+  if v_branch is null then
+    insert into public.workspace_branches(
+      workspace_id, code, name, timezone, currency, is_default, active, created_at, updated_at
+    ) values (
+      v_workspace, v_code, v_name, v_timezone, v_currency, false, v_active, v_now, v_now
+    )
+    returning * into v_row;
+  else
+    if exists (
+      select 1 from public.workspace_branches
+      where workspace_id = v_workspace and id = v_branch and is_default and not v_active
+    ) then
+      return jsonb_build_object('ok', false, 'code', 'DEFAULT_BRANCH_REQUIRED');
+    end if;
+
+    update public.workspace_branches
+    set code = v_code,
+        name = v_name,
+        timezone = v_timezone,
+        currency = v_currency,
+        active = v_active,
+        version = version + 1,
+        updated_at = v_now
+    where workspace_id = v_workspace
+      and id = v_branch
+      and version = v_expected
+    returning * into v_row;
+
+    if not found then
+      return jsonb_build_object('ok', false, 'code',
+        case when exists (
+          select 1 from public.workspace_branches where workspace_id = v_workspace and id = v_branch
+        ) then 'VERSION_CONFLICT' else 'BRANCH_NOT_FOUND' end
+      );
+    end if;
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'branchId', v_row.id,
+    'code', v_row.code,
+    'name', v_row.name,
+    'timezone', v_row.timezone,
+    'currency', v_row.currency,
+    'isDefault', v_row.is_default,
+    'active', v_row.active,
+    'version', v_row.version
+  );
+exception when unique_violation or check_violation or invalid_text_representation or datetime_field_overflow then
+  return jsonb_build_object('ok', false, 'code', 'BRANCH_INPUT_INVALID');
+end;
+$;
+
+create or replace function public.servicedesk_set_branch_membership(p_input jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
+  v_actor uuid := nullif(p_input->>'actorUserId','')::uuid;
+  v_role text := p_input->>'actorRole';
+  v_branch uuid := nullif(p_input->>'branchId','')::uuid;
+  v_user uuid := nullif(p_input->>'userId','')::uuid;
+  v_status text := upper(trim(p_input->>'status'));
+  v_now timestamptz := coalesce(nullif(p_input->>'now','')::timestamptz, now());
+  v_member public.memberships%rowtype;
+  v_row public.branch_memberships%rowtype;
+begin
+  if v_workspace is null or v_actor is null or v_role <> 'OWNER'
+     or v_branch is null or v_user is null or v_status not in ('ACTIVE','REVOKED')
+  then
+    return jsonb_build_object('ok', false, 'code', 'BRANCH_MEMBERSHIP_INPUT_INVALID');
+  end if;
+
+  if not public.has_active_membership(
+    v_workspace, array['OWNER']::public.membership_role[]
+  ) then
+    return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+  end if;
+
+  if not exists (
+    select 1 from public.workspace_branches
+    where workspace_id = v_workspace and id = v_branch and active
+  ) then
+    return jsonb_build_object('ok', false, 'code', 'BRANCH_NOT_FOUND');
+  end if;
+
+  select * into v_member
+  from public.memberships
+  where workspace_id = v_workspace and user_id = v_user and status = 'ACTIVE';
+
+  if not found then
+    return jsonb_build_object('ok', false, 'code', 'STAFF_MEMBERSHIP_NOT_FOUND');
+  end if;
+
+  if v_member.role = 'OWNER' then
+    return jsonb_build_object('ok', false, 'code', 'OWNER_BRANCH_ASSIGNMENT_NOT_REQUIRED');
+  end if;
+
+  insert into public.branch_memberships(
+    workspace_id, branch_id, user_id, status, version, created_at, updated_at
+  ) values (
+    v_workspace, v_branch, v_user, v_status, 1, v_now, v_now
+  )
+  on conflict (workspace_id, branch_id, user_id) do update
+  set status = excluded.status,
+      version = public.branch_memberships.version + 1,
+      updated_at = v_now
+  returning * into v_row;
+
+  return jsonb_build_object(
+    'ok', true,
+    'branchId', v_row.branch_id,
+    'userId', v_row.user_id,
+    'status', v_row.status,
+    'version', v_row.version
+  );
+exception when invalid_text_representation or datetime_field_overflow then
+  return jsonb_build_object('ok', false, 'code', 'BRANCH_MEMBERSHIP_INPUT_INVALID');
+end;
+$;
+
+revoke all on function public.servicedesk_upsert_workspace_branch(jsonb) from public, anon, authenticated;
+revoke all on function public.servicedesk_set_branch_membership(jsonb) from public, anon, authenticated;
+grant execute on function public.servicedesk_upsert_workspace_branch(jsonb) to service_role;
+grant execute on function public.servicedesk_set_branch_membership(jsonb) to service_role;
+
 alter table public.workspace_branches enable row level security;
 alter table public.branch_memberships enable row level security;
 
