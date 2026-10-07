@@ -326,6 +326,242 @@ using (
   or public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
 );
 
+drop policy if exists customers_staff_all on public.customers;
+create policy customers_branch_staff_all on public.customers
+for all to authenticated
+using (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or exists (
+    select 1
+    from public.properties p
+    where p.workspace_id = customers.workspace_id
+      and p.customer_id = customers.id
+      and public.has_branch_access(
+        p.workspace_id,
+        p.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+  or exists (
+    select 1
+    from public.requests r
+    where r.workspace_id = customers.workspace_id
+      and r.customer_id = customers.id
+      and public.has_branch_access(
+        r.workspace_id,
+        r.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+)
+with check (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or exists (
+    select 1
+    from public.properties p
+    where p.workspace_id = customers.workspace_id
+      and p.customer_id = customers.id
+      and public.has_branch_access(
+        p.workspace_id,
+        p.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+  or exists (
+    select 1
+    from public.requests r
+    where r.workspace_id = customers.workspace_id
+      and r.customer_id = customers.id
+      and public.has_branch_access(
+        r.workspace_id,
+        r.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+);
+
+drop policy if exists contacts_staff_all on public.customer_contacts;
+create policy contacts_branch_staff_all on public.customer_contacts
+for all to authenticated
+using (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or exists (
+    select 1
+    from public.properties p
+    where p.workspace_id = customer_contacts.workspace_id
+      and p.customer_id = customer_contacts.customer_id
+      and public.has_branch_access(
+        p.workspace_id,
+        p.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+  or exists (
+    select 1
+    from public.requests r
+    where r.workspace_id = customer_contacts.workspace_id
+      and r.customer_id = customer_contacts.customer_id
+      and public.has_branch_access(
+        r.workspace_id,
+        r.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+)
+with check (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or exists (
+    select 1
+    from public.properties p
+    where p.workspace_id = customer_contacts.workspace_id
+      and p.customer_id = customer_contacts.customer_id
+      and public.has_branch_access(
+        p.workspace_id,
+        p.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+  or exists (
+    select 1
+    from public.requests r
+    where r.workspace_id = customer_contacts.workspace_id
+      and r.customer_id = customer_contacts.customer_id
+      and public.has_branch_access(
+        r.workspace_id,
+        r.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+);
+
+drop policy if exists consents_staff_all on public.communication_consents;
+create policy consents_branch_staff_all on public.communication_consents
+for all to authenticated
+using (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or exists (
+    select 1
+    from public.properties p
+    where p.workspace_id = communication_consents.workspace_id
+      and p.customer_id = communication_consents.customer_id
+      and public.has_branch_access(
+        p.workspace_id,
+        p.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+  or exists (
+    select 1
+    from public.requests r
+    where r.workspace_id = communication_consents.workspace_id
+      and r.customer_id = communication_consents.customer_id
+      and public.has_branch_access(
+        r.workspace_id,
+        r.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+)
+with check (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or exists (
+    select 1
+    from public.properties p
+    where p.workspace_id = communication_consents.workspace_id
+      and p.customer_id = communication_consents.customer_id
+      and public.has_branch_access(
+        p.workspace_id,
+        p.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+  or exists (
+    select 1
+    from public.requests r
+    where r.workspace_id = communication_consents.workspace_id
+      and r.customer_id = communication_consents.customer_id
+      and public.has_branch_access(
+        r.workspace_id,
+        r.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+);
+
+drop policy if exists conversations_staff_all on public.conversations;
+create policy conversations_branch_staff_all on public.conversations
+for all to authenticated
+using (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or (
+    request_id is not null
+    and exists (
+      select 1
+      from public.requests r
+      where r.workspace_id = conversations.workspace_id
+        and r.id = conversations.request_id
+        and public.has_branch_access(
+          r.workspace_id,
+          r.branch_id,
+          array['DISPATCHER']::public.membership_role[]
+        )
+    )
+  )
+)
+with check (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or (
+    request_id is not null
+    and exists (
+      select 1
+      from public.requests r
+      where r.workspace_id = conversations.workspace_id
+        and r.id = conversations.request_id
+        and public.has_branch_access(
+          r.workspace_id,
+          r.branch_id,
+          array['DISPATCHER']::public.membership_role[]
+        )
+    )
+  )
+);
+
+drop policy if exists messages_staff_all on public.messages;
+create policy messages_branch_staff_all on public.messages
+for all to authenticated
+using (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or exists (
+    select 1
+    from public.conversations c
+    join public.requests r
+      on r.workspace_id = c.workspace_id and r.id = c.request_id
+    where c.workspace_id = messages.workspace_id
+      and c.id = messages.conversation_id
+      and public.has_branch_access(
+        r.workspace_id,
+        r.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+)
+with check (
+  public.has_active_membership(workspace_id, array['OWNER']::public.membership_role[])
+  or exists (
+    select 1
+    from public.conversations c
+    join public.requests r
+      on r.workspace_id = c.workspace_id and r.id = c.request_id
+    where c.workspace_id = messages.workspace_id
+      and c.id = messages.conversation_id
+      and public.has_branch_access(
+        r.workspace_id,
+        r.branch_id,
+        array['DISPATCHER']::public.membership_role[]
+      )
+  )
+);
+
 drop policy if exists properties_staff_all on public.properties;
 create policy properties_branch_staff_all on public.properties
 for all to authenticated
