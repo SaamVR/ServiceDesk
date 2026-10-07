@@ -412,8 +412,8 @@ for all to authenticated
 using (public.servicedesk_has_branch_access(workspace_id, branch_id, array['OWNER','DISPATCHER']::public.membership_role[]))
 with check (public.servicedesk_has_branch_access(workspace_id, branch_id, array['OWNER','DISPATCHER']::public.membership_role[]));
 
-drop policy if exists recurrence_staff_all on public.recurrence_rules;
-create policy recurrence_staff_all on public.recurrence_rules
+drop policy if exists recurrence_rules_staff_all on public.recurrence_rules;
+create policy recurrence_rules_staff_all on public.recurrence_rules
 for all to authenticated
 using (public.servicedesk_has_branch_access(workspace_id, branch_id, array['OWNER','DISPATCHER']::public.membership_role[]))
 with check (public.servicedesk_has_branch_access(workspace_id, branch_id, array['OWNER','DISPATCHER']::public.membership_role[]));
