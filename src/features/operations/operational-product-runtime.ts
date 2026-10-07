@@ -41,6 +41,56 @@ export interface OperationalCustomerContact {
   identityConflictCount: number;
 }
 
+export interface OperationalCommunicationConsent {
+  customerId: string;
+  channel: "EMAIL" | "WHATSAPP";
+  status: "GRANTED" | "REVOKED" | "UNKNOWN";
+  purpose: string;
+  recordedAt: string;
+}
+
+export interface OperationalRetentionControl {
+  customerId: string;
+  channel: "EMAIL" | "WHATSAPP";
+  status: "ACTIVE" | "PAUSED" | "SUPPRESSED";
+  reasonCode?: string;
+  untilAt?: string;
+  version: number;
+}
+
+export interface OperationalRetentionCampaign {
+  id: string;
+  name: string;
+  channel: "EMAIL" | "WHATSAPP";
+  purpose: "FOLLOW_UP" | "REVIEW_REQUEST" | "REFERRAL_NUDGE";
+  status: "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED";
+  templateKey?: string;
+  dailyCap: number;
+  perCustomerCap: number;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+  version: number;
+  updatedAt: string;
+}
+
+export interface OperationalReferralAttributionRow {
+  referralCodeId: string;
+  code: string;
+  label: string;
+  active: boolean;
+  touchCount: number;
+  paidJobCount: number;
+  firstTouchAt?: string;
+  lastTouchAt?: string;
+}
+
+export interface OperationalReferralAttributionSummary {
+  from: string;
+  to: string;
+  rows: OperationalReferralAttributionRow[];
+  disclosure: string;
+}
+
 export interface OperationalProperty {
   id: string;
   customerId: string;
@@ -180,6 +230,11 @@ export interface OperationalStaffSnapshot {
   actor: ActorContext;
   customers: OperationalCustomer[];
   customerContacts?: OperationalCustomerContact[];
+  communicationConsents?: OperationalCommunicationConsent[];
+  retentionControls?: OperationalRetentionControl[];
+  retentionCampaigns?: OperationalRetentionCampaign[];
+  retentionAvailable?: boolean;
+  referralAttribution?: OperationalReferralAttributionSummary;
   properties: OperationalProperty[];
   requests: OperationalRequest[];
   quotes: OperationalQuote[];
@@ -486,6 +541,31 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   const photoAssetRows = photoReviewAvailable ? rows(photoAssetRead.data) : [];
   const photoSuggestionRows = photoReviewAvailable ? rows(photoSuggestionRead.data) : [];
 
+  const [campaignRead, retentionControlRead, consentRead] = await Promise.all([
+    service
+      .from("retention_campaigns")
+      .select("id,name,channel,purpose,status,template_key,daily_cap,per_customer_cap,quiet_hours_start,quiet_hours_end,version,updated_at")
+      .eq("workspace_id", workspace.id)
+      .order("updated_at", { ascending: false })
+      .limit(200),
+    service
+      .from("customer_retention_controls")
+      .select("customer_id,channel,status,reason_code,until_at,version,updated_at")
+      .eq("workspace_id", workspace.id)
+      .limit(1000),
+    service
+      .from("communication_consents")
+      .select("id,customer_id,channel,purpose,status,recorded_at,created_at")
+      .eq("workspace_id", workspace.id)
+      .in("channel", ["EMAIL", "WHATSAPP"])
+      .order("recorded_at", { ascending: false })
+      .limit(2000),
+  ]);
+  const retentionAvailable = !campaignRead.error && !retentionControlRead.error && !consentRead.error;
+  const campaignRows = retentionAvailable ? rows(campaignRead.data) : [];
+  const retentionControlRows = retentionAvailable ? rows(retentionControlRead.data) : [];
+  const consentRows = retentionAvailable ? rows(consentRead.data) : [];
+
   const failedRead = tableReads.find((result) => result.error);
   if (failedRead?.error) {
     return { ok: false, kind: "server", message: "Workspace records could not be loaded. Try again shortly, or check the workspace connection in Settings." };
@@ -552,6 +632,54 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
           : 0,
       };
     });
+  const latestConsentByCustomerChannel = new Map<string, OperationalCommunicationConsent>();
+  for (const row of consentRows) {
+    const channel = String(row.channel);
+    const status = String(row.status);
+    if ((channel !== "EMAIL" && channel !== "WHATSAPP")
+        || (status !== "GRANTED" && status !== "REVOKED" && status !== "UNKNOWN")) continue;
+    const customerId = String(row.customer_id);
+    const key = customerId + ":" + channel;
+    if (latestConsentByCustomerChannel.has(key)) continue;
+    latestConsentByCustomerChannel.set(key, {
+      customerId,
+      channel,
+      status,
+      purpose: String(row.purpose ?? "GENERAL"),
+      recordedAt: String(row.recorded_at),
+    });
+  }
+  const communicationConsents = [...latestConsentByCustomerChannel.values()];
+  const retentionControls: OperationalRetentionControl[] = retentionControlRows
+    .filter((row) => ["EMAIL", "WHATSAPP"].includes(String(row.channel)))
+    .filter((row) => ["ACTIVE", "PAUSED", "SUPPRESSED"].includes(String(row.status)))
+    .map((row) => ({
+      customerId: String(row.customer_id),
+      channel: String(row.channel) as OperationalRetentionControl["channel"],
+      status: String(row.status) as OperationalRetentionControl["status"],
+      reasonCode: textValue(row, "reason_code"),
+      untilAt: textValue(row, "until_at"),
+      version: numberValue(row, "version", 1),
+    }));
+  const retentionCampaigns: OperationalRetentionCampaign[] = campaignRows
+    .filter((row) => ["EMAIL", "WHATSAPP"].includes(String(row.channel)))
+    .filter((row) => ["FOLLOW_UP", "REVIEW_REQUEST", "REFERRAL_NUDGE"].includes(String(row.purpose)))
+    .filter((row) => ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED"].includes(String(row.status)))
+    .map((row) => ({
+      id: String(row.id),
+      name: String(row.name),
+      channel: String(row.channel) as OperationalRetentionCampaign["channel"],
+      purpose: String(row.purpose) as OperationalRetentionCampaign["purpose"],
+      status: String(row.status) as OperationalRetentionCampaign["status"],
+      templateKey: textValue(row, "template_key"),
+      dailyCap: numberValue(row, "daily_cap", 100),
+      perCustomerCap: numberValue(row, "per_customer_cap", 1),
+      quietHoursStart: textValue(row, "quiet_hours_start"),
+      quietHoursEnd: textValue(row, "quiet_hours_end"),
+      version: numberValue(row, "version", 1),
+      updatedAt: String(row.updated_at),
+    }));
+
   const properties: OperationalProperty[] = propertyRows.map((row) => ({
     id: String(row.id),
     customerId: String(row.customer_id),
@@ -658,11 +786,41 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   const reportingFacade = createPostgresReportingPlatformFacadeMethods(rpc);
   const now = new Date();
   const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [reportingResult, billingResult, settingsResult] = await Promise.all([
+  const [reportingResult, billingResult, settingsResult, attributionRead] = await Promise.all([
     reportingFacade.readReportingSnapshot(actor, { from, to: now.toISOString() }),
     reportingFacade.readPlatformBillingSnapshot(actor),
     reportingFacade.readOwnerSettingsSnapshot(actor),
+    rpc.rpc<Row>("servicedesk_read_referral_attribution_summary", {
+      p_input: {
+        workspaceId: workspace.id,
+        actorUserId: actor.userId,
+        actorRole: actor.role,
+        from,
+        to: now.toISOString(),
+      },
+    }),
   ]);
+  let referralAttribution: OperationalReferralAttributionSummary | undefined;
+  if (!attributionRead.error && attributionRead.data?.ok === true) {
+    const attributionRows = Array.isArray(attributionRead.data.rows)
+      ? attributionRead.data.rows.filter((value): value is Row => Boolean(value) && typeof value === "object" && !Array.isArray(value))
+      : [];
+    referralAttribution = {
+      from: String(attributionRead.data.from),
+      to: String(attributionRead.data.to),
+      disclosure: String(attributionRead.data.disclosure ?? "Attribution is directional, not perfect."),
+      rows: attributionRows.map((row) => ({
+        referralCodeId: String(row.referralCodeId),
+        code: String(row.code),
+        label: String(row.label),
+        active: row.active === true,
+        touchCount: numberValue(row, "touchCount"),
+        paidJobCount: numberValue(row, "paidJobCount"),
+        firstTouchAt: textValue(row, "firstTouchAt"),
+        lastTouchAt: textValue(row, "lastTouchAt"),
+      })),
+    };
+  }
 
   return {
     ok: true,
@@ -672,6 +830,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       actor,
       customers,
       customerContacts,
+      communicationConsents,
+      retentionControls,
+      retentionCampaigns,
+      retentionAvailable,
+      referralAttribution,
       properties,
       requests,
       quotes,
@@ -1437,3 +1600,154 @@ export async function reviewOperationalPhotoSuggestion(
         : "Suggestion accepted for review. No request or quote price was changed automatically.",
   };
 }
+
+export async function upsertOperationalReferralCode(
+  workspaceSlug: string,
+  input: { code: string; label: string; active: boolean; startsAt?: string; endsAt?: string },
+): Promise<OperationalActionResult> {
+  const code = input.code.trim().toUpperCase();
+  const label = input.label.trim();
+  if (!/^[A-Z0-9][A-Z0-9_-]{2,39}$/.test(code) || !label || label.length > 120) {
+    return { ok: false, message: "Referral code or label is invalid." };
+  }
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can manage referral codes." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_upsert_referral_code", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      code,
+      label,
+      active: input.active,
+      startsAt: input.startsAt || undefined,
+      endsAt: input.endsAt || undefined,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "Referral code could not be saved. Check the code and date range." };
+  }
+  return { ok: true, message: "Referral code saved. Attribution remains directional rather than proof of causality." };
+}
+
+export async function upsertOperationalRetentionCampaign(
+  workspaceSlug: string,
+  input: {
+    campaignId?: string;
+    expectedVersion?: number;
+    name: string;
+    channel: "EMAIL" | "WHATSAPP";
+    purpose: "FOLLOW_UP" | "REVIEW_REQUEST" | "REFERRAL_NUDGE";
+    status: "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED";
+    templateKey?: string;
+    subject?: string;
+    bodyText: string;
+    bodyHtml?: string;
+    dailyCap: number;
+    perCustomerCap: number;
+    quietHoursStart?: string;
+    quietHoursEnd?: string;
+  },
+): Promise<OperationalActionResult> {
+  if (!input.name.trim() || !input.bodyText.trim()
+      || !Number.isInteger(input.dailyCap) || input.dailyCap < 1 || input.dailyCap > 10000
+      || !Number.isInteger(input.perCustomerCap) || input.perCustomerCap < 1 || input.perCustomerCap > 100) {
+    return { ok: false, message: "Campaign name, message and send caps are required." };
+  }
+  if (input.channel === "EMAIL" && (!input.subject?.trim() || !input.bodyHtml?.trim())) {
+    return { ok: false, message: "Email campaigns require a subject and HTML body." };
+  }
+  if (Boolean(input.quietHoursStart) !== Boolean(input.quietHoursEnd)) {
+    return { ok: false, message: "Quiet hours require both a start and end time." };
+  }
+
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can manage retention campaigns." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_upsert_retention_campaign", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      campaignId: input.campaignId || undefined,
+      expectedVersion: input.expectedVersion,
+      name: input.name.trim(),
+      channel: input.channel,
+      purpose: input.purpose,
+      status: input.status,
+      templateKey: input.templateKey?.trim() || undefined,
+      subject: input.subject?.trim() || undefined,
+      bodyText: input.bodyText.trim(),
+      bodyHtml: input.bodyHtml?.trim() || undefined,
+      dailyCap: input.dailyCap,
+      perCustomerCap: input.perCustomerCap,
+      quietHoursStart: input.quietHoursStart || undefined,
+      quietHoursEnd: input.quietHoursEnd || undefined,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error) return { ok: false, message: "Retention campaign could not be saved." };
+  if (!data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "VERSION_CONFLICT") {
+      return { ok: false, message: "This campaign changed since the page loaded. Refresh and try again." };
+    }
+    return { ok: false, message: "Retention campaign was rejected by the policy boundary." };
+  }
+  return {
+    ok: true,
+    message: input.status === "ACTIVE"
+      ? "Campaign activated. Every queued message will still recheck consent, suppression, quiet hours and caps at dispatch time."
+      : "Campaign saved. No customer message was queued.",
+  };
+}
+
+export async function setOperationalCustomerRetentionControl(
+  workspaceSlug: string,
+  input: {
+    customerId: string;
+    channel: "EMAIL" | "WHATSAPP";
+    status: "ACTIVE" | "PAUSED" | "SUPPRESSED";
+    reasonCode?: string;
+    untilAt?: string;
+  },
+): Promise<OperationalActionResult> {
+  if (!input.customerId.trim()) return { ok: false, message: "Customer is required." };
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_set_customer_retention_control", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      customerId: input.customerId,
+      channel: input.channel,
+      status: input.status,
+      reasonCode: input.reasonCode?.trim().toUpperCase() || undefined,
+      untilAt: input.untilAt || undefined,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "Customer retention status could not be updated." };
+  }
+
+  return {
+    ok: true,
+    message: input.status === "ACTIVE"
+      ? "Internal retention suppression cleared. A current customer opt-in is still required before any campaign can send."
+      : input.status === "PAUSED"
+        ? "Retention messages paused for this channel. Existing queued messages will be suppressed at dispatch time."
+        : "Retention messages suppressed for this channel. Existing queued messages will be suppressed at dispatch time.",
+  };
+}
+

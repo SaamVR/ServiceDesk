@@ -35,6 +35,7 @@ describe("transactional email templates", () => {
   test("does not create marketing purposes or unsupported template keys", () => {
     expect(TRANSACTIONAL_EMAIL_TEMPLATES).not.toHaveProperty("MARKETING_BLAST");
     expect(TRANSACTIONAL_EMAIL_TEMPLATES).not.toHaveProperty("NEWSLETTER");
+    expect(TRANSACTIONAL_EMAIL_TEMPLATES).not.toHaveProperty("RETENTION_CAMPAIGN");
   });
 
   test("normalizes missing public URL without leaking customer details", () => {
@@ -51,4 +52,9 @@ describe("transactional email templates", () => {
     expect(JSON.stringify(job)).not.toContain("bedroom");
     expect(JSON.stringify(job)).not.toContain("address");
   });
+
+  test("retention campaign content is resolved dynamically and cannot fall back to a transactional template", () => {
+    expect(Object.prototype.hasOwnProperty.call(TRANSACTIONAL_EMAIL_TEMPLATES, "RETENTION_CAMPAIGN")).toBe(false);
+  });
+
 });

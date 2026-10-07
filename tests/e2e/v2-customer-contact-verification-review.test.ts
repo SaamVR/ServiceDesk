@@ -35,7 +35,8 @@ describe("V2 customer contact verification review", () => {
     expect(route).toContain("Contact verification");
     expect(route).toContain("Identity conflict");
     expect(route).toContain("Needs verification");
-    expect(route).toContain("This screen is review-only and cannot mark a contact verified.");
+    expect(route).toContain("Verification status is evidence-backed customer data.");
+    expect(route).toContain("Clearing an internal retention hold never grants campaign consent");
     expect(route).not.toContain("verifyCustomerContact");
     expect(route).not.toContain("markContactVerified");
   });

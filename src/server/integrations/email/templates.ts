@@ -1,14 +1,16 @@
 import type { TransactionalEmailJob, TransactionalEmailPolicy, TransactionalEmailPurpose } from "./adapter";
 
+export type TemplateBackedEmailPurpose = Exclude<TransactionalEmailPurpose, "RETENTION_CAMPAIGN">;
+
 export interface TransactionalEmailTemplateDefinition {
-  purpose: TransactionalEmailPurpose;
+  purpose: TemplateBackedEmailPurpose;
   subject: string;
   heading: string;
   body: string;
   ctaLabel: string;
 }
 
-export const TRANSACTIONAL_EMAIL_TEMPLATES: Record<TransactionalEmailPurpose, TransactionalEmailTemplateDefinition> = {
+export const TRANSACTIONAL_EMAIL_TEMPLATES: Record<TemplateBackedEmailPurpose, TransactionalEmailTemplateDefinition> = {
   QUOTE_READY: {
     purpose: "QUOTE_READY",
     subject: "Your quote is ready",
@@ -62,7 +64,7 @@ export const TRANSACTIONAL_EMAIL_TEMPLATES: Record<TransactionalEmailPurpose, Tr
 
 export interface BuildTransactionalEmailJobInput {
   workspaceId: string;
-  purpose: TransactionalEmailPurpose;
+  purpose: TemplateBackedEmailPurpose;
   to: string;
   resourceId: string;
   publicUrl?: string;
