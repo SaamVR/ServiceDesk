@@ -2064,7 +2064,9 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
       <header className={styles.adminPageHeader}>
         <div>
           <p className={styles.adminEyebrow}>Performance summary</p>
-          <h2>Business performance</h2>
+          <h2>{data.branchScope?.selectedBranchId
+            ? (data.branchScope.branches.find((branch) => branch.id === data.branchScope?.selectedBranchId)?.name ?? "Branch") + " performance"
+            : "Business performance"}</h2>
           <p>
             {snapshot.from ? formatWhen(snapshot.from, data.workspace.timezone) : "Rolling period"}
             {" – "}
@@ -2193,6 +2195,59 @@ function ReportsView({ data }: { data: OperationalStaffSnapshot }) {
           </div>
         </section>
       </div>
+
+      {data.actor.role === "OWNER" && data.branchComparison ? (
+        <section className={styles.branchComparisonPanel} aria-label="Branch performance comparison">
+          <div className={styles.adminCardHeader}>
+            <div>
+              <p className={styles.adminSectionEyebrow}>Company view</p>
+              <h3>Branch comparison</h3>
+            </div>
+            <StatusBadge tone={data.branchComparison.mixedCurrency ? "warning" : "info"}>
+              {data.branchComparison.mixedCurrency ? "Mixed currencies" : "Comparable totals"}
+            </StatusBadge>
+          </div>
+
+          <div className={styles.branchComparisonRows}>
+            {data.branchComparison.branches.map((branch) => {
+              const conversion = branch.conversionRateBps === undefined
+                ? "—"
+                : (branch.conversionRateBps / 100).toFixed(1) + "%";
+              return (
+                <article key={branch.branchId}>
+                  <div className={styles.branchComparisonIdentity}>
+                    <strong>{branch.name}</strong>
+                    <span>{branch.code} · {branch.timezone} · {branch.currency}</span>
+                  </div>
+                  <dl>
+                    <div><dt>Requests</dt><dd>{branch.requestCount}</dd></div>
+                    <div><dt>Booked</dt><dd>{branch.bookedRequestCount}</dd></div>
+                    <div><dt>Conversion</dt><dd>{conversion}</dd></div>
+                    <div><dt>Collected</dt><dd>{formatMinorMoney(branch.collectedMinor, branch.currency)}</dd></div>
+                    <div><dt>Outstanding</dt><dd>{formatMinorMoney(branch.outstandingMinor, branch.currency)}</dd></div>
+                    <div><dt>Quality</dt><dd>{branch.unresolvedQualityCount}</dd></div>
+                  </dl>
+                </article>
+              );
+            })}
+          </div>
+
+          {!data.branchComparison.mixedCurrency
+            && data.branchComparison.aggregateCurrency
+            && data.branchComparison.aggregateCollectedMinor !== undefined
+            && data.branchComparison.aggregateOutstandingMinor !== undefined ? (
+            <div className={styles.branchComparisonTotals}>
+              <span><small>Company collected</small><strong>{formatMinorMoney(data.branchComparison.aggregateCollectedMinor, data.branchComparison.aggregateCurrency)}</strong></span>
+              <span><small>Company outstanding</small><strong>{formatMinorMoney(data.branchComparison.aggregateOutstandingMinor, data.branchComparison.aggregateCurrency)}</strong></span>
+            </div>
+          ) : null}
+
+          <div className={styles.attributionDisclosure}>
+            <span aria-hidden="true">i</span>
+            <p>{data.branchComparison.currencyDisclosure}</p>
+          </div>
+        </section>
+      ) : null}
 
       <section className={styles.attributionPanel} aria-label="Referral attribution">
         <div className={styles.adminCardHeader}>
