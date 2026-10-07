@@ -1,0 +1,75 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+}
+.context {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.context > span:not(.icon):not(.meta) {
+  display: grid;
+  gap: 1px;
+}
+.context small {
+  color: var(--app-text-muted);
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.context strong {
+  font-size: .82rem;
+}
+.icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: 7px;
+  background: var(--app-surface-subtle);
+}
+.meta {
+  color: var(--app-text-muted);
+  font-size: .68rem;
+}
+.form {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.form select {
+  min-width: 190px;
+}
+@media(max-width: 720px) {
+  .bar,
+  .context {
+    align-items: flex-start;
+  }
+  .bar {
+    display: grid;
+  }
+  .context {
+    flex-wrap: wrap;
+  }
+  .meta {
+    flex-basis: 100%;
+    padding-left: 37px;
+  }
+  .form {
+    width: 100%;
+  }
+  .form label,
+  .form select {
+    min-width: 0;
+    width: 100%;
+  }
+}
