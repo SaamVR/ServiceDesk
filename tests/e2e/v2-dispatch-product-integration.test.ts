@@ -17,6 +17,6 @@ describe("V2 dispatch product integration", () => {
     const adapter = source("src/features/operations/dispatch-product-adapter.ts");
     const runtime = source("src/features/operations/operational-product-runtime.ts");
     expect(adapter).toContain("workspaceId: data.workspace.id");
-    expect(runtime).toContain('.select("id,slug,name,timezone")');
+    expect(runtime).toContain('.select("id,slug,name,timezone,currency")');
   });
 });
