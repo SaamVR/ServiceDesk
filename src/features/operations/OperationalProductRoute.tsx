@@ -7,6 +7,7 @@ import {
   applyOperationalRecurrenceAction,
   applyOperationalQualityAction,
   calculateOperationalQuote,
+  createOperationalBranch,
   enqueueInboxReply,
   holdOperationalSlot,
   loadOperationalStaffSnapshot,
@@ -14,12 +15,14 @@ import {
   reviewOperationalPhotoSuggestion,
   sendOperationalQuote,
   setOperationalChecklistItem,
+  setOperationalBranchAssignment,
   setOperationalCustomerRetentionControl,
   setOperationalVoiceCallbackState,
   toggleInboxHandover,
   upsertOperationalReferralCode,
   upsertOperationalRetentionCampaign,
   transitionOperationalVisit,
+  updateOperationalBranch,
   updateOperationalServiceCatalogItem,
   type OperationalActionResult,
   type OperationalAttention,
@@ -33,6 +36,7 @@ import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligen
 import { CommercialBillingWorkspace } from "@/features/commercial/CommercialBillingWorkspace";
 import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
+import { BranchContextBar } from "./BranchContextBar";
 import { formatWorkspaceDateTime } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
 import styles from "./OperationalProductRoute.module.css";
@@ -2943,6 +2947,12 @@ export async function OperationalProductRoute({
 
       {result.ok ? (
         <>
+          <BranchContextBar
+            workspaceSlug={workspaceSlug}
+            currentModule={module}
+            branchScope={result.value.branchScope}
+          />
+
           {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
           {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId)}
         </>
