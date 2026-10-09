@@ -53,6 +53,9 @@ describe("V2 enterprise governance migration", () => {
     expect(sql).toContain("m.status = 'ACTIVE'");
     expect(sql).toContain("m.role = 'DISPATCHER'");
     expect(sql).toContain("g.expires_at is null or g.expires_at > p_at");
+    expect(sql).toContain("from public.workspace_branches b");
+    expect(sql).toContain("from public.branch_memberships bm");
+    expect(sql).toContain("DELEGATE_ALL_BRANCHES_REQUIRED");
   });
 
   it("keeps all governance mutations behind service-role RPCs", () => {
@@ -66,4 +69,17 @@ describe("V2 enterprise governance migration", () => {
       expect(sql).toContain(`grant execute on function public.${fn}(jsonb) to service_role`);
     }
   });
+
+  it("requires every active branch assignment before granting or using workspace-global catalog delegation", () => {
+    const helperStart = sql.indexOf("servicedesk_actor_has_governance_capability");
+    const helperEnd = sql.indexOf("revoke all on function public.servicedesk_actor_has_governance_capability", helperStart);
+    const helper = sql.slice(helperStart, helperEnd);
+    expect(helper).toContain("from public.workspace_branches b");
+    expect(helper).toContain("b.active");
+    expect(helper).toContain("not exists (");
+    expect(helper).toContain("from public.branch_memberships bm");
+    expect(helper).toContain("bm.status = 'ACTIVE'");
+    expect(sql).toContain("DELEGATE_ALL_BRANCHES_REQUIRED");
+  });
+
 });
