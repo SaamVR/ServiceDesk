@@ -97,8 +97,9 @@ describe("enterprise governance Postgres boundary", () => {
         rows: [{ action: "WORKFLOW_RULE_VERSION_PUBLISHED", resourceType: "workflow_rule" }],
       },
     });
-    expect(JSON.stringify(result)).not.toContain("before_data");
-    expect(JSON.stringify(result)).not.toContain("after_data");
+    expect(result.ok && result.value.rows[0]).not.toHaveProperty("beforeData");
+    expect(result.ok && result.value.rows[0]).not.toHaveProperty("afterData");
+    expect(result.ok && result.value.redaction).toContain("before_data and after_data are intentionally excluded");
   });
 
   it("rejects audit export for delegated dispatchers", async () => {
