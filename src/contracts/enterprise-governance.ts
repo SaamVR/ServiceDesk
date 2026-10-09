@@ -1,7 +1,4 @@
-export type GovernanceCapability =
-  | "SERVICE_CATALOG_MANAGE"
-  | "WORKFLOW_MANAGE"
-  | "RETENTION_MANAGE";
+export type GovernanceCapability = "SERVICE_CATALOG_MANAGE";
 
 export interface OperatorCapabilityGrantDTO {
   workspaceId: string;
