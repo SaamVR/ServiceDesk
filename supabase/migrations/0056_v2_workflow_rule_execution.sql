@@ -141,7 +141,7 @@ declare
   v_value jsonb;
 begin
   if jsonb_typeof(p_snapshot) <> 'object'
-     or jsonb_object_length(p_snapshot) > 12 then
+     or (select count(*) from jsonb_object_keys(p_snapshot)) > 12 then
     return jsonb_build_object('ok', false, 'code', 'WORKFLOW_EVENT_SNAPSHOT_INVALID');
   end if;
 
@@ -225,17 +225,28 @@ begin
   from public.workflow_rule_versions
   where workspace_id = v_workspace and id = v_version_id;
 
-  if not found or v_version.state <> 'PUBLISHED' or v_version.branch_id <> v_branch then
-    return jsonb_build_object('ok', false, 'code', 'WORKFLOW_PUBLISHED_VERSION_REQUIRED');
+  if not found or v_version.branch_id <> v_branch then
+    return jsonb_build_object('ok', false, 'code', 'WORKFLOW_VERSION_NOT_FOUND');
   end if;
 
   select * into v_rule
   from public.workflow_rules
   where workspace_id = v_workspace and id = v_version.rule_id;
 
-  if not found or v_rule.status <> 'ACTIVE' or v_rule.branch_id <> v_branch
-     or v_rule.published_version_number <> v_version.version_number then
-    return jsonb_build_object('ok', false, 'code', 'WORKFLOW_RULE_NOT_ACTIVE');
+  if not found or v_rule.branch_id <> v_branch then
+    return jsonb_build_object('ok', false, 'code', 'WORKFLOW_RULE_NOT_FOUND');
+  end if;
+
+  if v_mode = 'LIVE' and (
+    v_version.state <> 'PUBLISHED'
+    or v_rule.status <> 'ACTIVE'
+    or v_rule.published_version_number <> v_version.version_number
+  ) then
+    return jsonb_build_object('ok', false, 'code', 'WORKFLOW_PUBLISHED_VERSION_REQUIRED');
+  end if;
+
+  if v_mode = 'PREVIEW' and v_version.state not in ('DRAFT','PUBLISHED') then
+    return jsonb_build_object('ok', false, 'code', 'WORKFLOW_PREVIEW_VERSION_INVALID');
   end if;
 
   v_snapshot_validation := public.servicedesk_validate_workflow_event_snapshot(
@@ -454,6 +465,27 @@ begin
   set state = 'SUCCEEDED',
       completed_at = v_now
   where workspace_id = v_workspace and id = v_action.id;
+
+  if not exists (
+    select 1
+    from public.workflow_action_executions a
+    where a.workspace_id = v_workspace
+      and a.execution_id = v_action.execution_id
+      and a.state in ('PENDING','APPROVAL_REQUIRED','APPROVED')
+  ) then
+    update public.workflow_executions
+    set state = case
+          when exists (
+            select 1 from public.workflow_action_executions failed
+            where failed.workspace_id = v_workspace
+              and failed.execution_id = v_action.execution_id
+              and failed.state = 'FAILED'
+          ) then 'PARTIAL_FAILED'
+          else 'COMPLETED'
+        end,
+        completed_at = v_now
+    where workspace_id = v_workspace and id = v_action.execution_id;
+  end if;
 
   return jsonb_build_object(
     'ok', true,
