@@ -93,6 +93,7 @@ export interface OperationalReferralAttributionSummary {
 
 export interface OperationalProperty {
   id: string;
+  branchId?: string;
   customerId: string;
   label: string;
   address: string;
@@ -102,6 +103,7 @@ export interface OperationalProperty {
 
 export interface OperationalRequest {
   id: string;
+  branchId?: string;
   customerId?: string;
   propertyId?: string;
   serviceCode?: string;
@@ -165,6 +167,7 @@ export interface OperationalQuote {
 export interface OperationalVisit {
   id: string;
   workspaceId: string;
+  branchId?: string;
   requestId: string;
   quoteId: string;
   crewId?: string;
@@ -207,6 +210,7 @@ export interface OperationalQualityCase {
 
 export interface OperationalRecurrence {
   id: string;
+  branchId?: string;
   requestId: string;
   propertyId: string;
   frequency: string;
@@ -224,10 +228,55 @@ export interface OperationalServiceCatalogItem {
   updatedAt: string;
 }
 
+export interface OperationalBranch {
+  id: string;
+  code: string;
+  name: string;
+  timezone: string;
+  currency: string;
+  isDefault: boolean;
+}
+
+export interface OperationalBranchScope {
+  mode: "LEGACY" | "ALL" | "BRANCH";
+  branches: OperationalBranch[];
+  selectedBranchId?: string;
+}
+
+export interface OperationalBranchAssignment {
+  branchId: string;
+  userId: string;
+  status: "ACTIVE" | "REVOKED";
+  version: number;
+}
+
+export interface OperationalBranchComparisonRow {
+  branchId: string;
+  code: string;
+  name: string;
+  timezone: string;
+  currency: string;
+  requestCount: number;
+  scheduledVisitCount: number;
+  paidInvoiceCount: number;
+  collectedMinor: number;
+  currencyMismatchCount: number;
+}
+
+export interface OperationalBranchComparison {
+  fromDate: string;
+  toDate: string;
+  rows: OperationalBranchComparisonRow[];
+  disclosure: string;
+}
+
 export interface OperationalStaffSnapshot {
   loadedAt: string;
   workspace: { id: string; slug: string; name: string; timezone: string };
   actor: ActorContext;
+  branchScope?: OperationalBranchScope;
+  branchAssignments?: OperationalBranchAssignment[];
+  branchComparison?: OperationalBranchComparison;
   customers: OperationalCustomer[];
   customerContacts?: OperationalCustomerContact[];
   communicationConsents?: OperationalCommunicationConsent[];
@@ -250,8 +299,8 @@ export interface OperationalStaffSnapshot {
   recurrenceRules: OperationalRecurrence[];
   serviceCatalog: OperationalServiceCatalogItem[];
   integrations: OperationalIntegrationHealth[];
-  crews: Array<{ id: string; name: string; active: boolean }>;
-  capacitySlots: Array<{ id: string; crewId: string; startAt: string; endAt: string; capacityMinutes: number }>;
+  crews: Array<{ id: string; branchId?: string; name: string; active: boolean }>;
+  capacitySlots: Array<{ id: string; branchId?: string; crewId: string; startAt: string; endAt: string; capacityMinutes: number }>;
   slotHolds: Array<{ id: string; slotId: string; quoteId: string; status: string; expiresAt: string }>;
   visitEvidence: Array<{ id: string; visitId: string; kind: string; capturedAt: string; text?: string }>;
   visitChecklistItems: Array<{ id: string; visitId: string; itemKey: string; completed: boolean; note?: string; version: number }>;
@@ -302,10 +351,11 @@ function safeCoreFailure(
 }
 
 export interface ResolvedStaffActor {
-  workspace: { id: string; slug: string; name: string; timezone: string };
+  workspace: { id: string; slug: string; name: string; timezone: string; currency: string };
   actor: ActorContext;
   service: SupabaseClient;
   rpc: SupabaseRpcClient;
+  branchScope: OperationalBranchScope;
 }
 
 function textValue(row: Row, key: string): string | undefined {
@@ -332,6 +382,83 @@ function runtimeConfig() {
   return { url, anonKey, serviceRoleKey };
 }
 
+function branchCookieName(workspaceId: string) {
+  return `servicedesk_branch_${workspaceId}`;
+}
+
+function mapBranch(row: Row): OperationalBranch {
+  return {
+    id: String(row.id),
+    code: String(row.code),
+    name: String(row.name),
+    timezone: String(row.timezone),
+    currency: String(row.currency),
+    isDefault: row.is_default === true,
+  };
+}
+
+async function resolveOperationalBranchScope(input: {
+  service: SupabaseClient;
+  workspaceId: string;
+  userId: string;
+  role: "OWNER" | "DISPATCHER";
+  cookieValue?: string;
+}): Promise<
+  | { ok: true; value: OperationalBranchScope }
+  | { ok: false; kind: "authorization" | "server"; message: string }
+> {
+  const branchRead = await input.service
+    .from("workspace_branches")
+    .select("id,code,name,timezone,currency,is_default,active")
+    .eq("workspace_id", input.workspaceId)
+    .eq("active", true)
+    .order("is_default", { ascending: false })
+    .order("code", { ascending: true });
+
+  if (branchRead.error?.code === "42P01") {
+    return { ok: true, value: { mode: "LEGACY", branches: [] } };
+  }
+  if (branchRead.error) {
+    return { ok: false, kind: "server", message: "Branch access could not be loaded." };
+  }
+
+  const allBranches = rows(branchRead.data).map(mapBranch);
+  if (allBranches.length === 0) {
+    return { ok: false, kind: "server", message: "This workspace has no active branch." };
+  }
+
+  if (input.role === "OWNER") {
+    const requested = input.cookieValue?.trim();
+    if (requested && requested !== "ALL" && allBranches.some((branch) => branch.id === requested)) {
+      return { ok: true, value: { mode: "BRANCH", branches: allBranches, selectedBranchId: requested } };
+    }
+    return { ok: true, value: { mode: "ALL", branches: allBranches } };
+  }
+
+  const membershipRead = await input.service
+    .from("branch_memberships")
+    .select("branch_id,status")
+    .eq("workspace_id", input.workspaceId)
+    .eq("user_id", input.userId)
+    .eq("status", "ACTIVE");
+
+  if (membershipRead.error) {
+    return { ok: false, kind: "server", message: "Branch assignment could not be verified." };
+  }
+  const allowed = new Set(rows(membershipRead.data).map((row) => String(row.branch_id)));
+  const branches = allBranches.filter((branch) => allowed.has(branch.id));
+  if (branches.length === 0) {
+    return { ok: false, kind: "authorization", message: "Your dispatcher account has no active branch assignment." };
+  }
+
+  const requested = input.cookieValue?.trim();
+  const selected = requested && branches.some((branch) => branch.id === requested)
+    ? requested
+    : branches.find((branch) => branch.isDefault)?.id ?? branches[0].id;
+
+  return { ok: true, value: { mode: "BRANCH", branches, selectedBranchId: selected } };
+}
+
 export async function resolveStaffActor(workspaceSlug: string): Promise<
   { ok: true; value: ResolvedStaffActor } | Extract<OperationalRuntimeResult, { ok: false }>
 > {
@@ -352,7 +479,7 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
         return cookieStore.getAll();
       },
       setAll() {
-        // Cookie refresh is owned by the future authentication middleware.
+        // Cookie refresh is owned by middleware.
       },
     },
   });
@@ -372,7 +499,7 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
 
   const workspaceResult = await service
     .from("workspaces")
-    .select("id,slug,name,timezone")
+    .select("id,slug,name,timezone,currency")
     .eq("slug", workspaceSlug)
     .maybeSingle();
 
@@ -383,7 +510,13 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
     return { ok: false, kind: "not_found", message: "This workspace does not exist." };
   }
 
-  const workspace = workspaceResult.data as { id: string; slug: string; name: string; timezone: string };
+  const workspace = workspaceResult.data as {
+    id: string;
+    slug: string;
+    name: string;
+    timezone: string;
+    currency: string;
+  };
   const membershipResult = await service
     .from("memberships")
     .select("role,status")
@@ -413,6 +546,14 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
     userId: authData.user.id,
     role: membership.role,
   };
+  const branchScope = await resolveOperationalBranchScope({
+    service,
+    workspaceId: workspace.id,
+    userId: authData.user.id,
+    role: membership.role,
+    cookieValue: cookieStore.get(branchCookieName(workspace.id))?.value,
+  });
+  if (!branchScope.ok) return branchScope;
 
   return {
     ok: true,
@@ -421,8 +562,54 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
       actor,
       service,
       rpc: service as unknown as SupabaseRpcClient,
+      branchScope: branchScope.value,
     },
   };
+}
+
+export async function loadOperationalBranchScope(workspaceSlug: string): Promise<
+  { ok: true; value: { actor: ActorContext; branchScope: OperationalBranchScope } }
+  | { ok: false; kind: "configuration" | "authentication" | "authorization" | "not_found" | "server"; message: string }
+> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return resolved;
+  return {
+    ok: true,
+    value: {
+      actor: resolved.value.actor,
+      branchScope: resolved.value.branchScope,
+    },
+  };
+}
+
+export async function setOperationalBranchScope(
+  workspaceSlug: string,
+  requestedScope: string,
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const { actor, workspace, branchScope } = resolved.value;
+  if (branchScope.mode === "LEGACY") {
+    return { ok: false, message: "Branch controls are not available in this environment yet." };
+  }
+
+  const requested = requestedScope.trim();
+  if (requested === "ALL") {
+    if (actor.role !== "OWNER") {
+      return { ok: false, message: "Only an owner can open the company-wide branch view." };
+    }
+  } else if (!branchScope.branches.some((branch) => branch.id === requested)) {
+    return { ok: false, message: "You do not have access to that branch." };
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(branchCookieName(workspace.id), requested, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/app/",
+  });
+  return { ok: true, message: requested === "ALL" ? "Company-wide view selected." : "Branch view selected." };
 }
 
 function mapConversation(row: Row, workspaceId: string): ConversationDTO {
@@ -472,7 +659,7 @@ function mapInvoice(row: Row, workspaceId: string): OperationalInvoice {
 export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promise<OperationalRuntimeResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return resolved;
-  const { workspace, actor, service, rpc } = resolved.value;
+  const { workspace, actor, service, rpc, branchScope } = resolved.value;
 
   const tableReads = await Promise.all([
     service
@@ -516,7 +703,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       .limit(300),
     service.from("quality_cases").select("*").eq("workspace_id", workspace.id).order("updated_at", { ascending: false }).limit(300),
     service.from("recurrence_rules").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(100),
-    service.from("crews").select("id,name,active").eq("workspace_id", workspace.id).order("name", { ascending: true }).limit(100),
+    service.from("crews").select("*").eq("workspace_id", workspace.id).order("name", { ascending: true }).limit(100),
     service.from("capacity_slots").select("*").eq("workspace_id", workspace.id).order("starts_at", { ascending: true }).limit(300),
     service.from("slot_holds").select("*").eq("workspace_id", workspace.id).order("created_at", { ascending: false }).limit(300),
     service.from("visit_evidence").select("*").eq("workspace_id", workspace.id).order("captured_at", { ascending: false }).limit(1000),
@@ -566,31 +753,127 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   const retentionControlRows = retentionAvailable ? rows(retentionControlRead.data) : [];
   const consentRows = retentionAvailable ? rows(consentRead.data) : [];
 
+  let branchAssignments: OperationalBranchAssignment[] = [];
+  if (branchScope.mode !== "LEGACY" && actor.role === "OWNER") {
+    const assignmentRead = await service
+      .from("branch_memberships")
+      .select("branch_id,user_id,status,version")
+      .eq("workspace_id", workspace.id)
+      .order("branch_id", { ascending: true });
+    if (!assignmentRead.error) {
+      branchAssignments = rows(assignmentRead.data)
+        .filter((row) => row.status === "ACTIVE" || row.status === "REVOKED")
+        .map((row) => ({
+          branchId: String(row.branch_id),
+          userId: String(row.user_id),
+          status: String(row.status) as OperationalBranchAssignment["status"],
+          version: numberValue(row, "version", 1),
+        }));
+    }
+  }
+
   const failedRead = tableReads.find((result) => result.error);
   if (failedRead?.error) {
     return { ok: false, kind: "server", message: "Workspace records could not be loaded. Try again shortly, or check the workspace connection in Settings." };
   }
 
   const [
-    customerRows,
-    contactRows,
-    propertyRows,
+    rawCustomerRows,
+    rawContactRows,
+    rawPropertyRows,
     serviceRows,
-    requestRows,
-    quoteRows,
-    visitRows,
-    invoiceRows,
-    conversationRows,
-    messageRows,
-    attentionRows,
-    qualityRows,
-    recurrenceRows,
-    crewRows,
-    capacityRows,
-    holdRows,
-    evidenceRows,
-    checklistRows,
+    rawRequestRows,
+    rawQuoteRows,
+    rawVisitRows,
+    rawInvoiceRows,
+    rawConversationRows,
+    rawMessageRows,
+    rawAttentionRows,
+    rawQualityRows,
+    rawRecurrenceRows,
+    rawCrewRows,
+    rawCapacityRows,
+    rawHoldRows,
+    rawEvidenceRows,
+    rawChecklistRows,
   ] = tableReads.map((result) => rows(result.data));
+
+  const selectedBranch = branchScope.mode === "BRANCH"
+    ? branchScope.branches.find((branch) => branch.id === branchScope.selectedBranchId)
+    : undefined;
+  if (branchScope.mode === "BRANCH" && !selectedBranch) {
+    return { ok: false, kind: "authorization", message: "The selected branch is no longer available to your account." };
+  }
+  const branchId = selectedBranch?.id;
+  const inSelectedBranch = (row: Row) => !branchId || String(row.branch_id ?? "") === branchId;
+
+  const propertyRows = rawPropertyRows.filter(inSelectedBranch);
+  const requestRows = rawRequestRows.filter(inSelectedBranch);
+  const requestIds = new Set(requestRows.map((row) => String(row.id)));
+  const quoteRows = branchId
+    ? rawQuoteRows.filter((row) => requestIds.has(String(row.request_id)))
+    : rawQuoteRows;
+  const quoteIds = new Set(quoteRows.map((row) => String(row.id)));
+  const visitRows = rawVisitRows.filter(inSelectedBranch);
+  const visitIds = new Set(visitRows.map((row) => String(row.id)));
+  const conversationRows = rawConversationRows.filter(inSelectedBranch);
+  const conversationIds = new Set(conversationRows.map((row) => String(row.id)));
+  const recurrenceRows = rawRecurrenceRows.filter(inSelectedBranch);
+  const crewRows = rawCrewRows.filter(inSelectedBranch);
+  const capacityRows = rawCapacityRows.filter(inSelectedBranch);
+  const capacityIds = new Set(capacityRows.map((row) => String(row.id)));
+  const invoiceRows = branchId
+    ? rawInvoiceRows.filter((row) =>
+        (row.visit_id && visitIds.has(String(row.visit_id)))
+        || (row.quote_id && quoteIds.has(String(row.quote_id))))
+    : rawInvoiceRows;
+  const invoiceIds = new Set(invoiceRows.map((row) => String(row.id)));
+  const messageRows = branchId
+    ? rawMessageRows.filter((row) => conversationIds.has(String(row.conversation_id)))
+    : rawMessageRows;
+  const holdRows = branchId
+    ? rawHoldRows.filter((row) =>
+        capacityIds.has(String(row.slot_id)) || quoteIds.has(String(row.quote_id)))
+    : rawHoldRows;
+  const evidenceRows = branchId
+    ? rawEvidenceRows.filter((row) => visitIds.has(String(row.visit_id)))
+    : rawEvidenceRows;
+  const checklistRows = branchId
+    ? rawChecklistRows.filter((row) => visitIds.has(String(row.visit_id)))
+    : rawChecklistRows;
+  const qualityRows = branchId
+    ? rawQualityRows.filter((row) => visitIds.has(String(row.visit_id)))
+    : rawQualityRows;
+  const qualityIds = new Set(qualityRows.map((row) => String(row.id)));
+
+  const scopedCustomerIds = new Set<string>();
+  for (const row of propertyRows) scopedCustomerIds.add(String(row.customer_id));
+  for (const row of requestRows) if (row.customer_id) scopedCustomerIds.add(String(row.customer_id));
+  for (const row of conversationRows) if (row.customer_id) scopedCustomerIds.add(String(row.customer_id));
+  const customerRows = branchId
+    ? rawCustomerRows.filter((row) => scopedCustomerIds.has(String(row.id)))
+    : rawCustomerRows;
+  const activeCustomerIds = new Set(customerRows.map((row) => String(row.id)));
+  const contactRows = branchId
+    ? rawContactRows.filter((row) => activeCustomerIds.has(String(row.customer_id)))
+    : rawContactRows;
+
+  const propertyIds = new Set(propertyRows.map((row) => String(row.id)));
+  const attentionRows = branchId
+    ? rawAttentionRows.filter((row) => {
+        const type = String(row.resource_type ?? "").toLowerCase();
+        const id = String(row.resource_id ?? "");
+        if (type === "customer") return activeCustomerIds.has(id);
+        if (type === "property") return propertyIds.has(id);
+        if (type === "request") return requestIds.has(id);
+        if (type === "quote") return quoteIds.has(id);
+        if (type === "visit" || type === "job") return visitIds.has(id);
+        if (type === "conversation") return conversationIds.has(id);
+        if (type === "invoice") return invoiceIds.has(id);
+        if (type === "quality" || type === "quality_case") return qualityIds.has(id);
+        return false;
+      })
+    : rawAttentionRows;
 
   const serviceById = new Map(serviceRows.map((row) => [String(row.id), row]));
   const customers: OperationalCustomer[] = customerRows.map((row) => ({
@@ -598,7 +881,6 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     displayName: textValue(row, "display_name") ?? "Unnamed customer",
     leadSource: textValue(row, "lead_source"),
   }));
-  const activeCustomerIds = new Set(customers.map((customer) => customer.id));
   const verifiedIdentityCustomers = new Map<string, Set<string>>();
   for (const row of contactRows) {
     const customerId = String(row.customer_id);
@@ -634,6 +916,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     });
   const latestConsentByCustomerChannel = new Map<string, OperationalCommunicationConsent>();
   for (const row of consentRows) {
+    if (branchId && !activeCustomerIds.has(String(row.customer_id))) continue;
     const channel = String(row.channel);
     const status = String(row.status);
     if ((channel !== "EMAIL" && channel !== "WHATSAPP")
@@ -651,6 +934,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   }
   const communicationConsents = [...latestConsentByCustomerChannel.values()];
   const retentionControls: OperationalRetentionControl[] = retentionControlRows
+    .filter((row) => !branchId || activeCustomerIds.has(String(row.customer_id)))
     .filter((row) => ["EMAIL", "WHATSAPP"].includes(String(row.channel)))
     .filter((row) => ["ACTIVE", "PAUSED", "SUPPRESSED"].includes(String(row.status)))
     .map((row) => ({
@@ -661,7 +945,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       untilAt: textValue(row, "until_at"),
       version: numberValue(row, "version", 1),
     }));
-  const retentionCampaigns: OperationalRetentionCampaign[] = campaignRows
+  const retentionCampaigns: OperationalRetentionCampaign[] = (branchId ? [] : campaignRows)
     .filter((row) => ["EMAIL", "WHATSAPP"].includes(String(row.channel)))
     .filter((row) => ["FOLLOW_UP", "REVIEW_REQUEST", "REFERRAL_NUDGE"].includes(String(row.purpose)))
     .filter((row) => ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED"].includes(String(row.status)))
@@ -682,6 +966,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
 
   const properties: OperationalProperty[] = propertyRows.map((row) => ({
     id: String(row.id),
+    branchId: textValue(row, "branch_id"),
     customerId: String(row.customer_id),
     label: textValue(row, "label") ?? "Property",
     address: [textValue(row, "address_line1"), textValue(row, "city"), textValue(row, "postal_code")]
@@ -697,6 +982,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       : {};
     return {
       id: String(row.id),
+      branchId: textValue(row, "branch_id"),
       customerId: textValue(row, "customer_id"),
       propertyId: textValue(row, "property_id"),
       serviceCode: serviceRow ? textValue(serviceRow, "code") : undefined,
@@ -732,6 +1018,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     validUntil: textValue(row, "valid_until"),
   }));
   const photoAssets: OperationalPhotoAsset[] = photoAssetRows
+    .filter((row) => !branchId || requestIds.has(String(row.request_id)))
     .filter((row) => ["CUSTOMER_UPLOAD", "WHATSAPP_MEDIA_REFERENCE"].includes(String(row.source)))
     .map((row) => ({
       id: String(row.id),
@@ -746,7 +1033,9 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       version: numberValue(row, "version", 1),
       createdAt: String(row.created_at),
     }));
-  const photoSuggestions: OperationalPhotoSuggestion[] = photoSuggestionRows.map((row) => ({
+  const photoSuggestions: OperationalPhotoSuggestion[] = photoSuggestionRows
+    .filter((row) => !branchId || requestIds.has(String(row.request_id)))
+    .map((row) => ({
     id: String(row.id),
     requestId: String(row.request_id),
     photoAssetId: String(row.photo_asset_id),
@@ -769,6 +1058,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     return {
       id: String(row.id),
       workspaceId: workspace.id,
+      branchId: textValue(row, "branch_id"),
       requestId: String(row.request_id),
       quoteId: String(row.quote_id),
       crewId: textValue(row, "crew_id"),
@@ -800,8 +1090,48 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       },
     }),
   ]);
+  let branchComparison: OperationalBranchComparison | undefined;
+  if (actor.role === "OWNER" && branchScope.mode === "ALL") {
+    const fromDate = from.slice(0, 10);
+    const toDate = now.toISOString().slice(0, 10);
+    const comparisonRead = await rpc.rpc<Row>("servicedesk_read_branch_comparison_report", {
+      p_input: {
+        workspaceId: workspace.id,
+        actorUserId: actor.userId,
+        actorRole: actor.role,
+        fromDate,
+        toDate,
+      },
+    });
+    if (!comparisonRead.error && comparisonRead.data?.ok === true) {
+      const comparisonRows = Array.isArray(comparisonRead.data.rows)
+        ? comparisonRead.data.rows.filter((value): value is Row => Boolean(value) && typeof value === "object" && !Array.isArray(value))
+        : [];
+      branchComparison = {
+        fromDate: String(comparisonRead.data.fromDate ?? fromDate),
+        toDate: String(comparisonRead.data.toDate ?? toDate),
+        disclosure: String(
+          comparisonRead.data.disclosure
+          ?? "Each branch is measured in its own timezone and native currency. Cross-currency totals are not combined without explicit FX truth.",
+        ),
+        rows: comparisonRows.map((row) => ({
+          branchId: String(row.branchId),
+          code: String(row.code),
+          name: String(row.name),
+          timezone: String(row.timezone),
+          currency: String(row.currency),
+          requestCount: numberValue(row, "requestCount"),
+          scheduledVisitCount: numberValue(row, "scheduledVisitCount"),
+          paidInvoiceCount: numberValue(row, "paidInvoiceCount"),
+          collectedMinor: numberValue(row, "collectedMinor"),
+          currencyMismatchCount: numberValue(row, "currencyMismatchCount"),
+        })),
+      };
+    }
+  }
+
   let referralAttribution: OperationalReferralAttributionSummary | undefined;
-  if (!attributionRead.error && attributionRead.data?.ok === true) {
+  if (!branchId && !attributionRead.error && attributionRead.data?.ok === true) {
     const attributionRows = Array.isArray(attributionRead.data.rows)
       ? attributionRead.data.rows.filter((value): value is Row => Boolean(value) && typeof value === "object" && !Array.isArray(value))
       : [];
@@ -826,8 +1156,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     ok: true,
     value: {
       loadedAt: now.toISOString(),
-      workspace,
+      workspace: selectedBranch ? { ...workspace, timezone: selectedBranch.timezone } : workspace,
       actor,
+      branchScope,
+      branchAssignments,
+      branchComparison,
       customers,
       customerContacts,
       communicationConsents,
@@ -870,6 +1203,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       })),
       recurrenceRules: recurrenceRows.map((row) => ({
         id: String(row.id),
+        branchId: textValue(row, "branch_id"),
         requestId: String(row.request_id),
         propertyId: String(row.property_id),
         frequency: String(row.frequency),
@@ -888,11 +1222,13 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       integrations: buildOperationalIntegrationHealth(),
       crews: crewRows.map((row) => ({
         id: String(row.id),
+        branchId: textValue(row, "branch_id"),
         name: String(row.name ?? "Crew"),
         active: Boolean(row.active),
       })),
       capacitySlots: capacityRows.map((row) => ({
         id: String(row.id),
+        branchId: textValue(row, "branch_id"),
         crewId: String(row.crew_id),
         startAt: String(row.starts_at),
         endAt: String(row.ends_at),
@@ -920,11 +1256,139 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         note: textValue(row, "note"),
         version: numberValue(row, "version", 1),
       })),
-      reporting: reportingResult.ok ? reportingResult.value : undefined,
+      reporting: !branchId && reportingResult.ok ? reportingResult.value : undefined,
       platformBilling: billingResult.ok ? billingResult.value : undefined,
       ownerSettings: settingsResult.ok ? settingsResult.value : undefined,
     },
   };
+}
+
+type OperationalBranchResourceKind =
+  | "conversation"
+  | "request"
+  | "quote"
+  | "invoice"
+  | "quality"
+  | "visit"
+  | "crew"
+  | "capacity"
+  | "recurrence"
+  | "photoSuggestion"
+  | "voiceIntake"
+  | "customer";
+
+async function operationalResourceBranchId(
+  resolved: ResolvedStaffActor,
+  kind: OperationalBranchResourceKind,
+  id: string,
+): Promise<string | undefined> {
+  const workspaceId = resolved.workspace.id;
+
+  if (kind === "quote") {
+    const quote = await resolved.service.from("quotes")
+      .select("request_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (quote.error || !quote.data?.request_id) return undefined;
+    return operationalResourceBranchId(resolved, "request", String(quote.data.request_id));
+  }
+
+  if (kind === "invoice") {
+    const invoice = await resolved.service.from("invoices")
+      .select("visit_id,quote_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (invoice.error || !invoice.data) return undefined;
+    if (invoice.data.visit_id) {
+      return operationalResourceBranchId(resolved, "visit", String(invoice.data.visit_id));
+    }
+    if (invoice.data.quote_id) {
+      return operationalResourceBranchId(resolved, "quote", String(invoice.data.quote_id));
+    }
+    return undefined;
+  }
+
+  if (kind === "quality") {
+    const quality = await resolved.service.from("quality_cases")
+      .select("visit_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (quality.error || !quality.data?.visit_id) return undefined;
+    return operationalResourceBranchId(resolved, "visit", String(quality.data.visit_id));
+  }
+
+  if (kind === "photoSuggestion") {
+    const suggestion = await resolved.service.from("request_photo_suggestions")
+      .select("request_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (suggestion.error || !suggestion.data?.request_id) return undefined;
+    return operationalResourceBranchId(resolved, "request", String(suggestion.data.request_id));
+  }
+
+  if (kind === "voiceIntake") {
+    const intake = await resolved.service.from("voice_call_intakes")
+      .select("request_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (intake.error || !intake.data?.request_id) return undefined;
+    return operationalResourceBranchId(resolved, "request", String(intake.data.request_id));
+  }
+
+  if (kind === "customer") {
+    for (const table of ["properties", "requests", "conversations"] as const) {
+      const found = await resolved.service.from(table)
+        .select("branch_id")
+        .eq("workspace_id", workspaceId)
+        .eq("customer_id", id)
+        .eq("branch_id", resolved.branchScope.selectedBranchId ?? "")
+        .limit(1);
+      if (!found.error && rows(found.data).length > 0) {
+        return resolved.branchScope.selectedBranchId;
+      }
+    }
+    return undefined;
+  }
+
+  const tableByKind = {
+    conversation: "conversations",
+    request: "requests",
+    visit: "visits",
+    crew: "crews",
+    capacity: "capacity_slots",
+    recurrence: "recurrence_rules",
+  } as const;
+  const table = tableByKind[kind as keyof typeof tableByKind];
+  if (!table) return undefined;
+  const found = await resolved.service.from(table)
+    .select("branch_id")
+    .eq("workspace_id", workspaceId)
+    .eq("id", id)
+    .maybeSingle();
+  if (found.error || !found.data) return undefined;
+  return textValue(found.data as Row, "branch_id");
+}
+
+export async function requireOperationalBranchResource(
+  resolved: ResolvedStaffActor,
+  kind: OperationalBranchResourceKind,
+  id: string,
+): Promise<OperationalActionResult | undefined> {
+  if (resolved.branchScope.mode !== "BRANCH") return undefined;
+  const selected = resolved.branchScope.selectedBranchId;
+  if (!selected) {
+    return { ok: false, message: "Your active branch scope is no longer valid. Refresh the workspace." };
+  }
+  const resourceBranch = await operationalResourceBranchId(resolved, kind, id);
+  if (!resourceBranch || resourceBranch !== selected) {
+    return { ok: false, message: "This record is not available in your selected branch." };
+  }
+  return undefined;
 }
 
 async function loadConversationForAction(resolved: ResolvedStaffActor, conversationId: string) {
@@ -943,6 +1407,8 @@ export async function toggleInboxHandover(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "conversation", conversationId);
+  if (branchAccess) return branchAccess;
   const current = await loadConversationForAction(resolved.value, conversationId);
   if (current.error || !current.data) return { ok: false, message: "The conversation is no longer available." };
   const facade = createPostgresConversationFacadeMethods(resolved.value.rpc);
@@ -970,6 +1436,8 @@ export async function enqueueInboxReply(
   if (!trimmed) return { ok: false, message: "Write a reply before sending." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "conversation", conversationId);
+  if (branchAccess) return branchAccess;
   const current = await loadConversationForAction(resolved.value, conversationId);
   if (current.error || !current.data) return { ok: false, message: "The conversation is no longer available." };
   const channel = String(current.data.channel);
@@ -998,6 +1466,8 @@ export async function sendOperationalQuote(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "quote", quoteId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("quotes")
     .select("id,status,version")
@@ -1030,6 +1500,8 @@ export async function applyOperationalManualPayment(
   if (!reference.trim()) return { ok: false, message: "A payment reference is required." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "invoice", invoiceId);
+  if (branchAccess) return branchAccess;
   const invoice = await resolved.value.service
     .from("invoices")
     .select("id,currency,balance_minor,status")
@@ -1063,6 +1535,8 @@ export async function applyOperationalQualityAction(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "quality", qualityCaseId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("quality_cases")
     .select("id,version")
@@ -1098,6 +1572,8 @@ export async function calculateOperationalQuote(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "request", requestId);
+  if (branchAccess) return branchAccess;
   const facade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc);
   const result = await facade.calculateQuote(resolved.value.actor, requestId);
   return result.ok
@@ -1112,6 +1588,10 @@ export async function holdOperationalSlot(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const quoteBranchAccess = await requireOperationalBranchResource(resolved.value, "quote", quoteId);
+  if (quoteBranchAccess) return quoteBranchAccess;
+  const slotBranchAccess = await requireOperationalBranchResource(resolved.value, "capacity", slotId);
+  if (slotBranchAccess) return slotBranchAccess;
   const quote = await resolved.value.service
     .from("quotes")
     .select("id,status,version")
@@ -1145,6 +1625,10 @@ export async function assignOperationalCrew(
   }
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const visitBranchAccess = await requireOperationalBranchResource(resolved.value, "visit", visitId);
+  if (visitBranchAccess) return visitBranchAccess;
+  const crewBranchAccess = await requireOperationalBranchResource(resolved.value, "crew", crewId);
+  if (crewBranchAccess) return crewBranchAccess;
   const facade = createPostgresVisitFieldRuntimeFacadeMethods(resolved.value.rpc);
   const result = await facade.assignCrew(
     resolved.value.actor,
@@ -1168,6 +1652,8 @@ export async function transitionOperationalVisit(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "visit", visitId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("visits")
     .select("id,version")
@@ -1202,6 +1688,8 @@ export async function addOperationalVisitNote(
   if (!trimmed) return { ok: false, message: "Add a note before saving." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "visit", visitId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("visits")
     .select("id,version")
@@ -1234,6 +1722,8 @@ export async function setOperationalChecklistItem(
   if (!key) return { ok: false, message: "Checklist item name is required." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "visit", visitId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("visits")
     .select("id,version")
@@ -1263,6 +1753,8 @@ export async function applyOperationalRecurrenceAction(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "recurrence", ruleId);
+  if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("recurrence_rules")
     .select("id,version,status")
@@ -1465,6 +1957,8 @@ export async function setOperationalVoiceCallbackState(
 
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "voiceIntake", id);
+  if (branchAccess) return branchAccess;
 
   const result = await createPostgresVoiceMissedCallCommandPort(resolved.value.rpc)
     .setVoiceCallbackState(resolved.value.actor, {
@@ -1501,6 +1995,8 @@ export async function resolveOperationalConversationIdentity(
 
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "conversation", id);
+  if (branchAccess) return branchAccess;
 
   const { data, error } = await resolved.value.rpc.rpc<Row>(
     "servicedesk_resolve_conversation_verified_identity",
@@ -1561,6 +2057,8 @@ export async function reviewOperationalPhotoSuggestion(
   }
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "photoSuggestion", suggestionId);
+  if (branchAccess) return branchAccess;
 
   const { data, error } = await resolved.value.rpc.rpc<Row>(
     "servicedesk_review_request_photo_suggestion",
@@ -1723,6 +2221,8 @@ export async function setOperationalCustomerRetentionControl(
   if (!input.customerId.trim()) return { ok: false, message: "Customer is required." };
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchAccess = await requireOperationalBranchResource(resolved.value, "customer", input.customerId);
+  if (branchAccess) return branchAccess;
 
   const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_set_customer_retention_control", {
     p_input: {
@@ -1748,6 +2248,105 @@ export async function setOperationalCustomerRetentionControl(
       : input.status === "PAUSED"
         ? "Retention messages paused for this channel. Existing queued messages will be suppressed at dispatch time."
         : "Retention messages suppressed for this channel. Existing queued messages will be suppressed at dispatch time.",
+  };
+}
+
+export async function upsertOperationalBranch(
+  workspaceSlug: string,
+  input: {
+    branchId?: string;
+    expectedVersion?: number;
+    code: string;
+    name: string;
+    timezone: string;
+    currency: string;
+    active: boolean;
+  },
+): Promise<OperationalActionResult> {
+  const code = input.code.trim().toUpperCase();
+  const name = input.name.trim();
+  const timezone = input.timezone.trim();
+  const currency = input.currency.trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(code)
+      || !name || name.length > 120 || !timezone || !/^[A-Z]{3}$/.test(currency)) {
+    return { ok: false, message: "Branch code, name, timezone and three-letter currency are required." };
+  }
+
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can manage branches." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_upsert_workspace_branch", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      branchId: input.branchId || undefined,
+      expectedVersion: input.expectedVersion,
+      code,
+      name,
+      timezone,
+      currency,
+      active: input.active,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    const codeValue = typeof data?.code === "string" ? data.code : "";
+    if (codeValue === "VERSION_CONFLICT") {
+      return { ok: false, message: "This branch changed since the page loaded. Refresh and try again." };
+    }
+    if (codeValue === "DEFAULT_BRANCH_REQUIRED") {
+      return { ok: false, message: "The default branch cannot be disabled." };
+    }
+    if (codeValue === "BRANCH_TIMEZONE_INVALID") {
+      return { ok: false, message: "Use a valid IANA timezone such as America/New_York." };
+    }
+    return { ok: false, message: "Branch settings could not be saved." };
+  }
+  return { ok: true, message: "Branch settings saved." };
+}
+
+export async function setOperationalBranchMembership(
+  workspaceSlug: string,
+  input: { branchId: string; userId: string; status: "ACTIVE" | "REVOKED" },
+): Promise<OperationalActionResult> {
+  if (!input.branchId.trim() || !input.userId.trim()) {
+    return { ok: false, message: "Branch and staff member are required." };
+  }
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can manage branch assignments." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_set_branch_membership", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      branchId: input.branchId,
+      userId: input.userId,
+      status: input.status,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    const codeValue = typeof data?.code === "string" ? data.code : "";
+    if (codeValue === "OWNER_BRANCH_ASSIGNMENT_NOT_REQUIRED") {
+      return { ok: false, message: "Owners already have company-wide branch access." };
+    }
+    if (codeValue === "STAFF_MEMBERSHIP_NOT_FOUND") {
+      return { ok: false, message: "That staff account is no longer an active workspace member." };
+    }
+    return { ok: false, message: "Branch assignment could not be updated." };
+  }
+
+  return {
+    ok: true,
+    message: input.status === "ACTIVE" ? "Staff branch access granted." : "Staff branch access revoked.",
   };
 }
 
