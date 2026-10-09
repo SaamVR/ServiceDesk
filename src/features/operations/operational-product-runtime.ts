@@ -2947,6 +2947,9 @@ export async function setOperationalServiceCatalogDelegation(
     if (code === "DELEGATE_MEMBER_INVALID") {
       return { ok: false, message: "Delegation is available only to an active dispatcher." };
     }
+    if (code === "DELEGATE_ALL_BRANCHES_REQUIRED") {
+      return { ok: false, message: "Because the service catalog is workspace-wide, delegation requires this dispatcher to be assigned to every active branch." };
+    }
     if (code === "DELEGATION_EXPIRY_INVALID") {
       return { ok: false, message: "Delegation expiry must be in the future." };
     }

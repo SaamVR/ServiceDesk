@@ -29,8 +29,9 @@ describe("V2 2D.3 governance product", () => {
   it("shows only service-catalog delegation and states scope is not widened", () => {
     expect(route).toContain("Service-catalog management");
     expect(route).toContain("SERVICE_CATALOG_MANAGE");
-    expect(route).toContain("keeps their existing branch/tenant scope");
-    expect(route).toContain("This does not grant Owner access, all-branch access, workflow publishing, audit export, or support-access control.");
+    expect(route).toContain("already assigned to every active branch");
+    expect(route).toContain("The catalog is workspace-wide");
+    expect(route).toContain("does not grant Owner access or bypass tenant scope");
     expect(route).not.toContain("Delegate workflow");
     expect(route).not.toContain("Delegate retention");
   });
