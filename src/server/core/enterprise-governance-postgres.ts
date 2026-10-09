@@ -70,7 +70,7 @@ export function createPostgresEnterpriseGovernancePort(
       const status = text(data, "status");
       const version = typeof data.version === "number" ? data.version : Number.NaN;
       if (!userId
-          || !["SERVICE_CATALOG_MANAGE","WORKFLOW_MANAGE","RETENTION_MANAGE"].includes(capability ?? "")
+          || capability !== "SERVICE_CATALOG_MANAGE"
           || !["ACTIVE","REVOKED"].includes(status ?? "")
           || !Number.isInteger(version)) {
         return fail("GOVERNANCE_CAPABILITY_RPC_MALFORMED", "Governance capability response was malformed.");
