@@ -34,7 +34,13 @@ describe("V2 release health and Render readiness", () => {
     expect(yaml).toContain("SERVICEDESK_VOICE_ACCOUNT_WORKSPACE_MAP");
     expect(yaml).toContain("SERVICEDESK_EMAIL_INBOUND_PROOF_JSON");
     expect(yaml).toContain("SERVICEDESK_VOICE_INBOUND_PROOF_JSON");
-    expect(yaml.match(/sync: false/g)?.length).toBeGreaterThanOrEqual(9);
+    expect(yaml).toContain("SERVICEDESK_CANONICAL_RC_RECEIPT");
+    expect(yaml).toContain("SERVICEDESK_CANONICAL_RC_BUILD_SHA");
+    expect(yaml).toContain("SERVICEDESK_BROWSER_ACCEPTANCE_RECEIPT");
+    expect(yaml).toContain("SERVICEDESK_BROWSER_ACCEPTANCE_BUILD_SHA");
+    expect(yaml).toContain("SERVICEDESK_MIGRATION_REHEARSAL_RECEIPT");
+    expect(yaml).toContain("SERVICEDESK_MIGRATION_REHEARSAL_BUILD_SHA");
+    expect(yaml.match(/sync: false/g)?.length).toBeGreaterThanOrEqual(17);
     expect(yaml).not.toMatch(/preDeployCommand|supabase db push|migration up/i);
   });
 });
