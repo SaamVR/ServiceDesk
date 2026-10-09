@@ -3006,9 +3006,8 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
   const serviceCatalogGrant = (data.governanceCapabilities ?? []).find((grant) =>
     grant.userId === data.actor.userId
     && grant.capability === "SERVICE_CATALOG_MANAGE"
-    && grant.status === "ACTIVE"
-    && (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.parse(data.loadedAt)));
-  const canManageServiceCatalog = data.actor.role === "OWNER" || Boolean(serviceCatalogGrant);
+    && grant.status === "ACTIVE");
+  const canManageServiceCatalog = data.canManageServiceCatalog === true;
   const activeSupportGrants = (data.supportAccessGrants ?? []).filter((grant) =>
     !grant.revokedAt && Date.parse(grant.expiresAt) > Date.parse(data.loadedAt));
   const activeMembers = snapshot.members.filter((member) => member.active).length;
@@ -3542,17 +3541,33 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                           item.userId === member.userId
                           && item.capability === "SERVICE_CATALOG_MANAGE"
                           && item.status === "ACTIVE"
-                          && (!item.expiresAt || Date.parse(item.expiresAt) > Date.now()));
+                          && (!item.expiresAt || Date.parse(item.expiresAt) > Date.parse(data.loadedAt)));
+                        const activeBranchIds = new Set(
+                          (data.branchAssignments ?? [])
+                            .filter((assignment) => assignment.userId === member.userId && assignment.status === "ACTIVE")
+                            .map((assignment) => assignment.branchId),
+                        );
+                        const allBranchEligible = data.branchScope?.mode === "LEGACY"
+                          || (data.branchScope?.branches ?? []).every((branch) => activeBranchIds.has(branch.id));
                         return (
                           <article key={member.userId}>
                             <span>
                               <strong>Dispatcher {index + 1}</strong>
-                              <small>{grant ? "Service-catalog delegation active" : "No delegated management capability"}</small>
+                              <small>
+                                {grant
+                                  ? allBranchEligible
+                                    ? "Service-catalog delegation effective across all active branches"
+                                    : "Grant stored · inactive until assigned to every active branch"
+                                  : allBranchEligible
+                                    ? "Eligible for workspace-wide catalog delegation"
+                                    : "Assign every active branch before delegation"}
+                              </small>
                             </span>
                             <form action={serviceCatalogDelegationAction}>
                               <input name="userId" type="hidden" value={member.userId} />
                               <button
                                 className="app-button-secondary"
+                                disabled={!grant && !allBranchEligible}
                                 name="status"
                                 type="submit"
                                 value={grant ? "REVOKED" : "ACTIVE"}
@@ -3567,10 +3582,15 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         <div className={styles.settingsEmpty}><strong>No dispatchers</strong><p>Add an active dispatcher before delegating service-catalog management.</p></div>
                       ) : null}
                     </div>
-                  ) : serviceCatalogGrant ? (
+                  ) : canManageServiceCatalog && serviceCatalogGrant ? (
                     <div className={styles.integrationProofNote}>
                       <span aria-hidden="true">i</span>
-                      <p><strong>Delegated capability active.</strong> You may edit the service catalog. This does not grant Owner access, workflow publishing, audit export, support-access control, or access to another tenant. Because the catalog is workspace-wide, this delegation is valid only while you remain assigned to every active branch.</p>
+                      <p><strong>Delegated capability effective.</strong> You may edit the workspace-wide service catalog because you are assigned to every active branch. This does not grant Owner access, workflow publishing, audit export, support-access control, or access to another tenant.</p>
+                    </div>
+                  ) : serviceCatalogGrant ? (
+                    <div className={styles.settingsEmpty}>
+                      <strong>Delegation temporarily ineffective</strong>
+                      <p>The grant is stored, but workspace-wide catalog editing stays blocked until you are assigned to every active branch.</p>
                     </div>
                   ) : (
                     <div className={styles.settingsEmpty}><strong>No delegated governance capability</strong><p>Your dispatcher account retains its normal operational and branch scope.</p></div>
@@ -3580,8 +3600,8 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                 <section className={styles.governancePane}>
                   <div>
                     <p className={styles.adminSectionEyebrow}>Tenant support access</p>
-                    <h4>Temporary read-only support</h4>
-                    <p className={styles.adminHelp}>Owner-approved support access is limited to diagnostics or audit metadata, expires within 24 hours and never grants impersonation or write access.</p>
+                    <h4>Temporary support authorization</h4>
+                    <p className={styles.adminHelp}>Owner-approved support authorization is limited to diagnostics or audit metadata and expires within 24 hours. It does not create a support login or session; trusted support tooling must validate the exact subject hash before any read-only access.</p>
                   </div>
 
                   {data.actor.role === "OWNER" && data.governanceAvailable ? (
@@ -3613,7 +3633,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                           <span>Reason</span>
                           <input className="app-input" name="reason" minLength={4} maxLength={240} placeholder="Investigate provider delivery issue" required />
                         </label>
-                        <button className="app-button-primary" type="submit">Grant temporary read-only access</button>
+                        <button className="app-button-primary" type="submit">Authorize temporary read-only scope</button>
                       </form>
 
                       <div className={styles.governanceRows}>
