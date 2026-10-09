@@ -362,6 +362,109 @@ when invalid_text_representation or datetime_field_overflow then
 end;
 $$;
 
+create or replace function public.servicedesk_preview_workflow_rule_version(p_input jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
+  v_actor uuid := nullif(p_input->>'actorUserId','')::uuid;
+  v_role text := p_input->>'actorRole';
+  v_version_id uuid := nullif(p_input->>'ruleVersionId','')::uuid;
+  v_snapshot jsonb := p_input->'eventSnapshot';
+  v_now timestamptz := coalesce(nullif(p_input->>'now','')::timestamptz, now());
+  v_version public.workflow_rule_versions%rowtype;
+  v_validation jsonb;
+  v_condition jsonb;
+  v_actual jsonb;
+  v_matched boolean := true;
+  v_condition_match boolean;
+  v_execution_key text;
+  v_fingerprint text;
+  v_recorded jsonb;
+begin
+  if v_workspace is null or v_actor is null or v_role <> 'OWNER'
+     or v_version_id is null or v_snapshot is null
+  then
+    return jsonb_build_object('ok', false, 'code', 'WORKFLOW_PREVIEW_INPUT_INVALID');
+  end if;
+
+  select * into v_version
+  from public.workflow_rule_versions
+  where workspace_id = v_workspace and id = v_version_id;
+
+  if not found or v_version.state not in ('DRAFT','PUBLISHED') then
+    return jsonb_build_object('ok', false, 'code', 'WORKFLOW_PREVIEW_VERSION_INVALID');
+  end if;
+
+  if not public.servicedesk_actor_is_workspace_owner(v_workspace, v_actor, v_role)
+     or not public.servicedesk_actor_has_branch_access(
+       v_workspace, v_version.branch_id, v_actor, v_role,
+       array['OWNER']::public.membership_role[]
+     )
+  then
+    return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
+  end if;
+
+  v_validation := public.servicedesk_validate_workflow_event_snapshot(
+    v_version.event_type,
+    v_snapshot
+  );
+  if coalesce((v_validation->>'ok')::boolean,false) is false then
+    return v_validation;
+  end if;
+
+  for v_condition in select value from jsonb_array_elements(v_version.conditions)
+  loop
+    v_actual := v_snapshot -> (v_condition->>'field');
+    v_condition_match := case v_condition->>'operator'
+      when 'EQ' then v_actual = v_condition->'value'
+      when 'NEQ' then v_actual is distinct from v_condition->'value'
+      when 'IN' then exists (
+        select 1
+        from jsonb_array_elements(v_condition->'value') candidate
+        where candidate = v_actual
+      )
+      else false
+    end;
+    v_matched := v_matched and v_condition_match;
+  end loop;
+
+  v_fingerprint := md5(v_version.id::text || ':' || v_snapshot::text);
+  v_execution_key := 'preview:' || v_version.id::text || ':' || gen_random_uuid()::text;
+
+  v_recorded := public.servicedesk_record_workflow_execution(
+    jsonb_build_object(
+      'workspaceId', v_workspace,
+      'branchId', v_version.branch_id,
+      'ruleVersionId', v_version.id,
+      'mode', 'PREVIEW',
+      'executionKey', v_execution_key,
+      'eventFingerprint', v_fingerprint,
+      'eventSnapshot', v_snapshot,
+      'matched', v_matched,
+      'recursionDepth', 0,
+      'now', v_now
+    )
+  );
+
+  if coalesce((v_recorded->>'ok')::boolean,false) is false then
+    return v_recorded;
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'executionId', v_recorded->>'executionId',
+    'matched', v_matched,
+    'actionCount', coalesce((v_recorded->>'actionCount')::integer,0),
+    'eventType', v_version.event_type,
+    'previewOnly', true
+  );
+end;
+$;
+
 create or replace function public.servicedesk_approve_workflow_external_action(p_input jsonb)
 returns jsonb
 language plpgsql
@@ -703,12 +806,14 @@ $$;
 
 revoke all on function public.servicedesk_validate_workflow_event_snapshot(text, jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_record_workflow_execution(jsonb) from public, anon, authenticated;
+revoke all on function public.servicedesk_preview_workflow_rule_version(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_approve_workflow_external_action(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_execute_workflow_attention_action(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_mark_workflow_action_result(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_replay_failed_workflow_action(jsonb) from public, anon, authenticated;
 grant execute on function public.servicedesk_validate_workflow_event_snapshot(text, jsonb) to service_role;
 grant execute on function public.servicedesk_record_workflow_execution(jsonb) to service_role;
+grant execute on function public.servicedesk_preview_workflow_rule_version(jsonb) to service_role;
 grant execute on function public.servicedesk_approve_workflow_external_action(jsonb) to service_role;
 grant execute on function public.servicedesk_execute_workflow_attention_action(jsonb) to service_role;
 grant execute on function public.servicedesk_mark_workflow_action_result(jsonb) to service_role;
