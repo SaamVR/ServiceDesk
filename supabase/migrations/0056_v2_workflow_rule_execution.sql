@@ -125,6 +125,36 @@ using (
   )
 );
 
+
+create or replace function public.servicedesk_require_workflow_preview_before_publish()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+begin
+  if old.state = 'DRAFT' and new.state = 'PUBLISHED' and not exists (
+    select 1
+    from public.workflow_executions e
+    where e.workspace_id = old.workspace_id
+      and e.rule_version_id = old.id
+      and e.mode = 'PREVIEW'
+      and e.state = 'PREVIEWED'
+  ) then
+    raise exception 'workflow draft must be previewed before publish'
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists workflow_rule_versions_require_preview
+on public.workflow_rule_versions;
+create trigger workflow_rule_versions_require_preview
+before update of state on public.workflow_rule_versions
+for each row
+execute function public.servicedesk_require_workflow_preview_before_publish();
+
 create or replace function public.servicedesk_validate_workflow_event_snapshot(
   p_event_type text,
   p_snapshot jsonb
