@@ -4,7 +4,8 @@ import { resolveStaffActor } from "@/features/operations/operational-product-run
 type Row = Record<string, unknown>;
 
 function csvCell(value: unknown): string {
-  const text = value == null ? "" : String(value);
+  const raw = value == null ? "" : String(value);
+  const text = /^[=+\-@\t\r]/.test(raw) ? "'" + raw : raw;
   return '"' + text.replaceAll('"', '""') + '"';
 }
 
@@ -81,6 +82,7 @@ export async function GET(request: Request) {
       "content-disposition": 'attachment; filename="servicedesk-audit-metadata.csv"',
       "cache-control": "private, no-store, max-age=0",
       "x-content-type-options": "nosniff",
+      "x-servicedesk-export-truncated": data.truncated === true ? "true" : "false",
     },
   });
 }
