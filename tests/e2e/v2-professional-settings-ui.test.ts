@@ -11,16 +11,18 @@ describe("V2 professional workspace settings UI", () => {
     expect(route).toContain('href="#services"');
     expect(route).toContain('href="#team"');
     expect(route).toContain('href="#recurrence"');
+    expect(route).toContain('href="#governance"');
     expect(route).toContain('href="#integrations"');
     expect(route).toContain("Workspace configuration summary");
   });
 
-  it("keeps service catalog edits owner-only and stale-write protected", () => {
+  it("keeps service catalog edits explicitly authorized and stale-write protected", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
-    expect(route).toContain('data.actor.role === "OWNER"');
+    expect(route).toContain("canManageServiceCatalog");
+    expect(route).toContain('grant.capability === "SERVICE_CATALOG_MANAGE"');
     expect(route).toContain("updateOperationalServiceCatalogItem");
     expect(route).toContain('name="expectedUpdatedAt"');
-    expect(route).toContain("Only owners can make changes");
+    expect(route).toContain("Owner access or an active delegated service-catalog capability");
     expect(route).toContain("Show for new enquiries");
   });
 
