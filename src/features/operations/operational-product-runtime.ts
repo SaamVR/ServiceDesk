@@ -2515,3 +2515,288 @@ export async function setOperationalBranchMembership(
   };
 }
 
+function canActOnOperationalBranch(resolved: ResolvedStaffActor, branchId: string): boolean {
+  if (!branchId) return false;
+  if (resolved.actor.role === "OWNER") {
+    if (resolved.branchScope.mode === "BRANCH") return resolved.branchScope.selectedBranchId === branchId;
+    return resolved.branchScope.branches.some((branch) => branch.id === branchId);
+  }
+  return resolved.branchScope.mode === "BRANCH"
+    && resolved.branchScope.selectedBranchId === branchId
+    && resolved.branchScope.branches.some((branch) => branch.id === branchId);
+}
+
+export async function saveOperationalWorkflowDraft(
+  workspaceSlug: string,
+  input: {
+    branchId: string;
+    ruleId?: string;
+    expectedRuleVersion?: number;
+    code: string;
+    name: string;
+    eventType: "REQUEST_CREATED" | "QUOTE_ACCEPTED" | "VISIT_COMPLETED" | "INVOICE_PAID" | "ATTENTION_OPENED";
+    conditions: Array<{ field: string; operator: "EQ" | "NEQ" | "IN"; value: unknown }>;
+    actions: Array<Record<string, unknown>>;
+    maxActionsPerEvent: number;
+  },
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can create or revise workflow rules." };
+  }
+  if (!canActOnOperationalBranch(resolved.value, input.branchId)) {
+    return { ok: false, message: "Select an authorized branch before editing workflow rules." };
+  }
+  if (!/^[A-Z0-9][A-Z0-9_-]{2,63}$/.test(input.code.trim().toUpperCase())
+      || !input.name.trim()
+      || input.name.trim().length > 120
+      || !Number.isInteger(input.maxActionsPerEvent)
+      || input.maxActionsPerEvent < 1
+      || input.maxActionsPerEvent > 5
+      || input.actions.length < 1
+      || input.actions.length > input.maxActionsPerEvent
+      || input.conditions.length > 8) {
+    return { ok: false, message: "Workflow name, code, conditions or action cap is invalid." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_save_workflow_rule_draft", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      branchId: input.branchId,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      ruleId: input.ruleId,
+      expectedRuleVersion: input.expectedRuleVersion,
+      code: input.code.trim().toUpperCase(),
+      name: input.name.trim(),
+      eventType: input.eventType,
+      conditions: input.conditions,
+      actions: input.actions,
+      maxActionsPerEvent: input.maxActionsPerEvent,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error) {
+    return { ok: false, message: "Workflow draft could not be saved. Review the fixed event/condition/action catalogue." };
+  }
+  if (!data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "VERSION_CONFLICT") {
+      return { ok: false, message: "This rule changed since you opened it. Refresh and create the next draft again." };
+    }
+    if (code.includes("CATALOGUE") || code.includes("INVALID") || code.includes("UNSAFE")) {
+      return { ok: false, message: "The workflow definition contains an unsupported field or action. Only the fixed safe catalogue is allowed." };
+    }
+    return { ok: false, message: "Workflow draft was rejected by the rule authority." };
+  }
+
+  return {
+    ok: true,
+    message: data.hasExternalSend === true
+      ? "Draft saved. Preview it before publish; every external send will still require owner approval at execution time."
+      : "Draft saved. Preview it with synthetic event data before publishing.",
+  };
+}
+
+export async function previewOperationalWorkflowVersion(
+  workspaceSlug: string,
+  input: { versionId: string; branchId: string; eventSnapshot: Record<string, unknown> },
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can run workflow previews." };
+  }
+  if (!canActOnOperationalBranch(resolved.value, input.branchId)) {
+    return { ok: false, message: "This workflow version is outside the selected branch scope." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_preview_workflow_rule_version", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      ruleVersionId: input.versionId,
+      eventSnapshot: input.eventSnapshot,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error) return { ok: false, message: "Workflow preview could not be evaluated." };
+  if (!data || data.ok !== true) {
+    return { ok: false, message: "Workflow preview was rejected. Check the synthetic event fields for this event type." };
+  }
+
+  return {
+    ok: true,
+    message: data.matched === true
+      ? `Preview matched. ${numberValue(data, "actionCount")} action${numberValue(data, "actionCount") === 1 ? "" : "s"} would be planned; no live side effect ran.`
+      : "Preview did not match. No action would run, and no live side effect ran.",
+  };
+}
+
+export async function publishOperationalWorkflowVersion(
+  workspaceSlug: string,
+  input: { versionId: string; branchId: string },
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can publish workflow rules." };
+  }
+  if (!canActOnOperationalBranch(resolved.value, input.branchId)) {
+    return { ok: false, message: "This workflow version is outside the selected branch scope." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_publish_workflow_rule_version", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      versionId: input.versionId,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error) {
+    const message = error.message.toLowerCase();
+    return {
+      ok: false,
+      message: message.includes("preview")
+        ? "Preview this exact draft at least once before publishing it."
+        : "Workflow version could not be published.",
+    };
+  }
+  if (!data || data.ok !== true) {
+    return { ok: false, message: "Workflow version was rejected by the publish boundary." };
+  }
+  return { ok: true, message: "Workflow version published. Live events can now evaluate this exact immutable version." };
+}
+
+export async function rollbackOperationalWorkflowRule(
+  workspaceSlug: string,
+  input: { ruleId: string; branchId: string; targetVersionNumber: number },
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can roll back workflow rules." };
+  }
+  if (!canActOnOperationalBranch(resolved.value, input.branchId)) {
+    return { ok: false, message: "This workflow rule is outside the selected branch scope." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_rollback_workflow_rule", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      ruleId: input.ruleId,
+      targetVersionNumber: input.targetVersionNumber,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "Workflow rollback could not be completed." };
+  }
+  return { ok: true, message: "Previous workflow logic republished as a new immutable version. Historical executions remain unchanged." };
+}
+
+async function operationalWorkflowActionBranch(
+  resolved: ResolvedStaffActor,
+  actionExecutionId: string,
+): Promise<string | undefined> {
+  const found = await resolved.service
+    .from("workflow_action_executions")
+    .select("branch_id")
+    .eq("workspace_id", resolved.workspace.id)
+    .eq("id", actionExecutionId)
+    .maybeSingle();
+  if (found.error || !found.data) return undefined;
+  return String(found.data.branch_id);
+}
+
+export async function approveOperationalWorkflowExternalAction(
+  workspaceSlug: string,
+  actionExecutionId: string,
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can approve an external workflow send." };
+  }
+  const branchId = await operationalWorkflowActionBranch(resolved.value, actionExecutionId);
+  if (!branchId || !canActOnOperationalBranch(resolved.value, branchId)) {
+    return { ok: false, message: "This workflow action is outside the selected branch scope." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_approve_workflow_external_action", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      actionExecutionId,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "External workflow action could not be approved." };
+  }
+  return { ok: true, message: "External send approved. Delivery still uses the configured channel/template policy boundary." };
+}
+
+export async function replayOperationalWorkflowAction(
+  workspaceSlug: string,
+  actionExecutionId: string,
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an owner can replay a failed workflow action." };
+  }
+  const branchId = await operationalWorkflowActionBranch(resolved.value, actionExecutionId);
+  if (!branchId || !canActOnOperationalBranch(resolved.value, branchId)) {
+    return { ok: false, message: "This workflow action is outside the selected branch scope." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_replay_failed_workflow_action", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      actionExecutionId,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true || data.sourceBookingReplayed !== false) {
+    return { ok: false, message: "Failed action replay was rejected." };
+  }
+  return {
+    ok: true,
+    message: `Action replay attempt ${numberValue(data, "attemptNumber")} created. The source booking/event was not replayed.`,
+  };
+}
+
+export async function executeOperationalWorkflowAttentionAction(
+  workspaceSlug: string,
+  actionExecutionId: string,
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const branchId = await operationalWorkflowActionBranch(resolved.value, actionExecutionId);
+  if (!branchId || !canActOnOperationalBranch(resolved.value, branchId)) {
+    return { ok: false, message: "This workflow action is outside the selected branch scope." };
+  }
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_execute_workflow_attention_action", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actionExecutionId,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "Internal workflow attention action could not be executed." };
+  }
+  return { ok: true, message: "Workflow attention action completed. No booking or money state was changed." };
+}
+
