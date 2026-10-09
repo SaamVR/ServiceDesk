@@ -56,6 +56,15 @@ describe("V2 workflow execution migration", () => {
     expect(preview).not.toContain("insert into public.outbox_events");
   });
 
+
+  it("requires approval metadata for external terminal action states at the table boundary", () => {
+    expect(sql).toContain("state in ('APPROVED','SUCCEEDED','FAILED','SUPPRESSED')");
+    expect(sql).toContain("approved_by is not null");
+    expect(sql).toContain("approved_at is not null");
+    expect(sql).toContain("action_type = 'CREATE_ATTENTION'");
+    expect(sql).toContain("state in ('PREVIEW_ONLY','PENDING','SUCCEEDED','FAILED','SUPPRESSED')");
+  });
+
   it("requires explicit owner approval for every external send action", () => {
     expect(sql).toContain("then 'APPROVAL_REQUIRED'");
     expect(sql).toContain("servicedesk_approve_workflow_external_action");
