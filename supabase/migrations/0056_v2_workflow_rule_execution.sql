@@ -145,7 +145,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 begin
   if old.state = 'DRAFT' and new.state = 'PUBLISHED' and not exists (
     select 1
@@ -160,7 +160,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists workflow_rule_versions_require_preview
 on public.workflow_rule_versions;
@@ -381,7 +381,7 @@ returns jsonb
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
   v_actor uuid := nullif(p_input->>'actorUserId','')::uuid;
@@ -477,7 +477,7 @@ begin
     'previewOnly', true
   );
 end;
-$;
+$$;
 
 create or replace function public.servicedesk_approve_workflow_external_action(p_input jsonb)
 returns jsonb
