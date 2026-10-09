@@ -465,7 +465,7 @@ returns jsonb
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
   v_actor uuid := nullif(p_input->>'actorUserId','')::uuid;
@@ -569,7 +569,7 @@ begin
 exception when invalid_text_representation or datetime_field_overflow or invalid_parameter_value then
   return jsonb_build_object('ok', false, 'code', 'BRANCH_REPORT_INPUT_INVALID');
 end;
-$;
+$$;
 
 revoke all on function public.servicedesk_upsert_branch_service_zone(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_upsert_branch_provider_binding(jsonb) from public, anon, authenticated;
