@@ -22,7 +22,10 @@ import {
   sendOperationalQuote,
   setOperationalChecklistItem,
   setOperationalBranchMembership,
+  grantOperationalTenantSupportAccess,
+  revokeOperationalTenantSupportAccess,
   setOperationalCustomerRetentionControl,
+  setOperationalServiceCatalogDelegation,
   setOperationalVoiceCallbackState,
   toggleInboxHandover,
   upsertOperationalBranch,
@@ -2966,7 +2969,48 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     actionRedirect(workspaceSlug, "settings", result, "section=growth&");
   }
 
+  async function serviceCatalogDelegationAction(formData: FormData) {
+    "use server";
+    const rawStatus = String(formData.get("status") ?? "");
+    const status = rawStatus === "REVOKED" ? "REVOKED" : "ACTIVE";
+    const result = await setOperationalServiceCatalogDelegation(workspaceSlug, {
+      userId: String(formData.get("userId") ?? ""),
+      status,
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=governance&");
+  }
+
+  async function supportAccessGrantAction(formData: FormData) {
+    "use server";
+    const rawScope = String(formData.get("scope") ?? "");
+    const scope = rawScope === "READ_AUDIT_METADATA" ? "READ_AUDIT_METADATA" : "READ_DIAGNOSTICS";
+    const result = await grantOperationalTenantSupportAccess(workspaceSlug, {
+      supportSubjectHash: String(formData.get("supportSubjectHash") ?? ""),
+      scope,
+      reason: String(formData.get("reason") ?? ""),
+      durationHours: Number(formData.get("durationHours") ?? 1),
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=governance&");
+  }
+
+  async function supportAccessRevokeAction(formData: FormData) {
+    "use server";
+    const result = await revokeOperationalTenantSupportAccess(
+      workspaceSlug,
+      String(formData.get("grantId") ?? ""),
+    );
+    actionRedirect(workspaceSlug, "settings", result, "section=governance&");
+  }
+
   const activeServices = data.serviceCatalog.filter((service) => service.active).length;
+  const serviceCatalogGrant = (data.governanceCapabilities ?? []).find((grant) =>
+    grant.userId === data.actor.userId
+    && grant.capability === "SERVICE_CATALOG_MANAGE"
+    && grant.status === "ACTIVE"
+    && (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.now()));
+  const canManageServiceCatalog = data.actor.role === "OWNER" || Boolean(serviceCatalogGrant);
+  const activeSupportGrants = (data.supportAccessGrants ?? []).filter((grant) =>
+    !grant.revokedAt && Date.parse(grant.expiresAt) > Date.now());
   const activeMembers = snapshot.members.filter((member) => member.active).length;
   const pendingInvitations = snapshot.invitations.filter((invite) => invite.state === "PENDING").length;
   const configuredIntegrations = data.integrations.filter(
@@ -3009,6 +3053,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
           <a href="#branches">Branches</a>
           <a href="#recurrence">Recurring services</a>
           <a href="#growth">Growth & retention</a>
+          <a href="#governance">Governance</a>
           <a href="#integrations">Integrations</a>
         </nav>
 
@@ -3019,9 +3064,9 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                 <p className={styles.adminSectionEyebrow}>Services</p>
                 <h3>Service catalog</h3>
                 <p>
-                  {data.actor.role === "OWNER"
+                  {canManageServiceCatalog
                     ? "Manage customer-facing service names, availability and manual-review requirements."
-                    : "Services currently available to this workspace. Only owners can make changes to the catalog."}
+                    : "Services currently available to this workspace. Changes require Owner access or an active delegated service-catalog capability."}
                 </p>
               </div>
               <StatusBadge tone="neutral">{activeServices} active</StatusBadge>
@@ -3035,7 +3080,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
             ) : (
               <div className={styles.serviceSettingsList}>
                 {data.serviceCatalog.map((service) =>
-                  data.actor.role === "OWNER" ? (
+                  canManageServiceCatalog ? (
                     <form action={serviceCatalogAction} className={styles.serviceSettingRow} key={service.id}>
                       <input type="hidden" name="serviceId" value={service.id} />
                       <input type="hidden" name="expectedUpdatedAt" value={service.updatedAt} />
@@ -3433,6 +3478,194 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                 <p><strong>Saved policy is not a send.</strong> No customer message is queued from this screen. Provider delivery remains separately configured and evidenced.</p>
               </div>
               </>
+            )}
+          </section>
+
+          <section className={styles.settingsCard} id="governance">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Enterprise governance</p>
+                <h3>Vertical packs, delegated operations & support access</h3>
+                <p>Governance extends the existing tenant boundary. It does not create a second supported vertical, bypass branch scope, or expose unrestricted support access.</p>
+              </div>
+              <StatusBadge tone={data.governanceAvailable && data.verticalPackAvailable ? "info" : "neutral"}>
+                {data.governanceAvailable && data.verticalPackAvailable ? "Governed" : "Unavailable"}
+              </StatusBadge>
+            </div>
+
+            {!data.verticalPackAvailable ? (
+              <div className={styles.settingsEmpty}>
+                <strong>Vertical-pack governance is not available in this environment</strong>
+                <p>Existing cleaning operations continue unchanged until the 2D.3 governance migration is applied.</p>
+              </div>
+            ) : (
+              <div className={styles.governanceGrid}>
+                <section className={styles.governancePane}>
+                  <div>
+                    <p className={styles.adminSectionEyebrow}>Vertical packs</p>
+                    <h4>Supported operating model</h4>
+                    <p className={styles.adminHelp}>Pack versions isolate service/intake/checklist/pricing policy from the shared contract, payment and tenant core.</p>
+                  </div>
+
+                  <div className={styles.governanceRows}>
+                    {(data.verticalPacks ?? []).map((pack) => (
+                      <article key={pack.packCode}>
+                        <span>
+                          <strong>{pack.packCode === "CLEANING" ? "Cleaning operations" : pack.packCode.replaceAll("_", " ").toLowerCase()}</strong>
+                          <small>v{pack.versionNumber} · {pack.durationAdapterKey} · {pack.pricingAdapterKey}</small>
+                        </span>
+                        <StatusBadge tone={pack.status === "ENABLED" ? "success" : "neutral"}>
+                          {pack.status.toLowerCase()}
+                        </StatusBadge>
+                      </article>
+                    ))}
+                  </div>
+
+                  <FeedbackBanner
+                    title="Second vertical rollout is buyer-evidence blocked"
+                    description="The roadmap requires two real buyers sharing the same operating model before another vertical is released. Cleaning is the only enabled pack here; no property-maintenance or detailing support is being claimed."
+                    tone="warning"
+                  />
+                </section>
+
+                <section className={styles.governancePane}>
+                  <div>
+                    <p className={styles.adminSectionEyebrow}>Delegated operations</p>
+                    <h4>Service-catalog management</h4>
+                    <p className={styles.adminHelp}>An Owner may delegate only service-catalog management to an active dispatcher. The member remains a dispatcher and keeps their existing branch/tenant scope.</p>
+                  </div>
+
+                  {data.actor.role === "OWNER" ? (
+                    <div className={styles.governanceRows}>
+                      {snapshot.members.filter((member) => member.active && member.role === "DISPATCHER").map((member, index) => {
+                        const grant = (data.governanceCapabilities ?? []).find((item) =>
+                          item.userId === member.userId
+                          && item.capability === "SERVICE_CATALOG_MANAGE"
+                          && item.status === "ACTIVE"
+                          && (!item.expiresAt || Date.parse(item.expiresAt) > Date.now()));
+                        return (
+                          <article key={member.userId}>
+                            <span>
+                              <strong>Dispatcher {index + 1}</strong>
+                              <small>{grant ? "Service-catalog delegation active" : "No delegated management capability"}</small>
+                            </span>
+                            <form action={serviceCatalogDelegationAction}>
+                              <input name="userId" type="hidden" value={member.userId} />
+                              <button
+                                className="app-button-secondary"
+                                name="status"
+                                type="submit"
+                                value={grant ? "REVOKED" : "ACTIVE"}
+                              >
+                                {grant ? "Revoke delegation" : "Delegate catalog"}
+                              </button>
+                            </form>
+                          </article>
+                        );
+                      })}
+                      {snapshot.members.filter((member) => member.active && member.role === "DISPATCHER").length === 0 ? (
+                        <div className={styles.settingsEmpty}><strong>No dispatchers</strong><p>Add an active dispatcher before delegating service-catalog management.</p></div>
+                      ) : null}
+                    </div>
+                  ) : serviceCatalogGrant ? (
+                    <div className={styles.integrationProofNote}>
+                      <span aria-hidden="true">i</span>
+                      <p><strong>Delegated capability active.</strong> You may edit the service catalog. This does not grant Owner access, all-branch access, workflow publishing, audit export, or support-access control.</p>
+                    </div>
+                  ) : (
+                    <div className={styles.settingsEmpty}><strong>No delegated governance capability</strong><p>Your dispatcher account retains its normal operational and branch scope.</p></div>
+                  )}
+                </section>
+
+                <section className={styles.governancePane}>
+                  <div>
+                    <p className={styles.adminSectionEyebrow}>Tenant support access</p>
+                    <h4>Temporary read-only support</h4>
+                    <p className={styles.adminHelp}>Owner-approved support access is limited to diagnostics or audit metadata, expires within 24 hours and never grants impersonation or write access.</p>
+                  </div>
+
+                  {data.actor.role === "OWNER" && data.governanceAvailable ? (
+                    <>
+                      <form action={supportAccessGrantAction} className={styles.growthForm}>
+                        <label>
+                          <span>Support subject SHA-256</span>
+                          <input className="app-input" name="supportSubjectHash" minLength={64} maxLength={64} pattern="[a-fA-F0-9]{64}" required />
+                        </label>
+                        <div className={styles.growthFormRow}>
+                          <label>
+                            <span>Read-only scope</span>
+                            <select className="app-input" name="scope" defaultValue="READ_DIAGNOSTICS">
+                              <option value="READ_DIAGNOSTICS">Diagnostics</option>
+                              <option value="READ_AUDIT_METADATA">Audit metadata</option>
+                            </select>
+                          </label>
+                          <label>
+                            <span>Duration</span>
+                            <select className="app-input" name="durationHours" defaultValue="1">
+                              <option value="1">1 hour</option>
+                              <option value="4">4 hours</option>
+                              <option value="8">8 hours</option>
+                              <option value="24">24 hours</option>
+                            </select>
+                          </label>
+                        </div>
+                        <label>
+                          <span>Reason</span>
+                          <input className="app-input" name="reason" minLength={4} maxLength={240} placeholder="Investigate provider delivery issue" required />
+                        </label>
+                        <button className="app-button-primary" type="submit">Grant temporary read-only access</button>
+                      </form>
+
+                      <div className={styles.governanceRows}>
+                        {(data.supportAccessGrants ?? []).map((grant) => {
+                          const active = !grant.revokedAt && Date.parse(grant.expiresAt) > Date.now();
+                          return (
+                            <article key={grant.id}>
+                              <span>
+                                <strong>{grant.scope === "READ_DIAGNOSTICS" ? "Diagnostics" : "Audit metadata"}</strong>
+                                <small>subject {grant.subjectHashPrefix}… · expires {formatWhen(grant.expiresAt, data.workspace.timezone)}</small>
+                              </span>
+                              {active ? (
+                                <form action={supportAccessRevokeAction}>
+                                  <input name="grantId" type="hidden" value={grant.id} />
+                                  <button className="app-button-secondary" type="submit">Revoke</button>
+                                </form>
+                              ) : (
+                                <StatusBadge tone="neutral">{grant.revokedAt ? "revoked" : "expired"}</StatusBadge>
+                              )}
+                            </article>
+                          );
+                        })}
+                      </div>
+                      <p className={styles.adminHelp}>{activeSupportGrants.length} active temporary support grant{activeSupportGrants.length === 1 ? "" : "s"}.</p>
+                    </>
+                  ) : (
+                    <div className={styles.settingsEmpty}><strong>Owner controlled</strong><p>Temporary support access can be granted and revoked only by a workspace Owner.</p></div>
+                  )}
+                </section>
+
+                <section className={styles.governancePane}>
+                  <div>
+                    <p className={styles.adminSectionEyebrow}>Audit export</p>
+                    <h4>Metadata-only audit trail</h4>
+                    <p className={styles.adminHelp}>The export is Owner-only, limited to a bounded date window, and intentionally excludes before/after payloads that may contain customer data or secrets.</p>
+                  </div>
+                  {data.actor.role === "OWNER" && data.governanceAvailable ? (
+                    <a
+                      className="app-button-secondary"
+                      href={"/api/governance/audit-export?workspace=" + encodeURIComponent(workspaceSlug) + "&days=7"}
+                    >
+                      Download last 7 days · CSV
+                    </a>
+                  ) : (
+                    <StatusBadge tone="neutral">Owner only</StatusBadge>
+                  )}
+                  <div className={styles.integrationProofNote}>
+                    <span aria-hidden="true">i</span>
+                    <p><strong>Metadata only.</strong> Exported rows include action/resource/time identifiers; audit before/after payloads are deliberately excluded.</p>
+                  </div>
+                </section>
+              </div>
             )}
           </section>
 

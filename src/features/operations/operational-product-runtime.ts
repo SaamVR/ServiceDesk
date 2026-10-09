@@ -325,6 +325,36 @@ export interface OperationalBranchComparison {
   disclosure: string;
 }
 
+export interface OperationalVerticalPack {
+  packCode: string;
+  versionNumber: number;
+  status: "ENABLED" | "DISABLED";
+  evidenceStatus: "BASELINE_EXISTING" | "BUYER_EVIDENCE_BLOCKED" | "BUYER_EVIDENCE_VERIFIED";
+  state: "DRAFT" | "RELEASED" | "RETIRED";
+  durationAdapterKey: string;
+  pricingAdapterKey: string;
+  releaseNotes?: string;
+  enabledAt?: string;
+}
+
+export interface OperationalGovernanceCapabilityGrant {
+  userId: string;
+  capability: "SERVICE_CATALOG_MANAGE";
+  status: "ACTIVE" | "REVOKED";
+  expiresAt?: string;
+  version: number;
+}
+
+export interface OperationalSupportAccessGrant {
+  id: string;
+  scope: "READ_DIAGNOSTICS" | "READ_AUDIT_METADATA";
+  subjectHashPrefix: string;
+  reason: string;
+  approvedAt: string;
+  expiresAt: string;
+  revokedAt?: string;
+}
+
 export interface OperationalStaffSnapshot {
   loadedAt: string;
   workspace: { id: string; slug: string; name: string; timezone: string };
@@ -332,6 +362,11 @@ export interface OperationalStaffSnapshot {
   branchScope?: OperationalBranchScope;
   branchAssignments?: OperationalBranchAssignment[];
   branchComparison?: OperationalBranchComparison;
+  verticalPackAvailable?: boolean;
+  verticalPacks?: OperationalVerticalPack[];
+  governanceAvailable?: boolean;
+  governanceCapabilities?: OperationalGovernanceCapabilityGrant[];
+  supportAccessGrants?: OperationalSupportAccessGrant[];
   customers: OperationalCustomer[];
   customerContacts?: OperationalCustomerContact[];
   communicationConsents?: OperationalCommunicationConsent[];
@@ -849,6 +884,88 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   const rawWorkflowExecutions = workflowAvailable ? rows(workflowExecutionRead.data) : [];
   const rawWorkflowActions = workflowAvailable ? rows(workflowActionRead.data) : [];
 
+  const workspaceVerticalRead = await service
+    .from("workspace_vertical_packs")
+    .select("pack_code,version_number,status,enabled_at,disabled_at,version")
+    .eq("workspace_id", workspace.id)
+    .order("pack_code", { ascending: true });
+  const workspaceVerticalRows = workspaceVerticalRead.error ? [] : rows(workspaceVerticalRead.data);
+  const packCodes = [...new Set(workspaceVerticalRows.map((row) => String(row.pack_code)))];
+  const verticalVersionRead = packCodes.length > 0
+    ? await service
+        .from("vertical_pack_versions")
+        .select("pack_code,version_number,state,evidence_status,duration_adapter_key,pricing_adapter_key,release_notes")
+        .in("pack_code", packCodes)
+    : { data: [], error: null };
+  const verticalPackAvailable = !workspaceVerticalRead.error && !verticalVersionRead.error;
+  const verticalVersionRows = verticalPackAvailable ? rows(verticalVersionRead.data) : [];
+  const verticalVersionByKey = new Map(
+    verticalVersionRows.map((row) => [
+      String(row.pack_code) + ":" + String(row.version_number),
+      row,
+    ]),
+  );
+  const verticalPacks: OperationalVerticalPack[] = verticalPackAvailable
+    ? workspaceVerticalRows.map((row) => {
+        const version = verticalVersionByKey.get(String(row.pack_code) + ":" + String(row.version_number));
+        return {
+          packCode: String(row.pack_code),
+          versionNumber: numberValue(row, "version_number", 1),
+          status: String(row.status) as OperationalVerticalPack["status"],
+          evidenceStatus: String(version?.evidence_status ?? "BUYER_EVIDENCE_BLOCKED") as OperationalVerticalPack["evidenceStatus"],
+          state: String(version?.state ?? "DRAFT") as OperationalVerticalPack["state"],
+          durationAdapterKey: String(version?.duration_adapter_key ?? "UNAVAILABLE"),
+          pricingAdapterKey: String(version?.pricing_adapter_key ?? "UNAVAILABLE"),
+          releaseNotes: version ? textValue(version, "release_notes") : undefined,
+          enabledAt: textValue(row, "enabled_at"),
+        };
+      })
+    : [];
+
+  let capabilityQuery = service
+    .from("operator_capability_grants")
+    .select("user_id,capability,status,expires_at,version")
+    .eq("workspace_id", workspace.id)
+    .order("user_id", { ascending: true });
+  if (actor.role !== "OWNER") {
+    capabilityQuery = capabilityQuery.eq("user_id", actor.userId ?? "");
+  }
+  const capabilityRead = await capabilityQuery;
+  const supportRead = actor.role === "OWNER"
+    ? await service
+        .from("tenant_support_access_grants")
+        .select("id,support_subject_hash,scope,reason,approved_at,expires_at,revoked_at")
+        .eq("workspace_id", workspace.id)
+        .order("approved_at", { ascending: false })
+        .limit(200)
+    : { data: [], error: null };
+  const governanceAvailable = !capabilityRead.error && !supportRead.error;
+  const governanceCapabilities: OperationalGovernanceCapabilityGrant[] = governanceAvailable
+    ? rows(capabilityRead.data)
+        .filter((row) => row.capability === "SERVICE_CATALOG_MANAGE")
+        .filter((row) => row.status === "ACTIVE" || row.status === "REVOKED")
+        .map((row) => ({
+          userId: String(row.user_id),
+          capability: "SERVICE_CATALOG_MANAGE",
+          status: String(row.status) as OperationalGovernanceCapabilityGrant["status"],
+          expiresAt: textValue(row, "expires_at"),
+          version: numberValue(row, "version", 1),
+        }))
+    : [];
+  const supportAccessGrants: OperationalSupportAccessGrant[] = governanceAvailable && actor.role === "OWNER"
+    ? rows(supportRead.data)
+        .filter((row) => row.scope === "READ_DIAGNOSTICS" || row.scope === "READ_AUDIT_METADATA")
+        .map((row) => ({
+          id: String(row.id),
+          scope: String(row.scope) as OperationalSupportAccessGrant["scope"],
+          subjectHashPrefix: String(row.support_subject_hash ?? "").slice(0, 8),
+          reason: String(row.reason ?? ""),
+          approvedAt: String(row.approved_at),
+          expiresAt: String(row.expires_at),
+          revokedAt: textValue(row, "revoked_at"),
+        }))
+    : [];
+
   let branchAssignments: OperationalBranchAssignment[] = [];
   if (branchScope.mode !== "LEGACY" && actor.role === "OWNER") {
     const assignmentRead = await service
@@ -1270,6 +1387,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       branchScope,
       branchAssignments,
       branchComparison,
+      verticalPackAvailable,
+      verticalPacks,
+      governanceAvailable,
+      governanceCapabilities,
+      supportAccessGrants,
       customers,
       customerContacts,
       communicationConsents,
@@ -1955,10 +2077,6 @@ export async function updateOperationalServiceCatalogItem(
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
-  if (resolved.value.actor.role !== "OWNER") {
-    return { ok: false, message: "Only workspace owners can change the service catalog." };
-  }
-
   const serviceId = input.serviceId.trim();
   const name = input.name.trim();
   if (!serviceId || !name || name.length > 120 || !input.expectedUpdatedAt) {
@@ -1997,8 +2115,8 @@ export async function updateOperationalServiceCatalogItem(
     if (code === "SERVICE_VERSION_CONFLICT") {
       return { ok: false, message: "This service changed since the page loaded. Refresh and try again." };
     }
-    if (code === "OWNER_SCOPE_REQUIRED") {
-      return { ok: false, message: "Only workspace owners can change the service catalog." };
+    if (code === "OWNER_SCOPE_REQUIRED" || code === "SERVICE_CATALOG_SCOPE_REQUIRED") {
+      return { ok: false, message: "Service catalog changes require Owner access or an active delegated service-catalog capability." };
     }
     if (code === "SERVICE_NOT_FOUND") {
       return { ok: false, message: "This service is no longer available. Refresh the page." };
@@ -2798,5 +2916,119 @@ export async function executeOperationalWorkflowAttentionAction(
     return { ok: false, message: "Internal workflow attention action could not be executed." };
   }
   return { ok: true, message: "Workflow attention action completed. No booking or money state was changed." };
+}
+
+export async function setOperationalServiceCatalogDelegation(
+  workspaceSlug: string,
+  input: { userId: string; status: "ACTIVE" | "REVOKED"; expiresAt?: string },
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an Owner can delegate service-catalog management." };
+  }
+  const userId = input.userId.trim();
+  if (!userId) return { ok: false, message: "Choose a dispatcher." };
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_set_operator_capability", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      userId,
+      capability: "SERVICE_CATALOG_MANAGE",
+      status: input.status,
+      expiresAt: input.status === "ACTIVE" ? input.expiresAt : undefined,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    const code = typeof data?.code === "string" ? data.code : "";
+    if (code === "DELEGATE_MEMBER_INVALID") {
+      return { ok: false, message: "Delegation is available only to an active dispatcher." };
+    }
+    if (code === "DELEGATION_EXPIRY_INVALID") {
+      return { ok: false, message: "Delegation expiry must be in the future." };
+    }
+    return { ok: false, message: "Service-catalog delegation could not be updated." };
+  }
+  return {
+    ok: true,
+    message: input.status === "ACTIVE"
+      ? "Service-catalog management delegated to the dispatcher."
+      : "Service-catalog delegation revoked.",
+  };
+}
+
+export async function grantOperationalTenantSupportAccess(
+  workspaceSlug: string,
+  input: {
+    supportSubjectHash: string;
+    scope: "READ_DIAGNOSTICS" | "READ_AUDIT_METADATA";
+    reason: string;
+    durationHours: number;
+  },
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an Owner can grant tenant support access." };
+  }
+
+  const subject = input.supportSubjectHash.trim().toLowerCase();
+  const reason = input.reason.trim();
+  if (!/^[a-f0-9]{64}$/.test(subject) || reason.length < 4 || reason.length > 240
+      || !Number.isInteger(input.durationHours) || input.durationHours < 1 || input.durationHours > 24) {
+    return { ok: false, message: "Support subject hash, reason and 1–24 hour duration are required." };
+  }
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + input.durationHours * 60 * 60 * 1000);
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_grant_tenant_support_access", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      supportSubjectHash: subject,
+      scope: input.scope,
+      reason,
+      expiresAt: expiresAt.toISOString(),
+      now: now.toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "Read-only support access could not be granted." };
+  }
+  return {
+    ok: true,
+    message: "Read-only tenant support access granted temporarily. No impersonation or write scope was created.",
+  };
+}
+
+export async function revokeOperationalTenantSupportAccess(
+  workspaceSlug: string,
+  grantId: string,
+): Promise<OperationalActionResult> {
+  const resolved = await resolveStaffActor(workspaceSlug);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  if (resolved.value.actor.role !== "OWNER") {
+    return { ok: false, message: "Only an Owner can revoke tenant support access." };
+  }
+  const id = grantId.trim();
+  if (!id) return { ok: false, message: "Support grant is no longer available." };
+
+  const { data, error } = await resolved.value.rpc.rpc<Row>("servicedesk_revoke_tenant_support_access", {
+    p_input: {
+      workspaceId: resolved.value.workspace.id,
+      actorUserId: resolved.value.actor.userId,
+      actorRole: resolved.value.actor.role,
+      grantId: id,
+      now: new Date().toISOString(),
+    },
+  });
+  if (error || !data || data.ok !== true) {
+    return { ok: false, message: "Support access could not be revoked." };
+  }
+  return { ok: true, message: "Tenant support access revoked." };
 }
 
