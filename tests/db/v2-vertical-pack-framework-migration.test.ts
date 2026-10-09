@@ -40,7 +40,7 @@ describe("V2 vertical pack framework", () => {
   });
 
   it("uses workspace-scoped bindings and RLS without widening tenant authority", () => {
-    expect(sql).toContain("references public.workspace_vertical_packs(workspace_id, pack_code)");
+    expect(sql).toContain("references public.workspace_vertical_packs(workspace_id, pack_code, version_number)");
     expect(sql).toContain("using (public.has_active_membership(workspace_id))");
     expect(sql).toContain("exists (");
     expect(sql).toContain("m.user_id = auth.uid()");
