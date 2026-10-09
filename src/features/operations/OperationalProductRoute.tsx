@@ -1948,16 +1948,486 @@ function attentionResourceHref(workspaceSlug: string, item: OperationalAttention
   }
 }
 
+const workflowEventTypes = [
+  "REQUEST_CREATED",
+  "QUOTE_ACCEPTED",
+  "VISIT_COMPLETED",
+  "INVOICE_PAID",
+  "ATTENTION_OPENED",
+] as const;
+
+type OperationalWorkflowEventType = typeof workflowEventTypes[number];
+
+const workflowFieldsByEvent: Record<OperationalWorkflowEventType, readonly string[]> = {
+  REQUEST_CREATED: ["request.serviceCode", "request.leadSource", "request.branchCode"],
+  QUOTE_ACCEPTED: ["quote.currency", "quote.branchCode", "request.serviceCode"],
+  VISIT_COMPLETED: ["visit.branchCode", "request.serviceCode", "visit.hasIncident"],
+  INVOICE_PAID: ["invoice.currency", "invoice.branchCode", "request.serviceCode"],
+  ATTENTION_OPENED: ["attention.type", "attention.severity", "attention.branchCode"],
+};
+
+function workflowSyntheticValue(field: string, raw: string): string | boolean {
+  if (field === "visit.hasIncident") return raw.trim().toLowerCase() === "true";
+  return raw.trim();
+}
+
+function WorkflowPreviewFields({ eventType }: { eventType: OperationalWorkflowEventType }) {
+  return (
+    <div className={styles.workflowPreviewFields}>
+      {workflowFieldsByEvent[eventType].map((field) => (
+        <label key={field}>
+          <span>{field}</span>
+          {field === "visit.hasIncident" ? (
+            <select className="app-input" name={field} defaultValue="false">
+              <option value="false">false</option>
+              <option value="true">true</option>
+            </select>
+          ) : (
+            <input className="app-input" name={field} maxLength={160} placeholder="Synthetic value" />
+          )}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function WorkflowBuilderPanel({
+  data,
+  workspaceSlug,
+}: {
+  data: OperationalStaffSnapshot;
+  workspaceSlug: string;
+}) {
+  const rules = data.workflowRules ?? [];
+  const versions = data.workflowRuleVersions ?? [];
+  const executions = data.workflowExecutions ?? [];
+  const actionExecutions = data.workflowActionExecutions ?? [];
+  const branchScope = data.branchScope;
+  const editorBranches = branchScope?.mode === "BRANCH"
+    ? (branchScope.branches ?? []).filter((branch) => branch.id === branchScope.selectedBranchId)
+    : branchScope?.branches ?? [];
+  const ownerCanEdit = data.actor.role === "OWNER" && editorBranches.length > 0;
+
+  async function saveDraftAction(formData: FormData) {
+    "use server";
+    const rawEvent = String(formData.get("eventType") ?? "");
+    if (!workflowEventTypes.includes(rawEvent as OperationalWorkflowEventType)) {
+      actionRedirect(workspaceSlug, "automations", { ok: false, message: "Unsupported workflow event." });
+    }
+    const eventType = rawEvent as OperationalWorkflowEventType;
+    const target = String(formData.get("ruleTarget") ?? "NEW");
+    const [ruleId, expectedVersionText] = target === "NEW" ? ["", ""] : target.split("|");
+    const conditions: Array<{ field: string; operator: "EQ" | "NEQ" | "IN"; value: unknown }> = [];
+    for (let index = 1; index <= 3; index += 1) {
+      const field = String(formData.get(`condition${index}Field`) ?? "").trim();
+      if (!field) continue;
+      const operatorRaw = String(formData.get(`condition${index}Operator`) ?? "EQ");
+      const operator = operatorRaw === "NEQ" || operatorRaw === "IN" ? operatorRaw : "EQ";
+      const rawValue = String(formData.get(`condition${index}Value`) ?? "").trim();
+      const value = operator === "IN"
+        ? rawValue.split(",").map((item) => workflowSyntheticValue(field, item)).filter((item) => item !== "")
+        : workflowSyntheticValue(field, rawValue);
+      conditions.push({ field, operator, value });
+    }
+
+    const actions: Array<Record<string, unknown>> = [];
+    for (let index = 1; index <= 3; index += 1) {
+      const type = String(formData.get(`action${index}Type`) ?? "NONE");
+      if (type === "NONE") continue;
+      const detail = String(formData.get(`action${index}Detail`) ?? "").trim();
+      if (type === "CREATE_ATTENTION") {
+        const severityRaw = String(formData.get(`action${index}Severity`) ?? "WARNING");
+        const severity = severityRaw === "INFO" || severityRaw === "CRITICAL" ? severityRaw : "WARNING";
+        actions.push({ type, severity, summaryKey: detail.toUpperCase() });
+      } else if (type === "SEND_EMAIL_TEMPLATE" || type === "SEND_WHATSAPP_TEMPLATE") {
+        actions.push({ type, templateKey: detail, recipient: "CUSTOMER_PRIMARY" });
+      }
+    }
+
+    const result = await saveOperationalWorkflowDraft(workspaceSlug, {
+      branchId: String(formData.get("branchId") ?? ""),
+      ruleId: ruleId || undefined,
+      expectedRuleVersion: expectedVersionText ? Number(expectedVersionText) : undefined,
+      code: String(formData.get("code") ?? ""),
+      name: String(formData.get("name") ?? ""),
+      eventType,
+      conditions,
+      actions,
+      maxActionsPerEvent: Math.max(1, actions.length),
+    });
+    actionRedirect(workspaceSlug, "automations", result);
+  }
+
+  async function previewAction(formData: FormData) {
+    "use server";
+    const rawEvent = String(formData.get("eventType") ?? "");
+    if (!workflowEventTypes.includes(rawEvent as OperationalWorkflowEventType)) {
+      actionRedirect(workspaceSlug, "automations", { ok: false, message: "Unsupported preview event." });
+    }
+    const eventType = rawEvent as OperationalWorkflowEventType;
+    const snapshot: Record<string, unknown> = {};
+    for (const field of workflowFieldsByEvent[eventType]) {
+      const raw = String(formData.get(field) ?? "");
+      if (field === "visit.hasIncident" || raw.trim()) snapshot[field] = workflowSyntheticValue(field, raw);
+    }
+    const result = await previewOperationalWorkflowVersion(workspaceSlug, {
+      versionId: String(formData.get("versionId") ?? ""),
+      branchId: String(formData.get("branchId") ?? ""),
+      eventSnapshot: snapshot,
+    });
+    actionRedirect(workspaceSlug, "automations", result);
+  }
+
+  async function publishAction(formData: FormData) {
+    "use server";
+    const result = await publishOperationalWorkflowVersion(workspaceSlug, {
+      versionId: String(formData.get("versionId") ?? ""),
+      branchId: String(formData.get("branchId") ?? ""),
+    });
+    actionRedirect(workspaceSlug, "automations", result);
+  }
+
+  async function rollbackAction(formData: FormData) {
+    "use server";
+    const result = await rollbackOperationalWorkflowRule(workspaceSlug, {
+      ruleId: String(formData.get("ruleId") ?? ""),
+      branchId: String(formData.get("branchId") ?? ""),
+      targetVersionNumber: Number(formData.get("targetVersionNumber") ?? 0),
+    });
+    actionRedirect(workspaceSlug, "automations", result);
+  }
+
+  async function approveAction(formData: FormData) {
+    "use server";
+    const result = await approveOperationalWorkflowExternalAction(
+      workspaceSlug,
+      String(formData.get("actionExecutionId") ?? ""),
+    );
+    actionRedirect(workspaceSlug, "automations", result);
+  }
+
+  async function replayAction(formData: FormData) {
+    "use server";
+    const result = await replayOperationalWorkflowAction(
+      workspaceSlug,
+      String(formData.get("actionExecutionId") ?? ""),
+    );
+    actionRedirect(workspaceSlug, "automations", result);
+  }
+
+  async function runInternalAction(formData: FormData) {
+    "use server";
+    const result = await executeOperationalWorkflowAttentionAction(
+      workspaceSlug,
+      String(formData.get("actionExecutionId") ?? ""),
+    );
+    actionRedirect(workspaceSlug, "automations", result);
+  }
+
+  const latestExecutions = executions.slice(0, 20);
+
+  return (
+    <section className={styles.workflowBuilder} aria-label="Configurable workflow builder">
+      <header className={styles.workflowBuilderHeader}>
+        <div>
+          <p className={styles.recoveryEyebrow}>Controlled automation</p>
+          <h2>Workflow builder</h2>
+          <p>Draft, preview and publish branch-scoped rules from a fixed event → condition → action catalogue.</p>
+        </div>
+        <div className={styles.workflowSafetyChips}>
+          <StatusBadge tone="info">No code / SQL / URLs</StatusBadge>
+          <StatusBadge tone="warning">External sends need owner approval</StatusBadge>
+          <StatusBadge tone="neutral">Max 5 actions · recursion depth 2</StatusBadge>
+        </div>
+      </header>
+
+      {data.workflowAvailable === false ? (
+        <FeedbackBanner
+          title="Workflow builder is not available in this environment"
+          description="The existing recovery queue remains available. No rule is being simulated or silently executed."
+          tone="info"
+        />
+      ) : (
+        <>
+          {ownerCanEdit ? (
+            <section className={styles.workflowEditorCard}>
+              <div className={styles.workflowSectionHeader}>
+                <div>
+                  <p className={styles.recoverySectionEyebrow}>Rule draft</p>
+                  <h3>Create the next immutable draft</h3>
+                  <p>Existing rules can receive another draft version; published versions are never edited in place.</p>
+                </div>
+              </div>
+              <form action={saveDraftAction} className={styles.workflowDraftForm}>
+                <div className={styles.workflowFormGrid}>
+                  <label>
+                    <span>Rule</span>
+                    <select className="app-input" name="ruleTarget" defaultValue="NEW">
+                      <option value="NEW">New rule</option>
+                      {rules.map((rule) => (
+                        <option key={rule.id} value={rule.id + "|" + rule.version}>
+                          {rule.code} · {rule.name} · current v{rule.version}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Branch</span>
+                    <select className="app-input" name="branchId" defaultValue={editorBranches[0]?.id} required>
+                      {editorBranches.map((branch) => <option key={branch.id} value={branch.id}>{branch.code} · {branch.name}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Code</span>
+                    <input className="app-input" name="code" maxLength={64} placeholder="PAID_JOB_FOLLOWUP" required />
+                  </label>
+                  <label>
+                    <span>Name</span>
+                    <input className="app-input" name="name" maxLength={120} placeholder="Paid job follow-up" required />
+                  </label>
+                  <label>
+                    <span>Event</span>
+                    <select className="app-input" name="eventType" defaultValue="INVOICE_PAID">
+                      {workflowEventTypes.map((eventType) => <option key={eventType} value={eventType}>{eventType.replaceAll("_", " ")}</option>)}
+                    </select>
+                  </label>
+                </div>
+
+                <div className={styles.workflowBuilderColumns}>
+                  <section>
+                    <h4>Conditions <small>All conditions must match</small></h4>
+                    {[1, 2, 3].map((index) => (
+                      <div className={styles.workflowConditionRow} key={index}>
+                        <select className="app-input" name={`condition${index}Field`} defaultValue="">
+                          <option value="">No condition</option>
+                          <optgroup label="Request created">
+                            <option value="request.serviceCode">request.serviceCode</option>
+                            <option value="request.leadSource">request.leadSource</option>
+                            <option value="request.branchCode">request.branchCode</option>
+                          </optgroup>
+                          <optgroup label="Quote accepted">
+                            <option value="quote.currency">quote.currency</option>
+                            <option value="quote.branchCode">quote.branchCode</option>
+                          </optgroup>
+                          <optgroup label="Visit completed">
+                            <option value="visit.branchCode">visit.branchCode</option>
+                            <option value="visit.hasIncident">visit.hasIncident</option>
+                          </optgroup>
+                          <optgroup label="Invoice paid">
+                            <option value="invoice.currency">invoice.currency</option>
+                            <option value="invoice.branchCode">invoice.branchCode</option>
+                          </optgroup>
+                          <optgroup label="Attention opened">
+                            <option value="attention.type">attention.type</option>
+                            <option value="attention.severity">attention.severity</option>
+                            <option value="attention.branchCode">attention.branchCode</option>
+                          </optgroup>
+                        </select>
+                        <select className="app-input" name={`condition${index}Operator`} defaultValue="EQ">
+                          <option value="EQ">equals</option>
+                          <option value="NEQ">does not equal</option>
+                          <option value="IN">is one of</option>
+                        </select>
+                        <input className="app-input" name={`condition${index}Value`} maxLength={160} placeholder="Value; comma-separate IN values" />
+                      </div>
+                    ))}
+                  </section>
+
+                  <section>
+                    <h4>Actions <small>Fixed catalogue only</small></h4>
+                    {[1, 2, 3].map((index) => (
+                      <div className={styles.workflowActionRow} key={index}>
+                        <select className="app-input" name={`action${index}Type`} defaultValue={index === 1 ? "CREATE_ATTENTION" : "NONE"}>
+                          <option value="NONE">No action</option>
+                          <option value="CREATE_ATTENTION">Create attention item</option>
+                          <option value="SEND_EMAIL_TEMPLATE">Send approved Email template</option>
+                          <option value="SEND_WHATSAPP_TEMPLATE">Send approved WhatsApp template</option>
+                        </select>
+                        <select className="app-input" name={`action${index}Severity`} defaultValue="WARNING">
+                          <option value="INFO">Info</option>
+                          <option value="WARNING">Warning</option>
+                          <option value="CRITICAL">Critical</option>
+                        </select>
+                        <input className="app-input" name={`action${index}Detail`} maxLength={120} placeholder="Summary key or template key" required={index === 1} />
+                      </div>
+                    ))}
+                  </section>
+                </div>
+
+                <div className={styles.workflowFormFooter}>
+                  <p>External template actions are never auto-approved. A later action record must be approved by an owner before delivery can be queued.</p>
+                  <button className="app-button-primary" type="submit">Save draft version</button>
+                </div>
+              </form>
+            </section>
+          ) : (
+            <FeedbackBanner
+              title={data.actor.role === "OWNER" ? "Select a branch to edit rules" : "Workflow rules are owner-managed"}
+              description={data.actor.role === "OWNER"
+                ? "HQ can review all branches, but rule authoring requires one explicit branch scope."
+                : "Dispatchers can inspect decisions for their assigned branch but cannot draft, publish, approve external sends or replay failed actions."}
+              tone="info"
+            />
+          )}
+
+          <div className={styles.workflowRulesGrid}>
+            {rules.map((rule) => {
+              const ruleVersions = versions.filter((version) => version.ruleId === rule.id)
+                .sort((left, right) => right.versionNumber - left.versionNumber);
+              const draft = ruleVersions.find((version) => version.state === "DRAFT");
+              const published = ruleVersions.find((version) => version.state === "PUBLISHED");
+              const historical = ruleVersions.filter((version) => version.state === "RETIRED");
+              const branch = branchScope?.branches.find((item) => item.id === rule.branchId);
+              return (
+                <article className={styles.workflowRuleCard} key={rule.id}>
+                  <div className={styles.workflowRuleHeader}>
+                    <div>
+                      <span>{branch?.code ?? "BRANCH"} · {rule.code}</span>
+                      <h3>{rule.name}</h3>
+                    </div>
+                    <StatusBadge tone={rule.status === "ACTIVE" ? "success" : rule.status === "PAUSED" ? "warning" : "neutral"}>{rule.status.toLowerCase()}</StatusBadge>
+                  </div>
+
+                  {published ? (
+                    <div className={styles.workflowVersionSummary}>
+                      <strong>Published v{published.versionNumber}</strong>
+                      <span>{published.eventType.replaceAll("_", " ").toLowerCase()} · {published.conditions.length} conditions · {published.actions.length} actions</span>
+                    </div>
+                  ) : <p className={styles.workflowMuted}>No published version yet.</p>}
+
+                  {draft ? (
+                    <section className={styles.workflowDraftPreview}>
+                      <div className={styles.workflowVersionSummary}>
+                        <strong>Draft v{draft.versionNumber}</strong>
+                        <span>{draft.eventType.replaceAll("_", " ").toLowerCase()} · synthetic preview required before publish</span>
+                      </div>
+                      {ownerCanEdit && editorBranches.some((item) => item.id === draft.branchId) ? (
+                        <>
+                          <form action={previewAction} className={styles.workflowPreviewForm}>
+                            <input type="hidden" name="versionId" value={draft.id} />
+                            <input type="hidden" name="branchId" value={draft.branchId} />
+                            <input type="hidden" name="eventType" value={draft.eventType} />
+                            <WorkflowPreviewFields eventType={draft.eventType} />
+                            <button className="app-button-secondary" type="submit">Run synthetic preview</button>
+                          </form>
+                          <form action={publishAction}>
+                            <input type="hidden" name="versionId" value={draft.id} />
+                            <input type="hidden" name="branchId" value={draft.branchId} />
+                            <button className="app-button-primary" type="submit">Publish tested draft</button>
+                          </form>
+                        </>
+                      ) : null}
+                    </section>
+                  ) : null}
+
+                  {historical.length > 0 && ownerCanEdit ? (
+                    <details className={styles.workflowHistory}>
+                      <summary>Rollback targets</summary>
+                      <div>
+                        {historical.slice(0, 5).map((version) => (
+                          <form action={rollbackAction} key={version.id}>
+                            <input type="hidden" name="ruleId" value={rule.id} />
+                            <input type="hidden" name="branchId" value={rule.branchId} />
+                            <input type="hidden" name="targetVersionNumber" value={version.versionNumber} />
+                            <button className="app-button-secondary" type="submit">Republish v{version.versionNumber} as a new version</button>
+                          </form>
+                        ))}
+                      </div>
+                    </details>
+                  ) : null}
+                </article>
+              );
+            })}
+            {rules.length === 0 ? (
+              <div className={styles.recoveryClear}>
+                <span aria-hidden="true">◇</span>
+                <div><strong>No workflow rules yet</strong><p>Create a draft and preview it before publishing. Existing business workflows remain unchanged.</p></div>
+              </div>
+            ) : null}
+          </div>
+
+          <section className={styles.workflowDecisionLog}>
+            <div className={styles.workflowSectionHeader}>
+              <div>
+                <p className={styles.recoverySectionEyebrow}>Decision log</p>
+                <h3>Recent workflow decisions</h3>
+                <p>Preview and live executions are separate; action attempts remain individually auditable.</p>
+              </div>
+              <StatusBadge tone="neutral">{latestExecutions.length} shown</StatusBadge>
+            </div>
+
+            <div className={styles.workflowExecutionList}>
+              {latestExecutions.map((execution) => {
+                const rule = rules.find((item) => item.id === execution.ruleId);
+                const executionActions = actionExecutions
+                  .filter((action) => action.executionId === execution.id)
+                  .sort((left, right) => left.actionIndex - right.actionIndex || left.attemptNumber - right.attemptNumber);
+                return (
+                  <article key={execution.id}>
+                    <div className={styles.workflowExecutionHeader}>
+                      <div>
+                        <strong>{rule?.name ?? "Workflow rule"}</strong>
+                        <span>{execution.mode.toLowerCase()} · {execution.eventType.replaceAll("_", " ").toLowerCase()} · depth {execution.recursionDepth}</span>
+                      </div>
+                      <StatusBadge tone={execution.state === "COMPLETED" ? "success" : execution.state === "PARTIAL_FAILED" ? "danger" : execution.state === "ACTIONS_PENDING" ? "warning" : "neutral"}>
+                        {execution.state.replaceAll("_", " ").toLowerCase()}
+                      </StatusBadge>
+                    </div>
+                    <div className={styles.workflowExecutionMeta}>
+                      <span>{execution.matched ? "Conditions matched" : "Conditions did not match"}</span>
+                      <span>{formatWhen(execution.createdAt, data.workspace.timezone)}</span>
+                    </div>
+                    {executionActions.length > 0 ? (
+                      <div className={styles.workflowActionAttempts}>
+                        {executionActions.map((action) => (
+                          <div key={action.id}>
+                            <span><strong>{action.actionType.replaceAll("_", " ").toLowerCase()}</strong><small>action {action.actionIndex + 1} · attempt {action.attemptNumber}</small></span>
+                            <StatusBadge tone={action.state === "SUCCEEDED" ? "success" : action.state === "FAILED" ? "danger" : action.state === "APPROVAL_REQUIRED" ? "warning" : "neutral"}>
+                              {action.state.replaceAll("_", " ").toLowerCase()}
+                            </StatusBadge>
+                            {action.errorCode ? <code>{action.errorCode}</code> : null}
+                            <div className={styles.workflowActionControls}>
+                              {action.state === "PENDING" && action.actionType === "CREATE_ATTENTION" ? (
+                                <form action={runInternalAction}><input type="hidden" name="actionExecutionId" value={action.id} /><button className="app-button-secondary" type="submit">Run internal action</button></form>
+                              ) : null}
+                              {action.state === "APPROVAL_REQUIRED" && data.actor.role === "OWNER" ? (
+                                <form action={approveAction}><input type="hidden" name="actionExecutionId" value={action.id} /><button className="app-button-primary" type="submit">Approve external send</button></form>
+                              ) : null}
+                              {action.state === "FAILED" && data.actor.role === "OWNER" ? (
+                                <form action={replayAction}><input type="hidden" name="actionExecutionId" value={action.id} /><button className="app-button-secondary" type="submit">Replay this action only</button></form>
+                              ) : null}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+              {latestExecutions.length === 0 ? (
+                <div className={styles.recoveryClear}><span aria-hidden="true">◎</span><div><strong>No workflow decisions yet</strong><p>Run a synthetic preview to create the first decision record without any live side effect.</p></div></div>
+              ) : null}
+            </div>
+          </section>
+        </>
+      )}
+    </section>
+  );
+}
+
 function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot; workspaceSlug: string }) {
   const openItems = data.attentionItems.filter((item) => item.status !== "RESOLVED");
   if (openItems.length === 0) {
     return (
-      <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
+      <>
+        <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} />
+        <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
         <header className={styles.recoveryHeader}>
           <div><p className={styles.recoveryEyebrow}>Human recovery</p><h2>Recovery queue</h2><p>Operational exceptions that need a person before workflow can safely continue.</p></div>
         </header>
         <div className={styles.recoveryClear}><span aria-hidden="true">✓</span><div><strong>No recovery work</strong><p>There are no open attention items requiring human intervention.</p></div></div>
-      </section>
+        </section>
+      </>
     );
   }
 
@@ -1976,7 +2446,9 @@ function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapsh
   const overdue = openItems.filter((item) => item.dueAt && Date.parse(item.dueAt) < now).length;
 
   return (
-    <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
+    <>
+      <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} />
+      <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
       <header className={styles.recoveryHeader}>
         <div>
           <p className={styles.recoveryEyebrow}>Human recovery</p>
@@ -2039,7 +2511,8 @@ function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapsh
           </div>
         </aside>
       </div>
-    </section>
+      </section>
+    </>
   );
 }
 
