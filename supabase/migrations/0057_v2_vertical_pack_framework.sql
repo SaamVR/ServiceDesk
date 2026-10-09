@@ -49,6 +49,7 @@ create table if not exists public.workspace_vertical_packs (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (workspace_id, pack_code),
+  unique (workspace_id, pack_code, version_number),
   foreign key (pack_code, version_number)
     references public.vertical_pack_versions(pack_code, version_number) on delete restrict,
   check (
@@ -67,8 +68,9 @@ create table if not exists public.service_catalog_vertical_bindings (
   primary key (workspace_id, service_id),
   foreign key (workspace_id, service_id)
     references public.service_catalog(workspace_id, id) on delete cascade,
-  foreign key (workspace_id, pack_code)
-    references public.workspace_vertical_packs(workspace_id, pack_code) on delete restrict,
+  foreign key (workspace_id, pack_code, version_number)
+    references public.workspace_vertical_packs(workspace_id, pack_code, version_number)
+    on update cascade on delete restrict,
   foreign key (pack_code, version_number)
     references public.vertical_pack_versions(pack_code, version_number) on delete restrict
 );
