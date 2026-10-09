@@ -281,6 +281,14 @@ begin
     return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
   end if;
 
+  update public.tenant_support_access_grants
+  set revoked_by = v_actor,
+      revoked_at = v_now
+  where workspace_id = v_workspace
+    and support_subject_hash = v_subject
+    and scope = v_scope
+    and revoked_at is null;
+
   insert into public.tenant_support_access_grants(
     workspace_id, support_subject_hash, scope, reason,
     approved_by, approved_at, expires_at, created_at
