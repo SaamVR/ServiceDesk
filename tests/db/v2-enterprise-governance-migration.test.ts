@@ -87,8 +87,9 @@ describe("V2 enterprise governance migration", () => {
     const start = sql.indexOf("create or replace function public.servicedesk_update_service_catalog_item");
     const end = sql.indexOf("revoke all on function public.servicedesk_update_service_catalog_item", start);
     const block = sql.slice(start, end);
-    expect(block).toContain("as $\\ndeclare");
-    expect(block).toContain("end;\\n$;");
+    const dollarQuote = "$" + "$";
+    expect(block).toContain("as " + dollarQuote + "\\ndeclare");
+    expect(block).toContain("end;\\n" + dollarQuote + ";");
     expect(block).not.toContain("as $\\ndeclare");
     expect(block).not.toContain("end;\\n$;");
   });
