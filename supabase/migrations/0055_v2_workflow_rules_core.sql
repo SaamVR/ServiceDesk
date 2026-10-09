@@ -191,7 +191,7 @@ begin
 
     if exists (
       select 1
-      from jsonb_object_keys(v_condition) key
+      from jsonb_object_keys(v_condition) as condition_keys(key)
       where key not in ('field','operator','value')
     ) then
       return jsonb_build_object('ok', false, 'code', 'WORKFLOW_CONDITION_EXTRA_FIELD');
@@ -213,7 +213,8 @@ begin
         return jsonb_build_object('ok', false, 'code', 'WORKFLOW_ATTENTION_ACTION_INVALID');
       end if;
       if exists (
-        select 1 from jsonb_object_keys(v_action) key
+        select 1
+        from jsonb_object_keys(v_action) as action_keys(key)
         where key not in ('type','severity','summaryKey')
       ) then
         return jsonb_build_object('ok', false, 'code', 'WORKFLOW_ACTION_EXTRA_FIELD');
@@ -226,7 +227,8 @@ begin
         return jsonb_build_object('ok', false, 'code', 'WORKFLOW_EXTERNAL_SEND_ACTION_INVALID');
       end if;
       if exists (
-        select 1 from jsonb_object_keys(v_action) key
+        select 1
+        from jsonb_object_keys(v_action) as action_keys(key)
         where key not in ('type','templateKey','recipient')
       ) then
         return jsonb_build_object('ok', false, 'code', 'WORKFLOW_ACTION_EXTRA_FIELD');
@@ -236,7 +238,7 @@ begin
       return jsonb_build_object('ok', false, 'code', 'WORKFLOW_ACTION_CATALOGUE_VIOLATION');
     end if;
 
-    if (v_action::text ~* '(https?://|\bsql\b|javascript:|data:|webhook|api[_-]?key|secret|token)') then
+    if (v_action::text ~* '(https?://|(^|[^a-z0-9_])sql([^a-z0-9_]|$)|javascript:|data:|webhook|api[_-]?key|secret|token)') then
       return jsonb_build_object('ok', false, 'code', 'WORKFLOW_UNSAFE_ACTION_MATERIAL');
     end if;
   end loop;
