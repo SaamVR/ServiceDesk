@@ -32,6 +32,30 @@ describe("V2 workflow execution migration", () => {
     expect(sql).not.toContain("jsonb_object_length");
   });
 
+
+  it("requires a persisted preview before draft publish", () => {
+    expect(sql).toContain("servicedesk_require_workflow_preview_before_publish");
+    expect(sql).toContain("workflow_rule_versions_require_preview");
+    expect(sql).toContain("old.state = 'DRAFT' and new.state = 'PUBLISHED'");
+    expect(sql).toContain("e.mode = 'PREVIEW'");
+    expect(sql).toContain("e.state = 'PREVIEWED'");
+    expect(sql).toContain("workflow draft must be previewed before publish");
+  });
+
+  it("provides an owner-only synthetic preview RPC that records preview decisions without running actions", () => {
+    const start = sql.indexOf("servicedesk_preview_workflow_rule_version");
+    const end = sql.indexOf("servicedesk_approve_workflow_external_action", start);
+    const preview = sql.slice(start, end);
+    expect(preview).toContain("v_role <> 'OWNER'");
+    expect(preview).toContain("servicedesk_actor_is_workspace_owner");
+    expect(preview).toContain("servicedesk_validate_workflow_event_snapshot");
+    expect(preview).toContain("'mode', 'PREVIEW'");
+    expect(preview).toContain("servicedesk_record_workflow_execution");
+    expect(preview).toContain("'previewOnly', true");
+    expect(preview).not.toContain("servicedesk_execute_workflow_attention_action");
+    expect(preview).not.toContain("insert into public.outbox_events");
+  });
+
   it("requires explicit owner approval for every external send action", () => {
     expect(sql).toContain("then 'APPROVAL_REQUIRED'");
     expect(sql).toContain("servicedesk_approve_workflow_external_action");
