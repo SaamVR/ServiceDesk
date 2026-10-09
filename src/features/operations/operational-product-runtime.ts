@@ -884,6 +884,88 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   const rawWorkflowExecutions = workflowAvailable ? rows(workflowExecutionRead.data) : [];
   const rawWorkflowActions = workflowAvailable ? rows(workflowActionRead.data) : [];
 
+  const workspaceVerticalRead = await service
+    .from("workspace_vertical_packs")
+    .select("pack_code,version_number,status,enabled_at,disabled_at,version")
+    .eq("workspace_id", workspace.id)
+    .order("pack_code", { ascending: true });
+  const workspaceVerticalRows = workspaceVerticalRead.error ? [] : rows(workspaceVerticalRead.data);
+  const packCodes = [...new Set(workspaceVerticalRows.map((row) => String(row.pack_code)))];
+  const verticalVersionRead = packCodes.length > 0
+    ? await service
+        .from("vertical_pack_versions")
+        .select("pack_code,version_number,state,evidence_status,duration_adapter_key,pricing_adapter_key,release_notes")
+        .in("pack_code", packCodes)
+    : { data: [], error: null };
+  const verticalPackAvailable = !workspaceVerticalRead.error && !verticalVersionRead.error;
+  const verticalVersionRows = verticalPackAvailable ? rows(verticalVersionRead.data) : [];
+  const verticalVersionByKey = new Map(
+    verticalVersionRows.map((row) => [
+      String(row.pack_code) + ":" + String(row.version_number),
+      row,
+    ]),
+  );
+  const verticalPacks: OperationalVerticalPack[] = verticalPackAvailable
+    ? workspaceVerticalRows.map((row) => {
+        const version = verticalVersionByKey.get(String(row.pack_code) + ":" + String(row.version_number));
+        return {
+          packCode: String(row.pack_code),
+          versionNumber: numberValue(row, "version_number", 1),
+          status: String(row.status) as OperationalVerticalPack["status"],
+          evidenceStatus: String(version?.evidence_status ?? "BUYER_EVIDENCE_BLOCKED") as OperationalVerticalPack["evidenceStatus"],
+          state: String(version?.state ?? "DRAFT") as OperationalVerticalPack["state"],
+          durationAdapterKey: String(version?.duration_adapter_key ?? "UNAVAILABLE"),
+          pricingAdapterKey: String(version?.pricing_adapter_key ?? "UNAVAILABLE"),
+          releaseNotes: version ? textValue(version, "release_notes") : undefined,
+          enabledAt: textValue(row, "enabled_at"),
+        };
+      })
+    : [];
+
+  let capabilityQuery = service
+    .from("operator_capability_grants")
+    .select("user_id,capability,status,expires_at,version")
+    .eq("workspace_id", workspace.id)
+    .order("user_id", { ascending: true });
+  if (actor.role !== "OWNER") {
+    capabilityQuery = capabilityQuery.eq("user_id", actor.userId ?? "");
+  }
+  const capabilityRead = await capabilityQuery;
+  const supportRead = actor.role === "OWNER"
+    ? await service
+        .from("tenant_support_access_grants")
+        .select("id,support_subject_hash,scope,reason,approved_at,expires_at,revoked_at")
+        .eq("workspace_id", workspace.id)
+        .order("approved_at", { ascending: false })
+        .limit(200)
+    : { data: [], error: null };
+  const governanceAvailable = !capabilityRead.error && !supportRead.error;
+  const governanceCapabilities: OperationalGovernanceCapabilityGrant[] = governanceAvailable
+    ? rows(capabilityRead.data)
+        .filter((row) => row.capability === "SERVICE_CATALOG_MANAGE")
+        .filter((row) => row.status === "ACTIVE" || row.status === "REVOKED")
+        .map((row) => ({
+          userId: String(row.user_id),
+          capability: "SERVICE_CATALOG_MANAGE",
+          status: String(row.status) as OperationalGovernanceCapabilityGrant["status"],
+          expiresAt: textValue(row, "expires_at"),
+          version: numberValue(row, "version", 1),
+        }))
+    : [];
+  const supportAccessGrants: OperationalSupportAccessGrant[] = governanceAvailable && actor.role === "OWNER"
+    ? rows(supportRead.data)
+        .filter((row) => row.scope === "READ_DIAGNOSTICS" || row.scope === "READ_AUDIT_METADATA")
+        .map((row) => ({
+          id: String(row.id),
+          scope: String(row.scope) as OperationalSupportAccessGrant["scope"],
+          subjectHashPrefix: String(row.support_subject_hash ?? "").slice(0, 8),
+          reason: String(row.reason ?? ""),
+          approvedAt: String(row.approved_at),
+          expiresAt: String(row.expires_at),
+          revokedAt: textValue(row, "revoked_at"),
+        }))
+    : [];
+
   let branchAssignments: OperationalBranchAssignment[] = [];
   if (branchScope.mode !== "LEGACY" && actor.role === "OWNER") {
     const assignmentRead = await service
