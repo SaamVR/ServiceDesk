@@ -79,10 +79,24 @@ create table if not exists public.workflow_action_executions (
   foreign key (workspace_id, replay_of_action_execution_id)
     references public.workflow_action_executions(workspace_id, id) on delete set null,
   check (
-    (state in ('APPROVED','SUCCEEDED','FAILED','SUPPRESSED') and action_type in ('SEND_EMAIL_TEMPLATE','SEND_WHATSAPP_TEMPLATE')
-      and (state <> 'APPROVED' or (approved_by is not null and approved_at is not null)))
-    or action_type = 'CREATE_ATTENTION'
-    or state in ('PREVIEW_ONLY','APPROVAL_REQUIRED')
+    (
+      action_type in ('SEND_EMAIL_TEMPLATE','SEND_WHATSAPP_TEMPLATE')
+      and (
+        (state = 'PREVIEW_ONLY' and approved_by is null and approved_at is null)
+        or (state = 'APPROVAL_REQUIRED' and approved_by is null and approved_at is null)
+        or (
+          state in ('APPROVED','SUCCEEDED','FAILED','SUPPRESSED')
+          and approved_by is not null
+          and approved_at is not null
+        )
+      )
+    )
+    or (
+      action_type = 'CREATE_ATTENTION'
+      and state in ('PREVIEW_ONLY','PENDING','SUCCEEDED','FAILED','SUPPRESSED')
+      and approved_by is null
+      and approved_at is null
+    )
   )
 );
 
