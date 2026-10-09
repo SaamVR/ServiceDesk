@@ -116,7 +116,7 @@ language sql
 stable
 security definer
 set search_path = public
-as $
+as $$
   select actor_role = 'OWNER' and exists (
     select 1
     from public.memberships m
@@ -125,7 +125,7 @@ as $
       and m.status = 'ACTIVE'
       and m.role = 'OWNER'
   );
-$;
+$$;
 
 create or replace function public.servicedesk_actor_has_branch_access(
   target_workspace uuid,
@@ -139,7 +139,7 @@ language sql
 stable
 security definer
 set search_path = public
-as $
+as $$
   select exists (
     select 1
     from public.memberships m
@@ -160,7 +160,7 @@ as $
         )
       )
   );
-$;
+$$;
 
 revoke all on function public.servicedesk_default_branch(uuid) from public;
 revoke all on function public.servicedesk_has_branch_access(uuid, uuid, public.membership_role[]) from public;
@@ -428,7 +428,7 @@ returns jsonb
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
   v_actor uuid := nullif(p_input->>'actorUserId','')::uuid;
@@ -510,14 +510,14 @@ begin
 exception when unique_violation or check_violation or invalid_text_representation or datetime_field_overflow then
   return jsonb_build_object('ok', false, 'code', 'BRANCH_INPUT_INVALID');
 end;
-$;
+$$;
 
 create or replace function public.servicedesk_set_branch_membership(p_input jsonb)
 returns jsonb
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
   v_actor uuid := nullif(p_input->>'actorUserId','')::uuid;
@@ -579,7 +579,7 @@ begin
 exception when invalid_text_representation or datetime_field_overflow then
   return jsonb_build_object('ok', false, 'code', 'BRANCH_MEMBERSHIP_INPUT_INVALID');
 end;
-$;
+$$;
 
 revoke all on function public.servicedesk_upsert_workspace_branch(jsonb) from public, anon, authenticated;
 revoke all on function public.servicedesk_set_branch_membership(jsonb) from public, anon, authenticated;
