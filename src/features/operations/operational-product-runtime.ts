@@ -219,6 +219,61 @@ export interface OperationalRecurrence {
   version: number;
 }
 
+export interface OperationalWorkflowRule {
+  id: string;
+  branchId: string;
+  code: string;
+  name: string;
+  status: "DRAFT" | "ACTIVE" | "PAUSED" | "ARCHIVED";
+  publishedVersionNumber?: number;
+  version: number;
+  updatedAt: string;
+}
+
+export interface OperationalWorkflowRuleVersion {
+  id: string;
+  branchId: string;
+  ruleId: string;
+  versionNumber: number;
+  state: "DRAFT" | "PUBLISHED" | "RETIRED";
+  eventType: "REQUEST_CREATED" | "QUOTE_ACCEPTED" | "VISIT_COMPLETED" | "INVOICE_PAID" | "ATTENTION_OPENED";
+  conditions: Array<Record<string, unknown>>;
+  actions: Array<Record<string, unknown>>;
+  maxActionsPerEvent: number;
+  basedOnVersionNumber?: number;
+  publishedAt?: string;
+  createdAt: string;
+}
+
+export interface OperationalWorkflowExecution {
+  id: string;
+  branchId: string;
+  ruleId: string;
+  ruleVersionId: string;
+  mode: "PREVIEW" | "LIVE";
+  eventType: string;
+  matched: boolean;
+  recursionDepth: number;
+  state: "PREVIEWED" | "SKIPPED" | "ACTIONS_PENDING" | "COMPLETED" | "PARTIAL_FAILED";
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface OperationalWorkflowActionExecution {
+  id: string;
+  branchId: string;
+  executionId: string;
+  actionIndex: number;
+  attemptNumber: number;
+  actionType: "CREATE_ATTENTION" | "SEND_EMAIL_TEMPLATE" | "SEND_WHATSAPP_TEMPLATE";
+  state: "PREVIEW_ONLY" | "PENDING" | "APPROVAL_REQUIRED" | "APPROVED" | "SUCCEEDED" | "FAILED" | "SUPPRESSED";
+  approvedAt?: string;
+  errorCode?: string;
+  replayOfActionExecutionId?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
 export interface OperationalServiceCatalogItem {
   id: string;
   code: string;
@@ -298,6 +353,11 @@ export interface OperationalStaffSnapshot {
   qualityCases: OperationalQualityCase[];
   recurrenceRules: OperationalRecurrence[];
   serviceCatalog: OperationalServiceCatalogItem[];
+  workflowAvailable?: boolean;
+  workflowRules?: OperationalWorkflowRule[];
+  workflowRuleVersions?: OperationalWorkflowRuleVersion[];
+  workflowExecutions?: OperationalWorkflowExecution[];
+  workflowActionExecutions?: OperationalWorkflowActionExecution[];
   integrations: OperationalIntegrationHealth[];
   crews: Array<{ id: string; branchId?: string; name: string; active: boolean }>;
   capacitySlots: Array<{ id: string; branchId?: string; crewId: string; startAt: string; endAt: string; capacityMinutes: number }>;
@@ -753,6 +813,42 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   const retentionControlRows = retentionAvailable ? rows(retentionControlRead.data) : [];
   const consentRows = retentionAvailable ? rows(consentRead.data) : [];
 
+
+  const [workflowRuleRead, workflowVersionRead, workflowExecutionRead, workflowActionRead] = await Promise.all([
+    service
+      .from("workflow_rules")
+      .select("id,branch_id,code,name,status,published_version_number,version,updated_at")
+      .eq("workspace_id", workspace.id)
+      .order("updated_at", { ascending: false })
+      .limit(300),
+    service
+      .from("workflow_rule_versions")
+      .select("id,branch_id,rule_id,version_number,state,event_type,conditions,actions,max_actions_per_event,based_on_version_number,published_at,created_at")
+      .eq("workspace_id", workspace.id)
+      .order("created_at", { ascending: false })
+      .limit(1000),
+    service
+      .from("workflow_executions")
+      .select("id,branch_id,rule_id,rule_version_id,mode,event_type,matched,recursion_depth,state,created_at,completed_at")
+      .eq("workspace_id", workspace.id)
+      .order("created_at", { ascending: false })
+      .limit(1000),
+    service
+      .from("workflow_action_executions")
+      .select("id,branch_id,execution_id,action_index,attempt_number,action_type,state,approved_at,error_code,replay_of_action_execution_id,created_at,completed_at")
+      .eq("workspace_id", workspace.id)
+      .order("created_at", { ascending: false })
+      .limit(2000),
+  ]);
+  const workflowAvailable = !workflowRuleRead.error
+    && !workflowVersionRead.error
+    && !workflowExecutionRead.error
+    && !workflowActionRead.error;
+  const rawWorkflowRules = workflowAvailable ? rows(workflowRuleRead.data) : [];
+  const rawWorkflowVersions = workflowAvailable ? rows(workflowVersionRead.data) : [];
+  const rawWorkflowExecutions = workflowAvailable ? rows(workflowExecutionRead.data) : [];
+  const rawWorkflowActions = workflowAvailable ? rows(workflowActionRead.data) : [];
+
   let branchAssignments: OperationalBranchAssignment[] = [];
   if (branchScope.mode !== "LEGACY" && actor.role === "OWNER") {
     const assignmentRead = await service
@@ -806,6 +902,19 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   }
   const branchId = selectedBranch?.id;
   const inSelectedBranch = (row: Row) => !branchId || String(row.branch_id ?? "") === branchId;
+  const workflowRuleRows = rawWorkflowRules.filter(inSelectedBranch);
+  const workflowRuleIds = new Set(workflowRuleRows.map((row) => String(row.id)));
+  const workflowVersionRows = rawWorkflowVersions
+    .filter(inSelectedBranch)
+    .filter((row) => workflowRuleIds.has(String(row.rule_id)));
+  const workflowVersionIds = new Set(workflowVersionRows.map((row) => String(row.id)));
+  const workflowExecutionRows = rawWorkflowExecutions
+    .filter(inSelectedBranch)
+    .filter((row) => workflowRuleIds.has(String(row.rule_id)) && workflowVersionIds.has(String(row.rule_version_id)));
+  const workflowExecutionIds = new Set(workflowExecutionRows.map((row) => String(row.id)));
+  const workflowActionRows = rawWorkflowActions
+    .filter(inSelectedBranch)
+    .filter((row) => workflowExecutionIds.has(String(row.execution_id)));
 
   const propertyRows = rawPropertyRows.filter(inSelectedBranch);
   const requestRows = rawRequestRows.filter(inSelectedBranch);
@@ -1218,6 +1327,62 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         active: Boolean(row.active),
         requiresReview: Boolean(row.requires_review),
         updatedAt: String(row.updated_at),
+      })),
+      workflowAvailable,
+      workflowRules: workflowRuleRows.map((row) => ({
+        id: String(row.id),
+        branchId: String(row.branch_id),
+        code: String(row.code),
+        name: String(row.name),
+        status: String(row.status) as OperationalWorkflowRule["status"],
+        publishedVersionNumber: typeof row.published_version_number === "number" ? row.published_version_number : undefined,
+        version: numberValue(row, "version", 1),
+        updatedAt: String(row.updated_at),
+      })),
+      workflowRuleVersions: workflowVersionRows.map((row) => ({
+        id: String(row.id),
+        branchId: String(row.branch_id),
+        ruleId: String(row.rule_id),
+        versionNumber: numberValue(row, "version_number", 1),
+        state: String(row.state) as OperationalWorkflowRuleVersion["state"],
+        eventType: String(row.event_type) as OperationalWorkflowRuleVersion["eventType"],
+        conditions: Array.isArray(row.conditions)
+          ? row.conditions.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+          : [],
+        actions: Array.isArray(row.actions)
+          ? row.actions.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+          : [],
+        maxActionsPerEvent: numberValue(row, "max_actions_per_event", 3),
+        basedOnVersionNumber: typeof row.based_on_version_number === "number" ? row.based_on_version_number : undefined,
+        publishedAt: textValue(row, "published_at"),
+        createdAt: String(row.created_at),
+      })),
+      workflowExecutions: workflowExecutionRows.map((row) => ({
+        id: String(row.id),
+        branchId: String(row.branch_id),
+        ruleId: String(row.rule_id),
+        ruleVersionId: String(row.rule_version_id),
+        mode: String(row.mode) as OperationalWorkflowExecution["mode"],
+        eventType: String(row.event_type),
+        matched: row.matched === true,
+        recursionDepth: numberValue(row, "recursion_depth"),
+        state: String(row.state) as OperationalWorkflowExecution["state"],
+        createdAt: String(row.created_at),
+        completedAt: textValue(row, "completed_at"),
+      })),
+      workflowActionExecutions: workflowActionRows.map((row) => ({
+        id: String(row.id),
+        branchId: String(row.branch_id),
+        executionId: String(row.execution_id),
+        actionIndex: numberValue(row, "action_index"),
+        attemptNumber: numberValue(row, "attempt_number", 1),
+        actionType: String(row.action_type) as OperationalWorkflowActionExecution["actionType"],
+        state: String(row.state) as OperationalWorkflowActionExecution["state"],
+        approvedAt: textValue(row, "approved_at"),
+        errorCode: textValue(row, "error_code"),
+        replayOfActionExecutionId: textValue(row, "replay_of_action_execution_id"),
+        createdAt: String(row.created_at),
+        completedAt: textValue(row, "completed_at"),
       })),
       integrations: buildOperationalIntegrationHealth(),
       crews: crewRows.map((row) => ({
