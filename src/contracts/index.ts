@@ -11,3 +11,5 @@ export * from "./inbound-operations";
 export * from "./photo-intake";
 export * from "./retention-attribution";
 export * from "./workflow-rules";
+export * from "./enterprise-governance";
+export * from "./vertical-packs";
