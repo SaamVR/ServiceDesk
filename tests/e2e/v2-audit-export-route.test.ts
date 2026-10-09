@@ -35,4 +35,17 @@ describe("V2 governance audit export route", () => {
     expect(route).toContain('"cache-control": "private, no-store, max-age=0"');
     expect(route).toContain('"x-content-type-options": "nosniff"');
   });
+
+  it("neutralizes spreadsheet-formula prefixes in exported metadata", () => {
+    expect(route).toContain("/^[=+\\-@\\t\\r]/");
+    expect(route).toContain("\"'\" + raw");
+  });
+
+  it("surfaces server-side truncation without exporting before/after payloads", () => {
+    expect(route).toContain('"x-servicedesk-export-truncated"');
+    expect(route).toContain('data.truncated === true ? "true" : "false"');
+    expect(route).not.toContain("before_data");
+    expect(route).not.toContain("after_data");
+  });
+
 });
