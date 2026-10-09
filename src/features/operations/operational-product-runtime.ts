@@ -3017,7 +3017,7 @@ export async function grantOperationalTenantSupportAccess(
   }
   return {
     ok: true,
-    message: "Read-only tenant support access granted temporarily. No impersonation or write scope was created.",
+    message: "Temporary read-only support authorization recorded. This does not create a support login or session; trusted support tooling must validate the exact subject hash before access.",
   };
 }
 
