@@ -82,4 +82,15 @@ describe("V2 enterprise governance migration", () => {
     expect(sql).toContain("DELEGATE_ALL_BRANCHES_REQUIRED");
   });
 
+
+  it("uses valid dollar quoting for delegated service-catalog RPC", () => {
+    const start = sql.indexOf("create or replace function public.servicedesk_update_service_catalog_item");
+    const end = sql.indexOf("revoke all on function public.servicedesk_update_service_catalog_item", start);
+    const block = sql.slice(start, end);
+    expect(block).toContain("as $\\ndeclare");
+    expect(block).toContain("end;\\n$;");
+    expect(block).not.toContain("as $\\ndeclare");
+    expect(block).not.toContain("end;\\n$;");
+  });
+
 });
