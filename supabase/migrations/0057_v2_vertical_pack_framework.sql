@@ -97,7 +97,14 @@ drop policy if exists vertical_pack_versions_staff_select on public.vertical_pac
 create policy vertical_pack_versions_staff_select
 on public.vertical_pack_versions
 for select to authenticated
-using (public.has_active_membership((select m.workspace_id from public.memberships m where m.user_id = auth.uid() and m.status = 'ACTIVE' limit 1)));
+using (
+  exists (
+    select 1
+    from public.memberships m
+    where m.user_id = auth.uid()
+      and m.status = 'ACTIVE'
+  )
+);
 
 drop policy if exists workspace_vertical_packs_staff_select on public.workspace_vertical_packs;
 create policy workspace_vertical_packs_staff_select
