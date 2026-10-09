@@ -45,6 +45,13 @@ describe("V2 workflow rule core migration", () => {
     expect(sql).toMatch(/api\[_-\]\?key|api\[_-\]?key|api\[_-\]?key/i);
   });
 
+
+  it("aliases JSON object keys explicitly before rejecting unknown fields", () => {
+    expect(sql).toContain("jsonb_object_keys(v_condition) as condition_keys(key)");
+    expect(sql).toContain("jsonb_object_keys(v_action) as action_keys(key)");
+    expect(sql).toContain("key not in ('field','operator','value')");
+  });
+
   it("makes published definitions immutable and rollback creates a new published version", () => {
     expect(sql).toContain("servicedesk_prevent_published_workflow_version_mutation");
     expect(sql).toContain("published workflow versions are immutable");
