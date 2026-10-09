@@ -483,7 +483,7 @@ returns jsonb
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $servicedesk$
 declare
   v_workspace uuid := nullif(p_input->>'workspaceId','')::uuid;
   v_actor_user uuid := nullif(p_input->>'actorUserId','')::uuid;
@@ -653,7 +653,7 @@ exception
   when invalid_text_representation or check_violation or unique_violation then
     return jsonb_build_object('ok', false, 'code', 'SERVICE_CATALOG_UPDATE_REJECTED');
 end;
-$;
+$servicedesk$;
 
 revoke all on function public.servicedesk_update_service_catalog_item(jsonb) from public, anon, authenticated;
 grant execute on function public.servicedesk_update_service_catalog_item(jsonb) to service_role;
