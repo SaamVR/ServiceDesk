@@ -11,7 +11,7 @@ describe("enterprise governance Postgres boundary", () => {
     const port = createPostgresEnterpriseGovernancePort({ rpc } as SupabaseRpcClient);
     await expect(port.setCapability(dispatcher, {
       userId: "dispatcher-2",
-      capability: "WORKFLOW_MANAGE",
+      capability: "SERVICE_CATALOG_MANAGE",
       status: "ACTIVE",
     })).resolves.toMatchObject({ ok: false, code: "FORBIDDEN" });
     expect(rpc).not.toHaveBeenCalled();
@@ -22,7 +22,7 @@ describe("enterprise governance Postgres boundary", () => {
       data: {
         ok: true,
         userId: "dispatcher-2",
-        capability: "WORKFLOW_MANAGE",
+        capability: "SERVICE_CATALOG_MANAGE",
         status: "ACTIVE",
         version: 2,
       },
@@ -31,11 +31,11 @@ describe("enterprise governance Postgres boundary", () => {
     const port = createPostgresEnterpriseGovernancePort({ rpc } as SupabaseRpcClient);
     await expect(port.setCapability(owner, {
       userId: "dispatcher-2",
-      capability: "WORKFLOW_MANAGE",
+      capability: "SERVICE_CATALOG_MANAGE",
       status: "ACTIVE",
     })).resolves.toMatchObject({
       ok: true,
-      value: { userId: "dispatcher-2", capability: "WORKFLOW_MANAGE", status: "ACTIVE", version: 2 },
+      value: { userId: "dispatcher-2", capability: "SERVICE_CATALOG_MANAGE", status: "ACTIVE", version: 2 },
     });
   });
 
