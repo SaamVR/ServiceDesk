@@ -37,7 +37,7 @@ describe("V2 controlled workflow builder product", () => {
     expect(route).toContain("Run synthetic preview");
     expect(route).toContain("Publish tested draft");
     expect(route).toContain("synthetic preview required before publish");
-    expect(route).toContain("no live side effect");
+    expect(route).toContain("without any live side effect");
   });
 
   it("makes owner approval explicit for external sends", () => {
