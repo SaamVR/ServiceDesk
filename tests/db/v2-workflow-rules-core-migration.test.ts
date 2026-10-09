@@ -41,8 +41,10 @@ describe("V2 workflow rule core migration", () => {
     expect(sql).toContain("WORKFLOW_UNSAFE_ACTION_MATERIAL");
     expect(sql).toContain("WORKFLOW_ACTION_EXTRA_FIELD");
     expect(sql).toContain("WORKFLOW_ACTION_CATALOGUE_VIOLATION");
-    expect(sql).toMatch(/https?[:]?\/\//i);
-    expect(sql).toMatch(/api\[_-\]\?key|api\[_-\]?key|api\[_-\]?key/i);
+    expect(sql).toContain("https?://");
+    expect(sql).toContain("api[_-]?key");
+    expect(sql).toContain("secret");
+    expect(sql).toContain("token");
   });
 
 
