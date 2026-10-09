@@ -10,10 +10,12 @@ const sql = readFileSync(
 describe("V2 enterprise governance migration", () => {
   it("delegates only a fixed dispatcher capability catalogue", () => {
     expect(sql).toContain("SERVICE_CATALOG_MANAGE");
-    expect(sql).toContain("WORKFLOW_MANAGE");
-    expect(sql).toContain("RETENTION_MANAGE");
-    expect(sql).not.toContain("'AUDIT_EXPORT'\n    )");
+    expect(sql).not.toContain("'WORKFLOW_MANAGE'");
+    expect(sql).not.toContain("'RETENTION_MANAGE'");
+    expect(sql).not.toContain("'AUDIT_EXPORT'");
     expect(sql).toContain("v_member.role <> 'DISPATCHER'");
+    expect(sql).toContain("'SERVICE_CATALOG_MANAGE', v_now");
+    expect(sql).toContain("SERVICE_CATALOG_SCOPE_REQUIRED");
   });
 
   it("keeps audit export owner-only and metadata-only", () => {
