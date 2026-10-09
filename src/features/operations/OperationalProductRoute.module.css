@@ -1035,3 +1035,60 @@
   .workflowActionAttempts code,.workflowActionControls{grid-column:1/-1}
   .workflowActionControls{justify-content:flex-start}
 }
+
+
+.governanceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.governancePane {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-subtle);
+}
+.governancePane h4 {
+  margin: 2px 0 0;
+}
+.governanceRows {
+  display: grid;
+  gap: 7px;
+}
+.governanceRows article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 46px;
+  padding: 9px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+.governanceRows article > span:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.governanceRows small {
+  color: var(--app-text-muted);
+  font-size: .66rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+@media(max-width: 900px) {
+  .governanceGrid {
+    grid-template-columns: 1fr;
+  }
+}
+@media(max-width: 620px) {
+  .governanceRows article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
