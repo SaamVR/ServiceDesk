@@ -325,6 +325,36 @@ export interface OperationalBranchComparison {
   disclosure: string;
 }
 
+export interface OperationalVerticalPack {
+  packCode: string;
+  versionNumber: number;
+  status: "ENABLED" | "DISABLED";
+  evidenceStatus: "BASELINE_EXISTING" | "BUYER_EVIDENCE_BLOCKED" | "BUYER_EVIDENCE_VERIFIED";
+  state: "DRAFT" | "RELEASED" | "RETIRED";
+  durationAdapterKey: string;
+  pricingAdapterKey: string;
+  releaseNotes?: string;
+  enabledAt?: string;
+}
+
+export interface OperationalGovernanceCapabilityGrant {
+  userId: string;
+  capability: "SERVICE_CATALOG_MANAGE";
+  status: "ACTIVE" | "REVOKED";
+  expiresAt?: string;
+  version: number;
+}
+
+export interface OperationalSupportAccessGrant {
+  id: string;
+  scope: "READ_DIAGNOSTICS" | "READ_AUDIT_METADATA";
+  subjectHashPrefix: string;
+  reason: string;
+  approvedAt: string;
+  expiresAt: string;
+  revokedAt?: string;
+}
+
 export interface OperationalStaffSnapshot {
   loadedAt: string;
   workspace: { id: string; slug: string; name: string; timezone: string };
@@ -332,6 +362,11 @@ export interface OperationalStaffSnapshot {
   branchScope?: OperationalBranchScope;
   branchAssignments?: OperationalBranchAssignment[];
   branchComparison?: OperationalBranchComparison;
+  verticalPackAvailable?: boolean;
+  verticalPacks?: OperationalVerticalPack[];
+  governanceAvailable?: boolean;
+  governanceCapabilities?: OperationalGovernanceCapabilityGrant[];
+  supportAccessGrants?: OperationalSupportAccessGrant[];
   customers: OperationalCustomer[];
   customerContacts?: OperationalCustomerContact[];
   communicationConsents?: OperationalCommunicationConsent[];
