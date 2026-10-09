@@ -83,17 +83,15 @@ describe("V2 enterprise governance migration", () => {
   });
 
 
-  it("uses valid dollar quoting for delegated service-catalog RPC", () => {
+  it("uses valid tagged dollar quoting for delegated service-catalog RPC", () => {
     const start = sql.indexOf("create or replace function public.servicedesk_update_service_catalog_item");
     const end = sql.indexOf("revoke all on function public.servicedesk_update_service_catalog_item", start);
     const block = sql.slice(start, end);
-    const dollarQuote = "$" + "$";
-    expect(block).toContain("as " + dollarQuote + "\\ndeclare");
-    expect(block).toContain("end;\\n" + dollarQuote + ";");
+    expect(block).toContain("as $servicedesk$\\ndeclare");
+    expect(block).toContain("end;\\n$servicedesk$;");
     expect(block).not.toContain("as $\\ndeclare");
     expect(block).not.toContain("end;\\n$;");
   });
-
 
   it("supersedes prior unrevoked support grants for the same subject and scope", () => {
     const start = sql.indexOf("create or replace function public.servicedesk_grant_tenant_support_access");
