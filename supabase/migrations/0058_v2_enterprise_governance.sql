@@ -119,6 +119,20 @@ as $$
         and (g.expires_at is null or g.expires_at > p_at)
         and m.status = 'ACTIVE'
         and m.role = 'DISPATCHER'
+        and not exists (
+          select 1
+          from public.workspace_branches b
+          where b.workspace_id = p_workspace
+            and b.active
+            and not exists (
+              select 1
+              from public.branch_memberships bm
+              where bm.workspace_id = b.workspace_id
+                and bm.branch_id = b.id
+                and bm.user_id = p_user
+                and bm.status = 'ACTIVE'
+            )
+        )
     );
 $$;
 
@@ -165,6 +179,23 @@ begin
 
   if not found or v_member.role <> 'DISPATCHER' then
     return jsonb_build_object('ok', false, 'code', 'DELEGATE_MEMBER_INVALID');
+  end if;
+
+  if v_status = 'ACTIVE' and exists (
+    select 1
+    from public.workspace_branches b
+    where b.workspace_id = v_workspace
+      and b.active
+      and not exists (
+        select 1
+        from public.branch_memberships bm
+        where bm.workspace_id = b.workspace_id
+          and bm.branch_id = b.id
+          and bm.user_id = v_user
+          and bm.status = 'ACTIVE'
+      )
+  ) then
+    return jsonb_build_object('ok', false, 'code', 'DELEGATE_ALL_BRANCHES_REQUIRED');
   end if;
 
   if v_status = 'ACTIVE' and v_expires is not null and v_expires <= v_now then
@@ -635,7 +666,7 @@ grant execute on function public.servicedesk_check_tenant_support_access(jsonb) 
 grant execute on function public.servicedesk_read_audit_export_metadata(jsonb) to service_role;
 
 comment on table public.operator_capability_grants is
-  'Owner-granted dispatcher governance capabilities. Does not create new tenant roles or bypass branch/tenant scope; audit export remains owner-only.';
+  'Owner-granted dispatcher service-catalog capability. Because the catalog is workspace-global, activation requires active assignment to every active branch and is rechecked at use time; audit export remains owner-only.';
 comment on table public.tenant_support_access_grants is
   'Owner-approved, read-only support access grants capped at 24 hours. No write or impersonation scope exists.';
 comment on function public.servicedesk_read_audit_export_metadata(jsonb) is
