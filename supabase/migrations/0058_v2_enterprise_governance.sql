@@ -9,8 +9,7 @@ create table if not exists public.operator_capability_grants (
     capability in (
       'SERVICE_CATALOG_MANAGE',
       'WORKFLOW_MANAGE',
-      'RETENTION_MANAGE',
-      'AUDIT_EXPORT'
+      'RETENTION_MANAGE'
     )
   ),
   status text not null check (status in ('ACTIVE','REVOKED')),
@@ -121,7 +120,7 @@ as $$
         and g.status = 'ACTIVE'
         and (g.expires_at is null or g.expires_at > p_at)
         and m.status = 'ACTIVE'
-        and m.role in ('DISPATCHER','CREW')
+        and m.role = 'DISPATCHER'
     );
 $$;
 
@@ -151,7 +150,7 @@ begin
   if v_workspace is null or v_actor is null or v_role <> 'OWNER'
      or v_user is null
      or v_capability not in (
-       'SERVICE_CATALOG_MANAGE','WORKFLOW_MANAGE','RETENTION_MANAGE','AUDIT_EXPORT'
+       'SERVICE_CATALOG_MANAGE','WORKFLOW_MANAGE','RETENTION_MANAGE'
      )
      or v_status not in ('ACTIVE','REVOKED')
   then
@@ -166,7 +165,7 @@ begin
   from public.memberships
   where workspace_id = v_workspace and user_id = v_user and status = 'ACTIVE';
 
-  if not found or v_member.role not in ('DISPATCHER','CREW') then
+  if not found or v_member.role <> 'DISPATCHER' then
     return jsonb_build_object('ok', false, 'code', 'DELEGATE_MEMBER_INVALID');
   end if;
 
@@ -398,9 +397,8 @@ begin
     return jsonb_build_object('ok', false, 'code', 'AUDIT_EXPORT_INPUT_INVALID');
   end if;
 
-  if not public.servicedesk_actor_has_governance_capability(
-    v_workspace, v_actor, v_role, 'AUDIT_EXPORT', v_now
-  ) then
+  if v_role <> 'OWNER'
+     or not public.servicedesk_actor_is_workspace_owner(v_workspace, v_actor, v_role) then
     return jsonb_build_object('ok', false, 'code', 'FORBIDDEN');
   end if;
 
@@ -455,7 +453,7 @@ grant execute on function public.servicedesk_check_tenant_support_access(jsonb) 
 grant execute on function public.servicedesk_read_audit_export_metadata(jsonb) to service_role;
 
 comment on table public.operator_capability_grants is
-  'Owner-granted fixed governance capabilities. Does not create new tenant roles or bypass branch/tenant scope.';
+  'Owner-granted dispatcher governance capabilities. Does not create new tenant roles or bypass branch/tenant scope; audit export remains owner-only.';
 comment on table public.tenant_support_access_grants is
   'Owner-approved, read-only support access grants capped at 24 hours. No write or impersonation scope exists.';
 comment on function public.servicedesk_read_audit_export_metadata(jsonb) is
