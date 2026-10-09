@@ -32,14 +32,17 @@ describe("V2 2D.3 governance product", () => {
     expect(route).toContain("already assigned to every active branch");
     expect(route).toContain("The catalog is workspace-wide");
     expect(route).toContain("does not grant Owner access or bypass tenant scope");
+    expect(route).toContain("canManageServiceCatalog");
+    expect(route).toContain("Grant stored · inactive until assigned to every active branch");
     expect(route).not.toContain("Delegate workflow");
     expect(route).not.toContain("Delegate retention");
   });
 
   it("presents support access as read-only, temporary, and non-impersonating", () => {
-    expect(route).toContain("Temporary read-only support");
+    expect(route).toContain("Temporary support authorization");
     expect(route).toContain("expires within 24 hours");
-    expect(route).toContain("never grants impersonation or write access");
+    expect(route).toContain("does not create a support login or session");
+    expect(route).toContain("trusted support tooling must validate the exact subject hash");
     expect(route).toContain("READ_DIAGNOSTICS");
     expect(route).toContain("READ_AUDIT_METADATA");
   });
