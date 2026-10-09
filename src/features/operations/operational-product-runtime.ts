@@ -365,6 +365,7 @@ export interface OperationalStaffSnapshot {
   verticalPackAvailable?: boolean;
   verticalPacks?: OperationalVerticalPack[];
   governanceAvailable?: boolean;
+  canManageServiceCatalog?: boolean;
   governanceCapabilities?: OperationalGovernanceCapabilityGrant[];
   supportAccessGrants?: OperationalSupportAccessGrant[];
   customers: OperationalCustomer[];
@@ -940,6 +941,17 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         .limit(200)
     : { data: [], error: null };
   const governanceAvailable = !capabilityRead.error && !supportRead.error;
+  let canManageServiceCatalog = actor.role === "OWNER";
+  if (!canManageServiceCatalog && governanceAvailable && actor.userId) {
+    const capabilityCheck = await rpc.rpc<boolean>("servicedesk_actor_has_governance_capability", {
+      p_workspace: workspace.id,
+      p_user: actor.userId,
+      p_role: actor.role,
+      p_capability: "SERVICE_CATALOG_MANAGE",
+      p_at: new Date().toISOString(),
+    });
+    canManageServiceCatalog = !capabilityCheck.error && capabilityCheck.data === true;
+  }
   const governanceCapabilities: OperationalGovernanceCapabilityGrant[] = governanceAvailable
     ? rows(capabilityRead.data)
         .filter((row) => row.capability === "SERVICE_CATALOG_MANAGE")
@@ -1390,6 +1402,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       verticalPackAvailable,
       verticalPacks,
       governanceAvailable,
+      canManageServiceCatalog,
       governanceCapabilities,
       supportAccessGrants,
       customers,
