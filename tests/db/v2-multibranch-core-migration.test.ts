@@ -110,4 +110,10 @@ describe("V2 multi-branch core migration", () => {
     expect(management).not.toContain("has_active_membership");
   });
 
+
+  it("rejects malformed single-dollar SQL function delimiters", () => {
+    expect(sql.split("\n").some((line) => line.trim() === "as $")).toBe(false);
+    expect(sql.split("\n").some((line) => line.trim() === "$;")).toBe(false);
+  });
+
 });
