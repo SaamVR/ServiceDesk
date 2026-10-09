@@ -82,4 +82,26 @@ describe("V2 enterprise governance migration", () => {
     expect(sql).toContain("DELEGATE_ALL_BRANCHES_REQUIRED");
   });
 
+
+  it("uses valid dollar quoting for delegated service-catalog RPC", () => {
+    const start = sql.indexOf("create or replace function public.servicedesk_update_service_catalog_item");
+    const end = sql.indexOf("revoke all on function public.servicedesk_update_service_catalog_item", start);
+    const block = sql.slice(start, end);
+    expect(block).toContain("as $\\ndeclare");
+    expect(block).toContain("end;\\n$;");
+    expect(block).not.toContain("as $\\ndeclare");
+    expect(block).not.toContain("end;\\n$;");
+  });
+
+  it("supersedes prior unrevoked support grants for the same subject and scope", () => {
+    const start = sql.indexOf("create or replace function public.servicedesk_grant_tenant_support_access");
+    const end = sql.indexOf("create or replace function public.servicedesk_revoke_tenant_support_access", start);
+    const block = sql.slice(start, end);
+    expect(block).toContain("update public.tenant_support_access_grants");
+    expect(block).toContain("support_subject_hash = v_subject");
+    expect(block).toContain("scope = v_scope");
+    expect(block).toContain("and revoked_at is null");
+    expect(block).toContain("revoked_at = v_now");
+  });
+
 });
