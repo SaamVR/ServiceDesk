@@ -3007,10 +3007,10 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     grant.userId === data.actor.userId
     && grant.capability === "SERVICE_CATALOG_MANAGE"
     && grant.status === "ACTIVE"
-    && (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.now()));
+    && (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.parse(data.loadedAt)));
   const canManageServiceCatalog = data.actor.role === "OWNER" || Boolean(serviceCatalogGrant);
   const activeSupportGrants = (data.supportAccessGrants ?? []).filter((grant) =>
-    !grant.revokedAt && Date.parse(grant.expiresAt) > Date.now());
+    !grant.revokedAt && Date.parse(grant.expiresAt) > Date.parse(data.loadedAt));
   const activeMembers = snapshot.members.filter((member) => member.active).length;
   const pendingInvitations = snapshot.invitations.filter((invite) => invite.state === "PENDING").length;
   const configuredIntegrations = data.integrations.filter(
@@ -3618,7 +3618,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
 
                       <div className={styles.governanceRows}>
                         {(data.supportAccessGrants ?? []).map((grant) => {
-                          const active = !grant.revokedAt && Date.parse(grant.expiresAt) > Date.now();
+                          const active = !grant.revokedAt && Date.parse(grant.expiresAt) > Date.parse(data.loadedAt);
                           return (
                             <article key={grant.id}>
                               <span>
