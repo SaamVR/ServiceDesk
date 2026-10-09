@@ -3532,7 +3532,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                   <div>
                     <p className={styles.adminSectionEyebrow}>Delegated operations</p>
                     <h4>Service-catalog management</h4>
-                    <p className={styles.adminHelp}>An Owner may delegate only service-catalog management to an active dispatcher. The member remains a dispatcher and keeps their existing branch/tenant scope.</p>
+                    <p className={styles.adminHelp}>An Owner may delegate only service-catalog management to an active dispatcher who is already assigned to every active branch. The catalog is workspace-wide; delegation does not grant Owner access or bypass tenant scope.</p>
                   </div>
 
                   {data.actor.role === "OWNER" ? (
@@ -3570,7 +3570,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                   ) : serviceCatalogGrant ? (
                     <div className={styles.integrationProofNote}>
                       <span aria-hidden="true">i</span>
-                      <p><strong>Delegated capability active.</strong> You may edit the service catalog. This does not grant Owner access, all-branch access, workflow publishing, audit export, or support-access control.</p>
+                      <p><strong>Delegated capability active.</strong> You may edit the service catalog. This does not grant Owner access, workflow publishing, audit export, support-access control, or access to another tenant. Because the catalog is workspace-wide, this delegation is valid only while you remain assigned to every active branch.</p>
                     </div>
                   ) : (
                     <div className={styles.settingsEmpty}><strong>No delegated governance capability</strong><p>Your dispatcher account retains its normal operational and branch scope.</p></div>
