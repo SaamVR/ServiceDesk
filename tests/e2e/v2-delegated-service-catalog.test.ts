@@ -26,6 +26,8 @@ describe("V2 delegated service catalog product boundary", () => {
     expect(action).toContain('capability: "SERVICE_CATALOG_MANAGE"');
     expect(action).toContain("DELEGATE_ALL_BRANCHES_REQUIRED");
     expect(action).toContain("assigned to every active branch");
+    expect(runtime).toContain('"servicedesk_actor_has_governance_capability"');
+    expect(runtime).toContain("canManageServiceCatalog = !capabilityCheck.error && capabilityCheck.data === true");
     expect(action).not.toContain("WORKFLOW_MANAGE");
     expect(action).not.toContain("RETENTION_MANAGE");
   });
