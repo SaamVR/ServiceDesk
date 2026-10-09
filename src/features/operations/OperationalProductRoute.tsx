@@ -22,7 +22,10 @@ import {
   sendOperationalQuote,
   setOperationalChecklistItem,
   setOperationalBranchMembership,
+  grantOperationalTenantSupportAccess,
+  revokeOperationalTenantSupportAccess,
   setOperationalCustomerRetentionControl,
+  setOperationalServiceCatalogDelegation,
   setOperationalVoiceCallbackState,
   toggleInboxHandover,
   upsertOperationalBranch,
@@ -2966,7 +2969,48 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     actionRedirect(workspaceSlug, "settings", result, "section=growth&");
   }
 
+  async function serviceCatalogDelegationAction(formData: FormData) {
+    "use server";
+    const rawStatus = String(formData.get("status") ?? "");
+    const status = rawStatus === "REVOKED" ? "REVOKED" : "ACTIVE";
+    const result = await setOperationalServiceCatalogDelegation(workspaceSlug, {
+      userId: String(formData.get("userId") ?? ""),
+      status,
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=governance&");
+  }
+
+  async function supportAccessGrantAction(formData: FormData) {
+    "use server";
+    const rawScope = String(formData.get("scope") ?? "");
+    const scope = rawScope === "READ_AUDIT_METADATA" ? "READ_AUDIT_METADATA" : "READ_DIAGNOSTICS";
+    const result = await grantOperationalTenantSupportAccess(workspaceSlug, {
+      supportSubjectHash: String(formData.get("supportSubjectHash") ?? ""),
+      scope,
+      reason: String(formData.get("reason") ?? ""),
+      durationHours: Number(formData.get("durationHours") ?? 1),
+    });
+    actionRedirect(workspaceSlug, "settings", result, "section=governance&");
+  }
+
+  async function supportAccessRevokeAction(formData: FormData) {
+    "use server";
+    const result = await revokeOperationalTenantSupportAccess(
+      workspaceSlug,
+      String(formData.get("grantId") ?? ""),
+    );
+    actionRedirect(workspaceSlug, "settings", result, "section=governance&");
+  }
+
   const activeServices = data.serviceCatalog.filter((service) => service.active).length;
+  const serviceCatalogGrant = (data.governanceCapabilities ?? []).find((grant) =>
+    grant.userId === data.actor.userId
+    && grant.capability === "SERVICE_CATALOG_MANAGE"
+    && grant.status === "ACTIVE"
+    && (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.now()));
+  const canManageServiceCatalog = data.actor.role === "OWNER" || Boolean(serviceCatalogGrant);
+  const activeSupportGrants = (data.supportAccessGrants ?? []).filter((grant) =>
+    !grant.revokedAt && Date.parse(grant.expiresAt) > Date.now());
   const activeMembers = snapshot.members.filter((member) => member.active).length;
   const pendingInvitations = snapshot.invitations.filter((invite) => invite.state === "PENDING").length;
   const configuredIntegrations = data.integrations.filter(
@@ -3009,6 +3053,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
           <a href="#branches">Branches</a>
           <a href="#recurrence">Recurring services</a>
           <a href="#growth">Growth & retention</a>
+          <a href="#governance">Governance</a>
           <a href="#integrations">Integrations</a>
         </nav>
 
@@ -3019,9 +3064,9 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                 <p className={styles.adminSectionEyebrow}>Services</p>
                 <h3>Service catalog</h3>
                 <p>
-                  {data.actor.role === "OWNER"
+                  {canManageServiceCatalog
                     ? "Manage customer-facing service names, availability and manual-review requirements."
-                    : "Services currently available to this workspace. Only owners can make changes to the catalog."}
+                    : "Services currently available to this workspace. Changes require Owner access or an active delegated service-catalog capability."}
                 </p>
               </div>
               <StatusBadge tone="neutral">{activeServices} active</StatusBadge>
@@ -3035,7 +3080,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
             ) : (
               <div className={styles.serviceSettingsList}>
                 {data.serviceCatalog.map((service) =>
-                  data.actor.role === "OWNER" ? (
+                  canManageServiceCatalog ? (
                     <form action={serviceCatalogAction} className={styles.serviceSettingRow} key={service.id}>
                       <input type="hidden" name="serviceId" value={service.id} />
                       <input type="hidden" name="expectedUpdatedAt" value={service.updatedAt} />
