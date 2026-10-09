@@ -52,4 +52,12 @@ describe("V2 vertical pack framework", () => {
     expect(sql).toContain("VERTICAL_PACK_ENABLED");
     expect(sql).toContain("grant execute on function public.servicedesk_enable_vertical_pack(jsonb) to service_role");
   });
+
+  it("keeps every service binding on the workspace-enabled pack version", () => {
+    expect(sql).toContain("unique (workspace_id, pack_code, version_number)");
+    expect(sql).toContain("foreign key (workspace_id, pack_code, version_number)");
+    expect(sql).toContain("references public.workspace_vertical_packs(workspace_id, pack_code, version_number)");
+    expect(sql).toContain("on update cascade on delete restrict");
+  });
+
 });
