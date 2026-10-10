@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { supabasePublicConfig } from "../../src/features/auth/supabase-public-config";
+import { trustedAuthDestination } from "../../src/features/auth/email-origin";
 
 const source = (file: string) => readFileSync(join(process.cwd(), file), "utf8");
 
@@ -34,6 +35,26 @@ describe("V3 server-side Supabase auth and onboarding", () => {
     expect(supabasePublicConfig({ ...defaults, NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co@evil.example" })).toBeNull();
     expect(supabasePublicConfig({ ...defaults, NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co/auth/v1" })).toBeNull();
     expect(supabasePublicConfig({ ...defaults, NEXT_PUBLIC_SUPABASE_URL: "https://evil.example" })).toBeNull();
+  });
+
+  it("redirects only to server-approved public Auth origins, never proxy localhost", () => {
+    const env = {
+      SERVICEDESK_AUTH_REDIRECT_ORIGIN: "https://servicedesk-v2-multilane-gate.onrender.com",
+    };
+    expect(trustedAuthDestination("/auth/sign-in?error=missing", env)?.href)
+      .toBe("https://servicedesk-v2-multilane-gate.onrender.com/auth/sign-in?error=missing");
+    expect(trustedAuthDestination("/auth/continue", env)?.origin)
+      .toBe("https://servicedesk-v2-multilane-gate.onrender.com");
+    expect(trustedAuthDestination("//evil.example/auth/continue", env)).toBeNull();
+    expect(trustedAuthDestination("https://evil.example", env)).toBeNull();
+    expect(trustedAuthDestination("/auth/continue", {})).toBeNull();
+
+    const continueRoute = source("src/app/auth/continue/route.ts");
+    const confirmRoute = source("src/app/auth/confirm/route.ts");
+    expect(continueRoute).toContain("trustedAuthDestination(path)");
+    expect(confirmRoute).toContain("trustedAuthDestination(");
+    expect(continueRoute).not.toContain("request.url");
+    expect(confirmRoute).not.toContain("request.url");
   });
 
   it("keeps service-only operational authority while accepting the modern public key", () => {
