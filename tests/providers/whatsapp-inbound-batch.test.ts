@@ -105,7 +105,9 @@ describe("durable WhatsApp inbound batch persistence", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("WHATSAPP_INBOUND_BATCH_PERSISTENCE_FAILED");
-      expect(result.message).toContain("ws-clearnest:phone-1:wamid-b");
+      expect(result.message).toContain("retry is required");
+      expect(result.message).not.toContain("ws-clearnest:phone-1:wamid-b");
+      expect(result.message).not.toContain("failed ");
     }
     expect(store.records).toEqual(["ws-clearnest:phone-1:wamid-a"]);
   });
