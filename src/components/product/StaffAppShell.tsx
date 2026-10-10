@@ -96,7 +96,7 @@ function StaffNavigation({ workspace, mobile = false }: { workspace: string; mob
           className={styles.moreTools}
           key={group.label}
           // A deep link to a secondary route must expose its selected navigation item.
-          defaultOpen={group.modules.some(moduleIsActive)}
+          open={group.modules.some(moduleIsActive) ? true : undefined}
         >
           <summary className={styles.moreToolsTrigger}>
             <span>More tools</span>
