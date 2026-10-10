@@ -5,7 +5,7 @@
  * anon keys are supported for older installations. This module must NEVER
  * read, serialize or expose a service_role/secret key to the browser.
  */
-export function supabasePublicConfig(env: NodeJS.ProcessEnv = process.env):
+export function supabasePublicConfig(env: Readonly<Record<string, string | undefined>> = process.env):
   | { url: string; publishableKey: string }
   | null {
   const url = env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL;
