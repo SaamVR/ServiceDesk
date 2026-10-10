@@ -21,7 +21,8 @@ describe("V3 email confirmation templates for SSR accounts", () => {
     expect(recovery).toContain("{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}");
     expect(confirmRoute).toContain('request.nextUrl.searchParams.get("flow") === "recovery"');
     expect(confirmRoute).toContain('"/auth/reset-password"');
-    expect(recovery).not.toContain("type=email");\n    expect(recovery).not.toContain("{{ .SiteURL }}");
+    expect(recovery).not.toContain("type=email");
+    expect(recovery).not.toContain("{{ .SiteURL }}");
     expect(signup).not.toContain("flow=recovery");
   });
 
