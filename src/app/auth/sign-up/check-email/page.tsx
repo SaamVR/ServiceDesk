@@ -10,7 +10,7 @@ export default function CheckEmailPage() {
       asideTitle="Almost there."
       asideItems={["Confirm your email address", "Name your cleaning business", "Start your workspace setup"]}
     >
-      <p>If you don't see the email, check spam or wait a few minutes. The verification link should open ServiceDesk automatically.</p>
+      <p>If you don&apos;t see the email, check spam or wait a few minutes. The verification link should open ServiceDesk automatically.</p>
       <p>Already verified? <Link href="/auth/sign-in"><strong>Sign in to continue →</strong></Link></p>
     </RegistrationShell>
   );
