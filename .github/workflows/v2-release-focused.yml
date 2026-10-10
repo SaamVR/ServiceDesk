@@ -1,0 +1,60 @@
+name: V2 release gate focused checks
+
+# One low-cost PR check for release-gate changes. The existing Render RC
+# already runs the full suite/build on integrated candidates.
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v2-multilane-20261006
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - ".github/workflows/v2-release-focused.yml"
+      - "src/server/release/**"
+      - "src/features/operations/release-readiness-runtime.ts"
+      - "tests/providers/v2-release-readiness-registry.test.ts"
+      - "tests/e2e/v2-release-readiness-runtime.test.ts"
+      - "tests/e2e/v2-release-health-readiness.test.ts"
+      - "render.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-release-focused-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  focused-release:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Focused release regression
+        run: >-
+          pnpm exec vitest run
+          tests/providers/v2-release-readiness-registry.test.ts
+          tests/e2e/v2-release-readiness-runtime.test.ts
+          tests/e2e/v2-release-health-readiness.test.ts
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint changed release files
+        run: >-
+          pnpm exec eslint
+          src/server/release/v2-release-readiness.ts
+          src/features/operations/release-readiness-runtime.ts
+          tests/providers/v2-release-readiness-registry.test.ts
+          tests/e2e/v2-release-readiness-runtime.test.ts
+          tests/e2e/v2-release-health-readiness.test.ts
