@@ -50,8 +50,8 @@ describe("V3 server-side Supabase auth and onboarding", () => {
     const baseSchema = source("supabase/migrations/0001_core.sql");
     expect(onboarding).toContain("supabasePublicConfig()");
     expect(onboarding).toContain("auth.auth.getUser()");
-    expect(onboarding).toContain('auth.from("memberships")');
-    expect(onboarding).toContain('auth.from("workspaces")');
+    expect(onboarding).toMatch(/auth\s*\.from\("memberships"\)/);
+    expect(onboarding).toMatch(/auth\s*\.from\("workspaces"\)/);
     expect(onboarding).not.toContain("createClient(");
     expect(onboarding).not.toContain("process.env.SUPABASE_SERVICE_ROLE_KEY");
     expect(baseSchema).toContain("create policy memberships_self_or_owner_select on public.memberships");
