@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import styles from "./MarketingNavV3.module.css";
+import heroStyles from "./MarketingHeroV3.module.css";
+import { OperationalFlowHero } from "./OperationalFlowHero";
 import { productRoutes } from "@/features/product/story-model";
 
 interface MarketingShellProps {
@@ -56,8 +58,8 @@ export function MarketingShell({
         </div>
       </header>
 
-      <section className="hero-grid section-card marketing-hero">
-        <div className="stack-lg marketing-hero-copy">
+      <section className={`hero-grid section-card marketing-hero ${heroStyles.heroSection}`}>
+        <div className={`stack-lg marketing-hero-copy ${heroStyles.heroCopy}`}>
           <p className="eyebrow">{eyebrow}</p>
           <h1>{title}</h1>
           <p className="lead">{description}</p>
@@ -72,26 +74,7 @@ export function MarketingShell({
             <Link className="button-secondary" href={secondaryHref}>{secondaryLabel}</Link>
           </div>
         </div>
-        <div className="interface-card marketing-hero-card" aria-label="ServiceDesk operational interface">
-          <div className="browser-bar" aria-hidden="true"><span /><span /><span /></div>
-          <div className="split-preview">
-            <div>
-              <p className="label">Conversation</p>
-              <div className="message incoming">I need a move-out clean for 3 bedrooms, 2 bathrooms and oven.</div>
-              <div className="message outgoing">I can prepare that. Please confirm the area and preferred date.</div>
-              <div className="message incoming">SW11, next Friday morning.</div>
-            </div>
-            <aside>
-              <p className="label">Structured request</p>
-              <dl className="summary-list">
-                <div><dt>Service</dt><dd>Move-out clean</dd></div>
-                <div><dt>Quote</dt><dd>$340 total</dd></div>
-                <div><dt>Deposit</dt><dd>$85</dd></div>
-                <div><dt>Status</dt><dd><span className="status-pill attention">Needs slot</span></dd></div>
-              </dl>
-            </aside>
-          </div>
-        </div>
+        <OperationalFlowHero />
       </section>
 
       {children}
