@@ -6,7 +6,7 @@ export default function ResetEmailPage() {
     <RegistrationShell
       eyebrow="Secure account recovery"
       title="Check your inbox."
-      description="If your email address is linked to an account, we'll send a password reset link shortly."
+      description="If your email address is linked to an account, we’ll send a password reset link shortly."
       asideTitle="Back to your work, safely."
       asideItems={["Open the password reset email", "Set a new private password", "Sign in to your existing workspace"]}
     >
