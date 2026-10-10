@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { createOwnerWorkspace } from "./actions";
 import styles from "../sign-in/page.module.css";
+import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
 
 const timezones = [
   { value: "UTC", label: "UTC" },
@@ -24,9 +25,9 @@ export default async function CreateWorkspacePage({
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
 
-  if (!url || !key) {
+  if (!url || !key || !ownerRegistrationAvailable()) {
     return <RegistrationShell eyebrow="Workspace setup" title="Setup is unavailable"
-      description="Authentication has not been configured on this preview deployment."
+      description="Workspace registration is not enabled on this preview. Setup and verification checks must be completed before creating a business."
       asideTitle="One place to run the work." asideItems={["Customers and enquiries", "Jobs and crew scheduling", "Invoices and follow-ups"]}>
       <Link href="/auth/sign-in">Return to sign in</Link>
     </RegistrationShell>;
