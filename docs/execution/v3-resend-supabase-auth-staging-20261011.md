@@ -10,10 +10,13 @@ verification and **sending enabled**. Account email tracking is disabled for
 that domain. This is evidence of *domain capability*, **not** of an active
 Supabase SMTP integration or delivered ServiceDesk confirmation email.
 
-**Important:** A verified sending domain already present in an account must
-not automatically be repurposed for ServiceDesk. The owner must select/approve
-a brand-appropriate domain and sender, then have its ownership and sender
-policies checked. Keep unrelated e-commerce/customer brands isolated.
+**Owner approval 2026-10-11:** The owner explicitly approved using
+**`no-reply@ezcomo.shop`** as the temporary ServiceDesk staging sender,
+with a custom ServiceDesk domain to be considered later. The connected Resend
+domain `ezcomo.shop` was previously verified for sending with DKIM and SPF.
+This approval applies to the sender identity only: it does **not** imply that
+Supabase SMTP credentials or Auth sender settings are already installed,
+nor does it authorize sending unsolicited messages.
 
 There is an existing Resend API key visible in metadata, but the Resend
 connection **does not expose its secret**. Do not duplicate other systems'
@@ -38,12 +41,12 @@ staging project). Do not change the CMS project.
 
 | Setting | Value |
 |---|---|
-| Custom SMTP | Enabled **after approval of dedicated sender** |
+| Custom SMTP | Enable for approved temporary staging sender after a scoped credential is provisioned |
 | Host | `smtp.resend.com` |
 | Port | `465` (implicit TLS) |
 | Username | `resend` |
 | Password | Dedicated domain-scoped Resend API key, in Supabase secret config only |
-| Sender email | `no-reply@<approved-verified-domain>` |
+| Sender email | **`no-reply@ezcomo.shop`** (approved staging sender; replace at brand domain launch) |
 | Sender name | `ServiceDesk AI` |
 
 The existing public Resend integration does **not** itself update Supabase Auth
@@ -60,10 +63,15 @@ Place the exact repository files into the corresponding template editors:
 - **Confirm signup:** `supabase/auth-templates/confirm-signup.html`
 - **Reset password:** `supabase/auth-templates/recovery.html`
 
-Both use Supabase Go-template variables `{{ .SiteURL }}` and
+Both use Supabase Go-template variables `{{ .RedirectTo }}` and
 `{{ .TokenHash }}`, and send users directly to the verified server SSR
-callback endpoint. The signup link has `type=email` and recovery uses
-`flow=recovery`; do not swap them. The default `{{ .ConfirmationURL }}`
+callback endpoint. This intentionally honors the public HTTPS redirect
+provided by ServiceDesk server actions without relying on a stale Supabase
+Site URL. Signup generates `/auth/confirm` as the redirect URL and appends
+`?token_hash=...&type=email`. Recovery generates
+`/auth/confirm?flow=recovery` and appends `&token_hash=...`.
+**The Auth Redirect URL Allow List must still contain the expected callback
+URL**, and the Site URL should still be set to the preview origin. The default `{{ .ConfirmationURL }}`
 is not appropriate as a guaranteed SSR-session callback without the
 explicit app-hosted token-hash flow.
 
@@ -85,9 +93,9 @@ Provider links:
 3. Verify that the operational runtime has valid, server-only Supabase
    service-role credentials to load the new owner's dashboard; do not
    copy secret values into logs, the browser or the repository.
-4. The owner approves the sender domain; complete Auth SMTP, Site URL,
-   redirect allow-list and both email templates in the actual Supabase
-   project's authenticated settings.
+4. The owner-approved temporary sender is `no-reply@ezcomo.shop`.
+   Complete Auth SMTP, Site URL, redirect allow-list and both email templates
+   in the actual Supabase project's authenticated settings.
 5. Use a consenting controlled test mailbox to prove a delivered signup
    email, click token-hash confirmation, create a business, confirm the
    default branch and active owner membership, and load the authenticated
@@ -99,15 +107,15 @@ Provider links:
    `SERVICEDESK_OWNER_REGISTRATION_ENABLED=true` on the isolated Render
    preview. Keep false otherwise.
 
-The Resend verified domain and existing API-key metadata were intentionally
-not committed with personal account details or secrets.
+The **non-secret approved sender address** is intentionally recorded for staging
+configuration. No Resend API token or provider credentials are committed.
 
 ## Release status
 
 - Existing public Supabase URL/publishable key in Render: **configured**.
 - Email auth enabled and email confirmation required: **verified via public
   Supabase Auth settings**.
-- Verified Resend sending-domain capability: **verified**.
+- Resend sending domain **`ezcomo.shop`** and temporary `no-reply` sender: **verified domain / owner-approved sender**.
 - Supabase custom SMTP integration and receipt: **NOT_CONFIGURED / UNVERIFIED**.
 - Current ServiceDesk migration head: **0036** at latest verified query.
 - Public registration: **DISABLED**.
