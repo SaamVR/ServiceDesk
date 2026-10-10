@@ -35,6 +35,7 @@ export default async function SignInPage({
         </div>
         <button className={styles.submit} type="submit">Sign in <span aria-hidden="true">→</span></button>
       </form>
+      <p className={styles.help}>Forgot your password? <Link href="/auth/forgot-password"><strong>Recover access</strong></Link></p>
       <p className={styles.help}>New to ServiceDesk? <Link href="/auth/sign-up"><strong>Create your account</strong></Link></p>
       <p className={styles.help}>Joining a team? Use your existing account and the invitation link you received.</p>
     </RegistrationShell>
