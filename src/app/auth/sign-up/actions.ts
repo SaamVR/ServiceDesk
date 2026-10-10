@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { normalizedEmail, validateRegistrationFields } from "@/features/auth/registration";
 import { verifiedEmailRedirectOrigin } from "@/features/auth/email-origin";
+import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
 
 function signupError(message: string): never {
   redirect("/auth/sign-up?error=" + encodeURIComponent(message));
@@ -16,6 +17,7 @@ export async function signUpWithPassword(formData: FormData): Promise<never> {
   const consent = String(formData.get("terms") ?? "");
   const invalid = validateRegistrationFields({ email, password });
 
+  if (!ownerRegistrationAvailable()) signupError("Account creation is not enabled on this environment yet.");
   if (invalid) signupError(invalid);
   if (consent !== "agreed") signupError("Review and accept the Terms and Privacy Policy.");
 
