@@ -38,7 +38,7 @@ describe("V2 commercial direct cost migrations", () => {
   });
 
   it("requires completion for actual costs and contract currency agreement", () => {
-    expect(command).toContain("v_basis = 'ACTUAL' and v_visit.status <> 'COMPLETED'");
+    expect(command).toContain("v_basis = 'ACTUAL' and v_visit_status <> 'COMPLETED'");
     expect(command).toContain("COMMERCIAL_DIRECT_COST_ACTUAL_REQUIRES_COMPLETION");
     expect(command).toContain("COMMERCIAL_DIRECT_COST_CURRENCY_MISMATCH");
   });
@@ -63,4 +63,13 @@ describe("V2 commercial direct cost migrations", () => {
     expect(command).toContain("grant execute on function public.servicedesk_record_commercial_direct_cost(jsonb) to service_role");
     expect(read).toContain("grant execute on function public.servicedesk_read_commercial_direct_cost_snapshot(jsonb) to service_role");
   });
+
+  it("avoids mixing a rowtype record with scalar targets in one PL/pgSQL INTO list", () => {
+    expect(command).toContain("v_visit_status public.visits.status%type");
+    expect(command).toContain("select v.status");
+    expect(command).toContain("into v_visit_status, v_contract_version_id, v_site_id, v_service_id, v_contract_currency");
+    expect(command).not.toContain("v_visit public.visits%rowtype");
+    expect(command).not.toContain("into v_visit, v_contract_version_id");
+  });
+
 });
