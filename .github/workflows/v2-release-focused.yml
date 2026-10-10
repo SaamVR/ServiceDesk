@@ -1,4 +1,4 @@
-name: V2 focused release and provider integrity
+name: ServiceDesk focused product integrity
 
 # One low-cost PR check for release-gate changes. The existing Render RC
 # already runs the full suite/build on integrated candidates.
@@ -20,6 +20,10 @@ on:
       - "tests/providers/whatsapp-inbound-processor.test.ts"
       - "tests/providers/whatsapp-inbound-batch.test.ts"
       - "tests/providers/whatsapp-durable-inbound-handler.test.ts"
+      - "src/components/product/StaffAppShell.tsx"
+      - "src/components/product/StaffWorkspaceV3.module.css"
+      - "src/features/operations/StaffOverviewDashboard.module.css"
+      - "tests/e2e/staff-v3-navigation.test.tsx"
 
 permissions:
   contents: read
@@ -56,6 +60,7 @@ jobs:
           tests/providers/whatsapp-inbound-processor.test.ts
           tests/providers/whatsapp-inbound-batch.test.ts
           tests/providers/whatsapp-durable-inbound-handler.test.ts
+          tests/e2e/staff-v3-navigation.test.tsx
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint changed release files
@@ -71,3 +76,5 @@ jobs:
           tests/providers/whatsapp-inbound-processor.test.ts
           tests/providers/whatsapp-inbound-batch.test.ts
           tests/providers/whatsapp-durable-inbound-handler.test.ts
+          src/components/product/StaffAppShell.tsx
+          tests/e2e/staff-v3-navigation.test.tsx
