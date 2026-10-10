@@ -1138,3 +1138,187 @@
     justify-items: start;
   }
 }
+
+/* V3 conversation triage: readable operational typography, explicit action
+   hierarchy, keyboard-friendly queue tabs. All data stays in the existing
+   tenant-scoped server snapshot and existing command paths. */
+.inboxWorkspace {
+  grid-template-columns: minmax(272px, 304px) minmax(320px, 1fr) minmax(244px, 274px);
+  min-height: 690px;
+  border-color: #d9e2dc;
+  border-radius: 13px;
+  box-shadow: 0 2px 15px rgb(22 48 40 / 3%);
+}
+.inboxListPane,
+.inboxContextPane { background: #f9fbf9; }
+
+.inboxEmptyQueueWorkspace {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 13px;
+  background: var(--app-surface);
+}
+.inboxEmptyQueueHeading { padding: 20px 22px 13px; }
+.inboxEmptyQueueHeading h2 {
+  margin: 3px 0;
+  font-size: 1.17rem;
+  color: var(--app-text);
+}
+.inboxEmptyQueueHeading p:last-child {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: .84rem;
+}
+.inboxQueueNav {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px 11px;
+  border-bottom: 1px solid var(--app-border);
+  background: #f9fbf9;
+}
+.inboxQueueLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-width: 0;
+  min-height: 39px;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #475b53;
+  font-size: .8rem;
+  font-weight: 590;
+  line-height: 1.3;
+  text-decoration: none;
+}
+.inboxQueueLink:hover {
+  color: #155941;
+  background: #eaf4ed;
+  text-decoration: none;
+}
+.inboxQueueLink:focus-visible {
+  outline: 2px solid #137755;
+  outline-offset: 2px;
+}
+.inboxQueueActive {
+  background: #dcefe2;
+  color: #17573f;
+  font-weight: 740;
+}
+.inboxQueueCount {
+  display: inline-grid;
+  place-items: center;
+  min-width: 27px;
+  min-height: 23px;
+  padding: 2px 6px;
+  border: 1px solid #d9e4de;
+  border-radius: 7px;
+  background: #fff;
+  color: #3d5850;
+  font-size: .74rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.inboxQueueActive .inboxQueueCount {
+  background: #fff;
+  border-color: #b5d8c5;
+  color: #15583e;
+}
+.inboxNeedsReply { color: #175b44; font-weight: 735; }
+.inboxUnverified { color: #9a5e14; font-weight: 725; }
+
+.inboxPaneHeader,
+.threadHeader { min-height: 81px; padding: 16px 18px; }
+.inboxEyebrow { font-size: .7rem !important; letter-spacing: .055em; }
+.inboxPaneHeader h2,
+.threadHeader h2 { font-size: 1.02rem; font-weight: 710; }
+.inboxPaneHeader p:last-child,
+.threadHeader p { font-size: .79rem; line-height: 1.45; }
+.conversationList { max-height: 780px; }
+.conversationItem { min-height: 92px; padding: 14px 13px; grid-template-columns: 38px minmax(0,1fr); gap: 12px; }
+.conversationAvatar, .threadAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  font-size: .89rem;
+}
+.conversationTopline strong { font-size: .84rem; font-weight: 720; }
+.conversationTopline small { font-size: .73rem; }
+.conversationPreview { font-size: .8rem; line-height: 1.5; }
+.conversationMeta { flex-wrap: wrap; gap: 4px 9px; font-size: .72rem; }
+.messageTimeline {
+  gap: 13px;
+  max-height: 680px;
+  padding: 23px;
+  background: #f3f5f3;
+}
+.messageBubble { max-width: min(78%, 650px); padding: 13px 16px; border-radius: 12px 12px 12px 4px; }
+.messageOutbound .messageBubble { border-radius: 12px 12px 4px 12px; background: #e8f4ec; }
+.messageSender { margin-bottom: 7px; }
+.messageSender strong, .messageSender span { font-size: .73rem; }
+.messageBubble p { font-size: .85rem; line-height: 1.62; }
+.deliveryState { font-size: .72rem; }
+.replyComposer { gap: 10px; padding: 15px 19px; }
+.replyComposer textarea { min-height: 94px; font-size: .88rem; }
+.composerFooter > span { font-size: .76rem; }
+.contextSection { gap: 9px; padding: 17px 16px; }
+.contextLabel { font-size: .69rem; }
+.contextSection > strong { font-size: .87rem; }
+.contextSection > p { font-size: .8rem; line-height: 1.52; }
+.contextRow > span:first-child, .contextRow > strong { font-size: .76rem; line-height: 1.45; }
+.contextNote p { font-size: .78rem; line-height: 1.5; }
+.contextNote > span { font-size: .72rem; }
+
+@media (max-width: 1350px) {
+  .inboxWorkspace { grid-template-columns: minmax(260px, 286px) minmax(330px, 1fr); }
+  .inboxContextPane {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-left: 0;
+    border-top: 1px solid var(--app-border);
+  }
+  .inboxContextPane > .inboxPaneHeader { grid-column: 1 / -1; }
+  .contextSection { border-bottom: 0; border-right: 1px solid var(--app-border); }
+  .contextSection:last-child { border-right: 0; }
+}
+@media (max-width: 800px) {
+  .inboxWorkspace {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    gap: 13px;
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .inboxListPane,
+  .inboxThreadPane,
+  .inboxContextPane {
+    border: 1px solid var(--app-border);
+    border-radius: 13px;
+    overflow: hidden;
+  }
+  .inboxQueueNav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  .inboxQueueLink { min-height: 45px; padding: 8px 10px; }
+  .conversationList { max-height: 300px; }
+  .inboxContextPane { grid-column: auto; display: block; }
+  .contextSection { border-right: 0; border-bottom: 1px solid var(--app-border); }
+  .inboxThreadPane { grid-template-rows: auto minmax(280px, auto) auto; }
+  .threadHeader { flex-direction: column; align-items: flex-start; }
+  .threadActions { width: 100%; justify-content: space-between; }
+  .messageTimeline { max-height: 440px; padding: 15px; }
+  .messageBubble { max-width: 92%; }
+  .composerFooter { flex-direction: column; align-items: stretch; }
+  .composerFooter button { width: 100%; min-height: 44px; }
+}
+@media (max-width: 390px) {
+  .inboxQueueLink { font-size: .74rem; }
+  .inboxPaneHeader, .threadHeader { padding-inline: 14px; }
+  .conversationItem { padding-inline: 12px; }
+  .messageTimeline { padding: 12px; }
+  .replyComposer { padding: 12px; }
+}
