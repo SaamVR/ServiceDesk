@@ -35,15 +35,18 @@ export async function OnboardingProductRoute({
             title={
               result.kind === "authentication"
                 ? "Sign in to continue setup"
-                : "Onboarding unavailable"
+                : result.kind === "authorization"
+                  ? "Create your business workspace"
+                  : "Onboarding unavailable"
             }
             description={result.message}
             action={
-              result.kind === "authentication" ? (
+              result.kind === "authentication" || result.kind === "authorization" ? (
                 <Link
                   className="app-button-primary"
-                  href={
-                    "/auth/sign-in?next=" +
+                  href={result.kind === "authorization"
+                    ? "/auth/create-workspace"
+                    : "/auth/sign-in?next=" +
                     encodeURIComponent(
                       workspaceSlug
                         ? "/onboarding?workspace=" + encodeURIComponent(workspaceSlug)
@@ -51,7 +54,7 @@ export async function OnboardingProductRoute({
                     )
                   }
                 >
-                  Sign in
+                  {result.kind === "authorization" ? "Create workspace" : "Sign in"}
                 </Link>
               ) : undefined
             }
