@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import styles from "./StaffWorkspaceV3.module.css";
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "@/features/operations/staff-modules";
 
-const navGroups: Array<{ label: string; modules: StaffModule[] }> = [
-  { label: "Operations", modules: ["overview", "inbox", "requests", "quotes", "schedule", "jobs"] },
-  { label: "Customers", modules: ["customers", "invoices"] },
-  { label: "Quality & automation", modules: ["quality", "automations"] },
-  { label: "Insights", modules: ["reports"] },
-  { label: "Admin", modules: ["billing", "settings"] },
+// Keep daily work visible. Secondary tools remain available without dominating the rail.
+const navGroups: ReadonlyArray<{
+  label: string;
+  modules: readonly StaffModule[];
+  collapsible?: boolean;
+}> = [
+  { label: "Workday", modules: ["overview", "inbox", "schedule", "jobs"] },
+  { label: "Customer work", modules: ["requests", "quotes", "customers", "invoices"] },
+  { label: "More tools", modules: ["quality", "automations", "reports", "billing", "settings"], collapsible: true },
 ];
-
 
 function NavIcon({ module }: { module: StaffModule }) {
   const common = {
@@ -66,21 +69,45 @@ function workspaceDisplayName(workspace: string) {
 function StaffNavigation({ workspace, mobile = false }: { workspace: string; mobile?: boolean }) {
   const pathname = usePathname();
 
+  function moduleIsActive(module: StaffModule): boolean {
+    const href = buildStaffModuleHref(workspace, module);
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
+  function linkFor(module: StaffModule) {
+    const active = moduleIsActive(module);
+    return (
+      <Link
+        className={`app-nav-link ${styles.navLink}`}
+        aria-current={active ? "page" : undefined}
+        href={buildStaffModuleHref(workspace, module)}
+        key={module}
+      >
+        <NavIcon module={module} />
+        <span>{staffModuleConfig[module].label}</span>
+      </Link>
+    );
+  }
+
   return (
-    <nav className={mobile ? "app-mobile-links" : "app-sidebar-nav"} aria-label={mobile ? "Mobile workspace" : "Workspace"}>
-      {navGroups.map((group) => (
-        <div className="app-nav-group" key={group.label}>
-          <p className="app-nav-label">{group.label}</p>
-          {group.modules.map((module) => {
-            const href = buildStaffModuleHref(workspace, module);
-            const active = pathname === href || pathname.startsWith(`${href}/`);
-            return (
-              <Link className="app-nav-link" aria-current={active ? "page" : undefined} href={href} key={module}>
-                <NavIcon module={module} />
-                <span>{staffModuleConfig[module].label}</span>
-              </Link>
-            );
-          })}
+    <nav className={`${mobile ? "app-mobile-links" : "app-sidebar-nav"} ${styles.navigation}`} aria-label={mobile ? "Mobile workspace" : "Workspace"}>
+      {navGroups.map((group) => group.collapsible ? (
+        <details
+          className={styles.moreTools}
+          key={group.label}
+          // A deep link to a secondary route must expose its selected navigation item.
+          defaultOpen={group.modules.some(moduleIsActive)}
+        >
+          <summary className={styles.moreToolsTrigger}>
+            <span>More tools</span>
+            <span className={styles.moreToolsChevron} aria-hidden="true">⌄</span>
+          </summary>
+          <div className={styles.moreToolsItems}>{group.modules.map(linkFor)}</div>
+        </details>
+      ) : (
+        <div className={`app-nav-group ${styles.navGroup}`} key={group.label}>
+          <p className={`app-nav-label ${styles.navGroupLabel}`}>{group.label}</p>
+          {group.modules.map(linkFor)}
         </div>
       ))}
     </nav>
@@ -97,13 +124,18 @@ export function StaffAppShell({
   signedIn?: boolean;
 }) {
   const pathname = usePathname();
+  const mobileMenu = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    // Navigating from an open mobile drawer must not hide the destination page.
+    if (mobileMenu.current) mobileMenu.current.open = false;
+  }, [pathname]);
   const currentSegment = pathname.split("/").filter(Boolean).at(-1);
   const currentModule = currentSegment && currentSegment in staffModuleConfig ? currentSegment as StaffModule : "overview";
   const pageLabel = staffModuleConfig[currentModule].label;
   const workspaceName = workspaceDisplayName(workspace);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${styles.v3Shell}`}>
       <a className="app-skip-link" href="#app-main-content">Skip to main content</a>
       <aside className="app-sidebar">
         <Link className="app-brand" href={buildStaffModuleHref(workspace, "overview")} aria-label={`${workspaceName} overview`}>
@@ -116,13 +148,13 @@ export function StaffAppShell({
         <StaffNavigation workspace={workspace} />
         <div className="app-sidebar-footer">
           <Link className="app-sidebar-footer-link" href={buildStaffModuleHref(workspace, "settings")}>Workspace settings</Link>
-          <span className="app-product-caption">Operations workspace</span>
+          <span className="app-product-caption">Cleaning operations</span>
         </div>
       </aside>
 
       <div className="app-main-column">
         <header className="app-topbar">
-          <details className="app-mobile-nav">
+          <details className="app-mobile-nav" ref={mobileMenu}>
             <summary aria-label="Open workspace navigation">
               <span aria-hidden="true">☰</span>
               <span>Menu</span>
