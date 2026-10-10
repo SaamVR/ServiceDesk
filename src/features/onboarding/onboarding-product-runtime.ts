@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
 import {
   loadOperationalStaffSnapshot,
   type OperationalStaffSnapshot,
@@ -22,13 +22,7 @@ type OwnerWorkspaceResult =
   | { ok: false; kind: OnboardingErrorKind; message: string };
 
 function runtimeConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-    process.env.SUPABASE_ANON_KEY;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  return url && anonKey && serviceRoleKey ? { url, anonKey, serviceRoleKey } : undefined;
+  return supabasePublicConfig();
 }
 
 async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
@@ -42,7 +36,7 @@ async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
   }
 
   const cookieStore = await cookies();
-  const auth = createServerClient(config.url, config.anonKey, {
+  const auth = createServerClient(config.url, config.publishableKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -62,11 +56,13 @@ async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
     };
   }
 
-  const service = createClient(config.url, config.serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  // This is only an initial owner-workspace lookup. The authenticated caller
+  // can read their own active membership and workspace through existing RLS;
+  // elevated service credentials are neither required nor appropriate here.
+  // Full operational snapshot loading retains its independent server-only
+  // service credential and owner/dispatcher authorization checks.
 
-  const membershipResult = await service
+  const membershipResult = await auth
     .from("memberships")
     .select("workspace_id")
     .eq("user_id", authData.user.id)
@@ -91,7 +87,7 @@ async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
     };
   }
 
-  const workspaceResult = await service
+  const workspaceResult = await auth
     .from("workspaces")
     .select("slug")
     .eq("id", membership.workspace_id)
