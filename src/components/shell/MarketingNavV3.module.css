@@ -4,10 +4,10 @@
   gap: 16px;
   padding: 11px 15px;
 }
-.brand {
+.header .brand {
   display: inline-flex;
   flex: 0 0 auto;
-  width: auto;
+  width: auto !important;
   min-width: max-content;
   gap: 10px;
   align-items: center;
@@ -100,7 +100,7 @@
     padding: 9px 10px;
     border-radius: 13px;
   }
-  .brand { gap: 7px; font-size: .86rem; }
+  .header .brand { gap: 7px; font-size: .86rem; }
   .brand :global(.brand-mark) {
     width: 33px;
     height: 33px;
@@ -121,7 +121,7 @@
   .menuToggle { width: 41px; height: 41px; }
 }
 @media (max-width: 350px) {
-  .brand { font-size: .79rem; }
+  .header .brand { font-size: .79rem; }
   .actions { gap: 5px; }
   .primaryAction { font-size: .72rem; padding-inline: 8px; }
 }
