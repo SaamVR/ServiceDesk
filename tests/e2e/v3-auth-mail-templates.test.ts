@@ -26,6 +26,16 @@ describe("V3 email confirmation templates for SSR accounts", () => {
     expect(signup).not.toContain("flow=recovery");
   });
 
+  it("pins the owner-approved temporary Resend sender to the staging checklist", () => {
+    const runbook = read("docs/execution/v3-resend-supabase-auth-staging-20261011.md");
+    expect(runbook).toContain("no-reply@ezcomo.shop");
+    expect(runbook).toContain("smtp.resend.com");
+    expect(runbook).toContain("ServiceDesk AI");
+    expect(runbook).toContain("SIGNUP_DISABLED");
+    expect(runbook).toContain("SMTP_NOT_WIRED");
+    expect(runbook).not.toContain("re_live_");
+  });
+
   it("never embeds secrets, a fake customer identity, URL shorteners or tracking pixels", () => {
     for (const html of [signup, recovery]) {
       expect(html).not.toContain("{{ .ConfirmationURL }}");
