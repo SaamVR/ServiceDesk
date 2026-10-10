@@ -77,12 +77,13 @@ export async function persistDurableWhatsAppInboundBatchWithRecords(
       if (persistenceResult === "INSERTED") summary.inserted += 1;
       if (persistenceResult === "DUPLICATE") summary.duplicate += 1;
       records.push({ record, persistenceResult });
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : "unknown inbox persistence error";
+    } catch {
+      // Downstream failure details and provider receipt keys must never be
+      // reflected to an external webhook caller. A 503 still requests retry.
       return {
         ok: false,
         code: "WHATSAPP_INBOUND_BATCH_PERSISTENCE_FAILED",
-        message: `WhatsApp inbound batch persistence failed for ${record.receiptKey}: ${detail}`,
+        message: "WhatsApp inbound batch persistence failed; retry is required.",
       };
     }
   }
