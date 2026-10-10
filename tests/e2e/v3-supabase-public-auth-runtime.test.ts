@@ -66,6 +66,19 @@ describe("V3 server-side Supabase auth and onboarding", () => {
     expect(operational).toContain('.from("memberships")');
   });
 
+  it("supports the modern publishable key in protected customer and crew runtimes", () => {
+    for (const path of [
+      "src/features/crew/crew-product-runtime.ts",
+      "src/features/operations/customer-product-runtime.ts",
+    ]) {
+      const runtime = source(path);
+      expect(runtime).toContain("supabasePublicConfig()");
+      expect(runtime).toContain("process.env.SUPABASE_SERVICE_ROLE_KEY");
+      expect(runtime).toContain("if (!publicConfig || !serviceRoleKey) return undefined");
+      expect(runtime).toContain("auth.auth.getUser()");
+    }
+  });
+
   it("reads owner workspace identity through RLS rather than a privileged client", () => {
     const onboarding = source("src/features/onboarding/onboarding-product-runtime.ts");
     const baseSchema = source("supabase/migrations/0001_core.sql");
