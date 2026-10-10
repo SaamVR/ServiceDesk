@@ -233,3 +233,18 @@
 @media (prefers-reduced-motion: reduce) {
   .root * { scroll-behavior: auto; }
 }
+
+/* A preview without verified Auth + schema must show the form without
+   allowing a user to create an orphaned identity. */
+.formBody input:disabled, .formBody select:disabled {
+  background: #f0f3f0;
+  color: #61736a;
+  cursor: not-allowed;
+}
+.formBody button[type=submit]:disabled,
+.formBody button[type=submit]:disabled:hover {
+  background: #94a99b;
+  border-color: #94a99b;
+  color: #102a21;
+  cursor: not-allowed;
+}
