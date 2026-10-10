@@ -19,7 +19,7 @@ describe("V3 customer-facing product presentation", () => {
   }, createElement("p", null, "Services and integrations")));
 
   it("presents actual workflow capabilities instead of invented client conversations or payments", () => {
-    expect(markup).toContain("Customer intake");
+    expect(markup).toContain("CUSTOMER INTAKE");
     expect(markup).toContain("Quote with clarity.");
     expect(markup).toContain("Put the right crew on it.");
     expect(markup).toContain("Close the loop.");
@@ -32,7 +32,7 @@ describe("V3 customer-facing product presentation", () => {
   it("retains semantic steps, buyer CTAs and real navigation paths", () => {
     expect(markup).toContain('aria-label="Four stages of the cleaning operations workflow"');
     expect(markup).toContain("<ol");
-    expect(markup.match(/class="[^"]*flowStep/g)?.length).toBe(4);
+    expect(markup.match(/<li class="[^"]*flowStep_/g)?.length).toBe(4);
     expect(markup).toContain('href="/auth/sign-up"');
     expect(markup).toContain('href="/tour"');
     expect(markup).toContain('href="/auth/sign-in"');
