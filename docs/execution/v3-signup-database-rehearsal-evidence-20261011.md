@@ -81,9 +81,10 @@ Target is solely the authorized Supabase project `ServiceDesk` ref
   and owner bootstrap RPC `servicedesk_register_owner_workspace`.
 - Aggregated live project checks: **0 Auth users, 0 storage objects**,
   **0 rows in sampled workspaces, memberships, customers, requests,
-  conversations and visits**; `pg_stat_user_tables` estimated public rows
-  `0` across 39 public tables. Statistical counts are **not a full
-  table-by-table logical backup**.
+  conversations and visits**; the connected `list_tables` API reports `rows=0`
+  for **all 39 public tables** and `rls_enabled=true` for each of them. The
+  `pg_stat_user_tables` public row estimate was likewise `0`. These are
+  read-only administrative metadata checks, **not a restorable project backup**.
 - Supabase organization plan: `free`; no usable managed point-in-time
   snapshot/export capability was exposed by the connected Supabase tools.
   An independent CLI token on `samvr` returned **403** on Supabase backup
