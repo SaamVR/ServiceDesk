@@ -47,6 +47,7 @@ import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatWorkspaceDateTime } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
+import { buildOperationalReleaseReadiness } from "./release-readiness-runtime";
 import styles from "./OperationalProductRoute.module.css";
 
 interface OperationalProductRouteProps {
@@ -3015,6 +3016,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
   const configuredIntegrations = data.integrations.filter(
     (integration) => integration.configurationState === "CONFIGURED",
   ).length;
+  const releaseReadiness = buildOperationalReleaseReadiness(data.integrations);
 
   return (
     <section className={styles.settingsWorkspace} aria-label="Workspace settings console">
@@ -3043,6 +3045,10 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
           <span>Configured integrations</span>
           <strong>{configuredIntegrations}/{data.integrations.length}</strong>
         </div>
+        <div>
+          <span>Release blockers</span>
+          <strong>{releaseReadiness.blockingCount}</strong>
+        </div>
       </section>
 
       <div className={styles.settingsLayout}>
@@ -3053,6 +3059,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
           <a href="#recurrence">Recurring services</a>
           <a href="#growth">Growth & retention</a>
           <a href="#governance">Governance</a>
+          <a href="#release-readiness">Release readiness</a>
           <a href="#integrations">Integrations</a>
         </nav>
 
@@ -3687,6 +3694,49 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                 </section>
               </div>
             )}
+          </section>
+
+          <section className={styles.settingsCard} id="release-readiness">
+            <div className={styles.settingsSectionHeader}>
+              <div>
+                <p className={styles.adminSectionEyebrow}>Release control</p>
+                <h3>V2 release readiness</h3>
+                <p>Evidence states are intentionally conservative. Source code, configuration and authored tests never promote browser, provider, migration or buyer evidence by themselves.</p>
+              </div>
+              <StatusBadge tone={releaseReadiness.productionReleaseReady ? "success" : "warning"}>
+                {releaseReadiness.productionReleaseReady ? "Release ready" : releaseReadiness.blockingCount + " blocking"}
+              </StatusBadge>
+            </div>
+
+            <div className={styles.releaseReadinessGrid}>
+              {releaseReadiness.gates.map((gate) => {
+                const tone = gate.state === "PROVIDER_VERIFIED" || gate.state === "OPERATIONS_VERIFIED" || gate.state === "CONTRACT_TESTED"
+                  ? "success" as const
+                  : gate.state === "BUYER_EVIDENCE_BLOCKED"
+                    ? "info" as const
+                    : "warning" as const;
+                return (
+                  <article className={styles.releaseReadinessRow} key={gate.id}>
+                    <div>
+                      <strong>{gate.label}</strong>
+                      <p>{gate.note}</p>
+                    </div>
+                    <div className={styles.releaseReadinessStatus}>
+                      <StatusBadge tone={tone}>{gate.state.replaceAll("_", " ").toLowerCase()}</StatusBadge>
+                      <span>{gate.blocking ? "release-blocking" : "roadmap / non-blocking"}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className={styles.integrationProofNote}>
+              <span aria-hidden="true">i</span>
+              <p>
+                Current build: <strong>{releaseReadiness.buildSha?.slice(0, 12) ?? "unbound"}</strong>. Receipt values remain server-only.
+                Payment stays sandbox/demo only. The second vertical stays buyer-evidence blocked until two real buyers share the same model.
+              </p>
+            </div>
           </section>
 
           <section className={styles.settingsCard} id="integrations">
