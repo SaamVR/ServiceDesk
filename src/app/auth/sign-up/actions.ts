@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { normalizedEmail, validateRegistrationFields } from "@/features/auth/registration";
+import { verifiedEmailRedirectOrigin } from "@/features/auth/email-origin";
 
 function signupError(message: string): never {
   redirect("/auth/sign-up?error=" + encodeURIComponent(message));
@@ -21,23 +22,12 @@ export async function signUpWithPassword(formData: FormData): Promise<never> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
-  const origin = process.env.SERVICEDESK_AUTH_REDIRECT_ORIGIN ?? process.env.RENDER_EXTERNAL_URL;
-
-  if (!url || !publishableKey || !origin || !origin.startsWith("https://")) {
+  const redirectOrigin = verifiedEmailRedirectOrigin(
+    process.env.SERVICEDESK_AUTH_REDIRECT_ORIGIN,
+    process.env.RENDER_EXTERNAL_URL,
+  );
+  if (!url || !publishableKey || !redirectOrigin) {
     signupError("Account creation is not configured on this environment yet.");
-  }
-
-  // Fixed server-approved origin: never use untrusted Host or user-supplied
-  // next URLs in the confirmation link.
-  let redirectOrigin: string;
-  try {
-    const parsed = new URL(origin);
-    if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.pathname !== "/" || parsed.search || parsed.hash) {
-      signupError("Account confirmation URL is not configured correctly.");
-    }
-    redirectOrigin = parsed.origin;
-  } catch {
-    signupError("Account confirmation URL is not configured correctly.");
   }
 
   const store = await cookies();
