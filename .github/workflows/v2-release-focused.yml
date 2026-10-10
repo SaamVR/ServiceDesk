@@ -31,6 +31,7 @@ on:
       - "src/app/auth/**"
       - "src/app/page.tsx"
       - "src/components/shell/MarketingShell.tsx"
+      - "src/components/shell/MarketingNavV3.module.css"
       - "supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql"
       - "tests/e2e/v3-owner-registration-flow.test.tsx"
 
