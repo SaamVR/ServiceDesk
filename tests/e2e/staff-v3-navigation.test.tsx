@@ -14,17 +14,16 @@ function renderStaffShell(pathname: string, workspace = "acme-west") {
   return renderToStaticMarkup(createElement(StaffAppShell, {
     workspace,
     signedIn: true,
-    children: createElement("p", null, "Operational workspace"),
-  }));
+  }, createElement("p", null, "Operational workspace")));
 }
 
 describe("V3 staff workday shell", () => {
   it("retains access to all thirteen existing operational destinations in desktop and mobile navigation", () => {
     const html = renderStaffShell("/app/acme-west/overview");
-    for (const module of Object.keys(staffModuleConfig) as Array<keyof typeof staffModuleConfig>) {
-      const href = buildStaffModuleHref("acme-west", module);
+    for (const staffModule of Object.keys(staffModuleConfig) as Array<keyof typeof staffModuleConfig>) {
+      const href = buildStaffModuleHref("acme-west", staffModule);
       const occurrences = html.split(`href="${href}"`).length - 1;
-      expect(occurrences, `Expected reachable destination: ${module}`).toBeGreaterThanOrEqual(2);
+      expect(occurrences, `Expected reachable destination: ${staffModule}`).toBeGreaterThanOrEqual(2);
     }
     expect(html).toContain('aria-label="Workspace"');
     expect(html).toContain('aria-label="Mobile workspace"');
