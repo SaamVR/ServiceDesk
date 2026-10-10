@@ -132,6 +132,42 @@ describe("durable WhatsApp inbound webhook handler", () => {
     expect(processor.calls).toEqual(["ws-clearnest:phone-1:wamid-dup", "ws-clearnest:phone-1:wamid-dup"]);
   });
 
+  test("returns retryable 503 without exposing persistence or processing exception material", async () => {
+    const body = rawBody([
+      { id: "wamid-sensitive", from: "15550123456", timestamp: "1791108010", type: "text", text: { body: "Private request" } },
+    ]);
+    const persistenceStore = new DurableStore();
+    persistenceStore.persist = async () => {
+      throw new Error("database connection failed: Bearer secret-provider-key");
+    };
+    const failedPersistence = await callHandler({
+      store: persistenceStore,
+      processor: new IdempotentProcessor(),
+      rawBody: body,
+    });
+    expect(failedPersistence).toMatchObject({ statusCode: 503, acknowledged: false, retryable: true });
+    expect(failedPersistence.body).toContain("WHATSAPP_INBOUND_BATCH_PERSISTENCE_FAILED");
+    expect(failedPersistence.body).not.toContain("Bearer");
+    expect(failedPersistence.body).not.toContain("wamid-sensitive");
+    expect(failedPersistence.body).not.toContain("15550123456");
+
+    const processingStore = new DurableStore();
+    const processingWorker = new IdempotentProcessor();
+    processingWorker.process = async () => {
+      throw new Error("service exception: Authorization token=secret-value for +15550123456");
+    };
+    const failedProcessing = await callHandler({
+      store: processingStore,
+      processor: processingWorker,
+      rawBody: body,
+    });
+    expect(failedProcessing).toMatchObject({ statusCode: 503, acknowledged: false, retryable: true });
+    expect(failedProcessing.body).toContain("WHATSAPP_INBOUND_PROCESSING_FAILED");
+    expect(failedProcessing.body).not.toContain("token=");
+    expect(failedProcessing.body).not.toContain("wamid-sensitive");
+    expect(failedProcessing.body).not.toContain("15550123456");
+  });
+
   test("invalid signature never invokes durable persistence or processor", async () => {
     const store = new DurableStore();
     const processor = new IdempotentProcessor();
