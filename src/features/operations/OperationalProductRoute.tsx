@@ -283,7 +283,7 @@ function InboxView({
             return (
               <a
                 className={`${styles.conversationItem} ${selectedThread ? styles.conversationSelected : ""}`.trim()}
-                href={inboxQueueHref("all", conversation.id)}
+                href={inboxQueueHref(queue, conversation.id)}
                 aria-current={selectedThread ? "page" : undefined}
                 aria-label={(threadCustomer?.displayName ?? "Unverified sender") + " " + conversation.channel + " conversation"}
                 role="listitem"
@@ -456,7 +456,7 @@ function InboxView({
             <div className={styles.relatedChannels}>
               {relatedConversations.map((conversation) => (
                 <a
-                  href={"?conversation=" + encodeURIComponent(conversation.id)}
+                  href={inboxQueueHref("all", conversation.id)}
                   key={conversation.id}
                 >
                   <strong>{conversation.channel}</strong>
