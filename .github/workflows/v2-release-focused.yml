@@ -33,6 +33,8 @@ on:
       - "src/features/auth/supabase-public-config.ts"
       - "src/features/onboarding/onboarding-product-runtime.ts"
       - "src/features/operations/operational-product-runtime.ts"
+      - "src/features/operations/customer-product-runtime.ts"
+      - "src/features/crew/crew-product-runtime.ts"
       - "tests/e2e/v3-supabase-public-auth-runtime.test.ts"
       - "src/features/auth/email-origin.ts"
       - "src/features/auth/RegistrationShell.tsx"
@@ -109,6 +111,8 @@ jobs:
           src/features/auth/supabase-public-config.ts
           src/features/onboarding/onboarding-product-runtime.ts
           src/features/operations/operational-product-runtime.ts
+          src/features/operations/customer-product-runtime.ts
+          src/features/crew/crew-product-runtime.ts
           tests/e2e/v3-supabase-public-auth-runtime.test.ts
           src/features/operations/inbox-triage.ts
           src/features/operations/OperationalProductRoute.tsx
