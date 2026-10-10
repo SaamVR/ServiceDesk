@@ -6,7 +6,7 @@ import { supabasePublicConfig } from "../../src/features/auth/supabase-public-co
 const source = (file: string) => readFileSync(join(process.cwd(), file), "utf8");
 
 describe("V3 server-side Supabase auth and onboarding", () => {
-  const defaults: NodeJS.ProcessEnv = {
+  const defaults: Readonly<Record<string, string | undefined>> = {
     NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_mock",
   };
