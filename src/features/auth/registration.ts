@@ -15,7 +15,7 @@ export function normalizedEmail(raw: string) {
 }
 
 export function validateRegistrationFields(fields: RegistrationFields): string | null {
-  if (fields.email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(fields.email)) {
+  if (fields.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) {
     return "Enter a valid email address.";
   }
   if (fields.password.length < 12 || fields.password.length > 128) {
@@ -27,7 +27,7 @@ export function validateRegistrationFields(fields: RegistrationFields): string |
 export function businessSlug(name: string) {
   return name
     .normalize("NFKD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
