@@ -1,4 +1,4 @@
-name: V2 release gate focused checks
+name: V2 focused release and provider integrity
 
 # One low-cost PR check for release-gate changes. The existing Render RC
 # already runs the full suite/build on integrated candidates.
@@ -15,6 +15,11 @@ on:
       - "tests/e2e/v2-release-readiness-runtime.test.ts"
       - "tests/e2e/v2-release-health-readiness.test.ts"
       - "render.yaml"
+      - "src/server/integrations/whatsapp/inbound-processor.ts"
+      - "src/server/integrations/whatsapp/inbox-persistence.ts"
+      - "tests/providers/whatsapp-inbound-processor.test.ts"
+      - "tests/providers/whatsapp-inbound-batch.test.ts"
+      - "tests/providers/whatsapp-durable-inbound-handler.test.ts"
 
 permissions:
   contents: read
@@ -24,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  focused-release:
+  focused-integrity:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -48,6 +53,9 @@ jobs:
           tests/providers/v2-release-readiness-registry.test.ts
           tests/e2e/v2-release-readiness-runtime.test.ts
           tests/e2e/v2-release-health-readiness.test.ts
+          tests/providers/whatsapp-inbound-processor.test.ts
+          tests/providers/whatsapp-inbound-batch.test.ts
+          tests/providers/whatsapp-durable-inbound-handler.test.ts
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint changed release files
@@ -58,3 +66,8 @@ jobs:
           tests/providers/v2-release-readiness-registry.test.ts
           tests/e2e/v2-release-readiness-runtime.test.ts
           tests/e2e/v2-release-health-readiness.test.ts
+          src/server/integrations/whatsapp/inbound-processor.ts
+          src/server/integrations/whatsapp/inbox-persistence.ts
+          tests/providers/whatsapp-inbound-processor.test.ts
+          tests/providers/whatsapp-inbound-batch.test.ts
+          tests/providers/whatsapp-durable-inbound-handler.test.ts
