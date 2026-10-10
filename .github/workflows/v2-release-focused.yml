@@ -24,6 +24,15 @@ on:
       - "src/components/product/StaffWorkspaceV3.module.css"
       - "src/features/operations/StaffOverviewDashboard.module.css"
       - "tests/e2e/staff-v3-navigation.test.tsx"
+      - "src/features/auth/registration.ts"
+      - "src/features/auth/RegistrationShell.tsx"
+      - "src/features/auth/RegistrationShell.module.css"
+      - "src/features/onboarding/OnboardingProductRoute.tsx"
+      - "src/app/auth/**"
+      - "src/app/page.tsx"
+      - "src/components/shell/MarketingShell.tsx"
+      - "supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql"
+      - "tests/e2e/v3-owner-registration-flow.test.tsx"
 
 permissions:
   contents: read
@@ -61,6 +70,7 @@ jobs:
           tests/providers/whatsapp-inbound-batch.test.ts
           tests/providers/whatsapp-durable-inbound-handler.test.ts
           tests/e2e/staff-v3-navigation.test.tsx
+          tests/e2e/v3-owner-registration-flow.test.tsx
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint changed release files
@@ -78,3 +88,16 @@ jobs:
           tests/providers/whatsapp-durable-inbound-handler.test.ts
           src/components/product/StaffAppShell.tsx
           tests/e2e/staff-v3-navigation.test.tsx
+          tests/e2e/v3-owner-registration-flow.test.tsx
+          src/features/auth/registration.ts
+          src/features/auth/RegistrationShell.tsx
+          src/app/auth/sign-up/actions.ts
+          src/app/auth/sign-up/page.tsx
+          src/app/auth/sign-up/check-email/page.tsx
+          src/app/auth/confirm/route.ts
+          src/app/auth/continue/route.ts
+          src/app/auth/create-workspace/actions.ts
+          src/app/auth/create-workspace/page.tsx
+          src/app/auth/sign-in/page.tsx
+          src/features/onboarding/OnboardingProductRoute.tsx
+          src/components/shell/MarketingShell.tsx
