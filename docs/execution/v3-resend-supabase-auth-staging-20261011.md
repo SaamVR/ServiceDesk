@@ -49,12 +49,15 @@ staging project). Do not change the CMS project.
 | Sender email | **`no-reply@ezcomo.shop`** (approved staging sender; replace at brand domain launch) |
 | Sender name | `ServiceDesk AI` |
 
-The existing public Resend integration does **not** itself update Supabase Auth
-settings. The available Supabase connector lacks an Auth SMTP-management
-action; project CLI access tested earlier returned a permissions error. The
-configured sender and credentials must be applied in the authenticated
-Supabase dashboard or via separately authorized management access. **No
-SMTP configuration or transactional email delivery is asserted yet.**
+The connected Resend API does **not** itself update Supabase Auth settings.
+The available Supabase connector lacks an Auth SMTP-management action; the
+project CLI's management endpoint returned a permissions error. A browser
+check of the Supabase dashboard on the authorized device reached the
+**sign-in page**, so this run did not have an authenticated management session
+for applying SMTP or email templates. The sender and dedicated credential
+must be applied in an authenticated Supabase dashboard session or through
+supported, separately authorized management access. **No SMTP configuration,
+email template installation, or transactional email delivery is asserted yet.**
 
 **Auth → Email Templates**
 
