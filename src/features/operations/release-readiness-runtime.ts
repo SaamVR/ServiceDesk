@@ -62,6 +62,14 @@ export function buildOperationalReleaseReadiness(
     buildKey: "SERVICEDESK_BROWSER_ACCEPTANCE_BUILD_SHA",
     currentBuildSha: buildSha,
   });
+  const staffBrowserReference = env.SERVICEDESK_STAFF_BROWSER_ACCEPTANCE_RECEIPT?.trim() ?? "";
+  const staffBrowserAccepted = exactBuildReceipt({
+    env,
+    receiptKey: "SERVICEDESK_STAFF_BROWSER_ACCEPTANCE_RECEIPT",
+    buildKey: "SERVICEDESK_STAFF_BROWSER_ACCEPTANCE_BUILD_SHA",
+    currentBuildSha: buildSha,
+  }) && staffBrowserReference.startsWith("staff-browser:redacted:")
+    && staffBrowserReference !== env.SERVICEDESK_BROWSER_ACCEPTANCE_RECEIPT?.trim();
   const migrationRehearsed = exactBuildReceipt({
     env,
     receiptKey: "SERVICEDESK_MIGRATION_REHEARSAL_RECEIPT",
@@ -87,6 +95,15 @@ export function buildOperationalReleaseReadiness(
       note: browserAccepted
         ? "Desktop, tablet and mobile acceptance evidence is bound to this build."
         : "Real-browser desktop/tablet/mobile acceptance is still required.",
+    },
+    {
+      id: "AUTHENTICATED_STAFF_BROWSER",
+      label: "Authenticated staff browser workflows",
+      state: staffBrowserAccepted ? "OPERATIONS_VERIFIED" : "CONFIGURATION_BLOCKED",
+      blocking: true,
+      note: staffBrowserAccepted
+        ? "A distinct authenticated staff workflow receipt is bound to this exact build."
+        : "Public-page smoke tests do not prove authenticated staff sessions, branch roles, or operational workflows.",
     },
     {
       id: "MIGRATION_REHEARSAL",
