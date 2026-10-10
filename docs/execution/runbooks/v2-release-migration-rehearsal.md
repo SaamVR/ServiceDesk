@@ -41,15 +41,22 @@ A valid rehearsal must prove all three operations on the same plan fingerprint:
 
 Record PASS/FAIL for each stage. If any stage fails, release remains blocked.
 
-## 4. Browser acceptance
+## 4. Browser acceptance — two distinct release gates
 
-Run the frozen candidate in a real browser at the requested responsive matrix:
+Run the frozen candidate in real Chrome at the responsive matrix:
 
 - desktop 1440×900
 - tablet 834×1112
 - mobile 390×844
 
-Exercise the real staff journey and responsive/accessibility surfaces. Source-level E2E tests do not substitute for this browser receipt.
+**Public responsive smoke is not authenticated staff acceptance.** Preserve two independently captured, exact-build receipts:
+
+1. `RESPONSIVE_BROWSER`: public home, pricing and tour responsive/console/accessibility checks. Bind `SERVICEDESK_BROWSER_ACCEPTANCE_RECEIPT` and `SERVICEDESK_BROWSER_ACCEPTANCE_BUILD_SHA` to the exact candidate.
+2. `AUTHENTICATED_STAFF_BROWSER`: real staff sign-in, workspace/branch authorization, core customer enquiry → quote → booking, inbox/handover, dispatch/quality, and relevant Settings workflows. Check permission denials, error/focus states, desktop/tablet/mobile overflow and browser console. Capture a distinct `staff-browser:redacted:<receipt-id>` reference and its `SERVICEDESK_STAFF_BROWSER_ACCEPTANCE_BUILD_SHA`, both for the same exact SHA.
+
+Both gates must pass separately. Reusing the public receipt as the staff receipt, using another build's receipt, or merely running E2E/fixture tests does not qualify. Do not manufacture authenticated acceptance when login credentials, permissions, data or real-browser access are unavailable. Keep the staff gate `CONFIGURATION_BLOCKED` and document the exact blocker.
+
+The server-side release registry additionally expects a distinct `BROWSER_RECEIPT` with `scope: "AUTHENTICATED_STAFF"` and the exact candidate `buildSha`. Do not record a public-only browser matrix under that scope.
 
 ## 5. Controlled provider acceptance
 
