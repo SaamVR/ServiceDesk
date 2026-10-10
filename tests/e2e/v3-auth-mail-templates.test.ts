@@ -32,7 +32,8 @@ describe("V3 email confirmation templates for SSR accounts", () => {
     expect(runbook).toContain("smtp.resend.com");
     expect(runbook).toContain("ServiceDesk AI");
     expect(runbook).toContain("SIGNUP_DISABLED");
-    expect(runbook).toContain("SMTP_NOT_WIRED");
+    expect(runbook).toContain("SMTP_OWNER_REPORTED_CONFIGURED");
+    expect(runbook).toContain("DELIVERY_NOT_VERIFIED");
     expect(runbook).not.toContain("re_live_");
   });
 
