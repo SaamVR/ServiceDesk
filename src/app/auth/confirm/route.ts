@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { trustedAuthDestination } from "@/features/auth/email-origin";
 
 // Accepts both Supabase's SSR code exchange and the token-hash email template.
 // Destination is fixed, not derived from an untrusted query string.
@@ -7,9 +8,15 @@ export async function GET(request: NextRequest) {
   const configUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
-  const failure = new URL("/auth/sign-in?error=" + encodeURIComponent(
+  const failure = trustedAuthDestination("/auth/sign-in?error=" + encodeURIComponent(
     "The verification link has expired or could not be confirmed. Please try signing in.",
-  ), request.url);
+  ));
+  if (!failure) {
+    return NextResponse.json(
+      { error: "Authentication redirect is not configured for this environment." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
 
   if (!configUrl || !key) return NextResponse.redirect(failure, 303);
 
@@ -23,10 +30,16 @@ export async function GET(request: NextRequest) {
   const flow = request.nextUrl.searchParams.get("flow") === "recovery"
     ? "recovery"
     : "signup";
-  const response = NextResponse.redirect(
-    new URL(flow === "recovery" ? "/auth/reset-password" : "/auth/continue", request.url),
-    303,
+  const destination = trustedAuthDestination(
+    flow === "recovery" ? "/auth/reset-password" : "/auth/continue",
   );
+  if (!destination) {
+    return NextResponse.json(
+      { error: "Authentication redirect is not configured for this environment." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+  const response = NextResponse.redirect(destination, 303);
   response.headers.set("Cache-Control", "private, no-store");
 
   const supabase = createServerClient(configUrl, key, {

@@ -26,3 +26,25 @@ export function verifiedEmailRedirectOrigin(
     return null;
   }
 }
+
+/**
+ * Auth redirects must never be based on the inbound request URL. Some proxies
+ * forward an internal localhost:port URL; an untrusted Host header is also not
+ * an acceptable source of authentication callback destinations.
+ */
+export function trustedAuthDestination(
+  path: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): URL | null {
+  const origin = verifiedEmailRedirectOrigin(
+    env.SERVICEDESK_AUTH_REDIRECT_ORIGIN,
+    env.RENDER_EXTERNAL_URL,
+  );
+  if (!origin || !path.startsWith("/") || path.startsWith("//")) return null;
+  try {
+    const url = new URL(path, origin);
+    return url.origin === origin ? url : null;
+  } catch {
+    return null;
+  }
+}

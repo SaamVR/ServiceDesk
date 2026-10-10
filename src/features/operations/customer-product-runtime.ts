@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
 import type { ActorContext, QuoteDTO, SlotDTO } from "@/contracts";
 import { createPostgresPaymentApplicationFacadeMethods, type SupabaseRpcClient } from "@/server/core/payment-application-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
@@ -163,11 +164,10 @@ function rows(value: unknown): Row[] {
 }
 
 function runtimeConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
+  const publicConfig = supabasePublicConfig();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !anonKey || !serviceRoleKey) return undefined;
-  return { url, anonKey, serviceRoleKey };
+  if (!publicConfig || !serviceRoleKey) return undefined;
+  return { url: publicConfig.url, anonKey: publicConfig.publishableKey, serviceRoleKey };
 }
 
 async function resolveCustomer(): Promise<
