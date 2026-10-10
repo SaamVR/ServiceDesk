@@ -79,7 +79,7 @@ export default async function CreateWorkspacePage({
         </div>
         <button className={styles.submit} type="submit">Create my workspace <span aria-hidden="true">→</span></button>
       </form>
-      <p className={styles.help}>You'll be the workspace owner. Team members can be invited after setup.</p>
+      <p className={styles.help}>You&apos;ll be the workspace owner. Team members can be invited after setup.</p>
     </RegistrationShell>
   );
 }
