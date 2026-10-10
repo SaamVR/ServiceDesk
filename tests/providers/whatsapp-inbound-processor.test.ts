@@ -60,7 +60,7 @@ describe("idempotent durable WhatsApp inbound processor", () => {
     expect(result).toEqual({ ok: true, value: { received: 2, processed: 1, duplicate: 1, unsupported: 0 } });
   });
 
-  test("returns typed receipt-key failure when processing throws", async () => {
+  test("returns retryable typed failure without provider identifiers or downstream errors", async () => {
     const processor: DurableWhatsAppInboundProcessor = {
       async process() {
         throw new Error("downstream unavailable");
@@ -70,6 +70,10 @@ describe("idempotent durable WhatsApp inbound processor", () => {
     const result = await processDurableWhatsAppInboundBatch([record({ receiptKey: "failed-key" })], processor);
 
     expect(result).toMatchObject({ ok: false, code: "WHATSAPP_INBOUND_PROCESSING_FAILED" });
-    if (!result.ok) expect(result.message).toContain("failed-key");
+    if (!result.ok) {
+      expect(result.message).toContain("retry is required");
+      expect(result.message).not.toContain("failed-key");
+      expect(result.message).not.toContain("downstream unavailable");
+    }
   });
 });
