@@ -43,6 +43,10 @@ services:
         sync: false
       - key: SERVICEDESK_BROWSER_ACCEPTANCE_BUILD_SHA
         sync: false
+      - key: SERVICEDESK_STAFF_BROWSER_ACCEPTANCE_RECEIPT
+        sync: false
+      - key: SERVICEDESK_STAFF_BROWSER_ACCEPTANCE_BUILD_SHA
+        sync: false
       - key: SERVICEDESK_MIGRATION_REHEARSAL_RECEIPT
         sync: false
       - key: SERVICEDESK_MIGRATION_REHEARSAL_BUILD_SHA
