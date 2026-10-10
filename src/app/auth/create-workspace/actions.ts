@@ -4,12 +4,14 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { businessSlug, validateWorkspaceFields } from "@/features/auth/registration";
+import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
 
 function fail(code: string): never {
   redirect("/auth/create-workspace?error=" + encodeURIComponent(code));
 }
 
 export async function createOwnerWorkspace(formData: FormData): Promise<never> {
+  if (!ownerRegistrationAvailable()) fail("Workspace registration is not enabled on this environment yet.");
   const name = String(formData.get("businessName") ?? "").trim();
   const customSlug = String(formData.get("slug") ?? "").trim().toLowerCase();
   const derivedSlug = businessSlug(name);
