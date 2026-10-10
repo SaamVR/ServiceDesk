@@ -82,8 +82,8 @@ function buildBoundEvidence(
   expectedBuildSha: string | undefined,
   expectedKind: V2ReleaseEvidenceReference["kind"],
 ): V2ReleaseEvidenceReference | undefined {
-  if (!evidence || evidence.kind !== expectedKind) return undefined;
-  if (expectedBuildSha && evidence.buildSha !== expectedBuildSha) return undefined;
+  if (!expectedBuildSha || !evidence || evidence.kind !== expectedKind) return undefined;
+  if (evidence.buildSha !== expectedBuildSha) return undefined;
   return evidence;
 }
 
@@ -94,6 +94,9 @@ export function buildV2ReleaseReadinessRegistry(
   const executable = buildBoundEvidence(input.canonicalExecutable, build, "BUILD_RECEIPT");
   const browser = buildBoundEvidence(input.responsiveBrowser, build, "BROWSER_RECEIPT");
   const migration = buildBoundEvidence(input.migrationRehearsal, build, "REHEARSAL_RECEIPT");
+  const verifiedProvider = (
+    id: "WHATSAPP_PROVIDER" | "GOOGLE_CALENDAR_PROVIDER" | "EMAIL_PROVIDER" | "N8N_PROVIDER" | "AI_PROVIDER" | "EMAIL_INBOUND" | "VOICE_INBOUND",
+  ) => buildBoundEvidence(input.providerEvidence?.[id], build, "CONTROLLED_PROVIDER_RECEIPT");
   const secondVertical = input.secondVerticalBuyerEvidence?.kind === "BUYER_EVIDENCE"
     ? input.secondVerticalBuyerEvidence
     : undefined;
@@ -117,11 +120,11 @@ export function buildV2ReleaseReadinessRegistry(
       blockers: browser ? [] : ["DESKTOP_TABLET_MOBILE_BROWSER_RECEIPT_REQUIRED"],
       noClaimNotes: ["Unit/e2e source tests do not substitute for the requested real-browser acceptance matrix."],
     },
-    providerGate("WHATSAPP_PROVIDER", "WhatsApp controlled provider proof", input.providerEvidence?.WHATSAPP_PROVIDER),
-    providerGate("GOOGLE_CALENDAR_PROVIDER", "Google Calendar controlled provider proof", input.providerEvidence?.GOOGLE_CALENDAR_PROVIDER),
-    providerGate("EMAIL_PROVIDER", "Email controlled provider proof", input.providerEvidence?.EMAIL_PROVIDER),
-    providerGate("N8N_PROVIDER", "Webhook / n8n controlled provider proof", input.providerEvidence?.N8N_PROVIDER),
-    providerGate("AI_PROVIDER", "AI provider/model controlled proof", input.providerEvidence?.AI_PROVIDER),
+    providerGate("WHATSAPP_PROVIDER", "WhatsApp controlled provider proof", verifiedProvider("WHATSAPP_PROVIDER")),
+    providerGate("GOOGLE_CALENDAR_PROVIDER", "Google Calendar controlled provider proof", verifiedProvider("GOOGLE_CALENDAR_PROVIDER")),
+    providerGate("EMAIL_PROVIDER", "Email controlled provider proof", verifiedProvider("EMAIL_PROVIDER")),
+    providerGate("N8N_PROVIDER", "Webhook / n8n controlled provider proof", verifiedProvider("N8N_PROVIDER")),
+    providerGate("AI_PROVIDER", "AI provider/model controlled proof", verifiedProvider("AI_PROVIDER")),
     {
       id: "PAYMENT_SANDBOX",
       label: "Payment sandbox authority",
@@ -130,8 +133,8 @@ export function buildV2ReleaseReadinessRegistry(
       blockers: [],
       noClaimNotes: ["Payments remain sandbox/demo only. This gate never promotes to live-payment verification."],
     },
-    providerGate("EMAIL_INBOUND", "Email inbound controlled proof", input.providerEvidence?.EMAIL_INBOUND),
-    providerGate("VOICE_INBOUND", "Voice inbound controlled proof", input.providerEvidence?.VOICE_INBOUND),
+    providerGate("EMAIL_INBOUND", "Email inbound controlled proof", verifiedProvider("EMAIL_INBOUND")),
+    providerGate("VOICE_INBOUND", "Voice inbound controlled proof", verifiedProvider("VOICE_INBOUND")),
     {
       id: "PHOTO_ASSISTED_INTAKE",
       label: "Photo-assisted intake authority",
