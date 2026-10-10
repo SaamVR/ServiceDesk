@@ -22,6 +22,7 @@ describe("V2 release readiness registry", () => {
     expect(registry.productionReleaseReady).toBe(false);
     expect(registry.gates.find((gate) => gate.id === "CANONICAL_EXECUTABLE")?.state).toBe("IMPLEMENTED");
     expect(registry.gates.find((gate) => gate.id === "RESPONSIVE_BROWSER")?.state).toBe("CONFIGURATION_BLOCKED");
+    expect(registry.gates.find((gate) => gate.id === "AUTHENTICATED_STAFF_BROWSER")?.state).toBe("CONFIGURATION_BLOCKED");
     expect(registry.gates.find((gate) => gate.id === "WHATSAPP_PROVIDER")?.state).toBe("CONFIGURATION_BLOCKED");
     expect(registry.gates.find((gate) => gate.id === "MIGRATION_REHEARSAL")?.state).toBe("CONFIGURATION_BLOCKED");
     expect(registry.gates.find((gate) => gate.id === "SECOND_VERTICAL")?.state).toBe("BUYER_EVIDENCE_BLOCKED");
@@ -33,6 +34,10 @@ describe("V2 release readiness registry", () => {
       generatedAt: now,
       canonicalExecutable: ref("BUILD_RECEIPT", "render:rc-1"),
       responsiveBrowser: ref("BROWSER_RECEIPT", "browser:matrix-1"),
+      authenticatedStaffBrowser: {
+        ...ref("BROWSER_RECEIPT", "browser:staff-session-1"),
+        scope: "AUTHENTICATED_STAFF",
+      },
       migrationRehearsal: ref("REHEARSAL_RECEIPT", "rehearsal:1"),
       operatorRunbook: { kind: "DOCUMENTED_RUNBOOK", reference: "docs/runbook.md" },
       providerEvidence: {
@@ -41,6 +46,7 @@ describe("V2 release readiness registry", () => {
     });
     expect(registry.gates.find((gate) => gate.id === "CANONICAL_EXECUTABLE")?.state).toBe("CONTRACT_TESTED");
     expect(registry.gates.find((gate) => gate.id === "RESPONSIVE_BROWSER")?.state).toBe("OPERATIONS_VERIFIED");
+    expect(registry.gates.find((gate) => gate.id === "AUTHENTICATED_STAFF_BROWSER")?.state).toBe("OPERATIONS_VERIFIED");
     expect(registry.gates.find((gate) => gate.id === "MIGRATION_REHEARSAL")?.state).toBe("OPERATIONS_VERIFIED");
     expect(registry.gates.find((gate) => gate.id === "WHATSAPP_PROVIDER")?.state).toBe("PROVIDER_VERIFIED");
   });
@@ -60,6 +66,38 @@ describe("V2 release readiness registry", () => {
     });
     expect(registry.gates.find((gate) => gate.id === "CANONICAL_EXECUTABLE")?.state).toBe("IMPLEMENTED");
     expect(registry.gates.find((gate) => gate.id === "RESPONSIVE_BROWSER")?.state).toBe("CONFIGURATION_BLOCKED");
+  });
+
+  it("never substitutes public responsive smoke for authenticated staff browser acceptance", () => {
+    const registry = buildV2ReleaseReadinessRegistry({
+      buildSha,
+      generatedAt: now,
+      responsiveBrowser: ref("BROWSER_RECEIPT", "browser:public-only"),
+    });
+    expect(registry.gates.find((gate) => gate.id === "RESPONSIVE_BROWSER")?.state).toBe("OPERATIONS_VERIFIED");
+    expect(registry.gates.find((gate) => gate.id === "AUTHENTICATED_STAFF_BROWSER")).toMatchObject({
+      state: "CONFIGURATION_BLOCKED",
+      blockers: ["AUTHENTICATED_STAFF_BROWSER_RECEIPT_REQUIRED"],
+    });
+    expect(registry.blockingGateIds).toContain("AUTHENTICATED_STAFF_BROWSER");
+  });
+
+  it("rejects incorrectly scoped, shared-reference, and stale staff browser receipts", () => {
+    const publicReceipt = ref("BROWSER_RECEIPT", "browser:public");
+    const candidates = [
+      ref("BROWSER_RECEIPT", "browser:unscoped"),
+      { ...ref("BROWSER_RECEIPT", "browser:public"), scope: "AUTHENTICATED_STAFF" as const },
+      { ...ref("BROWSER_RECEIPT", "browser:old-staff"), scope: "AUTHENTICATED_STAFF" as const,
+        buildSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+      { ...ref("BUILD_RECEIPT", "browser:wrong-kind"), scope: "AUTHENTICATED_STAFF" as const },
+    ];
+    for (const authenticatedStaffBrowser of candidates) {
+      const registry = buildV2ReleaseReadinessRegistry({
+        buildSha, generatedAt: now, responsiveBrowser: publicReceipt, authenticatedStaffBrowser,
+      });
+      expect(registry.gates.find((gate) => gate.id === "AUTHENTICATED_STAFF_BROWSER")?.state)
+        .toBe("CONFIGURATION_BLOCKED");
+    }
   });
 
   it("never promotes payment sandbox to live provider verification", () => {
@@ -86,6 +124,10 @@ describe("V2 release readiness registry", () => {
       generatedAt: now,
       canonicalExecutable: ref("BUILD_RECEIPT", "render:rc"),
       responsiveBrowser: ref("BROWSER_RECEIPT", "browser:matrix"),
+      authenticatedStaffBrowser: {
+        ...ref("BROWSER_RECEIPT", "browser:staff-session"),
+        scope: "AUTHENTICATED_STAFF",
+      },
       migrationRehearsal: ref("REHEARSAL_RECEIPT", "migration:rehearsal"),
       operatorRunbook: { kind: "DOCUMENTED_RUNBOOK", reference: "docs/release-runbook.md" },
       providerEvidence: {
