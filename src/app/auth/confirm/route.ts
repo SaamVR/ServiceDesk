@@ -20,7 +20,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(failure, 303);
   }
 
-  const response = NextResponse.redirect(new URL("/auth/continue", request.url), 303);
+  const flow = request.nextUrl.searchParams.get("flow") === "recovery"
+    ? "recovery"
+    : "signup";
+  const response = NextResponse.redirect(
+    new URL(flow === "recovery" ? "/auth/reset-password" : "/auth/continue", request.url),
+    303,
+  );
   response.headers.set("Cache-Control", "private, no-store");
 
   const supabase = createServerClient(configUrl, key, {
@@ -34,7 +40,7 @@ export async function GET(request: NextRequest) {
 
   const verification = code && code.length <= 2048
     ? await supabase.auth.exchangeCodeForSession(code)
-    : await supabase.auth.verifyOtp({ token_hash: tokenHash!, type: "email" });
+    : await supabase.auth.verifyOtp({ token_hash: tokenHash!, type: flow === "recovery" ? "recovery" : "email" });
 
   if (verification.error) return NextResponse.redirect(failure, 303);
 
