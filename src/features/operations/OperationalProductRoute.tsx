@@ -49,11 +49,20 @@ import { formatWorkspaceDateTime } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
 import { buildOperationalReleaseReadiness } from "./release-readiness-runtime";
 import styles from "./OperationalProductRoute.module.css";
+import {
+  buildInboxTriage,
+  inboxQueueHref,
+  inboxQueues,
+  normalizeInboxQueue,
+  type InboxQueue,
+  type InboxQueueCounts,
+} from "./inbox-triage";
 
 interface OperationalProductRouteProps {
   workspaceSlug: string;
   module: Exclude<StaffModule, "overview">;
   selectedConversationId?: string;
+  selectedQueue?: string;
   selectedCustomerId?: string;
   selectedRequestId?: string;
   selectedQuoteId?: string;
@@ -120,23 +129,71 @@ function Notice({ notice, error }: { notice?: string; error?: string }) {
     />
   );
 }
+function InboxQueueNavigation({
+  queue,
+  counts,
+}: {
+  queue: InboxQueue;
+  counts: InboxQueueCounts;
+}) {
+  const labels: Record<InboxQueue, string> = {
+    all: "All",
+    "needs-reply": "Needs reply",
+    handover: "Human takeover",
+    unverified: "Identity review",
+  };
+  return (
+    <nav className={styles.inboxQueueNav} aria-label="Conversation queues">
+      {inboxQueues.map((item) => (
+        <a
+          key={item}
+          className={`${styles.inboxQueueLink} ${item === queue ? styles.inboxQueueActive : ""}`}
+          href={inboxQueueHref(item)}
+          aria-current={item === queue ? "page" : undefined}
+        >
+          <span>{labels[item]}</span>
+          <span className={styles.inboxQueueCount}>{counts[item]}</span>
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 function InboxView({
   data,
   workspaceSlug,
   selectedConversationId,
+  selectedQueue,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedConversationId?: string;
+  selectedQueue?: string;
 }) {
-  const orderedConversations = [...data.conversations].sort((left, right) =>
-    Date.parse(right.lastMessageAt ?? "1970-01-01T00:00:00.000Z")
-    - Date.parse(left.lastMessageAt ?? "1970-01-01T00:00:00.000Z"),
-  );
-  const selected =
-    orderedConversations.find((item) => item.id === selectedConversationId) ?? orderedConversations[0];
+  const queue = normalizeInboxQueue(selectedQueue);
+  const triage = buildInboxTriage(data.conversations, data.messages, data.customers, queue);
+  const orderedConversations = triage.visible;
+  const selected = orderedConversations.find((item) => item.id === selectedConversationId)
+    ?? orderedConversations[0];
   if (!selected) {
-    return <EmptyState title="Inbox is clear" detail="No customer conversations are stored for this workspace yet." />;
+    return (
+      <section className={styles.inboxEmptyQueueWorkspace} aria-label="Customer conversation triage">
+        <div className={styles.inboxEmptyQueueHeading}>
+          <div>
+            <p className={styles.inboxEyebrow}>Inbox</p>
+            <h2>Conversations</h2>
+            <p>{triage.counts.all} stored conversations</p>
+          </div>
+        </div>
+        <InboxQueueNavigation queue={queue} counts={triage.counts} />
+        <EmptyState
+          title={triage.counts.all ? "No conversations in this queue" : "Inbox is clear"}
+          detail={triage.counts.all
+            ? "Choose another queue to see existing conversations."
+            : "No customer conversations are stored for this workspace yet."}
+        />
+      </section>
+    );
   }
 
   const customer = data.customers.find((item) => item.id === selected.customerId);
@@ -165,7 +222,7 @@ function InboxView({
       workspaceSlug,
       "inbox",
       result,
-      "conversation=" + encodeURIComponent(conversationId) + "&",
+      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&",
     );
   }
 
@@ -182,7 +239,7 @@ function InboxView({
       workspaceSlug,
       "inbox",
       result,
-      "conversation=" + encodeURIComponent(conversationId) + "&",
+      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&",
     );
   }
 
@@ -195,7 +252,7 @@ function InboxView({
       workspaceSlug,
       "inbox",
       result,
-      "conversation=" + encodeURIComponent(conversationId) + "&",
+      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&",
     );
   }
 
@@ -214,9 +271,10 @@ function InboxView({
           <div>
             <p className={styles.inboxEyebrow}>Inbox</p>
             <h2>Conversations</h2>
-            <p>{orderedConversations.length} active thread{orderedConversations.length === 1 ? "" : "s"}</p>
+            <p>{triage.counts.all} stored threads · {triage.counts["needs-reply"]} awaiting reply</p>
           </div>
         </header>
+        <InboxQueueNavigation queue={queue} counts={triage.counts} />
         <div className={styles.conversationList} role="list">
           {orderedConversations.map((conversation) => {
             const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
@@ -225,7 +283,7 @@ function InboxView({
             return (
               <a
                 className={`${styles.conversationItem} ${selectedThread ? styles.conversationSelected : ""}`.trim()}
-                href={"?conversation=" + encodeURIComponent(conversation.id)}
+                href={inboxQueueHref("all", conversation.id)}
                 aria-current={selectedThread ? "page" : undefined}
                 aria-label={(threadCustomer?.displayName ?? "Unverified sender") + " " + conversation.channel + " conversation"}
                 role="listitem"
@@ -242,7 +300,14 @@ function InboxView({
                   <span className={styles.conversationPreview}>{latest?.body ?? (latest?.mediaReference ? "Media message" : "No messages yet")}</span>
                   <span className={styles.conversationMeta}>
                     <span>{conversation.channel}</span>
-                    {conversation.handoverActive ? <span className={styles.takeoverDot}>Human takeover</span> : <span>Open</span>}
+                    {conversation.handoverActive
+                      ? <span className={styles.takeoverDot}>Human takeover</span>
+                      : triage.threadFlags.get(conversation.id)?.needsReply
+                        ? <span className={styles.inboxNeedsReply}>Reply due</span>
+                        : <span>Open</span>}
+                    {triage.threadFlags.get(conversation.id)?.unverified
+                      ? <span className={styles.inboxUnverified}>Identity review</span>
+                      : null}
                   </span>
                 </span>
               </a>
@@ -3830,6 +3895,7 @@ function renderModule(
   selectedQualityCaseId?: string,
   selectedJobId?: string,
   selectedInvoiceId?: string,
+  selectedQueue?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -3838,6 +3904,7 @@ function renderModule(
           data={data}
           workspaceSlug={workspaceSlug}
           selectedConversationId={selectedConversationId}
+          selectedQueue={selectedQueue}
         />
       );
     case "customers":
@@ -3869,6 +3936,7 @@ export async function OperationalProductRoute({
   workspaceSlug,
   module,
   selectedConversationId,
+  selectedQueue,
   selectedCustomerId,
   selectedRequestId,
   selectedQuoteId,
@@ -3894,7 +3962,7 @@ export async function OperationalProductRoute({
       {result.ok ? (
         <>
           {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId)}
+          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue)}
         </>
       ) : (
         <Panel>
