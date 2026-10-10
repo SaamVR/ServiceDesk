@@ -50,7 +50,7 @@ declare
   v_idempotency text := nullif(trim(p_input->>'idempotencyKey'),'');
   v_occurred timestamptz := nullif(p_input->>'occurredAt','')::timestamptz;
   v_now timestamptz := coalesce(nullif(p_input->>'now','')::timestamptz, now());
-  v_visit public.visits%rowtype;
+  v_visit_status public.visits.status%type;
   v_contract_version_id uuid;
   v_site_id uuid;
   v_service_id uuid;
@@ -118,12 +118,12 @@ begin
     return jsonb_build_object('ok', false, 'code', 'COMMERCIAL_DIRECT_COST_IDEMPOTENCY_CONFLICT');
   end if;
 
-  select v,
+  select v.status,
          sp.contract_version_id,
          cs.site_id,
          cs.service_id,
          cv.currency
-  into v_visit, v_contract_version_id, v_site_id, v_service_id, v_contract_currency
+  into v_visit_status, v_contract_version_id, v_site_id, v_service_id, v_contract_currency
   from public.visits v
   join public.requests req
     on req.workspace_id = v.workspace_id and req.id = v.request_id
@@ -148,10 +148,10 @@ begin
     return jsonb_build_object('ok', false, 'code', 'COMMERCIAL_DIRECT_COST_VISIT_NOT_CONTRACT_BACKED');
   end if;
 
-  if v_visit.status = 'CANCELLED' then
+  if v_visit_status = 'CANCELLED' then
     return jsonb_build_object('ok', false, 'code', 'COMMERCIAL_DIRECT_COST_VISIT_CANCELLED');
   end if;
-  if v_basis = 'ACTUAL' and v_visit.status <> 'COMPLETED' then
+  if v_basis = 'ACTUAL' and v_visit_status <> 'COMPLETED' then
     return jsonb_build_object('ok', false, 'code', 'COMMERCIAL_DIRECT_COST_ACTUAL_REQUIRES_COMPLETION');
   end if;
   if v_currency <> v_contract_currency then
