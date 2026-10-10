@@ -10,7 +10,7 @@ describe("V3 email confirmation templates for SSR accounts", () => {
   const confirmRoute = read("src/app/auth/confirm/route.ts");
 
   it("sends email verification through the configured public site and SSR token-hash flow", () => {
-    expect(signup).toContain("{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email");
+    expect(signup).toContain("{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=email");
     expect(confirmRoute).toContain('const tokenHash = request.nextUrl.searchParams.get("token_hash")');
     expect(confirmRoute).toContain('type: flow === "recovery" ? "recovery" : "email"');
     expect(confirmRoute).toContain("auth.verifyOtp(");
@@ -18,10 +18,10 @@ describe("V3 email confirmation templates for SSR accounts", () => {
   });
 
   it("keeps password reset isolated from signup and sends it to the recovery session", () => {
-    expect(recovery).toContain("{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;flow=recovery");
+    expect(recovery).toContain("{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}");
     expect(confirmRoute).toContain('request.nextUrl.searchParams.get("flow") === "recovery"');
     expect(confirmRoute).toContain('"/auth/reset-password"');
-    expect(recovery).not.toContain("type=email");
+    expect(recovery).not.toContain("type=email");\n    expect(recovery).not.toContain("{{ .SiteURL }}");
     expect(signup).not.toContain("flow=recovery");
   });
 
