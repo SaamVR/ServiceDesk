@@ -62,6 +62,20 @@ describe("V3 customer-safe account creation and onboarding", () => {
     expect(sql).not.toMatch(/grant execute[^;]+to anon;/i);
   });
 
+  it("keeps the responsive marketing navigation reachable without crushing the brand", () => {
+    const shell = file("src/components/shell/MarketingShell.tsx");
+    const css = file("src/components/shell/MarketingNavV3.module.css");
+    expect(shell).toContain("styles.mobileMenu");
+    expect(shell).toContain('aria-label="Open product menu"');
+    expect(shell).toContain('aria-label="Mobile product navigation"');
+    expect(shell).toContain('href="/auth/sign-up"');
+    expect(shell).toContain('href="/auth/sign-in"');
+    expect(css).toContain("width: auto !important");
+    expect(css).toContain("min-width: max-content");
+    expect(css).toContain(".desktopNav { display: none !important; }");
+    expect(css).toContain("min-height: 44px");
+  });
+
   it("routes confirmation only to fixed same-origin continuation and records no supplied role", () => {
     const callback = file("src/app/auth/confirm/route.ts");
     const signup = file("src/app/auth/sign-up/actions.ts");
