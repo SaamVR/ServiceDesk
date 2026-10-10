@@ -15,7 +15,7 @@ describe("V2 migration rehearsal readiness", () => {
   it("fingerprints the exact ordered repository migration inventory", () => {
     const plan = buildMigrationRehearsalPlan({ buildSha, migrationFiles });
     expect(plan.migrationFiles).toEqual([...migrationFiles].sort((a, b) => a.localeCompare(b)));
-    expect(plan.migrationHead).toBe("0058_v2_enterprise_governance.sql");
+    expect(plan.migrationHead).toBe("0059_v3_verified_owner_workspace_bootstrap.sql");
     expect(plan.planFingerprint).toMatch(/^[a-f0-9]{64}$/);
     expect(plan).toMatchObject({
       targetClass: "DISPOSABLE_NON_PRODUCTION",

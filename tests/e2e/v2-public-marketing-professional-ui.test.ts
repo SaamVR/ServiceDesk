@@ -51,25 +51,28 @@ describe("V2 professional public product presentation", () => {
     expect(shell).not.toContain('primaryHref = "/tour"');
   });
 
-  it("gives existing users a direct sign-in entry without consuming a primary marketing slot", () => {
+  it("keeps an accessible existing-user sign-in path across desktop and mobile navigation", () => {
     const shell = source("src/components/shell/MarketingShell.tsx");
-    const css = source("src/app/globals.css");
-    expect(shell).toContain('className="site-auth-link"');
+    const css = source("src/components/shell/MarketingNavV3.module.css");
     expect(shell).toContain('href="/auth/sign-in"');
-    expect(shell).toContain(">Sign in</Link>");
-    expect(css).toContain(".site-auth-link {");
-    expect(css).toContain("grid-column: 2;");
-    expect(css).toContain("grid-row: 1;");
+    expect(shell).toContain('href="/auth/sign-up"');
+    expect(shell).toContain('aria-label="Mobile product navigation"');
+    expect(shell).toContain('aria-label="Open product menu"');
+    expect(css).toContain(".signIn { display: none !important; }");
+    expect(css).toContain(".mobileMenuPanel a");
+    expect(css).toContain("min-height: 44px");
   });
 
-  it("keeps every primary marketing destination visible on narrow screens", () => {
+  it("preserves all five primary product destinations in a mobile disclosure rather than wrapping the header", () => {
     const shell = source("src/components/shell/MarketingShell.tsx");
-    const css = source("src/app/globals.css");
-    expect(shell).toContain('className="site-nav site-primary-nav"');
-    expect(css).toContain(".site-primary-nav {");
-    expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr));");
-    expect(css).toContain(".site-primary-nav a:last-child");
-    expect(css).toContain("grid-column: 1 / -1");
+    const css = source("src/components/shell/MarketingNavV3.module.css");
+    expect(shell.match(/productRoutes.slice\(1, 6\)/g)).toHaveLength(2);
+    expect(shell).toContain("site-nav site-primary-nav");
+    expect(shell).toContain("styles.desktopNav");
+    expect(shell).toContain("styles.mobileMenu");
+    expect(css).toContain(".desktopNav { display: none !important; }");
+    expect(css).toContain("width: auto !important");
+    expect(css).toContain("white-space: nowrap");
   });
 
   it("has dedicated responsive hero composition instead of relying on the global h1 scale", () => {

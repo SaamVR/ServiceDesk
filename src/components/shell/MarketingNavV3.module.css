@@ -1,0 +1,130 @@
+/* Marketing navigation V3: scoped, responsive, no public app/sidebar leakage. */
+.header {
+  min-width: 0;
+  gap: 16px;
+  padding: 11px 15px;
+}
+.header .brand {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: auto !important;
+  min-width: max-content;
+  gap: 10px;
+  align-items: center;
+  white-space: nowrap;
+  letter-spacing: -.025em;
+}
+.brand :global(.brand-mark) {
+  flex: 0 0 40px;
+}
+.brandName { white-space: nowrap; }
+.brandAi { color: #51675e; font-weight: 550; }
+.desktopNav { min-width: 0; gap: 0; justify-content: flex-end; }
+.desktopNav a { padding: 0 8px; font-size: .88rem; white-space: nowrap; }
+.actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: 0;
+}
+.primaryAction {
+  background: #125d43 !important;
+  border-color: #125d43 !important;
+  color: #fff !important;
+  white-space: nowrap;
+}
+.primaryAction:hover, .primaryAction:focus-visible {
+  background: #0c4f38 !important;
+  color: #fff !important;
+}
+.mobileActionLabel, .mobileMenu { display: none; }
+@media (max-width: 1020px) {
+  .header {
+    display: flex !important;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .desktopNav { display: none !important; }
+  .actions { margin-left: auto; }
+  .mobileMenu { display: block; position: relative; flex: 0 0 auto; }
+  .menuToggle {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    background: #fff;
+    border: 1px solid #d9e3dd;
+    border-radius: 10px;
+    color: #1b3028;
+    cursor: pointer;
+    list-style: none;
+  }
+  .menuToggle::-webkit-details-marker { display: none; }
+  .menuToggle:hover { background: #edf4ef; }
+  .menuToggle:focus-visible { outline: 3px solid #19724d; outline-offset: 2px; }
+  .mobileMenuPanel {
+    position: absolute;
+    top: calc(100% + 13px);
+    right: 0;
+    width: min(310px, calc(100vw - 40px));
+    display: grid;
+    gap: 2px;
+    padding: 11px;
+    border: 1px solid #d9e4dc;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 20px 48px rgb(14 30 26 / 18%);
+  }
+  .mobileMenuPanel a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    color: #253e34;
+    font-size: .9rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .mobileMenuPanel a:hover, .mobileMenuPanel a:focus-visible {
+    background: #edf5ef;
+    color: #0b5c3e;
+  }
+}
+@media (max-width: 590px) {
+  .header {
+    top: 8px;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 13px;
+  }
+  .header .brand { gap: 7px; font-size: .86rem; }
+  .brand :global(.brand-mark) {
+    width: 33px;
+    height: 33px;
+    flex-basis: 33px;
+    border-radius: 9px;
+    font-size: .7rem;
+  }
+  .brandAi { display: none; }
+  .signIn { display: none !important; }
+  .primaryAction {
+    min-height: 41px;
+    padding-inline: 11px;
+    font-size: .77rem;
+    font-weight: 700;
+  }
+  .desktopActionLabel { display: none; }
+  .mobileActionLabel { display: inline; }
+  .menuToggle { width: 41px; height: 41px; }
+}
+@media (max-width: 350px) {
+  .header .brand { font-size: .79rem; }
+  .actions { gap: 5px; }
+  .primaryAction { font-size: .72rem; padding-inline: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .header *, .header *::before, .header *::after { transition: none !important; }
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import styles from "./MarketingNavV3.module.css";
 import { productRoutes } from "@/features/product/story-model";
 
 interface MarketingShellProps {
@@ -25,17 +26,34 @@ export function MarketingShell({
 }: MarketingShellProps) {
   return (
     <main className="site-shell">
-      <header className="site-header" aria-label="Product navigation">
-        <Link className="brand-lockup" href="/" aria-label="ServiceDesk AI home">
+      <header className={`site-header ${styles.header}`} aria-label="Product navigation">
+        <Link className={`brand-lockup ${styles.brand}`} href="/" aria-label="ServiceDesk AI home">
           <span className="brand-mark" aria-hidden="true">SD</span>
-          <span>ServiceDesk AI</span>
+          <span className={styles.brandName}>ServiceDesk <span className={styles.brandAi}>AI</span></span>
         </Link>
-        <nav className="site-nav site-primary-nav" aria-label="Primary">
+        <nav className={`site-nav site-primary-nav ${styles.desktopNav}`} aria-label="Primary">
           {productRoutes.slice(1, 6).map((route) => (
             <Link key={route.href} href={route.href}>{route.label}</Link>
           ))}
         </nav>
-        <Link className="site-auth-link" href="/auth/sign-in">Sign in</Link>
+        <div className={styles.actions}>
+          <Link className={`site-auth-link ${styles.signIn}`} href="/auth/sign-in">Sign in</Link>
+          <Link className={`site-auth-link ${styles.primaryAction}`} href="/auth/sign-up">
+            <span className={styles.desktopActionLabel}>Create account</span>
+            <span className={styles.mobileActionLabel}>Get started</span>
+          </Link>
+          <details className={styles.mobileMenu}>
+            <summary className={styles.menuToggle} aria-label="Open product menu">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            </summary>
+            <nav className={styles.mobileMenuPanel} aria-label="Mobile product navigation">
+              {productRoutes.slice(1, 6).map((route) => (
+                <Link key={route.href} href={route.href}>{route.label}</Link>
+              ))}
+              <Link href="/auth/sign-in">Sign in</Link>
+            </nav>
+          </details>
+        </div>
       </header>
 
       <section className="hero-grid section-card marketing-hero">

@@ -1,4 +1,4 @@
-name: V2 focused release and provider integrity
+name: ServiceDesk focused product integrity
 
 # One low-cost PR check for release-gate changes. The existing Render RC
 # already runs the full suite/build on integrated candidates.
@@ -20,6 +20,22 @@ on:
       - "tests/providers/whatsapp-inbound-processor.test.ts"
       - "tests/providers/whatsapp-inbound-batch.test.ts"
       - "tests/providers/whatsapp-durable-inbound-handler.test.ts"
+      - "src/components/product/StaffAppShell.tsx"
+      - "src/components/product/StaffWorkspaceV3.module.css"
+      - "src/features/operations/StaffOverviewDashboard.module.css"
+      - "tests/e2e/staff-v3-navigation.test.tsx"
+      - "src/features/auth/registration.ts"
+      - "src/features/auth/email-origin.ts"
+      - "src/features/auth/RegistrationShell.tsx"
+      - "src/features/auth/RegistrationShell.module.css"
+      - "src/features/onboarding/OnboardingProductRoute.tsx"
+      - "src/app/auth/**"
+      - "src/app/page.tsx"
+      - "src/components/shell/MarketingShell.tsx"
+      - "src/components/shell/MarketingNavV3.module.css"
+      - "supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql"
+      - "tests/e2e/v3-owner-registration-flow.test.tsx"
+      - "tests/e2e/v2-public-marketing-professional-ui.test.ts"
 
 permissions:
   contents: read
@@ -56,6 +72,9 @@ jobs:
           tests/providers/whatsapp-inbound-processor.test.ts
           tests/providers/whatsapp-inbound-batch.test.ts
           tests/providers/whatsapp-durable-inbound-handler.test.ts
+          tests/e2e/staff-v3-navigation.test.tsx
+          tests/e2e/v3-owner-registration-flow.test.tsx
+          tests/e2e/v2-public-marketing-professional-ui.test.ts
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint changed release files
@@ -71,3 +90,25 @@ jobs:
           tests/providers/whatsapp-inbound-processor.test.ts
           tests/providers/whatsapp-inbound-batch.test.ts
           tests/providers/whatsapp-durable-inbound-handler.test.ts
+          src/components/product/StaffAppShell.tsx
+          tests/e2e/staff-v3-navigation.test.tsx
+          tests/e2e/v3-owner-registration-flow.test.tsx
+          tests/e2e/v2-public-marketing-professional-ui.test.ts
+          src/features/auth/registration.ts
+          src/features/auth/email-origin.ts
+          src/app/auth/forgot-password/actions.ts
+          src/app/auth/forgot-password/page.tsx
+          src/app/auth/forgot-password/check-email/page.tsx
+          src/app/auth/reset-password/actions.ts
+          src/app/auth/reset-password/page.tsx
+          src/features/auth/RegistrationShell.tsx
+          src/app/auth/sign-up/actions.ts
+          src/app/auth/sign-up/page.tsx
+          src/app/auth/sign-up/check-email/page.tsx
+          src/app/auth/confirm/route.ts
+          src/app/auth/continue/route.ts
+          src/app/auth/create-workspace/actions.ts
+          src/app/auth/create-workspace/page.tsx
+          src/app/auth/sign-in/page.tsx
+          src/features/onboarding/OnboardingProductRoute.tsx
+          src/components/shell/MarketingShell.tsx

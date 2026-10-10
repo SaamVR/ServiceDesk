@@ -1,0 +1,250 @@
+/* ServiceDesk V3 registration: purpose-built onboarding, not dashboard chrome. */
+.root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #f7f8f5;
+  color: #152826;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.pageHeader {
+  height: 83px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 0 clamp(25px, 4vw, 76px);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #132c29;
+  font-size: 1.12rem;
+  font-weight: 780;
+  letter-spacing: -.035em;
+  text-decoration: none;
+}
+.brand:hover { text-decoration: none; }
+.brandMark {
+  display: inline-grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  border-radius: 11px;
+  color: #f1f8f3;
+  background: #16372f;
+  font-size: 1.6rem;
+  font-weight: 760;
+  letter-spacing: -.095em;
+}
+.brandMark span { color: #8be1aa; }
+.brandAi { font-weight: 480; }
+.backLink { font-size: .86rem; font-weight: 620; color: #51675d; }
+.backLink:hover { color: #123d2c; }
+.columns {
+  width: min(100% - 56px, 1512px);
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, .97fr) minmax(0, 1.03fr);
+  min-height: 635px;
+  margin: 0 auto;
+  border: 1px solid #dce6de;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+.story {
+  position: relative;
+  display: flex;
+  background: #172e2d;
+  color: #eef5ef;
+  overflow: hidden;
+}
+.story::after {
+  content: "";
+  position: absolute;
+  width: 580px;
+  height: 580px;
+  right: -240px;
+  bottom: -360px;
+  border: 1px solid rgb(195 238 207 / 23%);
+  box-shadow:
+    0 0 0 74px rgb(195 238 207 / 3%),
+    0 0 0 148px rgb(195 238 207 / 3%),
+    0 0 0 222px rgb(195 238 207 / 3%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.storyInner {
+  width: 100%;
+  max-width: 630px;
+  padding: clamp(42px, 6vw, 90px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+.storyKicker, .eyebrow {
+  font-size: .77rem;
+  font-weight: 750;
+  line-height: 1.5;
+  letter-spacing: .12em;
+}
+.storyKicker { color: #9edeb8; margin-bottom: 27px; }
+.story h2 {
+  max-width: 570px;
+  font-weight: 550;
+  font-size: clamp(2.8rem, 4.2vw, 4.8rem);
+  line-height: 1.08;
+  letter-spacing: -.066em;
+  text-wrap: balance;
+  margin: 0;
+}
+.storyRule {
+  width: 100%;
+  height: 1px;
+  margin: 54px 0 30px;
+  background: rgb(223 245 228 / 22%);
+}
+.storySteps { display: grid; gap: 24px; }
+.storyStep {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 15px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #e2f0e8;
+}
+.stepIndex { color: #9edeb8; font-weight: 680; }
+.storyBottom {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: auto;
+  padding-top: 48px;
+}
+.storyEmblem {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border: 1px solid #5a8372;
+  border-radius: 50%;
+  color: #b4e7c9;
+  font-size: 1.4rem;
+}
+.storyBottom p { color: #bad0c5; font-size: .82rem; margin: 0; }
+.formSide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(44px, 6vw, 90px) clamp(28px, 6vw, 88px);
+}
+.formInner { width: min(100%, 450px); }
+.eyebrow { color: #18744f; margin-bottom: 14px; }
+.formSide h1 {
+  margin: 0;
+  color: #152826;
+  font-size: clamp(2.7rem, 4vw, 4.1rem);
+  font-weight: 650;
+  line-height: 1.04;
+  letter-spacing: -.062em;
+  text-wrap: balance;
+}
+.description {
+  max-width: 410px;
+  margin: 21px 0 0;
+  color: #68756d;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.formBody { display: grid; gap: 22px; margin-top: 34px; }
+.formBody p { font-size: .88rem; line-height: 1.55; }
+.formBody label { font-size: .9rem; }
+.formBody input:not([type=checkbox]), .formBody select {
+  width: 100%;
+  min-height: 48px;
+  padding: 9px 13px;
+  background: #fff;
+  color: #1a2f29;
+  border: 1px solid #c5d2c9;
+  border-radius: 8px;
+}
+.formBody input:focus-visible, .formBody select:focus-visible {
+  outline: 3px solid #9ddcb6;
+  border-color: #14774f;
+  outline-offset: 2px;
+}
+.formBody button[type=submit] {
+  width: 100%;
+  min-height: 49px;
+  background: #126b4b;
+  border: 1px solid #126b4b;
+  border-radius: 8px;
+  font-weight: 740;
+  color: #fff;
+  cursor: pointer;
+}
+.formBody button[type=submit]:hover { background: #0d543b; }
+.formBody a { color: #126b4b; }
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 21px clamp(25px, 4vw, 76px);
+  color: #63766c;
+  font-size: .78rem;
+}
+.footer nav { display: flex; flex-wrap: wrap; gap: 24px; }
+.footer a { color: inherit; }
+@media (max-width: 920px) {
+  .columns { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+  .storyInner { padding: 43px 32px; }
+  .story h2 { font-size: 2.5rem; }
+  .storyRule { margin: 38px 0 27px; }
+  .formSide { padding: 45px 32px; }
+}
+@media (max-width: 690px) {
+  .pageHeader { height: 73px; padding: 0 19px; }
+  .brand { font-size: 1rem; }
+  .backLink { font-size: .8rem; }
+  .columns {
+    width: calc(100% - 24px);
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+    border-radius: 13px;
+  }
+  .formSide { order: 0; padding: 38px 25px 45px; }
+  .story { order: 1; }
+  .storyInner { padding: 30px 27px 36px; }
+  .storyKicker { font-size: .69rem; margin-bottom: 12px; }
+  .story h2 { font-size: 2rem; max-width: 390px; }
+  .storyRule { margin: 25px 0; }
+  .storySteps { gap: 15px; }
+  .storyStep { font-size: .83rem; }
+  .storyBottom { display: none; }
+  .formSide h1 { font-size: 2.6rem; }
+  .description { font-size: .92rem; }
+  .footer { padding: 18px 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .root * { scroll-behavior: auto; }
+}
+
+/* A preview without verified Auth + schema must show the form without
+   allowing a user to create an orphaned identity. */
+.formBody input:disabled, .formBody select:disabled {
+  background: #f0f3f0;
+  color: #61736a;
+  cursor: not-allowed;
+}
+.formBody button[type=submit]:disabled,
+.formBody button[type=submit]:disabled:hover {
+  background: #94a99b;
+  border-color: #94a99b;
+  color: #102a21;
+  cursor: not-allowed;
+}
