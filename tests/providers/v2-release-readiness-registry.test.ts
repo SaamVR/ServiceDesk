@@ -102,4 +102,55 @@ describe("V2 release readiness registry", () => {
     expect(registry.productionReleaseReady).toBe(true);
     expect(registry.gates.find((gate) => gate.id === "SECOND_VERTICAL")?.state).toBe("BUYER_EVIDENCE_BLOCKED");
   });
+  it("never marks stale-build provider receipts as verified", () => {
+    const staleProof = {
+      ...ref("CONTROLLED_PROVIDER_RECEIPT", "provider:stale"),
+      buildSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    };
+    const registry = buildV2ReleaseReadinessRegistry({
+      buildSha,
+      generatedAt: now,
+      providerEvidence: {
+        WHATSAPP_PROVIDER: staleProof,
+        EMAIL_PROVIDER: staleProof,
+        EMAIL_INBOUND: staleProof,
+        VOICE_INBOUND: staleProof,
+      },
+    });
+    for (const id of ["WHATSAPP_PROVIDER", "EMAIL_PROVIDER", "EMAIL_INBOUND", "VOICE_INBOUND"]) {
+      const gate = registry.gates.find((entry) => entry.id === id);
+      expect(gate?.state).toBe("CONFIGURATION_BLOCKED");
+      expect(gate?.evidence).toBeUndefined();
+      expect(registry.blockingGateIds).toContain(id);
+    }
+  });
+
+  it("does not accept provider, browser, build, or migration receipts without a current build SHA", () => {
+    const provider = ref("CONTROLLED_PROVIDER_RECEIPT", "provider:receipt");
+    const registry = buildV2ReleaseReadinessRegistry({
+      generatedAt: now,
+      canonicalExecutable: ref("BUILD_RECEIPT", "build:receipt"),
+      responsiveBrowser: ref("BROWSER_RECEIPT", "browser:receipt"),
+      migrationRehearsal: ref("REHEARSAL_RECEIPT", "rehearsal:receipt"),
+      providerEvidence: { WHATSAPP_PROVIDER: provider },
+    });
+    expect(registry.productionReleaseReady).toBe(false);
+    expect(registry.gates.find((gate) => gate.id === "CANONICAL_EXECUTABLE")?.state).toBe("IMPLEMENTED");
+    expect(registry.gates.find((gate) => gate.id === "RESPONSIVE_BROWSER")?.state).toBe("CONFIGURATION_BLOCKED");
+    expect(registry.gates.find((gate) => gate.id === "MIGRATION_REHEARSAL")?.state).toBe("CONFIGURATION_BLOCKED");
+    expect(registry.gates.find((gate) => gate.id === "WHATSAPP_PROVIDER")?.state).toBe("CONFIGURATION_BLOCKED");
+  });
+
+  it("rejects a provider receipt with the correct SHA but the wrong evidence kind", () => {
+    const registry = buildV2ReleaseReadinessRegistry({
+      buildSha,
+      generatedAt: now,
+      providerEvidence: {
+        GOOGLE_CALENDAR_PROVIDER: ref("BUILD_RECEIPT", "build:not-provider"),
+      },
+    });
+    expect(registry.gates.find((gate) => gate.id === "GOOGLE_CALENDAR_PROVIDER")?.state)
+      .toBe("CONFIGURATION_BLOCKED");
+  });
+
 });
