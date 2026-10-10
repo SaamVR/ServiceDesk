@@ -5,7 +5,7 @@ export default async function StaffInboxPage({
   searchParams,
 }: {
   params: Promise<{ workspace: string }>;
-  searchParams: Promise<{ conversation?: string; notice?: string; error?: string }>;
+  searchParams: Promise<{ conversation?: string; queue?: string; notice?: string; error?: string }>;
 }) {
   const { workspace } = await params;
   const query = await searchParams;
@@ -14,6 +14,7 @@ export default async function StaffInboxPage({
       workspaceSlug={workspace}
       module="inbox"
       selectedConversationId={query.conversation}
+      selectedQueue={query.queue}
       notice={query.notice}
       error={query.error}
     />
