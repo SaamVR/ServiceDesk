@@ -34,6 +34,7 @@ on:
       - "src/components/shell/MarketingNavV3.module.css"
       - "supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql"
       - "tests/e2e/v3-owner-registration-flow.test.tsx"
+      - "tests/e2e/v2-public-marketing-professional-ui.test.ts"
 
 permissions:
   contents: read
@@ -72,6 +73,7 @@ jobs:
           tests/providers/whatsapp-durable-inbound-handler.test.ts
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-owner-registration-flow.test.tsx
+          tests/e2e/v2-public-marketing-professional-ui.test.ts
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint changed release files
@@ -90,6 +92,7 @@ jobs:
           src/components/product/StaffAppShell.tsx
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-owner-registration-flow.test.tsx
+          tests/e2e/v2-public-marketing-professional-ui.test.ts
           src/features/auth/registration.ts
           src/features/auth/RegistrationShell.tsx
           src/app/auth/sign-up/actions.ts
