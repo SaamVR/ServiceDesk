@@ -9,6 +9,7 @@ export type V2ReleaseEvidenceState =
 export type V2ReleaseGateId =
   | "CANONICAL_EXECUTABLE"
   | "RESPONSIVE_BROWSER"
+  | "AUTHENTICATED_STAFF_BROWSER"
   | "WHATSAPP_PROVIDER"
   | "GOOGLE_CALENDAR_PROVIDER"
   | "EMAIL_PROVIDER"
@@ -27,6 +28,7 @@ export interface V2ReleaseEvidenceReference {
   reference: string;
   capturedAt?: string;
   buildSha?: string;
+  scope?: "PUBLIC_RESPONSIVE" | "AUTHENTICATED_STAFF";
 }
 
 export interface V2ReleaseGate {
@@ -52,6 +54,7 @@ export interface V2ReleaseEvidenceInput {
   generatedAt: string;
   canonicalExecutable?: V2ReleaseEvidenceReference;
   responsiveBrowser?: V2ReleaseEvidenceReference;
+  authenticatedStaffBrowser?: V2ReleaseEvidenceReference;
   providerEvidence?: Partial<Record<
     "WHATSAPP_PROVIDER" | "GOOGLE_CALENDAR_PROVIDER" | "EMAIL_PROVIDER" | "N8N_PROVIDER" | "AI_PROVIDER" | "EMAIL_INBOUND" | "VOICE_INBOUND",
     V2ReleaseEvidenceReference
@@ -93,6 +96,12 @@ export function buildV2ReleaseReadinessRegistry(
   const build = input.buildSha?.trim() || undefined;
   const executable = buildBoundEvidence(input.canonicalExecutable, build, "BUILD_RECEIPT");
   const browser = buildBoundEvidence(input.responsiveBrowser, build, "BROWSER_RECEIPT");
+  const staffBrowserCandidate = buildBoundEvidence(input.authenticatedStaffBrowser, build, "BROWSER_RECEIPT");
+  const staffBrowser = staffBrowserCandidate?.scope === "AUTHENTICATED_STAFF"
+    && staffBrowserCandidate.reference.trim().length > 0
+    && staffBrowserCandidate.reference !== browser?.reference
+    ? staffBrowserCandidate
+    : undefined;
   const migration = buildBoundEvidence(input.migrationRehearsal, build, "REHEARSAL_RECEIPT");
   const verifiedProvider = (
     id: "WHATSAPP_PROVIDER" | "GOOGLE_CALENDAR_PROVIDER" | "EMAIL_PROVIDER" | "N8N_PROVIDER" | "AI_PROVIDER" | "EMAIL_INBOUND" | "VOICE_INBOUND",
@@ -118,7 +127,16 @@ export function buildV2ReleaseReadinessRegistry(
       releaseBlocking: true,
       evidence: browser,
       blockers: browser ? [] : ["DESKTOP_TABLET_MOBILE_BROWSER_RECEIPT_REQUIRED"],
-      noClaimNotes: ["Unit/e2e source tests do not substitute for the requested real-browser acceptance matrix."],
+      noClaimNotes: ["This responsive browser receipt alone does not prove an authenticated staff workflow."],
+    },
+    {
+      id: "AUTHENTICATED_STAFF_BROWSER",
+      label: "Authenticated staff workflow browser acceptance",
+      state: staffBrowser ? "OPERATIONS_VERIFIED" : "CONFIGURATION_BLOCKED",
+      releaseBlocking: true,
+      evidence: staffBrowser,
+      blockers: staffBrowser ? [] : ["AUTHENTICATED_STAFF_BROWSER_RECEIPT_REQUIRED"],
+      noClaimNotes: ["Public-page responsive smoke checks do not establish staff authentication, permissions, business workflow or accessibility acceptance."],
     },
     providerGate("WHATSAPP_PROVIDER", "WhatsApp controlled provider proof", verifiedProvider("WHATSAPP_PROVIDER")),
     providerGate("GOOGLE_CALENDAR_PROVIDER", "Google Calendar controlled provider proof", verifiedProvider("GOOGLE_CALENDAR_PROVIDER")),

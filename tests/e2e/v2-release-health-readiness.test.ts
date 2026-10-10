@@ -38,6 +38,8 @@ describe("V2 release health and Render readiness", () => {
     expect(yaml).toContain("SERVICEDESK_CANONICAL_RC_BUILD_SHA");
     expect(yaml).toContain("SERVICEDESK_BROWSER_ACCEPTANCE_RECEIPT");
     expect(yaml).toContain("SERVICEDESK_BROWSER_ACCEPTANCE_BUILD_SHA");
+    expect(yaml).toContain("SERVICEDESK_STAFF_BROWSER_ACCEPTANCE_RECEIPT");
+    expect(yaml).toContain("SERVICEDESK_STAFF_BROWSER_ACCEPTANCE_BUILD_SHA");
     expect(yaml).toContain("SERVICEDESK_MIGRATION_REHEARSAL_RECEIPT");
     expect(yaml).toContain("SERVICEDESK_MIGRATION_REHEARSAL_BUILD_SHA");
     expect(yaml.match(/sync: false/g)?.length).toBeGreaterThanOrEqual(17);
