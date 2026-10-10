@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { RegistrationShell } from "../../src/features/auth/RegistrationShell";
+import { verifiedEmailRedirectOrigin } from "../../src/features/auth/email-origin";
 import {
   businessSlug, normalizedEmail, validateRegistrationFields, validateWorkspaceFields,
 } from "../../src/features/auth/registration";
@@ -74,6 +75,47 @@ describe("V3 customer-safe account creation and onboarding", () => {
     expect(css).toContain("min-width: max-content");
     expect(css).toContain(".desktopNav { display: none !important; }");
     expect(css).toContain("min-height: 44px");
+  });
+
+  it("accepts only server-owned HTTPS auth redirect origins, rejecting injection or unsafe hosts", () => {
+    expect(verifiedEmailRedirectOrigin("https://test.example.com", undefined)).toBe("https://test.example.com");
+    expect(verifiedEmailRedirectOrigin(undefined, "https://servicedesk-preview.onrender.com"))
+      .toBe("https://servicedesk-preview.onrender.com");
+    expect(verifiedEmailRedirectOrigin("http://test.example.com", undefined)).toBeNull();
+    expect(verifiedEmailRedirectOrigin("https://evil.example/path", undefined)).toBeNull();
+    expect(verifiedEmailRedirectOrigin("https://evil.example?next=/admin", undefined)).toBeNull();
+    expect(verifiedEmailRedirectOrigin("https://user:pass@evil.example", undefined)).toBeNull();
+    expect(verifiedEmailRedirectOrigin("//evil.example", undefined)).toBeNull();
+    expect(verifiedEmailRedirectOrigin(undefined, undefined)).toBeNull();
+  });
+
+  it("does not disclose account existence in password recovery or allow a caller-provided callback destination", () => {
+    const action = file("src/app/auth/forgot-password/actions.ts");
+    const update = file("src/app/auth/reset-password/actions.ts");
+    const callback = file("src/app/auth/confirm/route.ts");
+    const signIn = file("src/app/auth/sign-in/page.tsx");
+    expect(action).toContain("resetPasswordForEmail");
+    expect(action).toContain('"/auth/confirm?flow=recovery"');
+    expect(action).toContain('"/auth/forgot-password/check-email"');
+    expect(action).not.toContain("error.message");
+    expect(update).toContain("auth.auth.getUser()");
+    expect(update).toContain("email_confirmed_at");
+    expect(update).toContain("auth.auth.updateUser({ password })");
+    expect(update).toContain("auth.auth.signOut()");
+    expect(callback).toContain('flow === "recovery"');
+    expect(callback).toContain('"recovery" : "email"');
+    expect(signIn).toContain('href="/auth/forgot-password"');
+  });
+
+  it("prevents open redirects from registration and recovery email origins", () => {
+    const signup = file("src/app/auth/sign-up/actions.ts");
+    const forgot = file("src/app/auth/forgot-password/actions.ts");
+    const origin = file("src/features/auth/email-origin.ts");
+    expect(signup).toContain("verifiedEmailRedirectOrigin(");
+    expect(forgot).toContain("verifiedEmailRedirectOrigin(");
+    expect(origin).not.toContain("request.headers.get");
+    expect(origin).not.toContain("searchParams.get");
+    expect(origin).toContain('url.protocol !== "https:"');
   });
 
   it("routes confirmation only to fixed same-origin continuation and records no supplied role", () => {
