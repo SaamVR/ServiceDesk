@@ -30,6 +30,10 @@ on:
       - "tests/e2e/v3-inbox-triage.test.ts"
       - "tests/e2e/staff-v3-navigation.test.tsx"
       - "src/features/auth/registration.ts"
+      - "src/features/auth/supabase-public-config.ts"
+      - "src/features/onboarding/onboarding-product-runtime.ts"
+      - "src/features/operations/operational-product-runtime.ts"
+      - "tests/e2e/v3-supabase-public-auth-runtime.test.ts"
       - "src/features/auth/email-origin.ts"
       - "src/features/auth/RegistrationShell.tsx"
       - "src/features/auth/RegistrationShell.module.css"
@@ -79,6 +83,7 @@ jobs:
           tests/providers/whatsapp-durable-inbound-handler.test.ts
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-owner-registration-flow.test.tsx
+          tests/e2e/v3-supabase-public-auth-runtime.test.ts
           tests/e2e/v3-inbox-triage.test.ts
           tests/e2e/v2-public-marketing-professional-ui.test.ts
       - name: Typecheck
@@ -101,6 +106,10 @@ jobs:
           tests/e2e/v3-owner-registration-flow.test.tsx
           tests/e2e/v2-public-marketing-professional-ui.test.ts
           src/features/auth/registration.ts
+          src/features/auth/supabase-public-config.ts
+          src/features/onboarding/onboarding-product-runtime.ts
+          src/features/operations/operational-product-runtime.ts
+          tests/e2e/v3-supabase-public-auth-runtime.test.ts
           src/features/operations/inbox-triage.ts
           src/features/operations/OperationalProductRoute.tsx
           src/app/app/[workspace]/inbox/page.tsx
