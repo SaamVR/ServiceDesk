@@ -57,8 +57,12 @@ export async function GET(request: NextRequest) {
 
   if (verification.error) return NextResponse.redirect(failure, 303);
 
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user?.email_confirmed_at) {
+  // Both exchangeCodeForSession and verifyOtp return the user verified by
+  // Supabase Auth along with the new session. Check that authoritative result
+  // directly: SSR setAll() writes cookies to the *response*, and a second
+  // getUser() on this same inbound request can re-read its old, unsigned-in
+  // cookies before the browser has received the newly verified session.
+  if (!verification.data.user?.email_confirmed_at || !verification.data.session) {
     return NextResponse.redirect(failure, 303);
   }
   return response;
