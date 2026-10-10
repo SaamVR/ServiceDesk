@@ -1,0 +1,259 @@
+/* V3 staff application chrome. Scoped to the authenticated shell only.
+   Do not change public/customer/crew pages or the domain runtime. */
+.v3Shell {
+  --app-sidebar-width: 264px;
+  --app-canvas: #f6f7f5;
+  --app-surface-muted: #f2f5f3;
+  --app-text: #19272b;
+  --app-text-muted: #596970;
+  --app-text-subtle: #68767c;
+  --app-border: #dce4e0;
+  --app-accent: #126b50;
+  --app-accent-soft: #e5f3ed;
+  --app-radius-sm: 7px;
+  --app-radius-md: 10px;
+  --app-radius-lg: 13px;
+  min-width: 0;
+}
+
+.v3Shell :global(.app-sidebar) {
+  gap: 0;
+  padding: 25px 17px 18px;
+  border-right: 0;
+  background: #182a2b;
+  scrollbar-color: #435656 #182a2b;
+}
+
+.v3Shell :global(.app-sidebar) :global(.app-brand) {
+  gap: 12px;
+  min-height: 65px;
+  margin-bottom: 6px;
+  padding: 0 7px 18px;
+  border-bottom: 1px solid #385050;
+  color: #f6f9f7;
+}
+
+.v3Shell :global(.app-sidebar) :global(.app-brand-mark) {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: #b8ecd5;
+  box-shadow: none;
+  color: #16332c;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.v3Shell :global(.app-sidebar) :global(.app-brand-copy) strong {
+  color: #f6faf7;
+  font-size: .99rem;
+  font-weight: 720;
+  letter-spacing: -.025em;
+}
+
+.v3Shell :global(.app-sidebar) :global(.app-brand-copy) span {
+  color: #aac0bc;
+  font-size: .77rem;
+}
+
+.navigation {
+  display: grid;
+  align-content: start;
+}
+
+.v3Shell :global(.app-sidebar) .navigation {
+  gap: 23px;
+  padding: 24px 0 20px;
+}
+
+.navGroup {
+  display: grid;
+  gap: 4px;
+}
+
+.navGroupLabel {
+  margin: 0 13px 9px !important;
+  color: #b1c5c0 !important;
+  font-size: .7rem !important;
+  font-weight: 710 !important;
+  letter-spacing: .055em !important;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 43px;
+  padding: 0 13px;
+  border-radius: 8px;
+  font-size: .87rem;
+  font-weight: 560;
+  text-decoration: none;
+}
+
+.v3Shell :global(.app-sidebar) .navLink {
+  color: #c7d8d4;
+}
+
+.v3Shell :global(.app-sidebar) .navLink :global(.app-nav-icon) {
+  width: 18px;
+  height: 18px;
+  color: #9eb6b0;
+}
+
+.v3Shell :global(.app-sidebar) .navLink:hover {
+  background: #2a4141;
+  color: #fff;
+}
+
+.v3Shell :global(.app-sidebar) .navLink[aria-current="page"] {
+  background: #36524a;
+  color: #fff;
+  font-weight: 700;
+}
+
+.v3Shell :global(.app-sidebar) .navLink[aria-current="page"] :global(.app-nav-icon) {
+  color: #b8ecd5;
+}
+
+.v3Shell :global(.app-sidebar) .navLink[aria-current="page"]::before {
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  background: #b8ecd5;
+}
+
+.moreTools {
+  border-top: 1px solid #385050;
+  padding-top: 14px;
+}
+
+.moreToolsTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 13px;
+  border-radius: 8px;
+  color: #c7d8d4;
+  cursor: pointer;
+  font-size: .86rem;
+  font-weight: 650;
+  list-style: none;
+}
+
+.moreToolsTrigger::-webkit-details-marker { display: none; }
+.moreToolsTrigger:hover { background: #2a4141; color: #fff; }
+.moreToolsTrigger:focus-visible { outline: 2px solid #b8ecd5; outline-offset: 2px; }
+
+.moreToolsChevron {
+  display: inline-block;
+  font-size: 1.2rem;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 150ms ease;
+}
+
+.moreTools[open] .moreToolsChevron { transform: rotate(180deg); }
+
+.moreToolsItems {
+  display: grid;
+  gap: 4px;
+  padding: 6px 0 2px;
+}
+
+.v3Shell :global(.app-sidebar) :global(.app-sidebar-footer) {
+  border-top: 1px solid #385050;
+  padding-top: 17px;
+  padding-left: 11px;
+}
+
+.v3Shell :global(.app-sidebar) :global(.app-sidebar-footer-link) {
+  color: #e2ede8;
+  font-size: .84rem;
+}
+
+.v3Shell :global(.app-sidebar) :global(.app-product-caption) {
+  color: #afc0b9;
+  font-size: .76rem;
+}
+
+.v3Shell :global(.app-topbar) {
+  height: 66px;
+  padding: 0 34px;
+  border-bottom: 1px solid #e0e6e1;
+  background: rgb(255 255 255 / 97%);
+  box-shadow: none;
+}
+
+.v3Shell :global(.app-topbar-context) {
+  gap: 11px;
+  font-size: .87rem;
+}
+
+.v3Shell :global(.app-topbar-context) strong {
+  font-weight: 700;
+}
+
+.v3Shell :global(.app-content) {
+  max-width: 1480px;
+  padding: 36px 38px 64px;
+}
+
+.v3Shell :global(.app-page-heading) h1 {
+  font-size: clamp(2rem, 2.5vw, 2.65rem);
+  letter-spacing: -.048em;
+}
+
+.v3Shell :global(.app-page-heading) p {
+  font-size: .95rem;
+  line-height: 1.55;
+}
+
+.v3Shell :global(.app-button-primary),
+.v3Shell :global(.app-button-secondary) {
+  min-height: 39px;
+}
+
+@media (max-width: 1120px) {
+  .v3Shell :global(.app-content) { padding-inline: 24px; }
+}
+
+@media (max-width: 900px) {
+  .v3Shell :global(.app-topbar) { height: 58px; padding: 0 16px; }
+  .v3Shell :global(.app-mobile-nav-panel) {
+    inset: 58px 0 auto 0;
+    max-height: calc(100dvh - 58px);
+    padding: 19px 18px 30px;
+  }
+  .v3Shell :global(.app-content) { padding: 26px 20px 52px; }
+  .navigation { gap: 18px; }
+  .navGroupLabel { color: #5b6d69 !important; margin-bottom: 6px !important; }
+  .v3Shell :global(.app-mobile-links) .navLink {
+    min-height: 46px;
+    color: #334a49;
+  }
+  .v3Shell :global(.app-mobile-links) .navLink:hover { background: #edf3ee; }
+  .v3Shell :global(.app-mobile-links) .navLink[aria-current="page"] {
+    background: #e5f3ed;
+    color: #0c6149;
+    font-weight: 720;
+  }
+  .v3Shell :global(.app-mobile-links) .moreTools {
+    border-color: #e0e7e2;
+  }
+  .v3Shell :global(.app-mobile-links) .moreToolsTrigger { color: #344f48; }
+  .v3Shell :global(.app-mobile-links) .moreToolsTrigger:hover { background: #edf3ee; }
+  .v3Shell :global(.app-mobile-links) .moreToolsTrigger:focus-visible { outline-color: #126b50; }
+}
+
+@media (max-width: 620px) {
+  .v3Shell :global(.app-content) { padding: 24px 15px 44px; }
+  .v3Shell :global(.app-page-heading) h1 { font-size: 1.85rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moreToolsChevron { transition: none; }
+}
