@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { RegistrationShell } from "../../src/features/auth/RegistrationShell";
 import { verifiedEmailRedirectOrigin } from "../../src/features/auth/email-origin";
+import { ownerRegistrationAvailable } from "../../src/features/auth/owner-registration-readiness";
 import {
   businessSlug, normalizedEmail, validateRegistrationFields, validateWorkspaceFields,
 } from "../../src/features/auth/registration";
@@ -75,6 +76,26 @@ describe("V3 customer-safe account creation and onboarding", () => {
     expect(css).toContain("min-width: max-content");
     expect(css).toContain(".desktopNav { display: none !important; }");
     expect(css).toContain("min-height: 44px");
+  });
+
+  it("refuses owner signup until the explicit deploy switch, keys and trusted email origin agree", () => {
+    const ready = {
+      SERVICEDESK_OWNER_REGISTRATION_ENABLED: "true",
+      NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "public-placeholder",
+      SERVICEDESK_AUTH_REDIRECT_ORIGIN: "https://servicedesk-preview.onrender.com",
+    } as NodeJS.ProcessEnv;
+    expect(ownerRegistrationAvailable(ready)).toBe(true);
+    expect(ownerRegistrationAvailable({ ...ready, SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false" })).toBe(false);
+    expect(ownerRegistrationAvailable({ ...ready, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined })).toBe(false);
+    expect(ownerRegistrationAvailable({ ...ready, SERVICEDESK_AUTH_REDIRECT_ORIGIN: "http://wrong.example" })).toBe(false);
+    expect(ownerRegistrationAvailable({})).toBe(false);
+    const signup = file("src/app/auth/sign-up/actions.ts");
+    const workspace = file("src/app/auth/create-workspace/actions.ts");
+    const page = file("src/app/auth/sign-up/page.tsx");
+    expect(signup).toContain("if (!ownerRegistrationAvailable())");
+    expect(workspace).toContain("if (!ownerRegistrationAvailable())");
+    expect(page).toContain("disabled={!registrationEnabled}");
   });
 
   it("accepts only server-owned HTTPS auth redirect origins, rejecting injection or unsafe hosts", () => {
