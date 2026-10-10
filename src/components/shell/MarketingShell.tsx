@@ -35,7 +35,10 @@ export function MarketingShell({
             <Link key={route.href} href={route.href}>{route.label}</Link>
           ))}
         </nav>
-        <Link className="site-auth-link" href="/auth/sign-in">Sign in</Link>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <Link className="site-auth-link" href="/auth/sign-in">Sign in</Link>
+          <Link className="site-auth-link" href="/auth/sign-up" style={{background:"#125d43",color:"#fff",borderColor:"#125d43"}}>Create account</Link>
+        </div>
       </header>
 
       <section className="hero-grid section-card marketing-hero">
