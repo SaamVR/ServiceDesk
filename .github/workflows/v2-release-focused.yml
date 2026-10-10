@@ -39,6 +39,9 @@ on:
       - "src/features/auth/email-origin.ts"
       - "supabase/auth-templates/**"
       - "tests/e2e/v3-auth-mail-templates.test.ts"
+      - "tests/e2e/v3-verified-auth-callback.test.ts"
+      - "tests/e2e/v3-resend-signup-confirmation.test.ts"
+      - "src/app/auth/sign-up/check-email/**"
       - "src/features/auth/RegistrationShell.tsx"
       - "src/features/auth/RegistrationShell.module.css"
       - "src/features/onboarding/OnboardingProductRoute.tsx"
@@ -88,6 +91,10 @@ jobs:
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-owner-registration-flow.test.tsx
           tests/e2e/v3-auth-mail-templates.test.ts
+          tests/e2e/v3-verified-auth-callback.test.ts
+          tests/e2e/v3-resend-signup-confirmation.test.ts
+          src/app/auth/sign-up/check-email/actions.ts
+          src/app/auth/sign-up/check-email/page.tsx
           tests/e2e/v3-supabase-public-auth-runtime.test.ts
           tests/e2e/v3-inbox-triage.test.ts
           tests/e2e/v2-public-marketing-professional-ui.test.ts
@@ -110,6 +117,10 @@ jobs:
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-owner-registration-flow.test.tsx
           tests/e2e/v3-auth-mail-templates.test.ts
+          tests/e2e/v3-verified-auth-callback.test.ts
+          tests/e2e/v3-resend-signup-confirmation.test.ts
+          src/app/auth/sign-up/check-email/actions.ts
+          src/app/auth/sign-up/check-email/page.tsx
           tests/e2e/v2-public-marketing-professional-ui.test.ts
           src/features/auth/registration.ts
           src/features/auth/supabase-public-config.ts

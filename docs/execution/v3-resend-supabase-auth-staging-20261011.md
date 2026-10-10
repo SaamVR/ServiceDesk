@@ -1,6 +1,6 @@
 # ServiceDesk V3 — Resend sender + Supabase Auth setup (staging)
 
-Updated: 2026-10-11. Status: **EMAIL_PROVIDER_CONNECTED / SMTP_NOT_WIRED / SIGNUP_DISABLED**.
+Updated: 2026-10-11. Status: **SMTP_OWNER_REPORTED_CONFIGURED / DELIVERY_NOT_VERIFIED / SIGNUP_DISABLED**.
 
 ## Provider evidence
 
@@ -49,7 +49,7 @@ staging project). Do not change the CMS project.
 | Sender email | **`no-reply@ezcomo.shop`** (approved staging sender; replace at brand domain launch) |
 | Sender name | `ServiceDesk AI` |
 
-The connected Resend API does **not** itself update Supabase Auth settings.
+**Owner confirmation (2026-10-11):** The owner reports that SMTP is configured\nin Supabase using the approved temporary sender. This supersedes the previous\noperator assumption that SMTP was unwired, but **a successful Auth-originated\nemail delivery has not been independently verified**. Resend's transactional\nemail list returned no recent sent messages when checked, which is not\nproof of SMTP misconfiguration without sending a controlled test. A synthetic\nAuth signup attempt was stopped by the execution platform's safety check\nbefore reaching the provider; no Auth user was created by that attempt.\n\nThe connected Resend API does **not** itself update Supabase Auth settings.
 The available Supabase connector lacks an Auth SMTP-management action; the
 project CLI's management endpoint returned a permissions error. A browser
 check of the Supabase dashboard on the authorized device reached the
@@ -119,6 +119,6 @@ configuration. No Resend API token or provider credentials are committed.
 - Email auth enabled and email confirmation required: **verified via public
   Supabase Auth settings**.
 - Resend sending domain **`ezcomo.shop`** and temporary `no-reply` sender: **verified domain / owner-approved sender**.
-- Supabase custom SMTP integration and receipt: **NOT_CONFIGURED / UNVERIFIED**.
+- Supabase SMTP: **OWNER-REPORTED CONFIGURED**; independent credentials/config verification **not available**.\n- Supabase SMTP Auth confirmation delivery: **UNVERIFIED (no email receipt yet)**.
 - Current ServiceDesk migration head: **0036** at latest verified query.
 - Public registration: **DISABLED**.
