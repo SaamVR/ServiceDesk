@@ -9,9 +9,9 @@ describe("V2 authentication product", () => {
   it("accepts only internal return paths", () => {
     expect(normalizeReturnPath("/portal/quotes/quote_1")).toBe("/portal/quotes/quote_1");
     expect(normalizeReturnPath("/app/brightroom/inbox")).toBe("/app/brightroom/inbox");
-    expect(normalizeReturnPath("https://evil.example")).toBe("/portal");
-    expect(normalizeReturnPath("//evil.example")).toBe("/portal");
-    expect(normalizeReturnPath("/auth/sign-out")).toBe("/portal");
+    expect(normalizeReturnPath("https://evil.example")).toBe("/auth/continue");
+    expect(normalizeReturnPath("//evil.example")).toBe("/auth/continue");
+    expect(normalizeReturnPath("/auth/sign-out")).toBe("/auth/continue");
   });
 
   it("refreshes Supabase SSR sessions through the Next.js 16 proxy", () => {

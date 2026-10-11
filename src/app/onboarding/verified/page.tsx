@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
 import { loadVerifiedOwnerWorkspace } from "@/features/auth/verified-owner-workspace";
+import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,8 @@ export default async function VerifiedOwnerWorkspacePage({
   }
 
   const workspace = result.workspace;
-  const operationalConnected = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const operationalMode = operationalDatabaseMode();
+  const operationalConnected = operationalMode !== "DISABLED";
   const overviewHref = "/app/" + encodeURIComponent(workspace.slug) + "/overview";
   return <RegistrationShell
     eyebrow="Account verified · workspace registered"
@@ -68,7 +70,9 @@ export default async function VerifiedOwnerWorkspacePage({
       </dl>
       {operationalConnected ? (
         <>
-          <p>The operations backend is configured. Continue to setup and verify your first workspace actions.</p>
+          <p>{operationalMode === "QA_SESSION_RLS"
+            ? "QA mode: the dashboard uses your verified session and workspace row-level permissions. Provider connectivity and all operational actions are not yet certified."
+            : "The operations backend is configured. Continue to setup and verify your first workspace actions."}</p>
           <Link href={"/onboarding?workspace=" + encodeURIComponent(workspace.slug)}>
             Continue business setup →
           </Link>
