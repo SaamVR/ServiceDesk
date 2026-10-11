@@ -58,7 +58,12 @@ export function buildInboxTriage<
     const previous = recentExternal.get(message.conversationId);
     const when = Date.parse(message.createdAt);
     const earlier = previous ? Date.parse(previous.createdAt) : Number.NEGATIVE_INFINITY;
-    if (Number.isFinite(when) && when > (Number.isFinite(earlier) ? earlier : Number.NEGATIVE_INFINITY)) {
+    // Identical timestamps can occur for multiple provider deliveries.
+    // Prefer an inbound message on ties so a pending customer response is
+    // not silently hidden by nondeterministic database row ordering.
+    if (Number.isFinite(when) &&
+      (when > (Number.isFinite(earlier) ? earlier : Number.NEGATIVE_INFINITY) ||
+      (when === earlier && message.direction === "INBOUND" && previous?.direction !== "INBOUND"))) {
       recentExternal.set(message.conversationId, message);
     }
   }
@@ -66,7 +71,8 @@ export function buildInboxTriage<
   const sorted = [...conversations].sort((a, b) => {
     const aTime = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
     const bTime = b.lastMessageAt ? Date.parse(b.lastMessageAt) : 0;
-    return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+    return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0) ||
+      a.id.localeCompare(b.id);
   });
 
   const counts: InboxQueueCounts = {
