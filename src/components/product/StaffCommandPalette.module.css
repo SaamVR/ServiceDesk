@@ -65,3 +65,9 @@
 /* Keyboard arrow navigation follows the actual focused Next Link, never a fake option. */
 .result:focus-visible { background: #e3f4ee; color: #095f55; box-shadow: inset 3px 0 #0b746d; }
 @media (max-width: 680px) { .result { min-height: 52px; } }
+
+/* Record search opens an authorized route; no private records are loaded into this dialog. */
+.recordSearchGroup { display: grid; gap: 2px; border-top: 1px solid #dce8e9; padding: 7px 0 12px; }
+.recordSearchCaption { margin: 0; padding: 11px 13px 8px; color: #4f6a72; font-size: .75rem; font-weight: 750; letter-spacing: .015em; }
+.recordSearchGroup .result { min-height: 54px; }
+.recordSearchGroup .result:hover { background: #ebf7f3; }

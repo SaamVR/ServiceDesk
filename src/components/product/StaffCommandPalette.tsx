@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { searchStaffDestinations } from "@/features/operations/staff-command-search";
+import { buildStaffRecordSearches, searchStaffDestinations } from "@/features/operations/staff-command-search";
 import styles from "./StaffCommandPalette.module.css";
 
 /**
  * The native modal dialog traps focus, restores it on close and supports
  * Escape. The palette navigates ONLY to existing operational routes.
- * It intentionally makes no assertion about customer data or global search.
+ * Directory searches are navigational deep-links; this dialog never fetches customer data.
  */
 export function StaffCommandPalette({ workspace }: { workspace: string }) {
   const [query, setQuery] = useState("");
@@ -44,6 +44,7 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
   }, [pathname]);
 
   const matches = searchStaffDestinations(workspace, query);
+  const recordSearches = buildStaffRecordSearches(workspace, query);
   const close = () => dialog.current?.close();
 
   function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
@@ -81,27 +82,28 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
     <>
       <button className={styles.trigger} type="button" onClick={open} aria-haspopup="dialog">
         <span className={styles.searchIcon} aria-hidden="true">⌕</span>
-        <span className={styles.triggerLabel}>Jump to a workspace page</span>
+        <span className={styles.triggerLabel}>Find pages or records</span>
         <kbd className={styles.shortcut}>⌘ / Ctrl K</kbd>
       </button>
       <dialog ref={dialog} className={styles.dialog} aria-labelledby={titleId} onClose={() => setQuery("")}>
         <div className={styles.dialogHeader}>
           <div>
-            <p className={styles.eyebrow}>Workspace navigation</p>
-            <h2 id={titleId}>Where do you want to go?</h2>
+            <p className={styles.eyebrow}>Navigation &amp; record lookup</p>
+            <h2 id={titleId}>Find your next action</h2>
           </div>
           <button className={styles.close} type="button" onClick={close} aria-label="Close workspace navigation">×</button>
         </div>
         <label className={styles.searchField}>
-          <span className={styles.srOnly}>Filter workspace pages</span>
+          <span className={styles.srOnly}>Find workspace pages or search within authorized records</span>
           <input
             ref={input}
             type="search"
             value={query}
             onChange={event => setQuery(event.target.value)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Try inbox, dispatch, customers…"
+            placeholder="Search pages, customer, request or invoice…"
             autoComplete="off"
+            maxLength={100}
           />
         </label>
         <div ref={results} className={styles.results} onKeyDown={handleResultKeyDown} aria-live="polite" aria-label="Workspace destinations">
@@ -118,10 +120,24 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
               <span className={styles.resultArrow} aria-hidden="true">↗</span>
             </Link>
           )) : (
-            <p className={styles.empty}>No matching pages. Try a workflow name such as “quotes” or “jobs”.</p>
+            <p className={styles.empty}>{recordSearches.length
+              ? "No matching navigation pages. Search a record directory below."
+              : "No matching pages. Try a workflow name such as “quotes” or “jobs”."}</p>
           )}
+          {recordSearches.length ? (
+            <div className={styles.recordSearchGroup} aria-label="Search authorized workspace records">
+              <p className={styles.recordSearchCaption}>Search records · opens an authorized workspace view</p>
+              {recordSearches.map(target => (
+                <Link key={target.module} href={target.href} className={styles.result} onClick={close}>
+                  <span className={styles.resultName}>Find in {target.label}</span>
+                  <span className={styles.resultDescription}>Open filtered {target.label.toLowerCase()} in this workspace</span>
+                  <span className={styles.resultArrow} aria-hidden="true">↗</span>
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </div>
-        <p className={styles.dialogFooter}>↑ ↓ to navigate · Enter to open · Esc to close · Pages only, not customer search</p>
+        <p className={styles.dialogFooter}>↑ ↓ to navigate · Enter to open · Esc to close · Search results load only after authorization</p>
       </dialog>
     </>
   );
