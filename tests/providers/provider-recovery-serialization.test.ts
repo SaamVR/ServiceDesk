@@ -47,4 +47,59 @@ describe("provider recovery serialization", () => {
       code: "RECOVERY_RECORD_UNSAFE_MUTATION",
     });
   });
+
+  test("scrubs accidental recipient PII and provider auth credentials from persisted targets and notes", () => {
+    const serialized = serializeRecoveryRecord({
+      ...record,
+      redactedTarget: "customer@example.test +15551234567",
+      notes: ["Bearer sensitiveApiKey customer@example.test", "phone=+15551234567"],
+    });
+    const payload = JSON.stringify(serialized);
+    expect(payload).not.toContain("customer@example.test");
+    expect(payload).not.toContain("+15551234567");
+    expect(payload).not.toContain("sensitiveApiKey");
+    expect(serialized.record.idempotencyKey).toBe("whatsapp:wamid-123");
+    expect(serialized.record.redactedTarget).toContain("[redacted]");
+  });
+
+  test("rejects malformed or unsafe restart records without throwing", () => {
+    const valid = serializeRecoveryRecord(record);
+    const invalid = [
+      null,
+      { schemaVersion: 99, record: valid.record },
+      { schemaVersion: 1, record: null },
+      { schemaVersion: 1, record: { ...valid.record, notes: null } },
+      { schemaVersion: 1, record: { ...valid.record, notes: [123] } },
+      { schemaVersion: 1, record: { ...valid.record, workspaceId: "" } },
+      { schemaVersion: 1, record: { ...valid.record, idempotencyKey: 123 } },
+      { schemaVersion: 1, record: { ...valid.record, attempts: Number.POSITIVE_INFINITY } },
+      { schemaVersion: 1, record: { ...valid.record, queue: "arbitrary-dispatch" } },
+      { schemaVersion: 1, record: { ...valid.record, provider: "UNTRUSTED" } },
+      { schemaVersion: 1, record: { ...valid.record, operation: "PAYMENT_UPDATE" } },
+      { schemaVersion: 1, record: { ...valid.record, action: "DEAD_LETTER" } },
+      { schemaVersion: 1, record: { ...valid.record, operatorVisible: true } },
+      { schemaVersion: 1, record: { ...valid.record, redactedTarget: { raw: "customer@example.test" } } },
+      { schemaVersion: 1, record: { ...valid.record, leasedBy: 123 } },
+    ];
+    for (const candidate of invalid) {
+      expect(() => deserializeRecoveryRecord(candidate as any)).not.toThrow();
+      expect(deserializeRecoveryRecord(candidate as any).ok).toBe(false);
+    }
+  });
+
+  test("holds invalid scheduling timestamps and preserves a valid replay record", () => {
+    const valid = serializeRecoveryRecord(record);
+    const broken = [
+      { ...valid.record, queuedAt: "not-date" },
+      { ...valid.record, occurredAt: "unparseable" },
+      { ...valid.record, nextAttemptAt: "invalid" },
+      { ...valid.record, leaseExpiresAt: "invalid" },
+    ];
+    for (const payload of broken) {
+      expect(deserializeRecoveryRecord({ ...valid, record: payload }))
+        .toMatchObject({ ok: false, code: "RECOVERY_RECORD_SCHEDULE_INVALID" });
+    }
+    expect(deserializeRecoveryRecord(valid)).toEqual({ ok: true, value: valid.record });
+  });
+
 });

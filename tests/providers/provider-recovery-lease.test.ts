@@ -84,4 +84,35 @@ describe("provider recovery lease policy", () => {
     expect(short.leaseExpiresAt).toBe("2026-10-04T07:30:30.000Z");
     expect(long.leaseExpiresAt).toBe("2026-10-04T07:35:00.000Z");
   });
+
+  test("fails closed on malformed clocks, ambiguous foreign leases and invalid identities", () => {
+    const base = {
+      workspaceId: "ws", idempotencyKey: "idem", workerId: "worker",
+      now: "2026-10-11T02:00:00.000Z",
+    };
+    for (const invalid of [
+      { now: "not-a-date" },
+      { leaseOwner: "other-worker", leaseExpiresAt: "garbled" },
+      { leaseOwner: "other-worker", leaseExpiresAt: undefined },
+      { workerId: " " },
+      { workspaceId: "" },
+    ]) {
+      const decision = planProviderRecoveryLease({ ...base, ...invalid });
+      expect(decision.action).toBe("HELD");
+      expect(decision.canExecute).toBe(false);
+      expect(decision.mutatesBusinessTruth).toBe(false);
+    }
+  });
+
+  test("never throws on non-finite lease durations or invalid clock", () => {
+    const base = { workspaceId: "ws", idempotencyKey: "idem", workerId: "worker",
+      now: "2026-10-11T02:00:00.000Z" };
+    for (const duration of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const decision = planProviderRecoveryLease({ ...base, leaseDurationSeconds: duration });
+      expect(decision.canExecute).toBe(true);
+      expect(decision.leaseExpiresAt).toBe("2026-10-11T02:01:00.000Z");
+    }
+    expect(() => planProviderRecoveryLease({ ...base, now: "not-a-timestamp" })).not.toThrow();
+  });
+
 });

@@ -128,11 +128,12 @@ export async function handleWhatsAppInboundWebhook(input: WhatsAppInboundWebhook
       if (result === "INSERTED") summary.inserted += 1;
       if (result === "DUPLICATE") summary.duplicate += 1;
     }
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "unknown persistence error";
+  } catch {
+    // A provider callback is an untrusted HTTP caller. Never reflect raw
+    // persistence error text (tokens, phone numbers or customer payloads).
     return {
       statusCode: 503,
-      body: `WhatsApp inbound persistence failed: ${detail}`,
+      body: "WhatsApp inbound persistence failed; retry is required.",
       acknowledged: false,
       retryable: true,
     };
@@ -162,27 +163,28 @@ function statusToDeliveryState(status: string): WhatsAppDeliveryState | null {
 }
 
 function parseStatusCallbacks(raw: unknown, workspaceByPhoneNumberId: Record<string, string>, rawProviderEvent: string): WhatsAppStatusCallbackInput[] {
-  const payload = raw as {
-    entry?: Array<{ changes?: Array<{ value?: { metadata?: { phone_number_id?: string }; statuses?: unknown } }> }>;
-  };
-
+  const payload = isRecord(raw) ? raw : {};
   const callbacks: WhatsAppStatusCallbackInput[] = [];
   const entries = Array.isArray(payload.entry) ? payload.entry : [];
   for (const entry of entries) {
+    if (!isRecord(entry)) continue;
     const changes = Array.isArray(entry.changes) ? entry.changes : [];
     for (const change of changes) {
-      const phoneNumberId = change.value?.metadata?.phone_number_id;
-      if (!phoneNumberId) continue;
+      if (!isRecord(change) || !isRecord(change.value)) continue;
+      const value = change.value;
+      const metadata = isRecord(value.metadata) ? value.metadata : undefined;
+      const phoneNumberId = typeof metadata?.phone_number_id === "string" ? metadata.phone_number_id : "";
+      if (!phoneNumberId || !Object.hasOwn(workspaceByPhoneNumberId, phoneNumberId)) continue;
       const workspaceId = workspaceByPhoneNumberId[phoneNumberId];
       if (!workspaceId) continue;
 
-      const statuses = Array.isArray(change.value?.statuses) ? change.value.statuses : [];
+      const statuses = Array.isArray(value.statuses) ? value.statuses : [];
       for (const status of statuses) {
         if (!isRecord(status)) continue;
 
-        const providerMessageId = String(status.id ?? "");
-        const providerStatus = String(status.status ?? "");
-        const providerTimestamp = String(status.timestamp ?? "");
+        const providerMessageId = typeof status.id === "string" ? status.id.trim() : "";
+        const providerStatus = typeof status.status === "string" ? status.status : "";
+        const providerTimestamp = typeof status.timestamp === "string" ? status.timestamp : "";
         const deliveryState = statusToDeliveryState(providerStatus);
         if (!providerMessageId || !providerTimestamp || !deliveryState) continue;
 
@@ -246,11 +248,12 @@ export async function handleWhatsAppStatusWebhook(input: WhatsAppStatusWebhookIn
       if (result === "DUPLICATE") summary.duplicate += 1;
       if (result === "STALE_REGRESSION") summary.stale += 1;
     }
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "unknown persistence error";
+  } catch {
+    // A provider callback is an untrusted HTTP caller. Never reflect raw
+    // persistence error text (tokens, phone numbers or customer payloads).
     return {
       statusCode: 503,
-      body: `WhatsApp status persistence failed: ${detail}`,
+      body: "WhatsApp status persistence failed; retry is required.",
       acknowledged: false,
       retryable: true,
     };

@@ -74,4 +74,52 @@ describe("AI tool orchestration guard", () => {
     expect(plan.accepted).toHaveLength(0);
     expect(plan.rejected.map((item) => item.reason)).toEqual(["SCHEMA_VIOLATION", "SCHEMA_VIOLATION"]);
   });
+
+  test("finite proposal budget cannot be bypassed by NaN, Infinity or negative infinity", () => {
+    const requests = Array.from({ length: 9 }, () => ({ name: "getServiceCatalog", arguments: {} }));
+    for (const invalidBudget of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const plan = planAiToolOrchestration({ scope, requestedToolCalls: requests, maxToolCalls: invalidBudget });
+      expect(plan.accepted).toHaveLength(0);
+      expect(plan.rejected).toHaveLength(9);
+      expect(plan.rejected.every(item => item.reason === "TOOL_BUDGET_EXCEEDED")).toBe(true);
+      expect(plan.requiresHumanReview).toBe(true);
+    }
+    expect(planAiToolOrchestration({ scope, requestedToolCalls: requests, maxToolCalls: 2.7 }).accepted).toHaveLength(2);
+    expect(planAiToolOrchestration({ scope, requestedToolCalls: requests, maxToolCalls: 100 }).accepted).toHaveLength(6);
+  });
+
+  test("rejects mistyped scope references even when matching scope lists are present", () => {
+    const requestedToolCalls = [
+      { name: "calculateQuote", arguments: { requestId: 5 } },
+      { name: "calculateQuote", arguments: { requestId: null } },
+      { name: "getCustomerBookingSummary", arguments: { customerId: ["customer-1"] } },
+      { name: "getServiceCatalog", arguments: { workspaceId: 123 } },
+      { name: "getServiceCatalog", arguments: { workspaceId: "" } },
+      { name: "getServiceCatalog", arguments: { workspaceId: "other-workspace" } },
+    ];
+    const result = planAiToolOrchestration({ scope, requestedToolCalls });
+    expect(result.accepted).toHaveLength(0);
+    expect(result.rejected.map(item => item.reason)).toEqual(
+      Array(requestedToolCalls.length).fill("RESOURCE_OUT_OF_SCOPE"),
+    );
+    expect(result.businessMutationAllowed).toBe(false);
+  });
+
+  test("never accepts a malformed call list or empty execution workspace", () => {
+    const malformed = planAiToolOrchestration({
+      scope,
+      requestedToolCalls: { name: "getServiceCatalog" } as unknown as unknown[],
+    });
+    expect(malformed.accepted).toHaveLength(0);
+    expect(malformed.rejected).toMatchObject([{ reason: "SCHEMA_VIOLATION" }]);
+    expect(malformed.requiresHumanReview).toBe(true);
+
+    const missingScope = planAiToolOrchestration({
+      scope: { ...scope, workspaceId: " " },
+      requestedToolCalls: [{ name: "getServiceCatalog", arguments: {} }],
+    });
+    expect(missingScope.accepted).toHaveLength(0);
+    expect(missingScope.rejected).toMatchObject([{ reason: "RESOURCE_OUT_OF_SCOPE" }]);
+  });
+
 });

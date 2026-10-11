@@ -31,6 +31,20 @@ describe("conversation reply intent resolver", () => {
     expect(result.ok).toBe(false);
   });
 
+  test("matches deployed SQL outbox payload without redundant messageId", async () => {
+    const queued = event();
+    const deployedPayload = { conversationId: queued.payload.conversationId };
+    const result = await resolveConversationReplyIntent(
+      { ...queued, payload: deployedPayload }, {
+        async load() { return { ok: true, value: source() }; },
+      },
+    );
+    expect(result).toMatchObject({ ok: true, value: {
+      payload: { messageId: "msg-1" },
+      purpose: "CUSTOMER_REPLY",
+    } });
+  });
+
   test("creates CUSTOMER_REPLY jobs from authoritative STAFF source", async () => {
     const result = await resolveConversationReplyIntent(event(), { async load() { return { ok: true, value: source() }; } });
     expect(result.ok).toBe(true);
