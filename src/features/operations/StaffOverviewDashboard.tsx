@@ -197,7 +197,7 @@ export function StaffOverviewDashboard({
     : undefined;
   const waitingReplies = replyTriage?.counts["needs-reply"];
   const qualityIssues = snapshot.qualityCases.filter((qualityCase) => qualityCase.state !== "RESOLVED");
-  const outstanding = summarizeOutstandingInvoices(snapshot.invoices);
+  const outstanding = summarizeOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId)));
   const outstandingValue = outstanding.currency && outstanding.totalMinor !== undefined
     ? formatMinorMoney(outstanding.totalMinor, outstanding.currency)
     : outstanding.multipleCurrencies
@@ -298,7 +298,7 @@ export function StaffOverviewDashboard({
           label="Outstanding"
           href={buildStaffModuleHref(workspace, "invoices")}
           value={outstandingValue}
-          detail={outstanding.count ? `${outstanding.count} open invoice${outstanding.count === 1 ? "" : "s"}` : "Nothing to collect"}
+          detail={outstanding.count ? `${outstanding.count} customer invoice${outstanding.count === 1 ? "" : "s"} to collect` : "No customer invoices to collect"}
         />
       </nav>
 
@@ -372,7 +372,7 @@ export function StaffOverviewDashboard({
               <small>Waiting for customer reply</small>
             </Link>
             <Link href={buildStaffModuleHref(workspace, "invoices")} className={styles.pipelineItem}>
-              <span>Invoices to collect</span>
+              <span>Customer invoices to collect</span>
               <strong>{outstanding.count}</strong>
               <small>{outstandingValue}</small>
             </Link>
