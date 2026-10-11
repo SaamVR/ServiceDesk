@@ -175,6 +175,6 @@ export async function queueApprovedInboxReply(
 ): Promise<Result<ReviewedInboxReplyReceipt>> {
   return approveReviewedInboxReply(input, {
     resolveActor: resolveStaffActor,
-    requireBranch: requireOperationalBranchResource,
+    requireBranch: (actor, conversationId) => requireOperationalBranchResource(actor, "conversation", conversationId),
   });
 }
