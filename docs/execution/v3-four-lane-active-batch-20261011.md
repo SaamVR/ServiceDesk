@@ -23,7 +23,8 @@ This packet is an execution contract and measured status receipt, NOT an asserti
 - Branch: `feat/servicedesk-v3-provider-reliability-20261011`, head `779e618694175f57f5b383f0f2bf2943033c84c3`.
 - Delivered: Resend idempotency key input now fail-closes for whitespace, CRLF/control characters and non-ASCII before transport; preserves 256-character valid boundary. Only `src/server/integrations/email/transport.ts` and `tests/providers/resend-transactional-email-contract.test.ts` changed.
 - READY next: `pnpm exec vitest run tests/providers/resend-transactional-email-contract.test.ts` plus generic email transport regression, `pnpm typecheck`. Next independent code slice: test provider success/invalid-message ID and transient-retry classifications with injected transport; do not make real provider send without explicit approval.
-- Status: **IMPLEMENTED only**; original Resend REST mapping was verified in candidate A, but this later header-hardening revision has not run Vitest or an official provider.
+- Evidence: Node 22 experimental TypeScript transform + read-only extensionless-import resolver exercised the **exact hash-verified GitHub source** (`transport.ts` blob `82e10e523e5c4902ff03139a7fb25c280c945dba`, `adapter.ts` blob `36c86ac8a1d5c7bca117a22e6870a4319ed897b7`). Three independent mock-transport contract probes PASS: provider payload/redaction, injection/256-character boundary, fail-closed endpoint and opt-out. No real provider requests. The authored repository Vitest test is still not executed.
+- Status: **IMPLEMENTED with isolated Node behavior proof**; original Resend REST mapping was verified in candidate A, but this later header-hardening revision has not run full Vitest/typecheck or official provider acceptance.
  
 ## W3 — coordinator/integration/release, CONTRACT_TESTED for Node smoke slice only
 
