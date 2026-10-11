@@ -54,7 +54,11 @@ describe("V3 server-side Supabase auth and onboarding", () => {
     const confirmRoute = source("src/app/auth/confirm/route.ts");
     expect(continueRoute).toContain("trustedAuthDestination(path)");
     expect(confirmRoute).toContain("trustedAuthDestination(");
-    expect(continueRoute).  it("keeps staff operations disabled without explicit service or isolated QA session authorization", () => {
+    expect(continueRoute).not.toContain("request.url");
+    expect(confirmRoute).not.toContain("request.url");
+  });
+
+  it("keeps staff operations disabled without explicit service or isolated QA session authorization", () => {
     const operational = source("src/features/operations/operational-product-runtime.ts");
     expect(operational).toContain("supabasePublicConfig()");
     expect(operational).toContain("operationalDatabaseMode()");
@@ -84,10 +88,6 @@ describe("V3 server-side Supabase auth and onboarding", () => {
       SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true",
       SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "true",
     })).toBe("SERVICE_ROLE");
-  });
-
-n("auth.auth.getUser()");
-    expect(operational).toContain('.from("memberships")');
   });
 
   it("supports the modern publishable key in protected customer and crew runtimes", () => {
