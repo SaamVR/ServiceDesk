@@ -23,6 +23,9 @@ on:
       - "src/features/operations/record-directory.ts"
       - "src/app/app/[workspace]/**"
       - "tests/e2e/v3-record-directory.test.tsx"
+      - "tests/e2e/v3-jobs-queue.test.tsx"
+      - "src/features/operations/jobs-queue.ts"
+      - "src/features/operations/JobQueueFilters*"
       - "tests/e2e/v3-staff-route-resilience.test.tsx"
       - "tests/e2e/v3-inbox-search.test.ts"
       - "tests/e2e/v2-professional-schedule-ui.test.ts"
@@ -65,7 +68,11 @@ jobs:
           src/app/app/'[workspace]'/error.tsx
           src/app/app/'[workspace]'/loading.tsx
           tests/e2e/v3-record-directory.test.tsx
+          tests/e2e/v3-jobs-queue.test.tsx
           tests/e2e/v3-staff-route-resilience.test.tsx
+          tests/e2e/v3-jobs-queue.test.tsx
+          src/features/operations/jobs-queue.ts
+          src/features/operations/JobQueueFilters.tsx
           tests/e2e/v2-professional-dashboard-ui.test.ts
           tests/e2e/v3-record-directory.test.tsx
           tests/e2e/v3-staff-route-resilience.test.tsx
