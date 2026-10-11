@@ -99,6 +99,7 @@ interface OperationalProductRouteProps {
   selectedJobQueue?: string;
   selectedInvoiceId?: string;
   selectedInvoiceQueue?: string;
+  invoiceSurface?: string;
   notice?: string;
   error?: string;
 }
@@ -4296,6 +4297,7 @@ export async function OperationalProductRoute({
   selectedJobQueue,
   selectedInvoiceId,
   selectedInvoiceQueue,
+  invoiceSurface,
   notice,
   error,
 }: OperationalProductRouteProps) {
@@ -4318,8 +4320,23 @@ export async function OperationalProductRoute({
 
       {result.ok ? (
         <>
-          {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay, selectedQualityQueue, qualitySearchQuery, selectedInvoiceQueue)}
+          {module === "invoices" ? (
+            <nav className={styles.invoiceSurfaceNav} aria-label="Invoice workspace views">
+              <a href="?surface=customers" aria-current={invoiceSurface === "commercial" ? undefined : "page"}>
+                <strong>Customer collections</strong>
+                <span>Quote-backed invoices and received payments</span>
+              </a>
+              <a href="?surface=commercial" aria-current={invoiceSurface === "commercial" ? "page" : undefined}>
+                <strong>Commercial accounts</strong>
+                <span>Business contracts, tax and account billing</span>
+              </a>
+            </nav>
+          ) : null}
+          {module === "invoices" && invoiceSurface === "commercial" ? (
+            <CommercialBillingWorkspace workspaceSlug={workspaceSlug} />
+          ) : (
+            renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay, selectedQualityQueue, qualitySearchQuery, selectedInvoiceQueue)
+          )}
         </>
       ) : (
         <Panel>

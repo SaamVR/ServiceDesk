@@ -25,7 +25,7 @@ function redirectResult(workspaceSlug: string, result: CommercialFinanceActionRe
   redirect(
     "/app/" +
       encodeURIComponent(workspaceSlug) +
-      "/invoices?" +
+      "/invoices?surface=commercial&" +
       key +
       "=" +
       encodeURIComponent(result.message),

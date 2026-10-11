@@ -1943,3 +1943,14 @@
 .qualityQueueTop strong { font-size:.85rem; font-weight:740; }
 .qualityQueueCustomer { font-size:.77rem; }
 @media(max-width:800px) { .qualitySplit { grid-template-columns:minmax(0,1fr); min-height:0; } .qualityQueue { max-height:340px; border-right:0; border-bottom:1px solid #dce7e9; } .qualityDetailHeader { align-items:flex-start; flex-wrap:wrap; } }
+
+/* Dedicated invoice sub-workspaces: no mixed customer and commercial forms. */
+.invoiceSurfaceNav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:0 0 20px; }
+.invoiceSurfaceNav a { display:grid; align-content:center; gap:5px; min-height:84px; padding:16px 18px; border:1px solid #d9e5e8; border-radius:11px; background:#fff; color:#516c75; text-decoration:none; box-shadow:0 2px 5px rgb(21 50 58 / 3%); }
+.invoiceSurfaceNav a:hover { border-color:#aad1c9; background:#f3faf8; text-decoration:none; }
+.invoiceSurfaceNav a[aria-current="page"] { border-color:#9dcfc4; background:#e9f7f3; box-shadow:inset 3px 0 #0b8374; }
+.invoiceSurfaceNav strong { color:#223e48; font-size:.91rem; font-weight:770; }
+.invoiceSurfaceNav a[aria-current="page"] strong { color:#075e55; }
+.invoiceSurfaceNav span { color:#587179; font-size:.76rem; }
+.invoiceSurfaceNav a:focus-visible { outline:3px solid #198b7e; outline-offset:3px; }
+@media(max-width:680px) { .invoiceSurfaceNav { grid-template-columns:minmax(0,1fr); gap:7px; } .invoiceSurfaceNav a { min-height:70px; padding:12px 15px; } }
