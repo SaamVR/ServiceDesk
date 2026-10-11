@@ -35,13 +35,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 22.23.2 }
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Build real protected staff routes at exact commit with QA-only RLS
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SERVICEDESK_QA_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+          SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "true"
+          SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true"
+          SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false"
+          SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS: ${{ secrets.SERVICEDESK_QA_TEST_EMAIL }}
+          SERVICEDESK_AUTH_REDIRECT_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
+        run: pnpm build
+      - name: Start isolated Next QA server (no live provider secrets)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SERVICEDESK_QA_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+          SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "true"
+          SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true"
+          SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false"
+          SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS: ${{ secrets.SERVICEDESK_QA_TEST_EMAIL }}
+          SERVICEDESK_AUTH_REDIRECT_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/servicedesk-authenticated-qa.log" 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Exact-commit QA app did not boot" >&2
+          exit 1
       - name: Install real Chromium
         id: chrome
         uses: browser-actions/setup-chrome@v2
       - name: Validate REAL confirmed owner session and sidebar (no customer/provider action)
         env:
+          V4_AUTH_TEST_ORIGIN: http://127.0.0.1:3000
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SERVICEDESK_QA_SUPABASE_URL }}
           V4_AUTH_QA_EMAIL: ${{ secrets.SERVICEDESK_QA_TEST_EMAIL }}
           V4_AUTH_QA_PASSWORD: ${{ secrets.SERVICEDESK_QA_TEST_PASSWORD }}
           V4_AUTH_QA_WORKSPACE: ${{ secrets.SERVICEDESK_QA_TEST_WORKSPACE }}
