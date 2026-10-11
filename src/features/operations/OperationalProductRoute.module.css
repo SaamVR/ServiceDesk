@@ -1387,7 +1387,7 @@
   color: #252e28;
   font-size: .77rem;
 }
-.inboxSearchControl input::placeholder { color: #808277; }
+.inboxSearchControl input::placeholder { color: #626a60; }
 .inboxSearchControl button {
   flex: 0 0 auto;
   min-width: 56px;
