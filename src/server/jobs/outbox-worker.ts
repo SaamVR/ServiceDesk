@@ -78,7 +78,15 @@ export async function runOutboxBatch(input: RunOutboxBatchInput): Promise<Result
       continue;
     }
     let outcome: OutboxExecutionOutcome;
-    if (input.guard) {
+    // Marketing consent can change after enqueue. Without an execution-time
+    // eligibility reader, no retention campaign may leave the outbox.
+    if (event.topic === "retention.campaign" && !input.guard) {
+      outcome = {
+        outcome: "TERMINAL_FAILURE",
+        failedAt: input.now,
+        code: "OUTBOX_EXECUTION_GUARD_REQUIRED",
+      };
+    } else if (input.guard) {
       try {
         const checked = await input.guard.check(event, input.now);
         if (!checked.ok) {
