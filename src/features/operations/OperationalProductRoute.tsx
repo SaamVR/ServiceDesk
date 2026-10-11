@@ -54,6 +54,7 @@ import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatWorkspaceDateTime } from "./product-truth";
 import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
+import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { formatMinorMoney } from "./view-models";
 import { buildOperationalReleaseReadiness } from "./release-readiness-runtime";
 import styles from "./OperationalProductRoute.module.css";
@@ -75,6 +76,7 @@ interface OperationalProductRouteProps {
   selectedQueue?: string;
   searchQuery?: string;
   selectedScheduleQueue?: string;
+  selectedScheduleFrom?: string;
   selectedCustomerId?: string;
   selectedRequestId?: string;
   selectedQuoteId?: string;
@@ -1332,18 +1334,23 @@ function ScheduleView({
   data,
   workspaceSlug,
   selectedScheduleQueue,
+  selectedScheduleFrom,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedScheduleQueue?: string;
+  selectedScheduleFrom?: string;
 }) {
+  const window = buildScheduleWindow(data.loadedAt, data.workspace.timezone, selectedScheduleFrom);
+  const currentQueue = selectedScheduleQueue === "unassigned" ? "unassigned" : "all";
+  const redirectPrefix = scheduleWindowFeedbackPrefix(window, currentQueue);
   async function assignCrew(formData: FormData) {
     "use server";
     const visitId = String(formData.get("visitId") ?? "");
     const crewId = String(formData.get("crewId") ?? "");
     const expectedVersion = Number(formData.get("expectedVersion"));
     const result = await assignOperationalCrew(workspaceSlug, visitId, crewId, expectedVersion);
-    actionRedirect(workspaceSlug, "schedule", result);
+    actionRedirect(workspaceSlug, "schedule", result, redirectPrefix);
   }
 
   async function holdSlot(formData: FormData) {
@@ -1353,17 +1360,11 @@ function ScheduleView({
       String(formData.get("quoteId") ?? ""),
       String(formData.get("slotId") ?? ""),
     );
-    actionRedirect(workspaceSlug, "schedule", result);
+    actionRedirect(workspaceSlug, "schedule", result, redirectPrefix);
   }
 
   const now = Date.parse(data.loadedAt);
-  const week = now + 7 * 24 * 60 * 60 * 1000;
-  const upcoming = data.visits
-    .filter((visit) => {
-      const time = visit.startAt ? Date.parse(visit.startAt) : Number.NaN;
-      return Number.isFinite(time) && time >= now && time <= week && visit.status !== "CANCELLED";
-    })
-    .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt));
+  const upcoming = filterScheduleWindow(data.visits, data.workspace.timezone, window);
   const scheduledRequestIds = new Set(data.visits.map((visit) => visit.requestId));
   const unscheduled = data.requests.filter(
     (request) => !scheduledRequestIds.has(request.id) && !["LOST", "CLOSED"].includes(request.status),
@@ -1395,13 +1396,25 @@ function ScheduleView({
         <div>
           <p className={styles.scheduleEyebrow}>Operations planning</p>
           <h2>Planning &amp; dispatch</h2>
-          <p>Plan the next seven days, place accepted work into capacity, and confirm crew assignments.</p>
+          <p>Review crew coverage across business-local calendar days, place accepted work into capacity, and confirm assignments.</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open jobs</a>
       </header>
 
+      <nav className={styles.scheduleWindowNav} aria-label="Browse seven-day scheduling windows">
+        <div className={styles.scheduleWindowPeriod}>
+          <span>Service dates · {data.workspace.timezone}</span>
+          <strong>{window.from} → {window.end}</strong>
+        </div>
+        <div className={styles.scheduleWindowActions}>
+          <a href={scheduleWindowHref(window.previous, currentQueue, window.today)} aria-label="Previous seven calendar days">← Previous</a>
+          <a href={scheduleWindowHref(window.today, currentQueue, window.today)} aria-current={window.isCurrent ? "date" : undefined}>Today</a>
+          <a href={scheduleWindowHref(window.next, currentQueue, window.today)} aria-label="Next seven calendar days">Next →</a>
+        </div>
+      </nav>
+
       <section className={styles.scheduleMetrics} aria-label="Scheduling summary">
-        <div><span>Next 7 days</span><strong>{upcoming.length}</strong><small>Scheduled visits</small></div>
+        <div><span>{window.isCurrent ? "Next 7 days" : "Selected 7 days"}</span><strong>{upcoming.length}</strong><small>Scheduled visits</small></div>
         <div className={unassignedUpcoming ? styles.scheduleMetricWarning : undefined}><span>Need crew</span><strong>{unassignedUpcoming}</strong><small>Upcoming visits</small></div>
         <div className={acceptedQuotes.length ? styles.scheduleMetricAttention : undefined}><span>Awaiting slot</span><strong>{acceptedQuotes.length}</strong><small>Accepted quotes</small></div>
         <div><span>Active holds</span><strong>{activeHolds}</strong><small>Temporary capacity holds</small></div>
@@ -1426,10 +1439,10 @@ function ScheduleView({
       />
 
       <nav className={styles.scheduleQueueNav} aria-label="Schedule visit filters">
-        <a href="?" aria-current={!showUnassigned ? "page" : undefined}>
+        <a href={scheduleWindowHref(window.from, "all", window.today)} aria-current={!showUnassigned ? "page" : undefined}>
           All visits <strong>{upcoming.length}</strong>
         </a>
-        <a href="?queue=unassigned" aria-current={showUnassigned ? "page" : undefined}>
+        <a href={scheduleWindowHref(window.from, "unassigned", window.today)} aria-current={showUnassigned ? "page" : undefined}>
           Need crew <strong>{unassignedUpcoming}</strong>
         </a>
       </nav>
@@ -1437,7 +1450,7 @@ function ScheduleView({
       <div className={styles.schedulePlanningGrid}>
         <section className={styles.scheduleCard} aria-labelledby="next-seven-days-heading">
           <div className={styles.scheduleCardHeader}>
-            <div><p className={styles.scheduleCardEyebrow}>Upcoming</p><h3 id="next-seven-days-heading">{showUnassigned ? "Visits waiting for crew" : "Next 7 days"}</h3><p>{visibleUpcoming.length} visit{visibleUpcoming.length === 1 ? "" : "s"} shown from the verified schedule.</p></div>
+            <div><p className={styles.scheduleCardEyebrow}>Verified visits</p><h3 id="next-seven-days-heading">{showUnassigned ? "Visits waiting for crew" : window.isCurrent ? "Next 7 days" : "Selected 7 days"}</h3><p>{visibleUpcoming.length} visit{visibleUpcoming.length === 1 ? "" : "s"} shown from {window.from} through {window.end}.</p></div>
           </div>
           {visibleUpcoming.length === 0 ? (
             <div className={styles.scheduleEmpty}><strong>{showUnassigned ? "Crew coverage complete" : "No upcoming visits"}</strong><p>{showUnassigned ? "All scheduled visits in this window have a crew." : "No visits are scheduled in the next seven days."}</p></div>
@@ -4082,6 +4095,7 @@ function renderModule(
   searchQuery?: string,
   selectedScheduleQueue?: string,
   selectedJobQueue?: string,
+  selectedScheduleFrom?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -4101,7 +4115,7 @@ function renderModule(
     case "quotes":
       return <QuotesView data={data} workspaceSlug={workspaceSlug} selectedQuoteId={selectedQuoteId} searchQuery={searchQuery} />;
     case "schedule":
-      return <ScheduleView data={data} workspaceSlug={workspaceSlug} selectedScheduleQueue={selectedScheduleQueue} />;
+      return <ScheduleView data={data} workspaceSlug={workspaceSlug} selectedScheduleQueue={selectedScheduleQueue} selectedScheduleFrom={selectedScheduleFrom} />;
     case "jobs":
       return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} selectedJobQueue={selectedJobQueue} />;
     case "invoices":
@@ -4167,6 +4181,7 @@ export async function OperationalProductRoute({
   selectedQueue,
   searchQuery,
   selectedScheduleQueue,
+  selectedScheduleFrom,
   selectedCustomerId,
   selectedRequestId,
   selectedQuoteId,
@@ -4197,7 +4212,7 @@ export async function OperationalProductRoute({
       {result.ok ? (
         <>
           {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue)}
+          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom)}
         </>
       ) : (
         <Panel>

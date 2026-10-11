@@ -1904,3 +1904,28 @@
   font-size: .75rem; font-weight: 800; font-variant-numeric: tabular-nums;
 }
 .workflowRail a[aria-current="page"] .workflowCount { background: #c4e9dd; color: #075c53; }
+
+/* Read-only scheduling period controls: seven business-local calendar dates. */
+.scheduleWindowNav {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 13px 17px;
+  border: 1px solid #d8e7e8; border-radius: 11px; background: #fff;
+}
+.scheduleWindowPeriod { display: grid; gap: 4px; min-width: 0; }
+.scheduleWindowPeriod span { font-size: .76rem; color: #516c75; font-weight: 650; }
+.scheduleWindowPeriod strong { font-size: .94rem; color: #193b44; letter-spacing: -.02em; }
+.scheduleWindowActions { display: flex; gap: 6px; align-items: stretch; }
+.scheduleWindowActions a {
+  display: inline-flex; min-height: 44px; align-items: center; justify-content: center;
+  padding: 8px 13px; border: 1px solid #d5e4e6; border-radius: 8px;
+  color: #21535b; background: #f8fbfb; font-size: .8rem; font-weight: 730; text-decoration: none;
+}
+.scheduleWindowActions a:hover { color: #086c62; border-color: #a6ccc8; background: #edf7f4; text-decoration: none; }
+.scheduleWindowActions a[aria-current="date"] { color: #086558; background: #e2f4ef; border-color: #aad4c8; }
+.scheduleWindowActions a:focus-visible { outline: 3px solid #158b7e; outline-offset: 2px; }
+@media (max-width: 600px) {
+  .scheduleWindowNav { padding: 13px; }
+  .scheduleWindowPeriod { width: 100%; }
+  .scheduleWindowActions { width: 100%; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .scheduleWindowActions a { font-size: .73rem; padding-inline: 7px; }
+}
