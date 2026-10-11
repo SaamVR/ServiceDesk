@@ -3,6 +3,22 @@ name: ServiceDesk V3 focused PR safety
 # Narrow validation only. Complete RC and browser acceptance remain owned by
 # GPT Runtime, not by a recurring CI job or real provider credentials.
 on:
+  # Exactly one complete acceptance run after substantive backend integration,
+  # on the combined coordinator SHA. Documentation-only pushes do not retrigger.
+  push:
+    branches:
+      - feat/servicedesk-v3-coordination-20261011
+    paths:
+      - "src/server/jobs/**"
+      - "src/server/integrations/recovery/**"
+      - "src/server/integrations/outbox/**"
+      - "src/server/ai/**"
+      - "src/domain/auth/**"
+      - "tests/db/outbox*.test.ts"
+      - "tests/providers/provider-recovery*.test.ts"
+      - "tests/providers/ai*.test.ts"
+      - "vitest.config.ts"
+      - ".github/workflows/v3-focused-pr.yml"
   pull_request:
     branches:
       - feat/servicedesk-v3-coordination-20261011
@@ -37,12 +53,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: servicedesk-v3-focused-${{ github.event.pull_request.number }}
+  group: servicedesk-v3-focused-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   backend-contracts-and-rc:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
