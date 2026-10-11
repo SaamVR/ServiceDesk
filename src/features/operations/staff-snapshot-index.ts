@@ -22,3 +22,20 @@ export function countStaffBy<T>(
   }
   return counts;
 }
+
+/** Stable, linear-time current quote lookup. Authorization comes from the
+ * source staff snapshot; this cannot fetch or expose other tenant records.
+ * An older unsuperseded quote must not shadow a newer version because the
+ * database happened to return the rows in a different order.
+ */
+export function indexCurrentQuoteByRequest<T extends { requestId: string; version: number; status: string }>(
+  quotes: readonly T[],
+): Map<string, T> {
+  const current = new Map<string, T>();
+  for (const quote of quotes) {
+    if (quote.status === "SUPERSEDED") continue;
+    const previous = current.get(quote.requestId);
+    if (!previous || quote.version > previous.version) current.set(quote.requestId, quote);
+  }
+  return current;
+}
