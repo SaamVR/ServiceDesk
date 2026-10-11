@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { readWhatsAppInboundRuntimeConfig } from "../../src/server/integrations/whatsapp/inbound-config";
+import { verifyMetaSignature } from "../../src/server/integrations/whatsapp/adapter";
 import { handleWhatsAppRuntimeWebhook } from "../../src/server/api-handlers/provider-whatsapp-runtime";
 import type { ServiceDeskFacade } from "../../src/server/core/facade";
 
@@ -67,6 +68,17 @@ describe("configured Meta WhatsApp inbound runtime boundary", () => {
     expect(result).toMatchObject({ statusCode: 200, acknowledged: true, body: JSON.stringify({
       received: 1, applied: 0, duplicate: 1, unsupported: 0,
     }) });
+  });
+
+
+  it("requires an exact hex HMAC and nonempty Meta app secret", () => {
+    const rawBody = JSON.stringify(message("wamid.strict"));
+    const valid = signed(rawBody)["X-Hub-Signature-256"];
+    expect(verifyMetaSignature(rawBody, valid, secret)).toMatchObject({ ok: true });
+    for (const forged of [valid + "garbage", valid + "00", valid.slice(0, -1), "sha256=" + "g".repeat(64)]) {
+      expect(verifyMetaSignature(rawBody, forged, secret).ok).toBe(false);
+    }
+    expect(verifyMetaSignature(rawBody, valid, "").ok).toBe(false);
   });
 
   it("rejects unsigned or forged content without touching tenant storage", async () => {
