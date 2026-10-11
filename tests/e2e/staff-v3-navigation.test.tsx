@@ -65,5 +65,7 @@ describe("V3 staff workday shell", () => {
     expect(html).toContain('href="/app/east%2Fwest/quality"');
     expect(html).toContain('action="/auth/sign-out"');
     expect(html).toContain('method="post"');
+    expect(html).toContain('href="/auth/select-workspace"');
+    expect(html).toContain("Switch workspace");
   });
 });
