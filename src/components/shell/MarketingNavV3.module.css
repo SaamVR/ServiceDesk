@@ -273,3 +273,42 @@
   .header *, .header *::before, .header *::after { transition: none !important; }
   .primaryAction:hover { transform: none; }
 }
+
+
+/* V4 Clean Air navigation: homepage-only transformation. */
+.brightHeader:global(.site-header) {
+  min-height: 81px;
+  margin: 0;
+  padding-inline: clamp(24px, 5.2vw, 90px);
+  border-bottom: 1px solid #e5efec;
+  background: rgb(255 255 255 / 97%);
+  color: #203638;
+  box-shadow: none;
+  font-family: "DM Sans", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+}
+.brightHeader .brand { color: #254542; }
+.brightHeader .brandIcon { background: #209d98; border-radius: 12px; }
+.brightHeader .brandAi { color: #279f9a; }
+.brightHeader .brandCaption { color: #829591; }
+.brightHeader .navLink { color: #5d7570; font-weight: 690; }
+.brightHeader .navLink:hover, .brightHeader .navLink[aria-current="page"] { color: #188f87; }
+.brightHeader .navLink::after { background: #229e99; }
+.brightHeader .signIn { color: #375652; }
+.brightHeader .primaryAction {
+  min-height: 47px;
+  border-color: #208f89;
+  border-radius: 9px;
+  background: #208f89;
+  box-shadow: none;
+}
+.brightHeader .primaryAction:hover { background: #167770; box-shadow: 0 7px 19px rgb(24 143 135 / 12%); }
+.brightHeader .menuToggle { color: #254d49; border-color: #e0ebe7; }
+.brightHeader .mobileMenuPanel { border-color: #dfeee9; }
+.brightHeader .mobileLink:hover, .brightHeader .mobileLink[aria-current="page"] { background: #eefbf8; }
+@media (max-width: 1120px) {
+  .brightHeader:global(.site-header) { min-height: 74px; padding-inline: clamp(18px, 4vw, 44px); }
+}
+@media (max-width: 640px) {
+  .brightHeader:global(.site-header) { min-height: 65px; padding-inline: 18px; }
+  .brightHeader .brandName { letter-spacing: -.04em; }
+}
