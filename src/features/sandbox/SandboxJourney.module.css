@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap");
+
 .page { min-height: 100vh; color: #14241e; background: #f5f7f6; padding: 0 clamp(16px, 3.5vw, 48px) 40px; font-family: Arial, Helvetica, sans-serif; }
 .nav { max-width: 1340px; height: 78px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #dce4e0; }
 .logo { display: inline-flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 800; letter-spacing: -.04em; text-decoration: none; }
@@ -111,4 +113,218 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .page * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
+
+/* V4 Clean Air: the first actually usable sample-data workspace should read
+   as the same product as the approved public site and bright Studio OS.
+   The sandbox reducer/data/payment/send simulation is intentionally untouched. */
+.page {
+  --sandbox-ink: #203638;
+  --sandbox-secondary: #647e77;
+  --sandbox-accent: #208f86;
+  --sandbox-soft: #e8f7f2;
+  --sandbox-line: #dfeee8;
+  --sandbox-coral: #fa785f;
+  padding-bottom: 56px;
+  background: radial-gradient(ellipse at 15% 4%, #f1faf7 0%, #fff 38%, #f8fbfa 100%);
+  color: var(--sandbox-ink);
+  font-family: "DM Sans", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+}
+.page h1, .page h2, .page h3 {
+  font-family: "Manrope", "DM Sans", "Segoe UI", system-ui, sans-serif;
+  text-wrap: balance;
+}
+.nav {
+  height: 83px;
+  border-bottom: 1px solid #e6f0ec;
+}
+.logo { color: #254b46; font-size: 1.03rem; font-weight: 800; }
+.logoMark {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  background: #219d99;
+  color: #fff;
+  font-family: "Manrope",sans-serif;
+  box-shadow: 0 6px 17px rgb(32 157 153 / 13%);
+}
+.logo b { color: #209c92; }
+.navLinks { color: #54756a; font-weight: 730; }
+.navLinks a:hover { color: #188f82; }
+.hero { margin: 51px auto 28px; gap: clamp(26px, 5.5vw, 88px); }
+.hero > div { padding: clamp(16px, 2.5vw, 37px) 0; }
+.eyebrow { color: #219a8d; font-size: .67rem; }
+.dot { background: #27af99; box-shadow: 0 0 0 4px #e1f7ee; }
+.hero h1 {
+  max-width: 825px;
+  margin: 21px 0 19px;
+  color: #203b38;
+  font-size: clamp(2.7rem, 5.1vw, 5.1rem);
+  font-weight: 750;
+  letter-spacing: -.075em;
+  line-height: 1.08;
+}
+.intro { color: #657d76; font-size: clamp(.96rem, 1.2vw, 1.09rem); line-height: 1.8; }
+.modeNotice {
+  max-width: 710px;
+  margin-top: 24px;
+  padding: 15px 18px;
+  border: 1px solid #dbe9e2;
+  border-left: 3px solid #219b8d;
+  border-radius: 8px;
+  background: #edf8f3;
+  color: #58786b;
+  font-size: .77rem;
+  line-height: 1.7;
+}
+.modeNotice strong { color: #286d5c; }
+.heroAside {
+  align-self: stretch;
+  border: 1px solid #dceee5;
+  border-radius: 16px 125px 16px 16px;
+  background: linear-gradient(150deg, #e7f8f1 0%, #f7fcf9 79%, #e1f3ec 100%);
+  color: #275249;
+  box-shadow: 0 25px 63px rgb(30 97 79 / 9%);
+  padding: clamp(24px, 3vw, 38px);
+}
+.asideLabel { color: #248b78; font-size: .64rem; }
+.heroAside h2 {
+  color: #234b45;
+  font-family: "Manrope","DM Sans",sans-serif;
+  font-size: clamp(1.65rem, 2.6vw, 2.35rem);
+  font-weight: 780;
+}
+.heroAside p { color: #6d9082; }
+.customer { border-color: #c6e4d7; }
+.avatar {
+  width: 49px; height: 49px;
+  border: 2px solid #fff;
+  background: #ceeade; color: #207b67;
+  box-shadow: 0 5px 12px rgb(50 126 95 / 9%);
+}
+.customer strong { color: #254e45; }
+.customer div span { color: #688979; }
+.property { border-color: #c9e5d9; }
+.property span { color: #678779; }
+.property strong { color: #315d52; }
+.metrics { gap: 14px; margin-bottom: 23px; }
+.metrics article {
+  gap: 12px;
+  padding: 22px 23px;
+  border-color: #deebe5;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 7px 26px rgb(44 101 82 / 4%);
+}
+.metrics article > span { color: #63877a; font-weight: 760; font-size: .72rem; }
+.metrics article strong {
+  color: #286759;
+  font-family: "Manrope", "DM Sans", sans-serif;
+  font-size: clamp(1.48rem, 2.8vw, 2.24rem);
+  font-weight: 800;
+  letter-spacing: -.06em;
+}
+.metrics article strong.stageValue { color: #31554a; }
+.metrics small { color: #82978c; }
+.workbench { gap: 18px; }
+.workflow,.panel {
+  border: 1px solid #deece6;
+  border-radius: 16px;
+  padding: clamp(19px, 2.25vw, 30px);
+  background: #fff;
+  box-shadow: 0 10px 36px rgb(29 96 76 / 5%);
+}
+.sectionTitle h2 {
+  color: #294d44;
+  font-family: "Manrope", "DM Sans",sans-serif;
+  font-size: clamp(1.3rem, 2vw, 1.65rem);
+  font-weight: 790;
+  letter-spacing: -.04em;
+}
+.stepIndicator,.counter { background: #e8f8ef; color: #317b62; }
+.syntheticPill { background: #fff1e7; color: #ab6745; }
+.steps li:not(:last-child):before { background: #e2eee7; }
+.steps .completed:not(:last-child):before { background: #35a88d; }
+.stepNumber {
+  border-radius: 10px;
+  background: #f0f6f2; color: #809489;
+}
+.completed .stepNumber { background: #def5e9; color: #16816a; }
+.active .stepNumber { background: #209c91; color: #fff; }
+.steps strong { color: #33574b; }
+.steps p { color: #75897f; }
+.currentTag { color: #157e69; background: #e3f8ee; }
+.nextAction {
+  margin-top: 18px;
+  padding: 24px;
+  border: 1px solid #cfebdf;
+  border-radius: 12px;
+  background: #edf9f3;
+}
+.nextAction > strong { color: #225d4d; font-family: "Manrope","DM Sans",sans-serif; }
+.nextAction > p { color: #648275; }
+.primaryButton {
+  min-height: 49px;
+  padding: 12px 17px;
+  border: 1px solid #f37f65;
+  border-radius: 9px;
+  background: var(--sandbox-coral);
+  color: #fff;
+  box-shadow: 0 8px 19px rgb(250 120 95 / 15%);
+  transition: background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+.primaryButton:hover {
+  border-color: #e66b53;
+  background: #e56c55;
+  transform: translateY(-2px);
+  box-shadow: 0 11px 24px rgb(250 120 95 / 19%);
+}
+.resetButton {
+  border-color: #bbded1;
+  border-radius: 9px;
+  color: #287864;
+  background: #fff;
+}
+.resetButton:hover { background: #e3f8ed; }
+.liveNotice { color: #507666 !important; }
+.ledgerRows > div { border-color: #e7efeb; }
+.ledgerRows span { color: #70867a; }
+.ledgerRows strong { color: #2b5145; }
+.ledgerRows .outstanding { background: #e5f8ed; }
+.outstanding strong { color: #188168; }
+.deliveryStatus { background: #f1faf5; }
+.deliveryIcon { background: #ddf5e9; color: #209582; }
+.deliveryStatus strong { color: #2d6351; }
+.deliveryStatus p { color: #789085; }
+.deliveryActions button {
+  min-height: 44px;
+  border-color: #c7e4d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #267d65;
+}
+.deliveryActions button:not(:disabled):hover { background: #e9f8f0; }
+.history li { border-color: #e7efe9; }
+.eventIndex { color: #198774; background: #e9f8ef; }
+.history strong { color: #355e50; }
+.history p { color: #779087; }
+.footer { border-color: #e2eee7; color: #6d8779; }
+.footer a { color: #208879; }
+.page a:focus-visible,
+.page button:focus-visible,
+.page summary:focus-visible {
+  outline: 3px solid #1e998b;
+  outline-offset: 3px;
+}
+@media (max-width: 690px) {
+  .nav { height: 71px; }
+  .hero { margin: 30px auto 18px; gap: 24px; }
+  .hero h1 { font-size: clamp(2.65rem, 9.4vw, 3.7rem); }
+  .heroAside { border-radius: 14px 78px 14px 14px; }
+  .metrics article { padding: 16px; }
+  .workflow,.panel { padding: 18px; }
+  .nextAction { padding: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton, .page * { transition: none !important; animation: none !important; }
 }
