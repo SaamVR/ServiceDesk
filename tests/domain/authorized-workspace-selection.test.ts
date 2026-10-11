@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   resolveAuthorizedWorkspaceDestination,
+  resolveAuthorizedStaffWorkspaceSelection,
   type AuthorizedWorkspaceMembership,
 } from "../../src/domain/auth/authorized-workspace-selection";
 
@@ -132,5 +133,48 @@ describe("authenticated RLS membership destination resolver", () => {
     if (a.kind === "CHOOSE") {
       expect(a.workspaces.map(x => x.workspaceId)).toEqual(["a", "b", "z"]);
     }
+  });
+});
+
+describe("explicit authorized staff workspace choice", () => {
+  it("selects only the requested active staff workspace from multiple choices", () => {
+    const rows = [member("OWNER", "north"), member("DISPATCHER", "south")];
+    expect(resolveAuthorizedStaffWorkspaceSelection(rows, "south")).toMatchObject({
+      kind: "STAFF",
+      href: "/app/clean-south/overview",
+      workspace: { workspaceId: "south", role: "DISPATCHER" },
+    });
+    expect(resolveAuthorizedStaffWorkspaceSelection(rows, "north")).toMatchObject({
+      kind: "STAFF",
+      workspace: { workspaceId: "north", role: "OWNER" },
+    });
+  });
+
+  it("fails closed for an unknown, revoked or unsafe selection", () => {
+    const rows = [
+      member("OWNER", "active"),
+      member("OWNER", "revoked", { status: "REVOKED" }),
+      member("CREW", "crew-only"),
+    ];
+    for (const requested of ["unknown", "revoked", "crew-only", "../active", "clean-active", "", " active"]) {
+      expect(resolveAuthorizedStaffWorkspaceSelection(rows, requested)).toEqual({ kind: "NONE" });
+    }
+  });
+
+  it("selects the highest authorized role without mutating input", () => {
+    const rows = [member("DISPATCHER", "one"), member("OWNER", "one")];
+    const before = JSON.stringify(rows);
+    expect(resolveAuthorizedStaffWorkspaceSelection(rows, "one")).toMatchObject({
+      kind: "STAFF",
+      workspace: { role: "OWNER" },
+    });
+    expect(JSON.stringify(rows)).toBe(before);
+  });
+
+  it("never turns crew access or missing membership into staff access", () => {
+    expect(resolveAuthorizedStaffWorkspaceSelection([member("CREW", "crew")], "crew"))
+      .toEqual({ kind: "NONE" });
+    expect(resolveAuthorizedStaffWorkspaceSelection([], "new-business"))
+      .toEqual({ kind: "NONE" });
   });
 });
