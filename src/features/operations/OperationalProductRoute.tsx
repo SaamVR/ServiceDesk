@@ -52,6 +52,7 @@ import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { AiRequestBrief } from "./AiRequestBrief";
 import { AiOperationsStatus } from "./AiOperationsStatus";
+import { automationPlaybooks, getAutomationPlaybook } from "./automation-playbooks";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
@@ -107,6 +108,7 @@ interface OperationalProductRouteProps {
   selectedJobQueue?: string;
   selectedInvoiceId?: string;
   selectedInvoiceQueue?: string;
+  automationTemplate?: string;
   invoiceSurface?: string;
   notice?: string;
   error?: string;
@@ -2461,9 +2463,11 @@ function WorkflowPreviewFields({ eventType }: { eventType: OperationalWorkflowEv
 function WorkflowBuilderPanel({
   data,
   workspaceSlug,
+  automationTemplate,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
+  automationTemplate?: string;
 }) {
   const rules = data.workflowRules ?? [];
   const versions = data.workflowRuleVersions ?? [];
@@ -2474,6 +2478,7 @@ function WorkflowBuilderPanel({
     ? (branchScope.branches ?? []).filter((branch) => branch.id === branchScope.selectedBranchId)
     : branchScope?.branches ?? [];
   const ownerCanEdit = data.actor.role === "OWNER" && editorBranches.length > 0;
+  const playbook = getAutomationPlaybook(automationTemplate);
 
   async function saveDraftAction(formData: FormData) {
     "use server";
@@ -2608,6 +2613,23 @@ function WorkflowBuilderPanel({
         </div>
       </header>
 
+      <nav className={styles.automationPlaybookGrid} aria-label="Cleaning automation starter playbooks">
+        {automationPlaybooks.map(item => (
+          <a key={item.id}
+             className={item.id === playbook?.id ? styles.automationPlaybookSelected : styles.automationPlaybookCard}
+             href={"?template=" + encodeURIComponent(item.id)}
+             aria-current={item.id === playbook?.id ? "true" : undefined}>
+            <strong>{item.name}</strong>
+            <span>{item.description}</span>
+            <small>{item.id === playbook?.id ? "Loaded into draft form" : "Load draft starter"} ↗</small>
+          </a>
+        ))}
+      </nav>
+      <p className={styles.automationPlaybookDisclaimer}>
+        These starters only prefill a draft. Saving, synthetic preview and owner publication remain separate required steps.
+        Only internal attention actions are included; no provider delivery occurs by selecting a starter.
+      </p>
+
       {data.workflowAvailable === false ? (
         <FeedbackBanner
           title="Workflow builder is not available in this environment"
@@ -2646,15 +2668,15 @@ function WorkflowBuilderPanel({
                   </label>
                   <label>
                     <span>Code</span>
-                    <input className="app-input" name="code" maxLength={64} placeholder="PAID_JOB_FOLLOWUP" required />
+                    <input className="app-input" name="code" maxLength={64} placeholder="PAID_JOB_FOLLOWUP" defaultValue={playbook?.code} required />
                   </label>
                   <label>
                     <span>Name</span>
-                    <input className="app-input" name="name" maxLength={120} placeholder="Paid job follow-up" required />
+                    <input className="app-input" name="name" maxLength={120} placeholder="Paid job follow-up" defaultValue={playbook?.name} required />
                   </label>
                   <label>
                     <span>Event</span>
-                    <select className="app-input" name="eventType" defaultValue="INVOICE_PAID">
+                    <select className="app-input" name="eventType" defaultValue={playbook?.eventType ?? "INVOICE_PAID"}>
                       {workflowEventTypes.map((eventType) => <option key={eventType} value={eventType}>{eventType.replaceAll("_", " ")}</option>)}
                     </select>
                   </label>
@@ -2715,7 +2737,7 @@ function WorkflowBuilderPanel({
                           <option value="WARNING">Warning</option>
                           <option value="CRITICAL">Critical</option>
                         </select>
-                        <input className="app-input" name={`action${index}Detail`} maxLength={120} placeholder="Summary key or template key" required={index === 1} />
+                        <input className="app-input" name={`action${index}Detail`} maxLength={120} placeholder="Summary key or template key" defaultValue={index === 1 ? playbook?.actionDetail : undefined} required={index === 1} />
                       </div>
                     ))}
                   </section>
@@ -2882,7 +2904,7 @@ function WorkflowBuilderPanel({
   );
 }
 
-function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot; workspaceSlug: string }) {
+function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: OperationalStaffSnapshot; workspaceSlug: string; automationTemplate?: string }) {
   const openItems = data.attentionItems.filter((item) => item.status !== "RESOLVED");
   if (openItems.length === 0) {
     return (
@@ -2891,7 +2913,7 @@ function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapsh
           workspaceSlug={workspaceSlug}
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
         />
-        <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} />
+        <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
         <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
         <header className={styles.recoveryHeader}>
           <div><p className={styles.recoveryEyebrow}>Human recovery</p><h2>Recovery queue</h2><p>Operational exceptions that need a person before workflow can safely continue.</p></div>
@@ -2922,7 +2944,7 @@ function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapsh
           workspaceSlug={workspaceSlug}
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
         />
-      <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} />
+      <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
       <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
       <header className={styles.recoveryHeader}>
         <div>
@@ -4308,6 +4330,7 @@ function renderModule(
   selectedQualityQueue?: string,
   qualitySearchQuery?: string,
   selectedInvoiceQueue?: string,
+  automationTemplate?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -4335,7 +4358,7 @@ function renderModule(
     case "quality":
       return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} selectedQualityQueue={selectedQualityQueue} qualitySearchQuery={qualitySearchQuery} />;
     case "automations":
-      return <AutomationsView data={data} workspaceSlug={workspaceSlug} />;
+      return <AutomationsView data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />;
     case "reports":
       return <ReportsView data={data} />;
     case "billing":
@@ -4405,6 +4428,7 @@ export async function OperationalProductRoute({
   selectedJobQueue,
   selectedInvoiceId,
   selectedInvoiceQueue,
+  automationTemplate,
   invoiceSurface,
   notice,
   error,
@@ -4443,7 +4467,7 @@ export async function OperationalProductRoute({
           {module === "invoices" && invoiceSurface === "commercial" ? (
             <CommercialBillingWorkspace workspaceSlug={workspaceSlug} />
           ) : (
-            renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay, selectedQualityQueue, qualitySearchQuery, selectedInvoiceQueue)
+            renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay, selectedQualityQueue, qualitySearchQuery, selectedInvoiceQueue, automationTemplate)
           )}
         </>
       ) : (
