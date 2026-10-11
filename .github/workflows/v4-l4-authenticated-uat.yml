@@ -3,7 +3,7 @@ name: ServiceDesk V4 authenticated workspace UAT
 # on the designated review service. Never logs secrets, cookies, tokens or PII.
 on:
   push:
-    branches: [feat/servicedesk-v4-l4-e2e-20261012]
+    branches: [feat/servicedesk-v4-l4-e2e-20261012, feat/servicedesk-v4-real-auth-uat-20261012]
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
         run: pnpm exec vitest run tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/staff-v3-navigation.test.tsx tests/e2e/v4-studio-sidebar-visibility.test.ts
       - run: pnpm typecheck
   authenticated-seven-widths:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'feat/servicedesk-v4-real-auth-uat-20261012'
     runs-on: ubuntu-latest
     needs: source-preflight
     timeout-minutes: 20
