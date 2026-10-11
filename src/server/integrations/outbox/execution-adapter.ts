@@ -15,6 +15,13 @@ function terminal(code: string, at: string): Result<OutboxExecutionOutcome> {
 }
 
 function resolverFailureOutcome(code: string, at: string): Result<OutboxExecutionOutcome> {
+  // Real-time consent, contact and inbound-message changes invalidate
+  // already-queued staff replies. Suppression is not a provider error: do
+  // not retry/send a stale reply or mark a customer opt-out as delivery failure.
+  if (code.startsWith("OUTBOX_SUPPRESSED:")) {
+    return { ok: true, value: { outcome: "SUPPRESSED", failedAt: at,
+      code: code.slice("OUTBOX_SUPPRESSED:".length) || "OUTBOX_SUPPRESSED" } };
+  }
   if (code.startsWith("RETENTION_SUPPRESSED:")) {
     return {
       ok: true,
