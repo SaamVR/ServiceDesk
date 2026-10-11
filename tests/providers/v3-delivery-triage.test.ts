@@ -133,6 +133,15 @@ describe("real outbound delivery triage", () => {
     }
   });
 
+  it("classifies historical null delivery state as unknown requiring review, not a fabricated provider acknowledgement", async () => {
+    const h = fixture({ rows: [{ ...outbound[0], delivery_state: null }] });
+    expect(await readOperationalDeliveryTriage("service-desk", h.deps)).toMatchObject({
+      ok: true, value: { counts: { ok: 0, pending: 0, review: 1 },
+        items: [{ deliveryState: "UNKNOWN", health: "NEEDS_REVIEW", reason: "STATUS_MISSING" }],
+      },
+    });
+  });
+
   it("returns zero counts and does not query unrelated tables for no outgoing messages", async () => {
     const h = fixture({ rows: [] });
     expect(await readOperationalDeliveryTriage("service-desk", h.deps)).toMatchObject({
