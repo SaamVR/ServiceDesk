@@ -22,9 +22,11 @@ function hasValidAuthConfig(env: NodeJS.ProcessEnv): boolean {
 function qaAllowlist(env: NodeJS.ProcessEnv): string[] {
   const raw = env.SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS ?? "";
   if (raw.length > 2_540) return [];
-  const values = raw.split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+  const parts = raw.split(",");
+  if (parts.some(value => !value.trim())) return [];
+  const values = parts.map(value => value.trim().toLowerCase());
   if (values.length < 1 || values.length > 10 ||
-      values.some(value => value.length > 254 || !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(value))) {
+      values.some(value => value.length > 254 || !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(value))) {
     return [];
   }
   return [...new Set(values)];
