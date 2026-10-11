@@ -19,6 +19,7 @@ const pages = [
   { slug: "help", path: "/help", title: "Help for the workflows your team uses every day.", heroLabel: "help overview" },
   { slug: "privacy", path: "/privacy", title: "Privacy starts with workspace and role boundaries.", heroLabel: "privacy overview" },
   { slug: "terms", path: "/terms", title: "Clear product boundaries before launch.", heroLabel: "terms overview" },
+  { slug: "tour", path: "/tour", title: "See how a little clarity changes the whole workday.", heroLabel: "Bright cleaning workspace and illustrative service journey" },
   { slug: "sign-in", path: "/auth/sign-in", title: "Ready for what's next?" },
 ];
 const widths = [320, 390, 834, 1280, 1440];
@@ -144,7 +145,7 @@ async function layoutCheck(page, width) {
     'title:document.title,metaDescription:document.querySelector("meta[name=description]")?.content||"",' +
     'robots:document.querySelector("meta[name=robots]")?.content||"",' +
     'passwords:document.querySelectorAll("input[type=password]").length,' +
-    'heroLabel:(document.querySelector("[data-ai-example]")||document.querySelector("[data-public-hero] > [aria-label]")||document.querySelector(".marketing-hero aside[aria-label]"))?.getAttribute("aria-label")||"",' +
+    'heroLabel:(document.querySelector("[data-ai-example]")||document.querySelector("[data-public-hero] > [aria-label]")||document.querySelector("[data-tour-hero]")||document.querySelector(".marketing-hero aside[aria-label]"))?.getAttribute("aria-label")||"",' +
     'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header > div > a[href],.marketing-hero .button-primary,.marketing-hero .button-secondary,a[data-home-cta],a[data-home-link],a[data-public-primary],a[data-public-secondary]")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height),tag:el.tagName,href:el.getAttribute("href")||""}))}))()'
   );
   if (state.width !== width || state.height !== height(width) || !state.reduced) {
@@ -248,6 +249,21 @@ try {
             JSON.stringify({ ok: proof?.ok, expected, excerpt: proof?.text?.slice(0, 180) }));
         }
         captures.push(await snapshot(page, width, "interactive-selected"));
+      }
+      if (page.slug === "tour" && (width === 390 || width === 1280)) {
+        const tourProof = await inspect(
+          '(() => { const details=document.querySelector("#enquiry-to-paid-job details");' +
+          'if(!details) return {ok:false}; const trigger=details.querySelector("summary");' +
+          'if(!trigger) return {ok:false}; trigger.click();' +
+          'return {ok:details.open,content:details.textContent||""};})()'
+        );
+        if (!tourProof?.ok ||
+            !tourProof.content.includes("Enquiry capture") ||
+            !tourProof.content.includes("Deterministic quote") ||
+            !tourProof.content.includes("FIXTURE UI ONLY")) {
+          throw new Error("V4 tour scenario disclosure failed: " + width);
+        }
+        captures.push(await snapshot(page, width, "scenario-open"));
       }
       // Open the actual native mobile disclosure; closed-menu screenshots
       // alone cannot prove destinations are accessible to mobile visitors.
