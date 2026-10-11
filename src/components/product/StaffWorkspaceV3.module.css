@@ -249,3 +249,31 @@
 @media (prefers-reduced-motion: reduce) {
   .navLink, .moreToolsChevron { transition: none; }
 }
+
+
+/* Keep the mobile drawer keyboard/touch accessible without trapping its parent shell. */
+@media (max-width: 900px) {
+  .v3Shell :global(.app-mobile-nav) > summary {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .v3Shell :global(.app-mobile-nav-panel) {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    box-shadow: 0 18px 45px rgb(37 38 31 / 16%);
+  }
+  .v3Shell :global(.app-mobile-nav-panel) a:focus-visible,
+  .v3Shell :global(.app-mobile-nav) > summary:focus-visible {
+    outline: 3px solid #ad633f;
+    outline-offset: 2px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v3Shell :global(.app-mobile-nav-panel) { scroll-behavior: auto; }
+}
