@@ -1,0 +1,65 @@
+name: ServiceDesk V4 L2 clean public typography Chrome gate
+# Public and synthetic browser evidence only. No Supabase/provider secrets,
+# signed-in tenant acceptance or customer data is assumed.
+on:
+  push:
+    branches: [feat/servicedesk-v4-l2-public-polish-20261012]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-l2-public-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-head-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Locked dependency install
+        run: pnpm install --frozen-lockfile
+      - name: Exact-HEAD tests, TypeScript, lint and Next production build
+        run: pnpm check:rc
+      - name: Setup Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+      - name: Start exact build on loopback
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/servicedesk-v4-reconciled-server.log" 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Reconciled Next server did not become ready" >&2
+          exit 1
+      - name: Real Chrome public responsive proof
+        env:
+          V3_PUBLIC_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V3_PUBLIC_OUTPUT: ${{ runner.temp }}/sd-v4-reconcile-public
+          V3_PUBLIC_CHECKOUT_SHA: ${{ github.sha }}
+        run: node scripts/release/v3-public-browser-proof.mjs
+      - name: Real Chrome synthetic operations journey
+        env:
+          V3_SANDBOX_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V3_SANDBOX_OUTPUT: ${{ runner.temp }}/sd-v4-reconcile-sandbox
+        run: node scripts/release/v3-sandbox-browser.mjs
+      - name: Retain public and synthetic proof only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: servicedesk-v4-reconcile-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/sd-v4-reconcile-public/
+            ${{ runner.temp }}/sd-v4-reconcile-sandbox/
+          retention-days: 7
+          if-no-files-found: error
