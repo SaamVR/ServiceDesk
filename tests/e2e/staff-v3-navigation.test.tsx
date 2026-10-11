@@ -4,6 +4,7 @@ import "./v4-clean-air-home.test";
 import "./v4-clean-public-pages.test";
 import "./v4-clean-tour-public.test";
 import "./v4-clean-studio-shell.test";
+import "./v4-studio-sidebar-visibility.test";
 import "./v3-public-route-metadata.test";
 import "./v3-private-qa-paths.test";
 import { createElement } from "react";
