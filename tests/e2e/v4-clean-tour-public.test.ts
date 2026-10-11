@@ -32,7 +32,7 @@ describe("V4 Clean Air guided tour and controlled sandbox handoff", () => {
     expect(page).toContain('id="trust-title"');
     expect(page).toContain('data-tour-hero');
     expect(page).toContain('aria-label="Bright cleaning workspace and illustrative service journey"');
-    expect(page).toContain("Seven connected steps.").toBe(false);
+    expect(page).not.toContain("Seven connected steps.");
   });
 
   it("preserves presentation-deck deep-link targets as visible page landmarks", () => {
@@ -53,7 +53,7 @@ describe("V4 Clean Air guided tour and controlled sandbox handoff", () => {
     const page = file("src/app/tour/page.tsx");
     expect(page).toContain('tourScenarios.map');
     expect(page).toContain("scenario.steps.map");
-    expect(page).toContain("scenario.proofBoundary").toBe(false);
+    expect(page).not.toContain("scenario.proofBoundary");
     expect(page).toContain('step.proofBoundary');
     expect(page).toContain("no live provider evidence");
     for (const scenario of tourScenarios) {
