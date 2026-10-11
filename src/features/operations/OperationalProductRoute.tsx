@@ -42,6 +42,7 @@ import { filterDirectoryRows, directoryRecordHref, normalizeDirectoryQuery } fro
 import { RecordDirectorySearch } from "./RecordDirectorySearch";
 import { filterJobsQueue, indexJobProgress, jobsQueueHref, normalizeJobsQueue } from "./jobs-queue";
 import { JobQueueFilters } from "./JobQueueFilters";
+import { jobsActionReturnPrefix, scheduleActionReturnPrefix } from "./operations-action-return";
 import { countStaffBy, indexStaffById } from "./staff-snapshot-index";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { settingsFeedbackFragment } from "./settings-navigation";
@@ -1343,7 +1344,7 @@ function ScheduleView({
     const crewId = String(formData.get("crewId") ?? "");
     const expectedVersion = Number(formData.get("expectedVersion"));
     const result = await assignOperationalCrew(workspaceSlug, visitId, crewId, expectedVersion);
-    actionRedirect(workspaceSlug, "schedule", result);
+    actionRedirect(workspaceSlug, "schedule", result, scheduleActionReturnPrefix(selectedScheduleQueue));
   }
 
   async function holdSlot(formData: FormData) {
@@ -1353,7 +1354,7 @@ function ScheduleView({
       String(formData.get("quoteId") ?? ""),
       String(formData.get("slotId") ?? ""),
     );
-    actionRedirect(workspaceSlug, "schedule", result);
+    actionRedirect(workspaceSlug, "schedule", result, scheduleActionReturnPrefix(selectedScheduleQueue));
   }
 
   const now = Date.parse(data.loadedAt);
@@ -1549,11 +1550,11 @@ function JobsView({
       | "SUBMIT_REVIEW"
       | "COMPLETE";
     if (!["ASSIGN", "EN_ROUTE", "START", "SUBMIT_REVIEW", "COMPLETE"].includes(action)) {
-      actionRedirect(workspaceSlug, "jobs", { ok: false, message: "Unsupported visit action." });
+      actionRedirect(workspaceSlug, "jobs", { ok: false, message: "Unsupported visit action." }, jobsActionReturnPrefix("", selectedJobQueue));
     }
     const visitId = String(formData.get("visitId") ?? "");
     const result = await transitionOperationalVisit(workspaceSlug, visitId, action);
-    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionReturnPrefix(visitId, selectedJobQueue));
   }
 
   async function saveVisitNote(formData: FormData) {
@@ -1568,7 +1569,7 @@ function JobsView({
       kind,
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionReturnPrefix(visitId, selectedJobQueue));
   }
 
   async function saveChecklistItem(formData: FormData) {
@@ -1581,7 +1582,7 @@ function JobsView({
       String(formData.get("completed") ?? "") === "true",
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionReturnPrefix(visitId, selectedJobQueue));
   }
 
   const nextAction = (status: string) => {
