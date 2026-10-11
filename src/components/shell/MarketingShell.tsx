@@ -4,6 +4,8 @@ import styles from "./MarketingNavV3.module.css";
 import heroStyles from "./MarketingHeroV3.module.css";
 import { OperationalFlowHero } from "./OperationalFlowHero";
 import { productRoutes } from "@/features/product/story-model";
+import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { marketingHeroEntry, marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 
 interface MarketingShellProps {
   eyebrow?: string;
@@ -24,8 +26,11 @@ export function MarketingShell({
   primaryHref = "/features",
   primaryLabel = "Explore platform",
   secondaryHref = "/contact",
-  secondaryLabel = "Book a walkthrough",
+  secondaryLabel = "Plan a walkthrough",
 }: MarketingShellProps) {
+  const registrationEnabled = ownerRegistrationAvailable();
+  const registration = marketingRegistrationEntry(registrationEnabled);
+  const heroAction = marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
   return (
     <main className="site-shell">
       <header className={`site-header ${styles.header}`} aria-label="Product navigation">
@@ -40,9 +45,9 @@ export function MarketingShell({
         </nav>
         <div className={styles.actions}>
           <Link className={`site-auth-link ${styles.signIn}`} href="/auth/sign-in">Sign in</Link>
-          <Link className={`site-auth-link ${styles.primaryAction}`} href="/auth/sign-up">
-            <span className={styles.desktopActionLabel}>Create account</span>
-            <span className={styles.mobileActionLabel}>Get started</span>
+          <Link className={`site-auth-link ${styles.primaryAction}`} href={registration.href}>
+            <span className={styles.desktopActionLabel}>{registration.desktop}</span>
+            <span className={styles.mobileActionLabel}>{registration.mobile}</span>
           </Link>
           <details className={styles.mobileMenu}>
             <summary className={styles.menuToggle} aria-label="Open product menu">
@@ -70,7 +75,7 @@ export function MarketingShell({
             <li>Field proof & invoicing</li>
           </ul>
           <div className="action-row">
-            <Link className="button-primary" href={primaryHref}>{primaryLabel}</Link>
+            <Link className="button-primary" href={heroAction.href}>{heroAction.label}</Link>
             <Link className="button-secondary" href={secondaryHref}>{secondaryLabel}</Link>
           </div>
         </div>
