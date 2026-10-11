@@ -430,6 +430,14 @@ function InboxView({
           nextHref={threadPosition.nextHref}
         />
 
+        {triage.threadFlags.get(selected.id)?.deliveryIssue ? (
+          <FeedbackBanner
+            title="Outbound delivery needs review"
+            description="The latest outbound message failed or was suppressed. The customer has not received a confirmed reply. Check the provider status, recipient identity and consent before deciding whether to send a new message."
+            tone="danger"
+          />
+        ) : null}
+
         {!customer && identityResolutionSupported ? (
           <div className={styles.identityReview}>
             <FeedbackBanner
