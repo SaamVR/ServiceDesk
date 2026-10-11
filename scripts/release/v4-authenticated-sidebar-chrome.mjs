@@ -119,7 +119,7 @@ async function signIn() {
   await waitForWorkspace("/app/" + encodeURIComponent(slug) + "/overview");
 }
 function luminance(rgb) {
-  const values = String(rgb).match(/[\\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+  const values = String(rgb).replace(/[^0-9.,]/g, "").split(",").slice(0, 3).map(Number);
   return values.map(x => x / 255).map(x => x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4)
     .reduce((sum, x, i) => sum + x * [.2126, .7152, .0722][i], 0);
 }
