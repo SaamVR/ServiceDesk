@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { filterQualityQueue, isOverdueQualityCase, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref, normalizeQualityQueue, normalizeQualitySearch } from "@/features/operations/quality-queue";
 const source = [
  {id:"c1",state:"OPEN",summary:"Damaged kitchen counter",ownerUserId:null},
@@ -39,8 +41,7 @@ describe("authorized quality triage",()=>{
   expect(qualityFeedbackPrefix("overdue","Late","a")).toBe("queue=overdue&q=Late&case=a&");
  });
  it("surfaces overdue priority and case time in the authenticated quality route",()=>{
-  const source = require("node:fs").readFileSync;
-  const route = source(require("node:path").join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
+  const route = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.tsx"), "utf8");
   expect(route).toContain("qualityQueueCount(orderedCases, data.loadedAt)");
   expect(route).toContain("filterQualityQueue(orderedCases, queue, search");
   expect(route).toContain("Overdue as of snapshot");
