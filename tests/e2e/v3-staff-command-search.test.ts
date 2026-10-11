@@ -47,7 +47,7 @@ describe("V3 staff command palette navigation model", () => {
   });
   it("keeps palette mobile targets and supporting text legible", () => {
     const css = readFileSync(join(process.cwd(), "src/components/product/StaffCommandPalette.module.css"), "utf8");
-    const fontSizes = [...css.matchAll(/font-size:\\s*([.\\d]+)rem/g)].map((match) => Number(match[1]));
+    const fontSizes = [...css.matchAll(/font-size:\s*([.\d]+)rem/g)].map((match) => Number(match[1]));
     expect(fontSizes.filter((size) => size < 0.75)).toEqual([]);
     expect(css).toContain("min-width: 44px; min-height: 44px;");
     expect(css).toContain(".trigger { width: 44px; min-width: 44px;");
