@@ -40,3 +40,22 @@ export function searchStaffDestinations(
     .map(item => ({ module: item.module, label: item.label, eyebrow: item.eyebrow,
       description: item.description, href: item.href }));
 }
+
+/** Existing server-owned directory searches, not client-loaded customer data.
+ * The route itself enforces tenant authorization before fetching results.
+ */
+export interface StaffRecordSearchTarget { module: "inbox" | "customers" | "requests" | "quotes" | "invoices"; label:string; href:string; }
+const recordSearchModules: readonly {module:StaffRecordSearchTarget["module"];label:string}[] = [
+ {module:"inbox",label:"Conversations"},
+ {module:"customers",label:"Customers"},
+ {module:"requests",label:"Requests"},
+ {module:"quotes",label:"Quotes"},
+ {module:"invoices",label:"Invoices"},
+];
+export function buildStaffRecordSearches(workspace:string, rawQuery:string):StaffRecordSearchTarget[] {
+ const term = rawQuery.replace(/[\u0000-\u001f\u007f]/g," ").trim().slice(0,100);
+ if (term.length < 2) return [];
+ return recordSearchModules.map(({module,label})=>({
+   module,label,href:buildStaffModuleHref(workspace,module)+"?search="+encodeURIComponent(term),
+ }));
+}
