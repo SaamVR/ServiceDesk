@@ -48,6 +48,7 @@ import { buildQuotePipeline, isCurrentApprovedQuote } from "./quote-pipeline";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { InboxThreadNavigator } from "./InboxThreadNavigator";
 import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
+import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { settingsFeedbackFragment } from "./settings-navigation";
@@ -337,6 +338,15 @@ function InboxView({
   const participantLabel = customer?.displayName ?? "Unverified sender";
   const identityResolutionSupported = selected.channel === "WHATSAPP" || selected.channel === "EMAIL";
   const replySupported = identityResolutionSupported && Boolean(customer);
+  const latestInboundMessage = [...messages].reverse().find((item) =>
+    item.direction === "INBOUND" && item.senderKind === "CUSTOMER");
+  // Staff AI is server-side opt-in. A configured model key alone never
+  // enables it; the authenticated handler rechecks all permissions and scope.
+  const showStaffAiReview = process.env.SERVICEDESK_AI_ENABLED === "true" &&
+    replySupported && !selected.handoverActive &&
+    ["OWNER", "DISPATCHER"].includes(data.actor.role) &&
+    Boolean(latestInboundMessage) && Number.isSafeInteger(selected.version) && selected.version >= 1;
+
 
   return (
     <section className={styles.inboxWorkspace} aria-label="Customer conversations">
@@ -495,6 +505,16 @@ function InboxView({
             })
           )}
         </div>
+
+        {showStaffAiReview && latestInboundMessage ? (
+          <StaffAiReviewComposer
+            key={selected.id + ":" + selected.version + ":" + latestInboundMessage.id}
+            workspaceSlug={workspaceSlug}
+            conversationId={selected.id}
+            sourceMessageId={latestInboundMessage.id}
+            expectedVersion={selected.version}
+          />
+        ) : null}
 
         <form action={reply} className={styles.replyComposer}>
           <input type="hidden" name="conversationId" value={selected.id} />
