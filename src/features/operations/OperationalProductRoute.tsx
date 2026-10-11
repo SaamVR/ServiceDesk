@@ -63,7 +63,7 @@ import { formatWorkspaceDateTime } from "./product-truth";
 import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
 import { filterQualityQueue, isOverdueQualityCase, normalizeQualityQueue, normalizeQualitySearch, prioritizeQualityFollowUp, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
 import { QualityQueueFilters } from "./QualityQueueFilters";
-import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue } from "./invoice-collection-queue";
+import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue, parseManualPaymentAmountMinor } from "./invoice-collection-queue";
 import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { deriveDispatchBacklog } from "./dispatch-backlog";
@@ -1941,12 +1941,10 @@ function InvoicesView({
   async function manualPayment(formData: FormData) {
     "use server";
     const invoiceId = String(formData.get("invoiceId") ?? "");
-    const amount = String(formData.get("amount") ?? "").trim();
-    const match = amount.match(/^(\d+)(?:\.(\d{1,2}))?$/);
-    if (!match) {
-      actionRedirect(workspaceSlug, "invoices", { ok: false, message: "Enter a valid payment amount." }, invoiceFeedbackPrefix(queue, search, invoiceId));
+    const amountMinor = parseManualPaymentAmountMinor(String(formData.get("amount") ?? ""));
+    if (amountMinor === undefined) {
+      actionRedirect(workspaceSlug, "invoices", { ok: false, message: "Enter a positive payment amount with no more than two decimal places." }, invoiceFeedbackPrefix(queue, search, invoiceId));
     }
-    const amountMinor = Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
     const methodRaw = String(formData.get("method") ?? "OTHER");
     const method = methodRaw === "CASH" || methodRaw === "BANK_TRANSFER" ? methodRaw : "OTHER";
     const result = await applyOperationalManualPayment(workspaceSlug, invoiceId, amountMinor, method, String(formData.get("reference") ?? ""));
