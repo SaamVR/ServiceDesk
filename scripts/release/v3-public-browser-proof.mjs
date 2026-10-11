@@ -158,7 +158,7 @@ async function layoutCheck(page, width) {
   if (!state.title.includes("ServiceDesk AI") ||
       !state.metaDescription || state.metaDescription.length < 20 ||
       (page.heroLabel && page.slug !== "home" && !state.title.includes(page.title))) {
-    throw new Error("Public page title/description metadata did not match the actual page: " + page.slug);
+    throw new Error("Public page title/description metadata did not match the actual page: " + page.slug + " " + JSON.stringify({ title: state.title, descriptionLength: state.metaDescription.length, expectedTitle: page.title, heroLabel: state.heroLabel }));
   }
   if (process.env.SERVICEDESK_PUBLIC_INDEXING_ENABLED !== "true" &&
       !state.robots.toLowerCase().includes("noindex")) {
