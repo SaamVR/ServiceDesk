@@ -9,8 +9,8 @@
  * V3_QA_EXPECTED_SHA=<full_git_sha> node tests/e2e/v3-capture-workroom.mjs
  */
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { join, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -37,14 +37,22 @@ if (!existsSync(profile) || !statSync(profile).isDirectory() || !existsSync(exec
 }
 const output = resolve(process.env.V3_QA_OUTPUT || join(tmpdir(), "servicedesk-v3-visual-qa-" + randomUUID()));
 const root = resolve(process.cwd());
-if (profile === root || profile.startsWith(root + "/")) {
-  throw new Error("Private authenticated browser profiles must stay outside Git.");
+const realRoot = realpathSync(root);
+const withinRepo = path => path === realRoot || path.startsWith(realRoot + sep);
+const realProfile = realpathSync(profile);
+if (lstatSync(profile).isSymbolicLink() || withinRepo(realProfile) ||
+    profile === root || profile.startsWith(root + sep)) {
+  throw new Error("Private authenticated browser profiles must stay outside Git and cannot be symlinks.");
 }
-if (output === root || output.startsWith(root + "/")) throw new Error("Private evidence must stay outside Git.");
+if (output === root || output.startsWith(root + sep)) throw new Error("Private evidence must stay outside Git.");
 if (existsSync(join(profile, "DevToolsActivePort"))) {
   throw new Error("The QA browser profile has an active or stale DevTools port; use a separate inactive isolated profile.");
 }
 mkdirSync(output, { recursive: true, mode: 0o700 });
+const realOutput = realpathSync(output);
+if (lstatSync(output).isSymbolicLink() || withinRepo(realOutput)) {
+  throw new Error("Private screenshot output cannot point into Git through a symlink or parent redirect.");
+}
 if ((statSync(output).mode & 0o077) !== 0 || readdirSync(output).length !== 0) {
   throw new Error("QA screenshot directory must be private and empty; use a fresh isolated output path.");
 }
