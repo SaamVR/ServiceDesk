@@ -52,6 +52,7 @@ import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { AiRequestBrief } from "./AiRequestBrief";
 import { AiOperationsStatus } from "./AiOperationsStatus";
+import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import { automationPlaybooks, getAutomationPlaybook } from "./automation-playbooks";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
@@ -980,7 +981,12 @@ function RequestsView({
   }
 
   if (data.requests.length === 0) {
-    return <EmptyState title="No requests in the queue" detail="New enquiries will appear here as persisted requests." action={{ label: "Review conversations", href: buildStaffModuleHref(workspaceSlug, "inbox") }} />;
+    return (
+      <>
+        <CatalogReadinessBanner workspaceSlug={workspaceSlug} serviceCatalog={data.serviceCatalog} />
+        <EmptyState title="No requests in the queue" detail="New enquiries will appear here as persisted requests." action={{ label: "Review conversations", href: buildStaffModuleHref(workspaceSlug, "inbox") }} />
+      </>
+    );
   }
 
   const orderedRequests = [...data.requests].sort((left, right) =>
@@ -1026,6 +1032,7 @@ function RequestsView({
 
   return (
     <section className={styles.salesWorkspace} aria-label="Request intake workspace">
+      <CatalogReadinessBanner workspaceSlug={workspaceSlug} serviceCatalog={data.serviceCatalog} />
       <header className={styles.salesToolbar}>
         <div>
           <p className={styles.salesEyebrow}>Intake queue</p>
