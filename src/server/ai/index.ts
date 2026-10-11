@@ -14,3 +14,4 @@ export * from "./action-audit";
 export * from "./photo-intake";
 export * from "./photo-intake-execution";
 export * from "./photo-intake-execution-supabase";
+export * from "./configured-service";
