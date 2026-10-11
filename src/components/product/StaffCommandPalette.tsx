@@ -101,7 +101,7 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
             value={query}
             onChange={event => setQuery(event.target.value)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Search pages, customer, request or invoice…"
+            placeholder="Search pages, customers, jobs, quality cases…"
             autoComplete="off"
             maxLength={100}
           />
@@ -126,7 +126,7 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
           )}
           {recordSearches.length ? (
             <div className={styles.recordSearchGroup} aria-label="Search authorized workspace records">
-              <p className={styles.recordSearchCaption}>Search records · opens an authorized workspace view</p>
+              <p className={styles.recordSearchCaption}>Search records · opens a filtered, authorized workspace view</p>
               {recordSearches.map(target => (
                 <Link key={target.module} href={target.href} className={styles.result} onClick={close}>
                   <span className={styles.resultName}>Find in {target.label}</span>
