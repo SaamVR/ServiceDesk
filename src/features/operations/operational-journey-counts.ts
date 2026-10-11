@@ -22,6 +22,6 @@ export function operationalJourneyCounts(snapshot: Pick<OperationalStaffSnapshot
       !visit.crewId && !["COMPLETED", "CANCELLED"].includes(visit.status)).length,
     jobs: snapshot.visits.filter((visit) =>
       ["IN_PROGRESS", "EN_ROUTE"].includes(visit.status)).length,
-    invoices: summarizeOutstandingInvoices(snapshot.invoices).count,
+    invoices: summarizeOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId))).count,
   };
 }
