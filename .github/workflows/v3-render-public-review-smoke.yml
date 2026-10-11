@@ -1,0 +1,77 @@
+name: ServiceDesk V3 Render review HTTP smoke
+
+# Isolated QA-only workflow. No credentials, DB access or provider calls.
+on:
+  push:
+    branches:
+      - qa/servicedesk-v3-render-http-20261011
+    paths:
+      - .github/workflows/v3-render-public-review-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  render-public-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check live Render build identity and public routes
+        env:
+          REVIEW_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
+          EXPECTED_SHA: 92efdc81538a0524220b022bc11bebce62435d8c
+        run: |
+          node --input-type=module <<'JS'
+          const origin = process.env.REVIEW_ORIGIN;
+          const sha = process.env.EXPECTED_SHA;
+          if (!/^https:\/\/[a-z0-9-]+\.onrender\.com$/.test(origin) || !/^[a-f0-9]{40}$/.test(sha)) {
+            throw new Error("Unapproved Render review origin or commit");
+          }
+          const sleep = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
+          async function get(path) {
+            const response = await fetch(origin + path, {
+              method: "GET",
+              credentials: "omit",
+              cache: "no-store",
+              redirect: "manual",
+              headers: { Accept: path === "/health" ? "application/json" : "text/html" },
+              signal: AbortSignal.timeout(25_000),
+            });
+            if (response.status !== 200) throw new Error(path + ": HTTP " + response.status);
+            const body = await response.text();
+            if (body.length < 100 || body.length > 2_000_000) throw new Error(path + ": invalid body");
+            return body;
+          }
+          let health;
+          for (let attempt = 0; attempt < 15; attempt++) {
+            try {
+              health = JSON.parse(await get("/health"));
+              break;
+            } catch (error) {
+              if (attempt === 14) throw error;
+              await sleep(6_000);
+            }
+          }
+          if (health?.ok !== true || health?.service !== "servicedesk" ||
+              health?.sourceSha !== sha || health?.sourceProvider !== "render") {
+            throw new Error("Render-reported commit does not match pinned release candidate.");
+          }
+          console.log("PASS /health exact host-reported commit " + sha);
+          const routes = [
+            ["/", "Run cleaning operations from enquiry to paid job."],
+            ["/features", "Everything a cleaning operations team needs to move work forward."],
+            ["/pricing", "Service quote pricing stays transparent and controlled."],
+            ["/integrations", "Connect the systems your operation already uses."],
+            ["/contact", "See ServiceDesk against your real cleaning workflow."],
+            ["/auth/sign-in", "Ready for what's next?"],
+            ["/tour", "Controlled tour in an isolated showcase workspace."],
+          ];
+          for (const [path, expected] of routes) {
+            const html = await get(path);
+            if (!html.includes(expected) || !html.includes("<html") || !html.includes("noindex")) {
+              throw new Error("Render public route missing expected content/noindex: " + path);
+            }
+            console.log("PASS " + path + " content + noindex");
+          }
+          console.log("PASS Render public preview GET smoke. No authenticated staff/provider/DB acceptance implied.");
+          JS
