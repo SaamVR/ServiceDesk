@@ -5,7 +5,7 @@
   background: #fbfaf6;
 }
 .searchField { display: grid; gap: 6px; flex: 1 1 220px; min-width: 0; }
-.searchField label { font-size: .73rem; font-weight: 760; color: #414940; }
+.searchField label { font-size: .75rem; font-weight: 760; color: #414940; }
 .searchField input {
   width: 100%; min-width: 0; height: 43px; padding: 0 13px;
   border: 1px solid #cfc8ba; border-radius: 7px;
@@ -23,7 +23,7 @@
 .searchForm button { background: #0b746d; color: #fff; border: 1px solid #0b746d; }
 .searchForm button:hover { background: #075c56; }
 .searchForm a { background: #ffffff; color: #0b625a; border: 1px solid #cec5b8; }
-.resultCount { margin: 0 0 0 auto; font-size: .74rem; color: #555e54; font-variant-numeric: tabular-nums; }
+.resultCount { margin: 0 0 0 auto; font-size: .75rem; color: #555e54; font-variant-numeric: tabular-nums; }
 @media (max-width: 620px) {
   .searchForm { padding: 11px; gap: 8px; }
   .searchField { flex-basis: 100%; }

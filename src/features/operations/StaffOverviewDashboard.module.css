@@ -14,7 +14,7 @@
 }
 .eyebrow,.cardEyebrow {
   margin: 0 !important; color: #187b74 !important;
-  font-size: .68rem !important; font-weight: 780;
+  font-size: .75rem !important; font-weight: 780;
   text-transform: uppercase; letter-spacing: .115em;
 }
 .headerActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
@@ -38,7 +38,7 @@
 }
 .briefingLabel {
   display: flex; align-items: center; gap: 10px;
-  color: #a8eddf; font-size: .71rem; font-weight: 800;
+  color: #a8eddf; font-size: .75rem; font-weight: 800;
   text-transform: uppercase; letter-spacing: .085em; white-space: nowrap;
 }
 .liveMarker {
@@ -81,7 +81,7 @@
   font-size: clamp(1.65rem,2.5vw,2.05rem); font-weight: 780;
   letter-spacing: -.065em; line-height: 1.12; white-space: nowrap; text-overflow: ellipsis;
 }
-.kpiCard span:not(.kpiGo) { color: #657881; font-size: .73rem; }
+.kpiCard span:not(.kpiGo) { color: #657881; font-size: .75rem; }
 .kpiCard .kpiGo {
   position: absolute; top: 15px; right: 17px;
   color: #118176; font-size: .99rem; font-weight: 750;
@@ -107,7 +107,7 @@
   margin: 4px 0 0; color: #243a44;
   font-size: 1.05rem; font-weight: 780; line-height: 1.28; letter-spacing: -.035em;
 }
-.cardHeader p:last-child:not(.cardEyebrow) { margin: 5px 0 0; color: #657780; font-size: .73rem; line-height: 1.48; }
+.cardHeader p:last-child:not(.cardEyebrow) { margin: 5px 0 0; color: #657780; font-size: .75rem; line-height: 1.48; }
 .textLink {
   flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 34px;
   padding: 5px 9px; border-radius: 7px; color: #0b766c;
@@ -140,7 +140,7 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: #2b4048; font-size: .83rem; font-weight: 710;
 }
-.attentionCopy small,.scheduleCopy small,.qualityRow small { color: #6a7a81; font-size: .71rem; }
+.attentionCopy small,.scheduleCopy small,.qualityRow small { color: #6a7a81; font-size: .75rem; }
 .scheduleTime { color: #243f48; font-size: .77rem; font-weight: 770; font-variant-numeric: tabular-nums; }
 .scheduleMarker {
   width: 7px; height: 7px; border-radius: 50%;
@@ -154,21 +154,21 @@
 }
 .pipelineItem:last-child { border-right: 0; }
 .pipelineItem:hover { background: #f5faf9; text-decoration: none; }
-.pipelineItem span { color: #587179; font-size: .73rem; font-weight: 680; }
+.pipelineItem span { color: #587179; font-size: .75rem; font-weight: 680; }
 .pipelineItem strong { color: #1c3842; font-size: 1.75rem; font-weight: 790; line-height: 1; letter-spacing: -.055em; }
-.pipelineItem small { color: #6c7b83; font-size: .72rem; line-height: 1.5; }
+.pipelineItem small { color: #6c7b83; font-size: .75rem; line-height: 1.5; }
 .quickActions {
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
   padding: 13px 0 0; border-top: 1px solid #dce6e8;
 }
 .quickActions > span {
-  color: #657981; font-size: .71rem; font-weight: 760;
+  color: #657981; font-size: .75rem; font-weight: 760;
   letter-spacing: .08em; text-transform: uppercase; margin-right: 8px;
 }
 .quickActions a {
   min-height: 36px; display: inline-flex; align-items: center; justify-content: center;
   padding: 7px 12px; border: 1px solid #d6e4e7; border-radius: 8px;
-  background: #fff; color: #3c5760; font-size: .74rem; font-weight: 710; text-decoration: none;
+  background: #fff; color: #3c5760; font-size: .75rem; font-weight: 710; text-decoration: none;
 }
 .quickActions a:hover { background: #e9f6f2; color: #0b7167; border-color: #a3d3c9; text-decoration: none; }
 .emptyBlock { display: flex; align-items: center; gap: 13px; flex: 1; padding: 26px 21px; }
@@ -198,7 +198,7 @@
 @media(max-width:470px) {
   .kpiGrid { gap: 8px; }
   .kpiCard { min-height: 125px; padding: 15px 12px; gap: 6px; }
-  .kpiCard p { font-size: .7rem; }
+  .kpiCard p { font-size: .75rem; }
   .kpiCard strong { font-size: 1.45rem; white-space: normal; overflow-wrap: anywhere; }
   .kpiCard .kpiGo { top: 11px; right: 11px; }
   .attentionRow { grid-template-columns: 8px minmax(0,1fr); }
