@@ -98,7 +98,7 @@ describe("Resend REST transport compatibility", () => {
       sends++;
       return { status: 200, body: JSON.stringify({ id: "unexpected" }) };
     });
-    for (const unsafe of ["abc\\r\\nX-Evil: injected", "two words", "tab\\tkey", "newline\\nkey", "café", " leading", "trailing "]) {
+    for (const unsafe of ["abc\r\nX-Evil: injected", "two words", "tab\tkey", "newline\nkey", "café", " leading", "trailing "]) {
       expect(await provider.send({ ...job, idempotencyKey: unsafe })).toMatchObject({
         ok: false, code: "EMAIL_IDEMPOTENCY_KEY_INVALID",
       });
