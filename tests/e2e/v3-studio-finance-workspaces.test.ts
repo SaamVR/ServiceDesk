@@ -24,4 +24,16 @@ describe("Studio OS distinct finance workspaces",()=>{
   expect(css).toContain(".invoiceSurfaceNav a[aria-current=\"page\"]");
   expect(css).toContain("@media(max-width:680px)");
  });
+ it("fails closed with an honest commercial account error or entitlement state",()=>{
+  const finance=read("src/features/commercial/CommercialBillingWorkspace.tsx");
+  expect(finance).not.toContain("if (!result.ok) return null;");
+  expect(finance).not.toContain("if (!portfolio.feature.enabled) return null;");
+  expect(finance).toContain("Commercial accounts could not be loaded");
+  expect(finance).toContain("Commercial accounts are not enabled");
+  expect(finance).toContain("No invoices or payments were changed");
+  expect(finance).toContain('href="?surface=commercial"');
+  expect(finance).toContain('href="?surface=customers"');
+  expect(finance).toContain('<FeedbackBanner');
+ });
+
 });
