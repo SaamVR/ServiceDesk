@@ -25,10 +25,10 @@ describe("real invoice collection filters",()=>{
   expect(isCollectibleInvoice(invoices[4])).toBe(true);
   expect(isCollectibleInvoice(invoices[5])).toBe(false);
   expect(isCollectibleInvoice(invoices[6])).toBe(false);
-  expect(isCollectibleInvoice({id:"i",status:"ISSUED",balanceMinor:5100})).toBe(true);
-  expect(isCollectibleInvoice({id:"i",status:"SENT",balanceMinor:5100})).toBe(false);
-  expect(isCollectibleInvoice({id:"i",status:"DRAFT",balanceMinor:5100})).toBe(false);
-  expect(isCollectibleInvoice({id:"i",status:"ISSUED",balanceMinor:NaN})).toBe(false);
+  expect(isCollectibleInvoice({status:"ISSUED",balanceMinor:5100})).toBe(true);
+  expect(isCollectibleInvoice({status:"SENT",balanceMinor:5100})).toBe(false);
+  expect(isCollectibleInvoice({status:"DRAFT",balanceMinor:5100})).toBe(false);
+  expect(isCollectibleInvoice({status:"ISSUED",balanceMinor:NaN})).toBe(false);
   const code=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
   expect(code).toContain("const selectedInvoiceCanRecordPayment = isCollectibleInvoice(selectedInvoice)");
   expect(code).toContain("const openInvoices = selectedInvoices.filter(isCollectibleInvoice)");
