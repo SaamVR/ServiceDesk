@@ -67,7 +67,7 @@ export async function loadVerifiedOwnerWorkspace(
 /** Login never silently sends an owner into a staff backend without its key. */
 export function ownerAfterLoginHref(
   workspace: { slug: string; role: string; href: string },
-  env: Pick<NodeJS.ProcessEnv, "SUPABASE_SERVICE_ROLE_KEY"> = process.env,
+  env: { SUPABASE_SERVICE_ROLE_KEY?: string } = process.env,
 ): string {
   if (workspace.role === "OWNER" && !env.SUPABASE_SERVICE_ROLE_KEY) {
     return "/onboarding/verified?workspace=" + encodeURIComponent(workspace.slug);
