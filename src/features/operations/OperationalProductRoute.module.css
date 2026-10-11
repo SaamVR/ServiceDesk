@@ -337,6 +337,8 @@
 .salesPrimaryAction { display: grid; gap: 5px; padding: 12px 15px; }
 .salesPrimaryAction > span { color: var(--app-text-subtle); font-size: .75rem; }
 
+.quoteHeaderBadges { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 7px; min-width: 0; }
+
 .quoteFinancials { display: grid; grid-template-columns: minmax(180px,1.4fr) repeat(2,minmax(130px,.8fr)); border-bottom: 1px solid var(--app-border); background: #f8fbfc; }
 .quoteFinancials > div { display: grid; gap: 3px; padding: 16px 17px; border-right: 1px solid var(--app-border); }
 .quoteFinancials > div:last-child { border-right: 0; }
