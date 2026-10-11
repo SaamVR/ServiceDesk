@@ -14,6 +14,7 @@ import { formatMinorMoney } from "./view-models";
 import { createLocalDayKey } from "./staff-local-day";
 import { indexStaffById } from "./staff-snapshot-index";
 import { buildInboxTriage } from "./inbox-triage";
+import { AiOperationsStatus } from "./AiOperationsStatus";
 import styles from "./StaffOverviewDashboard.module.css";
 
 function attentionTone(severity: "INFO" | "WARNING" | "CRITICAL") {
@@ -276,6 +277,12 @@ export function StaffOverviewDashboard({
           {briefingAction} <span aria-hidden="true">↗</span>
         </Link>
       </section>
+
+      <AiOperationsStatus
+        workspaceSlug={workspace}
+        publishedRuleCount={(snapshot.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
+        compact
+      />
 
       <nav className={styles.kpiGrid} aria-label="Open operational queues">
         <KpiCard
