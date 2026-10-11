@@ -208,8 +208,8 @@ try {
       // must update in place and never imply a real AI/provider action.
       if (page.slug === "home" && (width === 390 || width === 1280)) {
         const proof = await inspect(
-          '(() => { const button=[...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Scheduling"));' +
-          'if(!button) return {ok:false};button.click();const region=document.querySelector("[aria-live=polite]");' +
+          '(async () => { const button=[...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Scheduling"));' +
+          'if(!button) return {ok:false};button.click();await new Promise(r=>setTimeout(r,180));const region=document.querySelector("[aria-live=polite]");' +
           'return {ok:button.getAttribute("aria-pressed")==="true",' +
           'text:region?.textContent||"",selected:[...document.querySelectorAll("button[aria-pressed=true]")].length};})()'
         );
