@@ -2,6 +2,8 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { queueApprovedInboxReply } from "@/server/core/reviewed-inbox-reply";
+import { runOwnerSavedRequestAutomation } from "@/server/workflows/owner-request-automation";
+import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import {
   addOperationalVisitNote,
   assignOperationalCrew,
@@ -960,6 +962,21 @@ function RequestsView({
     );
   }
 
+  async function executePublishedRequestRules(formData: FormData) {
+    "use server";
+    const requestId = String(formData.get("requestId") ?? "");
+    const outcome = await runOwnerSavedRequestAutomation(workspaceSlug, requestId);
+    const result: OperationalActionResult = outcome.ok
+      ? { ok: true, message: `Checked published request rules: ${outcome.value.matchedExecutions} matched; ${outcome.value.completedAttentionActions} internal attention actions verified. External sends remain approval-required.` }
+      : { ok: false, message: outcome.message };
+    actionRedirect(
+      workspaceSlug,
+      "requests",
+      result,
+      "request=" + encodeURIComponent(requestId) + "&",
+    );
+  }
+
   async function reviewPhotoSuggestion(formData: FormData) {
     "use server";
     const requestId = String(formData.get("requestId") ?? "");
@@ -1146,6 +1163,29 @@ function RequestsView({
               requestId={selectedRequest.id}
               configured={readConfiguredAiRuntimeConfig().ok}
             />
+
+            {data.actor.role === "OWNER" && (data.workflowRuleVersions ?? [])
+              .some(version => version.state === "PUBLISHED" && version.eventType === "REQUEST_CREATED") ? (
+              <section className={styles.salesSection} aria-label="Controlled request automation">
+                <div className={styles.salesSectionHeader}>
+                  <div>
+                    <p className={styles.salesSectionEyebrow}>Persisted event · owner-controlled</p>
+                    <h3>Request workflow processing</h3>
+                  </div>
+                </div>
+                <p>Evaluate this saved request against published cleaning workflows. Only internal attention actions can execute here; external templates still need separate owner approval.</p>
+                {operationalDatabaseMode() === "SERVICE_ROLE" ? (
+                  <form action={executePublishedRequestRules}>
+                    <input type="hidden" name="requestId" value={selectedRequest.id} />
+                    <StaffSubmitButton className="app-button-secondary" pendingLabel="Evaluating saved event…">
+                      Process published request rules
+                    </StaffSubmitButton>
+                  </form>
+                ) : (
+                  <p>Protected automation execution is not connected in this QA-session environment. No event was executed.</p>
+                )}
+              </section>
+            ) : null}
 
             <section className={styles.salesSection}>
               <div className={styles.salesSectionHeader}>
