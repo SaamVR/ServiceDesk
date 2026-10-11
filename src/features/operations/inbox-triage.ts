@@ -42,6 +42,28 @@ export function inboxQueueHref(
   return queryString ? "?" + queryString : "?";
 }
 
+/** Latest non-internal message is the only customer-preview/search truth.
+ * On identical provider timestamps prefer inbound: it must never be concealed
+ * by nondeterministic outbound row ordering while a reply may still be due.
+ */
+export function indexLatestExternalInboxMessages<Message extends InboxTriageMessage>(
+  messages: readonly Message[],
+): Map<string, Message> {
+  const latest = new Map<string, Message>();
+  for (const message of messages) {
+    if (message.direction === "INTERNAL") continue;
+    const when = Date.parse(message.createdAt);
+    if (!Number.isFinite(when)) continue;
+    const previous = latest.get(message.conversationId);
+    const earlier = previous ? Date.parse(previous.createdAt) : Number.NEGATIVE_INFINITY;
+    if (!previous || when > earlier ||
+      (when === earlier && message.direction === "INBOUND" && previous.direction !== "INBOUND")) {
+      latest.set(message.conversationId, message);
+    }
+  }
+  return latest;
+}
+
 export function buildInboxTriage<
   Conversation extends InboxTriageConversation,
   Message extends InboxTriageMessage,
@@ -53,22 +75,7 @@ export function buildInboxTriage<
   queue: InboxQueue,
 ) {
   const knownCustomers = new Set(customers.map((customer) => customer.id));
-  const recentExternal = new Map<string, Message>();
-
-  for (const message of messages) {
-    if (message.direction === "INTERNAL") continue;
-    const previous = recentExternal.get(message.conversationId);
-    const when = Date.parse(message.createdAt);
-    const earlier = previous ? Date.parse(previous.createdAt) : Number.NEGATIVE_INFINITY;
-    // Identical timestamps can occur for multiple provider deliveries.
-    // Prefer an inbound message on ties so a pending customer response is
-    // not silently hidden by nondeterministic database row ordering.
-    if (Number.isFinite(when) &&
-      (when > (Number.isFinite(earlier) ? earlier : Number.NEGATIVE_INFINITY) ||
-      (when === earlier && message.direction === "INBOUND" && previous?.direction !== "INBOUND"))) {
-      recentExternal.set(message.conversationId, message);
-    }
-  }
+  const recentExternal = indexLatestExternalInboxMessages(messages);
 
   const sorted = [...conversations].sort((a, b) => {
     const aTime = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
@@ -161,15 +168,7 @@ export function searchInboxQueue<
 
   const names = new Map(customers.map((customer) =>
     [customer.id, customer.displayName?.toLocaleLowerCase() ?? ""] as const));
-  const latest = new Map<string, Message>();
-  for (const message of messages) {
-    if (message.direction === "INTERNAL") continue;
-    const previous = latest.get(message.conversationId);
-    const when = Date.parse(message.createdAt);
-    if (!previous || (Number.isFinite(when) && when >= Date.parse(previous.createdAt))) {
-      latest.set(message.conversationId, message);
-    }
-  }
+  const latest = indexLatestExternalInboxMessages(messages);
   return conversations.filter((conversation) => {
     const searchable = [
       names.get(conversation.customerId ?? "") ?? "",
