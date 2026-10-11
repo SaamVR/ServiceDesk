@@ -5,7 +5,9 @@ on:
       - feat/servicedesk-v3-combined-acceptance-20261011
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - "src/components/shell/MarketingShell.tsx"
+      - "src/components/shell/**"
+      - "tests/e2e/v3-marketing-nav-redesign.test.ts"
+      - "scripts/release/v3-public-browser-proof.mjs"
       - "src/app/page.tsx"
       - "src/features/auth/marketing-entry-policy.ts"
       - "tests/e2e/v3-marketing-entry-truth.test.ts"
