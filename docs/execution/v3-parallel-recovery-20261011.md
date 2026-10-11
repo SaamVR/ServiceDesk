@@ -105,3 +105,61 @@ must be based on real browser evidence, not a design-only PDF.
 Record W1/W2 PR SHAs, comparison file lists, check command outputs, combined
 candidate commit SHA, release deployment ID, actual browser result and each
 blocker in the next addendum to this file.
+
+
+## Integration receipt — Combined Backend Candidate A (2026-10-11)
+
+- Source base: `b2b153d57213bb2f5f4aea1473a205b359b53a9b`.
+- W1 PR **#78**, accepted branch HEAD
+  `738a69bf463d3e4fd385faddeb1dd8ff79678103`,
+  merge SHA `302f10dae886233b7289cca9cd4d0b16651cbcea`;
+  changed only `src/domain/auth/authorized-workspace-selection.ts` and
+  `tests/domain/authorized-workspace-selection.test.ts`.
+- W2 PR **#79**, accepted branch HEAD
+  `2e14fca2879a9c523fd8ff1290ec2debc225e90a`,
+  combined merge SHA **`2a5f44e845880410719783ed076bffec1d9bba40`**;
+  changed only `src/server/integrations/email/transport.ts` and
+  `tests/providers/resend-transactional-email-contract.test.ts`.
+- Real test environment: isolated Render build using current gate branch,
+  deployment **`dep-db5deflckfvc739qp6bg`**. Exact source SHA
+  **`2a5f44e845880410719783ed076bffec1d9bba40`**.
+- **Test results: `355/355` files and `1,437/1,437` tests PASS.**
+  New W1 domain suite `11/11` PASS; new W2 Resend contract `6/6`
+  PASS; existing generic email-provider transport suite remained PASS.
+- `pnpm check:rc`: TypeScript PASS; ESLint zero errors / nine existing
+  warnings; Next.js production compilation and route generation PASS.
+  Build upload reported successful.
+- Render deploy reported **LIVE** at
+  `2026-10-11T00:27:29.715355Z`. Public URL:
+  `https://servicedesk-v2-multilane-gate.onrender.com`.
+  **This is deploy + contract-test evidence, not a real provider receipt,
+  authenticated UI test or a live new-account signup.**
+- Canonical V2 untouched; ServiceDesk Supabase migrations not changed in
+  this integration. W1 domain function is a reusable *pure policy*:
+  an authenticated UI query/chooser is still needed to use it.
+  W2 Resend mapping is for business transactional HTTP mail, separate
+  from owner-reported configured Supabase Auth SMTP; no provider email
+  was sent.
+- Frontend branch
+  `feat/servicedesk-v3-ui-overhaul-20261011` is reserved and based
+  on the original candidate SHA. It needs activation in a new independent
+  Work chat; **no frontend work or browser screenshot evidence is claimed
+  by this backend merge**.
+
+### Readiness
+
+Backend integrated candidate A: **CONTRACT_TESTED**. Real operational
+acceptance: **CONFIGURATION_BLOCKED** until owner signup migration 0037–0059
+and controlled email confirmation/e2e journey pass. Customer-ready
+release: **NOT AUTHORIZED / NOT VERIFIED**.
+
+### Next focused work
+
+W1: consume pure selection contract only through verified authenticated RLS
+membership results (coordinator/frontend cross-lane handshake) and test
+0/1/multiple business routing. W2: wire compatible Resend transport into
+a durable authorized outbox only when provider credentials and mode are
+explicitly approved; do not treat SMTP configuration as API wiring.
+W3: resolve migration 0037 with platform support, not bypass; maintain
+a single integration gate per batch. W4: execute UI redesign brief on
+its exclusive branch with real browser before/after images.
