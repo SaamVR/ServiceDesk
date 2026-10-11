@@ -9,6 +9,11 @@ on:
     branches:
       - feat/servicedesk-v3-coordination-20261011
     paths:
+      - "src/server/core/**"
+      - "src/server/api-handlers/**"
+      - "src/server/integrations/whatsapp/**"
+      - "tests/providers/v3-*.test.ts"
+      - "tests/e2e/v3-*.test.ts"
       - "src/server/jobs/**"
       - "src/server/integrations/recovery/**"
       - "src/server/integrations/outbox/**"
