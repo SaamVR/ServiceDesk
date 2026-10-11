@@ -3,6 +3,7 @@ import { resolveStaffActor } from "@/features/operations/operational-product-run
 import { readConfiguredAiRuntimeConfig } from "./runtime-config";
 import { callAiModel } from "./model-transport";
 import { createFetchAiModelTransport } from "./fetch-transport";
+import { validateRequestBriefDraft } from "./request-brief-safety";
 
 export interface RequestBriefInput {
   workspaceSlug: string;
@@ -119,9 +120,9 @@ export async function generateAuthorizedRequestBrief(
   if (response.value.requestedToolCalls?.length || response.value.citations?.length) {
     return fail("AI_BRIEF_OUTPUT_UNSAFE", "AI returned a workflow proposal instead of a review brief.");
   }
-  const briefing = response.value.replyDraft?.trim();
-  if (!briefing || briefing.length > 900) {
-    return fail("AI_BRIEF_OUTPUT_INVALID", "AI did not return a bounded review brief.");
+  const briefing = validateRequestBriefDraft(response.value.replyDraft);
+  if (!briefing) {
+    return fail("AI_BRIEF_OUTPUT_INVALID", "AI produced unverified contact, date, price or action text; use the saved request instead.");
   }
 
   return { ok: true, value: {
