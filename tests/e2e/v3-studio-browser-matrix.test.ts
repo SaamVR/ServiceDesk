@@ -48,7 +48,7 @@ describe("V3 Studio OS browser acceptance capture matrix", () => {
     expect(source).toContain("independentlyVerifiedSourceSha: false");
     expect(source).toContain("CAPTURED_NOT_YET_VISUALLY_ACCEPTED");
     expect(source).toContain("randomUUID()");
-    expect(source).toContain("Authenticated browser profiles must stay outside Git".replace("Authenticated", "authenticated"));
+    expect(source).toContain("authenticated browser profiles must stay outside Git");
     expect(source).toContain("DevToolsActivePort");
     expect(source).toContain("mode: 0o700");
     expect(source).toContain("QA screenshot directory must be private and empty");
