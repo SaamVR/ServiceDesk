@@ -9,7 +9,7 @@ permissions:
   contents: read
 concurrency:
   group: servicedesk-v4-reconciled-rc-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   exact-head-rc:
     runs-on: ubuntu-latest
