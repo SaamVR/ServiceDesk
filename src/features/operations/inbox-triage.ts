@@ -32,10 +32,12 @@ export function normalizeInboxQueue(value?: string | null): InboxQueue {
 export function inboxQueueHref(
   queue: InboxQueue,
   conversationId?: string,
+  search?: string,
 ): string {
   const params = new URLSearchParams();
   if (queue !== "all") params.set("queue", queue);
   if (conversationId) params.set("conversation", conversationId);
+  if (search?.trim()) params.set("search", search.trim().slice(0, 120));
   const search = params.toString();
   return search ? "?" + search : "?";
 }
@@ -112,4 +114,43 @@ export function buildInboxTriage<
   });
 
   return { visible, counts, threadFlags };
+}
+
+/**
+ * Filter an already tenant-authorized triage queue using visible conversation
+ * metadata and the latest external message. Presentation only: this is not a
+ * server-side search permission, identity verification or provider lookup.
+ */
+export function searchInboxQueue<
+  Conversation extends InboxTriageConversation & { channel?: string },
+  Message extends InboxTriageMessage & { body?: string | null },
+  Customer extends InboxTriageCustomer & { displayName?: string | null },
+>(
+  conversations: readonly Conversation[],
+  messages: readonly Message[],
+  customers: readonly Customer[],
+  rawSearch?: string | null,
+): Conversation[] {
+  const query = rawSearch?.trim().slice(0, 120).toLocaleLowerCase();
+  if (!query) return [...conversations];
+
+  const names = new Map(customers.map((customer) =>
+    [customer.id, customer.displayName?.toLocaleLowerCase() ?? ""] as const));
+  const latest = new Map<string, Message>();
+  for (const message of messages) {
+    if (message.direction === "INTERNAL") continue;
+    const previous = latest.get(message.conversationId);
+    const when = Date.parse(message.createdAt);
+    if (!previous || (Number.isFinite(when) && when >= Date.parse(previous.createdAt))) {
+      latest.set(message.conversationId, message);
+    }
+  }
+  return conversations.filter((conversation) => {
+    const searchable = [
+      names.get(conversation.customerId ?? "") ?? "",
+      conversation.channel ?? "",
+      latest.get(conversation.id)?.body ?? "",
+    ].join(" ").toLocaleLowerCase();
+    return searchable.includes(query);
+  });
 }
