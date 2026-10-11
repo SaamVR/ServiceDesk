@@ -54,6 +54,7 @@ import { AiRequestBrief } from "./AiRequestBrief";
 import { AiOperationsStatus } from "./AiOperationsStatus";
 import { automationPlaybooks, getAutomationPlaybook } from "./automation-playbooks";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
+import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { settingsFeedbackFragment } from "./settings-navigation";
@@ -2477,7 +2478,10 @@ function WorkflowBuilderPanel({
   const editorBranches = branchScope?.mode === "BRANCH"
     ? (branchScope.branches ?? []).filter((branch) => branch.id === branchScope.selectedBranchId)
     : branchScope?.branches ?? [];
-  const ownerCanEdit = data.actor.role === "OWNER" && editorBranches.length > 0;
+  // Workflow authoring RPCs are service_role-only in migration 0055.
+  // QA_SESSION_RLS must not display a control which cannot safely persist.
+  const workflowBackendWritable = operationalDatabaseMode() === "SERVICE_ROLE";
+  const ownerCanEdit = data.actor.role === "OWNER" && editorBranches.length > 0 && workflowBackendWritable;
   const playbook = getAutomationPlaybook(automationTemplate);
 
   async function saveDraftAction(formData: FormData) {
@@ -2751,8 +2755,10 @@ function WorkflowBuilderPanel({
             </section>
           ) : (
             <FeedbackBanner
-              title={data.actor.role === "OWNER" ? "Select a branch to edit rules" : "Workflow rules are owner-managed"}
-              description={data.actor.role === "OWNER"
+              title={data.actor.role === "OWNER" && !workflowBackendWritable ? "Workflow authoring backend not connected" : data.actor.role === "OWNER" ? "Select a branch to edit rules" : "Workflow rules are owner-managed"}
+              description={data.actor.role === "OWNER" && !workflowBackendWritable
+                ? "This QA-session preview can read workflow history but cannot call the server-restricted rule authoring RPCs. A separately configured authorized service backend is required. No rule has been published."
+                : data.actor.role === "OWNER"
                 ? "HQ can review all branches, but rule authoring requires one explicit branch scope."
                 : "Dispatchers can inspect decisions for their assigned branch but cannot draft, publish, approve external sends or replay failed actions."}
               tone="info"
