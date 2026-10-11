@@ -25,6 +25,8 @@ describe("Studio OS operational workspaces", () => {
     expect(css).toContain(".scheduleQueueNav");
     expect(css).toContain("background: #e1f3ee");
     expect(css).toContain("max-width: 800px");
+    expect(css).toContain("min-width: 1390px");
+    expect(css).toContain("grid-template-columns: minmax(0, 1fr);");
     expect(css).toContain("prefers-reduced-motion:reduce");
     expect(css).toContain(":focus-visible");
   });
