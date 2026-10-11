@@ -6,8 +6,8 @@ const file = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 describe("Studio OS operational workspaces", () => {
   it("exposes six real operational workflow destinations without server authority changes", () => {
     const route = file("src/features/operations/OperationalProductRoute.tsx");
-    for (const module of ["inbox","requests","quotes","schedule","jobs","invoices"]) {
-      expect(route).toContain('module: "' + module + '"');
+    for (const moduleName of ["inbox","requests","quotes","schedule","jobs","invoices"]) {
+      expect(route).toContain('module: "' + moduleName + '"');
     }
     expect(route).toContain('aria-label="Service workflow shortcuts"');
     expect(route).toContain('aria-current={module === item.module ? "page" : undefined}');
