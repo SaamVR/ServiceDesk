@@ -12,14 +12,7 @@ const invoices=[
 describe("real invoice collection filters",()=>{
  it("uses authoritative status rather than calling zero-balance drafts paid",()=>{
   expect(invoiceQueueOf(invoices[3])).toBe("other");
-  expect(invoiceQueueCounts(invoices)).toEqual({all:5,open:2,paid:1,void:1,other:1 it("wires real invoice search and collection links into authorized staff routing",()=>{
-  const code=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
-  expect(code).toContain("filterInvoiceQueue(orderedInvoices, queue)");
-  expect(code).toContain("invoiceFeedbackPrefix(queue, search, invoiceId)");
-  expect(code).toContain("invoiceQueueHref(queue, search, invoice.id)");
-  expect(code).toContain("InvoiceCollectionFilters queue={queue}");
- });
-});
+  expect(invoiceQueueCounts(invoices)).toEqual({all:5,open:2,paid:1,void:1,other:1});
   expect(filterInvoiceQueue(invoices,"open").map(x=>x.id)).toEqual(["a","e"]);
   expect(filterInvoiceQueue(invoices,"paid").map(x=>x.id)).toEqual(["b"]);
   expect(normalizeInvoiceQueue("unknown")).toBe("all");
@@ -28,5 +21,12 @@ describe("real invoice collection filters",()=>{
   expect(invoiceQueueHref("open","Walter Finch","a")).toBe("?queue=open&search=Walter+Finch&invoice=a");
   expect(invoiceFeedbackPrefix("open","Walter Finch","a")).toBe("queue=open&search=Walter+Finch&invoice=a&");
   expect(invoiceQueueHref("all","")).toBe("?");
+ });
+ it("wires real invoice search and collection links into authorized staff routing",()=>{
+  const code=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
+  expect(code).toContain("filterInvoiceQueue(orderedInvoices, queue)");
+  expect(code).toContain("invoiceFeedbackPrefix(queue, search, invoiceId)");
+  expect(code).toContain("invoiceQueueHref(queue, search, invoice.id)");
+  expect(code).toContain("InvoiceCollectionFilters queue={queue}");
  });
 });
