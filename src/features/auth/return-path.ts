@@ -1,6 +1,6 @@
 export function normalizeReturnPath(value?: string | null) {
   const fallback = "/auth/continue";
-  if (!value) return fallback;
+  if (!value || /[\\\u0000-\u001f\u007f]/.test(value) || /%(?:0a|0d|5c)/i.test(value)) return fallback;
 
   const path = value.trim();
   if (
