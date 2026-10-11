@@ -32,7 +32,20 @@ export async function handleRequestBriefPost(
   try { ownOrigin = new URL(request.url).origin; }
   catch { return json(400, { code: "REQUEST_URL_INVALID" }); }
   const fetchSite = request.headers.get("sec-fetch-site");
-  if (!origin || origin !== ownOrigin ||
+  // On Render, Next may see an internal proxy URL while the browser sends
+  // its real public Origin. Never trust X-Forwarded-Host supplied in the
+  // request; use the exact external origin provisioned in server config.
+  const configured = process.env.SERVICEDESK_AI_ALLOWED_ORIGIN;
+  let trustedPublicOrigin: string | undefined;
+  if (configured) {
+    try {
+      const parsed = new URL(configured);
+      if (parsed.protocol === "https:" && parsed.pathname === "/" &&
+          !parsed.username && !parsed.password && !parsed.search && !parsed.hash &&
+          !parsed.port) trustedPublicOrigin = parsed.origin;
+    } catch { /* Invalid configuration must fail closed. */ }
+  }
+  if (!origin || (origin !== ownOrigin && origin !== trustedPublicOrigin) ||
       (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
     return json(403, { code: "SAME_ORIGIN_REQUIRED" });
   }

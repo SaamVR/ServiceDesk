@@ -1,0 +1,26 @@
+name: ServiceDesk V4 AI behind-proxy same-origin security RC
+on:
+  push:
+    branches: [feat/servicedesk-v4-qa-gates-readiness-20261012]
+    paths:
+      - src/server/api-handlers/ai-request-brief-http.ts
+      - tests/e2e/v4-ai-proxy-origin.test.ts
+      - .github/workflows/v4-ai-proxy-origin-rc.yml
+permissions:
+  contents: read
+jobs:
+  proxy-origin-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: pnpm/action-setup@v4
+        with: {version: 10.17.1,run_install: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2, cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - name: Check real hosting proxy CSRF, hostile forwarded headers and wrong origins
+        run: pnpm exec vitest run tests/e2e/v4-ai-proxy-origin.test.ts tests/e2e/v4-ai-request-copilot.test.ts
+      - name: Full release RC, typecheck, lint and build
+        run: pnpm check:rc
