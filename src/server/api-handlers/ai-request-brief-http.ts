@@ -51,7 +51,7 @@ export async function handleRequestBriefPost(
       typeof p.workspaceSlug !== "string" || p.workspaceSlug.length < 3 ||
       p.workspaceSlug.length > 40 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.workspaceSlug) ||
       typeof p.requestId !== "string" ||
-      !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(p.requestId)) {
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.requestId)) {
     return json(400, { code: "REQUEST_SCHEMA_INVALID" });
   }
   let result: Result<RequestBrief>;
