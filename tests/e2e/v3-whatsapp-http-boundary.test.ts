@@ -112,6 +112,33 @@ describe("configured WhatsApp HTTP transport", () => {
     expect(created).toBe(0);
   });
 
+  it("supports opt-in durable status reconciliation but creates no privileged client for invalid signatures", async () => {
+    const raw = JSON.stringify({ object: "whatsapp_business_account", entry: [
+      { changes: [{ value: { metadata: { phone_number_id: "10001001" },
+        statuses: [{ id: "wamid-1", status: "delivered", timestamp: "1791687600",
+          recipient_id: "15553334444" }],
+      } }] },
+    ] });
+    const config = { ...env, SERVICEDESK_WHATSAPP_DURABLE_STATUS_ENABLED: "true" };
+    let accepted = 0;
+    const dependencies = {
+      createStatusStore() {
+        return { async applyStatusCallback() {
+          accepted++;
+          return "APPLIED" as const;
+        } };
+      },
+    };
+    const verified = await handleWhatsAppHttpPost(request(raw), config, dependencies);
+    expect(verified.status).toBe(200);
+    expect(accepted).toBe(1);
+
+    const unsigned = await handleWhatsAppHttpPost(
+      request(raw, { "x-hub-signature-256": "sha256=" + "0".repeat(64) }), config, dependencies);
+    expect(unsigned.status).toBe(401);
+    expect(accepted).toBe(1);
+  });
+
   it("rejects missing runtime configuration, wrong content type and excessive bodies", async () => {
     const raw = body();
     const unavailable = await handleWhatsAppHttpPost(request(raw), {

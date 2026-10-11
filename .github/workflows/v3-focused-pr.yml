@@ -52,6 +52,10 @@ on:
       - "src/server/ai/runtime-config.ts"
       - "tests/providers/ai-fetch-runtime.test.ts"
       - "src/server/ai/operational-runtime.ts"
+      - "src/server/ai/staff-invocation.ts"
+      - "src/server/ai/catalog-knowledge.ts"
+      - "tests/providers/ai-staff-invocation.test.ts"
+      - "tests/providers/ai-catalog-knowledge.test.ts"
       - "tests/providers/ai-operational-runtime.test.ts"
       - "src/server/ai/postgres-conversation-store.ts"
       - "src/server/ai/postgres-configured-service.ts"
@@ -61,6 +65,8 @@ on:
       - "src/server/api-handlers/provider-whatsapp-http.ts"
       - "tests/e2e/v3-whatsapp-http-boundary.test.ts"
       - "src/server/integrations/whatsapp/adapter.ts"
+      - "src/server/integrations/whatsapp/status-postgres.ts"
+      - "tests/providers/whatsapp-status-postgres.test.ts"
       - "src/server/integrations/whatsapp/inbound-config.ts"
       - "tests/providers/whatsapp-runtime-inbound.test.ts"
       - "src/server/core/conversation-postgres.ts"
@@ -115,9 +121,12 @@ jobs:
           tests/providers/ai-configured-service.test.ts
           tests/providers/ai-fetch-runtime.test.ts
           tests/providers/ai-operational-runtime.test.ts
+          tests/providers/ai-staff-invocation.test.ts
+          tests/providers/ai-catalog-knowledge.test.ts
           tests/db/v3-ai-durable-conversation-store.test.ts
           tests/providers/ai-postgres-configured-service.test.ts
           tests/providers/whatsapp-runtime-inbound.test.ts
+          tests/providers/whatsapp-status-postgres.test.ts
           tests/e2e/v3-whatsapp-http-boundary.test.ts
           tests/db/v3-inbound-rpc-scope.test.ts
           tests/providers/whatsapp-handler-hardening.test.ts
