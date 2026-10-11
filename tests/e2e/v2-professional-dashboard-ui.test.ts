@@ -6,6 +6,7 @@ import "./v3-studio-local-day.test";
 import "./v3-inbox-thread-navigation.test";
 import "./v3-dispatch-coverage-week.test";
 import "./v3-studio-queue-performance.test";
+import "./v3-jobs-search.test";
 
 const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
