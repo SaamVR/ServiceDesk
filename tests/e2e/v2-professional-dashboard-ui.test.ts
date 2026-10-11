@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import "./v3-studio-local-day.test";
 
 const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 

@@ -9,6 +9,8 @@ import type {
 } from "./operational-product-runtime";
 import { summarizeOutstandingInvoices } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
+import { createLocalDayKey } from "./staff-local-day";
+import { indexStaffById } from "./staff-snapshot-index";
 import styles from "./StaffOverviewDashboard.module.css";
 
 function attentionTone(severity: "INFO" | "WARNING" | "CRITICAL") {
@@ -21,21 +23,6 @@ function readable(value: string) {
   return value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function dateParts(value: string, timeZone: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return undefined;
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
-  const year = part("year");
-  const month = part("month");
-  const day = part("day");
-  return year && month && day ? `${year}-${month}-${day}` : undefined;
-}
 
 function formatTime(value: string, timeZone: string) {
   const date = new Date(value);
@@ -127,22 +114,28 @@ function EmptyBlock({ title, description }: { title: string; description: string
 
 function ScheduleRow({
   visit,
-  snapshot,
+  timeZone,
+  records,
   workspace,
 }: {
   visit: OperationalVisit;
-  snapshot: Pick<OperationalStaffSnapshot, "workspace" | "requests" | "customers" | "crews">;
+  timeZone: string;
+  records: {
+    requests: ReadonlyMap<string, OperationalStaffSnapshot["requests"][number]>;
+    customers: ReadonlyMap<string, OperationalStaffSnapshot["customers"][number]>;
+    crews: ReadonlyMap<string, OperationalStaffSnapshot["crews"][number]>;
+  };
   workspace: string;
 }) {
-  const request = snapshot.requests.find((item) => item.id === visit.requestId);
+  const request = records.requests.get(visit.requestId);
   const customer = request?.customerId
-    ? snapshot.customers.find((item) => item.id === request.customerId)
+    ? records.customers.get(request.customerId)
     : undefined;
-  const crew = visit.crewId ? snapshot.crews.find((item) => item.id === visit.crewId) : undefined;
+  const crew = visit.crewId ? records.crews.get(visit.crewId) : undefined;
 
   return (
     <Link className={styles.scheduleRow} href={`/app/${encodeURIComponent(workspace)}/jobs?job=${encodeURIComponent(visit.id)}`}>
-      <time className={styles.scheduleTime}>{formatTime(visit.startAt, snapshot.workspace.timezone)}</time>
+      <time className={styles.scheduleTime}>{formatTime(visit.startAt, timeZone)}</time>
       <span className={styles.scheduleMarker} aria-hidden="true" />
       <span className={styles.scheduleCopy}>
         <strong>{request?.serviceLabel ?? "Service visit"}</strong>
@@ -204,11 +197,21 @@ export function StaffOverviewDashboard({
       ? "Multiple currencies"
       : "—";
 
-  const todayKey = dateParts(snapshot.loadedAt, snapshot.workspace.timezone);
-  const todayVisits = snapshot.visits
-    .filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status))
-    .filter((visit) => dateParts(visit.startAt, snapshot.workspace.timezone) === todayKey)
-    .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt));
+  // A single timezone formatter per request avoids repeated Intl construction.
+  // Invalid snapshot dates must never silently match invalid visit dates.
+  const dayKey = createLocalDayKey(snapshot.workspace.timezone);
+  const todayKey = dayKey(snapshot.loadedAt);
+  const todayVisits = todayKey
+    ? snapshot.visits
+      .filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status))
+      .filter((visit) => dayKey(visit.startAt) === todayKey)
+      .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt))
+    : [];
+  const records = {
+    requests: indexStaffById(snapshot.requests),
+    customers: indexStaffById(snapshot.customers),
+    crews: indexStaffById(snapshot.crews),
+  };
   const unassignedToday = todayVisits.filter((visit) => !visit.crewId).length;
   const inProgressToday = todayVisits.filter((visit) => ["IN_PROGRESS", "EN_ROUTE"].includes(visit.status)).length;
   const criticalAttention = attention.filter((item) => item.severity === "CRITICAL").length;
@@ -325,7 +328,7 @@ export function StaffOverviewDashboard({
           {todayVisits.length ? (
             <div className={styles.scheduleList}>
               {todayVisits.slice(0, 8).map((visit) => (
-                <ScheduleRow key={visit.id} visit={visit} snapshot={snapshot} workspace={workspace} />
+                <ScheduleRow key={visit.id} visit={visit} timeZone={snapshot.workspace.timezone} records={records} workspace={workspace} />
               ))}
             </div>
           ) : (
