@@ -43,11 +43,12 @@ describe("same-origin operational AI draft HTTP boundary", () => {
 
   it("rejects cross-origin browser requests before invoking the staff actor resolver", async () => {
     let calls = 0;
-    for (const headers of [
+    const invalidHeaders: Array<Record<string, string>> = [
       { Origin: "https://untrusted.example.test" },
       { Origin: "" },
       { "sec-fetch-site": "cross-site" },
-    ]) {
+    ];
+    for (const headers of invalidHeaders) {
       const r = await handleStaffAiHttpPost(makeRequest(JSON.stringify(entry), headers), async () => {
         calls++; return { ok: true, value: turn };
       });
