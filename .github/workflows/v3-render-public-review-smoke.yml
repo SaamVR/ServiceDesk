@@ -19,7 +19,7 @@ jobs:
       - name: Check live Render build identity and public routes
         env:
           REVIEW_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
-          EXPECTED_SHA: 404721bc5b0462b7663c6b112ac5ed3a48701d86
+          EXPECTED_SHA: 3bd559119004751b9d6b50c864ce589de9f1e542
         run: |
           node --input-type=module <<'JS'
           const origin = process.env.REVIEW_ORIGIN;
@@ -64,6 +64,9 @@ jobs:
             ["/integrations", "Connect the systems your operation already uses."],
             ["/contact", "See ServiceDesk against your real cleaning workflow."],
             ["/auth/sign-in", "Ready for what's next?"],
+            ["/auth/sign-up", "Build a calmer workday."],
+            ["/auth/sign-up/check-email", "Check your email."],
+            ["/auth/forgot-password", "Get back to work."],
             ["/tour", "Controlled tour in an isolated showcase workspace."],
             ["/sandbox", "One job. Every step. Your decisions."],
           ];
@@ -74,5 +77,20 @@ jobs:
             }
             console.log("PASS " + path + " content + noindex");
           }
-          console.log("PASS Render public preview GET smoke. No authenticated staff/provider/DB acceptance implied.");
+          const signup = await get("/auth/sign-up");
+          const emailField = signup.match(/<input[^>]*name="email"[^>]*>/);
+          if (!signup.includes("approved test email addresses") ||
+              !emailField || /\sdisabled(?:=|\s|>)/.test(emailField[0])) {
+            throw new Error("Expected QA-only signup form is missing or disabled.");
+          }
+          console.log("PASS isolated QA signup form enabled, not public promotion");
+          const continuation = await fetch(origin + "/auth/continue", {
+            redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(25_000),
+          });
+          if (![302, 303, 307, 308].includes(continuation.status) ||
+              !(continuation.headers.get("location") || "").includes("/auth/sign-in")) {
+            throw new Error("Unauthenticated continuation did not redirect to sign-in.");
+          }
+          console.log("PASS missing session denied");
+          console.log("PASS Render public/QA HTTP preflight. Real confirmation email and authenticated staff acceptance are separate.");
           JS
