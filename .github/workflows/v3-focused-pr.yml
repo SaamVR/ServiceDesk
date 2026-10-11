@@ -27,6 +27,8 @@ on:
       - "tests/db/outbox-postgres-gateway.test.ts"
       - "src/server/integrations/recovery/serialization.ts"
       - "tests/providers/provider-recovery-serialization.test.ts"
+      - "src/server/ai/model-transport.ts"
+      - "tests/providers/ai-model-transport-hardening.test.ts"
       - "scripts/release/v3-staging-auth-smoke.mjs"
       - "scripts/release/v3-staging-auth-smoke.test.mjs"
       - ".github/workflows/v3-focused-pr.yml"
@@ -71,5 +73,6 @@ jobs:
           tests/providers/provider-recovery-scheduler.test.ts
           tests/db/outbox-postgres-gateway.test.ts
           tests/providers/provider-recovery-serialization.test.ts
+          tests/providers/ai-model-transport-hardening.test.ts
       - name: Complete repository RC gate (typecheck, all tests, lint, Next build)
         run: pnpm check:rc
