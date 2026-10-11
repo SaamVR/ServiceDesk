@@ -140,6 +140,9 @@ jobs:
           tests/providers/v3-reviewed-inbox-reply.test.ts
           tests/e2e/v3-reviewed-reply-http.test.ts
           tests/providers/v3-delivery-triage.test.ts
+          tests/providers/e05-conversation-reply-intent.test.ts
+          tests/providers/v3-conversation-reply-postgres.test.ts
+          tests/providers/v3-delivery-outbox-evidence.test.ts
           tests/e2e/v3-delivery-triage-http.test.ts
           tests/e2e/v3-ai-staff-http.test.ts
           tests/providers/ai-catalog-knowledge.test.ts
