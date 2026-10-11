@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { invoiceQueueCounts,filterInvoiceQueue,invoiceQueueHref,invoiceFeedbackPrefix,normalizeInvoiceQueue,invoiceQueueOf,isCollectibleInvoice } from "@/features/operations/invoice-collection-queue";
 const invoices=[
- {id:"a",status:"SENT",balanceMinor:7000},
+ {id:"a",status:"ISSUED",balanceMinor:7000},
  {id:"b",status:"PAID",balanceMinor:0},
  {id:"c",status:"VOID",balanceMinor:5000},
  {id:"d",status:"DRAFT",balanceMinor:0},
@@ -20,12 +20,13 @@ describe("real invoice collection filters",()=>{
   expect(normalizeInvoiceQueue("unknown")).toBe("all");
  });
  it("never presents draft invoice balances as collectible or enables payment actions",()=>{
-  expect(isCollectibleInvoice(invoices[0])).toBe(false); // SENT is not an authoritative invoice status
+  expect(isCollectibleInvoice(invoices[0])).toBe(true);
   expect(isCollectibleInvoice(invoices[3])).toBe(false);
   expect(isCollectibleInvoice(invoices[4])).toBe(true);
   expect(isCollectibleInvoice(invoices[5])).toBe(false);
   expect(isCollectibleInvoice(invoices[6])).toBe(false);
   expect(isCollectibleInvoice({id:"i",status:"ISSUED",balanceMinor:5100})).toBe(true);
+  expect(isCollectibleInvoice({id:"i",status:"SENT",balanceMinor:5100})).toBe(false);
   expect(isCollectibleInvoice({id:"i",status:"DRAFT",balanceMinor:5100})).toBe(false);
   expect(isCollectibleInvoice({id:"i",status:"ISSUED",balanceMinor:NaN})).toBe(false);
   const code=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
