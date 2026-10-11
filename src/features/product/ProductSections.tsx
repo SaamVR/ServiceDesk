@@ -57,12 +57,19 @@ export function PricingControlCard() {
         <h2 id="pricing-control-heading">Quotes stay predictable, versioned and auditable.</h2>
         <p>Configured pricing rules—not AI output—set the quote. Staff and customers see the same amount, deposit, duration and balance.</p>
       </div>
-      <dl className="metric-grid">
-        <div><dt>Total</dt><dd>$340</dd></div>
-        <div><dt>Deposit</dt><dd>$85</dd></div>
-        <div><dt>Balance</dt><dd>$255</dd></div>
-        <div><dt>Duration</dt><dd>{moveOutFixture.serviceMinutes}+{moveOutFixture.bufferMinutes}m</dd></div>
-      </dl>
+      <div>
+        <p className="eyebrow">Illustrative move-out cleaning quote · sample only</p>
+        <dl className="metric-grid" aria-label="Illustrative customer quote, not a live price">
+          <div><dt>Total</dt><dd>$340</dd></div>
+          <div><dt>Deposit</dt><dd>$85</dd></div>
+          <div><dt>Balance</dt><dd>$255</dd></div>
+          <div><dt>Duration</dt><dd>{moveOutFixture.serviceMinutes}+{moveOutFixture.bufferMinutes}m</dd></div>
+        </dl>
+        <p className="pricing-illustrative-note" role="note">
+          Example amounts only. Actual customer prices depend on a business&apos;s configured
+          rates; this is not ServiceDesk subscription pricing or a payment receipt.
+        </p>
+      </div>
     </section>
   );
 }
