@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducer } from "react";
+import Link from "next/link";
 import {
   createSandboxState,
   sandboxAllocatedMinor,
@@ -45,13 +46,13 @@ export function SandboxJourney() {
   return (
     <main className={styles.page} id="sandbox-main">
       <header className={styles.nav}>
-        <a className={styles.logo} href="/" aria-label="ServiceDesk AI home">
+        <Link className={styles.logo} href="/" aria-label="ServiceDesk AI home">
           <span className={styles.logoMark} aria-hidden="true">S</span>
           <span>ServiceDesk <b>AI</b></span>
-        </a>
+        </Link>
         <nav aria-label="Sandbox navigation" className={styles.navLinks}>
-          <a href="/tour">Guided tour</a>
-          <a href="/">Website</a>
+          <Link href="/tour">Guided tour</Link>
+          <Link href="/">Website</Link>
         </nav>
       </header>
 
@@ -177,7 +178,7 @@ export function SandboxJourney() {
           </section>
         </div>
       </div>
-      <footer className={styles.footer}><span>ServiceDesk AI · interactive demo data</span><a href="/tour">Explore the full guided product tour <span aria-hidden="true">→</span></a></footer>
+      <footer className={styles.footer}><span>ServiceDesk AI · interactive demo data</span><Link href="/tour">Explore the full guided product tour <span aria-hidden="true">→</span></Link></footer>
     </main>
   );
 }
