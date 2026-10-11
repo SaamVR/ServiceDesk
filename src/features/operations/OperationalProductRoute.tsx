@@ -2926,6 +2926,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
         <AiOperationsStatus
           workspaceSlug={workspaceSlug}
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
+          allowOwnerModelTest={data.actor.role === "OWNER"}
         />
         <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
         <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
@@ -2957,6 +2958,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
       <AiOperationsStatus
           workspaceSlug={workspaceSlug}
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
+          allowOwnerModelTest={data.actor.role === "OWNER"}
         />
       <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
       <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">

@@ -2,13 +2,15 @@ import Link from "next/link";
 import { buildStaffModuleHref } from "./staff-modules";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import styles from "./AiOperationsStatus.module.css";
+import { AiOwnerModelProbe } from "./AiOwnerModelProbe";
 
 export function AiOperationsStatus({
-  workspaceSlug, publishedRuleCount, compact = false,
+  workspaceSlug, publishedRuleCount, compact = false, allowOwnerModelTest = false,
 }: {
   workspaceSlug: string;
   publishedRuleCount: number;
   compact?: boolean;
+  allowOwnerModelTest?: boolean;
 }) {
   const ready = readConfiguredAiRuntimeConfig().ok;
   return (
@@ -42,6 +44,7 @@ export function AiOperationsStatus({
           <Link href={buildStaffModuleHref(workspaceSlug, "automations")}>Review rules <span aria-hidden="true">↗</span></Link>
         </div>
       </div>
+      {allowOwnerModelTest && !compact ? <AiOwnerModelProbe workspaceSlug={workspaceSlug} configured={ready} /> : null}
       {!compact ? <p className={styles.note}>Configuration status is not a successful provider connection test. AI suggestions cannot execute quotes, scheduling, outbound messages or charges.</p> : null}
     </section>
   );
