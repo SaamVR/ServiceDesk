@@ -10,12 +10,12 @@ import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const pages = [
-  { slug: "home", path: "/" },
-  { slug: "features", path: "/features" },
-  { slug: "pricing", path: "/pricing" },
-  { slug: "integrations", path: "/integrations" },
-  { slug: "contact", path: "/contact" },
-  { slug: "sign-in", path: "/auth/sign-in" },
+  { slug: "home", path: "/", title: "Run cleaning operations from enquiry to paid job." },
+  { slug: "features", path: "/features", title: "Everything a cleaning operations team needs to move work forward." },
+  { slug: "pricing", path: "/pricing", title: "Service quote pricing stays transparent and controlled." },
+  { slug: "integrations", path: "/integrations", title: "Connect the systems your operation already uses." },
+  { slug: "contact", path: "/contact", title: "See ServiceDesk against your real cleaning workflow." },
+  { slug: "sign-in", path: "/auth/sign-in", title: "Ready for what's next?" },
 ];
 const widths = [320, 390, 834, 1280, 1440];
 const height = (width) => width <= 390 ? 812 : 900;
@@ -99,19 +99,23 @@ async function inspect(expression) {
   if (result.exceptionDetails) throw new Error("Chrome page inspection failed.");
   return result.result?.value;
 }
-async function loaded(path) {
+async function loaded(page) {
   for (let i = 0; i < 100; i++) {
     try {
       const state = await inspect(
         '(() => ({path: location.pathname,ready: document.readyState === "complete",' +
-        'main:!!document.querySelector("main"),heading:!!document.querySelector("main h1"),' +
+        'main:!!document.querySelector("main"),' +
+        'heading:document.querySelector("main h1")?.textContent?.trim()?.replace(/\\s+/g," ") || "",' +
         'overlay:!!document.querySelector("nextjs-portal [data-nextjs-dialog-overlay]")}))()'
       );
-      if (state?.path === path && state.ready && state.main && state.heading && !state.overlay) return;
+      // A generic Next shell/error page is not proof of the requested product
+      // route; verify the route's actual authored H1 before capturing a PNG.
+      if (state?.path === page.path && state.ready && state.main &&
+          state.heading === page.title && !state.overlay) return;
     } catch { /* Navigation invalidated the previous execution context. */ }
     await sleep(120);
   }
-  throw new Error("Public page did not render main and h1: " + path);
+  throw new Error("Public page did not render the expected product heading: " + page.slug);
 }
 async function snapshot(page, width, type) {
   const data = await channel.send("Page.captureScreenshot", {
@@ -172,7 +176,7 @@ try {
     for (const page of pages) {
       const navigation = await channel.send("Page.navigate", { url: origin + page.path });
       if (navigation.errorText) throw new Error("Public navigation failed: " + page.slug);
-      await loaded(page.path);
+      await loaded(page);
       await inspect("document.fonts.ready.then(() => true)");
       await sleep(120);
       layout.push(await layoutCheck(page, width));

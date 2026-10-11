@@ -2,6 +2,7 @@ import { test, after } from "node:test";
 // The same bounded release CI runs the new V3 provenance and auth-negative checks.
 import "./v3-staging-source-preflight.test.mjs";
 import "./v3-migration-source-audit.test.mjs";
+import "./v3-public-browser-proof.test.mjs";
 import assert from "node:assert/strict";
 import {
   DEFAULT_PREVIEW,
