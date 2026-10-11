@@ -11,6 +11,9 @@ on:
       - .github/workflows/v4-wave2-responsive-full-ci.yml
       - src/features/auth/RegistrationShell.module.css
       - tests/e2e/v4-responsive-contrast-navigation.test.ts
+      - tests/e2e/v4-clean-air-home.test.tsx
+      - tests/e2e/v4-clean-public-pages.test.tsx
+      - tests/e2e/v4-clean-tour-public.test.ts
   workflow_dispatch:
 permissions:
   contents: read
