@@ -206,4 +206,6 @@ Source: [V3 active four-lane batch](v3-four-lane-active-batch-20261011.md) (file
 | V3-DB 0037–0059 | External platform | BLOCKED | 0036 on connected staging | Issue #75 safety rejection before execution; no bypass |
 | V3-Auth confirmation | External provider | BLOCKED | signup disabled | SMTP owner-configured; controlled delivered email/session receipt absent |
 
-Do not confuse W1/W2 authored tests with a successful repository Vitest run. No current-candidate full `pnpm check:rc` after these new commits.
+Candidate B: [PR #82](https://github.com/SaamVR/ServiceDesk/pull/82) at `7b9f4f1a00a87524397dd45d498d8fb4b7d7db09`, reviewable but **not merged**. The four-file diff is a clean branch-off of coordinator `62cc6fd...`. V3 narrow GitHub Actions gate added in `.github/workflows/v3-focused-pr.yml` (single 8-minute job, path filtered); its successful execution is NOT yet established.
+
+Do not confuse W1/W2 authored tests or isolated Node probes with a successful repository Vitest run. No full `pnpm check:rc` on candidate B. See [four-lane active packet](execution/v3-four-lane-active-batch-20261011.md).
