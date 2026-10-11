@@ -77,8 +77,8 @@ async function connect(url) {
     if (!item) return;
     pending.delete(packet.id);
     clearTimeout(item.timer);
-    if (packet.error) item.reject(new Error(packet.error.message));
-    else item.resolve(packet.result);
+    if (packet.error) item.fail(new Error(packet.error.message));
+    else item.ok(packet.result);
   };
   return {
     send(method, params = {}) {
