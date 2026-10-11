@@ -4,7 +4,7 @@ import { join } from "node:path";
 const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
 function smallTextSizes(css: string, minimum: number): number[] {
-  return [...css.matchAll(/font-size:\\s*([.\\d]+)rem/g)]
+  return [...css.matchAll(/font-size:\s*([.\d]+)rem/g)]
     .map((match) => Number(match[1]))
     .filter((size) => size < minimum);
 }
