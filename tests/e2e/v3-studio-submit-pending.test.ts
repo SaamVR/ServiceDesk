@@ -10,8 +10,8 @@ describe("Studio OS server-action submission reliability", () => {
     const html = renderToStaticMarkup(createElement("form", { action: "/offline-test" },
       createElement(StaffSubmitButton, {
         name: "decision", value: "ACCEPTED", className: "app-button-primary",
-        disabled: false, pendingLabel: "Approving…", children: "Approve now",
-      })));
+        disabled: false, pendingLabel: "Approving…",
+      }, "Approve now")));
     expect(html).toContain('type="submit"');
     expect(html).toContain('name="decision"');
     expect(html).toContain('value="ACCEPTED"');
@@ -22,7 +22,7 @@ describe("Studio OS server-action submission reliability", () => {
 
   it("never enables a permission-disabled action and exposes an actual busy guard", () => {
     const html = renderToStaticMarkup(createElement("form", null,
-      createElement(StaffSubmitButton, { disabled: true, children: "Not authorized" })));
+      createElement(StaffSubmitButton, { disabled: true }, "Not authorized")));
     expect(html).toContain("disabled");
     const component = readFileSync(join(process.cwd(),
       "src/components/product/StaffSubmitButton.tsx"), "utf8");
