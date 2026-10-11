@@ -8,6 +8,7 @@ import type {
   OperationalVisit,
 } from "./operational-product-runtime";
 import { summarizeOutstandingInvoices } from "./product-truth";
+import { buildQuotePipeline } from "./quote-pipeline";
 import { formatMinorMoney } from "./view-models";
 import { createLocalDayKey } from "./staff-local-day";
 import { indexStaffById } from "./staff-snapshot-index";
@@ -189,7 +190,7 @@ export function StaffOverviewDashboard({
 
   const attention = snapshot.attentionItems.filter((item) => item.status !== "RESOLVED");
   const waitingRequests = snapshot.requests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status));
-  const waitingQuotes = snapshot.quotes.filter((quote) => quote.status === "SENT");
+  const waitingQuoteCount = buildQuotePipeline(snapshot.quotes).awaitingCustomer;
   // The reply queue is derived from stored external-message direction, not a fake unread badge.
   // Older server test fixtures can omit these optional records without implying zero replies.
   const replyTriage = snapshot.conversations && snapshot.messages
@@ -291,8 +292,8 @@ export function StaffOverviewDashboard({
         <KpiCard
           label="Waiting pipeline"
           href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
-          value={waitingRequests.length + waitingQuotes.length}
-          detail={`${waitingRequests.length} requests · ${waitingQuotes.length} quotes`}
+          value={waitingRequests.length + waitingQuoteCount}
+          detail={`${waitingRequests.length} requests · ${waitingQuoteCount} quotes`}
         />
         <KpiCard
           label="Outstanding"
@@ -368,7 +369,7 @@ export function StaffOverviewDashboard({
             </Link>
             <Link href={buildStaffModuleHref(workspace, "quotes")} className={styles.pipelineItem}>
               <span>Quotes with customer</span>
-              <strong>{waitingQuotes.length}</strong>
+              <strong>{waitingQuoteCount}</strong>
               <small>Waiting for customer reply</small>
             </Link>
             <Link href={buildStaffModuleHref(workspace, "invoices")} className={styles.pipelineItem}>
