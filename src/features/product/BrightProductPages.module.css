@@ -10,7 +10,7 @@
   --sea: #209d99;
   --deep: #117c78;
   --border: #dfebe8;
-  --coral: #fa785f;
+  --coral: #bd4b36;
   color: var(--ink);
   background: white;
   font-family: "DM Sans", "Avenir Next", "Segoe UI", system-ui, sans-serif;
@@ -60,7 +60,7 @@
   text-decoration: none;
   transition: transform 200ms ease, background 200ms ease, box-shadow 200ms ease;
 }
-.primaryCta:hover { background: #e96752; box-shadow: 0 14px 24px rgb(250 120 95 / 19%); transform: translateY(-2px); }
+.primaryCta:hover { background: #a93b2b; box-shadow: 0 14px 24px rgb(250 120 95 / 19%); transform: translateY(-2px); }
 .secondaryCta, .textLink {
   display: inline-flex; align-items: center; gap: 11px;
   min-height: 45px; color: #276863; font-size: .86rem; font-weight: 790;
@@ -106,17 +106,17 @@
 .visualToolbar small { color: #627d74; font-size: .75rem; }
 .exampleBadge, .sampleTag { margin-left: auto; padding: 6px 8px; background: #eef8f4; color: #318677; border-radius: 5px; font-size: .75rem; font-weight: 830; letter-spacing: .07em; }
 .visualTitle { display: grid; gap: 8px; padding: 25px 2px 18px; }
-.visualTitle span { color: #65a199; font-size: .67rem; font-weight: 780; letter-spacing: .11em; }
+.visualTitle span { color: #65a199; font-size: .75rem; font-weight: 780; letter-spacing: .11em; }
 .visualTitle strong { color: #2e4945; font-size: 1.6rem; font-weight: 790; letter-spacing: -.05em; }
 .visualRows { display: grid; gap: 9px; }
 .visualRow { display: grid; grid-template-columns: 33px minmax(0, 1fr) 18px; gap: 12px; align-items: center; min-height: 75px; padding: 14px; border: 1px solid #e4efeb; border-radius: 9px; background: #fcfefd; }
 .visualRow:nth-child(2) { background: #eefaf6; border-color: #d5efe6; }
-.visualNumber { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: #e7f4ef; color: #26877b; font-weight: 780; font-size: .72rem; }
+.visualNumber { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: #e7f4ef; color: #26877b; font-weight: 780; font-size: .75rem; }
 .visualRow > span:nth-child(2) { display: grid; gap: 4px; }
 .visualRow strong { color: #314e48; font-size: .82rem; }
-.visualRow small { color: #708b83; font-size: .72rem; }
+.visualRow small { color: #708b83; font-size: .75rem; }
 .visualRow > span:last-child { color: #58a799; }
-.visualFooter { display: flex; align-items: center; gap: 10px; margin-top: 15px; padding: 12px; border-radius: 7px; background: #e9f7f1; color: #357763; font-size: .73rem; font-weight: 750; }
+.visualFooter { display: flex; align-items: center; gap: 10px; margin-top: 15px; padding: 12px; border-radius: 7px; background: #e9f7f1; color: #357763; font-size: .75rem; font-weight: 750; }
 .indicator { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: #35b696; box-shadow: 0 0 0 4px #d7efe6; }
 /* Home cleaning photography: use same licensed-unsplash photo selection as the approved home. */
 .cleaningVisual { position: relative; min-height: 495px; }
@@ -129,7 +129,7 @@
 .cleaningPhotoLabel {
   position: absolute; left: 9%; bottom: 68px; display: flex; align-items: center; gap: 10px;
   max-width: 225px; padding: 13px 15px; border-radius: 10px;
-  background: rgb(255 255 255 / 94%); color: #347c72; font-size: .73rem; line-height: 1.5; font-weight: 760;
+  background: rgb(255 255 255 / 94%); color: #347c72; font-size: .75rem; line-height: 1.5; font-weight: 760;
 }
 .cleaningInset {
   position: absolute; right: -3%; bottom: 0; display: grid; gap: 7px;
@@ -137,7 +137,7 @@
   border-radius: 14px; background: #fff; box-shadow: 0 20px 52px rgb(35 80 66 / 13%);
 }
 .cleaningInset strong { font-size: .94rem; color: #2a5149; line-height: 1.4; }
-.cleaningInset > span:last-child { color: #728983; font-size: .72rem; line-height: 1.5; }
+.cleaningInset > span:last-child { color: #728983; font-size: .75rem; line-height: 1.5; }
 /* Integrations: each connector is a safety boundary, not a "live" glow. */
 .integrationVisual {
   position: relative; display: grid; place-items: center;
@@ -150,7 +150,7 @@
 .networkCentre { position: relative; z-index: 2; display: grid; justify-items: center; gap: 5px; width: 154px; height: 154px; place-content: center; border-radius: 50%; border: 12px solid #d6f2e9; background: #229c93; color: #fff; box-shadow: 0 18px 34px rgb(36 130 112 / 16%); }
 .networkCentre > span { font-size: 2rem; line-height: 1; }
 .networkCentre strong { font-size: 1rem; font-weight: 800; letter-spacing: -.04em; }
-.networkCentre small { font-size: .7rem; letter-spacing: .03em; }
+.networkCentre small { font-size: .75rem; letter-spacing: .03em; }
 .networkNodes { position: absolute; inset: 0; }
 .networkNode {
   position: absolute; z-index: 3; display: grid; gap: 3px;
@@ -162,15 +162,15 @@
 .networkNode:nth-child(2) { right: 3%; top: 15%; }
 .networkNode:nth-child(3) { left: 3%; bottom: 16%; }
 .networkNode:nth-child(4) { right: 3%; bottom: 16%; }
-.networkNode > span { color: #6ba69a; font-size: .61rem; font-weight: 810; }
+.networkNode > span { color: #6ba69a; font-size: .75rem; font-weight: 810; }
 .networkNode strong { color: #31534d; font-size: .85rem; }
 .networkNode small { color: #58786f; font-size: .75rem; line-height: 1.4; }
 .networkDisclaimer { position: absolute; bottom: 12px; width: 80%; color: #4c7668 !important; text-align: center; font-size: .75rem; }
 /* Pricing: visual evidence is explicitly a sample, not a SaaS subscription. */
 .pricingVisual { max-width: 580px; margin: auto; padding: clamp(21px, 3vw, 36px); background: linear-gradient(140deg, #fcfffd, #edf9f5); }
-.pricingVisualTop { display: flex; align-items: center; gap: 10px; margin-bottom: 37px; font-size: .65rem; font-weight: 810; letter-spacing: .1em; color: #5b978a; }
+.pricingVisualTop { display: flex; align-items: center; gap: 10px; margin-bottom: 37px; font-size: .75rem; font-weight: 810; letter-spacing: .1em; color: #5b978a; }
 .pricingVisualTop > span:first-child { display: grid; place-items: center; width: 39px; height: 39px; background: #d7f4e9; color: #208f84; border-radius: 10px; font-size: 1.35rem; }
-.pricingMini { color: #548879; font-size: .64rem; letter-spacing: .09em; font-weight: 800; }
+.pricingMini { color: #548879; font-size: .75rem; letter-spacing: .09em; font-weight: 800; }
 .pricingVisualTotal { display: block; padding: 13px 0 33px; color: #1d5950; font-family: "Manrope", sans-serif; font-size: clamp(3.7rem, 6vw, 5.7rem); letter-spacing: -.09em; line-height: 1; }
 .pricingVisualTotal span { color: #70928a; font-family: "DM Sans", sans-serif; font-size: .75rem; letter-spacing: 0; font-weight: 600; }
 .pricingVisualLine { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 15px 0; border-top: 1px solid #d4e9e0; font-size: .8rem; color: #537468; }
@@ -182,16 +182,16 @@
 .contactVisual h3 { max-width: 425px; margin: 15px 0 26px; font-size: clamp(1.65rem, 2.35vw, 2.65rem); font-weight: 750; line-height: 1.22; letter-spacing: -.05em; }
 .contactVisual ol { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
 .contactVisual li { display: grid; grid-template-columns: 32px minmax(0, 1fr) 15px; gap: 10px; align-items: center; padding: 14px 10px; border-bottom: 1px solid #e4efea; }
-.contactVisual li > span:first-child { color: #279f8b; font-size: .66rem; font-weight: 840; }
+.contactVisual li > span:first-child { color: #279f8b; font-size: .75rem; font-weight: 840; }
 .contactVisual li strong { color: #31514b; font-size: .82rem; }
 .contactVisual li > span:last-child { color: #65aea0; }
-.contactVisual > p { margin: 23px 0 0; color: #71877d; font-size: .73rem; }
+.contactVisual > p { margin: 23px 0 0; color: #71877d; font-size: .75rem; }
 .simpleVisual { display: grid; align-content: center; gap: 16px; min-height: 370px; padding: 33px; background: #edf9f4; }
 .simpleVisualMark { display: grid; place-items: center; width: 67px; height: 67px; border-radius: 20px; background: #d9f4e9; color: #1b9c89; font-size: 2.1rem; }
 .simpleVisualRule { height: 1px; background: #d0e7dd; }
 .simpleVisual ol { display: grid; gap: 0; list-style: none; padding: 0; margin: 0; }
 .simpleVisual li { display: flex; align-items: center; gap: 13px; border-bottom: 1px solid #d0e7dd; padding: 14px 0; color: #326557; font-size: .86rem; font-weight: 720; }
-.simpleVisual li > span:first-child { color: #249d89; font-size: .67rem; }
+.simpleVisual li > span:first-child { color: #249d89; font-size: .75rem; }
 .simpleVisual li > span:last-child { margin-left: auto; color: #34a58d; }
 .simpleVisual > p { color: #689485; font-size: .79rem; }
 /* Explorers: accessible local-state interactions. */
@@ -205,20 +205,20 @@
   cursor: pointer; font: inherit; font-size: .81rem; font-weight: 780;
   transition: background 180ms ease, color 180ms ease;
 }
-.explorerTab > span { color: #71a69a; font-size: .64rem; font-weight: 810; }
+.explorerTab > span { color: #71a69a; font-size: .75rem; font-weight: 810; }
 .explorerTab:hover, .providerTab:hover, .quoteTabs button:hover { background: #edf7f3; }
 .explorerTab[aria-pressed=true], .providerTab[aria-pressed=true], .quoteTabs button[aria-pressed=true] { border-color: #cce8df; background: #e5f7f0; color: #147f74; }
 .explorerTab:focus-visible, .providerTab:focus-visible, .quoteTabs button:focus-visible { outline: 3px solid #18a49b; outline-offset: 2px; }
 .explorerResult { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 25px; padding: clamp(24px, 3vw, 43px); min-height: 270px; align-items: center; }
-.miniEyebrow { color: #399889; font-size: .64rem; font-weight: 830; letter-spacing: .1em; line-height: 1.5; }
+.miniEyebrow { color: #399889; font-size: .75rem; font-weight: 830; letter-spacing: .1em; line-height: 1.5; }
 .explorerCopy h3, .providerInfo h3 { margin: 13px 0; color: #285048; font-size: clamp(1.3rem, 2vw, 2.05rem); line-height: 1.23; letter-spacing: -.048em; }
 .explorerCopy > p, .providerInfo > p { margin: 0; max-width: 495px; color: #70847e; font-size: .85rem; line-height: 1.72; }
-.boundaryLabel { display: inline-flex; margin-top: 20px; padding: 8px 10px; background: #ecf8f3; border-radius: 7px; color: #448779; font-size: .69rem; font-weight: 750; }
+.boundaryLabel { display: inline-flex; margin-top: 20px; padding: 8px 10px; background: #ecf8f3; border-radius: 7px; color: #448779; font-size: .75rem; font-weight: 750; }
 .explorerDiagram { display: grid; grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr); align-items: center; gap: 9px; }
 .diagramCard, .diagramCardStrong { display: grid; place-items: center; min-height: 130px; padding: 13px; border: 1px solid #dbe9e3; border-radius: 13px; background: #f8fcfa; color: #4b7465; text-align: center; font-size: .8rem; font-weight: 780; }
 .diagramCardStrong { border-color: #c4e9da; background: #e7f8f0; color: #227d66; }
 .diagramArrow { text-align: center; color: #2ba68e; font-size: 1.3rem; }
-.demoDisclosure { margin: 0; padding: 15px 23px 18px; border-top: 1px solid #e6efec; color: #85958d !important; font-size: .71rem; line-height: 1.6; }
+.demoDisclosure { margin: 0; padding: 15px 23px 18px; border-top: 1px solid #e6efec; color: #85958d !important; font-size: .75rem; line-height: 1.6; }
 .capabilityGrid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 13px; }
 .capabilityCard { position: relative; display: grid; align-content: start; gap: 14px; min-height: 275px; padding: 27px 24px 32px; border: 1px solid #e1edeb; border-radius: 15px; background: #fff; transition: box-shadow 220ms ease, transform 220ms ease; }
 .capabilityCard:hover { box-shadow: 0 18px 35px rgb(44 96 77 / 8%); transform: translateY(-4px); }
@@ -227,11 +227,11 @@
 .cardArrow { position: absolute; bottom: 15px; right: 18px; color: #35a28e; }
 .integrationExplorer { background: #fff; }
 .providerDetail { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,.9fr); gap: 40px; padding: 35px; min-height: 255px; }
-.providerState { display: inline-flex; align-items: center; gap: 8px; margin: 5px 0 18px; padding: 7px 10px; border-radius: 7px; color: #8d6425; background: #fff4e4; font-size: .7rem; font-weight: 780; }
+.providerState { display: inline-flex; align-items: center; gap: 8px; margin: 5px 0 18px; padding: 7px 10px; border-radius: 7px; color: #8d6425; background: #fff4e4; font-size: .75rem; font-weight: 780; }
 .providerState > span { width: 7px; height: 7px; border-radius: 50%; background: #d0a05a; }
 .providerSteps { display: grid; align-content: center; gap: 0; margin: 0; padding: 0; list-style: none; }
 .providerSteps li { display: grid; grid-template-columns: 31px 1fr; gap: 10px; align-items: center; padding: 17px 0; border-bottom: 1px solid #e3eee9; color: #536f65; font-size: .8rem; line-height: 1.5; }
-.providerSteps li span { color: #2c9a82; font-size: .68rem; font-weight: 800; }
+.providerSteps li span { color: #2c9a82; font-size: .75rem; font-weight: 800; }
 .integrationPrinciples { display: grid; grid-template-columns: .9fr 1fr; gap: 90px; align-items: start; }
 .integrationPrinciples h2 { margin: 18px 0; font-size: clamp(2.4rem, 4vw, 4rem); letter-spacing: -.06em; line-height: 1.16; }
 .principleRows { display: grid; }
@@ -272,10 +272,10 @@
 .quoteTotals > div:first-child dd { color: #148b70; font-size: 1.6rem; }
 .reviewControls { display: grid; gap: 15px; margin: 0; padding: 0; list-style: none; }
 .reviewControls li { display: flex; align-items: center; gap: 14px; color: #42695d; font-size: .84rem; line-height: 1.5; }
-.reviewControls li span { display: grid; flex: 0 0 32px; place-items: center; height: 32px; border-radius: 7px; background: #e0f3e9; color: #168671; font-size: .72rem; font-weight: 800; }
+.reviewControls li span { display: grid; flex: 0 0 32px; place-items: center; height: 32px; border-radius: 7px; background: #e0f3e9; color: #168671; font-size: .75rem; font-weight: 800; }
 .threeGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
 .threeGrid article { min-height: 217px; padding: 24px; border: 1px solid #e0ede7; border-radius: 14px; background: #fff; }
-.threeGrid span { color: #2b9a8b; font-size: .7rem; font-weight: 800; }
+.threeGrid span { color: #2b9a8b; font-size: .75rem; font-weight: 800; }
 .threeGrid h3 { margin: 23px 0 10px; color: #2a5248; font-size: 1.25rem; }
 .threeGrid p { margin: 0; color: #6d8178; font-size: .82rem; line-height: 1.65; }
 /* Contact is a safe interactive planner, not a fake form. */
@@ -354,12 +354,35 @@
   .visualTitle { padding-top: 18px; }
   .visualTitle strong { font-size: 1.4rem; }
   .visualRow { min-height: 64px; padding: 10px; gap: 7px; grid-template-columns: 27px 1fr 12px; }
-  .visualNumber { width: 25px; height: 25px; font-size: .66rem; }
+  .visualNumber { width: 25px; height: 25px; font-size: .75rem; }
   .cleaningVisual { min-height: 367px; }
   .cleaningPhoto { inset: 0 5% 20px 0; border-radius: 90px 12px 65px 12px; }
   .cleaningInset { width: min(80%, 260px); right: 0; padding: 13px; }
   .cleaningPhotoLabel { bottom: 52px; left: 12px; font-size: .75rem; }
-  .integrationVisual { min-height: 370px; border-radius: 90px 12px 60px 12px; }
+  /* Provider cards form a readable grid at 320px rather than overlapping
+     the central hub. Do not imply that the integrations are connected. */
+  .integrationVisual {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-start; gap: 14px;
+    min-height: 0; padding: 24px 14px 18px;
+    border-radius: 42px 12px 34px 12px;
+  }
+  .integrationVisual::before,.integrationVisual::after { display: none; }
+  .networkNodes {
+    position: static; inset: auto; display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    width: 100%; align-items: stretch; gap: 9px;
+  }
+  .networkNode,.networkNode:nth-child(1),.networkNode:nth-child(2),
+  .networkNode:nth-child(3),.networkNode:nth-child(4) {
+    position: static; inset: auto; width: auto;
+    min-width: 0; min-height: 82px; padding: 10px 11px;
+  }
+  .networkNode strong,.networkNode small { overflow-wrap: anywhere; }
+  .networkDisclaimer {
+    position: static; width: 100%; margin: 0;
+    padding: 0 6px; text-align: center;
+  }
   .integrationVisual::before { width: 300px; height: 300px; }
   .integrationVisual::after { width: 225px; height: 225px; }
   .networkCentre { width: 115px; height: 115px; border-width: 8px; }

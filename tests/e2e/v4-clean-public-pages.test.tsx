@@ -121,7 +121,7 @@ describe("ServiceDesk V4 Clean Air public-page system", () => {
     expect(source).not.toContain("form action=");
   });
 
-  it("reuses homepage-approved style without changing home or signed-in staff UI", () => {
+  it("preserves the approved Clean Air layout and high-contrast primary CTAs without touching the signed-in staff UI", () => {
     const home = file("src/app/page.tsx");
     const shell = file("src/components/shell/MarketingShell.tsx");
     const pages = file("src/features/product/StaticProductPage.tsx");
@@ -132,7 +132,7 @@ describe("ServiceDesk V4 Clean Air public-page system", () => {
     expect(pages).toContain("SERVICEDESK_V4_PUBLIC_PAGES_ENABLED");
     expect(pages).toContain("<BrightProductExperience");
     expect(css).toContain("#f7fbfa");
-    expect(css).toContain("#fa785f");
+    expect(css).toContain("#bd4b36");
     expect(css).toContain("@media (max-width: 580px)");
     expect(css).toContain("prefers-reduced-motion: reduce");
     expect(file("src/components/product/StaffAppShell.tsx")).not.toContain("brightEdition");

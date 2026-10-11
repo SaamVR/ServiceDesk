@@ -220,7 +220,7 @@
   .formSide { order: 0; padding: 38px 25px 45px; }
   .story { order: 1; }
   .storyInner { padding: 30px 27px 36px; }
-  .storyKicker { font-size: .69rem; margin-bottom: 12px; }
+  .storyKicker { font-size: .75rem; margin-bottom: 12px; }
   .story h2 { font-size: 2rem; max-width: 390px; }
   .storyRule { margin: 25px 0; }
   .storySteps { gap: 15px; }
@@ -303,7 +303,7 @@
   box-shadow: 0 0 0 74px rgb(39 161 143 / 4%), 0 0 0 148px rgb(39 161 143 / 3%), 0 0 0 222px rgb(39 161 143 / 3%);
 }
 .storyInner { padding: clamp(41px, 5.7vw, 76px); }
-.storyKicker { color: #1e9386; font-size: .68rem; letter-spacing: .14em; margin-bottom: 25px; }
+.storyKicker { color: #1e9386; font-size: .75rem; letter-spacing: .14em; margin-bottom: 25px; }
 .story h2 {
   color: #28504c;
   font-family: "Manrope", "DM Sans", "Segoe UI", sans-serif;
@@ -322,7 +322,7 @@
 .storyBottom p { color: #508477; font-weight: 730; }
 .storyEmblem { border-color: #a3dace; background: #dff5eb; color: #158a7a; }
 .formSide { background: #fff; }
-.eyebrow { color: #22998d; font-size: .7rem; font-weight: 830; }
+.eyebrow { color: #22998d; font-size: .75rem; font-weight: 830; }
 .formSide h1 {
   color: #25433f;
   font-family: "Manrope", "DM Sans", sans-serif;
@@ -344,19 +344,19 @@
 }
 .formBody button[type=submit] {
   min-height: 52px;
-  border-color: #f27b62;
-  background: #fa785f;
+  border-color: #bd4b36;
+  background: #bd4b36;
   color: #fff;
   border-radius: 9px;
   box-shadow: 0 10px 22px rgb(250 120 95 / 15%);
   transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
-.formBody button[type=submit]:hover { background: #e56950; transform: translateY(-1px); box-shadow: 0 13px 26px rgb(250 120 95 / 19%); }
+.formBody button[type=submit]:hover { background: #a93b2b; transform: translateY(-1px); box-shadow: 0 13px 26px rgb(250 120 95 / 19%); }
 .formBody button[type=submit]:disabled,
 .formBody button[type=submit]:disabled:hover {
   background: #9caeaa; border-color: #9caeaa; color: #f4f8f6; box-shadow: none; transform: none;
 }
-.formBody a { color: #178f82; }
+.formBody a { color: #0b746d; }
 .footer { padding-block: 26px; border-top: 1px solid #edf3f1; color: #6e8980; }
 @media (max-width: 920px) {
   .columns { width: min(100% - 34px, 1370px); }

@@ -3,7 +3,7 @@
 .tour {
   --ink: #203638;
   --aqua: #219d9b;
-  --coral: #fa785f;
+  --coral: #bd4b36;
   --border: #e1eee9;
   --porcelain: #f7fbfa;
   --display: "Manrope","DM Sans","Segoe UI",system-ui,sans-serif;
@@ -13,7 +13,7 @@
 .tour h1,.tour h2,.tour h3 { font-family: var(--display); text-wrap: balance; }
 .tour a:hover { text-decoration: none; }
 .container { width: min(100% - 92px, 1250px); margin-inline: auto; }
-.eyebrow { display: inline-flex; align-items: center; gap: 9px; color: #138f85; font-size: .69rem; letter-spacing: .13em; font-weight: 840; line-height: 1.5; }
+.eyebrow { display: inline-flex; align-items: center; gap: 9px; color: #138f85; font-size: .75rem; letter-spacing: .13em; font-weight: 840; line-height: 1.5; }
 .eyebrow > span { font-size: 1.1rem; }
 .hero {
   display: grid; grid-template-columns: minmax(0,.98fr) minmax(0,1.02fr);
@@ -35,10 +35,10 @@
   font-size: .86rem; font-weight: 830; box-shadow: 0 10px 23px rgb(250 120 95 / 15%);
   transition: background 180ms ease,transform 180ms ease,box-shadow 180ms ease;
 }
-.primaryAction:hover { transform: translateY(-2px); background: #e96b54; color: #fff; box-shadow: 0 13px 27px rgb(250 120 95 / 20%); }
+.primaryAction:hover { transform: translateY(-2px); background: #a93b2b; color: #fff; box-shadow: 0 13px 27px rgb(250 120 95 / 20%); }
 .secondaryAction { display: inline-flex; align-items: center; gap: 12px; min-height: 50px; color: #276e66; font-size: .84rem; font-weight: 770; }
 .primaryAction:focus-visible,.secondaryAction:focus-visible { outline: 3px solid #1e9a8e; outline-offset: 4px; }
-.heroDisclosure { display: flex; align-items: center; gap: 10px; margin-top: 29px; max-width: 480px; color: #7f938c; font-size: .73rem; line-height: 1.6; }
+.heroDisclosure { display: flex; align-items: center; gap: 10px; margin-top: 29px; max-width: 480px; color: #7f938c; font-size: .75rem; line-height: 1.6; }
 .dot { display: inline-block; width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: #32b391; box-shadow: 0 0 0 4px #e1f7ee; }
 .heroVisual { position: relative; min-height: 515px; isolation: isolate; }
 .heroPhoto { position: absolute; inset: 0 8% 37px 0; border-radius: 142px 17px 110px 21px; background: #e5f0ea url("https://images.unsplash.com/photo-1773579223066-4b54a17ec8cc?auto=format&fit=crop&w=1300&q=85") center/cover; box-shadow: 0 22px 60px rgb(28 79 64 / 12%); }
@@ -47,13 +47,13 @@
 .cardIcon { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 9px; background: #e2f7ef; color: #209f91; font-size: 1.3rem; }
 .cardHeader > span:nth-child(2) { display: grid; gap: 4px; }
 .cardHeader strong { color: #31554a; font-size: .78rem; }
-.cardHeader small { color: #83988e; font-size: .64rem; }
-.cardSample { margin-left: auto; color: #418d76; font-size: .56rem; font-weight: 820; letter-spacing: .08em; }
+.cardHeader small { color: #83988e; font-size: .75rem; }
+.cardSample { margin-left: auto; color: #418d76; font-size: .75rem; font-weight: 820; letter-spacing: .08em; }
 .cardStage { display: grid; grid-template-columns: 25px minmax(0,1fr) auto; gap: 9px; align-items: center; padding: 12px 0; border-bottom: 1px solid #e9f1ec; }
-.cardStage > span { color: #3ca38f; font-size: .67rem; font-weight: 820; }
-.cardStage strong { color: #3b5e55; font-size: .73rem; }
-.cardStage small { color: #8c9c93; font-size: .61rem; text-align: right; }
-.cardNote { display: flex; align-items: center; gap: 9px; margin-top: 12px; color: #437f6a; font-size: .68rem; font-weight: 760; }
+.cardStage > span { color: #3ca38f; font-size: .75rem; font-weight: 820; }
+.cardStage strong { color: #3b5e55; font-size: .75rem; }
+.cardStage small { color: #8c9c93; font-size: .75rem; text-align: right; }
+.cardNote { display: flex; align-items: center; gap: 9px; margin-top: 12px; color: #437f6a; font-size: .75rem; font-weight: 760; }
 .stepSection,.scenarios,.trustSection { padding-block: clamp(75px,8vw,120px); }
 .stepSection { background: #eff9f6; }
 .sectionLead { display: flex; align-items: flex-end; justify-content: space-between; gap: 25px 60px; margin: 20px 0 37px; }
@@ -61,7 +61,7 @@
 .sectionLead > p { max-width: 345px; margin: 0 0 4px; color: #688178; font-size: .92rem; line-height: 1.75; }
 .stages { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
 .stages li { position: relative; min-height: 245px; padding: 24px 19px 33px; border: 1px solid #deeee8; border-radius: 15px; background: #fff; }
-.stages li > span:first-child,.scenarioCount { color: #2e9e8e; font-size: .71rem; letter-spacing: .11em; font-weight: 850; }
+.stages li > span:first-child,.scenarioCount { color: #2e9e8e; font-size: .75rem; letter-spacing: .11em; font-weight: 850; }
 .stages li strong { display: block; margin: 26px 0 11px; color: #31564d; font-size: 1.15rem; letter-spacing: -.035em; }
 .stages li p { margin: 0; color: #71877d; font-size: .8rem; line-height: 1.67; }
 .stageArrow { position: absolute; bottom: 15px; right: 17px; color: #4cad9a; }
@@ -77,9 +77,9 @@
 .scenarioCard ol { margin: 0; padding: 2px 0 10px 20px; }
 .scenarioCard li { margin-bottom: 12px; color: #3f7060; }
 .scenarioCard li strong { color: #396253; font-size: .8rem; }
-.scenarioCard li p { margin: 5px 0; color: #6b8377; font-size: .74rem; line-height: 1.6; }
-.scenarioCard li small { color: #9b7444; font-size: .63rem; }
-.scenarioDisclaimer { display: block; margin-top: 20px; padding-top: 13px; border-top: 1px solid #e3eeea; color: #8a9e93; font-size: .65rem; line-height: 1.6; }
+.scenarioCard li p { margin: 5px 0; color: #6b8377; font-size: .75rem; line-height: 1.6; }
+.scenarioCard li small { color: #9b7444; font-size: .75rem; }
+.scenarioDisclaimer { display: block; margin-top: 20px; padding-top: 13px; border-top: 1px solid #e3eeea; color: #8a9e93; font-size: .75rem; line-height: 1.6; }
 .priceStrip { padding-block: 88px; background: #229e9c; }
 .quoteInner { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,.7fr); gap: 50px; align-items: center; }
 .quoteInner .eyebrow { color: #e1fff7; }
@@ -87,15 +87,15 @@
 .quoteInner h2 em { color: #d7fff0; }
 .quoteInner p { color: #effffb; font-size: .91rem; line-height: 1.77; max-width: 645px; }
 .quoteSample { display: grid; justify-items: start; gap: 11px; padding: 28px; border-radius: 15px; background: #fff; box-shadow: 0 25px 53px rgb(0 55 49 / 17%); }
-.quoteSample small { color: #638f80; font-size: .62rem; font-weight: 850; letter-spacing: .1em; }
+.quoteSample small { color: #638f80; font-size: .75rem; font-weight: 850; letter-spacing: .1em; }
 .quoteSample > strong { color: #1e7063; font-size: clamp(3.2rem,5.3vw,5.1rem); letter-spacing: -.085em; line-height: 1.15; }
 .quoteSample > span { color: #466f62; font-size: .82rem; font-weight: 760; }
 .quoteSample > span > span { padding-inline: 6px; }
-.quoteSample small:last-child { letter-spacing: normal; font-weight: 600; font-size: .71rem; }
+.quoteSample small:last-child { letter-spacing: normal; font-weight: 600; font-size: .75rem; }
 .trustSection { background: #fff; }
 .boundaryGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 17px; }
 .boundaryGrid article { min-height: 245px; padding: 27px; border: 1px solid #e1eee8; border-radius: 14px; background: #f9fcfb; }
-.boundaryGrid article > span { color: #2aa08c; font-size: .73rem; font-weight: 840; }
+.boundaryGrid article > span { color: #2aa08c; font-size: .75rem; font-weight: 840; }
 .boundaryGrid h3 { margin: 32px 0 12px; color: #28574b; font-size: 1.25rem; letter-spacing: -.034em; }
 .boundaryGrid p { margin: 0; color: #6c8379; font-size: .83rem; line-height: 1.72; }
 .close { display: grid; justify-items: center; gap: 19px; padding: clamp(78px,9vw,130px) 25px; background: #eaf7f3; text-align: center; }
@@ -128,10 +128,12 @@
   .heroPhoto { inset: 0 4% 27px 0; border-radius: 95px 12px 70px 13px; }
   .heroCard { padding: 12px; width: min(81%,280px); }
   .cardHeader { padding-bottom: 8px; }
-  .cardStage { padding: 8px 0; gap: 5px; grid-template-columns: 20px 1fr auto; }
-  .cardStage strong { font-size: .63rem; }
-  .cardStage small { font-size: .54rem; }
-  .cardNote { font-size: .61rem; }
+  /* Readable status text gets its own row instead of crowding the title. */
+  .cardStage { padding: 9px 0; gap: 4px 7px; grid-template-columns: 20px minmax(0,1fr); }
+  .cardStage small { grid-column: 2; text-align: left; overflow-wrap: anywhere; }
+  .cardStage strong { font-size: .75rem; }
+  .cardStage small { font-size: .75rem; }
+  .cardNote { font-size: .75rem; }
   .stepSection,.scenarios,.trustSection { padding-block: 72px; }
   .sectionLead h2,.quoteInner h2,.close h2 { font-size: clamp(2.55rem,8.8vw,3.5rem); }
   .stages,.scenarioGrid { grid-template-columns: 1fr; gap: 10px; }
