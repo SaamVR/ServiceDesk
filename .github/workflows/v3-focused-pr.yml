@@ -53,6 +53,8 @@ on:
       - "tests/db/v3-ai-durable-conversation-store.test.ts"
       - "tests/providers/ai-postgres-configured-service.test.ts"
       - "src/server/api-handlers/provider-whatsapp-runtime.ts"
+      - "src/server/api-handlers/provider-whatsapp-http.ts"
+      - "tests/e2e/v3-whatsapp-http-boundary.test.ts"
       - "src/server/integrations/whatsapp/adapter.ts"
       - "src/server/integrations/whatsapp/inbound-config.ts"
       - "tests/providers/whatsapp-runtime-inbound.test.ts"
@@ -109,6 +111,7 @@ jobs:
           tests/db/v3-ai-durable-conversation-store.test.ts
           tests/providers/ai-postgres-configured-service.test.ts
           tests/providers/whatsapp-runtime-inbound.test.ts
+          tests/e2e/v3-whatsapp-http-boundary.test.ts
           tests/db/v3-inbound-rpc-scope.test.ts
           tests/providers/whatsapp-handler-hardening.test.ts
           tests/db/outbox-worker.test.ts
