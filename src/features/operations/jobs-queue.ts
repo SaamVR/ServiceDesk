@@ -66,6 +66,7 @@ export function jobsActionFeedbackPrefix(queue: JobsQueue, visitId: string, sear
  const params = new URLSearchParams();
  if (queue !== "all") params.set("queue", queue);
  params.set("job", visitId);
+ if (normalizeJobsSearch(search)) params.set("search", normalizeJobsSearch(search));
  return params.toString() + "&";
 }
 
