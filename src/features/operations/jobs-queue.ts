@@ -55,3 +55,14 @@ export function indexJobProgress<E extends { visitId: string }, C extends { visi
   }
   return byVisit;
 }
+
+/** Redirect context must survive a mutation (including success/failure).
+ * The action may move a visit out of the selected queue; preserve the filter
+ * but let the viewer choose the next visible job on revalidation.
+ */
+export function jobsActionFeedbackPrefix(queue: JobsQueue, visitId: string): string {
+ const params = new URLSearchParams();
+ if (queue !== "all") params.set("queue", queue);
+ params.set("job", visitId);
+ return params.toString() + "&";
+}

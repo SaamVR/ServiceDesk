@@ -40,7 +40,7 @@ import {
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
 import { filterDirectoryRows, directoryRecordHref, normalizeDirectoryQuery } from "./record-directory";
 import { RecordDirectorySearch } from "./RecordDirectorySearch";
-import { filterJobsQueue, indexJobProgress, jobsQueueHref, normalizeJobsQueue } from "./jobs-queue";
+import { filterJobsQueue, indexJobProgress, jobsActionFeedbackPrefix, jobsQueueHref, normalizeJobsQueue } from "./jobs-queue";
 import { JobQueueFilters } from "./JobQueueFilters";
 import { countStaffBy, indexStaffById } from "./staff-snapshot-index";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
@@ -55,6 +55,7 @@ import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter
 import { formatWorkspaceDateTime } from "./product-truth";
 import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
+import { deriveDispatchBacklog } from "./dispatch-backlog";
 import { formatMinorMoney } from "./view-models";
 import { buildOperationalReleaseReadiness } from "./release-readiness-runtime";
 import styles from "./OperationalProductRoute.module.css";
@@ -1365,13 +1366,7 @@ function ScheduleView({
 
   const now = Date.parse(data.loadedAt);
   const upcoming = filterScheduleWindow(data.visits, data.workspace.timezone, window);
-  const scheduledRequestIds = new Set(data.visits.map((visit) => visit.requestId));
-  const unscheduled = data.requests.filter(
-    (request) => !scheduledRequestIds.has(request.id) && !["LOST", "CLOSED"].includes(request.status),
-  );
-  const acceptedQuotes = data.quotes.filter(
-    (quote) => quote.status === "ACCEPTED" && !data.visits.some((visit) => visit.quoteId === quote.id),
-  );
+  const { unscheduled, acceptedQuotes } = deriveDispatchBacklog(data.requests, data.quotes, data.visits);
   const heldSlotIds = new Set(
     data.slotHolds
       .filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now)
@@ -1553,6 +1548,7 @@ function JobsView({
   selectedJobId?: string;
   selectedJobQueue?: string;
 }) {
+  const jobQueue = normalizeJobsQueue(selectedJobQueue);
   async function transitionVisit(formData: FormData) {
     "use server";
     const action = String(formData.get("action") ?? "") as
@@ -1566,7 +1562,7 @@ function JobsView({
     }
     const visitId = String(formData.get("visitId") ?? "");
     const result = await transitionOperationalVisit(workspaceSlug, visitId, action);
-    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId));
   }
 
   async function saveVisitNote(formData: FormData) {
@@ -1581,7 +1577,7 @@ function JobsView({
       kind,
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId));
   }
 
   async function saveChecklistItem(formData: FormData) {
@@ -1594,7 +1590,7 @@ function JobsView({
       String(formData.get("completed") ?? "") === "true",
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId));
   }
 
   const nextAction = (status: string) => {
