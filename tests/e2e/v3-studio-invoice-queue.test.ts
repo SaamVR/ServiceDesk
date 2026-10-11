@@ -1,7 +1,7 @@
 import { describe,expect,it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { invoiceQueueCounts,filterInvoiceQueue,invoiceQueueHref,invoiceFeedbackPrefix,normalizeInvoiceQueue,invoiceQueueOf,isCollectibleInvoice } from "@/features/operations/invoice-collection-queue";
+import { invoiceQueueCounts,filterInvoiceQueue,invoiceQueueHref,invoiceFeedbackPrefix,normalizeInvoiceQueue,invoiceQueueOf,isCollectibleInvoice,parseManualPaymentAmountMinor } from "@/features/operations/invoice-collection-queue";
 const invoices=[
  {id:"a",status:"ISSUED",balanceMinor:7000},
  {id:"b",status:"PAID",balanceMinor:0},
@@ -35,6 +35,24 @@ describe("real invoice collection filters",()=>{
   expect(code).toContain("const openInvoices = orderedInvoices.filter(isCollectibleInvoice)");
   expect(code).toContain('Draft awaiting issue');
   expect(code).toContain('Not due until the invoice is issued');
+ });
+ it("parses positive exact minor units and rejects unsafe monetary input",()=>{
+  expect(parseManualPaymentAmountMinor("1")).toBe(100);
+  expect(parseManualPaymentAmountMinor("1.2")).toBe(120);
+  expect(parseManualPaymentAmountMinor("1.23")).toBe(123);
+  expect(parseManualPaymentAmountMinor(" 0.01 ")).toBe(1);
+  expect(parseManualPaymentAmountMinor("90071992547409.91")).toBe(Number.MAX_SAFE_INTEGER);
+  for(const invalid of ["", "  ", "0", "0.00", "-1", "+1", ".50", "1.234", "0.001",
+    "1e3", "Infinity", "NaN", "1,000.00", "90071992547409.92", "9".repeat(100)]) {
+    expect(parseManualPaymentAmountMinor(invalid),invalid).toBeUndefined();
+  }
+ });
+ it("protects staff payment submission from rounded or unsafe decimal input",()=>{
+  const code=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
+  expect(code).toContain("parseManualPaymentAmountMinor(String(formData.get(\"amount\") ?? \"\"))");
+  expect(code).toContain("if (amountMinor === undefined)");
+  expect(code).toContain("applyOperationalManualPayment(workspaceSlug, invoiceId, amountMinor");
+  expect(code).not.toContain("Number(match[1]) * 100");
  });
  it("preserves queue and customer search after mutation and navigation",()=>{
   expect(invoiceQueueHref("open","Walter Finch","a")).toBe("?queue=open&search=Walter+Finch&invoice=a");
