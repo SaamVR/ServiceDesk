@@ -52,7 +52,7 @@ function HeroVisual() {
     <div className={styles.heroVisual}>
       <div className={styles.heroImage} role="img" aria-label="A sunlit, beautifully kept white kitchen with warm natural materials" />
       <div className={styles.heroImageLabel}><span className={styles.whiteDot} /> A clearer view of every clean.</div>
-      <div className={styles.heroSignal} role="group" aria-label="Illustrative AI-assisted service request">
+      <div data-ai-example className={styles.heroSignal} role="group" aria-label="Illustrative AI-assisted service request">
         <div className={styles.signalTop}>
           <span className={styles.signalAvatar}>✳</span>
           <div><strong>Service request</strong><span>AI-assisted intake · example</span></div>
