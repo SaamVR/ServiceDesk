@@ -13,7 +13,7 @@ export const marketingLinks = [
 ] as const;
 
 export function MarketingNavLinks({ variant }: { variant: "desktop" | "mobile" }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   return (
     <>
       {marketingLinks.map((item) => (
