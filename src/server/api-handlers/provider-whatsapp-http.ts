@@ -5,6 +5,8 @@ import { inboundWebhookResponse, readBoundedWebhookBody } from "./inbound-http-p
 import { handleWhatsAppChallenge } from "./provider-whatsapp";
 import { handleWhatsAppRuntimeWebhook } from "./provider-whatsapp-runtime";
 import type { ProviderDeliveryStatusStore } from "./provider-whatsapp";
+import { createPostgresWhatsAppDeliveryStatusStore, createSupabaseWhatsAppStatusPersistence } from "../integrations/whatsapp/status-postgres";
+
 import {
   readWhatsAppInboundRuntimeConfig,
   type WhatsAppInboundRuntimeConfig,
@@ -17,6 +19,8 @@ export interface WhatsAppHttpDependencies {
   createClient?: (config: WhatsAppInboundRuntimeConfig) => SupabaseRpcClient;
   /** Explicit durable delivery status authority. Without it POST returns 503 for statuses. */
   statusStore?: ProviderDeliveryStatusStore;
+  /** Pure test/authorized runtime constructor, not a customer-supplied client. */
+  createStatusStore?: (config: WhatsAppInboundRuntimeConfig) => ProviderDeliveryStatusStore;
 }
 
 function defaultClient(config: WhatsAppInboundRuntimeConfig): SupabaseRpcClient {
@@ -109,13 +113,31 @@ export async function handleWhatsAppHttpPost(
     },
   };
 
+  // Status reconciliation is a separate opt-in release gate. Its privileged
+  // connection is constructed only when a *verified, mapped* status callback
+  // actually reaches applyStatusCallback; invalid HMAC calls never open DB.
+  let durableStatusStore: ProviderDeliveryStatusStore | undefined = dependencies.statusStore;
+  if (!durableStatusStore && env.SERVICEDESK_WHATSAPP_DURABLE_STATUS_ENABLED === "true") {
+    durableStatusStore = {
+      async applyStatusCallback(event) {
+        const port = dependencies.createStatusStore?.(config.value) ??
+          createPostgresWhatsAppDeliveryStatusStore(createSupabaseWhatsAppStatusPersistence(
+            createClient(config.value.supabaseUrl, config.value.serviceRoleKey, {
+              auth: { autoRefreshToken: false, persistSession: false },
+            }),
+          ));
+        return port.applyStatusCallback(event);
+      },
+    };
+  }
+
   const status = await handleWhatsAppRuntimeWebhook({
     rawBody: bounded.rawBody,
     headers: Object.fromEntries(request.headers.entries()),
     appSecret: config.value.appSecret,
     workspaceByPhoneNumberId: config.value.workspaceByPhoneNumberId,
     store,
-    statusStore: dependencies.statusStore,
+    statusStore: durableStatusStore,
   });
   return inboundWebhookResponse({
     statusCode: status.statusCode,

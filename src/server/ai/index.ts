@@ -20,3 +20,5 @@ export * from "./postgres-configured-service";
 export * from "./fetch-transport";
 export * from "./runtime-config";
 export * from "./operational-runtime";
+export * from "./staff-invocation";
+export * from "./catalog-knowledge";
