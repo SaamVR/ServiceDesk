@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { searchStaffDestinations } from "@/features/operations/staff-command-search";
 import styles from "./StaffCommandPalette.module.css";
 
@@ -15,6 +15,7 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
   const [query, setQuery] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  const results = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const pathname = usePathname();
   const open = useCallback(() => {
@@ -45,6 +46,37 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
   const matches = searchStaffDestinations(workspace, query);
   const close = () => dialog.current?.close();
 
+  function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (!["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
+    const anchors = results.current?.querySelectorAll<HTMLAnchorElement>("a[href]");
+    if (!anchors?.length) return;
+    event.preventDefault();
+    if (event.key === "Enter") {
+      // Existing trusted Next Link handles route change and authorization.
+      anchors[0].click();
+    } else {
+      anchors[event.key === "ArrowUp" ? anchors.length - 1 : 0].focus();
+    }
+  }
+
+  function handleResultKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const anchors = Array.from(results.current?.querySelectorAll<HTMLAnchorElement>("a[href]") ?? []);
+    const current = (event.target as HTMLElement).closest("a");
+    const index = anchors.findIndex((item) => item === current);
+    if (index < 0 || !anchors.length) return;
+    event.preventDefault();
+    if (event.key === "ArrowUp" && index === 0) {
+      input.current?.focus();
+      return;
+    }
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? anchors.length - 1
+      : event.key === "ArrowDown" ? (index + 1) % anchors.length
+      : index - 1;
+    anchors[next]?.focus();
+  }
+
   return (
     <>
       <button className={styles.trigger} type="button" onClick={open} aria-haspopup="dialog">
@@ -67,11 +99,12 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
             type="search"
             value={query}
             onChange={event => setQuery(event.target.value)}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Try inbox, dispatch, customers…"
             autoComplete="off"
           />
         </label>
-        <div className={styles.results} aria-live="polite" aria-label="Workspace destinations">
+        <div ref={results} className={styles.results} onKeyDown={handleResultKeyDown} aria-live="polite" aria-label="Workspace destinations">
           {matches.length ? matches.map(destination => (
             <Link
               key={destination.module}
@@ -88,7 +121,7 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
             <p className={styles.empty}>No matching pages. Try a workflow name such as “quotes” or “jobs”.</p>
           )}
         </div>
-        <p className={styles.dialogFooter}>Press Esc to close · Results are navigation links, not customer records</p>
+        <p className={styles.dialogFooter}>↑ ↓ to navigate · Enter to open · Esc to close · Pages only, not customer search</p>
       </dialog>
     </>
   );
