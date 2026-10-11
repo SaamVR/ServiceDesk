@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { loadAuthorizedWorkspaceDecision } from "@/features/auth/authorized-workspace-access";
+import { ownerAfterLoginHref } from "@/features/auth/verified-owner-workspace";
 import styles from "./page.module.css";
 
 export default async function SelectWorkspacePage() {
@@ -40,7 +41,7 @@ export default async function SelectWorkspacePage() {
   }
 
   const decision = loaded.decision;
-  if (decision.kind === "STAFF") redirect(decision.href);
+  if (decision.kind === "STAFF") redirect(ownerAfterLoginHref(decision.workspace));
   if (decision.kind === "CREW") redirect("/crew/today");
   if (decision.kind === "NONE") redirect("/auth/continue");
 
@@ -54,7 +55,7 @@ export default async function SelectWorkspacePage() {
     >
       <nav className={styles.workspaceChoices} aria-label="Your authorized workspaces">
         {decision.workspaces.map(workspace => (
-          <Link key={workspace.workspaceId} className={styles.workspaceChoice} href={workspace.href}>
+          <Link key={workspace.workspaceId} className={styles.workspaceChoice} href={ownerAfterLoginHref(workspace)}>
             <span className={styles.workspaceMark} aria-hidden="true">{workspace.name.charAt(0).toUpperCase()}</span>
             <span className={styles.workspaceDetails}>
               <strong>{workspace.name}</strong>

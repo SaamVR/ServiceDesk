@@ -65,5 +65,5 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
     fail("Workspace could not be created. Check your details and try again.");
   }
 
-  redirect("/onboarding?workspace=" + encodeURIComponent(result.slug));
+  redirect("/onboarding/verified?workspace=" + encodeURIComponent(result.slug));
 }

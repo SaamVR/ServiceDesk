@@ -1,0 +1,43 @@
+name: ServiceDesk V3 real owner first-login acceptance
+on:
+  push:
+    branches: [feat/servicedesk-v3-auth-owner-first-login-20261011]
+  pull_request:
+    branches: [feat/servicedesk-v3-combined-acceptance-20261011]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/features/auth/verified-owner-workspace.ts"
+      - "src/app/onboarding/verified/**"
+      - "src/app/auth/continue/**"
+      - "src/app/auth/create-workspace/**"
+      - "src/app/auth/select-workspace/**"
+      - "tests/e2e/v3-owner-first-login.test.ts"
+      - ".github/workflows/v3-owner-first-login.yml"
+permissions:
+  contents: read
+jobs:
+  verified-owner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verified owner security and existing routing contracts
+        run: pnpm exec vitest run tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-owner-registration-flow.test.tsx tests/e2e/v3-qa-registration-allowlist.test.ts
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Targeted lint
+        run: pnpm exec eslint src/features/auth/verified-owner-workspace.ts src/app/onboarding/verified/page.tsx src/app/auth/continue/route.ts src/app/auth/create-workspace/actions.ts src/app/auth/select-workspace/page.tsx tests/e2e/v3-owner-first-login.test.ts
+      - name: Production build
+        run: pnpm build
