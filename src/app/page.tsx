@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { MarketingShell } from "@/components/shell/MarketingShell";
-import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { ownerRegistrationAvailable, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 import { BrightHomeExperience } from "@/features/product/BrightHomeExperience";
 
 export const metadata: Metadata = {
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  const canRegister = ownerRegistrationAvailable();
+  const canRegister = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
 
   return (
     <MarketingShell
