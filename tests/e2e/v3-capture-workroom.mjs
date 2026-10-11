@@ -60,7 +60,46 @@ const scenarios = [
   { name: "settings", module: "settings" },
 ];
 const widths = [320, 390, 834, 1280, 1440];
+// An h1 alone may be a signed-in shell or generic empty page. A real
+// authenticated scenario must contain its own visible workbench structure.
+const readinessLabels = Object.freeze({
+  today: "Workday briefing",
+  inbox: "Customer conversations",
+  schedule: "Scheduling and dispatch workspace",
+  jobs: "Field jobs workspace",
+  quality: "Quality review workspace",
+  "customer-collections": "Invoice collection workspace",
+  "commercial-accounts": "Commercial billing summary",
+  settings: "Workspace settings console",
+});
 const screenshots = [];
+
+async function assertHostReportedSourceSha() {
+  const response = await fetch(new URL("/health", base), {
+    method: "GET",
+    credentials: "omit",
+    redirect: "manual",
+    headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (response.status !== 200 || !response.headers.get("content-type")?.includes("application/json")) {
+    throw new Error("Staging health and build identity are unavailable.");
+  }
+  const raw = await response.text();
+  if (raw.length > 4096) throw new Error("Staging health response exceeded the permitted metadata size.");
+  let identity;
+  try { identity = JSON.parse(raw); }
+  catch { throw new Error("Staging health response was malformed."); }
+  if (identity?.ok !== true || identity.service !== "servicedesk" ||
+      !["render", "vercel", "both"].includes(identity.sourceProvider) ||
+      !/^[a-f0-9]{40}$/i.test(identity.sourceSha ?? "") ||
+      identity.sourceSha.toLowerCase() !== sourceSha.toLowerCase()) {
+    throw new Error("Preview-reported source SHA does not match the exact requested integration build.");
+  }
+  // A hosting platform's reported SHA still needs out-of-band provider
+  // deployment-metadata verification, so the manifest retains false below.
+  return identity.sourceProvider;
+}
 
 async function launch() {
   const child = spawn(executable, [
@@ -133,10 +172,13 @@ async function evaluate(cdp, expression) {
   return result.result?.value;
 }
 async function authenticatedPage(cdp, path, scenario) {
+  const label = JSON.stringify(readinessLabels[scenario.name]);
+  if (!label) throw new Error("Unknown acceptance surface: " + scenario.name);
   const expression = '(() => { const main = document.getElementById("app-main-content");' +
+    ' const regionReady = [...(main?.querySelectorAll("[aria-label]") ?? [])].some(el => el.getAttribute("aria-label") === ' + label + ');' +
     ' const selected = document.querySelector(\'[aria-label="Invoice workspace views"] a[aria-current="page"]\');' +
     ' return { path: location.pathname, ready: document.readyState, heading: Boolean(main?.querySelector("h1")),' +
-    ' staff: Boolean(main), surface: new URLSearchParams(location.search).get("surface"),' +
+    ' staff: Boolean(main), regionReady, surface: new URLSearchParams(location.search).get("surface"),' +
     ' selectedSurface: selected?.getAttribute("href")?.includes("surface=" + new URLSearchParams(location.search).get("surface")) ?? false,' +
     ' unauth: Boolean(document.querySelector(".app-auth-entry-link")),' +
     ' unavailable: Boolean(document.body?.textContent?.includes("Workspace unavailable")),' +
@@ -150,7 +192,8 @@ async function authenticatedPage(cdp, path, scenario) {
       throw new Error("Commercial finance is not enabled/available in the isolated QA tenant.");
     }
     const surfaceReady = !scenario.surface || (page?.surface === scenario.surface && page?.selectedSurface);
-    if (page?.path === path && page.staff && page.heading && surfaceReady && page.ready === "complete") return;
+    if (page?.path === path && page.staff && page.heading && page.regionReady &&
+        surfaceReady && page.ready === "complete") return;
     await sleep(200);
   }
   throw new Error("Staff surface did not finish loading: " + scenario.name);
@@ -165,6 +208,7 @@ function validatePNG(png, width, height) {
 let browser;
 let cdp;
 try {
+  const hostSourceProvider = await assertHostReportedSourceSha();
   browser = await launch();
   cdp = await connect(browser.wsUrl);
   await cdp.send("Page.enable");
@@ -210,6 +254,8 @@ try {
     origin: base.origin,
     operatorSuppliedSourceSha: sourceSha,
     independentlyVerifiedSourceSha: false,
+    hostReportedSourceShaMatches: true,
+    hostSourceProvider,
     capturedAt: new Date().toISOString(),
   }, null, 2), { mode: 0o600 });
   console.log("Chromium captured " + screenshots.length +
