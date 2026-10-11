@@ -424,7 +424,13 @@
 .differenceCard p { margin: 0; color: #6a807b; font-size: .78rem; line-height: 1.67; }
 .cardCorner { position: absolute; right: 18px; bottom: 15px; color: #399f95; }
 
-.aiSection { background: #163b3d; color: #eefdf8; }
+.aiSection {
+  border-top: 1px solid #e2f0eb;
+  background:
+    radial-gradient(ellipse 46% 70% at 5% 65%, rgb(164 226 214 / 27%), transparent 80%),
+    linear-gradient(125deg, #effaf7 0%, #f8fffd 100%);
+  color: #1d4442;
+}
 .aiSection .wrap {
   display: grid;
   grid-template-columns: minmax(0, .75fr) minmax(0, 1.15fr);
@@ -434,18 +440,18 @@
   margin: 0 auto;
   padding: clamp(68px, 7vw, 115px) clamp(28px, 6vw, 100px);
 }
-.eyebrowLight { color: #98e9de; }
-.eyebrowLight svg { color: #9ee3db; }
+.eyebrowLight { color: #168e83; }
+.eyebrowLight svg { color: #209d93; }
 .aiIntro h2 {
   margin: 24px 0;
-  color: #fff;
+  color: #214542;
   font-size: clamp(2.7rem, 4.25vw, 4.7rem);
   line-height: 1.1;
   font-weight: 690;
   letter-spacing: -.067em;
 }
-.aiIntro h2 em { color: #8ee2d3; font-style: normal; }
-.aiIntro > p { max-width: 480px; color: #bdd6d2 !important; font-size: 1rem; line-height: 1.8; }
+.aiIntro h2 em { color: #229f97; font-style: normal; }
+.aiIntro > p { max-width: 480px; color: #5d7b74 !important; font-size: 1rem; line-height: 1.8; }
 .aiSafeguard {
   display: flex;
   align-items: center;
@@ -453,10 +459,10 @@
   margin-top: 28px;
   max-width: 410px;
   padding: 14px 15px;
-  border: 1px solid rgb(168 226 207 / 23%);
+  border: 1px solid #ccebe0;
   border-radius: 9px;
-  background: rgb(232 253 246 / 6%);
-  color: #c9ede5;
+  background: #e1f5ec;
+  color: #287962;
   font-size: .79rem;
   line-height: 1.5;
 }
@@ -469,7 +475,7 @@
   border-radius: 17px;
   background: #fff;
   color: #243f3d;
-  box-shadow: 0 35px 90px rgb(0 21 23 / 23%);
+  box-shadow: 0 28px 82px rgb(24 110 93 / 10%);
 }
 .interactiveTopbar {
   display: flex;
