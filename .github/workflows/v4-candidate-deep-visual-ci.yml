@@ -1,0 +1,65 @@
+name: ServiceDesk V4 exact-code marketing typography deep Chrome RC
+on:
+  push:
+    branches: [feat/servicedesk-v4-deep-visual-browser-audit-20261012]
+    paths:
+      - src/features/product/BrightProductPages.module.css
+      - src/app/tour/tour.module.css
+      - src/features/product/BrightHomeExperience.module.css
+      - src/components/shell/MarketingNavV3.module.css
+      - tests/e2e/v4-public-legibility-regression.test.ts
+      - .github/workflows/v4-candidate-deep-visual-ci.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-deep-candidate-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  seven-width-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Exact-commit full TS, unit and integration tests, lint, production build
+        run: pnpm check:rc
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Serve actual production Next candidate on loopback
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/servicedesk-v4-studio.log" 2>&1 &
+          for i in $(seq 1 80); do
+            if curl -fsS http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: All eleven public routes in actual Chrome at seven widths
+        env:
+          V4_LIVE_BASE: http://127.0.0.1:3000
+          V4_LIVE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_LIVE_OUTPUT: ${{ runner.temp }}/candidate-deep-pages
+          V4_LIVE_CHECKOUT_SHA: ${{ github.sha }}
+        run: node scripts/release/v4-live-deep-browser-audit.mjs
+      - name: Report exact candidate small labels and card clipping
+        env:
+          REPORT: ${{ runner.temp }}/candidate-deep-pages/manifest.json
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync} from "node:fs";
+          const j=JSON.parse(readFileSync(process.env.REPORT,"utf8"));
+          console.log(JSON.stringify({testedSha:j.checkedOutSha, pages:j.pages.length, widths:j.widths, screenshots:j.captures.length,smallLabels:j.layout.map(x=>({page:x.page,width:x.width,count:x.deep.small.length,clipped:x.deep.clipped.length})).filter(x=>x.count||x.clipped)},null,2).slice(0,14000));
+          JS
+      - name: Keep candidate exact-code screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-deep-candidate-all-marketing-${{ github.sha }}
+          path: ${{ runner.temp }}/candidate-deep-pages/
+          retention-days: 7
+          if-no-files-found: warn
