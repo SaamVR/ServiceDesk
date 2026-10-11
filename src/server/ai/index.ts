@@ -15,3 +15,5 @@ export * from "./photo-intake";
 export * from "./photo-intake-execution";
 export * from "./photo-intake-execution-supabase";
 export * from "./configured-service";
+export * from "./postgres-conversation-store";
+export * from "./postgres-configured-service";
