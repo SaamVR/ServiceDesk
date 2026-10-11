@@ -18,7 +18,7 @@
   flex: 0 0 40px;
 }
 .brandName { white-space: nowrap; }
-.brandAi { color: #51675e; font-weight: 550; }
+.brandAi { color: #4f6b74; font-weight: 550; }
 .desktopNav { min-width: 0; gap: 0; justify-content: flex-end; }
 .desktopNav a { padding: 0 8px; font-size: .88rem; white-space: nowrap; }
 .actions {
@@ -29,13 +29,13 @@
   margin-left: 0;
 }
 .primaryAction {
-  background: #125d43 !important;
-  border-color: #125d43 !important;
+  background: #0b746d !important;
+  border-color: #0b746d !important;
   color: #fff !important;
   white-space: nowrap;
 }
 .primaryAction:hover, .primaryAction:focus-visible {
-  background: #0c4f38 !important;
+  background: #075c56 !important;
   color: #fff !important;
 }
 .mobileActionLabel, .mobileMenu { display: none; }
@@ -55,15 +55,15 @@
     width: 44px;
     height: 44px;
     background: #fff;
-    border: 1px solid #d9e3dd;
+    border: 1px solid #d9e6e8;
     border-radius: 10px;
-    color: #1b3028;
+    color: #263f46;
     cursor: pointer;
     list-style: none;
   }
   .menuToggle::-webkit-details-marker { display: none; }
-  .menuToggle:hover { background: #edf4ef; }
-  .menuToggle:focus-visible { outline: 3px solid #19724d; outline-offset: 2px; }
+  .menuToggle:hover { background: #ebf6f4; }
+  .menuToggle:focus-visible { outline: 3px solid #0c7f71; outline-offset: 2px; }
   .mobileMenuPanel {
     position: absolute;
     top: calc(100% + 13px);
@@ -72,7 +72,7 @@
     display: grid;
     gap: 2px;
     padding: 11px;
-    border: 1px solid #d9e4dc;
+    border: 1px solid #d9e7e9;
     border-radius: 14px;
     background: #fff;
     box-shadow: 0 20px 48px rgb(14 30 26 / 18%);
@@ -83,14 +83,14 @@
     min-height: 44px;
     padding: 9px 12px;
     border-radius: 8px;
-    color: #253e34;
+    color: #25444b;
     font-size: .9rem;
     font-weight: 600;
     text-decoration: none;
   }
   .mobileMenuPanel a:hover, .mobileMenuPanel a:focus-visible {
-    background: #edf5ef;
-    color: #0b5c3e;
+    background: #e9f6f3;
+    color: #0d7165;
   }
 }
 @media (max-width: 590px) {

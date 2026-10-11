@@ -38,15 +38,37 @@ import {
   type OperationalStaffSnapshot,
 } from "./operational-product-runtime";
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
+import { filterDirectoryRows, directoryRecordHref, normalizeDirectoryQuery } from "./record-directory";
+import { RecordDirectorySearch } from "./RecordDirectorySearch";
+import { filterJobsQueue, filterJobsSearch, indexJobProgress, jobsActionFeedbackPrefix, jobsQueueHref, normalizeJobsQueue, normalizeJobsSearch } from "./jobs-queue";
+import { JobQueueSearch } from "./JobQueueSearch";
+import { JobQueueFilters } from "./JobQueueFilters";
+import { countStaffBy, indexCurrentQuoteByRequest, indexStaffById } from "./staff-snapshot-index";
+import { buildQuotePipeline, isCurrentApprovedQuote } from "./quote-pipeline";
+import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
+import { InboxThreadNavigator } from "./InboxThreadNavigator";
+import { inboxThreadPosition } from "./inbox-thread-navigation";
+import { presentOutboundDelivery } from "./inbox-delivery-presentation";
+import { settingsFeedbackFragment } from "./settings-navigation";
 import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
+import { DispatchCoverageWeek } from "./DispatchCoverageWeek";
+import { buildDispatchCoverageWeek, normalizeCoverageDay, scheduleCoverageHref } from "./dispatch-coverage-week";
 import { CommercialBillingWorkspace } from "@/features/commercial/CommercialBillingWorkspace";
 import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatWorkspaceDateTime } from "./product-truth";
+import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
+import { filterQualityQueue, isOverdueQualityCase, normalizeQualityQueue, normalizeQualitySearch, prioritizeQualityFollowUp, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
+import { QualityQueueFilters } from "./QualityQueueFilters";
+import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue, orderCustomerCollectionInvoices, parseManualPaymentAmountMinor } from "./invoice-collection-queue";
+import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
+import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
+import { deriveDispatchBacklog } from "./dispatch-backlog";
 import { formatMinorMoney } from "./view-models";
+import { createLocalDayKey } from "./staff-local-day";
 import { buildOperationalReleaseReadiness } from "./release-readiness-runtime";
 import styles from "./OperationalProductRoute.module.css";
 import {
@@ -56,6 +78,8 @@ import {
   normalizeInboxQueue,
   type InboxQueue,
   type InboxQueueCounts,
+  searchInboxQueue,
+  indexLatestExternalInboxMessages,
 } from "./inbox-triage";
 
 interface OperationalProductRouteProps {
@@ -63,12 +87,21 @@ interface OperationalProductRouteProps {
   module: Exclude<StaffModule, "overview">;
   selectedConversationId?: string;
   selectedQueue?: string;
+  searchQuery?: string;
+  selectedScheduleQueue?: string;
+  selectedScheduleFrom?: string;
+  selectedScheduleDay?: string;
   selectedCustomerId?: string;
   selectedRequestId?: string;
   selectedQuoteId?: string;
   selectedQualityCaseId?: string;
+  selectedQualityQueue?: string;
+  qualitySearchQuery?: string;
   selectedJobId?: string;
+  selectedJobQueue?: string;
   selectedInvoiceId?: string;
+  selectedInvoiceQueue?: string;
+  invoiceSurface?: string;
   notice?: string;
   error?: string;
 }
@@ -89,7 +122,8 @@ function actionRedirect(
       extra +
       key +
       "=" +
-      encodeURIComponent(result.message),
+      encodeURIComponent(result.message) +
+      settingsFeedbackFragment(module, extra),
   );
 }
 
@@ -111,10 +145,18 @@ function statusBadgeTone(status: string): "neutral" | "success" | "warning" | "d
   return "neutral";
 }
 
-function EmptyState({ title, detail }: { title: string; detail: string }) {
+function EmptyState({ title, detail, action }: {
+  title: string;
+  detail: string;
+  action?: { label: string; href: string };
+}) {
   return (
     <Panel>
-      <AppEmptyState title={title} description={detail} />
+      <AppEmptyState
+        title={title}
+        description={detail}
+        action={action ? <a className="app-button-secondary" href={action.href}>{action.label}</a> : undefined}
+      />
     </Panel>
   );
 }
@@ -132,13 +174,16 @@ function Notice({ notice, error }: { notice?: string; error?: string }) {
 function InboxQueueNavigation({
   queue,
   counts,
+  search,
 }: {
   queue: InboxQueue;
   counts: InboxQueueCounts;
+  search?: string;
 }) {
   const labels: Record<InboxQueue, string> = {
     all: "All",
     "needs-reply": "Needs reply",
+    "delivery-issues": "Delivery issues",
     handover: "Human takeover",
     unverified: "Identity review",
   };
@@ -148,7 +193,7 @@ function InboxQueueNavigation({
         <a
           key={item}
           className={`${styles.inboxQueueLink} ${item === queue ? styles.inboxQueueActive : ""}`}
-          href={inboxQueueHref(item)}
+          href={inboxQueueHref(item, undefined, search)}
           aria-current={item === queue ? "page" : undefined}
         >
           <span>{labels[item]}</span>
@@ -159,20 +204,37 @@ function InboxQueueNavigation({
   );
 }
 
+function InboxSearchForm({ queue, search }: { queue: InboxQueue; search?: string }) {
+  return (
+    <form method="get" className={styles.inboxSearchForm} role="search" aria-label="Search workspace conversations">
+      {queue !== "all" ? <input type="hidden" name="queue" value={queue} /> : null}
+      <label htmlFor="inbox-search">Find a conversation</label>
+      <div className={styles.inboxSearchControl}>
+        <input id="inbox-search" type="search" name="search" defaultValue={search ?? ""}
+          placeholder="Name, channel, or message" maxLength={120} autoComplete="off" />
+        <StaffSubmitButton aria-label="Search conversations" pendingLabel="Searching…">Search</StaffSubmitButton>
+      </div>
+    </form>
+  );
+}
+
 function InboxView({
   data,
   workspaceSlug,
   selectedConversationId,
   selectedQueue,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedConversationId?: string;
   selectedQueue?: string;
+  searchQuery?: string;
 }) {
   const queue = normalizeInboxQueue(selectedQueue);
   const triage = buildInboxTriage(data.conversations, data.messages, data.customers, queue);
-  const orderedConversations = triage.visible;
+  const search = searchQuery?.trim().slice(0, 120) ?? "";
+  const orderedConversations = searchInboxQueue(triage.visible, data.messages, data.customers, search);
   const selected = orderedConversations.find((item) => item.id === selectedConversationId)
     ?? orderedConversations[0];
   if (!selected) {
@@ -185,10 +247,14 @@ function InboxView({
             <p>{triage.counts.all} stored conversations</p>
           </div>
         </div>
-        <InboxQueueNavigation queue={queue} counts={triage.counts} />
+        <InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />
+        <InboxSearchForm queue={queue} search={search} />
+        {search ? (
+          <a className={styles.inboxClearSearch} href={inboxQueueHref(queue)}>Clear search and see this queue</a>
+        ) : null}
         <EmptyState
-          title={triage.counts.all ? "No conversations in this queue" : "Inbox is clear"}
-          detail={triage.counts.all
+          title={search ? "No matching conversations" : triage.counts.all ? "No conversations in this queue" : "Inbox is clear"}
+          detail={search ? "Try a different name, channel or message phrase." : triage.counts.all
             ? "Choose another queue to see existing conversations."
             : "No customer conversations are stored for this workspace yet."}
         />
@@ -196,22 +262,29 @@ function InboxView({
     );
   }
 
-  const customer = data.customers.find((item) => item.id === selected.customerId);
+  const threadPosition = inboxThreadPosition(orderedConversations, selected.id, queue, search);
+  const customersById = indexStaffById(data.customers);
+  const customer = customersById.get(selected.customerId ?? "");
   const request = data.requests.find((item) => item.id === selected.requestId);
   const property = request?.propertyId
     ? data.properties.find((item) => item.id === request.propertyId)
     : undefined;
+  const activeQuote = request
+    ? [...data.quotes]
+      .filter((quote) => quote.requestId === request.id && quote.status !== "SUPERSEDED")
+      .sort((a, b) => b.version - a.version)[0]
+    : undefined;
+  const relatedVisit = request
+    ? data.visits.find((visit) => visit.requestId === request.id && !["COMPLETED", "CANCELLED"].includes(visit.status))
+      ?? data.visits.find((visit) => visit.requestId === request.id)
+    : undefined;
+  const relatedInvoice = activeQuote
+    ? data.invoices.find((invoice) => invoice.quoteId === activeQuote.id)
+    : undefined;
   const messages = data.messages
     .filter((item) => item.conversationId === selected.id)
     .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
-  const lastMessageByConversation = new Map(
-    orderedConversations.map((conversation) => {
-      const latest = data.messages
-        .filter((message) => message.conversationId === conversation.id)
-        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
-      return [conversation.id, latest] as const;
-    }),
-  );
+  const lastMessageByConversation = indexLatestExternalInboxMessages(data.messages);
 
   async function handover(formData: FormData) {
     "use server";
@@ -222,7 +295,7 @@ function InboxView({
       workspaceSlug,
       "inbox",
       result,
-      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&",
+      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&search=" + encodeURIComponent(search) + "&",
     );
   }
 
@@ -239,7 +312,7 @@ function InboxView({
       workspaceSlug,
       "inbox",
       result,
-      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&",
+      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&search=" + encodeURIComponent(search) + "&",
     );
   }
 
@@ -252,7 +325,7 @@ function InboxView({
       workspaceSlug,
       "inbox",
       result,
-      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&",
+      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&search=" + encodeURIComponent(search) + "&",
     );
   }
 
@@ -274,16 +347,24 @@ function InboxView({
             <p>{triage.counts.all} stored threads · {triage.counts["needs-reply"]} awaiting reply</p>
           </div>
         </header>
-        <InboxQueueNavigation queue={queue} counts={triage.counts} />
-        <div className={styles.conversationList} role="list">
+        <InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />
+        <InboxSearchForm queue={queue} search={search} />
+        <div className={styles.inboxResultsBar} aria-live="polite">
+          <span>{search
+            ? `${orderedConversations.length} matching conversation${orderedConversations.length === 1 ? "" : "s"}`
+            : `${orderedConversations.length} conversation${orderedConversations.length === 1 ? "" : "s"} in this queue`}</span>
+          {search ? <a href={inboxQueueHref(queue)}>Clear search</a> : null}
+        </div>
+        <a className={styles.inboxMobileJump} href="#active-inbox-thread">Jump to selected conversation ↓</a>
+        <div id="inbox-conversation-list" className={styles.conversationList} role="list">
           {orderedConversations.map((conversation) => {
-            const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
+            const threadCustomer = customersById.get(conversation.customerId ?? "");
             const latest = lastMessageByConversation.get(conversation.id);
             const selectedThread = conversation.id === selected.id;
             return (
               <a
                 className={`${styles.conversationItem} ${selectedThread ? styles.conversationSelected : ""}`.trim()}
-                href={inboxQueueHref(queue, conversation.id)}
+                href={inboxQueueHref(queue, conversation.id, search) + "#active-inbox-thread"}
                 aria-current={selectedThread ? "page" : undefined}
                 aria-label={(threadCustomer?.displayName ?? "Unverified sender") + " " + conversation.channel + " conversation"}
                 role="listitem"
@@ -302,9 +383,11 @@ function InboxView({
                     <span>{conversation.channel}</span>
                     {conversation.handoverActive
                       ? <span className={styles.takeoverDot}>Human takeover</span>
-                      : triage.threadFlags.get(conversation.id)?.needsReply
-                        ? <span className={styles.inboxNeedsReply}>Reply due</span>
-                        : <span>Open</span>}
+                      : triage.threadFlags.get(conversation.id)?.deliveryIssue
+                        ? <span className={styles.inboxDeliveryIssue}>Delivery issue</span>
+                        : triage.threadFlags.get(conversation.id)?.needsReply
+                          ? <span className={styles.inboxNeedsReply}>Reply due</span>
+                          : <span>Open</span>}
                     {triage.threadFlags.get(conversation.id)?.unverified
                       ? <span className={styles.inboxUnverified}>Identity review</span>
                       : null}
@@ -316,7 +399,8 @@ function InboxView({
         </div>
       </aside>
 
-      <section className={styles.inboxThreadPane} aria-label={customer ? customer.displayName + " conversation" : "Unverified sender conversation"}>
+      <section id="active-inbox-thread" className={styles.inboxThreadPane} aria-label={customer ? customer.displayName + " conversation" : "Unverified sender conversation"}>
+        <a className={styles.inboxBackToList} href="#inbox-conversation-list">↑ Back to conversations</a>
         <header className={styles.threadHeader}>
           <div className={styles.threadIdentity}>
             <span className={styles.threadAvatar} aria-hidden="true">{participantLabel.slice(0, 1).toUpperCase()}</span>
@@ -332,12 +416,27 @@ function InboxView({
             <form action={handover}>
               <input type="hidden" name="conversationId" value={selected.id} />
               <input type="hidden" name="active" value={selected.handoverActive ? "false" : "true"} />
-              <button className="app-button-secondary" type="submit">
+              <StaffSubmitButton className="app-button-secondary" pendingLabel="Updating handover…">
                 {selected.handoverActive ? "Release" : "Take over"}
-              </button>
+              </StaffSubmitButton>
             </form>
           </div>
         </header>
+
+        <InboxThreadNavigator
+          current={threadPosition.index}
+          total={threadPosition.total}
+          previousHref={threadPosition.previousHref}
+          nextHref={threadPosition.nextHref}
+        />
+
+        {triage.threadFlags.get(selected.id)?.deliveryIssue ? (
+          <FeedbackBanner
+            title="Outbound delivery needs review"
+            description="The latest outbound message failed or was suppressed. The customer has not received a confirmed reply. Check the provider status, recipient identity and consent before deciding whether to send a new message."
+            tone="danger"
+          />
+        ) : null}
 
         {!customer && identityResolutionSupported ? (
           <div className={styles.identityReview}>
@@ -349,7 +448,7 @@ function InboxView({
             <form action={resolveIdentity}>
               <input type="hidden" name="conversationId" value={selected.id} />
               <input type="hidden" name="expectedVersion" value={selected.version} />
-              <button className="app-button-secondary" type="submit">Resolve verified identity</button>
+              <StaffSubmitButton className="app-button-secondary" pendingLabel="Verifying identity…">Resolve verified identity</StaffSubmitButton>
               <span>Only an exact, unique verified contact match can be linked. Human takeover stays active.</span>
             </form>
           </div>
@@ -370,6 +469,9 @@ function InboxView({
                 : message.senderKind === "STAFF"
                   ? "Staff"
                   : message.senderKind;
+              const delivery = outbound && message.deliveryState
+                ? presentOutboundDelivery(message.deliveryState)
+                : undefined;
               return (
                 <article
                   className={`${styles.messageBubbleRow} ${outbound ? styles.messageOutbound : internal ? styles.messageInternal : styles.messageInbound}`}
@@ -381,8 +483,10 @@ function InboxView({
                       <span>{formatWhen(message.createdAt, data.workspace.timezone)}</span>
                     </div>
                     <p>{message.body ?? "Media message"}</p>
-                    {message.deliveryState ? (
-                      <small className={styles.deliveryState}>{message.deliveryState.replaceAll("_", " ").toLowerCase()}</small>
+                    {delivery ? (
+                      <span className={styles.deliveryState}>
+                        <StatusBadge tone={delivery.tone}>{delivery.label}</StatusBadge>
+                      </span>
                     ) : null}
                   </div>
                 </article>
@@ -409,9 +513,9 @@ function InboxView({
           </FormField>
           <div className={styles.composerFooter}>
             <span>{replySupported ? `Reply via ${selected.channel}` : !customer ? "Identity must be verified before reply" : "Read-only conversation"}</span>
-            <button className="app-button-primary" type="submit" disabled={!replySupported}>
+            <StaffSubmitButton className="app-button-primary" disabled={!replySupported} pendingLabel="Queueing reply…">
               Queue reply
-            </button>
+            </StaffSubmitButton>
           </div>
         </form>
       </section>
@@ -424,6 +528,36 @@ function InboxView({
             <p>{customer ? request?.serviceLabel ?? "No request linked" : "No customer record linked"}</p>
           </div>
         </header>
+
+        {customer || request ? (
+          <nav className={styles.contextActions} aria-label="Open related business records">
+            {customer ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/customers?customer=${encodeURIComponent(customer.id)}`}>
+                Customer record <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+            {request ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/requests?request=${encodeURIComponent(request.id)}`}>
+                Service request <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+            {activeQuote ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/quotes?quote=${encodeURIComponent(activeQuote.id)}`}>
+                Quote · {activeQuote.status.replaceAll("_", " ").toLowerCase()} <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+            {relatedVisit ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/jobs?job=${encodeURIComponent(relatedVisit.id)}`}>
+                Job · {relatedVisit.status.replaceAll("_", " ").toLowerCase()} <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+            {relatedInvoice ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/invoices?invoice=${encodeURIComponent(relatedInvoice.id)}`}>
+                Invoice · {relatedInvoice.status.replaceAll("_", " ").toLowerCase()} <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+          </nav>
+        ) : null}
 
         <div className={styles.contextSection}>
           <span className={styles.contextLabel}>Request</span>
@@ -456,7 +590,7 @@ function InboxView({
             <div className={styles.relatedChannels}>
               {relatedConversations.map((conversation) => (
                 <a
-                  href={inboxQueueHref("all", conversation.id)}
+                  href={inboxQueueHref("all", conversation.id, search)}
                   key={conversation.id}
                 >
                   <strong>{conversation.channel}</strong>
@@ -471,13 +605,27 @@ function InboxView({
   );
 }
 
-function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSnapshot; selectedCustomerId?: string }) {
+function CustomersView({ data, selectedCustomerId, searchQuery }: { data: OperationalStaffSnapshot; selectedCustomerId?: string; searchQuery?: string }) {
   if (data.customers.length === 0) {
-    return <EmptyState title="No customers yet" detail="Customers will appear here after enquiries are linked to a customer record." />;
+    return <EmptyState title="No customers yet" detail="Customers will appear here after enquiries are linked to a customer record." action={{ label: "Open conversations", href: buildStaffModuleHref(data.workspace.slug, "inbox") }} />;
   }
 
   const orderedCustomers = [...data.customers].sort((left, right) => left.displayName.localeCompare(right.displayName));
-  const selectedCustomer = orderedCustomers.find((customer) => customer.id === selectedCustomerId) ?? orderedCustomers[0];
+  const search = normalizeDirectoryQuery(searchQuery);
+  const visibleCustomers = filterDirectoryRows(orderedCustomers, search, (customer) => {
+    return [customer.displayName, customer.leadSource];
+  });
+  if (!visibleCustomers.length) {
+    return (
+      <section aria-label="Customer relationship workspace">
+        <RecordDirectorySearch label="customers" search={search} visible={0} total={orderedCustomers.length} />
+        <EmptyState title="No matching customers" detail="Try a different name or lead source, or clear the search." />
+      </section>
+    );
+  }
+  const propertiesByCustomer = countStaffBy(data.properties, (property) => property.customerId);
+  const requestsByCustomer = countStaffBy(data.requests, (request) => request.customerId);
+  const selectedCustomer = visibleCustomers.find((customer) => customer.id === selectedCustomerId) ?? visibleCustomers[0];
   const selectedProperties = data.properties.filter((property) => property.customerId === selectedCustomer.id);
   const selectedRequests = data.requests
     .filter((request) => request.customerId === selectedCustomer.id)
@@ -486,7 +634,7 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
   const selectedQuotes = data.quotes.filter((quote) => selectedRequestIds.has(quote.requestId));
   const selectedQuoteIds = new Set(selectedQuotes.map((quote) => quote.id));
   const selectedInvoices = data.invoices.filter((invoice) => invoice.quoteId && selectedQuoteIds.has(invoice.quoteId));
-  const openInvoices = selectedInvoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
+  const openInvoices = selectedInvoices.filter(isCollectibleInvoice);
   const openInvoiceTotal = openInvoices.reduce((sum, invoice) => sum + invoice.balanceMinor, 0);
   const openInvoiceCurrency = openInvoices.length > 0 && openInvoices.every((invoice) => invoice.currency === openInvoices[0].currency)
     ? openInvoices[0].currency
@@ -533,16 +681,17 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
         </div>
       </header>
 
+      <RecordDirectorySearch label="customers" search={search} visible={visibleCustomers.length} total={orderedCustomers.length} />
       <div className={styles.crmSplit}>
         <aside className={styles.crmQueue} aria-label="Customer list">
-          {orderedCustomers.map((customer) => {
-            const properties = data.properties.filter((item) => item.customerId === customer.id).length;
-            const requests = data.requests.filter((item) => item.customerId === customer.id).length;
+          {visibleCustomers.map((customer) => {
+            const properties = propertiesByCustomer.get(customer.id) ?? 0;
+            const requests = requestsByCustomer.get(customer.id) ?? 0;
             const selected = customer.id === selectedCustomer.id;
             return (
               <a
                 className={`${styles.crmQueueItem} ${selected ? styles.crmQueueSelected : ""}`.trim()}
-                href={"?customer=" + encodeURIComponent(customer.id)}
+                href={directoryRecordHref("customer", customer.id, search)}
                 aria-current={selected ? "page" : undefined}
                 key={customer.id}
               >
@@ -625,9 +774,9 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
                         {verified && data.retentionAvailable ? (
                           <form action={retentionControlAction}>
                             <input name="channel" type="hidden" value={channel} />
-                            <button className="app-button-secondary" name="status" type="submit" value="ACTIVE">Clear hold</button>
-                            <button className="app-button-secondary" name="status" type="submit" value="PAUSED">Pause</button>
-                            <button className="app-button-secondary" name="status" type="submit" value="SUPPRESSED">Suppress</button>
+                            <StaffSubmitButton className="app-button-secondary" name="status" value="ACTIVE" pendingLabel="Updating hold…">Clear hold</StaffSubmitButton>
+                            <StaffSubmitButton className="app-button-secondary" name="status" value="PAUSED" pendingLabel="Pausing…">Pause</StaffSubmitButton>
+                            <StaffSubmitButton className="app-button-secondary" name="status" value="SUPPRESSED" pendingLabel="Suppressing…">Suppress</StaffSubmitButton>
                           </form>
                         ) : null}
                       </div>
@@ -711,10 +860,12 @@ function RequestsView({
   data,
   workspaceSlug,
   selectedRequestId,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedRequestId?: string;
+  searchQuery?: string;
 }) {
   async function updateVoiceCallback(formData: FormData) {
     "use server";
@@ -767,17 +918,32 @@ function RequestsView({
   }
 
   if (data.requests.length === 0) {
-    return <EmptyState title="No requests in the queue" detail="New enquiries will appear here as persisted requests." />;
+    return <EmptyState title="No requests in the queue" detail="New enquiries will appear here as persisted requests." action={{ label: "Review conversations", href: buildStaffModuleHref(workspaceSlug, "inbox") }} />;
   }
 
   const orderedRequests = [...data.requests].sort((left, right) =>
     Date.parse(right.createdAt ?? "1970-01-01T00:00:00.000Z")
     - Date.parse(left.createdAt ?? "1970-01-01T00:00:00.000Z"),
   );
-  const selectedRequest = orderedRequests.find((request) => request.id === selectedRequestId) ?? orderedRequests[0];
-  const selectedRequestCustomer = data.customers.find((customer) => customer.id === selectedRequest.customerId);
+  const search = normalizeDirectoryQuery(searchQuery);
+  const customerById = indexStaffById(data.customers);
+  const customerNameById = new Map(data.customers.map((customer) => [customer.id, customer.displayName]));
+  const quoteByRequestId = indexCurrentQuoteByRequest(data.quotes);
+  const visibleRequests = filterDirectoryRows(orderedRequests, search, (request) => {
+    return [request.serviceLabel, request.status, request.sourceChannel, request.customerId ? customerNameById.get(request.customerId) : undefined];
+  });
+  if (!visibleRequests.length) {
+    return (
+      <section aria-label="Request intake workspace">
+        <RecordDirectorySearch label="requests" search={search} visible={0} total={orderedRequests.length} />
+        <EmptyState title="No matching requests" detail="Try a customer, service, channel or status, or clear the search." />
+      </section>
+    );
+  }
+  const selectedRequest = visibleRequests.find((request) => request.id === selectedRequestId) ?? visibleRequests[0];
+  const selectedRequestCustomer = customerById.get(selectedRequest.customerId ?? "");
   const selectedRequestProperty = data.properties.find((property) => property.id === selectedRequest.propertyId);
-  const selectedRequestQuote = data.quotes.find((quote) => quote.requestId === selectedRequest.id && quote.status !== "SUPERSEDED");
+  const selectedRequestQuote = quoteByRequestId.get(selectedRequest.id);
   const selectedPhotoAssets = (data.photoAssets ?? []).filter((asset) => asset.requestId === selectedRequest.id);
   const selectedPhotoSuggestions = (data.photoSuggestions ?? [])
     .filter((suggestion) => suggestion.requestId === selectedRequest.id)
@@ -793,9 +959,7 @@ function RequestsView({
     selectedRequest.bedrooms === undefined ? "Bedrooms" : undefined,
     selectedRequest.bathrooms === undefined ? "Bathrooms" : undefined,
   ].filter((item): item is string => Boolean(item));
-  const requestsWithoutQuote = orderedRequests.filter((request) =>
-    !data.quotes.some((quote) => quote.requestId === request.id && quote.status !== "SUPERSEDED"),
-  ).length;
+  const requestsWithoutQuote = orderedRequests.filter((request) => !quoteByRequestId.has(request.id)).length;
   const reviewRequests = orderedRequests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status)).length;
 
   return (
@@ -809,16 +973,17 @@ function RequestsView({
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "inbox")}>Open inbox</a>
       </header>
 
+      <RecordDirectorySearch label="requests" search={search} visible={visibleRequests.length} total={orderedRequests.length} />
       <div className={styles.salesSplit}>
         <aside className={styles.salesQueue} aria-label="Request queue">
-          {orderedRequests.map((request) => {
-            const requestCustomer = data.customers.find((item) => item.id === request.customerId);
-            const currentQuote = data.quotes.find((quote) => quote.requestId === request.id && quote.status !== "SUPERSEDED");
+          {visibleRequests.map((request) => {
+            const requestCustomer = customerById.get(request.customerId ?? "");
+            const currentQuote = quoteByRequestId.get(request.id);
             const selected = request.id === selectedRequest.id;
             return (
               <a
                 className={`${styles.salesQueueItem} ${selected ? styles.salesQueueSelected : ""}`.trim()}
-                href={"?request=" + encodeURIComponent(request.id)}
+                href={directoryRecordHref("request", request.id, search)}
                 aria-current={selected ? "page" : undefined}
                 key={request.id}
               >
@@ -888,9 +1053,9 @@ function RequestsView({
                     name="state"
                     value={selectedRequest.callbackRequired ? "RESOLVED" : "PENDING"}
                   />
-                  <button className="app-button-secondary" type="submit">
+                  <StaffSubmitButton className="app-button-secondary" pendingLabel="Updating callback…">
                     {selectedRequest.callbackRequired ? "Mark callback complete" : "Reopen callback"}
-                  </button>
+                  </StaffSubmitButton>
                   <span>
                     {selectedRequest.callbackRequired
                       ? "Completing the callback resolves its operations attention item."
@@ -931,7 +1096,7 @@ function RequestsView({
                   </ul>
                   <form action={calculateQuote} className={styles.salesPrimaryAction}>
                     <input type="hidden" name="requestId" value={selectedRequest.id} />
-                    <button className="app-button-primary" type="submit" disabled={!selectedRequestCanCalculate}>Calculate quote</button>
+                    <StaffSubmitButton className="app-button-primary" disabled={!selectedRequestCanCalculate} pendingLabel="Calculating quote…">Calculate quote</StaffSubmitButton>
                     {!selectedRequestCanCalculate ? <span>Complete the missing intake details before pricing.</span> : <span>Uses the current authoritative pricing rules.</span>}
                   </form>
                 </>
@@ -1024,8 +1189,8 @@ function RequestsView({
                                   <input name="requestId" type="hidden" value={selectedRequest.id} />
                                   <input name="suggestionId" type="hidden" value={latestSuggestion.id} />
                                   <input name="expectedVersion" type="hidden" value={latestSuggestion.version} />
-                                  <button className="app-button-primary" name="decision" type="submit" value="ACCEPTED">Accept for review</button>
-                                  <button className="app-button-secondary" name="decision" type="submit" value="REJECTED">Reject suggestion</button>
+                                  <StaffSubmitButton className="app-button-primary" name="decision" value="ACCEPTED" pendingLabel="Accepting suggestion…">Accept for review</StaffSubmitButton>
+                                  <StaffSubmitButton className="app-button-secondary" name="decision" value="REJECTED" pendingLabel="Rejecting suggestion…">Reject suggestion</StaffSubmitButton>
                                 </form>
                               ) : null}
                               <p className={styles.photoSafetyNote}>
@@ -1063,10 +1228,12 @@ function QuotesView({
   data,
   workspaceSlug,
   selectedQuoteId,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedQuoteId?: string;
+  searchQuery?: string;
 }) {
   async function sendQuote(formData: FormData) {
     "use server";
@@ -1081,20 +1248,32 @@ function QuotesView({
   }
 
   if (data.quotes.length === 0) {
-    return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." />;
+    return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." action={{ label: "Review service requests", href: buildStaffModuleHref(workspaceSlug, "requests") }} />;
   }
 
-  const orderedQuotes = [...data.quotes].sort((left, right) => {
-    const statusWeight: Record<string, number> = { APPROVED: 0, SENT: 1, ACCEPTED: 2, DRAFT: 3, EXPIRED: 4, DECLINED: 5, SUPERSEDED: 6 };
-    return (statusWeight[left.status] ?? 9) - (statusWeight[right.status] ?? 9)
-      || right.version - left.version;
+  const { currentQuoteByRequest, orderedQuotes, readyToSend, awaitingCustomer } = buildQuotePipeline(data.quotes);
+  const search = normalizeDirectoryQuery(searchQuery);
+  const requestById = new Map(data.requests.map((request) => [request.id, request]));
+  const customerById = new Map(data.customers.map((customer) => [customer.id, customer]));
+  const visibleQuotes = filterDirectoryRows(orderedQuotes, search, (quote) => {
+    const request = requestById.get(quote.requestId);
+    return [quote.status, quote.currency, request?.serviceLabel, request?.customerId ? customerById.get(request.customerId)?.displayName : undefined];
   });
-  const selectedQuote = orderedQuotes.find((quote) => quote.id === selectedQuoteId) ?? orderedQuotes[0];
-  const selectedQuoteRequest = data.requests.find((request) => request.id === selectedQuote.requestId);
-  const selectedQuoteCustomer = data.customers.find((customer) => customer.id === selectedQuoteRequest?.customerId);
+  if (!visibleQuotes.length) {
+    return (
+      <section aria-label="Quote workspace">
+        <RecordDirectorySearch label="quotes" search={search} visible={0} total={orderedQuotes.length} />
+        <EmptyState title="No matching quotes" detail="Try a customer, service or quote status, or clear the search." />
+      </section>
+    );
+  }
+  const selectedQuote = visibleQuotes.find((quote) => quote.id === selectedQuoteId) ?? visibleQuotes[0];
+  const currentQuote = currentQuoteByRequest.get(selectedQuote.requestId);
+  const selectedQuoteIsCurrent = currentQuote?.id === selectedQuote.id;
+  const selectedQuoteCanSend = isCurrentApprovedQuote(selectedQuote, currentQuoteByRequest);
+  const selectedQuoteRequest = requestById.get(selectedQuote.requestId);
+  const selectedQuoteCustomer = customerById.get(selectedQuoteRequest?.customerId ?? "");
   const selectedQuoteProperty = data.properties.find((property) => property.id === selectedQuoteRequest?.propertyId);
-  const awaitingCustomer = orderedQuotes.filter((quote) => quote.status === "SENT").length;
-  const readyToSend = orderedQuotes.filter((quote) => quote.status === "APPROVED").length;
 
   return (
     <section className={styles.salesWorkspace} aria-label="Quote workspace">
@@ -1107,16 +1286,17 @@ function QuotesView({
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "requests")}>Open requests</a>
       </header>
 
+      <RecordDirectorySearch label="quotes" search={search} visible={visibleQuotes.length} total={orderedQuotes.length} />
       <div className={styles.salesSplit}>
         <aside className={styles.salesQueue} aria-label="Quote list">
-          {orderedQuotes.map((quote) => {
-            const request = data.requests.find((item) => item.id === quote.requestId);
-            const customer = data.customers.find((item) => item.id === request?.customerId);
+          {visibleQuotes.map((quote) => {
+            const request = requestById.get(quote.requestId);
+            const customer = customerById.get(request?.customerId ?? "");
             const selected = quote.id === selectedQuote.id;
             return (
               <a
                 className={`${styles.salesQueueItem} ${selected ? styles.salesQueueSelected : ""}`.trim()}
-                href={"?quote=" + encodeURIComponent(quote.id)}
+                href={directoryRecordHref("quote", quote.id, search)}
                 aria-current={selected ? "page" : undefined}
                 key={quote.id}
               >
@@ -1127,7 +1307,7 @@ function QuotesView({
                 <span className={styles.salesQueueCustomer}>{customer?.displayName ?? "Customer unavailable"}</span>
                 <span className={styles.salesQueueMeta}>
                   <span>{formatMinorMoney(quote.totalMinor, quote.currency)}</span>
-                  <span>v{quote.version}</span>
+                  <span>v{quote.version}{currentQuoteByRequest.get(quote.requestId)?.id !== quote.id ? " · history" : ""}</span>
                 </span>
               </a>
             );
@@ -1141,7 +1321,10 @@ function QuotesView({
               <h2>{selectedQuoteRequest?.serviceLabel ?? "Service quote"}</h2>
               <p>{selectedQuoteCustomer?.displayName ?? "Customer unavailable"} · {selectedQuoteProperty?.label ?? "No property linked"}</p>
             </div>
-            <StatusBadge tone={statusBadgeTone(selectedQuote.status)}>{selectedQuote.status.replaceAll("_", " ")}</StatusBadge>
+            <div className={styles.quoteHeaderBadges}>
+              <StatusBadge tone={statusBadgeTone(selectedQuote.status)}>{selectedQuote.status.replaceAll("_", " ")}</StatusBadge>
+              {!selectedQuoteIsCurrent ? <StatusBadge tone="warning">Historical version</StatusBadge> : null}
+            </div>
           </header>
 
           <section className={styles.quoteFinancials} aria-label="Quote financial summary">
@@ -1166,15 +1349,22 @@ function QuotesView({
 
             <section className={styles.salesSection}>
               <div className={styles.salesSectionHeader}>
-                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{selectedQuote.status === "APPROVED" ? "Ready to send" : selectedQuote.status === "SENT" ? "Waiting for customer" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
+                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{!selectedQuoteIsCurrent ? "Historical quote" : selectedQuote.status === "APPROVED" ? "Ready to send" : selectedQuote.status === "SENT" ? "Waiting for customer" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
               </div>
               <div className={styles.quoteNextStep}>
-                {selectedQuote.status === "APPROVED" ? (
+                {!selectedQuoteIsCurrent ? (
+                  <>
+                    <p>This is not the current quote version. Review the latest quote before taking another action.</p>
+                    <a className="app-button-secondary" href={currentQuote
+                      ? directoryRecordHref("quote", currentQuote.id, search)
+                      : buildStaffModuleHref(workspaceSlug, "requests")}>Open current record</a>
+                  </>
+                ) : selectedQuoteCanSend ? (
                   <>
                     <p>The quote is approved internally and ready to send to the customer.</p>
                     <form action={sendQuote}>
                       <input type="hidden" name="quoteId" value={selectedQuote.id} />
-                      <button className="app-button-primary" type="submit">Send quote</button>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Sending quote…">Send quote</StaffSubmitButton>
                     </form>
                   </>
                 ) : selectedQuote.status === "SENT" ? (
@@ -1196,17 +1386,30 @@ function QuotesView({
 function ScheduleView({
   data,
   workspaceSlug,
+  selectedScheduleQueue,
+  selectedScheduleFrom,
+  selectedScheduleDay,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
+  selectedScheduleQueue?: string;
+  selectedScheduleFrom?: string;
+  selectedScheduleDay?: string;
 }) {
+  const window = buildScheduleWindow(data.loadedAt, data.workspace.timezone, selectedScheduleFrom);
+  const upcoming = filterScheduleWindow(data.visits, data.workspace.timezone, window);
+  const coverageDays = buildDispatchCoverageWeek(upcoming, data.loadedAt, data.workspace.timezone, window.from);
+  const selectedDay = normalizeCoverageDay(selectedScheduleDay, coverageDays);
+  const currentQueue = selectedScheduleQueue === "unassigned" ? "unassigned" : "all";
+  const redirectPrefix = scheduleWindowFeedbackPrefix(window, currentQueue)
+    + (selectedDay ? "day=" + encodeURIComponent(selectedDay) + "&" : "");
   async function assignCrew(formData: FormData) {
     "use server";
     const visitId = String(formData.get("visitId") ?? "");
     const crewId = String(formData.get("crewId") ?? "");
     const expectedVersion = Number(formData.get("expectedVersion"));
     const result = await assignOperationalCrew(workspaceSlug, visitId, crewId, expectedVersion);
-    actionRedirect(workspaceSlug, "schedule", result);
+    actionRedirect(workspaceSlug, "schedule", result, redirectPrefix);
   }
 
   async function holdSlot(formData: FormData) {
@@ -1216,35 +1419,39 @@ function ScheduleView({
       String(formData.get("quoteId") ?? ""),
       String(formData.get("slotId") ?? ""),
     );
-    actionRedirect(workspaceSlug, "schedule", result);
+    actionRedirect(workspaceSlug, "schedule", result, redirectPrefix);
   }
 
   const now = Date.parse(data.loadedAt);
-  const week = now + 7 * 24 * 60 * 60 * 1000;
-  const upcoming = data.visits
-    .filter((visit) => {
-      const time = visit.startAt ? Date.parse(visit.startAt) : Number.NaN;
-      return Number.isFinite(time) && time >= now && time <= week && visit.status !== "CANCELLED";
-    })
-    .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt));
-  const scheduledRequestIds = new Set(data.visits.map((visit) => visit.requestId));
-  const unscheduled = data.requests.filter(
-    (request) => !scheduledRequestIds.has(request.id) && !["LOST", "CLOSED"].includes(request.status),
-  );
-  const acceptedQuotes = data.quotes.filter(
-    (quote) => quote.status === "ACCEPTED" && !data.visits.some((visit) => visit.quoteId === quote.id),
-  );
+
+  const requestById = indexStaffById(data.requests);
+  const customerById = indexStaffById(data.customers);
+  const crewById = indexStaffById(data.crews);
+  const activeHoldByQuote = new Map<string, OperationalStaffSnapshot["slotHolds"][number]>();
+  for (const hold of data.slotHolds) {
+    if (hold.status === "HELD" && Date.parse(hold.expiresAt) > now && !activeHoldByQuote.has(hold.quoteId)) {
+      activeHoldByQuote.set(hold.quoteId, hold);
+    }
+  }
+  const { unscheduled, acceptedQuotes } = deriveDispatchBacklog(data.requests, data.quotes, data.visits);
   const heldSlotIds = new Set(
     data.slotHolds
       .filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now)
       .map((hold) => hold.slotId),
   );
   const unassignedUpcoming = upcoming.filter((visit) => !visit.crewId).length;
+  // A read-only view of already authorized visits; never affects assignment authority.
+  const showUnassigned = selectedScheduleQueue === "unassigned";
+  const queueVisits = showUnassigned ? upcoming.filter((visit) => !visit.crewId) : upcoming;
+  const localDayKey = createLocalDayKey(data.workspace.timezone);
+  const visibleUpcoming = selectedDay
+    ? queueVisits.filter((visit) => localDayKey(visit.startAt) === selectedDay)
+    : queueVisits;
   const activeHolds = data.slotHolds.filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now).length;
   const dispatch = buildOperationalDispatchIntelligence(data);
   const visitLabels = Object.fromEntries(data.visits.map((visit) => {
-    const request = data.requests.find((item) => item.id === visit.requestId);
-    const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
+    const request = requestById.get(visit.requestId);
+    const customer = request?.customerId ? customerById.get(request.customerId) : undefined;
     return [visit.id, `${request?.serviceLabel ?? "Service visit"}${customer ? ` · ${customer.displayName}` : ""}`];
   }));
   const visitMeta = Object.fromEntries(data.visits.map((visit) => [visit.id, formatWhen(visit.startAt, data.workspace.timezone)]));
@@ -1255,17 +1462,38 @@ function ScheduleView({
         <div>
           <p className={styles.scheduleEyebrow}>Operations planning</p>
           <h2>Planning &amp; dispatch</h2>
-          <p>Plan the next seven days, place accepted work into capacity, and confirm crew assignments.</p>
+          <p>Review crew coverage across business-local calendar days, place accepted work into capacity, and confirm assignments.</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open jobs</a>
       </header>
 
+      <nav className={styles.scheduleWindowNav} aria-label="Browse seven-day scheduling windows">
+        <div className={styles.scheduleWindowPeriod}>
+          <span>Service dates · {data.workspace.timezone}</span>
+          <strong>{window.from} → {window.end}</strong>
+        </div>
+        <div className={styles.scheduleWindowActions}>
+          <a href={scheduleWindowHref(window.previous, currentQueue, window.today)} aria-label="Previous seven calendar days">← Previous</a>
+          <a href={scheduleWindowHref(window.today, currentQueue, window.today)} aria-current={window.isCurrent ? "date" : undefined}>Today</a>
+          <a href={scheduleWindowHref(window.next, currentQueue, window.today)} aria-label="Next seven calendar days">Next →</a>
+        </div>
+      </nav>
+
       <section className={styles.scheduleMetrics} aria-label="Scheduling summary">
-        <div><span>Next 7 days</span><strong>{upcoming.length}</strong><small>Scheduled visits</small></div>
+        <div><span>{window.isCurrent ? "Next 7 days" : "Selected 7 days"}</span><strong>{upcoming.length}</strong><small>Scheduled visits</small></div>
         <div className={unassignedUpcoming ? styles.scheduleMetricWarning : undefined}><span>Need crew</span><strong>{unassignedUpcoming}</strong><small>Upcoming visits</small></div>
         <div className={acceptedQuotes.length ? styles.scheduleMetricAttention : undefined}><span>Awaiting slot</span><strong>{acceptedQuotes.length}</strong><small>Accepted quotes</small></div>
         <div><span>Active holds</span><strong>{activeHolds}</strong><small>Temporary capacity holds</small></div>
       </section>
+
+      <DispatchCoverageWeek
+        days={coverageDays}
+        selectedDay={selectedDay}
+        queue={selectedScheduleQueue}
+        timeZone={data.workspace.timezone}
+        from={window.from}
+        today={window.today}
+      />
 
       <DispatcherIntelligence
         recommendations={dispatch.recommendations}
@@ -1280,24 +1508,33 @@ function ScheduleView({
             <input type="hidden" name="visitId" value={recommendation.visitId} />
             <input type="hidden" name="crewId" value={candidate.candidateCrewId} />
             <input type="hidden" name="expectedVersion" value={recommendation.visitVersion} />
-            <button className="app-button-primary" type="submit">Assign crew</button>
+            <StaffSubmitButton className="app-button-primary" pendingLabel="Assigning crew…">Assign crew</StaffSubmitButton>
           </form>
         )}
       />
 
+      <nav className={styles.scheduleQueueNav} aria-label="Schedule visit filters">
+        <a href={scheduleCoverageHref("all", selectedDay, window.from, window.today)} aria-current={!showUnassigned ? "page" : undefined}>
+          All visits <strong>{upcoming.length}</strong>
+        </a>
+        <a href={scheduleCoverageHref("unassigned", selectedDay, window.from, window.today)} aria-current={showUnassigned ? "page" : undefined}>
+          Need crew <strong>{unassignedUpcoming}</strong>
+        </a>
+      </nav>
+
       <div className={styles.schedulePlanningGrid}>
         <section className={styles.scheduleCard} aria-labelledby="next-seven-days-heading">
           <div className={styles.scheduleCardHeader}>
-            <div><p className={styles.scheduleCardEyebrow}>Upcoming</p><h3 id="next-seven-days-heading">Next 7 days</h3><p>{upcoming.length} scheduled visit{upcoming.length === 1 ? "" : "s"}.</p></div>
+            <div><p className={styles.scheduleCardEyebrow}>Verified visits</p><h3 id="next-seven-days-heading">{showUnassigned ? "Visits waiting for crew" : window.isCurrent ? "Next 7 days" : "Selected 7 days"}</h3><p>{visibleUpcoming.length} visit{visibleUpcoming.length === 1 ? "" : "s"} shown from {window.from} through {window.end}.</p></div>
           </div>
-          {upcoming.length === 0 ? (
-            <div className={styles.scheduleEmpty}><strong>No upcoming visits</strong><p>No visits are scheduled in the next seven days.</p></div>
+          {visibleUpcoming.length === 0 ? (
+            <div className={styles.scheduleEmpty}><strong>{showUnassigned ? "Crew coverage complete" : "No scheduled visits"}</strong><p>{showUnassigned ? "All scheduled visits in this window have a crew." : `No visits are scheduled from ${window.from} through ${window.end}.`}</p></div>
           ) : (
             <div className={styles.scheduleVisitList}>
-              {upcoming.slice(0, 12).map((visit) => {
-                const request = data.requests.find((item) => item.id === visit.requestId);
-                const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
-                const crew = visit.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
+              {visibleUpcoming.slice(0, 12).map((visit) => {
+                const request = requestById.get(visit.requestId);
+                const customer = request?.customerId ? customerById.get(request.customerId) : undefined;
+                const crew = visit.crewId ? crewById.get(visit.crewId) : undefined;
                 return (
                   <a className={styles.scheduleVisitRow} href={`/app/${encodeURIComponent(workspaceSlug)}/jobs?job=${encodeURIComponent(visit.id)}`} key={visit.id}>
                     <time>{formatWhen(visit.startAt, data.workspace.timezone)}</time>
@@ -1306,6 +1543,12 @@ function ScheduleView({
                   </a>
                 );
               })}
+              {visibleUpcoming.length > 12 ? (
+                <div className={styles.scheduleOverflowNotice}>
+                  <span>Showing 12 of {visibleUpcoming.length} scheduled visits.</span>
+                  <a href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open all jobs →</a>
+                </div>
+              ) : null}
             </div>
           )}
         </section>
@@ -1319,9 +1562,9 @@ function ScheduleView({
           ) : (
             <div className={styles.bookingQueue}>
               {acceptedQuotes.map((quote) => {
-                const request = data.requests.find((item) => item.id === quote.requestId);
-                const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
-                const activeHold = data.slotHolds.find((hold) => hold.quoteId === quote.id && hold.status === "HELD" && Date.parse(hold.expiresAt) > now);
+                const request = requestById.get(quote.requestId);
+                const customer = request?.customerId ? customerById.get(request.customerId) : undefined;
+                const activeHold = activeHoldByQuote.get(quote.id);
                 const requiredMinutes = quote.durationMinutes + quote.bufferMinutes;
                 const candidates = data.capacitySlots.filter((slot) => {
                   const start = Date.parse(slot.startAt);
@@ -1342,7 +1585,7 @@ function ScheduleView({
                           <form action={holdSlot} key={slot.id}>
                             <input type="hidden" name="quoteId" value={quote.id} />
                             <input type="hidden" name="slotId" value={slot.id} />
-                            <button className="app-button-secondary" type="submit">Hold {formatWhen(slot.startAt, data.workspace.timezone)}</button>
+                            <StaffSubmitButton className="app-button-secondary" pendingLabel="Holding slot…">Hold {formatWhen(slot.startAt, data.workspace.timezone)}</StaffSubmitButton>
                           </form>
                         ))}
                       </div>
@@ -1365,7 +1608,7 @@ function ScheduleView({
         ) : (
           <div className={styles.unscheduledGrid}>
             {unscheduled.slice(0, 12).map((request) => {
-              const customer = request.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
+              const customer = request.customerId ? customerById.get(request.customerId) : undefined;
               return (
                 <a href={`/app/${encodeURIComponent(workspaceSlug)}/requests?request=${encodeURIComponent(request.id)}`} key={request.id}>
                   <span><strong>{request.serviceLabel}</strong><small>{customer?.displayName ?? "Visitor enquiry"} · Requested {formatWhen(request.requestedStartAt, data.workspace.timezone)}</small></span>
@@ -1384,11 +1627,17 @@ function JobsView({
   data,
   workspaceSlug,
   selectedJobId,
+  selectedJobQueue,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedJobId?: string;
+  selectedJobQueue?: string;
+  searchQuery?: string;
 }) {
+  const jobQueue = normalizeJobsQueue(selectedJobQueue);
+  const jobSearch = normalizeJobsSearch(searchQuery);
   async function transitionVisit(formData: FormData) {
     "use server";
     const action = String(formData.get("action") ?? "") as
@@ -1402,7 +1651,7 @@ function JobsView({
     }
     const visitId = String(formData.get("visitId") ?? "");
     const result = await transitionOperationalVisit(workspaceSlug, visitId, action);
-    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId, jobSearch));
   }
 
   async function saveVisitNote(formData: FormData) {
@@ -1417,7 +1666,7 @@ function JobsView({
       kind,
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId, jobSearch));
   }
 
   async function saveChecklistItem(formData: FormData) {
@@ -1430,7 +1679,7 @@ function JobsView({
       String(formData.get("completed") ?? "") === "true",
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result, "job=" + encodeURIComponent(visitId) + "&");
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId, jobSearch));
   }
 
   const nextAction = (status: string) => {
@@ -1443,7 +1692,7 @@ function JobsView({
   };
 
   if (data.visits.length === 0) {
-    return <EmptyState title="No jobs yet" detail="Paid and scheduled visits will appear here." />;
+    return <EmptyState title="No jobs yet" detail="Paid and scheduled visits will appear here." action={{ label: "Open schedule", href: buildStaffModuleHref(workspaceSlug, "schedule") }} />;
   }
 
   const orderedVisits = [...data.visits].sort((left, right) => {
@@ -1452,11 +1701,31 @@ function JobsView({
     return leftClosed - rightClosed || Date.parse(left.startAt) - Date.parse(right.startAt);
   });
   const activeVisits = orderedVisits.filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status));
-  const selectedVisit = orderedVisits.find((visit) => visit.id === selectedJobId) ?? activeVisits[0] ?? orderedVisits[0];
-  const selectedRequest = data.requests.find((request) => request.id === selectedVisit.requestId);
-  const selectedCustomer = data.customers.find((customer) => customer.id === selectedRequest?.customerId);
+  const requestById = indexStaffById(data.requests);
+  const customerById = indexStaffById(data.customers);
+  const crewById = indexStaffById(data.crews);
+  const queue = normalizeJobsQueue(selectedJobQueue);
+  const statusVisits = filterJobsQueue(orderedVisits, queue);
+  const visibleVisits = filterJobsSearch(statusVisits, jobSearch, (visit) => {
+    const request = requestById.get(visit.requestId);
+    const customer = customerById.get(request?.customerId ?? "");
+    const crew = crewById.get(visit.crewId ?? "");
+    return [request?.serviceLabel, customer?.displayName, crew?.name, visit.status, visit.startAt];
+  });
+  if (!visibleVisits.length) {
+    return (
+      <section className={styles.jobsWorkspace} aria-label="Field jobs workspace">
+        <JobQueueFilters queue={queue} visits={orderedVisits} search={jobSearch} />
+      <JobQueueSearch queue={queue} search={jobSearch} visible={visibleVisits.length} total={statusVisits.length} />
+        <EmptyState title={jobSearch ? "No matching jobs" : "No jobs in this queue"} detail={jobSearch ? "Try a different customer, service or crew, or clear your search." : "Choose another status to see work in progress or completed jobs."} />
+      </section>
+    );
+  }
+  const selectedVisit = visibleVisits.find((visit) => visit.id === selectedJobId) ?? visibleVisits[0];
+  const selectedRequest = requestById.get(selectedVisit.requestId);
+  const selectedCustomer = customerById.get(selectedRequest?.customerId ?? "");
   const selectedProperty = data.properties.find((property) => property.id === selectedRequest?.propertyId);
-  const selectedCrew = selectedVisit.crewId ? data.crews.find((crew) => crew.id === selectedVisit.crewId) : undefined;
+  const selectedCrew = selectedVisit.crewId ? crewById.get(selectedVisit.crewId) : undefined;
   const selectedEvidence = data.visitEvidence.filter((item) => item.visitId === selectedVisit.id);
   const selectedChecklist = data.visitChecklistItems.filter((item) => item.visitId === selectedVisit.id);
   const selectedChecklistDone = selectedChecklist.filter((item) => item.completed).length;
@@ -1467,6 +1736,7 @@ function JobsView({
   const unassigned = activeVisits.filter((visit) => !visit.crewId).length;
   const inProgress = activeVisits.filter((visit) => ["EN_ROUTE", "IN_PROGRESS"].includes(visit.status)).length;
   const pendingReview = activeVisits.filter((visit) => visit.status === "PENDING_REVIEW").length;
+  const progressByVisit = indexJobProgress(data.visitEvidence, data.visitChecklistItems);
 
   return (
     <section className={styles.jobsWorkspace} aria-label="Field jobs workspace">
@@ -1486,19 +1756,20 @@ function JobsView({
         <div><span>Review queue</span><strong>{pendingReview}</strong></div>
       </section>
 
+      <JobQueueFilters queue={queue} visits={orderedVisits} search={jobSearch} />
+      <JobQueueSearch queue={queue} search={jobSearch} visible={visibleVisits.length} total={statusVisits.length} />
       <div className={styles.jobsSplit}>
         <aside className={styles.jobsQueue} aria-label="Job list">
-          {orderedVisits.map((visit) => {
-            const request = data.requests.find((item) => item.id === visit.requestId);
-            const customer = data.customers.find((item) => item.id === request?.customerId);
-            const crew = visit.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
-            const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
-            const checklist = data.visitChecklistItems.filter((item) => item.visitId === visit.id);
+          {visibleVisits.map((visit) => {
+            const request = requestById.get(visit.requestId);
+            const customer = customerById.get(request?.customerId ?? "");
+            const crew = visit.crewId ? crewById.get(visit.crewId) : undefined;
+            const progress = progressByVisit.get(visit.id);
             const selected = visit.id === selectedVisit.id;
             return (
               <a
                 className={`${styles.jobsQueueItem} ${selected ? styles.jobsQueueSelected : ""}`.trim()}
-                href={"?job=" + encodeURIComponent(visit.id)}
+                href={jobsQueueHref(queue, visit.id, jobSearch)}
                 aria-current={selected ? "page" : undefined}
                 key={visit.id}
               >
@@ -1511,7 +1782,7 @@ function JobsView({
                   <span>{formatWhen(visit.startAt, data.workspace.timezone)}</span>
                   <span>{crew?.name ?? "Unassigned"}</span>
                 </span>
-                <span className={styles.jobsQueueProgress}>{evidence.length} evidence · {checklist.filter((item) => item.completed).length}/{checklist.length} checklist</span>
+                <span className={styles.jobsQueueProgress}>{progress?.evidence ?? 0} evidence · {progress?.completed ?? 0}/{progress?.checklist ?? 0} checklist</span>
               </a>
             );
           })}
@@ -1607,7 +1878,7 @@ function JobsView({
                     )}
                   </FormField>
                 </FormGrid>
-                <button className="app-button-secondary" type="submit">Save note</button>
+                <StaffSubmitButton className="app-button-secondary" pendingLabel="Saving note…">Save note</StaffSubmitButton>
               </form>
             </section>
 
@@ -1642,7 +1913,7 @@ function JobsView({
                     {({ id, describedBy, invalid }) => <TextInput id={id} name="note" describedBy={describedBy} invalid={invalid} placeholder="Optional note" />}
                   </FormField>
                 </FormGrid>
-                <button className="app-button-secondary" type="submit">Mark complete</button>
+                <StaffSubmitButton className="app-button-secondary" pendingLabel="Updating checklist…">Mark complete</StaffSubmitButton>
               </form>
             </section>
           </div>
@@ -1656,43 +1927,60 @@ function InvoicesView({
   data,
   workspaceSlug,
   selectedInvoiceId,
+  selectedInvoiceQueue,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedInvoiceId?: string;
+  selectedInvoiceQueue?: string;
+  searchQuery?: string;
 }) {
+  const queue = normalizeInvoiceQueue(selectedInvoiceQueue);
+  const search = normalizeDirectoryQuery(searchQuery);
   async function manualPayment(formData: FormData) {
     "use server";
     const invoiceId = String(formData.get("invoiceId") ?? "");
-    const amount = String(formData.get("amount") ?? "").trim();
-    const match = amount.match(/^(\d+)(?:\.(\d{1,2}))?$/);
-    if (!match) {
-      actionRedirect(workspaceSlug, "invoices", { ok: false, message: "Enter a valid payment amount." }, "invoice=" + encodeURIComponent(invoiceId) + "&");
+    const amountMinor = parseManualPaymentAmountMinor(String(formData.get("amount") ?? ""));
+    if (amountMinor === undefined) {
+      actionRedirect(workspaceSlug, "invoices", { ok: false, message: "Enter a positive payment amount with no more than two decimal places." }, invoiceFeedbackPrefix(queue, search, invoiceId));
     }
-    const amountMinor = Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
     const methodRaw = String(formData.get("method") ?? "OTHER");
     const method = methodRaw === "CASH" || methodRaw === "BANK_TRANSFER" ? methodRaw : "OTHER";
     const result = await applyOperationalManualPayment(workspaceSlug, invoiceId, amountMinor, method, String(formData.get("reference") ?? ""));
-    actionRedirect(workspaceSlug, "invoices", result, "invoice=" + encodeURIComponent(invoiceId) + "&");
+    actionRedirect(workspaceSlug, "invoices", result, invoiceFeedbackPrefix(queue, search, invoiceId));
   }
 
   const customerInvoices = data.invoices.filter((invoice) => Boolean(invoice.quoteId));
   if (customerInvoices.length === 0) {
-    return <EmptyState title="No customer invoices yet" detail="Quote-backed customer invoices will appear here after billable visits are created. Commercial contract invoices are managed above." />;
+    return <EmptyState title="No customer invoices yet" detail="Quote-backed customer invoices will appear here after billable visits are created. Commercial accounts remain available in the adjacent workspace." action={{ label: "Review jobs", href: buildStaffModuleHref(workspaceSlug, "jobs") }} />;
   }
 
-  const orderedInvoices = [...customerInvoices].sort((left, right) => {
-    const leftOpen = left.balanceMinor > 0 && left.status !== "VOID" ? 0 : 1;
-    const rightOpen = right.balanceMinor > 0 && right.status !== "VOID" ? 0 : 1;
-    return leftOpen - rightOpen || right.balanceMinor - left.balanceMinor;
+  const orderedInvoices = orderCustomerCollectionInvoices(customerInvoices);
+  const counts = invoiceQueueCounts(orderedInvoices);
+  const quoteById = new Map(data.quotes.map((quote) => [quote.id, quote]));
+  const requestById = new Map(data.requests.map((request) => [request.id, request]));
+  const customerById = new Map(data.customers.map((customer) => [customer.id, customer]));
+  const visibleInvoices = filterDirectoryRows(filterInvoiceQueue(orderedInvoices, queue), search, (invoice) => {
+    const quote = invoice.quoteId ? quoteById.get(invoice.quoteId) : undefined;
+    const request = quote ? requestById.get(quote.requestId) : undefined;
+    return [invoice.status, invoice.currency, request?.serviceLabel, request?.customerId ? customerById.get(request.customerId)?.displayName : undefined];
   });
-  const selectedInvoice = orderedInvoices.find((invoice) => invoice.id === selectedInvoiceId) ?? orderedInvoices[0];
-  const selectedInvoiceQuote = data.quotes.find((quote) => quote.id === selectedInvoice.quoteId);
-  const selectedInvoiceRequest = data.requests.find((request) => request.id === selectedInvoiceQuote?.requestId);
-  const selectedInvoiceCustomer = data.customers.find((customer) => customer.id === selectedInvoiceRequest?.customerId);
+  if (!visibleInvoices.length) {
+    return (
+      <section aria-label="Invoice collection workspace">
+        <InvoiceCollectionFilters queue={queue} search={search} counts={counts} visible={0} />
+        <EmptyState title={search ? "No matching invoices" : "No invoices in this status"} detail={search ? "Try another customer, service or invoice status, or clear the search." : "Choose another collection status to see existing invoices."} />
+      </section>
+    );
+  }
+  const selectedInvoice = visibleInvoices.find((invoice) => invoice.id === selectedInvoiceId) ?? visibleInvoices[0];
+  const selectedInvoiceQuote = quoteById.get(selectedInvoice.quoteId ?? "");
+  const selectedInvoiceRequest = requestById.get(selectedInvoiceQuote?.requestId ?? "");
+  const selectedInvoiceCustomer = customerById.get(selectedInvoiceRequest?.customerId ?? "");
   const selectedInvoiceProperty = data.properties.find((property) => property.id === selectedInvoiceRequest?.propertyId);
-  const selectedInvoiceCanRecordPayment = selectedInvoice.balanceMinor > 0 && selectedInvoice.status !== "VOID";
-  const openInvoices = orderedInvoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
+  const selectedInvoiceCanRecordPayment = isCollectibleInvoice(selectedInvoice);
+  const openInvoices = orderedInvoices.filter(isCollectibleInvoice);
   const paidInvoices = orderedInvoices.filter((invoice) => invoice.status === "PAID").length;
 
   return (
@@ -1701,22 +1989,23 @@ function InvoicesView({
         <div>
           <p className={styles.financeEyebrow}>Customer finance</p>
           <h2>Collections &amp; invoices</h2>
-          <p>{openInvoices.length} open balance{openInvoices.length === 1 ? "" : "s"} · {paidInvoices} paid</p>
+          <p>{openInvoices.length} open balance{openInvoices.length === 1 ? "" : "s"} · {paidInvoices} paid · Ordered by status and invoice currency</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "reports")}>Open reports</a>
       </header>
 
+      <InvoiceCollectionFilters queue={queue} search={search} counts={counts} visible={visibleInvoices.length} />
       <div className={styles.financeSplit}>
         <aside className={styles.financeQueue} aria-label="Invoice list">
-          {orderedInvoices.map((invoice) => {
-            const quote = data.quotes.find((item) => item.id === invoice.quoteId);
-            const request = data.requests.find((item) => item.id === quote?.requestId);
-            const customer = data.customers.find((item) => item.id === request?.customerId);
+          {visibleInvoices.map((invoice) => {
+            const quote = quoteById.get(invoice.quoteId ?? "");
+            const request = requestById.get(quote?.requestId ?? "");
+            const customer = customerById.get(request?.customerId ?? "");
             const selected = invoice.id === selectedInvoice.id;
             return (
               <a
                 className={`${styles.financeQueueItem} ${selected ? styles.financeQueueSelected : ""}`.trim()}
-                href={"?invoice=" + encodeURIComponent(invoice.id)}
+                href={invoiceQueueHref(queue, search, invoice.id)}
                 aria-current={selected ? "page" : undefined}
                 key={invoice.id}
               >
@@ -1726,7 +2015,7 @@ function InvoicesView({
                 </span>
                 <span className={styles.financeQueueService}>{request?.serviceLabel ?? "Service invoice"}</span>
                 <span className={styles.financeQueueMoney}>
-                  <span>{formatMinorMoney(invoice.balanceMinor, invoice.currency)} due</span>
+                  <span>{formatMinorMoney(invoice.balanceMinor, invoice.currency)} {invoice.status === "VOID" ? "void" : invoice.status === "PAID" ? "paid" : invoice.status === "DRAFT" ? "draft · not due" : isCollectibleInvoice(invoice) ? "due" : "balance · review"}</span>
                   <small>Invoice {invoice.id.slice(0, 8)}</small>
                 </span>
               </a>
@@ -1746,9 +2035,13 @@ function InvoicesView({
 
           <section className={styles.invoiceHero} aria-label="Invoice balance summary">
             <div className={styles.invoiceBalance}>
-              <span>Outstanding balance</span>
+              <span>{selectedInvoice.status === "DRAFT" ? "Draft balance" : "Outstanding balance"}</span>
               <strong>{formatMinorMoney(selectedInvoice.balanceMinor, selectedInvoice.currency)}</strong>
-              <small>{selectedInvoice.status === "PAID" ? "Paid in full" : selectedInvoice.status === "VOID" ? "Invoice void" : "Current amount still to collect"}</small>
+              <small>{selectedInvoice.status === "PAID" ? "Paid in full"
+                : selectedInvoice.status === "VOID" ? "Invoice void"
+                : selectedInvoice.status === "DRAFT" ? "Not due until the invoice is issued"
+                : isCollectibleInvoice(selectedInvoice) ? "Current amount still to collect"
+                : "Status requires review before payment recording"}</small>
             </div>
             <div><span>Invoice total</span><strong>{formatMinorMoney(selectedInvoice.totalMinor, selectedInvoice.currency)}</strong></div>
             <div><span>Allocated</span><strong>{formatMinorMoney(selectedInvoice.allocatedMinor, selectedInvoice.currency)}</strong></div>
@@ -1798,13 +2091,22 @@ function InvoicesView({
                       {({ id, describedBy, invalid }) => <TextInput id={id} name="reference" placeholder="Bank reference or receipt number" required describedBy={describedBy} invalid={invalid} />}
                     </FormField>
                   </FormGrid>
-                  <button className="app-button-primary" type="submit">Record payment</button>
+                  <StaffSubmitButton className="app-button-primary" pendingLabel="Recording payment…">Record payment</StaffSubmitButton>
                   <p>Use this only for money already received outside the online checkout flow. It does not simulate online settlement.</p>
                 </form>
               ) : (
                 <div className={styles.financeClosedState}>
-                  <span aria-hidden="true">✓</span>
-                  <div><strong>{selectedInvoice.status === "VOID" ? "Invoice void" : "Nothing outstanding"}</strong><p>{selectedInvoice.status === "VOID" ? "Payments cannot be recorded on this invoice." : "This invoice has no outstanding balance."}</p></div>
+                  <span aria-hidden="true">{selectedInvoice.status === "PAID" ? "✓" : "—"}</span>
+                  <div>
+                    <strong>{selectedInvoice.status === "VOID" ? "Invoice void"
+                      : selectedInvoice.status === "DRAFT" ? "Draft awaiting issue"
+                      : selectedInvoice.status === "PAID" ? "Paid in full"
+                      : "No collectible balance"}</strong>
+                    <p>{selectedInvoice.status === "VOID" ? "Payments cannot be recorded on a void invoice."
+                      : selectedInvoice.status === "DRAFT" ? "This draft is not yet due; issue the invoice through the authorized workflow before recording a collection."
+                      : selectedInvoice.status === "PAID" ? "The authoritative invoice status is paid."
+                      : "This invoice is not currently eligible for payment recording. Review its status before taking action."}</p>
+                  </div>
                 </div>
               )}
             </section>
@@ -1819,11 +2121,17 @@ function QualityView({
   data,
   workspaceSlug,
   selectedQualityCaseId,
+  selectedQualityQueue,
+  qualitySearchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedQualityCaseId?: string;
+  selectedQualityQueue?: string;
+  qualitySearchQuery?: string;
 }) {
+  const queue = normalizeQualityQueue(selectedQualityQueue);
+  const search = normalizeQualitySearch(qualitySearchQuery);
   async function qualityAction(formData: FormData) {
     "use server";
     const action = String(formData.get("action") ?? "") as
@@ -1842,28 +2150,49 @@ function QualityView({
       action,
       String(formData.get("resolutionNote") ?? ""),
     );
-    actionRedirect(workspaceSlug, "quality", result, "case=" + encodeURIComponent(qualityCaseId) + "&");
+    actionRedirect(workspaceSlug, "quality", result, qualityFeedbackPrefix(queue, search, qualityCaseId));
   }
 
   if (data.qualityCases.length === 0) {
-    return <EmptyState title="No quality cases" detail="Customer feedback that requires operational review will appear here." />;
+    return <EmptyState title="No quality cases" detail="Customer feedback that requires operational review will appear here." action={{ label: "Review completed jobs", href: buildStaffModuleHref(workspaceSlug, "jobs") }} />;
   }
 
-  const orderedCases = [...data.qualityCases].sort((left, right) => {
-    const stateWeight: Record<string, number> = { IN_REVIEW: 0, OPEN: 1, RESOLVED: 2 };
-    return (stateWeight[left.state] ?? 9) - (stateWeight[right.state] ?? 9)
-      || (left.dueAt ? Date.parse(left.dueAt) : Number.MAX_SAFE_INTEGER) - (right.dueAt ? Date.parse(right.dueAt) : Number.MAX_SAFE_INTEGER);
-  });
-  const selected = orderedCases.find((qualityCase) => qualityCase.id === selectedQualityCaseId) ?? orderedCases[0];
-  const visit = data.visits.find((item) => item.id === selected.visitId);
+  const orderedCases = prioritizeQualityFollowUp(data.qualityCases, data.loadedAt);
+  const visitById = new Map(data.visits.map(visit => [visit.id, visit]));
+  const requestById = new Map(data.requests.map(request => [request.id, request]));
+  const customerById = new Map(data.customers.map(customer => [customer.id, customer]));
+  const lookupCase = (qualityCase: typeof orderedCases[number]) => {
+    const caseVisit = visitById.get(qualityCase.visitId);
+    const caseRequest = caseVisit ? requestById.get(caseVisit.requestId) : undefined;
+    const caseCustomer = caseRequest?.customerId ? customerById.get(caseRequest.customerId) : undefined;
+    return { caseRequest, caseCustomer };
+  };
+  const filteredCases = filterQualityQueue(orderedCases, queue, search, qualityCase => {
+    const { caseRequest, caseCustomer } = lookupCase(qualityCase);
+    return [qualityCase.summary, caseCustomer?.displayName, caseRequest?.serviceLabel, qualityCase.state, qualityCase.feedbackScore?.toString()];
+  }, data.loadedAt);
+  const counts = qualityQueueCount(orderedCases, data.loadedAt);
+  if (!filteredCases.length) {
+    return (
+      <section className={styles.qualityWorkspace} aria-label="Quality review workspace">
+        <QualityQueueFilters queue={queue} search={search} counts={counts} visible={0} />
+        <EmptyState
+          title={search ? "No matching quality cases" : "No cases in this queue"}
+          detail={search ? "Try another customer, service or issue description." : "Choose another status or clear the filter to see existing cases."}
+        />
+      </section>
+    );
+  }
+  const selected = filteredCases.find(qualityCase => qualityCase.id === selectedQualityCaseId) ?? filteredCases[0];
+  const visit = visitById.get(selected.visitId);
   const request = visit ? data.requests.find((item) => item.id === visit.requestId) : undefined;
   const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
   const property = request?.propertyId ? data.properties.find((item) => item.id === request.propertyId) : undefined;
   const crew = visit?.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
   const evidence = data.visitEvidence.filter((item) => item.visitId === selected.visitId);
-  const openCount = orderedCases.filter((item) => item.state === "OPEN").length;
-  const reviewCount = orderedCases.filter((item) => item.state === "IN_REVIEW").length;
-  const resolvedCount = orderedCases.filter((item) => item.state === "RESOLVED").length;
+  const openCount = counts.open;
+  const reviewCount = counts.review;
+  const resolvedCount = counts.resolved;
 
   return (
     <section className={styles.qualityWorkspace} aria-label="Quality review workspace">
@@ -1871,28 +2200,30 @@ function QualityView({
         <div>
           <p className={styles.qualityEyebrow}>Issue management</p>
           <h2>Quality review queue</h2>
-          <p>{openCount} open · {reviewCount} in review · {resolvedCount} resolved</p>
+          <p>{openCount} open · {reviewCount} in review · {counts.overdue} overdue · {resolvedCount} resolved</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open jobs</a>
       </header>
 
+      <QualityQueueFilters queue={queue} search={search} counts={counts} visible={filteredCases.length} />
+
       <div className={styles.qualitySplit}>
         <aside className={styles.qualityQueue} aria-label="Quality case list">
-          {orderedCases.map((qualityCase) => {
-            const caseVisit = data.visits.find((item) => item.id === qualityCase.visitId);
-            const caseRequest = caseVisit ? data.requests.find((item) => item.id === caseVisit.requestId) : undefined;
-            const caseCustomer = caseRequest?.customerId ? data.customers.find((item) => item.id === caseRequest.customerId) : undefined;
+          {filteredCases.map((qualityCase) => {
+            const { caseRequest, caseCustomer } = lookupCase(qualityCase);
             const selectedCase = qualityCase.id === selected.id;
             return (
               <a
                 className={`${styles.qualityQueueItem} ${selectedCase ? styles.qualityQueueSelected : ""}`.trim()}
-                href={"?case=" + encodeURIComponent(qualityCase.id)}
+                href={qualityQueueHref(queue, search, qualityCase.id)}
                 aria-current={selectedCase ? "page" : undefined}
                 key={qualityCase.id}
               >
                 <span className={styles.qualityQueueTop}>
                   <strong>{qualityCase.summary}</strong>
-                  <StatusBadge tone={statusBadgeTone(qualityCase.state)}>{qualityCase.state.replaceAll("_", " ")}</StatusBadge>
+                  {isOverdueQualityCase(qualityCase, data.loadedAt)
+                    ? <StatusBadge tone="danger">Overdue</StatusBadge>
+                    : <StatusBadge tone={statusBadgeTone(qualityCase.state)}>{qualityCase.state.replaceAll("_", " ")}</StatusBadge>}
                 </span>
                 <span className={styles.qualityQueueCustomer}>{caseCustomer?.displayName ?? caseRequest?.serviceLabel ?? "Service visit"}</span>
                 <span className={styles.qualityQueueMeta}>
@@ -1913,16 +2244,17 @@ function QualityView({
             </div>
             <div className={styles.qualityHeaderActions}>
               <StatusBadge tone={statusBadgeTone(selected.state)}>{selected.state.replaceAll("_", " ")}</StatusBadge>
+              {isOverdueQualityCase(selected, data.loadedAt) ? <StatusBadge tone="danger">Deadline passed</StatusBadge> : null}
               {selected.state === "OPEN" ? (
                 <form action={qualityAction} className={styles.qualityInlineActions}>
                   <input type="hidden" name="qualityCaseId" value={selected.id} />
-                  <button className="app-button-secondary" name="action" value="ASSIGN">Assign to me</button>
-                  <button className="app-button-primary" name="action" value="START_REVIEW">Start review</button>
+                  <StaffSubmitButton className="app-button-secondary" name="action" value="ASSIGN" pendingLabel="Assigning case…">Assign to me</StaffSubmitButton>
+                  <StaffSubmitButton className="app-button-primary" name="action" value="START_REVIEW" pendingLabel="Starting review…">Start review</StaffSubmitButton>
                 </form>
               ) : selected.state === "RESOLVED" && selected.reviewRequestState === "ELIGIBLE" ? (
                 <form action={qualityAction}>
                   <input type="hidden" name="qualityCaseId" value={selected.id} />
-                  <button className="app-button-primary" name="action" value="REQUEST_REVIEW">Request customer review</button>
+                  <StaffSubmitButton className="app-button-primary" name="action" value="REQUEST_REVIEW" pendingLabel="Requesting review…">Request customer review</StaffSubmitButton>
                 </form>
               ) : null}
             </div>
@@ -1931,7 +2263,8 @@ function QualityView({
           <section className={styles.qualityMetrics} aria-label="Quality case summary">
             <div><span>Feedback</span><strong>{selected.feedbackScore !== undefined ? `${selected.feedbackScore}/5` : "—"}</strong></div>
             <div><span>Owner</span><strong>{selected.ownerUserId ? "Assigned" : "Unassigned"}</strong></div>
-            <div><span>Deadline</span><strong>{formatWhen(selected.dueAt, data.workspace.timezone)}</strong></div>
+            <div><span>Deadline</span><strong>{formatWhen(selected.dueAt, data.workspace.timezone)}</strong>
+              {isOverdueQualityCase(selected, data.loadedAt) ? <small>Overdue as of snapshot</small> : null}</div>
             <div><span>Evidence</span><strong>{evidence.length}</strong></div>
           </section>
 
@@ -1982,7 +2315,7 @@ function QualityView({
                     <TextArea id={id} name="resolutionNote" rows={4} required describedBy={describedBy} invalid={invalid} placeholder="Describe what was resolved" />
                   )}
                 </FormField>
-                <button className="app-button-primary" name="action" value="RESOLVE">Resolve case</button>
+                <StaffSubmitButton className="app-button-primary" name="action" value="RESOLVE" pendingLabel="Resolving case…">Resolve case</StaffSubmitButton>
               </form>
             </section>
           ) : null}
@@ -2325,7 +2658,7 @@ function WorkflowBuilderPanel({
 
                 <div className={styles.workflowFormFooter}>
                   <p>External template actions are never auto-approved. A later action record must be approved by an owner before delivery can be queued.</p>
-                  <button className="app-button-primary" type="submit">Save draft version</button>
+                  <StaffSubmitButton className="app-button-primary" pendingLabel="Saving draft…">Save draft version</StaffSubmitButton>
                 </div>
               </form>
             </section>
@@ -2377,12 +2710,12 @@ function WorkflowBuilderPanel({
                             <input type="hidden" name="branchId" value={draft.branchId} />
                             <input type="hidden" name="eventType" value={draft.eventType} />
                             <WorkflowPreviewFields eventType={draft.eventType} />
-                            <button className="app-button-secondary" type="submit">Run synthetic preview</button>
+                            <StaffSubmitButton className="app-button-secondary" pendingLabel="Running preview…">Run synthetic preview</StaffSubmitButton>
                           </form>
                           <form action={publishAction}>
                             <input type="hidden" name="versionId" value={draft.id} />
                             <input type="hidden" name="branchId" value={draft.branchId} />
-                            <button className="app-button-primary" type="submit">Publish tested draft</button>
+                            <StaffSubmitButton className="app-button-primary" pendingLabel="Publishing…">Publish tested draft</StaffSubmitButton>
                           </form>
                         </>
                       ) : null}
@@ -2398,7 +2731,7 @@ function WorkflowBuilderPanel({
                             <input type="hidden" name="ruleId" value={rule.id} />
                             <input type="hidden" name="branchId" value={rule.branchId} />
                             <input type="hidden" name="targetVersionNumber" value={version.versionNumber} />
-                            <button className="app-button-secondary" type="submit">Republish v{version.versionNumber} as a new version</button>
+                            <StaffSubmitButton className="app-button-secondary" pendingLabel="Publishing version…">Republish v{version.versionNumber} as a new version</StaffSubmitButton>
                           </form>
                         ))}
                       </div>
@@ -2457,13 +2790,13 @@ function WorkflowBuilderPanel({
                             {action.errorCode ? <code>{action.errorCode}</code> : null}
                             <div className={styles.workflowActionControls}>
                               {action.state === "PENDING" && action.actionType === "CREATE_ATTENTION" ? (
-                                <form action={runInternalAction}><input type="hidden" name="actionExecutionId" value={action.id} /><button className="app-button-secondary" type="submit">Run internal action</button></form>
+                                <form action={runInternalAction}><input type="hidden" name="actionExecutionId" value={action.id} /><StaffSubmitButton className="app-button-secondary" pendingLabel="Running internal action…">Run internal action</StaffSubmitButton></form>
                               ) : null}
                               {action.state === "APPROVAL_REQUIRED" && data.actor.role === "OWNER" ? (
-                                <form action={approveAction}><input type="hidden" name="actionExecutionId" value={action.id} /><button className="app-button-primary" type="submit">Approve external send</button></form>
+                                <form action={approveAction}><input type="hidden" name="actionExecutionId" value={action.id} /><StaffSubmitButton className="app-button-primary" pendingLabel="Submitting approval…">Approve external send</StaffSubmitButton></form>
                               ) : null}
                               {action.state === "FAILED" && data.actor.role === "OWNER" ? (
-                                <form action={replayAction}><input type="hidden" name="actionExecutionId" value={action.id} /><button className="app-button-secondary" type="submit">Replay this action only</button></form>
+                                <form action={replayAction}><input type="hidden" name="actionExecutionId" value={action.id} /><StaffSubmitButton className="app-button-secondary" pendingLabel="Replaying action…">Replay this action only</StaffSubmitButton></form>
                               ) : null}
                             </div>
                           </div>
@@ -3187,7 +3520,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         </span>
                       </label>
 
-                      <button className="app-button-primary" type="submit">Save</button>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Saving settings…">Save</StaffSubmitButton>
                     </form>
                   ) : (
                     <article className={styles.serviceSettingRow} key={service.id}>
@@ -3322,7 +3655,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         <input name="active" type="checkbox" defaultChecked />
                         <span><strong>Active</strong><small>Allow operational records and staff assignments.</small></span>
                       </label>
-                      <button className="app-button-primary" type="submit">Create branch</button>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Creating branch…">Create branch</StaffSubmitButton>
                     </form>
                   </section>
                 ) : null}
@@ -3348,14 +3681,13 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                                 <input name="branchId" type="hidden" value={branch.id} />
                                 <span><strong>{member.role.toLowerCase()}</strong><small>{branch.name} · staff {member.userId.slice(0, 8)}</small></span>
                                 <StatusBadge tone={assignment ? "success" : "neutral"}>{assignment ? "Assigned" : "No access"}</StatusBadge>
-                                <button
+                                <StaffSubmitButton
                                   className="app-button-secondary"
                                   name="status"
-                                  type="submit"
                                   value={assignment ? "REVOKED" : "ACTIVE"}
-                                >
+                                 pendingLabel="Updating membership…">
                                   {assignment ? "Revoke" : "Grant"}
-                                </button>
+                                </StaffSubmitButton>
                               </form>
                             );
                           }))}
@@ -3458,7 +3790,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         <input name="active" type="checkbox" defaultChecked />
                         <span><strong>Active</strong><small>Accept new touches for this code.</small></span>
                       </label>
-                      <button className="app-button-primary" type="submit">Save referral code</button>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Saving referral code…">Save referral code</StaffSubmitButton>
                     </form>
                   ) : null}
 
@@ -3523,7 +3855,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         <label><span>Quiet from</span><input className="app-input" name="quietHoursStart" type="time" /></label>
                         <label><span>Quiet until</span><input className="app-input" name="quietHoursEnd" type="time" /></label>
                       </div>
-                      <button className="app-button-primary" type="submit">Save campaign policy</button>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Saving campaign…">Save campaign policy</StaffSubmitButton>
                     </form>
                   ) : null}
 
@@ -3637,15 +3969,14 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                             </span>
                             <form action={serviceCatalogDelegationAction}>
                               <input name="userId" type="hidden" value={member.userId} />
-                              <button
+                              <StaffSubmitButton
                                 className="app-button-secondary"
                                 disabled={!grant && !allBranchEligible}
                                 name="status"
-                                type="submit"
                                 value={grant ? "REVOKED" : "ACTIVE"}
-                              >
+                               pendingLabel="Updating delegation…">
                                 {grant ? "Revoke delegation" : "Delegate catalog"}
-                              </button>
+                              </StaffSubmitButton>
                             </form>
                           </article>
                         );
@@ -3705,7 +4036,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                           <span>Reason</span>
                           <input className="app-input" name="reason" minLength={4} maxLength={240} placeholder="Investigate provider delivery issue" required />
                         </label>
-                        <button className="app-button-primary" type="submit">Authorize temporary read-only scope</button>
+                        <StaffSubmitButton className="app-button-primary" pendingLabel="Authorizing…">Authorize temporary read-only scope</StaffSubmitButton>
                       </form>
 
                       <div className={styles.governanceRows}>
@@ -3720,7 +4051,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                               {active ? (
                                 <form action={supportAccessRevokeAction}>
                                   <input name="grantId" type="hidden" value={grant.id} />
-                                  <button className="app-button-secondary" type="submit">Revoke</button>
+                                  <StaffSubmitButton className="app-button-secondary" pendingLabel="Revoking access…">Revoke</StaffSubmitButton>
                                 </form>
                               ) : (
                                 <StatusBadge tone="neutral">{grant.revokedAt ? "revoked" : "expired"}</StatusBadge>
@@ -3896,6 +4227,14 @@ function renderModule(
   selectedJobId?: string,
   selectedInvoiceId?: string,
   selectedQueue?: string,
+  searchQuery?: string,
+  selectedScheduleQueue?: string,
+  selectedJobQueue?: string,
+  selectedScheduleFrom?: string,
+  selectedScheduleDay?: string,
+  selectedQualityQueue?: string,
+  qualitySearchQuery?: string,
+  selectedInvoiceQueue?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -3905,22 +4244,23 @@ function renderModule(
           workspaceSlug={workspaceSlug}
           selectedConversationId={selectedConversationId}
           selectedQueue={selectedQueue}
+          searchQuery={searchQuery}
         />
       );
     case "customers":
-      return <CustomersView data={data} selectedCustomerId={selectedCustomerId} />;
+      return <CustomersView data={data} selectedCustomerId={selectedCustomerId} searchQuery={searchQuery} />;
     case "requests":
-      return <RequestsView data={data} workspaceSlug={workspaceSlug} selectedRequestId={selectedRequestId} />;
+      return <RequestsView data={data} workspaceSlug={workspaceSlug} selectedRequestId={selectedRequestId} searchQuery={searchQuery} />;
     case "quotes":
-      return <QuotesView data={data} workspaceSlug={workspaceSlug} selectedQuoteId={selectedQuoteId} />;
+      return <QuotesView data={data} workspaceSlug={workspaceSlug} selectedQuoteId={selectedQuoteId} searchQuery={searchQuery} />;
     case "schedule":
-      return <ScheduleView data={data} workspaceSlug={workspaceSlug} />;
+      return <ScheduleView data={data} workspaceSlug={workspaceSlug} selectedScheduleQueue={selectedScheduleQueue} selectedScheduleFrom={selectedScheduleFrom} selectedScheduleDay={selectedScheduleDay} />;
     case "jobs":
-      return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} />;
+      return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} selectedJobQueue={selectedJobQueue} searchQuery={searchQuery} />;
     case "invoices":
-      return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} />;
+      return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} selectedInvoiceQueue={selectedInvoiceQueue} searchQuery={searchQuery} />;
     case "quality":
-      return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} />;
+      return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} selectedQualityQueue={selectedQualityQueue} qualitySearchQuery={qualitySearchQuery} />;
     case "automations":
       return <AutomationsView data={data} workspaceSlug={workspaceSlug} />;
     case "reports":
@@ -3932,17 +4272,67 @@ function renderModule(
   }
 }
 
+const operationalJourney: ReadonlyArray<{ module: OperationalJourneyModule; label: string; countHint: string }> = [
+  { module: "inbox", label: "Inbox", countHint: "need reply" },
+  { module: "requests", label: "Requests", countHint: "need intake" },
+  { module: "quotes", label: "Quotes", countHint: "ready to send" },
+  { module: "schedule", label: "Dispatch", countHint: "need crew" },
+  { module: "jobs", label: "Jobs", countHint: "underway" },
+  { module: "invoices", label: "Invoices", countHint: "open balances" },
+];
+
+function OperationalJourneyNav({
+  workspace,
+  module,
+  data,
+}: {
+  workspace: string;
+  module: OperationalProductRouteProps["module"];
+  data: OperationalStaffSnapshot;
+}) {
+  const counts = operationalJourneyCounts(data);
+  return (
+    <nav className={styles.workflowRail} aria-label="Service workflow shortcuts">
+      <span className={styles.workflowRailLabel}>Workflow</span>
+      {operationalJourney.map((item) => (
+        <a
+          href={buildStaffModuleHref(workspace, item.module)}
+          aria-current={module === item.module ? "page" : undefined}
+          aria-label={counts[item.module]
+            ? item.label + ": " + counts[item.module] + " " + item.countHint
+            : item.label}
+          key={item.module}
+        >
+          {item.label}
+          {counts[item.module] > 0 ? (
+            <span className={styles.workflowCount} aria-hidden="true">{counts[item.module]}</span>
+          ) : null}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 export async function OperationalProductRoute({
   workspaceSlug,
   module,
   selectedConversationId,
   selectedQueue,
+  searchQuery,
+  selectedScheduleQueue,
+  selectedScheduleFrom,
+  selectedScheduleDay,
   selectedCustomerId,
   selectedRequestId,
   selectedQuoteId,
   selectedQualityCaseId,
+  selectedQualityQueue,
+  qualitySearchQuery,
   selectedJobId,
+  selectedJobQueue,
   selectedInvoiceId,
+  selectedInvoiceQueue,
+  invoiceSurface,
   notice,
   error,
 }: OperationalProductRouteProps) {
@@ -3957,18 +4347,39 @@ export async function OperationalProductRoute({
         description={config.description}
       />
 
+      {result.ok && operationalJourney.some((item) => item.module === module) ? (
+        <OperationalJourneyNav workspace={workspaceSlug} module={module} data={result.value} />
+      ) : null}
+
       <Notice notice={notice} error={error} />
 
       {result.ok ? (
         <>
-          {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue)}
+          {module === "invoices" ? (
+            <nav className={styles.invoiceSurfaceNav} aria-label="Invoice workspace views">
+              <a href="?surface=customers" aria-current={invoiceSurface === "commercial" ? undefined : "page"}>
+                <strong>Customer collections</strong>
+                <span>Quote-backed invoices and received payments</span>
+              </a>
+              <a href="?surface=commercial" aria-current={invoiceSurface === "commercial" ? "page" : undefined}>
+                <strong>Commercial accounts</strong>
+                <span>Business contracts, tax and account billing</span>
+              </a>
+            </nav>
+          ) : null}
+          {module === "invoices" && invoiceSurface === "commercial" ? (
+            <CommercialBillingWorkspace workspaceSlug={workspaceSlug} />
+          ) : (
+            renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay, selectedQualityQueue, qualitySearchQuery, selectedInvoiceQueue)
+          )}
         </>
       ) : (
         <Panel>
           <FeedbackBanner
             title={result.kind === "authentication" ? "Staff sign-in required" : "Workspace unavailable"}
-            description={result.message}
+            description={result.kind === "authentication"
+              ? "Your staff session could not be confirmed. Sign in to access authorized records."
+              : "The latest workspace records could not be verified. Retry this read-only view, and check saved records before repeating any action."}
             tone={result.kind === "authentication" ? "warning" : "danger"}
             action={
               result.kind === "authentication" ? (
@@ -3986,7 +4397,11 @@ export async function OperationalProductRoute({
                 >
                   Sign in
                 </a>
-              ) : undefined
+              ) : (
+                <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, module)}>
+                  Retry view
+                </a>
+              )
             }
           />
         </Panel>

@@ -1,0 +1,18 @@
+/**
+ * Business-local day conversion for dispatch, including DST and date boundaries.
+ * Construct an Intl formatter once per rendered snapshot, not per visit.
+ */
+export function createLocalDayKey(timeZone: string): (timestamp: string) => string | undefined {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric", month: "2-digit", day: "2-digit",
+  });
+  return (timestamp) => {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return undefined;
+    const parts = formatter.formatToParts(date);
+    const part = (name: string) => parts.find((item) => item.type === name)?.value;
+    const year = part("year"), month = part("month"), day = part("day");
+    return year && month && day ? year + "-" + month + "-" + day : undefined;
+  };
+}

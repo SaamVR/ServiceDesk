@@ -1,0 +1,17 @@
+.controls { display:grid; gap:12px; min-width:0; }
+.tabs { display:flex; flex-wrap:wrap; gap:5px; min-width:0; padding:5px; border:1px solid #d7e5e7; background:#eef5f5; border-radius:10px; }
+.tabs a { min-height:44px; display:inline-flex; gap:9px; align-items:center; justify-content:center; padding:8px 11px; border-radius:7px; font-size:.8rem; font-weight:710; color:#49646b; text-decoration:none; }
+.tabs a:hover { color:#0a7066; background:#fff; text-decoration:none; }
+.tabs a[aria-current="page"] { background:#fff; color:#086a5f; box-shadow:0 2px 5px rgb(22 56 64 / 9%),inset 0 -2px #0d8172; }
+.tabs span { padding:2px 6px; border-radius:5px; background:#e4eded; color:#3d6670; font-size:.75rem; font-variant-numeric:tabular-nums; }
+.searchForm { display:grid; gap:8px; padding:16px 18px; border:1px solid #dce7e9; border-radius:10px; background:#fff; }
+.searchForm label { color:#2a4750; font-size:.79rem; font-weight:730; }
+.searchControl { display:flex; gap:8px; min-width:0; }
+.searchControl input { width:100%; min-width:0; flex:1; min-height:44px; padding:10px 12px; border:1px solid #c9dadd; border-radius:8px; color:#213e47; background:#fff; font:inherit; font-size:.86rem; }
+.searchControl input::placeholder { color:#6b7f84; opacity:1; }
+.searchControl button { min-height:44px; padding:9px 18px; border:0; border-radius:8px; background:#0b746d; color:#fff; font:inherit; font-weight:740; cursor:pointer; }
+.searchControl button:hover { background:#075c56; }
+.count { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; color:#547078; font-size:.76rem; }
+.count a { color:#096c62; font-weight:740; text-decoration:underline; text-underline-offset:3px; }
+.tabs a:focus-visible,.searchControl button:focus-visible,.searchControl input:focus-visible,.count a:focus-visible { outline:3px solid #18877b; outline-offset:2px; }
+@media(max-width:640px) { .tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .tabs a { justify-content:space-between; } .searchForm { padding:12px; } }
