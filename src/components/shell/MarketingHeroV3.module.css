@@ -9,12 +9,12 @@
   min-height: 662px;
   overflow: hidden;
   padding: clamp(44px, 5vw, 76px);
-  border: 1px solid #263d35;
+  border: 1px solid #24414a;
   border-radius: 22px;
   background:
     radial-gradient(ellipse 72% 90% at 95% -18%, rgb(97 177 130 / 15%), transparent 80%),
-    linear-gradient(130deg, #162d28 0%, #122621 55%, #132b25 100%);
-  color: #eaf4ee;
+    linear-gradient(130deg, #142b33 0%, #0c242c 55%, #102a32 100%);
+  color: #e9f6f5;
 }
 .heroSection::before {
   content: "";
@@ -31,7 +31,7 @@
 .heroCopy { position: relative; z-index: 1; min-width: 0; }
 .heroSection :global(.eyebrow) {
   max-width: 34ch;
-  color: #a1deb8;
+  color: #92e9d7;
   font-size: .78rem;
   font-weight: 730;
   letter-spacing: .13em;
@@ -40,7 +40,7 @@
 .heroSection :global(.marketing-hero-copy) h1 {
   max-width: 11.2ch;
   margin: 18px 0 19px;
-  color: #f1f7f2;
+  color: #f1fafa;
   font-size: clamp(3.2rem, 5.15vw, 5.6rem);
   font-weight: 580;
   letter-spacing: -.068em;
@@ -50,7 +50,7 @@
 .heroSection :global(.marketing-hero-copy) :global(.lead) {
   max-width: 535px;
   margin: 0;
-  color: #c5d8cd;
+  color: #cadfe1;
   font-size: clamp(.99rem, 1.35vw, 1.11rem);
   line-height: 1.67;
   letter-spacing: -.004em;
@@ -59,17 +59,17 @@
   max-width: 510px;
   margin-top: 29px;
   padding-top: 20px;
-  border-top: 1px solid #486356;
+  border-top: 1px solid #42636b;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 .heroSection :global(.hero-capabilities) li {
-  color: #d1e5d7;
+  color: #d6eae8;
   font-size: .82rem;
   font-weight: 630;
   line-height: 1.45;
 }
-.heroSection :global(.hero-capabilities) li::before { background: #9bd7ac; }
+.heroSection :global(.hero-capabilities) li::before { background: #69d2ba; }
 .heroSection :global(.action-row) {
   display: flex;
   flex-wrap: wrap;
@@ -88,19 +88,19 @@
 .heroSection :global(.button-primary) {
   background: #a9e6be;
   border: 1px solid #a9e6be;
-  color: #0f3525;
+  color: #12443e;
 }
 .heroSection :global(.button-primary):hover {
-  background: #c5f5d1;
-  color: #0a2d21;
+  background: #d3f8ee;
+  color: #0b423b;
 }
 .heroSection :global(.button-secondary) {
-  border: 1px solid #627b6e;
+  border: 1px solid #587780;
   background: transparent;
-  color: #e2efe8;
+  color: #e4f2f1;
 }
 .heroSection :global(.button-secondary):hover {
-  background: #284a3b;
+  background: #234b50;
   color: #fff;
 }
 .flowCard {
@@ -108,10 +108,10 @@
   z-index: 1;
   min-width: 0;
   padding: 23px;
-  border: 1px solid #dae5de;
+  border: 1px solid #dce7e8;
   border-radius: 15px;
-  background: #f8fbf8;
-  color: #19362b;
+  background: #f7fbfb;
+  color: #153740;
   box-shadow: 0 32px 70px rgb(1 13 9 / 29%);
 }
 .flowHead {
@@ -120,7 +120,7 @@
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 17px;
-  border-bottom: 1px solid #dce5dc;
+  border-bottom: 1px solid #e0eaec;
 }
 .flowProduct {
   display: flex;
@@ -137,12 +137,12 @@
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #194a38;
-  color: #e7ffed;
+  background: #0d6258;
+  color: #dcfbf3;
   font-weight: 790;
 }
 .flowTag {
-  color: #50685c;
+  color: #4e6d75;
   font-size: .62rem;
   letter-spacing: .075em;
   font-weight: 750;
@@ -151,7 +151,7 @@
 .flowIntro {
   max-width: 310px;
   margin: 20px 0 19px;
-  color: #1a352b;
+  color: #173940;
   font-size: 1.25rem;
   font-weight: 690;
   letter-spacing: -.032em;
@@ -170,10 +170,10 @@
   place-items: center;
   width: 27px;
   height: 27px;
-  border: 1px solid #cadbcf;
+  border: 1px solid #cfe3e4;
   border-radius: 8px;
-  background: #e6f2e8;
-  color: #1e6144;
+  background: #e9f6f3;
+  color: #0d776a;
   font-size: .73rem;
   font-variant-numeric: tabular-nums;
   font-weight: 760;
