@@ -52,7 +52,19 @@ async function fetchPublic(path, accept="text/html") {
   if (t.length < 15 || t.length > 2_500_000) throw new Error("Unexpected bounded public response: " + path);
   return t;
 }
-const health = JSON.parse(await fetchPublic("/health", "application/json"));
+// Render free-tier review instances may be suspended after inactivity.
+ // Only a bounded warm-up is tolerated; failed identity remains a hard error.
+let health;
+for (let attempt = 1; attempt <= 8; attempt++) {
+  try {
+    health = JSON.parse(await fetchPublic("/health", "application/json"));
+    break;
+  } catch (error) {
+    console.log("Render cold-start identity check " + attempt + "/8 not ready.");
+    if (attempt === 8) throw error;
+    await pause(6500);
+  }
+}
 if (health?.ok !== true || health?.service !== "servicedesk" ||
     health?.sourceSha !== expectedSha || health?.sourceProvider !== "render") {
   throw new Error("Render preview is NOT the independently pinned V4 source.");
