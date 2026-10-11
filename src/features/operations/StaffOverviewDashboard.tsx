@@ -260,7 +260,7 @@ export function StaffOverviewDashboard({
       <nav className={styles.kpiGrid} aria-label="Open operational queues">
         <KpiCard
           label="Today's jobs"
-          href={buildStaffModuleHref(workspace, "schedule")}
+          href={buildStaffModuleHref(workspace, "schedule") + (unassignedToday ? "?queue=unassigned" : "")}
           value={todayVisits.length}
           detail={unassignedToday ? `${unassignedToday} need crew` : `${inProgressToday} underway`}
           emphasis={unassignedToday ? "warning" : "default"}
