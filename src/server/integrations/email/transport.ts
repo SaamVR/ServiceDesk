@@ -65,7 +65,40 @@ function evidence(config: EmailTransportConfig, providerMessageId: string, job: 
   };
 }
 
+function isResendEndpoint(config: EmailTransportConfig): boolean {
+  try {
+    return new URL(config.endpointUrl).hostname.toLowerCase() === "api.resend.com";
+  } catch {
+    return false;
+  }
+}
+
+function validResendEndpoint(config: EmailTransportConfig): boolean {
+  try {
+    const uri = new URL(config.endpointUrl);
+    return uri.protocol === "https:" && uri.hostname === "api.resend.com" &&
+      uri.pathname === "/emails" && !uri.search && !uri.hash &&
+      !uri.username && !uri.password && !uri.port;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resend's /emails API has a narrow payload schema. The legacy generic
+ * transport envelope includes business-only metadata which must NOT be
+ * included in direct Resend API requests.
+ */
 function bodyFor(config: EmailTransportConfig, job: TransactionalEmailJob): string {
+  if (isResendEndpoint(config)) {
+    return JSON.stringify({
+      from: config.senderAddress,
+      to: [job.to],
+      subject: job.subject,
+      text: job.text,
+      html: job.html,
+    });
+  }
   return JSON.stringify({
     from: config.senderAddress,
     to: job.to,
@@ -112,6 +145,16 @@ export function createConfiguredEmailTransport(config: EmailTransportConfig, htt
     async send(job: TransactionalEmailJob): Promise<Result<TransactionalEmailSendResult>> {
       if (!config.endpointUrl || !config.apiKey || !config.senderAddress) {
         return { ok: false, code: "EMAIL_CONFIGURATION_BLOCKED", message: "Transactional email configuration is incomplete." };
+      }
+
+      // Avoid sending a production provider key to a misspelled, insecure or
+      // substituted endpoint. Generic connector transports remain unchanged.
+      if ((config.providerName.trim().toLowerCase() === "resend" || isResendEndpoint(config)) &&
+          !validResendEndpoint(config)) {
+        return { ok: false, code: "EMAIL_CONFIGURATION_BLOCKED", message: "Resend endpoint must use the official HTTPS /emails API." };
+      }
+      if (isResendEndpoint(config) && (!job.idempotencyKey.trim() || job.idempotencyKey.length > 256)) {
+        return { ok: false, code: "EMAIL_IDEMPOTENCY_KEY_INVALID", message: "Resend idempotency key must be 1–256 characters." };
       }
 
       const suppression = shouldSuppressTransactionalEmail(job);
