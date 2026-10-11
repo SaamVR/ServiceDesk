@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
 import styles from "./StaffWorkspaceV3.module.css";
+import { StaffCommandPalette } from "./StaffCommandPalette";
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "@/features/operations/staff-modules";
 
 // Keep daily work visible. Secondary tools remain available without dominating the rail.
@@ -173,6 +174,8 @@ export function StaffAppShell({
             <span aria-hidden="true">/</span>
             <strong>{pageLabel}</strong>
           </div>
+
+          <StaffCommandPalette workspace={workspace} />
 
           <div className="app-topbar-actions">
             <Link className="app-topbar-link" href={buildStaffModuleHref(workspace, "inbox")}>Inbox</Link>
