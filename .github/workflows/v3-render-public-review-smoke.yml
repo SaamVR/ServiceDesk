@@ -4,7 +4,7 @@ name: ServiceDesk V3 Render review HTTP smoke
 on:
   push:
     branches:
-      - qa/servicedesk-v4-auth-live-20261011
+      - qa/servicedesk-v4-seed-live-20261012
     paths:
       - .github/workflows/v3-render-public-review-smoke.yml
 
@@ -19,7 +19,7 @@ jobs:
       - name: Check live Render build identity and public routes
         env:
           REVIEW_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
-          EXPECTED_SHA: e4cbe24f2e1949ff22c2252d30a665cea8def53b
+          EXPECTED_SHA: 499ab9e1e55944f3484a56925c88da9bfb6dae9a
         run: |
           node --input-type=module <<'JS'
           const origin = process.env.REVIEW_ORIGIN;
@@ -84,6 +84,9 @@ jobs:
             throw new Error("Expected QA-only signup form is missing or disabled.");
           }
           console.log("PASS isolated QA signup form enabled, not public promotion");
+          const login = await get("/auth/sign-in");
+          if (!login.includes("Approved tester?")) throw new Error("Invited-tester sign-up path missing from sign-in");
+          console.log("PASS invited tester entry visible");
           const continuation = await fetch(origin + "/auth/continue", {
             redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(25_000),
           });
