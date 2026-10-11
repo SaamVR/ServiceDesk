@@ -3,7 +3,7 @@
  * never decides message delivery, verified identity, or handover authority.
  * The last external message determines whether a reply might be needed.
  */
-export const inboxQueues = ["all", "needs-reply", "handover", "unverified"] as const;
+export const inboxQueues = ["all", "needs-reply", "delivery-issues", "handover", "unverified"] as const;
 export type InboxQueue = typeof inboxQueues[number];
 
 export interface InboxTriageConversation {
@@ -17,6 +17,7 @@ export interface InboxTriageMessage {
   conversationId: string;
   direction: "INBOUND" | "OUTBOUND" | "INTERNAL";
   createdAt: string;
+  deliveryState?: string | null;
 }
 
 export interface InboxTriageCustomer {
@@ -87,25 +88,34 @@ export function buildInboxTriage<
   const counts: InboxQueueCounts = {
     all: sorted.length,
     "needs-reply": 0,
+    "delivery-issues": 0,
     handover: 0,
     unverified: 0,
   };
 
   const threadFlags = new Map<string, {
     needsReply: boolean;
+    deliveryIssue: boolean;
     handover: boolean;
     unverified: boolean;
   }>();
 
   for (const conversation of sorted) {
     const last = recentExternal.get(conversation.id);
+    // Only persisted explicit failures/suppression justify delivery-recovery
+    // triage. Queued/provider-accepted states are not proof of delivery, but
+    // also are not evidence of failure: do not encourage duplicate sends.
+    const deliveryIssue = last?.direction === "OUTBOUND" &&
+      (last.deliveryState === "FAILED" || last.deliveryState === "SUPPRESSED");
     const flags = {
-      needsReply: last?.direction === "INBOUND",
+      needsReply: last?.direction === "INBOUND" || deliveryIssue,
+      deliveryIssue,
       handover: conversation.handoverActive,
       unverified: !conversation.customerId || !knownCustomers.has(conversation.customerId),
     };
     threadFlags.set(conversation.id, flags);
     if (flags.needsReply) counts["needs-reply"]++;
+    if (flags.deliveryIssue) counts["delivery-issues"]++;
     if (flags.handover) counts.handover++;
     if (flags.unverified) counts.unverified++;
   }
@@ -114,6 +124,7 @@ export function buildInboxTriage<
     const flags = threadFlags.get(thread.id);
     switch (queue) {
       case "needs-reply": return flags?.needsReply;
+      case "delivery-issues": return flags?.deliveryIssue;
       case "handover": return flags?.handover;
       case "unverified": return flags?.unverified;
       default: return true;
