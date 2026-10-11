@@ -34,6 +34,20 @@ export function filterInvoiceQueue<T extends InvoiceCollectionRecord>(records:re
   if(queue==="all")return [...records];
   return records.filter(x=>invoiceQueueOf(x)===queue);
 }
+/** Parse a human-entered two-decimal amount exactly in integer minor units.
+ * Never round fractional cents, accept exponent notation or pass imprecise
+ * Number values into the authorized payment command.
+ */
+export function parseManualPaymentAmountMinor(raw: string): number | undefined {
+  const value = raw.trim();
+  if (!value || value.length > 32) return undefined;
+  const match = /^(\\d+)(?:\\.(\\d{1,2}))?$/.exec(value);
+  if (!match) return undefined;
+  const minor = BigInt(match[1]) * 100n + BigInt((match[2] ?? "").padEnd(2, "0"));
+  if (minor <= 0n || minor > BigInt(Number.MAX_SAFE_INTEGER)) return undefined;
+  return Number(minor);
+}
+
 export function invoiceQueueHref(queue:InvoiceQueue,search:string,id?:string):string {
   const qs=new URLSearchParams();
   if(queue!=="all")qs.set("queue",queue);
