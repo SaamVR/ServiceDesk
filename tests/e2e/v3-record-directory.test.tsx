@@ -9,6 +9,7 @@ import {
   normalizeDirectoryQuery,
 } from "../../src/features/operations/record-directory";
 import { RecordDirectorySearch } from "../../src/features/operations/RecordDirectorySearch";
+import { countStaffBy, indexStaffById } from "../../src/features/operations/staff-snapshot-index";
 
 const rows = [
   { id: "first", name: "Avery Home", channel: "WHATSAPP", status: "READY" },
@@ -16,6 +17,15 @@ const rows = [
 ];
 
 describe("V3 staff operational record discovery", () => {
+  it("builds linear first-match snapshot indexes without mutating authorized records", () => {
+    const customers = [{ id: "first", name: "Original" }, { id: "first", name: "Duplicate" }, { id: "other", name: "Other" }];
+    const indexed = indexStaffById(customers);
+    expect(indexed.get("first")?.name).toBe("Original");
+    expect(indexed.size).toBe(2);
+    expect(countStaffBy([{ customerId: "first" }, { customerId: "first" }, { customerId: undefined }], (row) => row.customerId)).toEqual(new Map([["first", 2]]));
+    expect(customers).toHaveLength(3);
+  });
+
   it("filters authorized record properties without mutating the snapshot", () => {
     const result = filterDirectoryRows(rows, "  briar ", (row) => [row.name, row.channel, row.status]);
     expect(result.map((row) => row.id)).toEqual(["second"]);
@@ -56,5 +66,7 @@ describe("V3 staff operational record discovery", () => {
     expect(route).toContain("No matching requests");
     expect(route).toContain("No matching quotes");
     expect(route).toContain("No matching invoices");
+    expect(route).toContain("countStaffBy(data.properties");
+    expect(route).toContain("indexStaffById(data.crews)");
   });
 });

@@ -42,6 +42,7 @@ import { filterDirectoryRows, directoryRecordHref, normalizeDirectoryQuery } fro
 import { RecordDirectorySearch } from "./RecordDirectorySearch";
 import { filterJobsQueue, indexJobProgress, jobsQueueHref, normalizeJobsQueue } from "./jobs-queue";
 import { JobQueueFilters } from "./JobQueueFilters";
+import { countStaffBy, indexStaffById } from "./staff-snapshot-index";
 import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
@@ -565,6 +566,8 @@ function CustomersView({ data, selectedCustomerId, searchQuery }: { data: Operat
       </section>
     );
   }
+  const propertiesByCustomer = countStaffBy(data.properties, (property) => property.customerId);
+  const requestsByCustomer = countStaffBy(data.requests, (request) => request.customerId);
   const selectedCustomer = visibleCustomers.find((customer) => customer.id === selectedCustomerId) ?? visibleCustomers[0];
   const selectedProperties = data.properties.filter((property) => property.customerId === selectedCustomer.id);
   const selectedRequests = data.requests
@@ -625,8 +628,8 @@ function CustomersView({ data, selectedCustomerId, searchQuery }: { data: Operat
       <div className={styles.crmSplit}>
         <aside className={styles.crmQueue} aria-label="Customer list">
           {visibleCustomers.map((customer) => {
-            const properties = data.properties.filter((item) => item.customerId === customer.id).length;
-            const requests = data.requests.filter((item) => item.customerId === customer.id).length;
+            const properties = propertiesByCustomer.get(customer.id) ?? 0;
+            const requests = requestsByCustomer.get(customer.id) ?? 0;
             const selected = customer.id === selectedCustomer.id;
             return (
               <a
@@ -866,7 +869,12 @@ function RequestsView({
     - Date.parse(left.createdAt ?? "1970-01-01T00:00:00.000Z"),
   );
   const search = normalizeDirectoryQuery(searchQuery);
+  const customerById = indexStaffById(data.customers);
   const customerNameById = new Map(data.customers.map((customer) => [customer.id, customer.displayName]));
+  const quoteByRequestId = new Map<string, OperationalStaffSnapshot["quotes"][number]>();
+  for (const quote of data.quotes) {
+    if (quote.status !== "SUPERSEDED" && !quoteByRequestId.has(quote.requestId)) quoteByRequestId.set(quote.requestId, quote);
+  }
   const visibleRequests = filterDirectoryRows(orderedRequests, search, (request) => {
     return [request.serviceLabel, request.status, request.sourceChannel, request.customerId ? customerNameById.get(request.customerId) : undefined];
   });
@@ -879,9 +887,9 @@ function RequestsView({
     );
   }
   const selectedRequest = visibleRequests.find((request) => request.id === selectedRequestId) ?? visibleRequests[0];
-  const selectedRequestCustomer = data.customers.find((customer) => customer.id === selectedRequest.customerId);
+  const selectedRequestCustomer = customerById.get(selectedRequest.customerId ?? "");
   const selectedRequestProperty = data.properties.find((property) => property.id === selectedRequest.propertyId);
-  const selectedRequestQuote = data.quotes.find((quote) => quote.requestId === selectedRequest.id && quote.status !== "SUPERSEDED");
+  const selectedRequestQuote = quoteByRequestId.get(selectedRequest.id);
   const selectedPhotoAssets = (data.photoAssets ?? []).filter((asset) => asset.requestId === selectedRequest.id);
   const selectedPhotoSuggestions = (data.photoSuggestions ?? [])
     .filter((suggestion) => suggestion.requestId === selectedRequest.id)
@@ -917,8 +925,8 @@ function RequestsView({
       <div className={styles.salesSplit}>
         <aside className={styles.salesQueue} aria-label="Request queue">
           {visibleRequests.map((request) => {
-            const requestCustomer = data.customers.find((item) => item.id === request.customerId);
-            const currentQuote = data.quotes.find((quote) => quote.requestId === request.id && quote.status !== "SUPERSEDED");
+            const requestCustomer = customerById.get(request.customerId ?? "");
+            const currentQuote = quoteByRequestId.get(request.id);
             const selected = request.id === selectedRequest.id;
             return (
               <a
@@ -1212,8 +1220,8 @@ function QuotesView({
     );
   }
   const selectedQuote = visibleQuotes.find((quote) => quote.id === selectedQuoteId) ?? visibleQuotes[0];
-  const selectedQuoteRequest = data.requests.find((request) => request.id === selectedQuote.requestId);
-  const selectedQuoteCustomer = data.customers.find((customer) => customer.id === selectedQuoteRequest?.customerId);
+  const selectedQuoteRequest = requestById.get(selectedQuote.requestId);
+  const selectedQuoteCustomer = customerById.get(selectedQuoteRequest?.customerId ?? "");
   const selectedQuoteProperty = data.properties.find((property) => property.id === selectedQuoteRequest?.propertyId);
   const awaitingCustomer = orderedQuotes.filter((quote) => quote.status === "SENT").length;
   const readyToSend = orderedQuotes.filter((quote) => quote.status === "APPROVED").length;
@@ -1233,8 +1241,8 @@ function QuotesView({
       <div className={styles.salesSplit}>
         <aside className={styles.salesQueue} aria-label="Quote list">
           {visibleQuotes.map((quote) => {
-            const request = data.requests.find((item) => item.id === quote.requestId);
-            const customer = data.customers.find((item) => item.id === request?.customerId);
+            const request = requestById.get(quote.requestId);
+            const customer = customerById.get(request?.customerId ?? "");
             const selected = quote.id === selectedQuote.id;
             return (
               <a
@@ -1591,6 +1599,9 @@ function JobsView({
     return leftClosed - rightClosed || Date.parse(left.startAt) - Date.parse(right.startAt);
   });
   const activeVisits = orderedVisits.filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status));
+  const requestById = indexStaffById(data.requests);
+  const customerById = indexStaffById(data.customers);
+  const crewById = indexStaffById(data.crews);
   const queue = normalizeJobsQueue(selectedJobQueue);
   const visibleVisits = filterJobsQueue(orderedVisits, queue);
   if (!visibleVisits.length) {
@@ -1602,10 +1613,10 @@ function JobsView({
     );
   }
   const selectedVisit = visibleVisits.find((visit) => visit.id === selectedJobId) ?? visibleVisits[0];
-  const selectedRequest = data.requests.find((request) => request.id === selectedVisit.requestId);
-  const selectedCustomer = data.customers.find((customer) => customer.id === selectedRequest?.customerId);
+  const selectedRequest = requestById.get(selectedVisit.requestId);
+  const selectedCustomer = customerById.get(selectedRequest?.customerId ?? "");
   const selectedProperty = data.properties.find((property) => property.id === selectedRequest?.propertyId);
-  const selectedCrew = selectedVisit.crewId ? data.crews.find((crew) => crew.id === selectedVisit.crewId) : undefined;
+  const selectedCrew = selectedVisit.crewId ? crewById.get(selectedVisit.crewId) : undefined;
   const selectedEvidence = data.visitEvidence.filter((item) => item.visitId === selectedVisit.id);
   const selectedChecklist = data.visitChecklistItems.filter((item) => item.visitId === selectedVisit.id);
   const selectedChecklistDone = selectedChecklist.filter((item) => item.completed).length;
@@ -1640,9 +1651,9 @@ function JobsView({
       <div className={styles.jobsSplit}>
         <aside className={styles.jobsQueue} aria-label="Job list">
           {visibleVisits.map((visit) => {
-            const request = data.requests.find((item) => item.id === visit.requestId);
-            const customer = data.customers.find((item) => item.id === request?.customerId);
-            const crew = visit.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
+            const request = requestById.get(visit.requestId);
+            const customer = customerById.get(request?.customerId ?? "");
+            const crew = visit.crewId ? crewById.get(visit.crewId) : undefined;
             const progress = progressByVisit.get(visit.id);
             const selected = visit.id === selectedVisit.id;
             return (
@@ -1856,9 +1867,9 @@ function InvoicesView({
     );
   }
   const selectedInvoice = visibleInvoices.find((invoice) => invoice.id === selectedInvoiceId) ?? visibleInvoices[0];
-  const selectedInvoiceQuote = data.quotes.find((quote) => quote.id === selectedInvoice.quoteId);
-  const selectedInvoiceRequest = data.requests.find((request) => request.id === selectedInvoiceQuote?.requestId);
-  const selectedInvoiceCustomer = data.customers.find((customer) => customer.id === selectedInvoiceRequest?.customerId);
+  const selectedInvoiceQuote = quoteById.get(selectedInvoice.quoteId ?? "");
+  const selectedInvoiceRequest = requestById.get(selectedInvoiceQuote?.requestId ?? "");
+  const selectedInvoiceCustomer = customerById.get(selectedInvoiceRequest?.customerId ?? "");
   const selectedInvoiceProperty = data.properties.find((property) => property.id === selectedInvoiceRequest?.propertyId);
   const selectedInvoiceCanRecordPayment = selectedInvoice.balanceMinor > 0 && selectedInvoice.status !== "VOID";
   const openInvoices = orderedInvoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
@@ -1879,9 +1890,9 @@ function InvoicesView({
       <div className={styles.financeSplit}>
         <aside className={styles.financeQueue} aria-label="Invoice list">
           {visibleInvoices.map((invoice) => {
-            const quote = data.quotes.find((item) => item.id === invoice.quoteId);
-            const request = data.requests.find((item) => item.id === quote?.requestId);
-            const customer = data.customers.find((item) => item.id === request?.customerId);
+            const quote = quoteById.get(invoice.quoteId ?? "");
+            const request = requestById.get(quote?.requestId ?? "");
+            const customer = customerById.get(request?.customerId ?? "");
             const selected = invoice.id === selectedInvoice.id;
             return (
               <a
