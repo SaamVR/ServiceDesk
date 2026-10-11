@@ -209,3 +209,10 @@ Source: [V3 active four-lane batch](v3-four-lane-active-batch-20261011.md) (file
 Candidate B: [PR #82](https://github.com/SaamVR/ServiceDesk/pull/82) at `7b9f4f1a00a87524397dd45d498d8fb4b7d7db09`, reviewable but **not merged**. The four-file diff is a clean branch-off of coordinator `62cc6fd...`. V3 narrow GitHub Actions gate added in `.github/workflows/v3-focused-pr.yml` (single 8-minute job, path filtered); its successful execution is NOT yet established.
 
 Do not confuse W1/W2 authored tests or isolated Node probes with a successful repository Vitest run. No full `pnpm check:rc` on candidate B. See [four-lane active packet](execution/v3-four-lane-active-batch-20261011.md).
+
+### V3 verified milestone — 2026-10-11, ~07:42 Asia/Dhaka
+
+- **W1/W2 DONE / targeted CONTRACT_TESTED:** [PR #82](https://github.com/SaamVR/ServiceDesk/pull/82) merged **only** into V3 coordinator at `19468334ccbdde41b26e9aeddb65a255685f249e`; CI [38102291787](https://github.com/SaamVR/ServiceDesk/actions/runs/38102291787) focused Vitest, Node smoke and TypeScript green.
+- **W4 REVIEW / targeted CONTRACT_TESTED:** [PR #83](https://github.com/SaamVR/ServiceDesk/pull/83) remains **unmerged**. Work includes actual authenticated RLS workspace chooser, operational command palette, responsive operator shell, clickable Today queues and deterministic Inbox triage. CI [38102684008](https://github.com/SaamVR/ServiceDesk/actions/runs/38102684008) 5/5 files, 28/28 tests, typecheck and lint PASS at `1246f7e861f478d274408e75e5c4eb630cf7a2e0`. Browser/owner visual approval still required.
+- **W3 ACTIVE:** one complete combined `pnpm check:rc` after W4 acceptance; preserve canonical V2 and isolated Render gate until separately reviewed.
+- **External BLOCKED:** migration 0037 platform safety, Auth SMTP controlled delivery/session receipt, real signup and authenticated browser workflow acceptance. Registration stays disabled. See [four-lane receipt](execution/v3-four-lane-active-batch-20261011.md).
