@@ -18,7 +18,7 @@
   display: grid;
   gap: 6px;
   color: var(--app-text-muted);
-  font-size: .64rem;
+  font-size: 0.78rem;
   font-weight: 720;
 }
 
@@ -46,7 +46,7 @@
 .error p {
   margin: 0;
   color: inherit;
-  font-size: .65rem;
+  font-size: 0.78rem;
 }
 
 .inviteLinkActions {
@@ -64,7 +64,7 @@
   border-radius: 6px;
   background: rgb(255 255 255 / 72%);
   color: inherit;
-  font-size: .58rem;
+  font-size: 0.78rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -115,12 +115,12 @@
 
 .inviteCopy strong {
   color: var(--app-text);
-  font-size: .68rem;
+  font-size: 0.78rem;
 }
 
 .inviteCopy small {
   color: var(--app-text-muted);
-  font-size: .58rem;
+  font-size: 0.78rem;
 }
 
 .state {
@@ -128,7 +128,7 @@
   padding: 4px 7px;
   background: var(--app-surface-muted);
   color: var(--app-text-muted);
-  font-size: .55rem;
+  font-size: 0.78rem;
   font-weight: 760;
   text-transform: capitalize;
 }
@@ -147,14 +147,14 @@
 
 .empty strong {
   color: var(--app-text);
-  font-size: .7rem;
+  font-size: 0.78rem;
 }
 
 .empty p,
 .help {
   margin: 2px 0 0;
   color: var(--app-text-muted);
-  font-size: .6rem;
+  font-size: 0.78rem;
   line-height: 1.45;
 }
 
@@ -171,4 +171,9 @@
 }
 
 /* The token is never logged or copied into exception messages. */
-.copyError { grid-column: 1 / -1; margin: 5px 0 0; color: #a53b42; font-size: .73rem; font-weight: 680; }
+.copyError { grid-column: 1 / -1; margin: 5px 0 0; color: #a53b42; font-size: 0.78rem; font-weight: 680; }
+
+/* Invitation credentials and status should remain readable at 320px. */
+.inviteForm button,.invitationRow form button { min-height: 44px; }
+.inviteCopy { min-width: 0; }
+.copyError { line-height: 1.5; }

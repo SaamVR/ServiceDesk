@@ -49,14 +49,14 @@
 
 .header > div:first-child > p:last-child {
   max-width: 760px;
-  font-size: .7rem;
+  font-size: 0.75rem;
 }
 
 .eyebrow,
 .sectionEyebrow {
   margin: 0 !important;
   color: var(--app-accent-hover) !important;
-  font-size: .66rem !important;
+  font-size: 0.75rem !important;
   font-weight: 800;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -78,7 +78,7 @@
   padding: 9px 10px;
   border-right: 1px solid var(--app-border);
   color: var(--app-text-muted);
-  font-size: .65rem;
+  font-size: 0.75rem;
 }
 
 .headerMetrics span:last-child {
@@ -120,13 +120,13 @@
 .accountingConnection span,
 .accountingMetrics span {
   color: var(--app-text-muted);
-  font-size: .64rem;
+  font-size: 0.75rem;
 }
 
 .accountingConnection strong {
   overflow: hidden;
   color: var(--app-text);
-  font-size: .72rem;
+  font-size: 0.75rem;
   text-transform: capitalize;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -154,7 +154,7 @@
 
 .accountingMetrics strong {
   color: var(--app-text);
-  font-size: .72rem;
+  font-size: 0.75rem;
 }
 
 .accountingBackfill {
@@ -176,12 +176,12 @@
 
 .accountingBackfill span {
   color: var(--app-text-muted);
-  font-size: .64rem;
+  font-size: 0.75rem;
 }
 
 .accountingBackfill strong {
   color: var(--app-text);
-  font-size: .7rem;
+  font-size: 0.75rem;
 }
 
 .accountingBackfillStats {
@@ -195,7 +195,7 @@
   grid-column: 1 / -1;
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .65rem;
+  font-size: 0.75rem;
   line-height: 1.45;
 }
 
@@ -203,7 +203,7 @@
 .accountingEmpty p {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .66rem;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
@@ -218,7 +218,7 @@
 
 .accountingEmpty strong {
   color: var(--app-text);
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .costPanel {
@@ -244,7 +244,7 @@
 .costMeta span,
 .costSummaryRow span {
   color: var(--app-text-muted);
-  font-size: .65rem;
+  font-size: 0.75rem;
 }
 
 .costMeta strong,
@@ -269,7 +269,7 @@
 }
 
 .costSummaryRow strong {
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .costEmpty {
@@ -283,14 +283,14 @@
 
 .costEmpty strong {
   color: var(--app-text);
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .costEmpty p,
 .costNote {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .66rem;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
@@ -318,7 +318,7 @@
 .profitabilityCoverage span,
 .profitabilityAdjustments span {
   color: var(--app-text-muted);
-  font-size: .65rem;
+  font-size: 0.75rem;
 }
 
 .profitabilityMeta strong {
@@ -355,12 +355,12 @@
 .profitabilityTitle strong,
 .profitabilityAdjustments strong {
   color: var(--app-text);
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .profitabilityTitle span {
   color: var(--app-text-muted);
-  font-size: .65rem;
+  font-size: 0.75rem;
 }
 
 .profitabilityMetrics {
@@ -386,13 +386,13 @@
 .profitabilityMetrics span,
 .profitabilityMetrics small {
   color: var(--app-text-muted);
-  font-size: .64rem;
+  font-size: 0.75rem;
 }
 
 .profitabilityMetrics strong {
   overflow: hidden;
   color: var(--app-text);
-  font-size: .7rem;
+  font-size: 0.75rem;
   text-overflow: ellipsis;
 }
 
@@ -423,13 +423,13 @@
 .profitabilityNote {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .66rem;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
 .profitabilityEmpty strong {
   color: var(--app-text);
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .taxPanel {
@@ -457,7 +457,7 @@
 .taxMeta span,
 .taxProfileDetails span {
   color: var(--app-text-muted);
-  font-size: .65rem;
+  font-size: 0.75rem;
 }
 
 .taxMeta strong {
@@ -488,12 +488,12 @@
 
 .taxProfileHeader strong {
   color: var(--app-text);
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .taxProfileHeader span {
   color: var(--app-text-muted);
-  font-size: .65rem;
+  font-size: 0.75rem;
 }
 
 .taxProfileDetails {
@@ -529,14 +529,14 @@
 
 .taxEmpty strong {
   color: var(--app-text);
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .taxEmpty p,
 .taxNote {
   margin: 0;
   color: var(--app-text-muted);
-  font-size: .66rem;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
@@ -571,7 +571,7 @@
 
 .sectionHeading > p {
   max-width: 520px;
-  font-size: .6rem;
+  font-size: 0.75rem;
   text-align: right;
 }
 
@@ -593,7 +593,7 @@
 .draftFooter p,
 .collection p {
   max-width: 720px;
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .readiness,
@@ -609,12 +609,12 @@
 .readiness strong,
 .empty strong {
   color: var(--app-text);
-  font-size: .68rem;
+  font-size: 0.75rem;
 }
 
 .readiness p,
 .empty p {
-  font-size: .6rem;
+  font-size: 0.75rem;
 }
 
 .draftList {
@@ -649,7 +649,7 @@
 .draftHeader p {
   margin: 0;
   color: var(--app-accent-hover);
-  font-size: .65rem;
+  font-size: 0.75rem;
   font-weight: 760;
 }
 
@@ -662,7 +662,7 @@
 
 .draftHeader span {
   color: var(--app-text-muted);
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .totals {
@@ -687,13 +687,13 @@
 
 .totals span {
   color: var(--app-text-muted);
-  font-size: .64rem;
+  font-size: 0.75rem;
 }
 
 .totals strong {
   overflow: hidden;
   color: var(--app-text);
-  font-size: .7rem;
+  font-size: 0.75rem;
   text-overflow: ellipsis;
 }
 
@@ -730,17 +730,17 @@
 
 .lineCopy strong {
   color: var(--app-text);
-  font-size: .64rem;
+  font-size: 0.75rem;
 }
 
 .lineCopy span {
   color: var(--app-text-muted);
-  font-size: .65rem;
+  font-size: 0.75rem;
 }
 
 .lineAmount {
   color: var(--app-text);
-  font-size: .64rem;
+  font-size: 0.75rem;
   font-weight: 760;
 }
 
@@ -762,7 +762,7 @@
 
 .collection strong {
   color: var(--app-text);
-  font-size: .66rem;
+  font-size: 0.75rem;
 }
 
 .paymentForm {
@@ -917,3 +917,7 @@
     justify-self: start;
   }
 }
+
+/* Production financial work uses readable metadata and touch-safe actions. */
+.workspace :global(button[type="submit"]) { min-height: 44px; }
+.lineCopy,.lineAmount,.collection { overflow-wrap: anywhere; }
