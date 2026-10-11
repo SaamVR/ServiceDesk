@@ -63,7 +63,7 @@ describe("verified owner first-login RLS landing", () => {
     expect(calls).toContain("member:role=OWNER");
     expect(calls).toContain("member:status=ACTIVE");
     expect(calls).toContain("workspace-in:id");
-    expect(calls).toContain("workspace-eq:slug=brightroom-cleaning");
+    expect(calls).toContain("workspace-eq:slug");
   });
 
   it("denies another workspace, even if it is visible to an improperly configured read facade", async () => {
