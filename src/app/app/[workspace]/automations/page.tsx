@@ -5,7 +5,7 @@ export default async function StaffAutomationsPage({
   searchParams,
 }: {
   params: Promise<{ workspace: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; template?: string }>;
 }) {
   const { workspace } = await params;
   const query = await searchParams;
@@ -15,6 +15,7 @@ export default async function StaffAutomationsPage({
       module="automations"
       notice={query.notice}
       error={query.error}
+      automationTemplate={query.template}
     />
   );
 }
