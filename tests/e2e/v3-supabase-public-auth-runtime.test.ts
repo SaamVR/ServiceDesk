@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { supabasePublicConfig } from "../../src/features/auth/supabase-public-config";
 import { trustedAuthDestination } from "../../src/features/auth/email-origin";
+import { operationalDatabaseMode } from "../../src/features/auth/operational-preview-mode";
 
 const source = (file: string) => readFileSync(join(process.cwd(), file), "utf8");
 
@@ -53,16 +54,39 @@ describe("V3 server-side Supabase auth and onboarding", () => {
     const confirmRoute = source("src/app/auth/confirm/route.ts");
     expect(continueRoute).toContain("trustedAuthDestination(path)");
     expect(confirmRoute).toContain("trustedAuthDestination(");
-    expect(continueRoute).not.toContain("request.url");
-    expect(confirmRoute).not.toContain("request.url");
-  });
-
-  it("keeps service-only operational authority while accepting the modern public key", () => {
+    expect(continueRoute).  it("keeps staff operations disabled without explicit service or isolated QA session authorization", () => {
     const operational = source("src/features/operations/operational-product-runtime.ts");
     expect(operational).toContain("supabasePublicConfig()");
-    expect(operational).toContain("process.env.SUPABASE_SERVICE_ROLE_KEY");
-    expect(operational).toContain("if (!publicConfig || !serviceRoleKey) return undefined");
+    expect(operational).toContain("operationalDatabaseMode()");
+    expect(operational).toContain('mode === "DISABLED"');
+    expect(operational).toContain('config.mode === "SERVICE_ROLE" && config.serviceRoleKey');
     expect(operational).toContain("auth.auth.getUser()");
+    expect(operational).toContain('.from("memberships")');
+
+    expect(operationalDatabaseMode({})).toBe("DISABLED");
+    expect(operationalDatabaseMode({ SUPABASE_SERVICE_ROLE_KEY: "server-only" }))
+      .toBe("SERVICE_ROLE");
+    expect(operationalDatabaseMode({
+      SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true",
+    })).toBe("DISABLED");
+    expect(operationalDatabaseMode({
+      SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true",
+      SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "true",
+      SERVICEDESK_OWNER_REGISTRATION_ENABLED: "true",
+    })).toBe("DISABLED");
+    expect(operationalDatabaseMode({
+      SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true",
+      SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "true",
+      SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false",
+    })).toBe("QA_SESSION_RLS");
+    expect(operationalDatabaseMode({
+      SUPABASE_SERVICE_ROLE_KEY: "server-only",
+      SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true",
+      SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "true",
+    })).toBe("SERVICE_ROLE");
+  });
+
+n("auth.auth.getUser()");
     expect(operational).toContain('.from("memberships")');
   });
 
