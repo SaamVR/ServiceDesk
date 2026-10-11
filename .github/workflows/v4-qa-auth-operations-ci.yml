@@ -2,7 +2,7 @@ name: ServiceDesk V4 QA authenticated RLS full release gate
 # Synthetic-only combined gate; no provider secrets or customer data.
 on:
   push:
-    branches: [feat/servicedesk-v4-qa-auth-operations-20261011]
+    branches: [feat/servicedesk-v4-qa-rls-final-gate-20261011]
   workflow_dispatch:
 permissions:
   contents: read
