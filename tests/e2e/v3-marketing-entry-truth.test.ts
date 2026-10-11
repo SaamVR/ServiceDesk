@@ -19,8 +19,9 @@ describe("Marketing CTA and closed-registration release truth", () => {
     expect(marketingHeroEntry(true, "/auth/sign-up", "Create workspace").href).toBe("/auth/sign-up");
     expect(ownerRegistrationAvailable({} as NodeJS.ProcessEnv)).toBe(false);
     expect(ownerRegistrationAvailable({
+      ...process.env,
       SERVICEDESK_OWNER_REGISTRATION_ENABLED: "true",
-    } as NodeJS.ProcessEnv)).toBe(false);
+    })).toBe(false);
   });
   it("applies policy to navigation and home hero while leaving sign-in working", () => {
     const nav = source("src/components/shell/MarketingShell.tsx");
