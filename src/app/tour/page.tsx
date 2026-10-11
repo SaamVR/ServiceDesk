@@ -39,8 +39,8 @@ export default function TourPage() {
             <h1 id="tour-title">See how a little clarity changes <em>the whole workday.</em></h1>
             <p>From a new enquiry to the final follow-up, discover how your cleaning team can keep every detail, decision and handoff in one place.</p>
             <div className={styles.heroActions}>
-              <Link className={styles.primaryAction} href="/sandbox">Try the interactive sandbox <span aria-hidden="true">↗</span></Link>
-              <Link className={styles.secondaryAction} href="#journey">Explore the journey <span aria-hidden="true">→</span></Link>
+              <Link data-public-primary className={styles.primaryAction} href="/sandbox">Try the interactive sandbox <span aria-hidden="true">↗</span></Link>
+              <Link data-public-secondary className={styles.secondaryAction} href="#journey">Explore the journey <span aria-hidden="true">→</span></Link>
             </div>
             <div className={styles.heroDisclosure}><span className={styles.dot} /> Demonstration uses sample data. No real charges, messages or bookings.</div>
           </div>
