@@ -2,9 +2,20 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./responsive-a11y.css";
 
+// Public indexing is an explicit deployment/release decision. Preview
+// builds are noindex/nofollow by default until the owner approves publication.
+const publicIndexingEnabled = process.env.SERVICEDESK_PUBLIC_INDEXING_ENABLED === "true";
+
 export const metadata: Metadata = {
-  title: "ServiceDesk AI",
-  description: "Operations platform for residential cleaning businesses",
+  title: {
+    default: "ServiceDesk AI | Cleaning Operations Workspace",
+    template: "%s | ServiceDesk AI",
+  },
+  description: "A cleaning operations workspace connecting customer enquiries, quotes, dispatch, field jobs, invoicing and quality review.",
+  robots: {
+    index: publicIndexingEnabled,
+    follow: publicIndexingEnabled,
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
