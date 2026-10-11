@@ -40,7 +40,7 @@ function fixture(config: {
           (config.conversation === undefined ? { ...conversation, handover_active: Boolean(config.handover) } : config.conversation) :
           table === "messages" ? (config.message === undefined ? message : config.message) :
           table === "requests" ? (config.request === undefined ? request : config.request) : null;
-        if (raw && filters.some(([k, v]) => raw[k] !== v)) return { data: null, error: null };
+        if (raw && filters.some(([k, v]) => (raw as Record<string, unknown>)[k] !== v)) return { data: null, error: null };
         return { data: raw, error: null };
       },
     };
@@ -55,7 +55,7 @@ function fixture(config: {
       : { mode: "ALL", branches: [] },
   } as unknown as ResolvedStaffActor;
   const opts = {
-    resolveActor: async () => config.authFailed
+    resolveActor: async (_slug: string) => config.authFailed
       ? { ok: false as const, kind: "authentication", message: "Sign in required" }
       : { ok: true as const, value: staff },
     env, knowledge: new ApprovedKnowledgeIndex([]), promptVersion: "controlled-v3-inbox",
