@@ -140,8 +140,8 @@ describe("explicit human approval of reviewed inbox reply", () => {
       { ...source, sender_kind: "STAFF" }, { ...source, direction: "OUTBOUND" },
     ]) {
       const h = harness({ source: changed });
-      expect((await approveReviewedInboxReply(input, h.deps))
-        .toMatchObject({ ok: false, code: "REVIEWED_REPLY_SOURCE_STALE" }));
+      expect(await approveReviewedInboxReply(input, h.deps))
+        .toMatchObject({ ok: false, code: "REVIEWED_REPLY_SOURCE_STALE" });
       expect(h.calls).toEqual([]);
     }
   });
