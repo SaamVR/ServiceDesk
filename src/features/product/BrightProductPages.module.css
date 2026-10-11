@@ -10,7 +10,7 @@
   --sea: #209d99;
   --deep: #117c78;
   --border: #dfebe8;
-  --coral: #fa785f;
+  --coral: #bd4b36;
   color: var(--ink);
   background: white;
   font-family: "DM Sans", "Avenir Next", "Segoe UI", system-ui, sans-serif;
@@ -60,7 +60,7 @@
   text-decoration: none;
   transition: transform 200ms ease, background 200ms ease, box-shadow 200ms ease;
 }
-.primaryCta:hover { background: #e96752; box-shadow: 0 14px 24px rgb(250 120 95 / 19%); transform: translateY(-2px); }
+.primaryCta:hover { background: #a93b2b; box-shadow: 0 14px 24px rgb(250 120 95 / 19%); transform: translateY(-2px); }
 .secondaryCta, .textLink {
   display: inline-flex; align-items: center; gap: 11px;
   min-height: 45px; color: #276863; font-size: .86rem; font-weight: 790;
@@ -359,7 +359,30 @@
   .cleaningPhoto { inset: 0 5% 20px 0; border-radius: 90px 12px 65px 12px; }
   .cleaningInset { width: min(80%, 260px); right: 0; padding: 13px; }
   .cleaningPhotoLabel { bottom: 52px; left: 12px; font-size: .75rem; }
-  .integrationVisual { min-height: 370px; border-radius: 90px 12px 60px 12px; }
+  /* Provider cards form a readable grid at 320px rather than overlapping
+     the central hub. Do not imply that the integrations are connected. */
+  .integrationVisual {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-start; gap: 14px;
+    min-height: 0; padding: 24px 14px 18px;
+    border-radius: 42px 12px 34px 12px;
+  }
+  .integrationVisual::before,.integrationVisual::after { display: none; }
+  .networkNodes {
+    position: static; inset: auto; display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    width: 100%; align-items: stretch; gap: 9px;
+  }
+  .networkNode,.networkNode:nth-child(1),.networkNode:nth-child(2),
+  .networkNode:nth-child(3),.networkNode:nth-child(4) {
+    position: static; inset: auto; width: auto;
+    min-width: 0; min-height: 82px; padding: 10px 11px;
+  }
+  .networkNode strong,.networkNode small { overflow-wrap: anywhere; }
+  .networkDisclaimer {
+    position: static; width: 100%; margin: 0;
+    padding: 0 6px; text-align: center;
+  }
   .integrationVisual::before { width: 300px; height: 300px; }
   .integrationVisual::after { width: 225px; height: 225px; }
   .networkCentre { width: 115px; height: 115px; border-width: 8px; }
