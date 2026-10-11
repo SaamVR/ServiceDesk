@@ -5,7 +5,7 @@ export default async function StaffJobsPage({
   searchParams,
 }: {
   params: Promise<{ workspace: string }>;
-  searchParams: Promise<{ notice?: string; error?: string; job?: string; queue?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; job?: string; queue?: string; search?: string }>;
 }) {
   const { workspace } = await params;
   const query = await searchParams;
@@ -15,6 +15,7 @@ export default async function StaffJobsPage({
       module="jobs"
       selectedJobId={query.job}
       selectedJobQueue={query.queue}
+      searchQuery={query.search}
       notice={query.notice}
       error={query.error}
     />
