@@ -17,7 +17,7 @@ describe("Studio OS live workflow decision badges", () => {
         { crewId: undefined, status: "COMPLETED" },
       ],
       invoices: [
-        { balanceMinor: 2000, currency: "USD", status: "SENT" },
+        { balanceMinor: 2000, currency: "USD", status: "ISSUED" },
         { balanceMinor: 0, currency: "USD", status: "PAID" },
       ],
     };
