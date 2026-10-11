@@ -48,12 +48,14 @@ export function verifyWhatsAppWebhookChallenge(query: WhatsAppWebhookChallengeQu
 }
 
 export function verifyMetaSignature(rawBody: string, signatureHeader: string | undefined, appSecret: string): Result<true> {
-  if (!signatureHeader?.startsWith("sha256=")) {
+  // Buffer.from(hex) silently ignores trailing garbage. Require the exact
+  // 256-bit signature format before comparing, and never trust an empty key.
+  if (!appSecret || !/^sha256=[a-f0-9]{64}$/i.test(signatureHeader ?? "")) {
     return { ok: false, code: "MISSING_SIGNATURE", message: "Missing X-Hub-Signature-256 header." };
   }
 
   const expected = createHmac("sha256", appSecret).update(rawBody).digest("hex");
-  const received = signatureHeader.slice("sha256=".length);
+  const received = (signatureHeader ?? "").slice("sha256=".length);
   const expectedBuffer = Buffer.from(expected, "hex");
   const receivedBuffer = Buffer.from(received, "hex");
 
