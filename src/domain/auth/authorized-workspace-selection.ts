@@ -56,6 +56,9 @@ export function resolveAuthorizedWorkspaceDestination(
   rows: readonly AuthorizedWorkspaceMembership[],
 ): AuthorizedWorkspaceDecision {
   const staff = new Map<string, AuthorizedStaffDestination>();
+  // A membership join must not map the same immutable workspace ID to
+  // different slugs. Fail closed rather than making routing row-order-dependent.
+  const conflictingSlugs = new Set<string>();
   let hasCrewAccess = false;
 
   for (const row of rows) {
@@ -74,8 +77,15 @@ export function resolveAuthorizedWorkspaceDestination(
       role: row.role,
       href: "/app/" + encodeURIComponent(row.slug) + "/overview",
     };
+    if (conflictingSlugs.has(row.workspaceId)) continue;
     const previous = staff.get(row.workspaceId);
-    if (!previous || staffRoleRank[next.role] < staffRoleRank[previous.role]) {
+    if (previous && previous.slug !== next.slug) {
+      conflictingSlugs.add(row.workspaceId);
+      staff.delete(row.workspaceId);
+      continue;
+    }
+    if (!previous || staffRoleRank[next.role] < staffRoleRank[previous.role] ||
+      (next.role === previous.role && next.name.localeCompare(previous.name) < 0)) {
       staff.set(row.workspaceId, next);
     }
   }
@@ -94,4 +104,27 @@ export function resolveAuthorizedWorkspaceDestination(
   };
   if (hasCrewAccess) return { kind: "CREW", href: "/crew/today" };
   return { kind: "NONE" };
+}
+
+/**
+ * Complete an explicit workspace choice against the same RLS-scoped rows used
+ * to build the chooser. A URL, selected slug, or client-supplied role cannot
+ * authorize entry into a workspace: the chosen ID must be present in the
+ * authenticated active staff membership result.
+ *
+ * This is navigation policy only. The destination must independently
+ * authenticate and authorize the current user.
+ */
+export function resolveAuthorizedStaffWorkspaceSelection(
+  rows: readonly AuthorizedWorkspaceMembership[],
+  requestedWorkspaceId: string,
+): Extract<AuthorizedWorkspaceDecision, { kind: "STAFF" }> | { kind: "NONE" } {
+  if (!validWorkspaceId(requestedWorkspaceId)) return { kind: "NONE" };
+  const decision = resolveAuthorizedWorkspaceDestination(rows);
+  const workspace = decision.kind === "STAFF"
+    ? (decision.workspace.workspaceId === requestedWorkspaceId ? decision.workspace : undefined)
+    : decision.kind === "CHOOSE"
+      ? decision.workspaces.find(candidate => candidate.workspaceId === requestedWorkspaceId)
+      : undefined;
+  return workspace ? { kind: "STAFF", workspace, href: workspace.href } : { kind: "NONE" };
 }

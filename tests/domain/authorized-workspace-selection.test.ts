@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   resolveAuthorizedWorkspaceDestination,
+  resolveAuthorizedStaffWorkspaceSelection,
   type AuthorizedWorkspaceMembership,
 } from "../../src/domain/auth/authorized-workspace-selection";
 
@@ -131,6 +132,84 @@ describe("authenticated RLS membership destination resolver", () => {
     expect(a).toEqual(b);
     if (a.kind === "CHOOSE") {
       expect(a.workspaces.map(x => x.workspaceId)).toEqual(["a", "b", "z"]);
+    }
+  });
+});
+
+describe("explicit authorized staff workspace choice", () => {
+  it("selects only the requested active staff workspace from multiple choices", () => {
+    const rows = [member("OWNER", "north"), member("DISPATCHER", "south")];
+    expect(resolveAuthorizedStaffWorkspaceSelection(rows, "south")).toMatchObject({
+      kind: "STAFF",
+      href: "/app/clean-south/overview",
+      workspace: { workspaceId: "south", role: "DISPATCHER" },
+    });
+    expect(resolveAuthorizedStaffWorkspaceSelection(rows, "north")).toMatchObject({
+      kind: "STAFF",
+      workspace: { workspaceId: "north", role: "OWNER" },
+    });
+  });
+
+  it("fails closed for an unknown, revoked or unsafe selection", () => {
+    const rows = [
+      member("OWNER", "active"),
+      member("OWNER", "revoked", { status: "REVOKED" }),
+      member("CREW", "crew-only"),
+    ];
+    for (const requested of ["unknown", "revoked", "crew-only", "../active", "clean-active", "", " active"]) {
+      expect(resolveAuthorizedStaffWorkspaceSelection(rows, requested)).toEqual({ kind: "NONE" });
+    }
+  });
+
+  it("selects the highest authorized role without mutating input", () => {
+    const rows = [member("DISPATCHER", "one"), member("OWNER", "one")];
+    const before = JSON.stringify(rows);
+    expect(resolveAuthorizedStaffWorkspaceSelection(rows, "one")).toMatchObject({
+      kind: "STAFF",
+      workspace: { role: "OWNER" },
+    });
+    expect(JSON.stringify(rows)).toBe(before);
+  });
+
+  it("never turns crew access or missing membership into staff access", () => {
+    expect(resolveAuthorizedStaffWorkspaceSelection([member("CREW", "crew")], "crew"))
+      .toEqual({ kind: "NONE" });
+    expect(resolveAuthorizedStaffWorkspaceSelection([], "new-business"))
+      .toEqual({ kind: "NONE" });
+  });
+});
+
+describe("duplicate authenticated membership integrity", () => {
+  it("rejects a conflicting slug for one immutable workspace ID", () => {
+    const rows = [
+      member("OWNER", "same", { slug: "legitimate-one" }),
+      member("DISPATCHER", "same", { slug: "different-one" }),
+    ];
+    expect(resolveAuthorizedWorkspaceDestination(rows)).toEqual({ kind: "NONE" });
+    expect(resolveAuthorizedWorkspaceDestination([...rows].reverse())).toEqual({ kind: "NONE" });
+    expect(resolveAuthorizedStaffWorkspaceSelection(rows, "same")).toEqual({ kind: "NONE" });
+  });
+
+  it("keeps unrelated authorized workspaces despite a conflicting joined row", () => {
+    const rows = [
+      member("OWNER", "a", { slug: "north-one" }),
+      member("OWNER", "a", { slug: "north-two" }),
+      member("OWNER", "b", { slug: "south-office" }),
+    ];
+    expect(resolveAuthorizedWorkspaceDestination(rows)).toMatchObject({
+      kind: "STAFF", href: "/app/south-office/overview",
+    });
+  });
+
+  it("stabilizes duplicate display names for equal authorized roles", () => {
+    const rows = [
+      member("OWNER", "one", { name: "Zeta" }),
+      member("OWNER", "one", { name: "Alpha" }),
+    ];
+    for (const input of [rows, [...rows].reverse()]) {
+      expect(resolveAuthorizedWorkspaceDestination(input)).toMatchObject({
+        kind: "STAFF", workspace: { name: "Alpha", role: "OWNER" },
+      });
     }
   });
 });
