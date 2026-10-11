@@ -544,13 +544,25 @@ function InboxView({
   );
 }
 
-function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSnapshot; selectedCustomerId?: string }) {
+function CustomersView({ data, selectedCustomerId, searchQuery }: { data: OperationalStaffSnapshot; selectedCustomerId?: string; searchQuery?: string }) {
   if (data.customers.length === 0) {
     return <EmptyState title="No customers yet" detail="Customers will appear here after enquiries are linked to a customer record." />;
   }
 
   const orderedCustomers = [...data.customers].sort((left, right) => left.displayName.localeCompare(right.displayName));
-  const selectedCustomer = orderedCustomers.find((customer) => customer.id === selectedCustomerId) ?? orderedCustomers[0];
+  const search = normalizeDirectoryQuery(searchQuery);
+  const visibleCustomers = filterDirectoryRows(orderedCustomers, search, (customer) => {
+    return [customer.displayName, customer.leadSource];
+  });
+  if (!visibleCustomers.length) {
+    return (
+      <section aria-label="Customer relationship workspace">
+        <RecordDirectorySearch label="customers" search={search} visible={0} total={orderedCustomers.length} />
+        <EmptyState title="No matching customers" detail="Try a different name or lead source, or clear the search." />
+      </section>
+    );
+  }
+  const selectedCustomer = visibleCustomers.find((customer) => customer.id === selectedCustomerId) ?? visibleCustomers[0];
   const selectedProperties = data.properties.filter((property) => property.customerId === selectedCustomer.id);
   const selectedRequests = data.requests
     .filter((request) => request.customerId === selectedCustomer.id)
@@ -606,16 +618,17 @@ function CustomersView({ data, selectedCustomerId }: { data: OperationalStaffSna
         </div>
       </header>
 
+      <RecordDirectorySearch label="customers" search={search} visible={visibleCustomers.length} total={orderedCustomers.length} />
       <div className={styles.crmSplit}>
         <aside className={styles.crmQueue} aria-label="Customer list">
-          {orderedCustomers.map((customer) => {
+          {visibleCustomers.map((customer) => {
             const properties = data.properties.filter((item) => item.customerId === customer.id).length;
             const requests = data.requests.filter((item) => item.customerId === customer.id).length;
             const selected = customer.id === selectedCustomer.id;
             return (
               <a
                 className={`${styles.crmQueueItem} ${selected ? styles.crmQueueSelected : ""}`.trim()}
-                href={"?customer=" + encodeURIComponent(customer.id)}
+                href={directoryRecordHref("customer", customer.id, search)}
                 aria-current={selected ? "page" : undefined}
                 key={customer.id}
               >
@@ -784,10 +797,12 @@ function RequestsView({
   data,
   workspaceSlug,
   selectedRequestId,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedRequestId?: string;
+  searchQuery?: string;
 }) {
   async function updateVoiceCallback(formData: FormData) {
     "use server";
@@ -847,7 +862,20 @@ function RequestsView({
     Date.parse(right.createdAt ?? "1970-01-01T00:00:00.000Z")
     - Date.parse(left.createdAt ?? "1970-01-01T00:00:00.000Z"),
   );
-  const selectedRequest = orderedRequests.find((request) => request.id === selectedRequestId) ?? orderedRequests[0];
+  const search = normalizeDirectoryQuery(searchQuery);
+  const customerNameById = new Map(data.customers.map((customer) => [customer.id, customer.displayName]));
+  const visibleRequests = filterDirectoryRows(orderedRequests, search, (request) => {
+    return [request.serviceLabel, request.status, request.sourceChannel, request.customerId ? customerNameById.get(request.customerId) : undefined];
+  });
+  if (!visibleRequests.length) {
+    return (
+      <section aria-label="Request intake workspace">
+        <RecordDirectorySearch label="requests" search={search} visible={0} total={orderedRequests.length} />
+        <EmptyState title="No matching requests" detail="Try a customer, service, channel or status, or clear the search." />
+      </section>
+    );
+  }
+  const selectedRequest = visibleRequests.find((request) => request.id === selectedRequestId) ?? visibleRequests[0];
   const selectedRequestCustomer = data.customers.find((customer) => customer.id === selectedRequest.customerId);
   const selectedRequestProperty = data.properties.find((property) => property.id === selectedRequest.propertyId);
   const selectedRequestQuote = data.quotes.find((quote) => quote.requestId === selectedRequest.id && quote.status !== "SUPERSEDED");
@@ -882,16 +910,17 @@ function RequestsView({
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "inbox")}>Open inbox</a>
       </header>
 
+      <RecordDirectorySearch label="requests" search={search} visible={visibleRequests.length} total={orderedRequests.length} />
       <div className={styles.salesSplit}>
         <aside className={styles.salesQueue} aria-label="Request queue">
-          {orderedRequests.map((request) => {
+          {visibleRequests.map((request) => {
             const requestCustomer = data.customers.find((item) => item.id === request.customerId);
             const currentQuote = data.quotes.find((quote) => quote.requestId === request.id && quote.status !== "SUPERSEDED");
             const selected = request.id === selectedRequest.id;
             return (
               <a
                 className={`${styles.salesQueueItem} ${selected ? styles.salesQueueSelected : ""}`.trim()}
-                href={"?request=" + encodeURIComponent(request.id)}
+                href={directoryRecordHref("request", request.id, search)}
                 aria-current={selected ? "page" : undefined}
                 key={request.id}
               >
@@ -1136,10 +1165,12 @@ function QuotesView({
   data,
   workspaceSlug,
   selectedQuoteId,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedQuoteId?: string;
+  searchQuery?: string;
 }) {
   async function sendQuote(formData: FormData) {
     "use server";
@@ -1162,7 +1193,22 @@ function QuotesView({
     return (statusWeight[left.status] ?? 9) - (statusWeight[right.status] ?? 9)
       || right.version - left.version;
   });
-  const selectedQuote = orderedQuotes.find((quote) => quote.id === selectedQuoteId) ?? orderedQuotes[0];
+  const search = normalizeDirectoryQuery(searchQuery);
+  const requestById = new Map(data.requests.map((request) => [request.id, request]));
+  const customerById = new Map(data.customers.map((customer) => [customer.id, customer]));
+  const visibleQuotes = filterDirectoryRows(orderedQuotes, search, (quote) => {
+    const request = requestById.get(quote.requestId);
+    return [quote.status, quote.currency, request?.serviceLabel, request?.customerId ? customerById.get(request.customerId)?.displayName : undefined];
+  });
+  if (!visibleQuotes.length) {
+    return (
+      <section aria-label="Quote workspace">
+        <RecordDirectorySearch label="quotes" search={search} visible={0} total={orderedQuotes.length} />
+        <EmptyState title="No matching quotes" detail="Try a customer, service or quote status, or clear the search." />
+      </section>
+    );
+  }
+  const selectedQuote = visibleQuotes.find((quote) => quote.id === selectedQuoteId) ?? visibleQuotes[0];
   const selectedQuoteRequest = data.requests.find((request) => request.id === selectedQuote.requestId);
   const selectedQuoteCustomer = data.customers.find((customer) => customer.id === selectedQuoteRequest?.customerId);
   const selectedQuoteProperty = data.properties.find((property) => property.id === selectedQuoteRequest?.propertyId);
@@ -1180,16 +1226,17 @@ function QuotesView({
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "requests")}>Open requests</a>
       </header>
 
+      <RecordDirectorySearch label="quotes" search={search} visible={visibleQuotes.length} total={orderedQuotes.length} />
       <div className={styles.salesSplit}>
         <aside className={styles.salesQueue} aria-label="Quote list">
-          {orderedQuotes.map((quote) => {
+          {visibleQuotes.map((quote) => {
             const request = data.requests.find((item) => item.id === quote.requestId);
             const customer = data.customers.find((item) => item.id === request?.customerId);
             const selected = quote.id === selectedQuote.id;
             return (
               <a
                 className={`${styles.salesQueueItem} ${selected ? styles.salesQueueSelected : ""}`.trim()}
-                href={"?quote=" + encodeURIComponent(quote.id)}
+                href={directoryRecordHref("quote", quote.id, search)}
                 aria-current={selected ? "page" : undefined}
                 key={quote.id}
               >
@@ -1743,10 +1790,12 @@ function InvoicesView({
   data,
   workspaceSlug,
   selectedInvoiceId,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedInvoiceId?: string;
+  searchQuery?: string;
 }) {
   async function manualPayment(formData: FormData) {
     "use server";
@@ -1773,7 +1822,24 @@ function InvoicesView({
     const rightOpen = right.balanceMinor > 0 && right.status !== "VOID" ? 0 : 1;
     return leftOpen - rightOpen || right.balanceMinor - left.balanceMinor;
   });
-  const selectedInvoice = orderedInvoices.find((invoice) => invoice.id === selectedInvoiceId) ?? orderedInvoices[0];
+  const search = normalizeDirectoryQuery(searchQuery);
+  const quoteById = new Map(data.quotes.map((quote) => [quote.id, quote]));
+  const requestById = new Map(data.requests.map((request) => [request.id, request]));
+  const customerById = new Map(data.customers.map((customer) => [customer.id, customer]));
+  const visibleInvoices = filterDirectoryRows(orderedInvoices, search, (invoice) => {
+    const quote = invoice.quoteId ? quoteById.get(invoice.quoteId) : undefined;
+    const request = quote ? requestById.get(quote.requestId) : undefined;
+    return [invoice.status, invoice.currency, request?.serviceLabel, request?.customerId ? customerById.get(request.customerId)?.displayName : undefined];
+  });
+  if (!visibleInvoices.length) {
+    return (
+      <section aria-label="Invoice collection workspace">
+        <RecordDirectorySearch label="invoices" search={search} visible={0} total={orderedInvoices.length} />
+        <EmptyState title="No matching invoices" detail="Try a customer, service or invoice status, or clear the search." />
+      </section>
+    );
+  }
+  const selectedInvoice = visibleInvoices.find((invoice) => invoice.id === selectedInvoiceId) ?? visibleInvoices[0];
   const selectedInvoiceQuote = data.quotes.find((quote) => quote.id === selectedInvoice.quoteId);
   const selectedInvoiceRequest = data.requests.find((request) => request.id === selectedInvoiceQuote?.requestId);
   const selectedInvoiceCustomer = data.customers.find((customer) => customer.id === selectedInvoiceRequest?.customerId);
@@ -1793,9 +1859,10 @@ function InvoicesView({
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "reports")}>Open reports</a>
       </header>
 
+      <RecordDirectorySearch label="invoices" search={search} visible={visibleInvoices.length} total={orderedInvoices.length} />
       <div className={styles.financeSplit}>
         <aside className={styles.financeQueue} aria-label="Invoice list">
-          {orderedInvoices.map((invoice) => {
+          {visibleInvoices.map((invoice) => {
             const quote = data.quotes.find((item) => item.id === invoice.quoteId);
             const request = data.requests.find((item) => item.id === quote?.requestId);
             const customer = data.customers.find((item) => item.id === request?.customerId);
@@ -1803,7 +1870,7 @@ function InvoicesView({
             return (
               <a
                 className={`${styles.financeQueueItem} ${selected ? styles.financeQueueSelected : ""}`.trim()}
-                href={"?invoice=" + encodeURIComponent(invoice.id)}
+                href={directoryRecordHref("invoice", invoice.id, search)}
                 aria-current={selected ? "page" : undefined}
                 key={invoice.id}
               >
