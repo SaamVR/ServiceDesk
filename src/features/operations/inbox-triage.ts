@@ -38,8 +38,8 @@ export function inboxQueueHref(
   if (queue !== "all") params.set("queue", queue);
   if (conversationId) params.set("conversation", conversationId);
   if (search?.trim()) params.set("search", search.trim().slice(0, 120));
-  const search = params.toString();
-  return search ? "?" + search : "?";
+  const queryString = params.toString();
+  return queryString ? "?" + queryString : "?";
 }
 
 export function buildInboxTriage<
