@@ -35,6 +35,7 @@ describe("workflow execution Postgres boundary", () => {
         workspaceId: "workspace-1",
         branchId: "branch-1",
         eventType: "INVOICE_PAID",
+        sourceEventId: "invoice-paid-event-0001",
         snapshot: {
           "invoice.currency": "USD",
           "invoice.branchCode": "MAIN",
@@ -53,6 +54,24 @@ describe("workflow execution Postgres boundary", () => {
         matched: true,
       }),
     });
+  });
+
+  it("rejects a source-less LIVE event before recording anything to PostgreSQL", async () => {
+    const rpc = vi.fn();
+    const port = new PostgresWorkflowExecutionPort({ rpc } as SupabaseRpcClient);
+    const result = await port.evaluateAndRecord({
+      version,
+      mode: "LIVE",
+      event: {
+        workspaceId: "workspace-1",
+        branchId: "branch-1",
+        eventType: "INVOICE_PAID",
+        snapshot: { "invoice.currency": "USD" },
+        recursionDepth: 0,
+      },
+    });
+    expect(result).toMatchObject({ ok: false, code: "WORKFLOW_SOURCE_EVENT_ID_REQUIRED" });
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("requires owner authority before external action approval or replay", async () => {
