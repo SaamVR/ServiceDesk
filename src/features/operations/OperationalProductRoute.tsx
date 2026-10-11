@@ -448,6 +448,21 @@ function InboxView({
           </div>
         </header>
 
+        {customer || request ? (
+          <nav className={styles.contextActions} aria-label="Open related business records">
+            {customer ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/customers?customer=${encodeURIComponent(customer.id)}`}>
+                Customer record <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+            {request ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/requests?request=${encodeURIComponent(request.id)}`}>
+                Service request <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+          </nav>
+        ) : null}
+
         <div className={styles.contextSection}>
           <span className={styles.contextLabel}>Request</span>
           <strong>{request?.serviceLabel ?? "No linked request"}</strong>
