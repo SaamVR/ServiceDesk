@@ -178,3 +178,38 @@ describe("explicit authorized staff workspace choice", () => {
       .toEqual({ kind: "NONE" });
   });
 });
+
+describe("duplicate authenticated membership integrity", () => {
+  it("rejects a conflicting slug for one immutable workspace ID", () => {
+    const rows = [
+      member("OWNER", "same", { slug: "legitimate-one" }),
+      member("DISPATCHER", "same", { slug: "different-one" }),
+    ];
+    expect(resolveAuthorizedWorkspaceDestination(rows)).toEqual({ kind: "NONE" });
+    expect(resolveAuthorizedWorkspaceDestination([...rows].reverse())).toEqual({ kind: "NONE" });
+    expect(resolveAuthorizedStaffWorkspaceSelection(rows, "same")).toEqual({ kind: "NONE" });
+  });
+
+  it("keeps unrelated authorized workspaces despite a conflicting joined row", () => {
+    const rows = [
+      member("OWNER", "a", { slug: "north-one" }),
+      member("OWNER", "a", { slug: "north-two" }),
+      member("OWNER", "b", { slug: "south-office" }),
+    ];
+    expect(resolveAuthorizedWorkspaceDestination(rows)).toMatchObject({
+      kind: "STAFF", href: "/app/south-office/overview",
+    });
+  });
+
+  it("stabilizes duplicate display names for equal authorized roles", () => {
+    const rows = [
+      member("OWNER", "one", { name: "Zeta" }),
+      member("OWNER", "one", { name: "Alpha" }),
+    ];
+    for (const input of [rows, [...rows].reverse()]) {
+      expect(resolveAuthorizedWorkspaceDestination(input)).toMatchObject({
+        kind: "STAFF", workspace: { name: "Alpha", role: "OWNER" },
+      });
+    }
+  });
+});
