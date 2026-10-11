@@ -55,7 +55,7 @@ export function verifyMetaSignature(rawBody: string, signatureHeader: string | u
   }
 
   const expected = createHmac("sha256", appSecret).update(rawBody).digest("hex");
-  const received = signatureHeader.slice("sha256=".length);
+  const received = (signatureHeader ?? "").slice("sha256=".length);
   const expectedBuffer = Buffer.from(expected, "hex");
   const receivedBuffer = Buffer.from(received, "hex");
 
