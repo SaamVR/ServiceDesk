@@ -1,0 +1,31 @@
+name: ServiceDesk V4 production-like live AI origin regression proof
+on:
+  push:
+    branches: [qa/servicedesk-v4-ai-real-origin-20261012]
+    paths: [.github/workflows/v4-ai-live-origin-smoke-20261012.yml]
+permissions:
+  contents: read
+jobs:
+  render-ai-browser-origin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2}
+      - run: node --check scripts/release/v4-ai-live-origin-smoke.mjs
+      - name: Wait for real Render service to serve the exact tested release
+        env:
+          EXPECTED: 88a5e21e1b260706244be307bba058ae4f7053d8
+        shell: bash
+        run: |
+          for attempt in $(seq 1 90); do
+            actual="$(curl -fsS --max-time 10 https://servicedesk-v3-frontend-review.onrender.com/health 2>/dev/null | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>{try{const j=JSON.parse(s);process.stdout.write(j.ok===true&&j.sourceProvider==="render"?j.sourceSha:"")}catch{}})' || true)"
+            if [[ "$actual" == "$EXPECTED" ]]; then echo "Approved live Render SHA verified"; exit 0; fi
+            sleep 8
+          done
+          echo "BLOCKED: review not running the approved exact release"
+          exit 1
+      - name: Exercise safe actual HTTP CSRF acceptance and anonymous denial
+        run: node scripts/release/v4-ai-live-origin-smoke.mjs
