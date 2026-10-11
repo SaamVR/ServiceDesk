@@ -8,7 +8,7 @@ const script = join(process.cwd(), "tests/e2e/v3-capture-workroom.mjs");
 const sha = "f".repeat(40);
 
 describe("V3 authenticated screenshot evidence path containment", () => {
-  it("refuses an external-looking profile symlink into Git without opening Chromium", () => {
+  it.skipIf(process.platform === "win32")("refuses an external-looking profile symlink into Git without opening Chromium", () => {
     const dir = mkdtempSync(join(tmpdir(), "sd-v3-qa-profile-"));
     try {
       const profile = join(dir, "profile-link");
@@ -34,7 +34,7 @@ describe("V3 authenticated screenshot evidence path containment", () => {
     }
   });
 
-  it("refuses screenshot output symlinked through a private temp directory into Git", () => {
+  it.skipIf(process.platform === "win32")("refuses screenshot output symlinked through a private temp directory into Git", () => {
     const dir = mkdtempSync(join(tmpdir(), "sd-v3-qa-out-"));
     try {
       const profile = join(dir, "profile");
