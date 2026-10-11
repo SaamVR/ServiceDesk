@@ -1,0 +1,42 @@
+name: ServiceDesk V4 Live Render Visual Review
+
+# PUBLIC design QA only. No login, no database, no provider traffic, no token.
+on:
+  push:
+    branches:
+      - qa/servicedesk-v4-live-render-browser-20261011
+    paths:
+      - "scripts/release/v4-live-render-browser-review.mjs"
+      - ".github/workflows/v4-render-live-browser-review.yml"
+
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-live-render-review
+  cancel-in-progress: true
+jobs:
+  public-live-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify script parses without package installation
+        run: node --check scripts/release/v4-live-render-browser-review.mjs
+      - name: Prepare actual Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+      - name: Capture exact deployed source via real Chromium
+        env:
+          V4_REVIEW_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_REVIEW_OUTPUT: ${{ runner.temp }}/servicedesk-v4-live-browser-review
+        run: node scripts/release/v4-live-render-browser-review.mjs
+      - name: Upload credential-free live screenshot evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-render-live-public-ffd8ceb-visual
+          path: ${{ runner.temp }}/servicedesk-v4-live-browser-review/
+          retention-days: 7
+          if-no-files-found: error
