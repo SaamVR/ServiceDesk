@@ -1,4 +1,4 @@
-import type { Result } from "../../contracts";
+import type { Result, MessageDeliveryState } from "../../contracts";
 import { resolveStaffActor, requireOperationalBranchResource, type ResolvedStaffActor } from "../../features/operations/operational-product-runtime";
 import { createPostgresConversationFacadeMethods } from "./conversation-postgres";
 import type { ConversationReplyOutcome } from "./facade";
@@ -18,17 +18,17 @@ export interface ReviewedInboxReplyDependencies {
     { ok: false; kind: string; message: string }
   >;
   requireBranch: (actor: ResolvedStaffActor, conversationId: string) => Promise<
-    { ok: false; message: string } | undefined
+    { ok: boolean; message: string } | undefined
   >;
 }
 export interface ReviewedInboxReplyReceipt {
-  state: "QUEUED_FOR_PROVIDER";
+  state: "QUEUED_FOR_PROVIDER" | "EXISTING_REPLY";
   workspaceId: string;
   conversationId: string;
   sourceMessageId: string;
   outboundMessageId: string;
   outboxEventId: string;
-  deliveryState: "QUEUED";
+  deliveryState: MessageDeliveryState;
 }
 
 function failure(code: string, message: string): Result<never> {
@@ -107,7 +107,7 @@ export async function approveReviewedInboxReply(
     // inbound customer message. Race with a newly-arriving message is caught
     // again by the RPC's locked conversation-version predicate.
     const lastMessage = await service.from("messages")
-      .select("id,workspace_id,conversation_id,direction,sender_kind")
+      .select("id,workspace_id,conversation_id,direction,sender_kind,created_at")
       .eq("workspace_id", workspace.id)
       .eq("conversation_id", input.conversationId)
       .eq("direction", "INBOUND")
@@ -120,7 +120,9 @@ export async function approveReviewedInboxReply(
         lastMessage.data.workspace_id !== workspace.id ||
         lastMessage.data.conversation_id !== input.conversationId ||
         lastMessage.data.direction !== "INBOUND" ||
-        lastMessage.data.sender_kind !== "CUSTOMER") {
+        lastMessage.data.sender_kind !== "CUSTOMER" ||
+        typeof lastMessage.data.created_at !== "string" ||
+        !Number.isFinite(Date.parse(lastMessage.data.created_at))) {
       return failure("REVIEWED_REPLY_SOURCE_STALE", "A newer customer message requires another review.");
     }
 
@@ -145,17 +147,20 @@ export async function approveReviewedInboxReply(
         message.conversationId !== input.conversationId ||
         message.direction !== "OUTBOUND" || message.senderKind !== "STAFF" ||
         message.body !== body || !validId(message.id) ||
-        !validId(outboxEventId) || message.deliveryState !== "QUEUED") {
+        !validId(outboxEventId) ||
+        !["QUEUED", "RUNNING", "PROVIDER_ACCEPTED", "DELIVERED", "READ", "FAILED", "SUPPRESSED"].includes(message.deliveryState ?? "") ||
+        !Number.isFinite(Date.parse(message.createdAt)) ||
+        Date.parse(message.createdAt) < Date.parse(lastMessage.data.created_at)) {
       return failure("REVIEWED_REPLY_RECEIPT_MISMATCH", "The queued reply did not match the reviewed message.");
     }
     return { ok: true, value: {
-      state: "QUEUED_FOR_PROVIDER",
+      state: message.deliveryState === "QUEUED" ? "QUEUED_FOR_PROVIDER" : "EXISTING_REPLY",
       workspaceId: workspace.id,
       conversationId: input.conversationId,
       sourceMessageId: input.sourceMessageId,
       outboundMessageId: message.id,
       outboxEventId,
-      deliveryState: "QUEUED",
+      deliveryState: message.deliveryState!,
     } };
   } catch {
     return failure("REVIEWED_REPLY_UNAVAILABLE", "Reply verification is temporarily unavailable.");
