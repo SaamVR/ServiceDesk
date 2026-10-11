@@ -55,7 +55,8 @@ describe("V2 professional public product presentation", () => {
     const shell = source("src/components/shell/MarketingShell.tsx");
     const css = source("src/components/shell/MarketingNavV3.module.css");
     expect(shell).toContain('href="/auth/sign-in"');
-    expect(shell).toContain('href="/auth/sign-up"');
+    expect(shell).toContain("href={registration.href}");
+    expect(shell).toContain("marketingRegistrationEntry(registrationEnabled)");
     expect(shell).toContain('aria-label="Mobile product navigation"');
     expect(shell).toContain('aria-label="Open product menu"');
     expect(css).toContain(".signIn { display: none !important; }");

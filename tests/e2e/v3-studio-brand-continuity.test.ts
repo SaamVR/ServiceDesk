@@ -18,7 +18,8 @@ describe("Studio OS public-to-staff brand continuity", () => {
   });
   it("preserves actual sign-up routing and customer safety rather than inventing demo records", () => {
     const marketing = read("src/app/page.tsx");
-    expect(marketing).toContain('primaryHref="/auth/sign-up"');
+    expect(marketing).toContain('primaryHref={canRegister ? "/auth/sign-up" : "/tour"}');
+    expect(marketing).toContain("ownerRegistrationAvailable()");
     expect(marketing).toContain("<StaffWorkspacePreview />");
     expect(marketing).toContain("<CustomerJourneyPreview />");
   });

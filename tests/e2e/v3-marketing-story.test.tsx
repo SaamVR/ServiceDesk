@@ -33,7 +33,8 @@ describe("V3 customer-facing product presentation", () => {
     expect(markup).toContain('aria-label="Four stages of the cleaning operations workflow"');
     expect(markup).toContain("<ol");
     expect(markup.match(/<li class="[^"]*flowStep_/g)?.length).toBe(4);
-    expect(markup).toContain('href="/auth/sign-up"');
+    expect(markup).toContain('href="/tour"');
+    expect(markup).not.toContain('href="/auth/sign-up"');
     expect(markup).toContain('href="/tour"');
     expect(markup).toContain('href="/auth/sign-in"');
     expect(markup).toContain("Structured intake");

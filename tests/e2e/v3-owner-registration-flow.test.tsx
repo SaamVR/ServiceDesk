@@ -70,7 +70,8 @@ describe("V3 customer-safe account creation and onboarding", () => {
     expect(shell).toContain("styles.mobileMenu");
     expect(shell).toContain('aria-label="Open product menu"');
     expect(shell).toContain('aria-label="Mobile product navigation"');
-    expect(shell).toContain('href="/auth/sign-up"');
+    expect(shell).toContain("href={registration.href}");
+    expect(shell).toContain("ownerRegistrationAvailable()");
     expect(shell).toContain('href="/auth/sign-in"');
     expect(css).toContain("width: auto !important");
     expect(css).toContain("min-width: max-content");
