@@ -6,6 +6,7 @@ import {
   validatedPreviewUrl,
   safePublicRedirect,
   assessSmokeResult,
+  disabledSubmitPresent,
   runSmoke,
 } from "./v3-staging-auth-smoke.mjs";
 
@@ -14,12 +15,30 @@ test("rejects credential-bearing, internal, external and malformed origins", () 
   for (const input of [
     "http://servicedesk-v2-multilane-gate.onrender.com",
     "https://example.com",
+    "https://unrelated-production-service.onrender.com",
+    "https://servicedesk-v2-multilane-gate.onrender.com:444",
+
     "https://localhost:10000",
     "https://token@servicedesk-v2-multilane-gate.onrender.com",
     "https://servicedesk-v2-multilane-gate.onrender.com/auth",
     "https://servicedesk-v2-multilane-gate.onrender.com/?token=sensitive",
     "not a URL",
   ]) assert.equal(validatedPreviewUrl(input), null, input);
+});
+
+test("disabled signup requires an actual disabled submit control, not just a notice", () => {
+  const spec = PATHS[0];
+  const notice = spec.phrase;
+  assert.equal(disabledSubmitPresent('<button type="submit" disabled="">Create</button>'), true);
+  assert.equal(disabledSubmitPresent('<button disabled type="submit">Create</button>'), true);
+  assert.equal(disabledSubmitPresent('<button type="submit">Create</button>'), false);
+  assert.equal(disabledSubmitPresent('<button disabled type="button">Cancel</button>'), false);
+  assert.equal(assessSmokeResult(DEFAULT_PREVIEW, spec, {
+    status: 200, body: notice + '<button type="submit">Create account</button>',
+  }).status, "FAIL");
+  assert.equal(assessSmokeResult(DEFAULT_PREVIEW, spec, {
+    status: 200, body: notice + '<button disabled="" type="submit">Create account</button>',
+  }).status, "PASS");
 });
 
 test("signed-out callback stays at public sign-in despite a spoofed next", () => {
@@ -37,7 +56,7 @@ test("distinguishes cold start from application rejection", () => {
     key: spec.key, status: "COLD_START_503", http: 503,
   });
   assert.equal(assessSmokeResult(DEFAULT_PREVIEW, spec, {
-    status: 200, body: "Account registration is not available on this preview yet.",
+    status: 200, body: "Account registration is not available on this preview yet.<button type='submit' disabled>Create account</button>",
   }).status, "PASS");
   assert.equal(assessSmokeResult(DEFAULT_PREVIEW, spec, {
     status: 200, body: "Create your account now!",
@@ -53,7 +72,9 @@ function mockedResponse(path) {
   return {
     status: spec.redirect ? 303 : 200,
     headers: { get: name => name.toLowerCase() === "location" ? DEFAULT_PREVIEW + "/auth/sign-in" : null },
-    text: async () => spec.phrase ?? "",
+    text: async () => spec.requireDisabledSubmit
+      ? spec.phrase + '<button disabled="" type="submit">Create account</button>'
+      : spec.phrase ?? "",
   };
 }
 
