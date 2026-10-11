@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import "./v3-studio-submit-pending.test";
+import "./v3-inbox-search.test";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
@@ -9,6 +10,7 @@ import {
   normalizeInboxQueue,
   searchInboxQueue,
   indexLatestInboxMessages,
+  indexLatestExternalInboxMessages,
   type InboxTriageConversation,
   type InboxTriageMessage,
 } from "../../src/features/operations/inbox-triage";
@@ -133,6 +135,20 @@ describe("V3 operational Inbox triage", () => {
     expect(searchInboxQueue(rows, messageRows, customerRows, "Old message")).toEqual([]);
     expect(searchInboxQueue(rows, messageRows, customerRows, "Secret internal note")).toEqual([]);
     expect(rows).toHaveLength(2);
+  });
+
+  it("keeps inbound conversation previews consistent with needs-reply triage under timestamp ties", () => {
+    const base = "2026-10-11T09:00:00Z";
+    const incoming = { conversationId: "tied", direction: "INBOUND" as const, createdAt: base, body: "Please reply" };
+    const outgoing = { conversationId: "tied", direction: "OUTBOUND" as const, createdAt: base, body: "Earlier draft" };
+    const note = { conversationId: "tied", direction: "INTERNAL" as const, createdAt: "2026-10-11T10:00:00Z", body: "Private memo" };
+    for (const messages of [[incoming, outgoing, note], [outgoing, note, incoming]]) {
+      expect(indexLatestExternalInboxMessages(messages).get("tied")).toBe(incoming);
+      expect(searchInboxQueue([{ id: "tied", channel: "EMAIL", handoverActive: false }], messages, [], "please reply"))
+        .toHaveLength(1);
+      expect(searchInboxQueue([{ id: "tied", channel: "EMAIL", handoverActive: false }], messages, [], "private memo"))
+        .toHaveLength(0);
+    }
   });
 
   it("indexes the latest stored preview in one pass with stable timestamp ties", () => {

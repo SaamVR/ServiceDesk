@@ -64,7 +64,7 @@ import {
   type InboxQueue,
   type InboxQueueCounts,
   searchInboxQueue,
-  indexLatestInboxMessages,
+  indexLatestExternalInboxMessages,
 } from "./inbox-triage";
 
 interface OperationalProductRouteProps {
@@ -252,7 +252,7 @@ function InboxView({
   const messages = data.messages
     .filter((item) => item.conversationId === selected.id)
     .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
-  const lastMessageByConversation = indexLatestInboxMessages(data.messages);
+  const lastMessageByConversation = indexLatestExternalInboxMessages(data.messages);
 
   async function handover(formData: FormData) {
     "use server";
