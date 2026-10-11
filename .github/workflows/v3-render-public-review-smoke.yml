@@ -4,7 +4,7 @@ name: ServiceDesk V3 Render review HTTP smoke
 on:
   push:
     branches:
-      - qa/servicedesk-v3-render-http-20261011
+      - qa/servicedesk-v4-auth-live-20261011
     paths:
       - .github/workflows/v3-render-public-review-smoke.yml
 
@@ -19,7 +19,7 @@ jobs:
       - name: Check live Render build identity and public routes
         env:
           REVIEW_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
-          EXPECTED_SHA: 3bd559119004751b9d6b50c864ce589de9f1e542
+          EXPECTED_SHA: e4cbe24f2e1949ff22c2252d30a665cea8def53b
         run: |
           node --input-type=module <<'JS'
           const origin = process.env.REVIEW_ORIGIN;
@@ -58,7 +58,7 @@ jobs:
           }
           console.log("PASS /health exact host-reported commit " + sha);
           const routes = [
-            ["/", "Run cleaning operations from enquiry to paid job."],
+            ["/", "A cleaner way to run your cleaning business."],
             ["/features", "Everything a cleaning operations team needs to move work forward."],
             ["/pricing", "Service quote pricing stays transparent and controlled."],
             ["/integrations", "Connect the systems your operation already uses."],
@@ -92,5 +92,13 @@ jobs:
             throw new Error("Unauthenticated continuation did not redirect to sign-in.");
           }
           console.log("PASS missing session denied");
+          const protectedWelcome = await fetch(origin + "/onboarding/verified?workspace=brightroom-cleaning", {
+            redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(25_000),
+          });
+          if (![302, 303, 307, 308].includes(protectedWelcome.status) ||
+              !(protectedWelcome.headers.get("location") || "").includes("/auth/sign-in")) {
+            throw new Error("Verified-owner onboarding exposed data to anonymous visitor.");
+          }
+          console.log("PASS anonymous owner welcome denied");
           console.log("PASS Render public/QA HTTP preflight. Real confirmation email and authenticated staff acceptance are separate.");
           JS
