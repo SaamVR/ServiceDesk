@@ -63,7 +63,7 @@ import { formatWorkspaceDateTime } from "./product-truth";
 import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
 import { filterQualityQueue, isOverdueQualityCase, normalizeQualityQueue, normalizeQualitySearch, prioritizeQualityFollowUp, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
 import { QualityQueueFilters } from "./QualityQueueFilters";
-import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue, parseManualPaymentAmountMinor } from "./invoice-collection-queue";
+import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue, orderCustomerCollectionInvoices, parseManualPaymentAmountMinor } from "./invoice-collection-queue";
 import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { deriveDispatchBacklog } from "./dispatch-backlog";
@@ -1956,11 +1956,7 @@ function InvoicesView({
     return <EmptyState title="No customer invoices yet" detail="Quote-backed customer invoices will appear here after billable visits are created. Commercial accounts remain available in the adjacent workspace." action={{ label: "Review jobs", href: buildStaffModuleHref(workspaceSlug, "jobs") }} />;
   }
 
-  const orderedInvoices = [...customerInvoices].sort((left, right) => {
-    const leftOpen = isCollectibleInvoice(left) ? 0 : 1;
-    const rightOpen = isCollectibleInvoice(right) ? 0 : 1;
-    return leftOpen - rightOpen || right.balanceMinor - left.balanceMinor;
-  });
+  const orderedInvoices = orderCustomerCollectionInvoices(customerInvoices);
   const counts = invoiceQueueCounts(orderedInvoices);
   const quoteById = new Map(data.quotes.map((quote) => [quote.id, quote]));
   const requestById = new Map(data.requests.map((request) => [request.id, request]));
@@ -1993,7 +1989,7 @@ function InvoicesView({
         <div>
           <p className={styles.financeEyebrow}>Customer finance</p>
           <h2>Collections &amp; invoices</h2>
-          <p>{openInvoices.length} open balance{openInvoices.length === 1 ? "" : "s"} · {paidInvoices} paid</p>
+          <p>{openInvoices.length} open balance{openInvoices.length === 1 ? "" : "s"} · {paidInvoices} paid · Ordered by status and invoice currency</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "reports")}>Open reports</a>
       </header>
