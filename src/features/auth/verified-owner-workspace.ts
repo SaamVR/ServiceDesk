@@ -1,3 +1,4 @@
+import { operationalDatabaseMode, type OperationalModeEnvironment } from "./operational-preview-mode";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface VerifiedOwnerWorkspace {
@@ -67,9 +68,9 @@ export async function loadVerifiedOwnerWorkspace(
 /** Login never silently sends an owner into a staff backend without its key. */
 export function ownerAfterLoginHref(
   workspace: { slug: string; role: string; href: string },
-  env: { SUPABASE_SERVICE_ROLE_KEY?: string } = { SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY },
+  env?: OperationalModeEnvironment,
 ): string {
-  if (workspace.role === "OWNER" && !env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (workspace.role === "OWNER" && operationalDatabaseMode(env) === "DISABLED") {
     return "/onboarding/verified?workspace=" + encodeURIComponent(workspace.slug);
   }
   return workspace.href;

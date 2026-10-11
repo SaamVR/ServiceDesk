@@ -1,0 +1,33 @@
+name: ServiceDesk V3 Auth entry and safe redirect
+on:
+  push:
+    branches: [feat/servicedesk-v3-auth-entry-recovery-20261011]
+  pull_request:
+    branches: [feat/servicedesk-v3-combined-acceptance-20261011]
+    paths:
+      - src/features/auth/return-path.ts
+      - src/app/auth/sign-in/page.tsx
+      - tests/e2e/v3-auth-safe-return.test.ts
+      - .github/workflows/v3-auth-entry-ci.yml
+permissions:
+  contents: read
+jobs:
+  auth-entry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.20.0, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Owner Auth, verified landing and safe return regression
+        run: pnpm exec vitest run tests/e2e/v3-auth-safe-return.test.ts tests/e2e/v3-qa-registration-allowlist.test.ts tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts
+      - name: TypeScript
+        run: pnpm typecheck
+      - name: Focused lint
+        run: pnpm exec eslint src/features/auth/return-path.ts src/app/auth/sign-in/page.tsx tests/e2e/v3-auth-safe-return.test.ts
+      - name: Production build
+        run: pnpm build

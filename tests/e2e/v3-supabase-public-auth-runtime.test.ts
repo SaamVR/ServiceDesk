@@ -57,11 +57,14 @@ describe("V3 server-side Supabase auth and onboarding", () => {
     expect(confirmRoute).not.toContain("request.url");
   });
 
-  it("keeps service-only operational authority while accepting the modern public key", () => {
+  it("keeps service-role as default, but allows explicitly guarded authenticated-RLS QA operations", () => {
     const operational = source("src/features/operations/operational-product-runtime.ts");
     expect(operational).toContain("supabasePublicConfig()");
     expect(operational).toContain("process.env.SUPABASE_SERVICE_ROLE_KEY");
-    expect(operational).toContain("if (!publicConfig || !serviceRoleKey) return undefined");
+    expect(operational).toContain("operationalDatabaseMode()");
+    expect(operational).toContain('mode === "DISABLED"');
+    expect(operational).toContain('config.mode === "SERVICE_ROLE" && config.serviceRoleKey');
+    expect(operational).toContain(": auth;");
     expect(operational).toContain("auth.auth.getUser()");
     expect(operational).toContain('.from("memberships")');
   });

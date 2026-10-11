@@ -1,0 +1,32 @@
+name: ServiceDesk V3 QA authenticated RLS backend
+on:
+  push:
+    branches: [feat/servicedesk-v3-qa-rls-operations-20261011]
+  pull_request:
+    branches: [feat/servicedesk-v3-combined-acceptance-20261011]
+    paths:
+      - src/features/auth/operational-preview-mode.ts
+      - src/features/auth/verified-owner-workspace.ts
+      - src/features/operations/operational-product-runtime.ts
+      - src/app/onboarding/verified/page.tsx
+      - tests/e2e/v3-qa-operations-rls-fallback.test.ts
+      - .github/workflows/v3-qa-operations-rls.yml
+permissions:
+  contents: read
+jobs:
+  qa-rls-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.20.0, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Session-scoped QA RLS and owner route regressions
+        run: pnpm exec vitest run tests/e2e/v3-qa-operations-rls-fallback.test.ts tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts
+      - run: pnpm typecheck
+      - run: pnpm exec eslint src/features/auth/operational-preview-mode.ts src/features/auth/verified-owner-workspace.ts src/features/operations/operational-product-runtime.ts src/app/onboarding/verified/page.tsx tests/e2e/v3-qa-operations-rls-fallback.test.ts
+      - run: pnpm build
