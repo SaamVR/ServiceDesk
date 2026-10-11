@@ -13,9 +13,10 @@ export function buildDispatchCoverageWeek<T extends { startAt?: string; crewId?:
   visits: readonly T[],
   snapshotAt: string,
   timeZone: string,
+  startDay?: string,
 ): DispatchCoverageDay[] {
   const localDayKey = createLocalDayKey(timeZone);
-  const start = localDayKey(snapshotAt);
+  const start = startDay ?? localDayKey(snapshotAt);
   if (!start) return [];
   const [year, month, day] = start.split("-").map(Number);
   const dates: DispatchCoverageDay[] = Array.from({ length: 7 }, (_, offset) => {
@@ -47,8 +48,9 @@ export function normalizeCoverageDay(input: string | undefined, days: readonly D
   return days.some((day) => day.key === input) ? input : undefined;
 }
 
-export function scheduleCoverageHref(queue: string | undefined, day?: string): string {
+export function scheduleCoverageHref(queue: string | undefined, day?: string, from?: string, today?: string): string {
   const params = new URLSearchParams();
+  if (from && from !== today && /^\\d{4}-\\d{2}-\\d{2}$/.test(from)) params.set("from", from);
   if (queue === "unassigned") params.set("queue", "unassigned");
   if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) params.set("day", day);
   const value = params.toString();

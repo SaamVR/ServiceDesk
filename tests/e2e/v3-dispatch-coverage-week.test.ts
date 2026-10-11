@@ -23,6 +23,7 @@ describe("7-day dispatch workload in business-local dates", () => {
     expect(scheduleCoverageHref("unassigned", "2026-11-02")).toBe("?queue=unassigned&day=2026-11-02");
     expect(scheduleCoverageHref("bad", "javascript:alert(1)")).toBe("?");
     expect(scheduleCoverageHref("unassigned")).toBe("?queue=unassigned");
+    expect(scheduleCoverageHref("unassigned", "2026-11-02", "2026-11-01", "2026-10-11")).toBe("?from=2026-11-01&queue=unassigned&day=2026-11-02");
   });
   it("wires the seven-day selection into the authenticated schedule view", () => {
     const route = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.tsx"), "utf8");

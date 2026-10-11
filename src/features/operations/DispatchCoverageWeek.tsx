@@ -10,11 +10,15 @@ export function DispatchCoverageWeek({
   selectedDay,
   queue,
   timeZone,
+  from,
+  today,
 }: {
   days: readonly DispatchCoverageDay[];
   selectedDay?: string;
   queue?: string;
   timeZone: string;
+  from: string;
+  today: string;
 }) {
   if (!days.length) return null;
   return (
@@ -32,7 +36,7 @@ export function DispatchCoverageWeek({
       </div>
       <nav className={styles.grid} aria-label="Filter scheduled visits by day">
         <a
-          href={scheduleCoverageHref(queue)}
+          href={scheduleCoverageHref(queue, undefined, from, today)}
           className={styles.allDays}
           aria-current={!selectedDay ? "date" : undefined}
         >
@@ -42,7 +46,7 @@ export function DispatchCoverageWeek({
         </a>
         {days.map((day) => (
           <a
-            href={scheduleCoverageHref(queue, day.key)}
+            href={scheduleCoverageHref(queue, day.key, from, today)}
             aria-label={day.weekday + " " + day.monthDay + ": " + day.total + " visits, " + day.unassigned + " unassigned"}
             aria-current={selectedDay === day.key ? "date" : undefined}
             key={day.key}
