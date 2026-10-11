@@ -47,6 +47,7 @@ import { countStaffBy, indexCurrentQuoteByRequest, indexStaffById } from "./staf
 import { buildQuotePipeline, isCurrentApprovedQuote } from "./quote-pipeline";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { InboxThreadNavigator } from "./InboxThreadNavigator";
+import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { settingsFeedbackFragment } from "./settings-navigation";
@@ -583,6 +584,8 @@ function InboxView({
           <div className={styles.contextRow}><span>Messages</span><strong>{messages.length}</strong></div>
           <div className={styles.contextRow}><span>Delivery</span><strong>Stored per message</strong></div>
         </div>
+
+        <InboxDeliveryDiagnostics workspaceSlug={workspaceSlug} />
 
         {customer && relatedConversations.length > 0 ? (
           <div className={styles.contextSection}>
