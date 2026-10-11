@@ -11,11 +11,13 @@ export function filterDirectoryRows<T>(
   query: string | undefined,
   searchTerms: (row: T) => readonly (string | number | null | undefined)[],
 ): T[] {
-  const needle = normalizeDirectoryQuery(query).toLocaleLowerCase("en");
-  if (!needle) return [...rows];
-  return rows.filter((row) => searchTerms(row).some((value) =>
-    String(value ?? "").toLocaleLowerCase("en").includes(needle),
-  ));
+  const normalized = normalizeDirectoryQuery(query).toLocaleLowerCase("en");
+  if (!normalized) return [...rows];
+  const tokens = normalized.split(" ").filter(Boolean);
+  return rows.filter((row) => {
+    const fields = searchTerms(row).map((value) => String(value ?? "").toLocaleLowerCase("en"));
+    return tokens.every((token) => fields.some((field) => field.includes(token)));
+  });
 }
 
 export function directoryRecordHref(
