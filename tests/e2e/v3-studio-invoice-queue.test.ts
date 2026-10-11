@@ -1,7 +1,7 @@
 import { describe,expect,it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { invoiceQueueCounts,filterInvoiceQueue,invoiceQueueHref,invoiceFeedbackPrefix,normalizeInvoiceQueue,invoiceQueueOf,isCollectibleInvoice,parseManualPaymentAmountMinor } from "@/features/operations/invoice-collection-queue";
+import { invoiceQueueCounts,filterInvoiceQueue,invoiceQueueHref,invoiceFeedbackPrefix,normalizeInvoiceQueue,invoiceQueueOf,isCollectibleInvoice,orderCustomerCollectionInvoices,parseManualPaymentAmountMinor } from "@/features/operations/invoice-collection-queue";
 const invoices=[
  {id:"a",status:"ISSUED",balanceMinor:7000},
  {id:"b",status:"PAID",balanceMinor:0},
@@ -53,6 +53,25 @@ describe("real invoice collection filters",()=>{
   expect(code).toContain("if (amountMinor === undefined)");
   expect(code).toContain("applyOperationalManualPayment(workspaceSlug, invoiceId, amountMinor");
   expect(code).not.toContain("Number(match[1]) * 100");
+ });
+ it("sorts collections without comparing balances across different currencies",()=>{
+  const source=[
+    {id:"usd-low",status:"ISSUED",currency:"USD",balanceMinor:100},
+    {id:"eur-high",status:"ISSUED",currency:"EUR",balanceMinor:300000},
+    {id:"usd-high",status:"PARTIALLY_PAID",currency:"USD",balanceMinor:7500},
+    {id:"draft",status:"DRAFT",currency:"USD",balanceMinor:1000000},
+    {id:"paid",status:"PAID",currency:"USD",balanceMinor:0},
+    {id:"void",status:"VOID",currency:"USD",balanceMinor:80000000},
+  ];
+  const order=orderCustomerCollectionInvoices(source);
+  expect(order.map(item=>item.id)).toEqual(["eur-high","usd-high","usd-low","draft","paid","void"]);
+  expect(source.map(item=>item.id)).toEqual(["usd-low","eur-high","usd-high","draft","paid","void"]);
+  expect(orderCustomerCollectionInvoices([...source].reverse()).map(item=>item.id))
+    .toEqual(order.map(item=>item.id));
+  const route=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
+  expect(route).toContain("orderCustomerCollectionInvoices(customerInvoices)");
+  expect(route).toContain("Ordered by status and invoice currency");
+  expect(route).not.toContain("right.balanceMinor - left.balanceMinor");
  });
  it("preserves queue and customer search after mutation and navigation",()=>{
   expect(invoiceQueueHref("open","Walter Finch","a")).toBe("?queue=open&search=Walter+Finch&invoice=a");
