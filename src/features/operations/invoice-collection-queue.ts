@@ -11,10 +11,18 @@ export type InvoiceCollectionRecord = { id: string; status: string; balanceMinor
 export function normalizeInvoiceQueue(input?: string | null): InvoiceQueue {
   return invoiceQueueOptions.find(x => x.key === input)?.key ?? "all";
 }
+/** Only issued invoices with a positive balance can be presented as collectible.
+ * Drafts are not bills sent to a customer, even when their calculated balance is
+ * positive. The payment backend remains authoritative for all mutations.
+ */
+export function isCollectibleInvoice(invoice: InvoiceCollectionRecord): boolean {
+  return (invoice.status === "ISSUED" || invoice.status === "PARTIALLY_PAID")
+    && Number.isFinite(invoice.balanceMinor) && invoice.balanceMinor > 0;
+}
 export function invoiceQueueOf(invoice:InvoiceCollectionRecord):Exclude<InvoiceQueue,"all"> {
   if (invoice.status === "VOID") return "void";
   if (invoice.status === "PAID") return "paid";
-  if (invoice.balanceMinor > 0) return "open";
+  if (isCollectibleInvoice(invoice)) return "open";
   return "other";
 }
 export function invoiceQueueCounts(records:readonly InvoiceCollectionRecord[]):Record<InvoiceQueue,number> {
