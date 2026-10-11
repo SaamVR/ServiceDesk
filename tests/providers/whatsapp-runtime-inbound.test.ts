@@ -176,4 +176,48 @@ describe("WhatsApp server-only runtime settings", () => {
       expect(readWhatsAppInboundRuntimeConfig(invalid).ok).toBe(false);
     }
   });
+
+  it("does not acknowledge malformed signed status callbacks or non-array message data", async () => {
+    let applied = 0;
+    let statusCalls = 0;
+    const corruptPayloads = [
+      { statuses: "delivered" },
+      { statuses: [null] },
+      { statuses: [{ id: "wamid-1", status: "unknown", timestamp: "1791108000" }] },
+      { statuses: [{ id: 7, status: "delivered", timestamp: "1791108000" }] },
+      { statuses: [{ id: "wamid-1", status: "delivered", timestamp: "bad-time" }] },
+      { messages: "not-an-array" },
+    ];
+    for (const value of corruptPayloads) {
+      const rawBody = JSON.stringify({
+        object: "whatsapp_business_account",
+        entry: [{ changes: [{ value: { metadata: { phone_number_id: "10001001" }, ...value } }] }],
+      });
+      const outcome = await handleWhatsAppRuntimeWebhook(input(rawBody, {
+        apply: async () => { applied++; return { ok: true, value: { state: "APPLIED", conversation: {} as never } }; },
+        statusStore: { async applyStatusCallback() { statusCalls++; return "APPLIED"; } },
+      }));
+      expect(outcome).toMatchObject({ statusCode: 400, acknowledged: false, retryable: false });
+    }
+    expect(applied).toBe(0);
+    expect(statusCalls).toBe(0);
+  });
+
+  it("retains processing for valid signed status updates with durable status port", async () => {
+    const rawBody = JSON.stringify({
+      object: "whatsapp_business_account",
+      entry: [{ changes: [{ value: { metadata: { phone_number_id: "10001001" },
+        statuses: [{ id: "wamid-valid", status: "read", timestamp: "1791108000" }] } }] }],
+    });
+    const states: string[] = [];
+    const result = await handleWhatsAppRuntimeWebhook(input(rawBody, {
+      statusStore: { async applyStatusCallback(callback) {
+        states.push(callback.deliveryState);
+        return "APPLIED";
+      } },
+    }));
+    expect(result).toMatchObject({ statusCode: 200, acknowledged: true });
+    expect(states).toEqual(["READ"]);
+  });
+
 });
