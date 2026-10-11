@@ -121,6 +121,31 @@ export function buildInboxTriage<
  * metadata and the latest external message. Presentation only: this is not a
  * server-side search permission, identity verification or provider lookup.
  */
+/**
+ * O(messages) preview index rather than filtering and sorting the entire
+ * message collection once per conversation. Ties remain stable: first stored
+ * message wins, matching the old stable-sort rendering semantics.
+ * Uses only messages from the already authorized workspace snapshot.
+ */
+export function indexLatestInboxMessages<
+  Message extends { conversationId: string; createdAt: string },
+>(messages: readonly Message[]): Map<string, Message> {
+  const latest = new Map<string, Message>();
+  for (const message of messages) {
+    const previous = latest.get(message.conversationId);
+    if (!previous) {
+      latest.set(message.conversationId, message);
+      continue;
+    }
+    const nextAt = Date.parse(message.createdAt);
+    const prevAt = Date.parse(previous.createdAt);
+    if (Number.isFinite(nextAt) && (!Number.isFinite(prevAt) || nextAt > prevAt)) {
+      latest.set(message.conversationId, message);
+    }
+  }
+  return latest;
+}
+
 export function searchInboxQueue<
   Conversation extends InboxTriageConversation & { channel?: string },
   Message extends InboxTriageMessage & { body?: string | null },
