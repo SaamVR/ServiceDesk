@@ -14,6 +14,8 @@ export interface WorkflowEventEnvelope {
   workspaceId: string;
   branchId: string;
   eventType: WorkflowEventType;
+  /** Stable persisted domain-event or source-row identity; mandatory for LIVE. */
+  sourceEventId?: string;
   snapshot: Record<string, WorkflowEventValue>;
   recursionDepth: number;
   parentExecutionId?: string;
@@ -84,6 +86,11 @@ function stableSnapshot(snapshot: Record<string, WorkflowEventValue>): string {
 export function validateWorkflowEventEnvelope(
   input: WorkflowEventEnvelope,
 ): Result<WorkflowEventEnvelope> {
+  if (input.sourceEventId !== undefined &&
+      (typeof input.sourceEventId !== "string" ||
+       !/^[A-Za-z0-9:_-]{3,128}$/.test(input.sourceEventId))) {
+    return fail("WORKFLOW_SOURCE_EVENT_ID_INVALID", "Workflow source event identity is invalid.");
+  }
   if (!input.workspaceId || !input.branchId) {
     return fail("WORKFLOW_EVENT_SCOPE_REQUIRED", "Workflow events require workspace and branch scope.");
   }
@@ -138,6 +145,12 @@ export function evaluateWorkflowRule(
   if (mode === "LIVE" && version.state !== "PUBLISHED") {
     return fail("WORKFLOW_PUBLISHED_VERSION_REQUIRED", "Live workflow evaluation requires a published version.");
   }
+  // Fingerprinting only the event snapshot silently collapses distinct jobs
+  // that happen to share service, branch and currency. Live execution must
+  // carry durable source identity so retries dedupe but new jobs never do.
+  if (mode === "LIVE" && !event.sourceEventId) {
+    return fail("WORKFLOW_SOURCE_EVENT_ID_REQUIRED", "Live workflow execution needs a persisted source event identity.");
+  }
   if (mode === "PREVIEW" && version.state !== "DRAFT" && version.state !== "PUBLISHED") {
     return fail("WORKFLOW_PREVIEW_VERSION_INVALID", "Only draft or published versions can be previewed.");
   }
@@ -166,6 +179,7 @@ export function evaluateWorkflowRule(
       event.workspaceId,
       event.branchId,
       event.eventType,
+      event.sourceEventId ?? "",
       stableSnapshot(event.snapshot),
       String(event.recursionDepth),
       event.parentExecutionId ?? "",
