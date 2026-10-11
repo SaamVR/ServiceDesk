@@ -1,0 +1,36 @@
+name: ServiceDesk V4 live Render synthetic workflow Chrome
+on:
+  push:
+    branches: [feat/servicedesk-v4-deep-visual-browser-audit-20261012]
+    paths:
+      - scripts/release/v4-live-sandbox-browser.mjs
+      - .github/workflows/v4-live-sandbox-audit.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-synthetic-sandbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2 }
+      - name: Validate browser script
+        run: node --check scripts/release/v4-live-sandbox-browser.mjs
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Live Chrome all sample business actions, responsive screens, failure retry and financial ledger
+        env:
+          V4_LIVE_SANDBOX_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_LIVE_SANDBOX_OUTPUT: ${{ runner.temp }}/servicedesk-v4-live-sandbox
+        run: node scripts/release/v4-live-sandbox-browser.mjs
+      - name: Retain public synthetic flow screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-live-sandbox-actual-chrome-${{ github.sha }}
+          path: ${{ runner.temp }}/servicedesk-v4-live-sandbox/
+          retention-days: 7
+          if-no-files-found: warn
