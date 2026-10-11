@@ -1539,3 +1539,37 @@
   .scheduleMetrics > div { padding: 12px; }
   .scheduleVisitRow { grid-template-columns: 1fr; }
 }
+
+
+/* Related records are live navigation, not visual placeholders. */
+.contextActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e8e3d8;
+  background: #f5f0e8;
+}
+.contextActions a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 37px;
+  padding: 7px 9px;
+  border: 1px solid #ded7cb;
+  border-radius: 6px;
+  background: #fffefa;
+  color: #6d3c2a;
+  font-size: .72rem;
+  font-weight: 730;
+  line-height: 1.35;
+  text-decoration: none;
+}
+.contextActions a:hover { background: #f3e5db; border-color: #c9b6a7; text-decoration: none; }
+@media (min-width: 1451px) {
+  .contextActions { grid-template-columns: 1fr; }
+}
+@media (max-width: 360px) {
+  .contextActions { grid-template-columns: 1fr; }
+}
