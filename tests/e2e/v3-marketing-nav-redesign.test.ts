@@ -39,4 +39,10 @@ describe("V3 public navigation redesign", () => {
     expect(css).toContain("prefers-reduced-motion: reduce");
     expect(css).toContain("max-width: 350px");
   });
+  it("verifies the opened mobile disclosure in real Chrome, not just the collapsed header", () => {
+    const proof = file("scripts/release/v3-public-browser-proof.mjs");
+    expect(proof).toContain('page.slug === "home" && width <= 834');
+    expect(proof).toContain('state.links < 7');
+    expect(proof).toContain('"mobile-menu-open"');
+  });
 });
