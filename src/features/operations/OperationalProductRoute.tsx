@@ -60,7 +60,7 @@ import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatWorkspaceDateTime } from "./product-truth";
 import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
-import { filterQualityQueue, isOverdueQualityCase, normalizeQualityQueue, normalizeQualitySearch, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
+import { filterQualityQueue, isOverdueQualityCase, normalizeQualityQueue, normalizeQualitySearch, prioritizeQualityFollowUp, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
 import { QualityQueueFilters } from "./QualityQueueFilters";
 import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue } from "./invoice-collection-queue";
 import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
@@ -2146,12 +2146,7 @@ function QualityView({
     return <EmptyState title="No quality cases" detail="Customer feedback that requires operational review will appear here." action={{ label: "Review completed jobs", href: buildStaffModuleHref(workspaceSlug, "jobs") }} />;
   }
 
-  const orderedCases = [...data.qualityCases].sort((left, right) => {
-    const stateWeight: Record<string, number> = { IN_REVIEW: 0, OPEN: 1, RESOLVED: 2 };
-    return Number(isOverdueQualityCase(right, data.loadedAt)) - Number(isOverdueQualityCase(left, data.loadedAt))
-      || (stateWeight[left.state] ?? 9) - (stateWeight[right.state] ?? 9)
-      || (left.dueAt ? Date.parse(left.dueAt) : Number.MAX_SAFE_INTEGER) - (right.dueAt ? Date.parse(right.dueAt) : Number.MAX_SAFE_INTEGER);
-  });
+  const orderedCases = prioritizeQualityFollowUp(data.qualityCases, data.loadedAt);
   const visitById = new Map(data.visits.map(visit => [visit.id, visit]));
   const requestById = new Map(data.requests.map(request => [request.id, request]));
   const customerById = new Map(data.customers.map(customer => [customer.id, customer]));
