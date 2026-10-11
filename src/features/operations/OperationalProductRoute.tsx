@@ -56,6 +56,7 @@ import {
   normalizeInboxQueue,
   type InboxQueue,
   type InboxQueueCounts,
+  searchInboxQueue,
 } from "./inbox-triage";
 
 interface OperationalProductRouteProps {
@@ -63,6 +64,7 @@ interface OperationalProductRouteProps {
   module: Exclude<StaffModule, "overview">;
   selectedConversationId?: string;
   selectedQueue?: string;
+  searchQuery?: string;
   selectedCustomerId?: string;
   selectedRequestId?: string;
   selectedQuoteId?: string;
@@ -132,9 +134,11 @@ function Notice({ notice, error }: { notice?: string; error?: string }) {
 function InboxQueueNavigation({
   queue,
   counts,
+  search,
 }: {
   queue: InboxQueue;
   counts: InboxQueueCounts;
+  search?: string;
 }) {
   const labels: Record<InboxQueue, string> = {
     all: "All",
@@ -148,7 +152,7 @@ function InboxQueueNavigation({
         <a
           key={item}
           className={`${styles.inboxQueueLink} ${item === queue ? styles.inboxQueueActive : ""}`}
-          href={inboxQueueHref(item)}
+          href={inboxQueueHref(item, undefined, search)}
           aria-current={item === queue ? "page" : undefined}
         >
           <span>{labels[item]}</span>
@@ -159,20 +163,37 @@ function InboxQueueNavigation({
   );
 }
 
+function InboxSearchForm({ queue, search }: { queue: InboxQueue; search?: string }) {
+  return (
+    <form method="get" className={styles.inboxSearchForm} role="search" aria-label="Search workspace conversations">
+      {queue !== "all" ? <input type="hidden" name="queue" value={queue} /> : null}
+      <label htmlFor="inbox-search">Find a conversation</label>
+      <div className={styles.inboxSearchControl}>
+        <input id="inbox-search" type="search" name="search" defaultValue={search ?? ""}
+          placeholder="Name, channel, or message" maxLength={120} autoComplete="off" />
+        <button type="submit" aria-label="Search conversations">Search</button>
+      </div>
+    </form>
+  );
+}
+
 function InboxView({
   data,
   workspaceSlug,
   selectedConversationId,
   selectedQueue,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedConversationId?: string;
   selectedQueue?: string;
+  searchQuery?: string;
 }) {
   const queue = normalizeInboxQueue(selectedQueue);
   const triage = buildInboxTriage(data.conversations, data.messages, data.customers, queue);
-  const orderedConversations = triage.visible;
+  const search = searchQuery?.trim().slice(0, 120) ?? "";
+  const orderedConversations = searchInboxQueue(triage.visible, data.messages, data.customers, search);
   const selected = orderedConversations.find((item) => item.id === selectedConversationId)
     ?? orderedConversations[0];
   if (!selected) {
@@ -185,10 +206,11 @@ function InboxView({
             <p>{triage.counts.all} stored conversations</p>
           </div>
         </div>
-        <InboxQueueNavigation queue={queue} counts={triage.counts} />
+        <InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />
+        <InboxSearchForm queue={queue} search={search} />
         <EmptyState
-          title={triage.counts.all ? "No conversations in this queue" : "Inbox is clear"}
-          detail={triage.counts.all
+          title={search ? "No matching conversations" : triage.counts.all ? "No conversations in this queue" : "Inbox is clear"}
+          detail={search ? "Try a different name, channel or message phrase." : triage.counts.all
             ? "Choose another queue to see existing conversations."
             : "No customer conversations are stored for this workspace yet."}
         />
@@ -222,7 +244,7 @@ function InboxView({
       workspaceSlug,
       "inbox",
       result,
-      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&",
+      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&search=" + encodeURIComponent(search) + "&",
     );
   }
 
@@ -239,7 +261,7 @@ function InboxView({
       workspaceSlug,
       "inbox",
       result,
-      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&",
+      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&search=" + encodeURIComponent(search) + "&",
     );
   }
 
@@ -252,7 +274,7 @@ function InboxView({
       workspaceSlug,
       "inbox",
       result,
-      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&",
+      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&search=" + encodeURIComponent(search) + "&",
     );
   }
 
@@ -274,7 +296,8 @@ function InboxView({
             <p>{triage.counts.all} stored threads · {triage.counts["needs-reply"]} awaiting reply</p>
           </div>
         </header>
-        <InboxQueueNavigation queue={queue} counts={triage.counts} />
+        <InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />
+        <InboxSearchForm queue={queue} search={search} />
         <div className={styles.conversationList} role="list">
           {orderedConversations.map((conversation) => {
             const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
@@ -283,7 +306,7 @@ function InboxView({
             return (
               <a
                 className={`${styles.conversationItem} ${selectedThread ? styles.conversationSelected : ""}`.trim()}
-                href={inboxQueueHref(queue, conversation.id)}
+                href={inboxQueueHref(queue, conversation.id, search)}
                 aria-current={selectedThread ? "page" : undefined}
                 aria-label={(threadCustomer?.displayName ?? "Unverified sender") + " " + conversation.channel + " conversation"}
                 role="listitem"
@@ -456,7 +479,7 @@ function InboxView({
             <div className={styles.relatedChannels}>
               {relatedConversations.map((conversation) => (
                 <a
-                  href={inboxQueueHref("all", conversation.id)}
+                  href={inboxQueueHref("all", conversation.id, search)}
                   key={conversation.id}
                 >
                   <strong>{conversation.channel}</strong>
@@ -3896,6 +3919,7 @@ function renderModule(
   selectedJobId?: string,
   selectedInvoiceId?: string,
   selectedQueue?: string,
+  searchQuery?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -3905,6 +3929,7 @@ function renderModule(
           workspaceSlug={workspaceSlug}
           selectedConversationId={selectedConversationId}
           selectedQueue={selectedQueue}
+          searchQuery={searchQuery}
         />
       );
     case "customers":
@@ -3937,6 +3962,7 @@ export async function OperationalProductRoute({
   module,
   selectedConversationId,
   selectedQueue,
+  searchQuery,
   selectedCustomerId,
   selectedRequestId,
   selectedQuoteId,
@@ -3962,7 +3988,7 @@ export async function OperationalProductRoute({
       {result.ok ? (
         <>
           {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue)}
+          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery)}
         </>
       ) : (
         <Panel>
