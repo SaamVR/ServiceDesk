@@ -192,3 +192,18 @@ A worker returning after one narrow implementation slice is incomplete unless:
 - one genuine blocker prevents all remaining owned work.
 
 Receipt-only or DNS-only runs are not accepted while package-free owned work exists.
+
+## ServiceDesk V3 current cycle — 2026-10-11
+
+Source: [V3 active four-lane batch](v3-four-lane-active-batch-20261011.md) (file is in `docs/execution/`; relative link from taskboard: [open packet](execution/v3-four-lane-active-batch-20261011.md)).
+
+| Task | Lane | State | Observed SHA | New proof / next gate |
+| --- | --- | --- | --- | --- |
+| V3-W1 explicit authorized workspace selection | Core | REVIEW | `0e18b9c2d7c44654ff56eba01cc059a92048f117` | Exact-code Node TS-strip 4/4 probes PASS; Vitest/typecheck still required |
+| V3-W2 safe Resend idempotency header | Integrations | REVIEW | `779e618694175f57f5b383f0f2bf2943033c84c3` | Code+regression cases committed; provider/test runner pending, zero sends |
+| V3-W3 disabled-signup release smoke | Coordinator | DONE | `6160f3e332a48b2b2817fbd2eb8e3d93dc523560` | PR #81 merged into coordinator; matching Git blobs, Node native 6/6 PASS; deployed browser proof pending |
+| V3-W4 professional operator UI | Frontend chat | READY | `b2b153d57213bb2f5f4aea1473a205b359b53a9b` | Branch reserved, no code commits yet; separate chat activation and first visual wave required |
+| V3-DB 0037–0059 | External platform | BLOCKED | 0036 on connected staging | Issue #75 safety rejection before execution; no bypass |
+| V3-Auth confirmation | External provider | BLOCKED | signup disabled | SMTP owner-configured; controlled delivered email/session receipt absent |
+
+Do not confuse W1/W2 authored tests with a successful repository Vitest run. No current-candidate full `pnpm check:rc` after these new commits.
