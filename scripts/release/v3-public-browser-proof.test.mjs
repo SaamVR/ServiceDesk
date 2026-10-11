@@ -41,6 +41,24 @@ test("real Chrome expected headings agree with route-authored product text", () 
   assert.equal((script.match(/\{ slug: "(?:home|features|pricing|integrations|contact|sign-in)"/g) ?? []).length, 6);
 });
 
+test("public Chrome requires different authored storyboards instead of a repeated default illustration", () => {
+  const script = file("scripts/release/v3-public-browser-proof.mjs");
+  const component = file("src/components/shell/ProductStoryHero.tsx");
+  const shell = file("src/components/shell/MarketingShell.tsx");
+  for (const name of [
+    "Four stages of the cleaning operations workflow",
+    "Feature workflow from intake through quality",
+    "Illustrative service quote breakdown, not subscription prices",
+    "Integration readiness categories, not live provider status",
+    "ServiceDesk walkthrough preparation agenda",
+  ]) {
+    assert.ok(script.includes('heroLabel: "' + name + '"'), name);
+    assert.ok(component.includes(name) || file("src/components/shell/OperationalFlowHero.tsx").includes(name));
+  }
+  assert.ok(script.includes("state.heroLabel !== page.heroLabel"));
+  assert.ok(shell.includes('heroStory ? <ProductStoryHero kind={heroStory} /> : <OperationalFlowHero />'));
+});
+
 test("browser acceptance remains fully public, five-width, no secrets, and labelled as partial evidence", () => {
   const script = file("scripts/release/v3-public-browser-proof.mjs");
   assert.ok(script.includes("const widths = [320, 390, 834, 1280, 1440]"));
@@ -50,4 +68,17 @@ test("browser acceptance remains fully public, five-width, no secrets, and label
   assert.ok(script.includes("No authenticated staff proof."));
   assert.ok(!script.includes("SUPABASE_SERVICE_ROLE_KEY"));
   assert.ok(!script.includes("api/internal/inbox/reply"));
+});
+
+test("mobile header controls meet the 44 CSS pixel minimum and Chrome enforces it", () => {
+  const css = file("src/components/shell/MarketingNavV3.module.css");
+  const chrome = file("scripts/release/v3-public-browser-proof.mjs");
+  assert.ok(css.includes("min-height: 44px;"));
+  assert.ok(css.includes(".menuToggle { width: 44px; min-height: 44px;"));
+  assert.ok(!css.includes("min-height: 41px;"));
+  assert.ok(!css.includes("min-height: 39px;"));
+  assert.ok(chrome.includes("state.touchTargets"));
+  assert.ok(chrome.includes("item.w < 44 || item.h < 44"));
+  assert.ok(chrome.includes("width <= 390 && page.heroLabel"));
+  assert.ok(chrome.includes("Public mobile navigation/action target below 44 CSS pixels"));
 });

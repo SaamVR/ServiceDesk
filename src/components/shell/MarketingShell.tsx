@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import styles from "./MarketingNavV3.module.css";
 import heroStyles from "./MarketingHeroV3.module.css";
 import { OperationalFlowHero } from "./OperationalFlowHero";
+import { ProductStoryHero, type ProductStoryHeroKind } from "./ProductStoryHero";
 import { MarketingNavLinks } from "./MarketingNavLinks";
 import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
 import { marketingHeroEntry, marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
@@ -16,6 +17,7 @@ interface MarketingShellProps {
   primaryLabel?: string;
   secondaryHref?: string;
   secondaryLabel?: string;
+  heroStory?: ProductStoryHeroKind;
 }
 
 export function MarketingShell({
@@ -27,6 +29,7 @@ export function MarketingShell({
   primaryLabel = "Explore platform",
   secondaryHref = "/contact",
   secondaryLabel = "Plan a walkthrough",
+  heroStory,
 }: MarketingShellProps) {
   const registrationEnabled = ownerRegistrationAvailable();
   const registration = marketingRegistrationEntry(registrationEnabled);
@@ -93,7 +96,7 @@ export function MarketingShell({
             <Link className="button-secondary" href={secondaryHref}>{secondaryLabel}</Link>
           </div>
         </div>
-        <OperationalFlowHero />
+        {heroStory ? <ProductStoryHero kind={heroStory} /> : <OperationalFlowHero />}
       </section>
 
       {children}

@@ -10,11 +10,11 @@ import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const pages = [
-  { slug: "home", path: "/", title: "Run cleaning operations from enquiry to paid job." },
-  { slug: "features", path: "/features", title: "Everything a cleaning operations team needs to move work forward." },
-  { slug: "pricing", path: "/pricing", title: "Service quote pricing stays transparent and controlled." },
-  { slug: "integrations", path: "/integrations", title: "Connect the systems your operation already uses." },
-  { slug: "contact", path: "/contact", title: "See ServiceDesk against your real cleaning workflow." },
+  { slug: "home", path: "/", title: "Run cleaning operations from enquiry to paid job.", heroLabel: "Four stages of the cleaning operations workflow" },
+  { slug: "features", path: "/features", title: "Everything a cleaning operations team needs to move work forward.", heroLabel: "Feature workflow from intake through quality" },
+  { slug: "pricing", path: "/pricing", title: "Service quote pricing stays transparent and controlled.", heroLabel: "Illustrative service quote breakdown, not subscription prices" },
+  { slug: "integrations", path: "/integrations", title: "Connect the systems your operation already uses.", heroLabel: "Integration readiness categories, not live provider status" },
+  { slug: "contact", path: "/contact", title: "See ServiceDesk against your real cleaning workflow.", heroLabel: "ServiceDesk walkthrough preparation agenda" },
   { slug: "sign-in", path: "/auth/sign-in", title: "Ready for what's next?" },
 ];
 const widths = [320, 390, 834, 1280, 1440];
@@ -137,7 +137,9 @@ async function layoutCheck(page, width) {
     'reduced:matchMedia("(prefers-reduced-motion: reduce)").matches,' +
     'heading:document.querySelector("main h1")?.textContent?.trim()?.length || 0,' +
     'links:document.querySelectorAll("a[href]").length,' +
-    'passwords:document.querySelectorAll("input[type=password]").length}))()'
+    'passwords:document.querySelectorAll("input[type=password]").length,' +
+    'heroLabel:document.querySelector(".marketing-hero aside[aria-label]")?.getAttribute("aria-label")||"",' +
+    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header > div a[href],.marketing-hero .button-primary,.marketing-hero .button-secondary")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height)}))}))()'
   );
   if (state.width !== width || state.height !== height(width) || !state.reduced) {
     throw new Error("Chrome viewport/reduced-motion mismatch: " + page.slug + " " + width);
@@ -147,10 +149,20 @@ async function layoutCheck(page, width) {
       " (" + Math.max(state.body, state.root) + ")");
   }
   if (state.heading < 4 || state.links < 1 ||
+      (page.heroLabel && state.heroLabel !== page.heroLabel) ||
       (page.slug === "sign-in" && state.passwords !== 1)) {
     throw new Error("Public page is missing visible content/form controls: " + page.slug);
   }
-  return { page: page.slug, width, links: state.links, horizontalOverflow: false };
+  if (width <= 390 && page.heroLabel) {
+    const targets = state.touchTargets;
+    if (!Array.isArray(targets) || targets.length < 3 ||
+        targets.some(item => item.w < 44 || item.h < 44)) {
+      throw new Error("Public mobile navigation/action target below 44 CSS pixels: " + page.slug + " " + width);
+    }
+  }
+  return { page: page.slug, width, links: state.links,
+    touchTargetCount: width <= 390 ? state.touchTargets.length : undefined,
+    horizontalOverflow: false };
 }
 
 const captures = [];
