@@ -94,19 +94,22 @@ function KpiCard({
   label,
   value,
   detail,
+  href,
   emphasis = "default",
 }: {
   label: string;
   value: string | number;
   detail: string;
+  href: string;
   emphasis?: "default" | "warning" | "danger";
 }) {
   return (
-    <article className={`${styles.kpiCard} ${styles[`kpi_${emphasis}`]}`}>
+    <Link className={`${styles.kpiCard} ${styles[`kpi_${emphasis}`]}`} href={href}>
       <p>{label}</p>
       <strong>{value}</strong>
       <span>{detail}</span>
-    </article>
+      <span className={styles.kpiGo} aria-hidden="true">↗</span>
+    </Link>
   );
 }
 
@@ -231,30 +234,34 @@ export function StaffOverviewDashboard({
         </div>
       </header>
 
-      <section className={styles.kpiGrid} aria-label="Operations summary">
+      <nav className={styles.kpiGrid} aria-label="Open operational queues">
         <KpiCard
           label="Today's jobs"
+          href={buildStaffModuleHref(workspace, "schedule")}
           value={todayVisits.length}
           detail={unassignedToday ? `${unassignedToday} need crew` : `${inProgressToday} underway`}
           emphasis={unassignedToday ? "warning" : "default"}
         />
         <KpiCard
           label="Needs attention"
+          href={buildStaffModuleHref(workspace, "automations")}
           value={attention.length}
           detail={criticalAttention ? `${criticalAttention} critical` : "No critical issues"}
           emphasis={criticalAttention ? "danger" : attention.length ? "warning" : "default"}
         />
         <KpiCard
           label="Waiting pipeline"
+          href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
           value={waitingRequests.length + waitingQuotes.length}
           detail={`${waitingRequests.length} requests · ${waitingQuotes.length} quotes`}
         />
         <KpiCard
           label="Outstanding"
+          href={buildStaffModuleHref(workspace, "invoices")}
           value={outstandingValue}
           detail={outstanding.count ? `${outstanding.count} open invoice${outstanding.count === 1 ? "" : "s"}` : "Nothing to collect"}
         />
-      </section>
+      </nav>
 
       <div className={styles.primaryGrid}>
         <section className={styles.card} aria-labelledby="today-heading">
