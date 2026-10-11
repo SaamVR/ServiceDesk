@@ -36,7 +36,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: v4-render-live-public-ffd8ceb-visual
+          name: v4-render-live-public-000148a-visual
           path: ${{ runner.temp }}/servicedesk-v4-live-browser-review/
           retention-days: 7
           if-no-files-found: error
