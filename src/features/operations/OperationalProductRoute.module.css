@@ -1345,7 +1345,7 @@
 .inboxEyebrow { color: #50727a !important; font-size: .65rem !important; letter-spacing: .13em !important; }
 .inboxPaneHeader h2, .threadHeader h2 {
   margin-top: 5px;
-  font-family: Georgia, Cambria, serif;
+  font-family: Inter, "Segoe UI", sans-serif;
   font-size: 1.28rem;
   font-weight: 600;
   letter-spacing: -.045em;
@@ -1490,7 +1490,7 @@
    capacity or simulated timeline values. All measures still use the snapshot. */
 .scheduleWorkspace, .salesWorkspace { gap: 20px; }
 .scheduleHeader h2, .salesToolbar h2 {
-  font-family: Georgia, Cambria, serif;
+  font-family: Inter, "Segoe UI", sans-serif;
   font-weight: 600;
   font-size: 1.55rem;
   letter-spacing: -.04em;
@@ -1508,7 +1508,7 @@
   box-shadow: 0 2px 14px rgb(47 42 33 / 3%);
 }
 .scheduleCardHeader { min-height: 75px; padding: 15px 20px; }
-.scheduleCardHeader h3 { font-family: Georgia, Cambria, serif; font-size: 1.13rem; font-weight: 590; }
+.scheduleCardHeader h3 { font-family: Inter, "Segoe UI", sans-serif; font-size: 1.13rem; font-weight: 590; }
 .scheduleVisitRow { min-height: 70px; padding: 13px 18px; grid-template-columns: 155px minmax(0, 1fr) auto; }
 .scheduleVisitRow time { font-size: .77rem; }
 .scheduleVisitCopy strong, .bookingQueueTitle strong { font-size: .84rem; }
@@ -1525,7 +1525,7 @@
 .salesQueueTop strong { font-size: .84rem; }
 .salesQueueCustomer { font-size: .77rem; }
 .salesDetailHeader { min-height: 91px; padding: 20px; }
-.salesDetailHeader h2 { font-family: Georgia, Cambria, serif; font-size: 1.32rem; font-weight: 590; }
+.salesDetailHeader h2 { font-family: Inter, "Segoe UI", sans-serif; font-size: 1.32rem; font-weight: 590; }
 .salesSummary dt, .salesSummary dd { font-size: .77rem; }
 @media (max-width: 1120px) { .schedulePlanningGrid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) {
@@ -1643,7 +1643,7 @@
   .inboxMobileJump, .inboxBackToList {
     display: block;
     padding: 10px 14px;
-    color: #8c482e;
+    color: #0b7168;
     background: #f5eee6;
     font-size: .77rem;
     font-weight: 750;
