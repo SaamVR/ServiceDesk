@@ -128,7 +128,7 @@ export async function handleWhatsAppInboundWebhook(input: WhatsAppInboundWebhook
       if (result === "INSERTED") summary.inserted += 1;
       if (result === "DUPLICATE") summary.duplicate += 1;
     }
-  } catch (error) {
+  } catch {
     // A provider callback is an untrusted HTTP caller. Never reflect raw
     // persistence error text (tokens, phone numbers or customer payloads).
     return {
@@ -248,7 +248,7 @@ export async function handleWhatsAppStatusWebhook(input: WhatsAppStatusWebhookIn
       if (result === "DUPLICATE") summary.duplicate += 1;
       if (result === "STALE_REGRESSION") summary.stale += 1;
     }
-  } catch (error) {
+  } catch {
     // A provider callback is an untrusted HTTP caller. Never reflect raw
     // persistence error text (tokens, phone numbers or customer payloads).
     return {
