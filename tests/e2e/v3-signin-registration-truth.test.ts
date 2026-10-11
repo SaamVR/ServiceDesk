@@ -11,7 +11,7 @@ describe("V3 signed-out first-use registration truth", () => {
     expect(marketingRegistrationEntry(false)).toEqual({
       href: "/tour", desktop: "Explore tour", mobile: "Take tour",
     });
-    expect(ownerRegistrationAvailable({})).toBe(false);
+    expect(ownerRegistrationAvailable({ ...process.env, SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false" })).toBe(false);
     const source = read("src/app/auth/sign-in/page.tsx");
     expect(source).toContain("const registrationAvailable = ownerRegistrationAvailable()");
     expect(source).toContain("const newVisitorEntry = marketingRegistrationEntry(registrationAvailable)");
@@ -26,12 +26,13 @@ describe("V3 signed-out first-use registration truth", () => {
     expect(marketingRegistrationEntry(true)).toEqual({
       href: "/auth/sign-up", desktop: "Create account", mobile: "Get started",
     });
-    const ready = {
+    const ready: NodeJS.ProcessEnv = {
+      ...process.env,
       SERVICEDESK_OWNER_REGISTRATION_ENABLED: "true",
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "nonsecret-public-placeholder",
       SERVICEDESK_AUTH_REDIRECT_ORIGIN: "https://review.example.test",
-    } as NodeJS.ProcessEnv;
+    };
     expect(ownerRegistrationAvailable(ready)).toBe(true);
     expect(ownerRegistrationAvailable({
       ...ready,
