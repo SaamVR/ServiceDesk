@@ -29,7 +29,7 @@ test("real Chrome expected headings agree with route-authored product text", () 
   const expected = [
     "Run cleaning operations from enquiry to paid job.",
     "Everything a cleaning operations team needs to move work forward.",
-    "Pricing stays rule-based, versioned and auditable.",
+    "Service quote pricing stays transparent and controlled.",
     "Connect the systems your operation already uses.",
     "See ServiceDesk against your real cleaning workflow.",
     "Ready for what's next?",
