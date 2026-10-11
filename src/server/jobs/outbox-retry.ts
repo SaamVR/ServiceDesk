@@ -80,6 +80,13 @@ export function decideOutboxPersistence(input: OutboxRetryPolicyInput): Result<O
     return { ok: false, code: "OUTBOX_RETRY_AFTER_INVALID", message: "retryAfterSeconds must be a nonnegative integer when provided." };
   }
   const delaySeconds = Math.max(minimum, retryAfter);
+  // A provider Retry-After can be a syntactically valid integer but still
+  // overflow Date's supported range. Keep the worker's batch alive and fail
+  // the affected record closed instead of throwing RangeError from toISOString.
+  const nextAttemptMs = (parseTime(outcome.failedAt) ?? NaN) + delaySeconds * 1_000;
+  if (!Number.isFinite(nextAttemptMs) || Math.abs(nextAttemptMs) > 8.64e15) {
+    return { ok: false, code: "OUTBOX_RETRY_SCHEDULE_INVALID", message: "Provider retry schedule exceeds supported timestamp range." };
+  }
   return {
     ok: true,
     value: {
