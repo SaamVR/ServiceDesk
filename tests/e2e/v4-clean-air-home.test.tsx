@@ -87,7 +87,7 @@ describe("V4 Clean Air homepage redesign", () => {
     const home = file("src/app/page.tsx");
     expect(css).toContain("--clean-porcelain: #f7fbfa");
     expect(css).toContain("--clean-turquoise: #219d9b");
-    expect(css).toContain("--clean-coral: #fa785f");
+    expect(css).toContain("--clean-coral: #bd4b36");
     expect(css).toContain('font-family: var(--clean-font)');
     expect(css).toContain('@media (max-width: 580px)');
     expect(css).toContain('@media (prefers-reduced-motion: reduce)');
