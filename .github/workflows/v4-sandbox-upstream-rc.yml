@@ -1,0 +1,71 @@
+name: ServiceDesk V4 Sandbox Upstream RC
+
+# Source-only integration acceptance, sample data only.
+on:
+  push:
+    branches:
+      - feat/servicedesk-v4-sandbox-upstream-20261011
+    paths:
+      - ".github/workflows/v4-sandbox-upstream-rc.yml"
+      - "src/features/sandbox/**"
+      - "tests/e2e/v4-sandbox-clean-air.test.ts"
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-full-visual-candidate-20261011
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/v4-sandbox-upstream-rc.yml"
+      - "src/features/sandbox/**"
+      - "tests/e2e/v4-sandbox-clean-air.test.ts"
+
+permissions:
+  contents: read
+jobs:
+  sandbox-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Install lockfile dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Focused simulator and style assertions
+        run: pnpm exec vitest run tests/e2e/v3-sandbox-workflow.test.ts tests/e2e/v4-sandbox-clean-air.test.ts
+      - name: Verify TS, lint and production compilation
+        run: |
+          pnpm typecheck
+          pnpm exec eslint src/features/sandbox/ tests/e2e/v4-sandbox-clean-air.test.ts
+          pnpm build
+      - name: Install Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+      - name: Boot local sandbox
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/sandbox-upstream.log" 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/sandbox >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Drive eight-step mock job through Chrome
+        env:
+          V3_SANDBOX_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V3_SANDBOX_OUTPUT: ${{ runner.temp }}/v4-sandbox-upstream-chrome
+        run: node scripts/release/v3-sandbox-browser.mjs
+      - name: Upload synthetic visual evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-sandbox-upstream-chrome
+          path: ${{ runner.temp }}/v4-sandbox-upstream-chrome/
+          retention-days: 7
+          if-no-files-found: error
