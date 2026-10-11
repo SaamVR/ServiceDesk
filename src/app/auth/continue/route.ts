@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { trustedAuthDestination } from "@/features/auth/email-origin";
 import { loadAuthorizedWorkspaceDecision } from "@/features/auth/authorized-workspace-access";
+import { ownerAfterLoginHref } from "@/features/auth/verified-owner-workspace";
 
 function go(path: string) {
   const destination = trustedAuthDestination(path);
@@ -43,7 +44,7 @@ export async function GET() {
 
   const decision = loaded.decision;
   if (decision.kind === "CREW") return go("/crew/today");
-  if (decision.kind === "STAFF") return go(decision.href);
+  if (decision.kind === "STAFF") return go(ownerAfterLoginHref(decision.workspace));
   if (decision.kind === "CHOOSE") return go("/auth/select-workspace");
 
   const customers = await auth.from("customers")

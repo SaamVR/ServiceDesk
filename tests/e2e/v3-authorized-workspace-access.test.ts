@@ -113,7 +113,7 @@ describe("verified authenticated RLS workspace discovery", () => {
     expect(continuation).toContain('"/auth/select-workspace"');
     expect(chooser).toContain('auth.auth.getUser()');
     expect(chooser).toContain("email_confirmed_at");
-    expect(chooser).toContain('href={workspace.href}');
+    expect(chooser).toContain('href={ownerAfterLoginHref(workspace)}');
     expect(chooser).not.toContain("user_metadata");
     expect(chooser).not.toContain("service_role");
   });
