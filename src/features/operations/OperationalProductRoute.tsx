@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { queueApprovedInboxReply } from "@/server/core/reviewed-inbox-reply";
 import { runOwnerSavedRequestAutomation } from "@/server/workflows/owner-request-automation";
-import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import {
   addOperationalVisitNote,
   assignOperationalCrew,
@@ -57,6 +56,7 @@ import { AiOperationsStatus } from "./AiOperationsStatus";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import { automationPlaybooks, getAutomationPlaybook } from "./automation-playbooks";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
+import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
