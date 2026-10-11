@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import styles from "./AiRequestBrief.module.css";
 
 type Brief = {
@@ -21,8 +21,6 @@ export function AiRequestBrief({
   const [busy, setBusy] = useState(false);
   const [brief, setBrief] = useState<Brief>();
   const [error, setError] = useState<string>();
-
-  useEffect(() => { setBrief(undefined); setError(undefined); }, [requestId, workspaceSlug]);
 
   async function generate() {
     if (!configured || busy) return;
