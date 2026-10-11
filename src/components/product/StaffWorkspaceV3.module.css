@@ -1,279 +1,292 @@
-/* ServiceDesk / Workroom: editorial precision for an operational product.
-   The authentication, workspace links and domain state remain server-owned.
-   Scope these tokens to staff surfaces; never restyle customer portals. */
+/* ServiceDesk / Studio OS — clear operating context, restrained hierarchy.
+   All visual tokens are scoped to authenticated staff navigation only. */
 .v3Shell {
-  --app-sidebar-width: 242px;
-  --app-canvas: #f7f5f0;
-  --app-surface: #fffefb;
-  --app-surface-subtle: #faf8f3;
-  --app-surface-muted: #f0ede5;
-  --app-text: #202823;
-  --app-text-muted: #566058;
-  --app-text-subtle: #626c63;
-  --app-border: #e3e0d7;
-  --app-border-strong: #cbc7bc;
-  --app-accent: #ab5139;
-  --app-accent-hover: #853b29;
-  --app-accent-soft: #f8eee8;
-  --app-success: #246749;
-  --app-warning: #8b570a;
-  --app-danger: #aa3e35;
-  --app-info: #315e71;
-  --app-radius-sm: 6px;
-  --app-radius-md: 9px;
-  --app-radius-lg: 12px;
-  --app-shadow-sm: 0 1px 2px rgb(48 43 33 / 4%);
+  --app-sidebar-width: 252px;
+  --app-canvas: #f3f6f7;
+  --app-surface: #ffffff;
+  --app-surface-subtle: #f7fafb;
+  --app-surface-muted: #eaf1f2;
+  --app-text: #1a3039;
+  --app-text-muted: #4e626c;
+  --app-text-subtle: #61747c;
+  --app-border: #dce5e8;
+  --app-border-strong: #bbced2;
+  --app-accent: #0b746d;
+  --app-accent-hover: #075c56;
+  --app-accent-soft: #e5f5f2;
+  --app-success: #14705c;
+  --app-warning: #87521b;
+  --app-danger: #aa353f;
+  --app-info: #23677c;
+  --app-radius-sm: 7px;
+  --app-radius-md: 10px;
+  --app-radius-lg: 13px;
+  --app-shadow-sm: 0 2px 6px rgb(22 47 59 / 3%);
   min-width: 0;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+  font-family: Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.48;
+  font-feature-settings: "ss01" on;
   font-variant-numeric: tabular-nums;
 }
 .v3Shell :global(.app-sidebar) {
   gap: 0;
-  padding: 26px 13px 18px;
-  border-right: 1px solid #dfd9ce;
-  background: #f0ede6;
-  scrollbar-color: #c6c0b4 transparent;
+  padding: 24px 13px 18px;
+  border-right: 1px solid #18333c;
+  background: #142b33;
+  color: #e9f1f2;
+  scrollbar-color: #526971 transparent;
 }
 .v3Shell :global(.app-sidebar) :global(.app-brand) {
-  min-height: 70px;
+  min-height: 72px;
   align-items: center;
-  gap: 11px;
-  margin: 0 6px 15px;
-  padding: 0 2px 22px;
-  border-bottom: 1px solid #d9d4c9;
-  color: #252923;
+  gap: 12px;
+  margin: 0 5px 19px;
+  padding: 0 3px 22px;
+  border-bottom: 1px solid rgb(211 230 230 / 13%);
+  color: #fff;
 }
+.v3Shell :global(.app-sidebar) :global(.app-brand):hover { color: #fff; }
 .v3Shell :global(.app-sidebar) :global(.app-brand-mark) {
   position: relative;
-  width: 39px;
-  height: 39px;
-  border-radius: 10px;
-  background: #b45940;
-  color: #fff8f2;
-  font-family: Georgia, Cambria, serif;
-  font-size: 1.45rem;
-  font-weight: 500;
-  letter-spacing: -.11em;
-  box-shadow: 0 3px 0 #853b29;
+  display: grid;
+  place-items: center;
+  width: 42px; height: 42px;
+  border: 1px solid rgb(255 255 255 / 19%);
+  border-radius: 12px;
+  background: linear-gradient(150deg,#22aa91,#0d776b 70%,#085b57);
+  box-shadow: 0 5px 14px rgb(0 0 0 / 17%);
+  color: #fff;
+  font-family: Inter,"Segoe UI",sans-serif;
+  font-size: 1.22rem;
+  font-weight: 800;
+  letter-spacing: -.09em;
 }
 .v3Shell :global(.app-sidebar) :global(.app-brand-copy) strong {
-  font-size: .99rem;
-  font-weight: 760;
+  color: #f6fafa;
+  font-size: 1.02rem;
+  font-weight: 780;
   letter-spacing: -.035em;
-  color: #202823;
 }
 .v3Shell :global(.app-sidebar) :global(.app-brand-copy) span {
-  color: #656e64;
-  font-size: .75rem;
+  color: #acc6c9;
+  font-size: .73rem;
   font-weight: 520;
 }
 .navigation { display: grid; align-content: start; }
-.v3Shell :global(.app-sidebar) .navigation { gap: 22px; padding: 12px 0 20px; }
+.v3Shell :global(.app-sidebar) .navigation { gap: 20px; padding: 11px 0 20px; }
 .navGroup { display: grid; gap: 3px; }
 .navGroupLabel {
-  margin: 0 10px 8px !important;
-  color: #5d645b !important;
-  font-size: .66rem !important;
-  font-weight: 820 !important;
-  letter-spacing: .10em !important;
+  margin: 0 12px 8px !important;
+  color: #a5c0c3 !important;
+  font-size: .67rem !important;
+  font-weight: 740 !important;
+  letter-spacing: .11em !important;
   text-transform: uppercase;
 }
 .navLink {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 11px;
-  min-height: 41px;
-  padding: 0 11px;
-  border-radius: 7px;
-  font-size: .83rem;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: .82rem;
   font-weight: 600;
   text-decoration: none;
-  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  transition: background-color 140ms ease, color 140ms ease;
 }
-.v3Shell :global(.app-sidebar) .navLink { color: #50584f; }
+.v3Shell :global(.app-sidebar) .navLink { color: #c7d8db; }
 .v3Shell :global(.app-sidebar) .navLink :global(.app-nav-icon) {
-  width: 18px;
-  height: 18px;
-  color: #80867b;
+  width: 18px; height: 18px; color: #a2bdc2; flex-shrink: 0;
 }
 .v3Shell :global(.app-sidebar) .navLink:hover {
-  background: #e7e2d7;
-  color: #202823;
+  background: rgb(224 247 241 / 10%);
+  color: #fff;
 }
 .v3Shell :global(.app-sidebar) .navLink[aria-current="page"] {
-  background: #fffefb;
-  box-shadow: 0 1px 3px rgb(48 43 33 / 8%), inset 3px 0 #b45940;
-  color: #262b25;
-  font-weight: 760;
+  background: #2b4d53;
+  box-shadow: inset 3px 0 #48d2b4;
+  color: #fff;
+  font-weight: 740;
 }
-.v3Shell :global(.app-sidebar) .navLink[aria-current="page"] :global(.app-nav-icon) { color: #a74e38; }
-.moreTools { border-top: 1px solid #d9d4c9; padding-top: 14px; }
+.v3Shell :global(.app-sidebar) .navLink[aria-current="page"] :global(.app-nav-icon) { color: #79e8d0; }
+.moreTools {
+  padding-top: 13px;
+  border-top: 1px solid rgb(211 230 230 / 13%);
+}
 .moreToolsTrigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 40px;
-  padding: 0 11px;
-  border-radius: 7px;
-  color: #50584f;
+  min-height: 41px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #bed2d5;
   cursor: pointer;
-  font-size: .82rem;
+  font-size: .8rem;
   font-weight: 710;
   list-style: none;
 }
 .moreToolsTrigger::-webkit-details-marker { display: none; }
-.moreToolsTrigger:hover { background: #e7e2d7; }
-.moreToolsChevron { font-size: 1.15rem; transition: transform 160ms ease; }
+.moreToolsTrigger:hover { background: rgb(224 247 241 / 10%); color: #fff; }
+.moreToolsChevron { font-size: 1.15rem; transition: transform 150ms ease; }
 .moreTools[open] .moreToolsChevron { transform: rotate(180deg); }
-.moreToolsItems { display: grid; gap: 3px; padding: 4px 0; }
+.moreToolsItems { display: grid; gap: 3px; padding: 3px 0; }
 .v3Shell :global(.app-sidebar) :global(.app-sidebar-footer) {
-  border-top: 1px solid #d9d4c9;
-  padding: 18px 10px 1px;
+  gap: 10px;
+  margin: auto 5px 0;
+  padding: 16px 7px 2px;
+  border-top: 1px solid rgb(211 230 230 / 13%);
 }
-.v3Shell :global(.app-sidebar) :global(.app-sidebar-footer-link) { color: #353c34; font-size: .8rem; }
-.v3Shell :global(.app-sidebar) :global(.app-product-caption) { color: #5d645b; font-size: .71rem; }
+.v3Shell :global(.app-sidebar) :global(.app-sidebar-footer-link) {
+  color: #e4f1f1;
+  font-size: .81rem;
+  font-weight: 660;
+}
+.v3Shell :global(.app-sidebar) :global(.app-product-caption) {
+  color: #a6c1c5;
+  font-size: .7rem;
+  letter-spacing: .015em;
+}
+.v3Shell :global(.app-main-column) { min-width: 0; background: var(--app-canvas); }
 .v3Shell :global(.app-topbar) {
-  height: 68px;
+  height: 66px;
   gap: 18px;
-  padding: 0 36px;
-  border-bottom: 1px solid #e7e2d9;
-  background: rgb(255 254 251 / 96%);
+  padding: 0 clamp(18px,2.55vw,40px);
+  border-bottom: 1px solid #dce6e9;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 1px 3px rgb(24 51 60 / 2%);
   backdrop-filter: blur(14px);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 70%);
 }
 .v3Shell :global(.app-topbar-context) {
   gap: 10px;
+  flex: 0 1 auto;
   min-width: 0;
-  flex: 0 0 auto;
-  color: #61685f;
-  font-size: .81rem;
+  color: #5e7077;
+  font-size: .8rem;
 }
-.v3Shell :global(.app-topbar-context) strong {
-  color: #2a322c;
-  font-weight: 760;
-}
-.v3Shell :global(.app-topbar-actions) { gap: 10px; margin-left: auto; }
+.v3Shell :global(.app-topbar-context) strong { color: #233d45; font-weight: 740; }
+.v3Shell :global(.app-topbar-actions) { gap: 6px; margin-left: auto; }
 .v3Shell :global(.app-topbar-actions) :global(.app-topbar-link),
 .v3Shell :global(.app-account-link) {
-  color: #50584f;
-  font-size: .76rem;
-  font-weight: 700;
+  color: #425961;
+  min-height: 36px;
+  font-size: .77rem;
+  font-weight: 690;
+}
+.v3Shell :global(.app-topbar-actions) :global(.app-topbar-link):hover,
+.v3Shell :global(.app-account-link):hover { color: #0d625c; background: #edf6f5; }
+.v3Shell :global(.app-account-link) {
+  border: 1px solid #d9e6e8;
+  border-radius: 8px;
+  padding: 3px 8px 3px 4px;
 }
 .v3Shell :global(.app-account-link) :global(.app-avatar) {
-  background: #e9dfd2;
-  color: #7a4938;
-  border-radius: 50%;
+  width: 30px; height: 30px; border-radius: 7px;
+  background: #dbf1ec; color: #08645c; font-weight: 770;
 }
 .v3Shell :global(.app-content) {
   width: 100%;
-  max-width: 1590px;
-  padding: 37px clamp(22px, 3vw, 52px) 76px;
+  max-width: 1660px;
+  padding: 34px clamp(20px,3vw,50px) 78px;
 }
-.v3Shell :global(.app-page-header) { margin-bottom: 26px; }
+.v3Shell :global(.app-page-header) { margin-bottom: 27px; }
 .v3Shell :global(.app-page-heading) h1 {
-  font-family: Georgia, Cambria, "Times New Roman", serif;
-  font-size: clamp(2rem, 2.55vw, 2.7rem);
-  font-weight: 600;
-  letter-spacing: -.045em;
-  line-height: 1.16;
+  font-family: Inter,"Segoe UI",sans-serif;
+  color: #1e3540;
+  font-size: clamp(1.85rem,2.4vw,2.45rem);
+  font-weight: 770;
+  letter-spacing: -.05em;
+  line-height: 1.18;
 }
-.v3Shell :global(.app-page-heading) p { font-size: .87rem; line-height: 1.6; }
-.v3Shell :global(.app-eyebrow) { color: #a64c35 !important; }
+.v3Shell :global(.app-page-heading) p { color: #5c6f76; font-size: .86rem; line-height: 1.65; }
+.v3Shell :global(.app-eyebrow) { color: #107b72 !important; }
 .v3Shell :global(.app-panel) {
-  box-shadow: 0 2px 8px rgb(46 43 34 / 3%);
+  border-color: #dce6e9;
+  border-radius: 11px;
+  box-shadow: var(--app-shadow-sm);
 }
 .v3Shell :global(.app-button-primary) {
-  background: #a84e36;
-  border-color: #a84e36;
+  min-height: 39px;
+  background: #0b746d;
+  border-color: #0b746d;
   color: #fff;
+  border-radius: 8px;
+  font-weight: 740;
 }
-.v3Shell :global(.app-button-primary):hover {
-  background: #843a28;
-  border-color: #843a28;
-}
+.v3Shell :global(.app-button-primary):hover { background: #075c56; border-color: #075c56; }
 .v3Shell :global(.app-button-secondary) {
-  background: #fffefa;
-  border-color: #d6d0c4;
-  color: #343b34;
+  min-height: 39px;
+  background: #fff;
+  border-color: #cbdadd;
+  color: #2b464f;
+  border-radius: 8px;
+  font-weight: 710;
 }
-.v3Shell :global(.app-button-secondary):hover { background: #f1ece3; border-color: #b9b1a4; }
+.v3Shell :global(.app-button-secondary):hover { background: #eef6f5; border-color: #9ac5bd; }
 .v3Shell :global(a):focus-visible,
 .v3Shell :global(button):focus-visible,
 .v3Shell :global(input):focus-visible,
+.v3Shell :global(select):focus-visible,
 .v3Shell :global(textarea):focus-visible,
 .v3Shell summary:focus-visible {
-  outline: 3px solid #ad633f;
+  outline: 3px solid #1e8a81;
   outline-offset: 3px;
 }
-.v3Shell :global(.app-status-warning) { background: #fcf0d9; color: #80530a; }
-.v3Shell :global(.app-status-danger) { background: #fbe7e2; color: #9d392c; }
-.v3Shell :global(.app-status-success) { background: #e4f1e7; color: #245b40; }
-.v3Shell :global(.app-status-info) { background: #e5f0f1; color: #2a5c6e; }
+.v3Shell :global(.app-status-warning) { background: #fff1d9; color: #865016; }
+.v3Shell :global(.app-status-danger) { background: #fff0ef; color: #a73744; }
+.v3Shell :global(.app-status-success) { background: #e2f5ed; color: #176c56; }
+.v3Shell :global(.app-status-info) { background: #e5f4f8; color: #286b7e; }
+.v3Shell :global(.app-status-neutral) { background: #edf2f4; color: #52666f; }
 @media (max-width: 1280px) {
   .v3Shell :global(.app-topbar) { gap: 10px; padding-inline: 20px; }
   .v3Shell :global(.app-topbar-context) > span:first-child { display: none; }
 }
 @media (max-width: 900px) {
-  .v3Shell :global(.app-topbar) { height: 60px; gap: 9px; padding-inline: 17px; }
+  .v3Shell :global(.app-topbar) { height: 60px; gap: 10px; padding-inline: 18px; }
+  .v3Shell :global(.app-mobile-nav) > summary {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; min-height: 44px; min-width: 44px; cursor: pointer;
+    color: #26444a;
+  }
   .v3Shell :global(.app-mobile-nav-panel) {
     inset: 60px 0 auto 0;
     max-height: calc(100dvh - 60px);
-    padding: 15px 16px 25px;
-    background: #faf8f3;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding: 16px 17px calc(24px + env(safe-area-inset-bottom));
+    background: #f8fbfb;
+    color: #203b43;
+    box-shadow: 0 24px 45px rgb(21 47 54 / 20%);
   }
-  .v3Shell :global(.app-content) { padding: 27px 22px 54px; }
-  .navigation { gap: 17px; }
-  .v3Shell :global(.app-mobile-links) .navLink { min-height: 46px; color: #3a413a; }
-  .v3Shell :global(.app-mobile-links) .navLink:hover { background: #ebe5db; }
+  .v3Shell :global(.app-mobile-workspace) { color: #253f46; }
+  .v3Shell :global(.app-content) { padding: 26px 22px 64px; }
+  .navigation { gap: 14px; }
+  .v3Shell :global(.app-mobile-links) .navLink { min-height: 46px; color: #304b51; }
+  .v3Shell :global(.app-mobile-links) .navLink :global(.app-nav-icon) { color: #5b777c; width: 18px; height: 18px; }
+  .v3Shell :global(.app-mobile-links) .navLink:hover { background: #e6f1f1; }
   .v3Shell :global(.app-mobile-links) .navLink[aria-current="page"] {
-    background: #fff; box-shadow: inset 3px 0 #b45940; color: #302f29;
+    background: #dff3ee; box-shadow: inset 3px 0 #0e8b78; color: #075c55;
   }
-  .v3Shell :global(.app-mobile-links) .moreToolsTrigger { color: #363d35; }
+  .v3Shell :global(.app-mobile-links) .navGroupLabel { color: #687e84 !important; }
+  .v3Shell :global(.app-mobile-links) .moreTools { border-color: #d8e4e7; }
+  .v3Shell :global(.app-mobile-links) .moreToolsTrigger { color: #314e53; }
 }
 @media (max-width: 680px) {
   .v3Shell :global(.app-topbar-actions) > :global(.app-topbar-link):first-child { display: none; }
   .v3Shell :global(.app-account-link) span:last-child { display: none; }
 }
 @media (max-width: 620px) {
-  .v3Shell :global(.app-content) { padding: 23px 15px 43px; }
-  .v3Shell :global(.app-page-heading) h1 { font-size: 2rem; }
+  .v3Shell :global(.app-content) { padding: 23px 15px 45px; }
+  .v3Shell :global(.app-page-heading) h1 { font-size: 1.9rem; }
   .v3Shell :global(.app-topbar-context) { font-size: .75rem; }
-  .v3Shell :global(.app-topbar-actions) { gap: 4px; }
+  .v3Shell :global(.app-topbar-actions) { gap: 3px; }
 }
 @media (max-width: 390px) {
   .v3Shell :global(.app-topbar) { padding-inline: 10px; }
   .v3Shell :global(.app-topbar-context) { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .navLink, .moreToolsChevron { transition: none; }
-}
-
-
-/* Keep the mobile drawer keyboard/touch accessible without trapping its parent shell. */
-@media (max-width: 900px) {
-  .v3Shell :global(.app-mobile-nav) > summary {
-    min-width: 44px;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    cursor: pointer;
-  }
-  .v3Shell :global(.app-mobile-nav-panel) {
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-    padding-bottom: calc(24px + env(safe-area-inset-bottom));
-    box-shadow: 0 18px 45px rgb(37 38 31 / 16%);
-  }
-  .v3Shell :global(.app-mobile-nav-panel) a:focus-visible,
-  .v3Shell :global(.app-mobile-nav) > summary:focus-visible {
-    outline: 3px solid #ad633f;
-    outline-offset: 2px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
+  .navLink,.moreToolsChevron { transition: none; }
   .v3Shell :global(.app-mobile-nav-panel) { scroll-behavior: auto; }
 }

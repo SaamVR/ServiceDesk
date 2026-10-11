@@ -162,7 +162,7 @@ export function StaffAppShell({
         <StaffNavigation workspace={workspace} />
         <div className="app-sidebar-footer">
           <Link className="app-sidebar-footer-link" href={buildStaffModuleHref(workspace, "settings")}>Workspace settings</Link>
-          <span className="app-product-caption">Cleaning operations</span>
+          <span className="app-product-caption">Workspace operations · Staff console</span>
         </div>
       </aside>
 
