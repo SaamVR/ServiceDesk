@@ -4119,6 +4119,38 @@ function renderModule(
   }
 }
 
+const operationalJourney: ReadonlyArray<{ module: "inbox" | "requests" | "quotes" | "schedule" | "jobs" | "invoices"; label: string }> = [
+  { module: "inbox", label: "Inbox" },
+  { module: "requests", label: "Requests" },
+  { module: "quotes", label: "Quotes" },
+  { module: "schedule", label: "Dispatch" },
+  { module: "jobs", label: "Jobs" },
+  { module: "invoices", label: "Invoices" },
+];
+
+function OperationalJourneyNav({
+  workspace,
+  module,
+}: {
+  workspace: string;
+  module: OperationalProductRouteProps["module"];
+}) {
+  return (
+    <nav className={styles.workflowRail} aria-label="Service workflow shortcuts">
+      <span className={styles.workflowRailLabel}>Workflow</span>
+      {operationalJourney.map((item) => (
+        <a
+          href={buildStaffModuleHref(workspace, item.module)}
+          aria-current={module === item.module ? "page" : undefined}
+          key={item.module}
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 export async function OperationalProductRoute({
   workspaceSlug,
   module,
@@ -4146,6 +4178,10 @@ export async function OperationalProductRoute({
         title={config.label}
         description={config.description}
       />
+
+      {operationalJourney.some((item) => item.module === module) ? (
+        <OperationalJourneyNav workspace={workspaceSlug} module={module} />
+      ) : null}
 
       <Notice notice={notice} error={error} />
 

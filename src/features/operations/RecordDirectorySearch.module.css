@@ -13,16 +13,16 @@
 }
 .searchField input::placeholder { color: #687067; opacity: 1; }
 .searchField input:focus-visible, .searchForm button:focus-visible, .searchForm a:focus-visible {
-  outline: 3px solid #ad633f; outline-offset: 2px;
+  outline: 3px solid #1b8c7f; outline-offset: 2px;
 }
 .searchForm button,.searchForm a {
   display: inline-flex; align-items: center; justify-content: center; height: 43px;
   padding: 0 15px; border-radius: 7px; text-decoration: none; cursor: pointer;
   font-size: .79rem; font-weight: 740;
 }
-.searchForm button { background: #a64e36; color: #fff; border: 1px solid #a64e36; }
-.searchForm button:hover { background: #823b29; }
-.searchForm a { background: #fffefb; color: #713c2d; border: 1px solid #cec5b8; }
+.searchForm button { background: #0b746d; color: #fff; border: 1px solid #0b746d; }
+.searchForm button:hover { background: #075c56; }
+.searchForm a { background: #ffffff; color: #0b625a; border: 1px solid #cec5b8; }
 .resultCount { margin: 0 0 0 auto; font-size: .74rem; color: #555e54; font-variant-numeric: tabular-nums; }
 @media (max-width: 620px) {
   .searchForm { padding: 11px; gap: 8px; }
