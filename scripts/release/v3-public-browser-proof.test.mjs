@@ -69,3 +69,16 @@ test("browser acceptance remains fully public, five-width, no secrets, and label
   assert.ok(!script.includes("SUPABASE_SERVICE_ROLE_KEY"));
   assert.ok(!script.includes("api/internal/inbox/reply"));
 });
+
+test("mobile header controls meet the 44 CSS pixel minimum and Chrome enforces it", () => {
+  const css = file("src/components/shell/MarketingNavV3.module.css");
+  const chrome = file("scripts/release/v3-public-browser-proof.mjs");
+  assert.ok(css.includes("min-height: 44px;"));
+  assert.ok(css.includes(".menuToggle { width: 44px; height: 44px; }"));
+  assert.ok(!css.includes("min-height: 41px;"));
+  assert.ok(!css.includes(".menuToggle { width: 41px; height: 41px; }"));
+  assert.ok(chrome.includes("state.touchTargets"));
+  assert.ok(chrome.includes("item.w < 44 || item.h < 44"));
+  assert.ok(chrome.includes("width <= 390 && page.heroLabel"));
+  assert.ok(chrome.includes("Public mobile navigation/action target below 44 CSS pixels"));
+});
