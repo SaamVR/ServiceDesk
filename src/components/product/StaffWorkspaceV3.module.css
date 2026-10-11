@@ -1,15 +1,15 @@
 /* V3 staff application chrome. Scoped to the authenticated shell only.
    Do not change public/customer/crew pages or the domain runtime. */
 .v3Shell {
-  --app-sidebar-width: 264px;
-  --app-canvas: #f6f7f5;
-  --app-surface-muted: #f2f5f3;
-  --app-text: #19272b;
-  --app-text-muted: #596970;
-  --app-text-subtle: #68767c;
-  --app-border: #dce4e0;
-  --app-accent: #126b50;
-  --app-accent-soft: #e5f3ed;
+  --app-sidebar-width: 254px;
+  --app-canvas: #f5f7fb;
+  --app-surface-muted: #eef2fb;
+  --app-text: #202a44;
+  --app-text-muted: #596780;
+  --app-text-subtle: #6d7890;
+  --app-border: #dfe4ef;
+  --app-accent: #4257af;
+  --app-accent-soft: #edf0ff;
   --app-radius-sm: 7px;
   --app-radius-md: 10px;
   --app-radius-lg: 13px;
@@ -20,8 +20,8 @@
   gap: 0;
   padding: 25px 17px 18px;
   border-right: 0;
-  background: #182a2b;
-  scrollbar-color: #435656 #182a2b;
+  background: #151f39;
+  scrollbar-color: #46547a #151f39;
 }
 
 .v3Shell :global(.app-sidebar) :global(.app-brand) {
@@ -29,7 +29,7 @@
   min-height: 65px;
   margin-bottom: 6px;
   padding: 0 7px 18px;
-  border-bottom: 1px solid #385050;
+  border-bottom: 1px solid #344362;
   color: #f6f9f7;
 }
 
@@ -37,22 +37,22 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: #b8ecd5;
+  background: #b9c7ff;
   box-shadow: none;
-  color: #16332c;
+  color: #1c2d63;
   font-size: 1rem;
   font-weight: 800;
 }
 
 .v3Shell :global(.app-sidebar) :global(.app-brand-copy) strong {
-  color: #f6faf7;
+  color: #f5f7ff;
   font-size: .99rem;
   font-weight: 720;
   letter-spacing: -.025em;
 }
 
 .v3Shell :global(.app-sidebar) :global(.app-brand-copy) span {
-  color: #aac0bc;
+  color: #a9b7d9;
   font-size: .77rem;
 }
 
@@ -73,7 +73,7 @@
 
 .navGroupLabel {
   margin: 0 13px 9px !important;
-  color: #b1c5c0 !important;
+  color: #95a7cf !important;
   font-size: .7rem !important;
   font-weight: 710 !important;
   letter-spacing: .055em !important;
@@ -92,28 +92,28 @@
 }
 
 .v3Shell :global(.app-sidebar) .navLink {
-  color: #c7d8d4;
+  color: #c8d3ef;
 }
 
 .v3Shell :global(.app-sidebar) .navLink :global(.app-nav-icon) {
   width: 18px;
   height: 18px;
-  color: #9eb6b0;
+  color: #93a4cd;
 }
 
 .v3Shell :global(.app-sidebar) .navLink:hover {
-  background: #2a4141;
+  background: #293858;
   color: #fff;
 }
 
 .v3Shell :global(.app-sidebar) .navLink[aria-current="page"] {
-  background: #36524a;
+  background: #354777;
   color: #fff;
   font-weight: 700;
 }
 
 .v3Shell :global(.app-sidebar) .navLink[aria-current="page"] :global(.app-nav-icon) {
-  color: #b8ecd5;
+  color: #c4d0ff;
 }
 
 .v3Shell :global(.app-sidebar) .navLink[aria-current="page"]::before {
@@ -121,11 +121,11 @@
   top: 10px;
   bottom: 10px;
   width: 3px;
-  background: #b8ecd5;
+  background: #b9c7ff;
 }
 
 .moreTools {
-  border-top: 1px solid #385050;
+  border-top: 1px solid #344362;
   padding-top: 14px;
 }
 
@@ -137,7 +137,7 @@
   margin: 0;
   padding: 0 13px;
   border-radius: 8px;
-  color: #c7d8d4;
+  color: #c8d3ef;
   cursor: pointer;
   font-size: .86rem;
   font-weight: 650;
@@ -145,8 +145,8 @@
 }
 
 .moreToolsTrigger::-webkit-details-marker { display: none; }
-.moreToolsTrigger:hover { background: #2a4141; color: #fff; }
-.moreToolsTrigger:focus-visible { outline: 2px solid #b8ecd5; outline-offset: 2px; }
+.moreToolsTrigger:hover { background: #293858; color: #fff; }
+.moreToolsTrigger:focus-visible { outline: 2px solid #b9c7ff; outline-offset: 2px; }
 
 .moreToolsChevron {
   display: inline-block;
@@ -165,25 +165,25 @@
 }
 
 .v3Shell :global(.app-sidebar) :global(.app-sidebar-footer) {
-  border-top: 1px solid #385050;
+  border-top: 1px solid #344362;
   padding-top: 17px;
   padding-left: 11px;
 }
 
 .v3Shell :global(.app-sidebar) :global(.app-sidebar-footer-link) {
-  color: #e2ede8;
+  color: #e4eaff;
   font-size: .84rem;
 }
 
 .v3Shell :global(.app-sidebar) :global(.app-product-caption) {
-  color: #afc0b9;
+  color: #a9b7d9;
   font-size: .76rem;
 }
 
 .v3Shell :global(.app-topbar) {
   height: 66px;
   padding: 0 34px;
-  border-bottom: 1px solid #e0e6e1;
+  border-bottom: 1px solid #e0e5f0;
   background: rgb(255 255 255 / 97%);
   box-shadow: none;
 }
@@ -256,4 +256,73 @@
 
 @media (prefers-reduced-motion: reduce) {
   .moreToolsChevron { transition: none; }
+}
+
+/* Signal Desk: clear navigation hierarchy without a heavy dashboard hero.
+   Accent is reserved for focus/selected actions, never status semantics. */
+.v3Shell {
+  --app-surface: #fff;
+  --app-focus: #839bff;
+  font-family: Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+.v3Shell :global(.app-sidebar) {
+  box-shadow: inset -1px 0 #263552;
+}
+.v3Shell :global(.app-sidebar) .navLink {
+  transition: background 160ms ease, color 160ms ease;
+}
+.v3Shell :global(.app-sidebar) .navLink[aria-current="page"] {
+  box-shadow: inset 3px 0 #a7b9ff;
+}
+.v3Shell :global(.app-main-column) {
+  min-width: 0;
+}
+.v3Shell :global(.app-topbar) {
+  gap: 16px;
+}
+.v3Shell :global(.app-topbar-context) {
+  min-width: 0;
+  flex: 0 0 auto;
+}
+.v3Shell :global(.app-topbar-actions) {
+  margin-left: auto;
+}
+.v3Shell :global(.app-content) {
+  width: 100%;
+  max-width: 1660px;
+}
+.v3Shell :global(.app-button-primary) {
+  background: #4257af;
+  border-color: #4257af;
+  color: #fff;
+}
+.v3Shell :global(.app-button-primary):hover {
+  background: #304495;
+}
+.v3Shell :global(a):focus-visible,
+.v3Shell :global(button):focus-visible {
+  outline: 3px solid #839bff;
+  outline-offset: 2px;
+}
+@media (max-width: 1280px) {
+  .v3Shell :global(.app-topbar) { gap: 10px; padding-inline: 20px; }
+  .v3Shell :global(.app-topbar-context) > span:first-child { display: none; }
+}
+@media (max-width: 900px) {
+  .v3Shell :global(.app-topbar) { gap: 8px; padding-inline: 16px; }
+  .v3Shell :global(.app-topbar-context) { font-size: .79rem; }
+  .v3Shell :global(.app-mobile-links) .navLink[aria-current="page"] {
+    color: #304495;
+    background: #e9edff;
+  }
+  .v3Shell :global(.app-mobile-links) .navLink:hover { background: #eef1fc; }
+  .v3Shell :global(.app-mobile-links) .moreToolsTrigger:focus-visible { outline-color: #657cda; }
+}
+@media (max-width: 390px) {
+  .v3Shell :global(.app-topbar) { padding-inline: 10px; }
+  .v3Shell :global(.app-topbar-actions) { gap: 4px; }
+  .v3Shell :global(.app-topbar-context) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v3Shell :global(.app-sidebar) .navLink { transition: none; }
 }
