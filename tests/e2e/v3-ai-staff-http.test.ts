@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import "./v3-next-http-route-bridge.test";
 import type { AssistantTurn } from "../../src/server/ai/types";
 import { handleStaffAiHttpPost } from "../../src/server/api-handlers/ai-staff-http";
 
