@@ -31,13 +31,13 @@ describe("Studio OS server-action submission reliability", () => {
     expect(component).toContain("useFormStatus()");
   });
 
-  it("wires all 32 operational command submits to pending protections", () => {
+  it("guards all existing and quality-case operational submissions", () => {
     const source = readFileSync(join(process.cwd(),
       "src/features/operations/OperationalProductRoute.tsx"), "utf8");
-    expect(source.match(/<StaffSubmitButton\b/g)).toHaveLength(32);
+    expect((source.match(/<StaffSubmitButton\b/g) ?? []).length).toBeGreaterThanOrEqual(36);
     expect(source).not.toContain('<button className="app-button-primary" type="submit"');
     for (const label of ["Recording payment…","Queueing reply…","Sending quote…",
-      "Assigning crew…","Submitting approval…","Updating checklist…"]) {
+      "Assigning crew…","Submitting approval…","Updating checklist…", "Assigning case…", "Starting review…", "Requesting review…", "Resolving case…"]) {
       expect(source).toContain('pendingLabel="' + label + '"');
     }
     expect(source).toContain('name="decision"');
