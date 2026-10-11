@@ -40,7 +40,8 @@ import {
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
 import { filterDirectoryRows, directoryRecordHref, normalizeDirectoryQuery } from "./record-directory";
 import { RecordDirectorySearch } from "./RecordDirectorySearch";
-import { filterJobsQueue, indexJobProgress, jobsActionFeedbackPrefix, jobsQueueHref, normalizeJobsQueue } from "./jobs-queue";
+import { filterJobsQueue, filterJobsSearch, indexJobProgress, jobsActionFeedbackPrefix, jobsQueueHref, normalizeJobsQueue, normalizeJobsSearch } from "./jobs-queue";
+import { JobQueueSearch } from "./JobQueueSearch";
 import { JobQueueFilters } from "./JobQueueFilters";
 import { countStaffBy, indexStaffById } from "./staff-snapshot-index";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
@@ -1591,13 +1592,16 @@ function JobsView({
   workspaceSlug,
   selectedJobId,
   selectedJobQueue,
+  searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedJobId?: string;
   selectedJobQueue?: string;
+  searchQuery?: string;
 }) {
   const jobQueue = normalizeJobsQueue(selectedJobQueue);
+  const jobSearch = normalizeJobsSearch(searchQuery);
   async function transitionVisit(formData: FormData) {
     "use server";
     const action = String(formData.get("action") ?? "") as
@@ -1611,7 +1615,7 @@ function JobsView({
     }
     const visitId = String(formData.get("visitId") ?? "");
     const result = await transitionOperationalVisit(workspaceSlug, visitId, action);
-    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId));
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId, jobSearch));
   }
 
   async function saveVisitNote(formData: FormData) {
@@ -1626,7 +1630,7 @@ function JobsView({
       kind,
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId));
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId, jobSearch));
   }
 
   async function saveChecklistItem(formData: FormData) {
@@ -1639,7 +1643,7 @@ function JobsView({
       String(formData.get("completed") ?? "") === "true",
       String(formData.get("note") ?? ""),
     );
-    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId));
+    actionRedirect(workspaceSlug, "jobs", result, jobsActionFeedbackPrefix(jobQueue, visitId, jobSearch));
   }
 
   const nextAction = (status: string) => {
@@ -1665,12 +1669,19 @@ function JobsView({
   const customerById = indexStaffById(data.customers);
   const crewById = indexStaffById(data.crews);
   const queue = normalizeJobsQueue(selectedJobQueue);
-  const visibleVisits = filterJobsQueue(orderedVisits, queue);
+  const statusVisits = filterJobsQueue(orderedVisits, queue);
+  const visibleVisits = filterJobsSearch(statusVisits, jobSearch, (visit) => {
+    const request = requestById.get(visit.requestId);
+    const customer = customerById.get(request?.customerId ?? "");
+    const crew = crewById.get(visit.crewId ?? "");
+    return [request?.serviceLabel, customer?.displayName, crew?.name, visit.status, visit.startAt];
+  });
   if (!visibleVisits.length) {
     return (
       <section className={styles.jobsWorkspace} aria-label="Field jobs workspace">
-        <JobQueueFilters queue={queue} visits={orderedVisits} />
-        <EmptyState title="No jobs in this queue" detail="Choose another status to see work in progress or completed jobs." />
+        <JobQueueFilters queue={queue} visits={orderedVisits} search={jobSearch} />
+      <JobQueueSearch queue={queue} search={jobSearch} visible={visibleVisits.length} total={statusVisits.length} />
+        <EmptyState title={jobSearch ? "No matching jobs" : "No jobs in this queue"} detail={jobSearch ? "Try a different customer, service or crew, or clear your search." : "Choose another status to see work in progress or completed jobs."} />
       </section>
     );
   }
@@ -1709,7 +1720,8 @@ function JobsView({
         <div><span>Review queue</span><strong>{pendingReview}</strong></div>
       </section>
 
-      <JobQueueFilters queue={queue} visits={orderedVisits} />
+      <JobQueueFilters queue={queue} visits={orderedVisits} search={jobSearch} />
+      <JobQueueSearch queue={queue} search={jobSearch} visible={visibleVisits.length} total={statusVisits.length} />
       <div className={styles.jobsSplit}>
         <aside className={styles.jobsQueue} aria-label="Job list">
           {visibleVisits.map((visit) => {
@@ -1721,7 +1733,7 @@ function JobsView({
             return (
               <a
                 className={`${styles.jobsQueueItem} ${selected ? styles.jobsQueueSelected : ""}`.trim()}
-                href={jobsQueueHref(queue, visit.id)}
+                href={jobsQueueHref(queue, visit.id, jobSearch)}
                 aria-current={selected ? "page" : undefined}
                 key={visit.id}
               >
@@ -4163,7 +4175,7 @@ function renderModule(
     case "schedule":
       return <ScheduleView data={data} workspaceSlug={workspaceSlug} selectedScheduleQueue={selectedScheduleQueue} selectedScheduleFrom={selectedScheduleFrom} selectedScheduleDay={selectedScheduleDay} />;
     case "jobs":
-      return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} selectedJobQueue={selectedJobQueue} />;
+      return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} selectedJobQueue={selectedJobQueue} searchQuery={searchQuery} />;
     case "invoices":
       return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} searchQuery={searchQuery} />;
     case "quality":
