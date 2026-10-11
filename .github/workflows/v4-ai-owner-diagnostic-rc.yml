@@ -1,0 +1,37 @@
+name: ServiceDesk V4 owner AI provider diagnostic RC
+on:
+  push:
+    branches: [feat/v4-owner-ai-connection-test-20261012]
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - src/server/ai/owner-provider-connection-test.ts
+      - src/server/api-handlers/ai-owner-probe-http.ts
+      - src/app/api/internal/ai/connection-test/**
+      - src/features/operations/AiOwnerModelProbe.tsx
+      - src/features/operations/AiOperationsStatus.tsx
+      - src/features/operations/OperationalProductRoute.tsx
+      - tests/e2e/v4-owner-ai-connection-test.test.ts
+      - .github/workflows/v4-ai-owner-diagnostic-rc.yml
+permissions:
+  contents: read
+concurrency:
+  group: v4-ai-owner-probe-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-head-rc:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Focused owner authorization and synthetic provider probe contracts
+        run: pnpm exec vitest run tests/e2e/v4-owner-ai-connection-test.test.ts tests/e2e/v4-ai-request-copilot.test.ts
+      - name: TypeScript, all tests, lint and production build
+        run: pnpm check:rc
