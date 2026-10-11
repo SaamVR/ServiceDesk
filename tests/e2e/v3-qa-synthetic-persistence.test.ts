@@ -14,7 +14,7 @@ const fakeIds = [
 ];
 const workspace = { id: workspaceId, slug: "qa-brightroom" };
 
-function database(options: { noBranch?: boolean; deny?: string } = {}) {
+function database(options: { noBranch?: boolean; deny?: string; denyAfterSeedRead?: string } = {}) {
   const data: Record<string, Row[]> = {
     workspace_branches: options.noBranch ? [] : [{ id: branchId, workspace_id: workspaceId, code: "MAIN" }],
     customers: [], properties: [], requests: [],
@@ -27,7 +27,9 @@ function database(options: { noBranch?: boolean; deny?: string } = {}) {
       const predicates: Array<(row: Row) => boolean> = [];
       let adding: Row | undefined;
       const result = (single = false) => {
-        if (options.deny === table) return { data: null, error: { code: "42501" } };
+        if (options.deny === table || (options.denyAfterSeedRead === table && writes.length === 3 && !adding)) {
+          return { data: null, error: { code: "42501" } };
+        }
         if (adding) {
           const row: Row = { id: fakeIds[writes.length], ...adding };
           data[table].push(row);
@@ -99,6 +101,13 @@ describe("QA-only authenticated RLS synthetic business seed", () => {
     const db = database({ deny: "customers" });
     expect(await seedQaWorkspaceData(db.client, workspace)).toEqual({ ok: false, stage: "customer" });
     expect(db.writes).toHaveLength(0);
+  });
+
+  it("does not claim success until all three records are readable under the same session", async () => {
+    const db = database({ denyAfterSeedRead: "requests" });
+    const result = await seedQaWorkspaceData(db.client, workspace);
+    expect(db.writes.map(write => write.table)).toEqual(["customers", "properties", "requests"]);
+    expect(result).toEqual({ ok: false, stage: "request" });
   });
 
   it("never seeds automatically and requires server-side QA, verified owner and exact workspace", () => {
