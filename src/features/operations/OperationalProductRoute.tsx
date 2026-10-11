@@ -1134,6 +1134,7 @@ function RequestsView({
             </section>
 
             <AiRequestBrief
+              key={selectedRequest.id}
               workspaceSlug={workspaceSlug}
               requestId={selectedRequest.id}
               configured={readConfiguredAiRuntimeConfig().ok}
