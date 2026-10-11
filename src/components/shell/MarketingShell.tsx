@@ -6,7 +6,7 @@ import brightStyles from "@/features/product/BrightHomeExperience.module.css";
 import { OperationalFlowHero } from "./OperationalFlowHero";
 import { ProductStoryHero, type ProductStoryHeroKind } from "./ProductStoryHero";
 import { MarketingNavLinks } from "./MarketingNavLinks";
-import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { ownerRegistrationAvailable, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 import { marketingHeroEntry, marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 
 interface MarketingShellProps {
@@ -34,7 +34,7 @@ export function MarketingShell({
   heroStory,
   homeEdition = false,
 }: MarketingShellProps) {
-  const registrationEnabled = ownerRegistrationAvailable();
+  const registrationEnabled = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
   const registration = marketingRegistrationEntry(registrationEnabled);
   const heroAction = marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
   return (
