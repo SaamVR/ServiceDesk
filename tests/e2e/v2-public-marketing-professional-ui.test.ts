@@ -7,8 +7,13 @@ const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8")
 describe("V2 professional public product presentation", () => {
   it("positions the homepage as the current operational product rather than V1 evidence", () => {
     const home = source("src/app/page.tsx");
-    expect(home).toContain("Run cleaning operations from enquiry to paid job.");
-    expect(home).toContain("one operational workspace for residential cleaning teams");
+    expect(home).toContain("A cleaner way to run your cleaning business.");
+    expect(home).toContain('homeEdition');
+    expect(home).toContain('<BrightHomeExperience canRegister={canRegister} />');
+    const landing = source("src/features/product/BrightHomeExperience.tsx");
+    expect(landing).toContain("A better clean starts");
+    expect(landing).toContain("Clean spaces.");
+    expect(landing).toContain("<BrightHomeInteractions />");
     expect(home).not.toContain("ServiceDesk AI V1");
   });
 
