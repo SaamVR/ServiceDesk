@@ -1,4 +1,6 @@
 import { test, after } from "node:test";
+// The same bounded release CI runs the new V3 provenance and auth-negative checks.
+import "./v3-staging-source-preflight.test.mjs";
 import assert from "node:assert/strict";
 import {
   DEFAULT_PREVIEW,
