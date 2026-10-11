@@ -24,15 +24,18 @@ function fixture(options: {
   rows?: Array<Record<string, unknown>>;
   conversations?: Array<Record<string, unknown>>;
   requests?: Array<Record<string, unknown>>;
+  outbox?: Array<Record<string, unknown>>;
   branch?: string; role?: "OWNER" | "DISPATCHER" | "CREW";
   authorized?: boolean; failTable?: string;
 } = {}) {
   const seen: string[] = [];
   const scoped: Array<[string, unknown]> = [];
+  const inclusions: Array<{ table: string; column: string; ids: unknown[] }> = [];
   const source: Record<string, Array<Record<string, unknown>>> = {
     messages: options.rows ?? outbound,
     conversations: options.conversations ?? conversations,
     requests: options.requests ?? requests,
+    outbox_events: options.outbox ?? [],
   };
   const service = {
     from(table: string) {
@@ -43,7 +46,7 @@ function fixture(options: {
           scoped.push([column, value]);
           return this;
         },
-        in() { return this; },
+        in(column: string, ids: unknown[]) { inclusions.push({ table, column, ids }); return this; },
         order() { return this; },
         async limit(limit: number) {
           seen.push(table);
@@ -68,9 +71,77 @@ function fixture(options: {
       : { ok: true as const, value: resolved },
     now: () => new Date("2026-10-11T06:00:00Z"),
   };
-  return { deps, seen, scoped };
+  return { deps, seen, scoped, inclusions };
 }
 describe("real outbound delivery triage", () => {
+  it("shows authoritative provider acceptance from a SENT outbox without misreporting delivery", async () => {
+    const h = fixture({ rows: [{ ...outbound[0], outbox_event_id: "outbox1" }],
+      outbox: [{ id: "outbox1", workspace_id: "ws1", topic: "conversation.reply",
+        status: "SENT", provider_reference: "provider-ref-private" }],
+    });
+    const result = await readOperationalDeliveryTriage("service-desk", h.deps);
+    expect(result).toMatchObject({ ok: true, value: {
+      counts: { ok: 0, pending: 0, review: 1 },
+      items: [{ messageId: "msg1", deliveryState: "PROVIDER_ACCEPTED",
+        evidenceSource: "OUTBOX_PROVIDER_ACCEPTANCE", health: "NEEDS_REVIEW",
+        reason: "STALE_PENDING" }],
+    } });
+    expect(h.seen).toEqual(["messages", "conversations", "outbox_events"]);
+    expect(h.inclusions).toContainEqual({
+      table: "outbox_events", column: "id", ids: ["outbox1"],
+    });
+    expect(JSON.stringify(result)).not.toContain("provider-ref-private");
+  });
+
+  it("derives terminal outbox failure without falsely changing the persisted message", async () => {
+    for (const [state, expected] of [["FAILED", "FAILED"], ["SUPPRESSED", "SUPPRESSED"]] as const) {
+      const h = fixture({ rows: [{ ...outbound[0], outbox_event_id: "outbox1" }],
+        outbox: [{ id: "outbox1", workspace_id: "ws1", topic: "conversation.reply",
+          status: state, provider_reference: null }],
+      });
+      const r = await readOperationalDeliveryTriage("service-desk", h.deps);
+      expect(r).toMatchObject({ ok: true, value: {
+        items: [{ deliveryState: expected, evidenceSource: "OUTBOX_TERMINAL",
+          health: "NEEDS_REVIEW" }],
+      } });
+    }
+  });
+
+  it("loads outbox receipts only for the authenticated operator's branch", async () => {
+    const h = fixture({ role: "DISPATCHER", branch: "north",
+      rows: [
+        { ...outbound[0], outbox_event_id: "north-outbox" },
+        { ...outbound[1], outbox_event_id: "south-outbox" },
+      ],
+      outbox: [{ id: "north-outbox", workspace_id: "ws1",
+        topic: "conversation.reply", status: "SENT", provider_reference: "north-ref" }],
+    });
+    const r = await readOperationalDeliveryTriage("service-desk", h.deps);
+    expect(r).toMatchObject({ ok: true, value: {
+      scannedOutboundMessages: 1, truncated: true, items: [
+        { messageId: "msg1", evidenceSource: "OUTBOX_PROVIDER_ACCEPTANCE" },
+      ],
+    } });
+    expect(h.inclusions).toContainEqual({
+      table: "outbox_events", column: "id", ids: ["north-outbox"],
+    });
+    expect(JSON.stringify(r)).not.toContain("south-outbox");
+  });
+
+  it("fails closed on foreign or ambiguous outbox source rows", async () => {
+    for (const bad of [
+      [{ id: "outbox1", workspace_id: "foreign",
+        topic: "conversation.reply", status: "SENT", provider_reference: "ref" }],
+      [{ id: "outbox1", workspace_id: "ws1",
+        topic: "conversation.reply", status: "SENT", provider_reference: "ref" },
+       { id: "outbox1", workspace_id: "ws1",
+        topic: "conversation.reply", status: "SENT", provider_reference: "ref" }],
+    ]) {
+      const h = fixture({ rows: [{ ...outbound[0], outbox_event_id: "outbox1" }], outbox: bad });
+      expect((await readOperationalDeliveryTriage("service-desk", h.deps)).ok).toBe(false);
+    }
+  });
+
   it("reports age, review, pending and completed states without customer details", async () => {
     const h = fixture();
     const result = await readOperationalDeliveryTriage("service-desk", h.deps);
