@@ -1,0 +1,65 @@
+name: ServiceDesk V4 QA authenticated RLS full release gate
+# Synthetic-only combined gate; no provider secrets or customer data.
+on:
+  push:
+    branches: [feat/servicedesk-v4-qa-auth-operations-20261011]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-qa-operations-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  combined-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Full release test, TS, lint and build
+        run: pnpm check:rc
+      - name: Install real Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+      - name: Boot exact commit on loopback
+        shell: bash
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/servicedesk-v4-auth-preview.log" 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Combined V4+Auth app did not start" >&2
+          exit 1
+      - name: Real Chrome marketing responsive proof
+        env:
+          V3_PUBLIC_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V3_PUBLIC_OUTPUT: ${{ runner.temp }}/servicedesk-v4-public
+          V3_PUBLIC_CHECKOUT_SHA: ${{ github.sha }}
+        run: node scripts/release/v3-public-browser-proof.mjs
+      - name: Real Chrome synthetic workflow
+        env:
+          V3_SANDBOX_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V3_SANDBOX_OUTPUT: ${{ runner.temp }}/servicedesk-v4-sandbox
+        run: node scripts/release/v3-sandbox-browser.mjs
+      - name: Publish public synthetic screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-auth-operations-public-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/servicedesk-v4-public/
+            ${{ runner.temp }}/servicedesk-v4-sandbox/
+          retention-days: 7
+          if-no-files-found: error
