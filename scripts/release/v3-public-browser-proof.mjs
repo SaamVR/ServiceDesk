@@ -12,7 +12,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 const pages = [
   { slug: "home", path: "/", title: "Run cleaning operations from enquiry to paid job." },
   { slug: "features", path: "/features", title: "Everything a cleaning operations team needs to move work forward." },
-  { slug: "pricing", path: "/pricing", title: "Pricing stays rule-based, versioned and auditable." },
+  { slug: "pricing", path: "/pricing", title: "Service quote pricing stays transparent and controlled." },
   { slug: "integrations", path: "/integrations", title: "Connect the systems your operation already uses." },
   { slug: "contact", path: "/contact", title: "See ServiceDesk against your real cleaning workflow." },
   { slug: "sign-in", path: "/auth/sign-in", title: "Ready for what's next?" },
