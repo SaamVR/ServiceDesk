@@ -2,7 +2,9 @@ name: ServiceDesk V4 production-like live AI origin regression proof
 on:
   push:
     branches: [qa/servicedesk-v4-ai-real-origin-20261012]
-    paths: [.github/workflows/v4-ai-live-origin-smoke-20261012.yml]
+    paths:
+      - .github/workflows/v4-ai-live-origin-smoke-20261012.yml
+      - scripts/release/v4-ai-live-origin-smoke.mjs
 permissions:
   contents: read
 concurrency:
