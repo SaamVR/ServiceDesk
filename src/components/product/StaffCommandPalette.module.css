@@ -1,0 +1,63 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 320px);
+  min-height: 38px;
+  padding: 0 10px;
+  background: #f8f9fc;
+  border: 1px solid #d8deea;
+  border-radius: 9px;
+  color: #4c5a77;
+  font: inherit;
+  font-size: .78rem;
+  cursor: pointer;
+  text-align: left;
+}
+.trigger:hover { background: #eff2fc; border-color: #abb9e7; }
+.trigger:focus-visible, .close:focus-visible, .result:focus-visible {
+  outline: 3px solid #90a6ff;
+  outline-offset: 2px;
+}
+.searchIcon { font-size: 1.5rem; line-height: 1; color: #3d55a5; }
+.triggerLabel { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
+.shortcut { color: #596884; border: 1px solid #d6ddec; border-radius: 4px; padding: 3px 5px; white-space: nowrap; font: 600 .64rem ui-sans-serif, system-ui, sans-serif; }
+.dialog {
+  width: min(94vw, 620px);
+  max-height: min(85dvh, 680px);
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #d4dbee;
+  border-radius: 16px;
+  background: #fff;
+  color: #17233d;
+  box-shadow: 0 28px 75px rgb(13 24 55 / 24%);
+}
+.dialog::backdrop { background: rgb(8 15 35 / 62%); backdrop-filter: blur(3px); }
+.dialogHeader { display: flex; align-items: start; justify-content: space-between; gap: 14px; padding: 21px 22px 12px; }
+.dialogHeader h2 { font-size: clamp(1.05rem, 2vw, 1.3rem); letter-spacing: -.035em; margin: 2px 0 0; color: #17233d; }
+.eyebrow { margin: 0; color: #647194; text-transform: uppercase; letter-spacing: .08em; font: 750 .62rem ui-sans-serif, system-ui, sans-serif; }
+.close { background: #f0f3fa; color: #4d5870; border: 0; border-radius: 8px; min-width: 40px; min-height: 40px; cursor: pointer; font-size: 1.3rem; }
+.searchField { display: block; margin: 0 22px 14px; }
+.searchField input { display: block; width: 100%; min-height: 48px; padding: 0 15px; border: 1px solid #b9c6ec; border-radius: 10px; background: #fbfcff; color: #1b2945; font: 500 .95rem ui-sans-serif, system-ui, sans-serif; }
+.searchField input:focus-visible { outline: 3px solid #a9b9ff; outline-offset: 1px; }
+.results { display: grid; overflow-y: auto; overscroll-behavior: contain; max-height: min(48dvh, 420px); padding: 4px 12px; }
+.result { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 16px; padding: 10px 13px; border-radius: 9px; color: #17233d; text-decoration: none; }
+.result:hover, .result[aria-current="page"] { background: #eef2ff; color: #172d71; }
+.resultName { font-weight: 740; font-size: .88rem; }
+.resultDescription { grid-column: 1; color: #64718c; font-size: .72rem; line-height: 1.4; }
+.resultArrow { grid-row: 1 / span 2; grid-column: 2; color: #5b71b8; }
+.empty { margin: 4px; padding: 30px 12px; font-size: .86rem; color: #66738c; text-align: center; }
+.dialogFooter { border-top: 1px solid #e8ecf4; margin: 0; padding: 11px 22px 14px; color: #69758e; font-size: .69rem; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 680px) {
+  .trigger { width: 40px; min-width: 40px; padding: 0; justify-content: center; }
+  .triggerLabel, .shortcut { display: none; }
+  .dialog { width: calc(100vw - 22px); max-height: 90dvh; border-radius: 12px; }
+  .dialogHeader { padding-inline: 14px; }
+  .searchField { margin-inline: 14px; }
+  .dialogFooter { padding-inline: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog::backdrop { backdrop-filter: none; }
+}
