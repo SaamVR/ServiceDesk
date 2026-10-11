@@ -40,6 +40,8 @@ import {
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
 import { filterDirectoryRows, directoryRecordHref, normalizeDirectoryQuery } from "./record-directory";
 import { RecordDirectorySearch } from "./RecordDirectorySearch";
+import { filterJobsQueue, indexJobProgress, jobsQueueHref, normalizeJobsQueue } from "./jobs-queue";
+import { JobQueueFilters } from "./JobQueueFilters";
 import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
@@ -74,6 +76,7 @@ interface OperationalProductRouteProps {
   selectedQuoteId?: string;
   selectedQualityCaseId?: string;
   selectedJobId?: string;
+  selectedJobQueue?: string;
   selectedInvoiceId?: string;
   notice?: string;
   error?: string;
@@ -1518,10 +1521,12 @@ function JobsView({
   data,
   workspaceSlug,
   selectedJobId,
+  selectedJobQueue,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedJobId?: string;
+  selectedJobQueue?: string;
 }) {
   async function transitionVisit(formData: FormData) {
     "use server";
@@ -1586,7 +1591,17 @@ function JobsView({
     return leftClosed - rightClosed || Date.parse(left.startAt) - Date.parse(right.startAt);
   });
   const activeVisits = orderedVisits.filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status));
-  const selectedVisit = orderedVisits.find((visit) => visit.id === selectedJobId) ?? activeVisits[0] ?? orderedVisits[0];
+  const queue = normalizeJobsQueue(selectedJobQueue);
+  const visibleVisits = filterJobsQueue(orderedVisits, queue);
+  if (!visibleVisits.length) {
+    return (
+      <section className={styles.jobsWorkspace} aria-label="Field jobs workspace">
+        <JobQueueFilters queue={queue} visits={orderedVisits} />
+        <EmptyState title="No jobs in this queue" detail="Choose another status to see work in progress or completed jobs." />
+      </section>
+    );
+  }
+  const selectedVisit = visibleVisits.find((visit) => visit.id === selectedJobId) ?? visibleVisits[0];
   const selectedRequest = data.requests.find((request) => request.id === selectedVisit.requestId);
   const selectedCustomer = data.customers.find((customer) => customer.id === selectedRequest?.customerId);
   const selectedProperty = data.properties.find((property) => property.id === selectedRequest?.propertyId);
@@ -1601,6 +1616,7 @@ function JobsView({
   const unassigned = activeVisits.filter((visit) => !visit.crewId).length;
   const inProgress = activeVisits.filter((visit) => ["EN_ROUTE", "IN_PROGRESS"].includes(visit.status)).length;
   const pendingReview = activeVisits.filter((visit) => visit.status === "PENDING_REVIEW").length;
+  const progressByVisit = indexJobProgress(data.visitEvidence, data.visitChecklistItems);
 
   return (
     <section className={styles.jobsWorkspace} aria-label="Field jobs workspace">
@@ -1620,19 +1636,19 @@ function JobsView({
         <div><span>Review queue</span><strong>{pendingReview}</strong></div>
       </section>
 
+      <JobQueueFilters queue={queue} visits={orderedVisits} />
       <div className={styles.jobsSplit}>
         <aside className={styles.jobsQueue} aria-label="Job list">
-          {orderedVisits.map((visit) => {
+          {visibleVisits.map((visit) => {
             const request = data.requests.find((item) => item.id === visit.requestId);
             const customer = data.customers.find((item) => item.id === request?.customerId);
             const crew = visit.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
-            const evidence = data.visitEvidence.filter((item) => item.visitId === visit.id);
-            const checklist = data.visitChecklistItems.filter((item) => item.visitId === visit.id);
+            const progress = progressByVisit.get(visit.id);
             const selected = visit.id === selectedVisit.id;
             return (
               <a
                 className={`${styles.jobsQueueItem} ${selected ? styles.jobsQueueSelected : ""}`.trim()}
-                href={"?job=" + encodeURIComponent(visit.id)}
+                href={jobsQueueHref(queue, visit.id)}
                 aria-current={selected ? "page" : undefined}
                 key={visit.id}
               >
@@ -1645,7 +1661,7 @@ function JobsView({
                   <span>{formatWhen(visit.startAt, data.workspace.timezone)}</span>
                   <span>{crew?.name ?? "Unassigned"}</span>
                 </span>
-                <span className={styles.jobsQueueProgress}>{evidence.length} evidence · {checklist.filter((item) => item.completed).length}/{checklist.length} checklist</span>
+                <span className={styles.jobsQueueProgress}>{progress?.evidence ?? 0} evidence · {progress?.completed ?? 0}/{progress?.checklist ?? 0} checklist</span>
               </a>
             );
           })}
@@ -4052,6 +4068,7 @@ function renderModule(
   selectedQueue?: string,
   searchQuery?: string,
   selectedScheduleQueue?: string,
+  selectedJobQueue?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -4073,7 +4090,7 @@ function renderModule(
     case "schedule":
       return <ScheduleView data={data} workspaceSlug={workspaceSlug} selectedScheduleQueue={selectedScheduleQueue} />;
     case "jobs":
-      return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} />;
+      return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} selectedJobQueue={selectedJobQueue} />;
     case "invoices":
       return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} searchQuery={searchQuery} />;
     case "quality":
@@ -4101,6 +4118,7 @@ export async function OperationalProductRoute({
   selectedQuoteId,
   selectedQualityCaseId,
   selectedJobId,
+  selectedJobQueue,
   selectedInvoiceId,
   notice,
   error,
@@ -4121,7 +4139,7 @@ export async function OperationalProductRoute({
       {result.ok ? (
         <>
           {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue)}
+          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue)}
         </>
       ) : (
         <Panel>

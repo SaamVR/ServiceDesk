@@ -1,0 +1,21 @@
+.nav {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+  margin: 6px 0 19px; padding: 8px;
+  background: #f1efe9; border: 1px solid #e2ded3; border-radius: 9px;
+}
+.nav a {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px;
+  padding: 7px 12px; border-radius: 6px; text-decoration: none;
+  color: #525a52; font-size: .79rem; font-weight: 700;
+}
+.nav a:hover { background: #e8e1d7; }
+.nav a[aria-current="page"] {
+  background: #fffefa; color: #343d32;
+  box-shadow: 0 1px 5px rgb(42 43 35 / 9%), inset 0 -2px #ae583b;
+}
+.nav strong { font-size: .72rem; font-weight: 820; font-variant-numeric: tabular-nums; }
+.nav a:focus-visible { outline: 3px solid #ad633f; outline-offset: 3px; }
+@media (max-width: 620px) {
+  .nav { gap: 5px; padding: 6px; }
+  .nav a { min-height: 44px; padding: 8px 10px; flex: 1 1 auto; justify-content: center; }
+}
