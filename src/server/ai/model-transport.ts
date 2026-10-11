@@ -78,11 +78,19 @@ function buildModelBody(config: AiModelTransportConfig, input: AiModelCallInput)
 }
 
 function parseModelOutput(body: string): Result<AiModelOutput> {
+  // A hostile/incorrect provider response must never be mistaken for a
+  // transient network failure or stored as a customer-facing reply.
+  if (body.length > 262_144) {
+    return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider returned an oversized response." };
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(body);
   } catch {
     return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider returned malformed JSON." };
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider must return a structured JSON object." };
   }
 
   const output = (parsed as { output?: unknown }).output;
@@ -91,8 +99,9 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
   }
 
   const requestedToolCalls = (parsed as { requestedToolCalls?: unknown }).requestedToolCalls;
-  if (requestedToolCalls !== undefined && !Array.isArray(requestedToolCalls)) {
-    return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider response has invalid tool call shape." };
+  if (requestedToolCalls !== undefined &&
+      (!Array.isArray(requestedToolCalls) || requestedToolCalls.length > 8)) {
+    return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider response has an invalid or oversized tool call list." };
   }
 
   const citations = (parsed as { citations?: unknown }).citations;
@@ -100,11 +109,16 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
     return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider response has invalid citation shape." };
   }
 
+  const replyDraft = (parsed as { replyDraft?: unknown }).replyDraft;
+  if (replyDraft !== undefined && (typeof replyDraft !== "string" || replyDraft.length > 6_000)) {
+    return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider returned an invalid or oversized reply draft." };
+  }
+
   return {
     ok: true,
     value: {
       output: output as Partial<CleaningRequestExtraction>,
-      replyDraft: typeof (parsed as { replyDraft?: unknown }).replyDraft === "string" ? (parsed as { replyDraft: string }).replyDraft : undefined,
+      replyDraft: replyDraft as string | undefined,
       requestedToolCalls: requestedToolCalls as AiModelOutput["requestedToolCalls"],
       citations: citations as AiModelOutput["citations"],
     },
@@ -138,7 +152,10 @@ export async function callAiModel(
   }
 
   const controller = new AbortController();
-  const timeoutMs = Math.max(250, Math.min(config.timeoutMs ?? 10_000, 30_000));
+  const requestedTimeout = config.timeoutMs ?? 10_000;
+  const timeoutMs = Number.isFinite(requestedTimeout)
+    ? Math.max(250, Math.min(requestedTimeout, 30_000))
+    : 10_000;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
