@@ -3,7 +3,7 @@ name: ServiceDesk V3 RC contract reconciliation
 on:
   push:
     branches:
-      - fix/v3-rc-auth-rls-migration-contracts-20261012
+      - feat/servicedesk-v3-combined-acceptance-20261011
   pull_request:
     branches:
       - feat/servicedesk-v3-combined-acceptance-20261011
