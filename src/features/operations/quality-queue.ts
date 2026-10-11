@@ -34,6 +34,25 @@ export function isOverdueQualityCase(item: QualityCaseRecord, snapshotAt?: strin
   const asOf = Date.parse(snapshotAt);
   return Number.isFinite(due) && Number.isFinite(asOf) && due < asOf;
 }
+/** Shared, read-only attention order used by Today and the Quality queue.
+ * We do not synthesize deadlines: unknown/invalid due times sort last.
+ */
+export function prioritizeQualityFollowUp<T extends QualityCaseRecord>(
+  records: readonly T[],
+  snapshotAt?: string,
+): T[] {
+  const stateWeight: Record<string, number> = { IN_REVIEW: 0, OPEN: 1, RESOLVED: 2 };
+  const deadline = (caseItem: T) => {
+    const parsed = caseItem.dueAt ? Date.parse(caseItem.dueAt) : NaN;
+    return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+  };
+  return [...records].sort((left, right) =>
+    Number(isOverdueQualityCase(right, snapshotAt)) - Number(isOverdueQualityCase(left, snapshotAt))
+    || (stateWeight[left.state] ?? 9) - (stateWeight[right.state] ?? 9)
+    || deadline(left) - deadline(right)
+    || left.id.localeCompare(right.id));
+}
+
 export function qualityQueueCount(records: readonly QualityCaseRecord[], snapshotAt?: string): Record<QualityQueue, number> {
   const count = { all: records.length, open: 0, review: 0, overdue: 0, unassigned: 0, resolved: 0 };
   for (const item of records) {
