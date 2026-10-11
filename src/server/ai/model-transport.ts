@@ -272,6 +272,10 @@ export async function callAiModel(
     if (response.status < 200 || response.status >= 300) return normalizedFailure(response.status);
     return parseModelOutput(response.body);
   } catch (error) {
+    if (error instanceof Error && error.name === "AiModelResponseTooLargeError") {
+      return { ok: false, code: "AI_MODEL_INVALID_RESPONSE",
+        message: "AI model provider returned an oversized response." };
+    }
     if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
       return { ok: false, code: "AI_MODEL_TIMEOUT", message: "AI model provider request timed out." };
     }
