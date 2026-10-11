@@ -494,3 +494,127 @@
 @media (prefers-reduced-motion: reduce) {
   .kpiCard { transition: none; }
 }
+
+
+/* Workroom workday: real task briefing before passive totals.
+   These styles deliberately replace Signal Desk's tile-and-card hierarchy. */
+.dashboard {
+  gap: 20px;
+  max-width: 1500px;
+  color: var(--app-text);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+.pageHeader { min-height: 92px; align-items: center; margin-bottom: 1px; }
+.pageHeader h1 {
+  font-family: Georgia, Cambria, "Times New Roman", serif;
+  font-weight: 500;
+  font-size: clamp(2.6rem, 3.75vw, 4rem);
+  line-height: 1.04;
+  letter-spacing: -.065em;
+}
+.pageHeader > div > p:last-child { margin-top: 11px; font-size: .83rem; }
+.eyebrow, .cardEyebrow { color: #966247 !important; font-size: .65rem !important; letter-spacing: .13em; }
+.headerActions :global(.app-button-primary),
+.headerActions :global(.app-button-secondary) { min-height: 42px; }
+.workdayBrief {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 19px 24px;
+  border: 1px solid #e5d8cb;
+  border-radius: 8px;
+  background: #f4eae0;
+}
+.briefingLabel { display: flex; align-items: center; gap: 9px; color: #7b4834; font-size: .7rem; font-weight: 830; text-transform: uppercase; letter-spacing: .07em; white-space: nowrap; }
+.liveMarker { width: 8px; height: 8px; border-radius: 50%; background: #b45d42; box-shadow: 0 0 0 4px #f8d9c6; }
+.workdayBrief p { margin: 0; color: #403d35; font-size: .86rem; font-weight: 590; line-height: 1.55; }
+.workdayBrief a { color: #8c3e2c; font-size: .81rem; font-weight: 790; text-decoration: none; white-space: nowrap; }
+.workdayBrief a:hover { color: #56291e; text-decoration: underline; }
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid #e2ddd3;
+  border-radius: 8px;
+  background: #fffefa;
+  box-shadow: none;
+}
+.kpiCard {
+  min-height: 99px;
+  gap: 2px;
+  padding: 17px 19px;
+  border: 0;
+  border-right: 1px solid #eae6dd;
+  border-radius: 0;
+  background: transparent;
+}
+.kpiCard:last-child { border-right: 0; }
+.kpiCard:hover, .kpiCard:focus-visible { background: #faf2eb; border-color: #eae6dd; }
+.kpiCard p { font-size: .76rem; font-weight: 730; color: #5e635a; }
+.kpiCard strong { font-size: clamp(1.2rem, 2vw, 1.73rem); font-weight: 750; letter-spacing: -.045em; }
+.kpiCard span { font-size: .7rem; color: #737970; }
+.kpiCard .kpiGo { color: #ab5139; }
+.kpi_warning strong { color: #86560d; }
+.kpi_danger strong { color: #a53a30; }
+.primaryGrid { grid-template-columns: minmax(0, 1.45fr) minmax(320px, .92fr); gap: 18px; }
+.secondaryGrid { grid-template-columns: minmax(0, 1.32fr) minmax(300px, .85fr); gap: 18px; }
+.card { border: 1px solid #e4e0d6; border-radius: 9px; background: #fffefb; box-shadow: 0 3px 12px rgb(42 37 24 / 3%); }
+.cardHeader { min-height: 82px; padding: 18px 21px; }
+.cardHeader h2 {
+  margin-top: 5px;
+  font-family: Georgia, Cambria, serif;
+  font-size: 1.36rem;
+  font-weight: 600;
+  letter-spacing: -.04em;
+}
+.cardHeader p:last-child:not(.cardEyebrow) { font-size: .74rem; line-height: 1.5; }
+.textLink { font-size: .75rem; color: #8c4b35; }
+.textLink:hover { color: #703720; background: #f7eee6; }
+.attentionCard { border-top: 3px solid #b35c43; }
+.attentionRow { grid-template-columns: 9px minmax(0, 1fr) auto; min-height: 73px; padding: 15px 19px; }
+.attentionCopy strong, .scheduleCopy strong, .qualityRow strong { font-size: .85rem; font-weight: 680; }
+.attentionCopy small, .scheduleCopy small, .qualityRow small { font-size: .72rem; }
+.scheduleRow { min-height: 72px; grid-template-columns: 72px 10px minmax(0, 1fr) auto; padding: 14px 19px; }
+.scheduleTime { font-size: .76rem; }
+.scheduleMarker { background: #b35c43; box-shadow: 0 0 0 4px #f6e7de; }
+.pipelineItem { min-height: 111px; padding: 20px; }
+.pipelineItem strong { font-size: 1.65rem; }
+.quickActions { border: 0; border-top: 1px solid #ded9ce; border-radius: 0; background: transparent; box-shadow: none; }
+.quickActions a { min-height: 37px; color: #4c554d; }
+.quickActions a:hover { background: #eee8dd; }
+.emptyBlock > span { background: #e7f1e9; color: #2c664a; }
+@media (max-width: 1230px) {
+  .primaryGrid, .secondaryGrid { grid-template-columns: 1fr; }
+  .workdayBrief { grid-template-columns: 125px minmax(0, 1fr); }
+  .workdayBrief a { grid-column: 2; }
+  .kpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpiCard:nth-child(2) { border-right: 0; }
+  .kpiCard:nth-child(-n + 2) { border-bottom: 1px solid #eae6dd; }
+}
+@media (max-width: 700px) {
+  .dashboard { gap: 14px; }
+  .pageHeader { align-items: flex-start; gap: 19px; }
+  .pageHeader h1 { font-size: 3rem; }
+  .workdayBrief { grid-template-columns: 1fr; gap: 11px; padding: 17px; }
+  .workdayBrief a { grid-column: 1; }
+  .cardHeader { padding: 15px 16px; }
+  .scheduleRow { grid-template-columns: 61px 8px minmax(0, 1fr); padding: 12px 13px; }
+  .scheduleRow :global(.app-status) { grid-column: 3; justify-self: start; }
+  .pipelineGrid { grid-template-columns: 1fr; }
+  .pipelineItem { min-height: 81px; border-right: 0; border-bottom: 1px solid #eae6dd; }
+}
+@media (max-width: 430px) {
+  .pageHeader h1 { font-size: 2.65rem; }
+  .headerActions { display: flex; width: 100%; }
+  .headerActions a { flex: 1; text-align: center; }
+  .kpiGrid { grid-template-columns: 1fr 1fr; }
+  .kpiCard { min-height: 105px; padding: 13px 12px; border-bottom: 1px solid #eae6dd; }
+  .kpiCard:nth-child(odd) { border-right: 1px solid #eae6dd; }
+  .kpiCard:nth-child(n + 3) { border-bottom: 0; }
+  .kpiCard strong { font-size: 1.26rem; overflow-wrap: anywhere; white-space: normal; }
+  .kpiCard .kpiGo { top: 7px; right: 8px; }
+  .attentionRow { grid-template-columns: 7px minmax(0, 1fr); }
+  .attentionRow :global(.app-status) { grid-column: 2; justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { .kpiCard { transition: none; } }
