@@ -59,7 +59,9 @@ export function claimedOutboxEventFromRow(row: DurableOutboxRow, workerId: strin
     idempotencyKey: row.idempotencyKey,
     attempt: row.attempts,
     claimedAt: row.lockedAt ?? row.updatedAt,
-    lockedBy: workerId,
+    // The lease owner must come from the DB row. Substituting workerId
+    // here would mask a foreign or missing claim and defeat the worker guard.
+    lockedBy: row.lockedBy === workerId ? workerId : (row.lockedBy ?? ""),
   };
 }
 

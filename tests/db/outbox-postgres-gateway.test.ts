@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createPostgresOutboxTableGateway, type TrustedOutboxRpcClient } from "../../src/server/jobs/outbox-postgres-gateway";
+import { claimedOutboxEventFromRow } from "../../src/server/jobs/outbox-repository";
 
 const row = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -51,4 +52,27 @@ describe("trusted Postgres outbox gateway", () => {
       args: { p_worker_id: "worker-a", p_status: "SENT", p_attempts: null, p_provider_reference: "wamid.1" },
     });
   });
+
+  it("does not overwrite a foreign or absent database lease with the claiming worker ID", () => {
+    const mapped = {
+      id: row.id,
+      workspaceId: row.workspace_id,
+      topic: row.topic,
+      payload: row.payload,
+      status: row.status,
+      attempts: row.attempts,
+      idempotencyKey: row.idempotency_key,
+      lockedAt: row.locked_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+    const foreign = claimedOutboxEventFromRow({ ...mapped, lockedBy: "worker-b" }, "worker-a");
+    const missing = claimedOutboxEventFromRow({ ...mapped, lockedBy: undefined }, "worker-a");
+    const owned = claimedOutboxEventFromRow({ ...mapped, lockedBy: "worker-a" }, "worker-a");
+    expect(foreign.lockedBy).toBe("worker-b");
+    expect(missing.lockedBy).toBe("");
+    expect(owned.lockedBy).toBe("worker-a");
+    expect(foreign.workspaceId).toBe(row.workspace_id);
+  });
+
 });

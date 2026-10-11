@@ -23,6 +23,10 @@ on:
       - "src/server/integrations/recovery/scheduler.ts"
       - "tests/providers/provider-recovery-lease.test.ts"
       - "tests/providers/provider-recovery-scheduler.test.ts"
+      - "src/server/jobs/outbox-repository.ts"
+      - "tests/db/outbox-postgres-gateway.test.ts"
+      - "src/server/integrations/recovery/serialization.ts"
+      - "tests/providers/provider-recovery-serialization.test.ts"
       - "scripts/release/v3-staging-auth-smoke.mjs"
       - "scripts/release/v3-staging-auth-smoke.test.mjs"
       - ".github/workflows/v3-focused-pr.yml"
@@ -65,5 +69,7 @@ jobs:
           tests/db/outbox-worker.test.ts
           tests/providers/provider-recovery-lease.test.ts
           tests/providers/provider-recovery-scheduler.test.ts
+          tests/db/outbox-postgres-gateway.test.ts
+          tests/providers/provider-recovery-serialization.test.ts
       - name: Complete repository RC gate (typecheck, all tests, lint, Next build)
         run: pnpm check:rc
