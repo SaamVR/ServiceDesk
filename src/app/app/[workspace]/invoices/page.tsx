@@ -5,7 +5,7 @@ export default async function StaffInvoicesPage({
   searchParams,
 }: {
   params: Promise<{ workspace: string }>;
-  searchParams: Promise<{ notice?: string; error?: string; invoice?: string; search?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; invoice?: string; search?: string; queue?: string }>;
 }) {
   const { workspace } = await params;
   const query = await searchParams;
@@ -13,7 +13,7 @@ export default async function StaffInvoicesPage({
     <OperationalProductRoute
       workspaceSlug={workspace}
       module="invoices"
-      selectedInvoiceId={query.invoice} searchQuery={query.search}
+      selectedInvoiceId={query.invoice} searchQuery={query.search} selectedInvoiceQueue={query.queue}
       notice={query.notice}
       error={query.error}
     />

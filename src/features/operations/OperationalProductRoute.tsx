@@ -61,6 +61,8 @@ import { formatWorkspaceDateTime } from "./product-truth";
 import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
 import { filterQualityQueue, normalizeQualityQueue, normalizeQualitySearch, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
 import { QualityQueueFilters } from "./QualityQueueFilters";
+import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, normalizeInvoiceQueue } from "./invoice-collection-queue";
+import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { deriveDispatchBacklog } from "./dispatch-backlog";
 import { formatMinorMoney } from "./view-models";
@@ -96,6 +98,7 @@ interface OperationalProductRouteProps {
   selectedJobId?: string;
   selectedJobQueue?: string;
   selectedInvoiceId?: string;
+  selectedInvoiceQueue?: string;
   notice?: string;
   error?: string;
 }
@@ -1895,26 +1898,30 @@ function InvoicesView({
   data,
   workspaceSlug,
   selectedInvoiceId,
+  selectedInvoiceQueue,
   searchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedInvoiceId?: string;
+  selectedInvoiceQueue?: string;
   searchQuery?: string;
 }) {
+  const queue = normalizeInvoiceQueue(selectedInvoiceQueue);
+  const search = normalizeDirectoryQuery(searchQuery);
   async function manualPayment(formData: FormData) {
     "use server";
     const invoiceId = String(formData.get("invoiceId") ?? "");
     const amount = String(formData.get("amount") ?? "").trim();
     const match = amount.match(/^(\d+)(?:\.(\d{1,2}))?$/);
     if (!match) {
-      actionRedirect(workspaceSlug, "invoices", { ok: false, message: "Enter a valid payment amount." }, "invoice=" + encodeURIComponent(invoiceId) + "&");
+      actionRedirect(workspaceSlug, "invoices", { ok: false, message: "Enter a valid payment amount." }, invoiceFeedbackPrefix(queue, search, invoiceId));
     }
     const amountMinor = Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
     const methodRaw = String(formData.get("method") ?? "OTHER");
     const method = methodRaw === "CASH" || methodRaw === "BANK_TRANSFER" ? methodRaw : "OTHER";
     const result = await applyOperationalManualPayment(workspaceSlug, invoiceId, amountMinor, method, String(formData.get("reference") ?? ""));
-    actionRedirect(workspaceSlug, "invoices", result, "invoice=" + encodeURIComponent(invoiceId) + "&");
+    actionRedirect(workspaceSlug, "invoices", result, invoiceFeedbackPrefix(queue, search, invoiceId));
   }
 
   const customerInvoices = data.invoices.filter((invoice) => Boolean(invoice.quoteId));
@@ -1927,11 +1934,11 @@ function InvoicesView({
     const rightOpen = right.balanceMinor > 0 && right.status !== "VOID" ? 0 : 1;
     return leftOpen - rightOpen || right.balanceMinor - left.balanceMinor;
   });
-  const search = normalizeDirectoryQuery(searchQuery);
+  const counts = invoiceQueueCounts(orderedInvoices);
   const quoteById = new Map(data.quotes.map((quote) => [quote.id, quote]));
   const requestById = new Map(data.requests.map((request) => [request.id, request]));
   const customerById = new Map(data.customers.map((customer) => [customer.id, customer]));
-  const visibleInvoices = filterDirectoryRows(orderedInvoices, search, (invoice) => {
+  const visibleInvoices = filterDirectoryRows(filterInvoiceQueue(orderedInvoices, queue), search, (invoice) => {
     const quote = invoice.quoteId ? quoteById.get(invoice.quoteId) : undefined;
     const request = quote ? requestById.get(quote.requestId) : undefined;
     return [invoice.status, invoice.currency, request?.serviceLabel, request?.customerId ? customerById.get(request.customerId)?.displayName : undefined];
@@ -1939,8 +1946,8 @@ function InvoicesView({
   if (!visibleInvoices.length) {
     return (
       <section aria-label="Invoice collection workspace">
-        <RecordDirectorySearch label="invoices" search={search} visible={0} total={orderedInvoices.length} />
-        <EmptyState title="No matching invoices" detail="Try a customer, service or invoice status, or clear the search." />
+        <InvoiceCollectionFilters queue={queue} search={search} counts={counts} visible={0} />
+        <EmptyState title={search ? "No matching invoices" : "No invoices in this status"} detail={search ? "Try another customer, service or invoice status, or clear the search." : "Choose another collection status to see existing invoices."} />
       </section>
     );
   }
@@ -1964,7 +1971,7 @@ function InvoicesView({
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "reports")}>Open reports</a>
       </header>
 
-      <RecordDirectorySearch label="invoices" search={search} visible={visibleInvoices.length} total={orderedInvoices.length} />
+      <InvoiceCollectionFilters queue={queue} search={search} counts={counts} visible={visibleInvoices.length} />
       <div className={styles.financeSplit}>
         <aside className={styles.financeQueue} aria-label="Invoice list">
           {visibleInvoices.map((invoice) => {
@@ -1975,7 +1982,7 @@ function InvoicesView({
             return (
               <a
                 className={`${styles.financeQueueItem} ${selected ? styles.financeQueueSelected : ""}`.trim()}
-                href={directoryRecordHref("invoice", invoice.id, search)}
+                href={invoiceQueueHref(queue, search, invoice.id)}
                 aria-current={selected ? "page" : undefined}
                 key={invoice.id}
               >
@@ -1985,7 +1992,7 @@ function InvoicesView({
                 </span>
                 <span className={styles.financeQueueService}>{request?.serviceLabel ?? "Service invoice"}</span>
                 <span className={styles.financeQueueMoney}>
-                  <span>{formatMinorMoney(invoice.balanceMinor, invoice.currency)} due</span>
+                  <span>{formatMinorMoney(invoice.balanceMinor, invoice.currency)} {invoice.status === "VOID" ? "balance · void" : invoice.status === "PAID" ? "balance · paid" : "due"}</span>
                   <small>Invoice {invoice.id.slice(0, 8)}</small>
                 </span>
               </a>
@@ -4191,6 +4198,7 @@ function renderModule(
   selectedScheduleDay?: string,
   selectedQualityQueue?: string,
   qualitySearchQuery?: string,
+  selectedInvoiceQueue?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -4214,7 +4222,7 @@ function renderModule(
     case "jobs":
       return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} selectedJobQueue={selectedJobQueue} searchQuery={searchQuery} />;
     case "invoices":
-      return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} searchQuery={searchQuery} />;
+      return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} selectedInvoiceQueue={selectedInvoiceQueue} searchQuery={searchQuery} />;
     case "quality":
       return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} selectedQualityQueue={selectedQualityQueue} qualitySearchQuery={qualitySearchQuery} />;
     case "automations":
@@ -4287,6 +4295,7 @@ export async function OperationalProductRoute({
   selectedJobId,
   selectedJobQueue,
   selectedInvoiceId,
+  selectedInvoiceQueue,
   notice,
   error,
 }: OperationalProductRouteProps) {
@@ -4310,7 +4319,7 @@ export async function OperationalProductRoute({
       {result.ok ? (
         <>
           {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay, selectedQualityQueue, qualitySearchQuery)}
+          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay, selectedQualityQueue, qualitySearchQuery, selectedInvoiceQueue)}
         </>
       ) : (
         <Panel>
