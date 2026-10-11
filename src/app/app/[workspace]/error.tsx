@@ -24,9 +24,9 @@ export default function WorkspaceError({
       <span className={styles.eyebrow}>Workspace interruption</span>
       <h2 className={styles.title}>This workspace did not load</h2>
       <p className={styles.description}>
-        Your operational records have not been changed. Retry the view or return to
-        the overview. If the problem continues, ask your workspace administrator
-        to review the service health.
+        This view could not confirm its latest state. If you just submitted a
+        payment, crew assignment, or another change, check the saved record
+        before repeating that action. Retry the view or return to the overview.
       </p>
       <div className={styles.actions}>
         <button type="button" className={styles.action} onClick={() => reset()}>
