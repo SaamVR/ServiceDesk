@@ -106,7 +106,7 @@ export default function TourPage() {
 
         <section className={styles.trustSection} id="pain" aria-labelledby="trust-title">
           <div className={styles.container}>
-            <div className={styles.sectionLead}><div><span className={styles.eyebrow}>THE INTELLIGENCE BEHIND THE SCENES</span><h2 id="trust-title">Smarter assistance. <em>Clearer boundaries.</em></h2></div><p>Being AI-integrated shouldn't mean making promises the system cannot prove.</p></div>
+            <div className={styles.sectionLead}><div><span className={styles.eyebrow}>THE INTELLIGENCE BEHIND THE SCENES</span><h2 id="trust-title">Smarter assistance. <em>Clearer boundaries.</em></h2></div><p>Being AI-integrated shouldn&apos;t mean making promises the system cannot prove.</p></div>
             <div className={styles.boundaryGrid}>
               {boundaries.map(([title,detail],index)=><article key={title}><span>0{index+1}</span><h3>{title}</h3><p>{detail}</p></article>)}
             </div>
