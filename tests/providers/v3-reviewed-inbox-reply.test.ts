@@ -20,6 +20,8 @@ function harness(options: {
   actorRole?: "OWNER" | "DISPATCHER" | "CREW";
   conversation?: Record<string, unknown> | null;
   source?: Record<string, unknown> | null;
+  existing?: Record<string, unknown> | null;
+  priorOutbox?: Record<string, unknown> | null;
   outgoing?: Record<string, unknown>;
   rpcError?: string;
   responseCode?: string;
@@ -39,7 +41,11 @@ function harness(options: {
         reads.push(table);
         const data = table === "conversations"
           ? (options.conversation === undefined ? conversation : options.conversation)
-          : (options.source === undefined ? source : options.source);
+          : table === "outbox_events"
+            ? (options.priorOutbox === undefined ? null : options.priorOutbox)
+            : filters.some(([key]) => key === "outbound_idempotency_key")
+              ? (options.existing === undefined ? null : options.existing)
+              : (options.source === undefined ? source : options.source);
         if (data && filters.some(([k, v]) => (data as Record<string, unknown>)[k] !== v)) {
           return { data: null, error: null };
         }
@@ -83,7 +89,7 @@ describe("explicit human approval of reviewed inbox reply", () => {
         outboxEventId: "outbox1", deliveryState: "QUEUED",
       },
     });
-    expect(h.reads).toEqual(["conversations", "messages"]);
+    expect(h.reads).toEqual(["conversations", "messages", "messages"]);
     expect(h.calls).toHaveLength(1);
     expect(h.calls[0].name).toBe("servicedesk_enqueue_conversation_reply");
     expect(h.calls[0].arguments.p_input).toMatchObject({
@@ -91,6 +97,72 @@ describe("explicit human approval of reviewed inbox reply", () => {
       conversationId: "conv1", expectedVersion: 3, body: "Reviewed reply",
       channel: "WHATSAPP", idempotencyKey: "reviewed-reply-unique-0001",
     });
+  });
+
+  it("returns the prior durable receipt after the first approval incremented conversation version", async () => {
+    const h = harness({
+      conversation: { ...conversation, version: 4 },
+      existing: { id: "existing-outbound", workspace_id: "ws1",
+        conversation_id: "conv1", direction: "OUTBOUND", sender_kind: "STAFF",
+        outbound_idempotency_key: "reviewed-reply-unique-0001",
+        outbox_event_id: "existing-outbox", body: "Reviewed reply",
+        delivery_state: "QUEUED", created_at: "2026-10-11T05:05:00Z" },
+      priorOutbox: { id: "existing-outbox", workspace_id: "ws1",
+        topic: "conversation.reply",
+        idempotency_key: "conversation.reply:ws1:reviewed-reply-unique-0001",
+        status: "PENDING", provider_reference: null },
+    });
+    expect(await approveReviewedInboxReply(input, h.deps)).toMatchObject({
+      ok: true, value: {
+        state: "EXISTING_REPLY", outboundMessageId: "existing-outbound",
+        outboxEventId: "existing-outbox", deliveryState: "QUEUED",
+      },
+    });
+    expect(h.calls).toHaveLength(0);
+    expect(h.reads).toEqual(["conversations", "messages", "messages", "outbox_events"]);
+  });
+
+  it("does not confuse a provider-accepted outbox with delivered/read customer status", async () => {
+    const h = harness({
+      conversation: { ...conversation, version: 5 },
+      existing: { id: "existing-outbound", workspace_id: "ws1",
+        conversation_id: "conv1", direction: "OUTBOUND", sender_kind: "STAFF",
+        outbound_idempotency_key: input.idempotencyKey,
+        outbox_event_id: "existing-outbox", body: "Reviewed reply",
+        delivery_state: "QUEUED", created_at: "2026-10-11T05:05:00Z" },
+      priorOutbox: { id: "existing-outbox", workspace_id: "ws1",
+        topic: "conversation.reply",
+        idempotency_key: "conversation.reply:ws1:reviewed-reply-unique-0001",
+        status: "SENT", provider_reference: "provider-accepted-not-delivered" },
+    });
+    const result = await approveReviewedInboxReply(input, h.deps);
+    expect(result).toMatchObject({ ok: true, value: {
+      state: "EXISTING_REPLY", deliveryState: "PROVIDER_ACCEPTED",
+    } });
+    expect(JSON.stringify(result)).not.toContain("provider-accepted-not-delivered");
+    expect(h.calls).toHaveLength(0);
+  });
+
+  it("refuses a reused idempotency key with different body, tenant, source chronology or outbox", async () => {
+    const valid = { id: "outbound1", workspace_id: "ws1",
+      conversation_id: "conv1", outbound_idempotency_key: input.idempotencyKey,
+      outbox_event_id: "outbox1", direction: "OUTBOUND", sender_kind: "STAFF",
+      body: "Reviewed reply", delivery_state: "QUEUED",
+      created_at: "2026-10-11T05:05:00Z" };
+    const outbox = { id: "outbox1", workspace_id: "ws1",
+      topic: "conversation.reply", status: "PENDING", provider_reference: null,
+      idempotency_key: "conversation.reply:ws1:reviewed-reply-unique-0001" };
+    for (const h of [
+      harness({ existing: { ...valid, body: "Other body" }, priorOutbox: outbox }),
+      harness({ existing: { ...valid, workspace_id: "foreign" }, priorOutbox: outbox }),
+      harness({ existing: { ...valid, created_at: "2026-10-11T04:00:00Z" }, priorOutbox: outbox }),
+      harness({ existing: valid, priorOutbox: { ...outbox, topic: "retention.campaign" } }),
+      harness({ existing: valid, priorOutbox: null }),
+    ]) {
+      expect(await approveReviewedInboxReply(input, h.deps))
+        .toMatchObject({ ok: false, code: "REVIEWED_REPLY_RECEIPT_MISMATCH" });
+      expect(h.calls).toHaveLength(0);
+    }
   });
 
   it("requires actual staff confirmation and valid input before accessing database", async () => {
