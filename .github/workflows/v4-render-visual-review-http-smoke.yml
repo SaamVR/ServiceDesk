@@ -1,0 +1,76 @@
+name: ServiceDesk V4 Render visual-review HTTP acceptance
+
+# Public-only read-only validation. No secrets, auth, database or provider sends.
+on:
+  push:
+    branches:
+      - qa/servicedesk-v4-render-http-20261011
+    paths:
+      - ".github/workflows/v4-render-visual-review-http-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check-real-render-host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify exact deployed SHA, live route content and default noindex policy
+        env:
+          RENDER_HOST: https://servicedesk-v3-frontend-review.onrender.com
+          DEPLOYED_SHA: ffd8ceb12a817ec9e3bb6713e8ef43c0f38af1d1
+        run: |
+          node --input-type=module <<'JS'
+          const origin = process.env.RENDER_HOST;
+          const expectedSha = process.env.DEPLOYED_SHA;
+          const paths = [
+            ["/","A cleaner way"],
+            ["/features","Everything a cleaning operations team"],
+            ["/use-cases/cleaning","Built for residential"],
+            ["/integrations","Connect the systems"],
+            ["/pricing","Service quote pricing stays transparent"],
+            ["/contact","See ServiceDesk against your real"],
+            ["/help","Help for the workflows"],
+            ["/privacy","Privacy starts with workspace"],
+            ["/terms","Clear product boundaries before launch"],
+            ["/tour","See how a little clarity changes"],
+            ["/sandbox","One job. Every step."],
+            ["/auth/sign-in","Ready for"],
+          ];
+          if (!/^https:\/\/[a-z0-9-]+\.onrender\.com$/.test(origin) ||
+              !/^[a-f0-9]{40}$/.test(expectedSha)) {
+            throw new Error("Review origin or commit identity must be pinned.");
+          }
+          const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+          async function get(path){
+            const result = await fetch(origin + path,{
+              method:"GET",credentials:"omit",redirect:"manual",cache:"no-store",
+              headers:{Accept: path==="/health"?"application/json":"text/html"},
+              signal:AbortSignal.timeout(30_000)
+            });
+            if(result.status!==200)throw Error(path+" returned HTTP "+result.status);
+            const body=await result.text();
+            if(body.length<85 || body.length>2_500_000)throw Error(path+" response size not credible");
+            return body;
+          }
+          let health;
+          for(let i=0;i<18;i++){
+            try{ health=JSON.parse(await get("/health"));break; }
+            catch(err){ if(i===17)throw err;await sleep(5000); }
+          }
+          if(!health?.ok || health?.sourceSha!==expectedSha ||
+             health?.sourceProvider!=="render" || health?.service!=="servicedesk"){
+            throw Error("Wrong source commit or provider: "+JSON.stringify(health));
+          }
+          console.log("PASS exact Render source "+expectedSha);
+          for(const [route,title]of paths){
+            const html=await get(route);
+            if(!html.includes("<html") || !html.includes(title) || !html.includes("noindex")){
+              throw Error(route+" missing expected markup/title or preview noindex");
+            }
+            console.log("PASS "+route);
+          }
+          console.log("PASS V4 Render public-only acceptance: "+paths.length+" real HTTP routes.");
+          console.log("Authenticated workspace, provider UAT and user signup are not tested here.");
+          JS
