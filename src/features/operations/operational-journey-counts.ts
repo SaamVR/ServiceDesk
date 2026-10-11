@@ -1,6 +1,7 @@
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { buildInboxTriage } from "./inbox-triage";
 import { summarizeOutstandingInvoices } from "./product-truth";
+import { buildQuotePipeline } from "./quote-pipeline";
 
 export type OperationalJourneyModule = "inbox" | "requests" | "quotes" | "schedule" | "jobs" | "invoices";
 export type OperationalJourneyCounts = Record<OperationalJourneyModule, number>;
@@ -17,7 +18,7 @@ export function operationalJourneyCounts(snapshot: Pick<OperationalStaffSnapshot
     inbox: inbox.counts["needs-reply"],
     requests: snapshot.requests.filter((request) =>
       ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status)).length,
-    quotes: snapshot.quotes.filter((quote) => quote.status === "APPROVED").length,
+    quotes: buildQuotePipeline(snapshot.quotes).readyToSend,
     schedule: snapshot.visits.filter((visit) =>
       !visit.crewId && !["COMPLETED", "CANCELLED"].includes(visit.status)).length,
     jobs: snapshot.visits.filter((visit) =>
