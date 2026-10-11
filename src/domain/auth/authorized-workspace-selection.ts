@@ -95,3 +95,26 @@ export function resolveAuthorizedWorkspaceDestination(
   if (hasCrewAccess) return { kind: "CREW", href: "/crew/today" };
   return { kind: "NONE" };
 }
+
+/**
+ * Complete an explicit workspace choice against the same RLS-scoped rows used
+ * to build the chooser. A URL, selected slug, or client-supplied role cannot
+ * authorize entry into a workspace: the chosen ID must be present in the
+ * authenticated active staff membership result.
+ *
+ * This is navigation policy only. The destination must independently
+ * authenticate and authorize the current user.
+ */
+export function resolveAuthorizedStaffWorkspaceSelection(
+  rows: readonly AuthorizedWorkspaceMembership[],
+  requestedWorkspaceId: string,
+): Extract<AuthorizedWorkspaceDecision, { kind: "STAFF" }> | { kind: "NONE" } {
+  if (!validWorkspaceId(requestedWorkspaceId)) return { kind: "NONE" };
+  const decision = resolveAuthorizedWorkspaceDestination(rows);
+  const workspace = decision.kind === "STAFF"
+    ? (decision.workspace.workspaceId === requestedWorkspaceId ? decision.workspace : undefined)
+    : decision.kind === "CHOOSE"
+      ? decision.workspaces.find(candidate => candidate.workspaceId === requestedWorkspaceId)
+      : undefined;
+  return workspace ? { kind: "STAFF", workspace, href: workspace.href } : { kind: "NONE" };
+}
