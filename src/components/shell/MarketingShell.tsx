@@ -59,7 +59,7 @@ export function MarketingShell({
             <svg className={styles.actionArrow} width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </Link>
           <details className={styles.mobileMenu}>
-            <summary className={styles.menuToggle} aria-label="Toggle navigation menu">
+            <summary className={styles.menuToggle} aria-label="Open product menu">
               <span className={styles.menuText}>Menu</span>
               <span className={styles.menuBars} aria-hidden="true"><span /><span /></span>
             </summary>
