@@ -118,10 +118,13 @@ describe("V3 operational Inbox triage", () => {
     const css = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.module.css"), "utf8");
     expect(page).toContain('selectedQueue={query.queue}');
     expect(main).toContain("buildInboxTriage(data.conversations, data.messages, data.customers, queue)");
-    expect(main).toContain('<InboxQueueNavigation queue={queue} counts={triage.counts} />');
+    expect(main).toContain('<InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />');
+    expect(main).toContain('searchInboxQueue(triage.visible, data.messages, data.customers, search)');
+    expect(main).toContain('<InboxSearchForm queue={queue} search={search} />');
+    expect(page).toContain('searchQuery={query.search}');
     expect(main).toContain('aria-label="Conversation queues"');
-    expect(main).toContain('href={inboxQueueHref(queue, conversation.id)}');
-    expect(main).toContain('href={inboxQueueHref("all", conversation.id)}');
+    expect(main).toContain('href={inboxQueueHref(queue, conversation.id, search)}');
+    expect(main).toContain('href={inboxQueueHref("all", conversation.id, search)}');
     expect(main).toContain("toggleInboxHandover(workspaceSlug");
     expect(main).toContain("enqueueInboxReply(workspaceSlug");
     expect(main).toContain("resolveOperationalConversationIdentity(");
