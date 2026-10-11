@@ -2,6 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import "./v3-studio-local-day.test";
+// Expand the existing cached frontend gate; do not create extra CI jobs.
+import "./v3-inbox-thread-navigation.test";
+import "./v3-dispatch-coverage-week.test";
+import "./v3-studio-queue-performance.test";
 
 const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
