@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { filterQualityQueue, isOverdueQualityCase, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref, normalizeQualityQueue, normalizeQualitySearch } from "@/features/operations/quality-queue";
+import { filterQualityQueue, isOverdueQualityCase, prioritizeQualityFollowUp, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref, normalizeQualityQueue, normalizeQualitySearch } from "@/features/operations/quality-queue";
 const source = [
  {id:"c1",state:"OPEN",summary:"Damaged kitchen counter",ownerUserId:null},
  {id:"c2",state:"IN_REVIEW",summary:"Missed window",ownerUserId:"u1"},
@@ -46,6 +46,25 @@ describe("authorized quality triage",()=>{
   expect(route).toContain("filterQualityQueue(orderedCases, queue, search");
   expect(route).toContain("Overdue as of snapshot");
   expect(route).toContain('tone="danger">Overdue');
+ });
+ it("uses the same deadline-first order in Today and Quality without fabricating due dates",()=>{
+  const cases=[
+    {id:"future",state:"IN_REVIEW",summary:"Awaiting review",dueAt:"2026-10-13T09:00:00Z"},
+    {id:"late-open",state:"OPEN",summary:"Late service",dueAt:"2026-10-10T00:00:00Z"},
+    {id:"closed",state:"RESOLVED",summary:"Completed",dueAt:"2026-10-08T00:00:00Z"},
+    {id:"missing",state:"OPEN",summary:"No known deadline",dueAt:"invalid"},
+    {id:"late-review",state:"IN_REVIEW",summary:"Late follow-up",dueAt:"2026-10-09T00:00:00Z"},
+  ];
+  const sorted=prioritizeQualityFollowUp(cases,"2026-10-11T08:00:00Z");
+  expect(sorted.map(x=>x.id)).toEqual(["late-review","late-open","future","missing","closed"]);
+  expect(cases[0].id).toBe("future");
+  const dashboard=readFileSync(join(process.cwd(),"src/features/operations/StaffOverviewDashboard.tsx"),"utf8");
+  expect(dashboard).toContain("prioritizeQualityFollowUp(snapshot.qualityCases, snapshot.loadedAt)");
+  expect(dashboard).toContain("overdueQualityCount");
+  expect(dashboard).toContain("?queue=overdue");
+  expect(dashboard).toContain('isOverdueQualityCase(item, snapshot.loadedAt) ? "Overdue"');
+  const route=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
+  expect(route).toContain("prioritizeQualityFollowUp(data.qualityCases, data.loadedAt)");
  });
  it("keeps status and text filter after authenticated case actions",()=>{
   expect(qualityQueueHref("review","Missed window","c2")).toBe("?queue=review&q=Missed+window&case=c2");
