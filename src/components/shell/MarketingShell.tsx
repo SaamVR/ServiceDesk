@@ -33,7 +33,7 @@ export function MarketingShell({
   const heroAction = marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
   return (
     <main className="site-shell">
-      <      <header className={"site-header " + styles.header} aria-label="Product navigation">
+      <header className={"site-header " + styles.header} aria-label="Product navigation">
         <Link className={styles.brand} href="/" aria-label="ServiceDesk AI home">
           <span className={styles.brandIcon} aria-hidden="true">
             <svg width="38" height="38" viewBox="0 0 38 38" fill="none" focusable="false">
