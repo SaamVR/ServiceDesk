@@ -24,7 +24,7 @@ function database(options: { noBranch?: boolean; deny?: string } = {}) {
   const client = {
     from(table: string) {
       if (!(table in data)) throw new Error("Unexpected table: " + table);
-      let predicates: Array<(row: Row) => boolean> = [];
+      const predicates: Array<(row: Row) => boolean> = [];
       let adding: Row | undefined;
       const result = (single = false) => {
         if (options.deny === table) return { data: null, error: { code: "42501" } };
@@ -39,7 +39,7 @@ function database(options: { noBranch?: boolean; deny?: string } = {}) {
         return { data: found, error: null };
       };
       const q = {
-        select(_columns: string) { return q; },
+        select() { return q; },
         eq(key: string, value: unknown) {
           predicates.push(row => row[key] === value);
           return q;
@@ -50,7 +50,7 @@ function database(options: { noBranch?: boolean; deny?: string } = {}) {
           return q;
         },
         insert(input: Row) { adding = input; return q; },
-        limit(_n: number) { return Promise.resolve(result()); },
+        limit() { return Promise.resolve(result()); },
         single() { return Promise.resolve(result(true)); },
         maybeSingle() { return Promise.resolve(result(true)); },
       };

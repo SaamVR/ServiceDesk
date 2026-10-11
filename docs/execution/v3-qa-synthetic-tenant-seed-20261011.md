@@ -17,7 +17,7 @@ It NEVER sends an email/WhatsApp message, charges a card, creates a payment toke
 - This is a resumable multi-statement operation, NOT a DB transaction. It reuses existing customer/property/request records by immutable markers on subsequent sequential requests. Concurrent clicks could still race; operators must use one tester at a time until a DB-atomic idempotency key is introduced.
 - Any RLS permission or constraint failure is surfaced as a generic operator error; avoid publishing raw provider messages/customer data.
 - Do not use on real customer tenants or enable with public registration/production service role. No automatic seeding at page load.
-- No real confirmed owner currently exists in staging: **an actual completed signup and browser-driven persisted write remain the final acceptance gate**.
+- Connected Supabase verification now shows one real, email-confirmed QA owner and active workspace. No fictional customer/property/request records have been seeded yet. Actual user-triggered write, persistence, duplicate prevention, and tenant-denial browser proof remain acceptance gates.
 
 ## Manual E2E
 
