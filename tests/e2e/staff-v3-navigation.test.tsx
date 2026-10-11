@@ -13,6 +13,11 @@ import "./v3-studio-workspaces.test";
 import "./v3-studio-brand-continuity.test";
 import "./v3-studio-contrast.test";
 import "./v3-studio-coverage.test";
+import "./v3-studio-command-record-search.test";
+import "./v3-studio-reply-brief.test";
+import "./v3-studio-schedule-window.test";
+import "./v3-studio-operational-continuity.test";
+import "./v3-dispatch-coverage-week.test";
 import { staffModuleConfig, buildStaffModuleHref } from "../../src/features/operations/staff-modules";
 import { StaffAppShell } from "../../src/components/product/StaffAppShell";
 
@@ -73,10 +78,10 @@ describe("V3 staff workday shell", () => {
 
   it("includes an accessible keyboard command palette without changing authorization or routes", () => {
     const html = renderStaffShell("/app/acme-west/inbox");
-    expect(html).toContain("Jump to a workspace page");
+    expect(html).toContain("Find pages or records");
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('type="search"');
-    expect(html).toContain("Where do you want to go?");
+    expect(html).toContain("Find your next action");
     expect(html).toContain('aria-label="Close workspace navigation"');
     expect(html).toContain('href="/app/acme-west/jobs"');
     expect(html).toContain('href="/app/acme-west/inbox"');
