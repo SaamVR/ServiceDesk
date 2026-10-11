@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { OperationalFixtureRoute } from "@/features/operations/OperationalFixtureRoute";
 import { TourScenarioList } from "@/features/product/ProductSections";
 import styles from "./BrightTour.module.css";
+
+export const metadata: Metadata = {
+  title: "Controlled tour in an isolated showcase workspace.",
+  description: "Explore ServiceDesk's sample cleaning-business workflow. From enquiry through quote and crew work to invoice and recovery, everything stays synthetic.",
+  robots: { index: false, follow: false },
+};
 
 export default function TourPage() {
   return (
