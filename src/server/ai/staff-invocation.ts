@@ -3,6 +3,8 @@ import { resolveStaffActor, type ResolvedStaffActor } from "../../features/opera
 import type { AiPersistedMessageLookup } from "./postgres-conversation-store";
 import { createOperationalAiRuntime, type OperationalAiRuntimeDependencies } from "./operational-runtime";
 import { ApprovedKnowledgeIndex } from "./knowledge";
+import { loadApprovedCatalogKnowledge } from "./catalog-knowledge";
+import { readConfiguredAiRuntimeConfig } from "./runtime-config";
 import type { AssistantTurn } from "./types";
 
 export interface StaffAiInvocation {
@@ -53,20 +55,13 @@ export async function executeAuthorizedStaffAiTurn(
     return fail("AI_STAFF_WORKSPACE_MISMATCH", "Staff session does not authorize this workspace.");
   }
 
-  // No database or model work is allowed while the operational AI feature is
-  // disabled. This check intentionally precedes querying private messages.
-  const runtime = createOperationalAiRuntime({
-    messages: service as unknown as AiPersistedMessageLookup,
-    knowledge: deps.knowledge ?? new ApprovedKnowledgeIndex([]),
-    env: deps.env,
-    fetchPort: deps.fetchPort,
-    promptVersion: deps.promptVersion ?? "servicedesk-v3-reviewed-intake",
-  });
-  if (!runtime.ok) return runtime;
+  // No database or model work is allowed while operational AI is disabled.
+  const enabled = readConfiguredAiRuntimeConfig(deps.env);
+  if (!enabled.ok) return enabled;
 
   try {
     const conv = await service.from("conversations")
-      .select("id,workspace_id,request_id,customer_id,handover_active")
+      .select("id,workspace_id,request_id,customer_id,channel,handover_active")
       .eq("workspace_id", workspace.id)
       .eq("id", input.conversationId)
       .maybeSingle();
@@ -110,9 +105,26 @@ export async function executeAuthorizedStaffAiTurn(
       return fail("AI_MESSAGE_NOT_AUTHORIZED", "The selected saved customer message cannot be analyzed.");
     }
 
+    if (c.channel !== "WHATSAPP" && c.channel !== "EMAIL") {
+      return fail("AI_CONVERSATION_CHANNEL_INVALID", "Conversation channel is not supported.");
+    }
+    // Fetch authoritative, active service knowledge only after membership,
+    // branch and customer message checks. Never use fixture FAQs in production.
+    const knowledge = deps.knowledge
+      ? { ok: true as const, value: deps.knowledge }
+      : await loadApprovedCatalogKnowledge(service, workspace.id);
+    if (!knowledge.ok) return knowledge;
+    const runtime = createOperationalAiRuntime({
+      messages: service as unknown as AiPersistedMessageLookup,
+      knowledge: knowledge.value,
+      env: deps.env,
+      fetchPort: deps.fetchPort,
+      promptVersion: deps.promptVersion ?? "servicedesk-v3-reviewed-intake",
+    });
+    if (!runtime.ok) return runtime;
     return await runtime.value.respond(actor, input.conversationId, {
       messageId: m.id,
-      channel: "WHATSAPP",
+      channel: c.channel,
       text: m.body,
       receivedAt: m.created_at,
       requestId: typeof c.request_id === "string" ? c.request_id : undefined,
