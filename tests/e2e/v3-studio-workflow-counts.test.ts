@@ -21,7 +21,7 @@ describe("Studio OS live workflow decision badges", () => {
         { balanceMinor: 0, currency: "USD", status: "PAID" },
       ],
     };
-    const counts = operationalJourneyCounts(snapshot as Parameters<typeof operationalJourneyCounts>[0]);
+    const counts = operationalJourneyCounts(snapshot as unknown as Parameters<typeof operationalJourneyCounts>[0]);
     expect(counts).toEqual({ inbox: 1, requests: 1, quotes: 1, schedule: 1, jobs: 1, invoices: 1 });
   });
   it("keeps counts behind tenant authorization and labels them accurately", () => {
