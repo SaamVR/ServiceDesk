@@ -55,7 +55,7 @@ function fixture(config: {
       : { mode: "ALL", branches: [] },
   } as unknown as ResolvedStaffActor;
   const opts = {
-    resolveActor: async (_slug: string) => config.authFailed
+    resolveActor: async (slug: string) => (config.authFailed || slug !== "service-desk")
       ? { ok: false as const, kind: "authentication", message: "Sign in required" }
       : { ok: true as const, value: staff },
     env, knowledge: new ApprovedKnowledgeIndex([]), promptVersion: "controlled-v3-inbox",
