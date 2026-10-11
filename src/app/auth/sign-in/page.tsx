@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { normalizeReturnPath } from "@/features/auth/return-path";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
-import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { ownerRegistrationAvailable, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 import { marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 import { signInWithPassword } from "./actions";
 import styles from "./page.module.css";
@@ -13,7 +13,7 @@ export default async function SignInPage({
 }) {
   const query = await searchParams;
   const next = normalizeReturnPath(query.next ?? "/auth/continue");
-  const registrationAvailable = ownerRegistrationAvailable();
+  const registrationAvailable = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
   const newVisitorEntry = marketingRegistrationEntry(registrationAvailable);
 
   return (

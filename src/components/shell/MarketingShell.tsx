@@ -5,7 +5,7 @@ import heroStyles from "./MarketingHeroV3.module.css";
 import { OperationalFlowHero } from "./OperationalFlowHero";
 import { ProductStoryHero, type ProductStoryHeroKind } from "./ProductStoryHero";
 import { MarketingNavLinks } from "./MarketingNavLinks";
-import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { ownerRegistrationAvailable, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 import { marketingHeroEntry, marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 
 interface MarketingShellProps {
@@ -31,7 +31,7 @@ export function MarketingShell({
   secondaryLabel = "Plan a walkthrough",
   heroStory,
 }: MarketingShellProps) {
-  const registrationEnabled = ownerRegistrationAvailable();
+  const registrationEnabled = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
   const registration = marketingRegistrationEntry(registrationEnabled);
   const heroAction = marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
   return (

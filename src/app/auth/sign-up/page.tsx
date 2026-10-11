@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signUpWithPassword } from "./actions";
 import styles from "../sign-in/page.module.css";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
-import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { ownerRegistrationAvailable, ownerRegistrationMode } from "@/features/auth/owner-registration-readiness";
 
 export default async function SignUpPage({
   searchParams,
@@ -11,6 +11,7 @@ export default async function SignUpPage({
 }) {
   const query = await searchParams;
   const registrationEnabled = ownerRegistrationAvailable();
+  const qaOnly = ownerRegistrationMode() === "QA_ONLY";
   return (
     <RegistrationShell
       eyebrow="Start your workspace"
@@ -20,6 +21,9 @@ export default async function SignUpPage({
       asideItems={["Receive and qualify new enquiries", "Send clear quotes and schedule your crews", "Keep jobs, payments and follow-ups in sync"]}
     >
       {query.error ? <p className={styles.error} role="alert">{query.error}</p> : null}
+      {qaOnly ? (
+        <p className={styles.notice} role="status">This is an isolated testing environment. Registration is limited to approved test email addresses. Real payment and outbound messaging remain disabled.</p>
+      ) : null}
       {!registrationEnabled ? (
         <p className={styles.notice} role="status">
           Account registration is not available on this preview yet. The setup and

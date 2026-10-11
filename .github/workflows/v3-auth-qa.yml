@@ -1,0 +1,44 @@
+name: ServiceDesk V3 staging Auth QA acceptance
+on:
+  push:
+    branches: [feat/servicedesk-v3-qa-auth-20261011]
+  pull_request:
+    branches: [feat/servicedesk-v3-combined-acceptance-20261011]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/features/auth/owner-registration-readiness.ts"
+      - "src/app/auth/sign-up/**"
+      - "src/app/auth/create-workspace/**"
+      - "src/app/auth/sign-in/page.tsx"
+      - "src/components/shell/MarketingShell.tsx"
+      - "src/app/page.tsx"
+      - "tests/e2e/v3-qa-registration-allowlist.test.ts"
+      - ".github/workflows/v3-auth-qa.yml"
+permissions:
+  contents: read
+jobs:
+  auth-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Auth QA and existing registration regression
+        run: pnpm exec vitest run tests/e2e/v3-qa-registration-allowlist.test.ts tests/e2e/v3-owner-registration-flow.test.tsx tests/e2e/v3-resend-signup-confirmation.test.ts
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint edited Auth files
+        run: pnpm exec eslint src/features/auth/owner-registration-readiness.ts src/app/auth/sign-up/ src/app/auth/create-workspace/ src/app/auth/sign-in/page.tsx src/components/shell/MarketingShell.tsx src/app/page.tsx tests/e2e/v3-qa-registration-allowlist.test.ts
+      - name: Production build
+        run: pnpm build
