@@ -141,7 +141,7 @@ async function layoutCheck(page, width) {
     'robots:document.querySelector("meta[name=robots]")?.content||"",' +
     'passwords:document.querySelectorAll("input[type=password]").length,' +
     'heroLabel:document.querySelector(".marketing-hero aside[aria-label]")?.getAttribute("aria-label")||"",' +
-    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header a.site-auth-link,.marketing-hero .button-primary,.marketing-hero .button-secondary")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height)}))}))()'
+    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header > div > a[href],.marketing-hero .button-primary,.marketing-hero .button-secondary")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height),tag:el.tagName,href:el.getAttribute("href")||""}))}))()'
   );
   if (state.width !== width || state.height !== height(width) || !state.reduced) {
     throw new Error("Chrome viewport/reduced-motion mismatch: " + page.slug + " " + width);
@@ -168,7 +168,7 @@ async function layoutCheck(page, width) {
     const targets = state.touchTargets;
     if (!Array.isArray(targets) || targets.length < 3 ||
         targets.some(item => item.w < 44 || item.h < 44)) {
-      throw new Error("Public mobile navigation/action target below 44 CSS pixels: " + page.slug + " " + width);
+      throw new Error("Public mobile navigation/action target below 44 CSS pixels: " + page.slug + " " + width + " " + JSON.stringify(state.touchTargets));
     }
   }
   return { page: page.slug, width, links: state.links,
@@ -204,6 +204,25 @@ try {
       await sleep(120);
       layout.push(await layoutCheck(page, width));
       captures.push(await snapshot(page, width, "first-fold"));
+      // Open the actual native mobile disclosure; closed-menu screenshots
+      // alone cannot prove destinations are accessible to mobile visitors.
+      if (page.slug === "home" && width <= 834) {
+        const state = await inspect(
+          '(() => { const menu = document.querySelector("header details");' +
+          'if (!menu) return null; menu.querySelector("summary")?.click();' +
+          'const panel = menu.querySelector("nav"); if (!panel) return null;' +
+          'const rect = panel.getBoundingClientRect();' +
+          'return {open:menu.open,links:panel.querySelectorAll("a[href]").length,' +
+          'visible:getComputedStyle(panel).display !== "none",left:rect.left,right:rect.right}; })()'
+        );
+        if (!state?.open || !state.visible || state.links < 7 ||
+            state.left < -2 || state.right > width + 2) {
+          throw new Error("Public mobile navigation did not open with reachable links: " +
+            width + " " + JSON.stringify(state));
+        }
+        captures.push(await snapshot(page, width, "mobile-menu-open"));
+        await inspect('(() => { document.querySelector("header details").open = false; return true; })()');
+      }
       await inspect('(() => {window.scrollTo({top:Math.floor((document.documentElement.scrollHeight-innerHeight)/2),behavior:"instant"});return true;})()');
       await sleep(100);
       captures.push(await snapshot(page, width, "mid-page"));
@@ -221,5 +240,11 @@ try {
 } finally {
   channel?.close();
   child?.kill();
-  rmSync(profile, { recursive: true, force: true });
+  // Chrome can still write profile data while exiting; do not hide a real
+  // screenshot/layout failure behind an ENOTEMPTY cleanup race.
+  try {
+    rmSync(profile, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 });
+  } catch (error) {
+    console.warn("Ephemeral Chrome profile cleanup deferred:", error?.code || "unknown");
+  }
 }

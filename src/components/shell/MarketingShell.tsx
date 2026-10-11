@@ -4,7 +4,7 @@ import styles from "./MarketingNavV3.module.css";
 import heroStyles from "./MarketingHeroV3.module.css";
 import { OperationalFlowHero } from "./OperationalFlowHero";
 import { ProductStoryHero, type ProductStoryHeroKind } from "./ProductStoryHero";
-import { productRoutes } from "@/features/product/story-model";
+import { MarketingNavLinks } from "./MarketingNavLinks";
 import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
 import { marketingHeroEntry, marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 
@@ -36,37 +36,51 @@ export function MarketingShell({
   const heroAction = marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
   return (
     <main className="site-shell">
-      <header className={`site-header ${styles.header}`} aria-label="Product navigation">
-        <Link className={`brand-lockup ${styles.brand}`} href="/" aria-label="ServiceDesk AI home">
-          <span className="brand-mark" aria-hidden="true">SD</span>
-          <span className={styles.brandName}>ServiceDesk <span className={styles.brandAi}>AI</span></span>
+      <a className={styles.skipLink} href="#public-main-content">Skip to content</a>
+      <header className={"site-header " + styles.header} aria-label="Product navigation">
+        <Link className={styles.brand} href="/" aria-label="ServiceDesk AI home">
+          <span className={styles.brandIcon} aria-hidden="true">
+            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" focusable="false">
+              <path d="M12 12.5h10.5l4 6.5-4 6.5H12" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="12.5" r="3" fill="currentColor" />
+              <circle cx="12" cy="25.5" r="3" fill="currentColor" />
+              <path d="m20.5 17 3.4 2-3.4 2" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span className={styles.brandCopy}>
+            <span className={styles.brandName}>ServiceDesk <span className={styles.brandAi}>AI</span></span>
+            <span className={styles.brandCaption}>THE OPERATIONS DESK</span>
+          </span>
         </Link>
-        <nav className={`site-nav site-primary-nav ${styles.desktopNav}`} aria-label="Primary">
-          {productRoutes.slice(1, 6).map((route) => (
-            <Link key={route.href} href={route.href}>{route.label}</Link>
-          ))}
+        <nav className={styles.desktopNav} aria-label="Primary navigation">
+          <MarketingNavLinks variant="desktop" />
         </nav>
         <div className={styles.actions}>
-          <Link className={`site-auth-link ${styles.signIn}`} href="/auth/sign-in">Sign in</Link>
-          <Link className={`site-auth-link ${styles.primaryAction}`} href={registration.href}>
+          <Link className={styles.signIn} href="/auth/sign-in">Sign in</Link>
+          <Link className={styles.primaryAction} href={registration.href}>
             <span className={styles.desktopActionLabel}>{registration.desktop}</span>
             <span className={styles.mobileActionLabel}>{registration.mobile}</span>
+            <svg className={styles.actionArrow} width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </Link>
           <details className={styles.mobileMenu}>
             <summary className={styles.menuToggle} aria-label="Open product menu">
-              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+              <span className={styles.menuText}>Menu</span>
+              <span className={styles.menuBars} aria-hidden="true"><span /><span /></span>
             </summary>
             <nav className={styles.mobileMenuPanel} aria-label="Mobile product navigation">
-              {productRoutes.slice(1, 6).map((route) => (
-                <Link key={route.href} href={route.href}>{route.label}</Link>
-              ))}
-              <Link href="/auth/sign-in">Sign in</Link>
+              <p className={styles.menuEyebrow}>Explore the platform</p>
+              <MarketingNavLinks variant="mobile" />
+              <div className={styles.mobileMenuFooter}>
+                <Link href="/contact">Contact sales <span aria-hidden="true">↗</span></Link>
+                <Link href="/help">Help center <span aria-hidden="true">↗</span></Link>
+                <Link href="/auth/sign-in">Sign in <span aria-hidden="true">↗</span></Link>
+              </div>
             </nav>
           </details>
         </div>
       </header>
 
-      <section className={`hero-grid section-card marketing-hero ${heroStyles.heroSection}`}>
+      <section id="public-main-content" tabIndex={-1} className={`hero-grid section-card marketing-hero ${heroStyles.heroSection}`}>
         <div className={`stack-lg marketing-hero-copy ${heroStyles.heroCopy}`}>
           <p className="eyebrow">{eyebrow}</p>
           <h1>{title}</h1>

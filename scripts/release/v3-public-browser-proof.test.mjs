@@ -74,9 +74,9 @@ test("mobile header controls meet the 44 CSS pixel minimum and Chrome enforces i
   const css = file("src/components/shell/MarketingNavV3.module.css");
   const chrome = file("scripts/release/v3-public-browser-proof.mjs");
   assert.ok(css.includes("min-height: 44px;"));
-  assert.ok(css.includes(".menuToggle { width: 44px; height: 44px; }"));
+  assert.ok(css.includes(".menuToggle { width: 44px; min-height: 44px;"));
   assert.ok(!css.includes("min-height: 41px;"));
-  assert.ok(!css.includes(".menuToggle { width: 41px; height: 41px; }"));
+  assert.ok(!css.includes("min-height: 39px;"));
   assert.ok(chrome.includes("state.touchTargets"));
   assert.ok(chrome.includes("item.w < 44 || item.h < 44"));
   assert.ok(chrome.includes("width <= 390 && page.heroLabel"));

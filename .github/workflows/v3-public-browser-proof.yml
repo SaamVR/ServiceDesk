@@ -7,6 +7,7 @@ on:
       - feat/servicedesk-v3-combined-acceptance-20261011
     paths:
       - "scripts/release/v3-public-browser-proof.mjs"
+      - "tests/e2e/v3-marketing-nav-redesign.test.ts"
       - ".github/workflows/v3-public-browser-proof.yml"
       - "src/components/shell/**"
       - "src/features/product/**"
@@ -23,6 +24,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "scripts/release/v3-public-browser-proof.mjs"
+      - "tests/e2e/v3-marketing-nav-redesign.test.ts"
       - ".github/workflows/v3-public-browser-proof.yml"
       - "src/components/shell/**"
       - "src/features/product/**"
