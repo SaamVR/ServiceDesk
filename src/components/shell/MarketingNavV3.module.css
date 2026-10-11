@@ -111,14 +111,14 @@
   .brandAi { display: none; }
   .signIn { display: none !important; }
   .primaryAction {
-    min-height: 41px;
+    min-height: 44px;
     padding-inline: 11px;
     font-size: .77rem;
     font-weight: 700;
   }
   .desktopActionLabel { display: none; }
   .mobileActionLabel { display: inline; }
-  .menuToggle { width: 41px; height: 41px; }
+  .menuToggle { width: 44px; height: 44px; }
 }
 @media (max-width: 350px) {
   .header .brand { font-size: .79rem; }
