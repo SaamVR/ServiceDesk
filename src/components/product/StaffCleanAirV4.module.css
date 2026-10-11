@@ -70,7 +70,7 @@
 }
 .cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-brand-copy) span {
   color: #527368;
-  font-size: .73rem;
+  font-size: .75rem;
   font-weight: 650;
 }
 .cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-sidebar-nav) {
@@ -79,7 +79,7 @@
 }
 .cleanShell:global(.app-shell) :global(.app-nav-label) {
   color: #49695d !important;
-  font-size: .67rem !important;
+  font-size: .75rem !important;
   margin: 0 13px 9px !important;
   font-weight: 830 !important;
   letter-spacing: .115em !important;
@@ -135,7 +135,7 @@
 }
 .cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-product-caption) {
   color: #526c60;
-  font-size: .69rem;
+  font-size: .75rem;
 }
 /* Explicit V4 sidebar hierarchy must beat V3 dark styles regardless of
    CSS module import order. Keep labels and icons visible in every state. */
@@ -248,7 +248,7 @@
 }
 .cleanShell :global(.app-eyebrow) {
   color: #219587 !important;
-  font-size: .68rem !important;
+  font-size: .75rem !important;
   font-weight: 830;
   letter-spacing: .12em;
 }
@@ -281,7 +281,7 @@
 }
 .cleanShell :global(.app-metric) { padding: 19px 18px; }
 .cleanShell :global(.app-metric) dt {
-  color: #6b897f; font-size: .72rem; font-weight: 740;
+  color: #6b897f; font-size: .75rem; font-weight: 740;
 }
 .cleanShell :global(.app-metric) dd {
   color: #2a584a;
