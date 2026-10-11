@@ -1,0 +1,91 @@
+name: ServiceDesk V4 L1 navigation regression (synthetic browser only)
+
+# CI-only synthetic shell. This route is created after checkout and is
+# NEVER committed or deployed to Render.
+on:
+  push:
+    branches: [feat/servicedesk-v4-l1-real-sidebar-20261012]
+    paths:
+      - src/components/product/StaffAppShell.tsx
+      - src/components/product/StaffCleanAirV4.module.css
+      - tests/e2e/v4-studio-sidebar-visibility.test.ts
+      - tests/e2e/staff-v3-navigation.test.tsx
+      - scripts/release/v4-studio-sidebar-chrome.mjs
+      - .github/workflows/v4-l1-navigation-ci.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servicedesk-v4-l1-sidebar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sidebar-real-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare temporary synthetic UI-only StaffAppShell route
+        run: |
+          node --input-type=module <<'JS'
+          import { mkdirSync, writeFileSync } from "node:fs";
+          mkdirSync("src/app/studio-navigation-qa", { recursive: true });
+          writeFileSync("src/app/studio-navigation-qa/page.tsx", [
+            'import { StaffAppShell } from "@/components/product/StaffAppShell";',
+            'export default function SyntheticSidebarQA() {',
+            '  return (',
+            '    <StaffAppShell workspace="synthetic-qa-only" signedIn={false}>',
+            '      <section><h1>Synthetic Sidebar Contrast QA</h1>',
+            '      <p>No account, tenant, customer record or provider data in this page.</p></section>',
+            '    </StaffAppShell>',
+            '  );',
+            '}',
+            '',
+          ].join("\n"));
+          JS
+      - name: Check browser script and focused sidebar tests
+        run: |
+          node --check scripts/release/v4-studio-sidebar-chrome.mjs
+          pnpm exec vitest run tests/e2e/v4-studio-sidebar-visibility.test.ts tests/e2e/staff-v3-navigation.test.tsx
+      - name: Complete full RC with ephemeral synthetic route
+        run: pnpm check:rc
+      - name: Install real Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+      - name: Boot isolated local Next application
+        shell: bash
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/servicedesk-v4-sidebar-server.log" 2>&1 &
+          for i in $(seq 1 75); do
+            if curl -fsS http://127.0.0.1:3000/studio-navigation-qa > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Ephemeral sidebar QA fixture failed to boot" >&2
+          exit 1
+      - name: Capture real Chrome rail and mobile menu at seven widths
+        env:
+          V4_SIDEBAR_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_SIDEBAR_OUTPUT: ${{ runner.temp }}/sd-v4-sidebar-qa
+          V4_SIDEBAR_SHA: ${{ github.sha }}
+        run: node scripts/release/v4-studio-sidebar-chrome.mjs
+      - name: Upload synthetic-only screenshot proof
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: servicedesk-v4-synthetic-sidebar-seven-widths
+          path: ${{ runner.temp }}/sd-v4-sidebar-qa/
+          if-no-files-found: error
+          retention-days: 7

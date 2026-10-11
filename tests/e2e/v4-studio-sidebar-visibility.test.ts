@@ -46,6 +46,10 @@ describe("V4 Studio OS sidebar visibility", () => {
     expect(rail).toContain("scrollbar-width: thin");
     expect(rail).toContain("scrollbar-gutter: stable");
     expect(rail).toContain("overscroll-behavior-y: contain");
+    expect(rail).toContain("height: 100dvh");
+    expect(rail).toContain("max-height: 100dvh");
+    expect(rail).toContain("overflow-y: auto");
+    expect(rail).toContain("overflow-x: hidden");
   });
 
   it("keeps text, icons and labels WCAG AA readable on white", () => {
@@ -88,6 +92,12 @@ describe("V4 Studio OS sidebar visibility", () => {
     expect(css).toContain("color: #4b6d5f !important");
     expect(shell).toContain('aria-label={mobileNavOpen ? "Close workspace navigation" : "Open workspace navigation"}');
     expect(shell).toContain("handleMobileNavigationKeyDown");
+    expect(shell).toContain('event.key !== "Tab"');
+    expect(shell).toContain("document.activeElement === first");
+    expect(shell).toContain("document.activeElement === last");
+    expect(shell).toContain('document.body.style.overflow = "hidden"');
+    expect(shell).toContain('window.matchMedia("(min-width: 901px)")');
+    expect(shell).toContain('role="dialog" aria-modal="true" aria-label="Workspace navigation"');
     expect(css).toContain("prefers-reduced-motion: reduce");
   });
 });

@@ -143,10 +143,32 @@ export function StaffAppShell({
     setMobileNavOpen(event.currentTarget.open);
   }
   function handleMobileNavigationKeyDown(event: React.KeyboardEvent<HTMLDetailsElement>) {
-    if (event.key !== "Escape" || !mobileMenu.current?.open) return;
-    event.preventDefault();
-    closeMobileNavigation();
-    mobileMenu.current?.querySelector("summary")?.focus();
+    if (!mobileMenu.current?.open) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMobileNavigation();
+      mobileMenu.current?.querySelector("summary")?.focus();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    // The workspace drawer covers the page on small screens. Do not let
+    // keyboard focus disappear behind its full-width navigation panel.
+    const focusable = [...mobileMenu.current.querySelectorAll<HTMLElement>(
+      'summary, a[href], button:not([disabled]), [tabindex="0"]',
+    )].filter(node => node.getClientRects().length > 0);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    } else if (!focusable.includes(document.activeElement as HTMLElement)) {
+      event.preventDefault();
+      first.focus();
+    }
   }
   function handleMobileNavigationClick(event: React.MouseEvent<HTMLDivElement>) {
     // Close on both same-route links and route changes. Native <details> stays keyboard operable.
@@ -156,6 +178,26 @@ export function StaffAppShell({
     // Navigating from an open mobile drawer must not hide the destination page.
     if (mobileMenu.current) mobileMenu.current.open = false;
   }, [pathname]);
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const menu = mobileMenu.current;
+    // Return to regular desktop navigation if the viewport grows while open.
+    const desktop = window.matchMedia("(min-width: 901px)");
+    const handleDesktop = () => {
+      if (desktop.matches && menu) {
+        menu.open = false;
+        setMobileNavOpen(false);
+      }
+    };
+    desktop.addEventListener("change", handleDesktop);
+    handleDesktop();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      desktop.removeEventListener("change", handleDesktop);
+    };
+  }, [mobileNavOpen]);
   const currentSegment = pathname.split("/").filter(Boolean).at(-1);
   const currentModule = currentSegment && currentSegment in staffModuleConfig ? currentSegment as StaffModule : "overview";
   const pageLabel = staffModuleConfig[currentModule].label;
@@ -186,7 +228,7 @@ export function StaffAppShell({
               <span aria-hidden="true">☰</span>
               <span>Menu</span>
             </summary>
-            <div className="app-mobile-nav-panel" onClick={handleMobileNavigationClick}>
+            <div className="app-mobile-nav-panel" role="dialog" aria-modal="true" aria-label="Workspace navigation" onClick={handleMobileNavigationClick}>
               <div className="app-mobile-workspace">
                 <strong>{workspaceName}</strong>
                 <span>{pageLabel}</span>
