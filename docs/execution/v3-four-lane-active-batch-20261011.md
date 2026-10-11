@@ -74,3 +74,28 @@ GitHub Actions [38102684008](https://github.com/SaamVR/ServiceDesk/actions/runs/
 **Still blocked / intentionally unchanged:** connected Supabase at migration `0036` with platform safety rejection of `0037` (issue #75), no 0037–0059 skip or bypass, owner-reported Supabase Auth SMTP with no confirmed recipient/session evidence, sign-up disabled, no provider send or payment writes, no canonical V2/main promotion. The Render integration gate remains at its prior deployed source until exact-sha release acceptance. Independent UI browser screenshots at 320/390/834/1280/1440 still required. No separate background chat worker was claimed.
 
 **Next immediate validation:** capture actual browser screenshots from an authorized nonproduction workspace, run one complete `pnpm check:rc` on the prospective combined coordinator+W4 candidate in GPT Runtime/authorized environment, review the indigo Signal Desk visual direction with owner, and only then merge the frontend PR. Do not spend multiple cycles re-auditing unchanged blockers or redoing accepted W1/W2 work.
+
+## V3 sustained backend implementation + exact coordinator RC — 11 October 2026, ~08:30 Asia/Dhaka
+
+**Supersedes prior pending statements for W1/W2 backend candidates only.** The owner explicitly rejected the current frontend/Signal Desk visual design; [W4 PR #83](https://github.com/SaamVR/ServiceDesk/pull/83) stays OPEN/UNMERGED for a separate owner-activated redesign and genuine Chromium review.
+
+Four substantive backend implementation batches have passed focused checks and full `pnpm check:rc` and merged into the **V3 coordinator only**:
+
+| Candidate | PR | Merge commit | Behavior delivered |
+|---|---|---|---|
+| E | [#86](https://github.com/SaamVR/ServiceDesk/pull/86) | `22e702f7199ff23c0c4c1f47f71218d35b39289a` | Durable outbox: isolate DB exceptions, never send foreign-lease rows; bound provider Retry-After; de-duplicate recovery replays, invalid timestamp/ambiguous-lease hold; 7 W1/W2 source+test files |
+| F | [#87](https://github.com/SaamVR/ServiceDesk/pull/87) | `b38ef60039fedb4e09d39a2c9ada7245877c4eec` | Preserve **actual PostgreSQL `lockedBy`**, stop laundering wrong lease owner; validate persisted provider recovery envelope, action/queue concordance, redact recipient PII/credentials |
+| G | [#88](https://github.com/SaamVR/ServiceDesk/pull/88) | `5bf7225a50043cd9c3c063f73b69105cde9a22ae` | Bounded AI model transport; valid JSON `null`/primitive/malformed and oversized tool/reply payload correctly classify INVALID_RESPONSE, not NETWORK_FAILURE; finite timeout |
+| H | [#89](https://github.com/SaamVR/ServiceDesk/pull/89) | `1bc7f1fb9134059afc315f86aa4b616f2450eaee` | Official OpenAI Responses transport: `text.format`, `store:false`, scalar metadata, `output[].content[].text` parsing; incomplete/refusal fail closed, synthetic provider tests; no real API call |
+
+**Test history:** PR #86 first exposed TS duplicate object key and Vitest mistakenly discovering the Node-native smoke test; both corrected without bypassing tests. The Node smoke continues as `node --test`, Vitest excludes that separate suite. Final PR #86 CI [38104625792](https://github.com/SaamVR/ServiceDesk/actions/runs/38104625792) was GREEN with 1,465/1,465 tests and Next build. PR #87 [38104760392](https://github.com/SaamVR/ServiceDesk/actions/runs/38104760392), PR #88 [38104946142](https://github.com/SaamVR/ServiceDesk/actions/runs/38104946142) and PR #89 [38105098119](https://github.com/SaamVR/ServiceDesk/actions/runs/38105098119) each passed focused and full RC gates against exact PR heads.
+
+**Final combined gate:** code+workflow coordinator commit `c3410438e4eb4977a89546c7a006c044c4ad3335`. GitHub Actions push [38105252436](https://github.com/SaamVR/ServiceDesk/actions/runs/38105252436) **PASS** on the exact integrated commit:
+- Node release-smoke: 6/6 PASS.
+- Focused backend suite: 10/10 files, **78/78 tests PASS**.
+- Full `pnpm check:rc`: **356/356 files, 1,476/1,476 Vitest tests PASS; TypeScript PASS; ESLint 0 errors/9 warnings; Next production build PASS**, including 32 static pages generated.
+- GitHub Actions push gate is scoped to backend source/workflow changes; documentation-only commits do not retrigger builds. These are executable GitHub-hosted CI checks, not fabricated GPT Runtime/browser/provider receipts.
+
+**Release status: NOT LAUNCH APPROVED.** The original isolated Render integration gate remains pinned to previously reviewed SHA until independent deployment acceptance; no preview/prod promotion happened in these batches. Connected Supabase schema still last confirmed `0036`, 0037 platform safety rejected ([issue #75](https://github.com/SaamVR/ServiceDesk/issues/75)); do not bypass/migrate out of order. Supabase Auth SMTP configured by owner but controlled email-confirmation delivery/session receipt unverified; registration disabled. REST Resend and OpenAI tests are **CONTRACT_TESTED**, not live provider verification. No live messages/payments, tenant data edits, canonical V2/main edits, or credential exposure. Visual redesign must be approved with actual browser screenshots at 320/390/834/1280/1440, not inferred from tests.
+
+**Next high-leverage work:** Let the owner-activated W4 chat own the complete visual overhaul on its branch; W3 reviews and merges it only after genuine screenshot/UX acceptance and combined RC. In parallel W1/W2 continue feature slices tied to operational use, not repetitive documentation. Resolve migration 0037 only through a supported platform/owner path, then verify real auth email, RLS session, controlled provider callbacks, and exact-sha staged browser walkthrough. Do not claim four independent conversations are running without observed worker evidence.
