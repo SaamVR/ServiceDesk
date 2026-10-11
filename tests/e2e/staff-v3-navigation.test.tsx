@@ -3,6 +3,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import "./v3-studio-visual-standard.test";
+import "./v3-studio-dashboard.test";
+import "./v3-studio-workspaces.test";
+import "./v3-studio-brand-continuity.test";
+import "./v3-studio-contrast.test";
+import "./v3-studio-coverage.test";
 import { staffModuleConfig, buildStaffModuleHref } from "../../src/features/operations/staff-modules";
 import { StaffAppShell } from "../../src/components/product/StaffAppShell";
 
