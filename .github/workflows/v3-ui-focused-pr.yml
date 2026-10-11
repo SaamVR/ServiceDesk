@@ -18,6 +18,14 @@ on:
       - "tests/e2e/v3-staff-command-search.test.ts"
       - "tests/e2e/v3-inbox-triage.test.ts"
       - "tests/e2e/v2-professional-dashboard-ui.test.ts"
+      - "src/features/operations/OperationalProductRoute.tsx"
+      - "src/features/operations/RecordDirectorySearch*"
+      - "src/features/operations/record-directory.ts"
+      - "src/app/app/[workspace]/**"
+      - "tests/e2e/v3-record-directory.test.tsx"
+      - "tests/e2e/v3-staff-route-resilience.test.tsx"
+      - "tests/e2e/v3-inbox-search.test.ts"
+      - "tests/e2e/v2-professional-schedule-ui.test.ts"
       - ".github/workflows/v3-ui-focused-pr.yml"
 
 permissions:
@@ -52,7 +60,17 @@ jobs:
           tests/e2e/v3-staff-command-search.test.ts
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-inbox-triage.test.ts
+          src/features/operations/RecordDirectorySearch.tsx
+          src/features/operations/record-directory.ts
+          src/app/app/'[workspace]'/error.tsx
+          src/app/app/'[workspace]'/loading.tsx
+          tests/e2e/v3-record-directory.test.tsx
+          tests/e2e/v3-staff-route-resilience.test.tsx
           tests/e2e/v2-professional-dashboard-ui.test.ts
+          tests/e2e/v3-record-directory.test.tsx
+          tests/e2e/v3-staff-route-resilience.test.tsx
+          tests/e2e/v3-inbox-search.test.ts
+          tests/e2e/v2-professional-schedule-ui.test.ts
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint changed UI
