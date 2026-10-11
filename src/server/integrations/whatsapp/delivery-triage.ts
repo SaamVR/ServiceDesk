@@ -1,5 +1,6 @@
 import type { Result } from "../../../contracts";
 import { resolveStaffActor, type ResolvedStaffActor } from "../../../features/operations/operational-product-runtime";
+import { reconcileOutboundDelivery, type DeliveryEvidenceSource, type DeliveryOutboxEvidence } from "./delivery-outbox-evidence";
 
 export type DeliveryHealth = "OK" | "PENDING" | "NEEDS_REVIEW";
 export type DeliveryState =
@@ -9,10 +10,11 @@ export interface DeliveryTriageItem {
   conversationId: string;
   channel: "WHATSAPP" | "EMAIL";
   deliveryState: DeliveryState;
+  evidenceSource?: DeliveryEvidenceSource;
   createdAt: string;
   ageMinutes: number;
   health: DeliveryHealth;
-  reason?: "PROVIDER_FAILURE" | "SUPPRESSED_BY_POLICY" | "STALE_PENDING" | "STATUS_MISSING";
+  reason?: "PROVIDER_FAILURE" | "SUPPRESSED_BY_POLICY" | "STALE_PENDING" | "STATUS_MISSING" | "OUTBOX_RECEIPT_MISSING" | "OUTBOX_REFERENCE_MISSING";
 }
 export interface DeliveryTriageSnapshot {
   workspaceId: string;
@@ -68,7 +70,7 @@ export async function readOperationalDeliveryTriage(
 
   try {
     const outbound = await service.from("messages")
-      .select("id,workspace_id,conversation_id,direction,delivery_state,created_at")
+      .select("id,workspace_id,conversation_id,direction,delivery_state,created_at,outbox_event_id")
       .eq("workspace_id", workspace.id)
       .eq("direction", "OUTBOUND")
       .order("created_at", { ascending: false })
@@ -143,19 +145,54 @@ export async function readOperationalDeliveryTriage(
       }
     }
 
+    // Load outbox acceptance evidence ONLY for branch-authorized message IDs.
+    // Without this, SENT events leave messages.delivery_state=QUEUED and the
+    // operator view incorrectly reports provider-accepted replies as unsent.
+    const authorized = scanned.filter(row => {
+      const conversation = conversations.get(row.conversation_id)!;
+      return !permittedRequestIds ||
+        (Boolean(conversation.requestId) && permittedRequestIds.has(conversation.requestId!));
+    });
+    const outboxIds = [...new Set(authorized
+      .map(row => row.outbox_event_id)
+      .filter((id): id is string => validId(id)))];
+    const evidenceById = new Map<string, DeliveryOutboxEvidence>();
+    if (outboxIds.length > 0) {
+      const evidence = await service.from("outbox_events")
+        .select("id,workspace_id,topic,status,provider_reference")
+        .eq("workspace_id", workspace.id)
+        .in("id", outboxIds)
+        .limit(201);
+      if (evidence.error || !Array.isArray(evidence.data)) {
+        return fail("DELIVERY_TRIAGE_OUTBOX_READ_FAILED", "Provider acceptance evidence is unavailable.");
+      }
+      for (const e of evidence.data) {
+        if (!validId(e.id) || !outboxIds.includes(e.id) ||
+            e.workspace_id !== workspace.id || typeof e.topic !== "string" ||
+            !["PENDING", "SENT", "FAILED", "SUPPRESSED"].includes(e.status) ||
+            (e.provider_reference !== null && typeof e.provider_reference !== "string") ||
+            evidenceById.has(e.id)) {
+          return fail("DELIVERY_TRIAGE_OUTBOX_INVALID", "Provider acceptance evidence was inconsistent.");
+        }
+        evidenceById.set(e.id, e as DeliveryOutboxEvidence);
+      }
+    }
     const counts = { ok: 0, pending: 0, review: 0 };
     const items: DeliveryTriageItem[] = [];
-    for (const row of scanned) {
-      const conversation = conversations.get(row.conversation_id)!;
-      if (permittedRequestIds &&
-          (!conversation.requestId || !permittedRequestIds.has(conversation.requestId))) continue;
-      const deliveryState = (row.delivery_state === null ? "UNKNOWN" : row.delivery_state) as DeliveryState;
+    for (const row of authorized) {
+      const persisted = (row.delivery_state === null ? "UNKNOWN" : row.delivery_state) as DeliveryState;
+      const reconciled = typeof row.outbox_event_id === "string"
+        ? reconcileOutboundDelivery(persisted, evidenceById.get(row.outbox_event_id))
+        : { deliveryState: persisted, evidenceSource: "MESSAGE_STATE" as const };
+      const deliveryState = reconciled.deliveryState;
       const ageMinutes = Math.max(0, Math.floor((now.getTime() - Date.parse(row.created_at)) / 60000));
       let health: DeliveryHealth = "OK";
       let reason: DeliveryTriageItem["reason"];
       if (deliveryState === "UNKNOWN") {
         health = "NEEDS_REVIEW";
-        reason = "STATUS_MISSING";
+        reason = reconciled.reason === "OUTBOX_REFERENCE_MISSING" ||
+          reconciled.reason === "OUTBOX_RECEIPT_MISSING"
+          ? reconciled.reason : "STATUS_MISSING";
       } else if (deliveryState === "FAILED" || deliveryState === "SUPPRESSED") {
         health = "NEEDS_REVIEW";
         reason = deliveryState === "FAILED" ? "PROVIDER_FAILURE" : "SUPPRESSED_BY_POLICY";
@@ -170,7 +207,8 @@ export async function readOperationalDeliveryTriage(
       else counts.review++;
       items.push({
         messageId: row.id, conversationId: row.conversation_id,
-        channel: conversation.channel, deliveryState,
+        channel: conversations.get(row.conversation_id)!.channel, deliveryState,
+        evidenceSource: reconciled.evidenceSource,
         createdAt: row.created_at, ageMinutes, health, ...(reason ? { reason } : {}),
       });
     }
