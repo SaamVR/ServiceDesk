@@ -59,6 +59,8 @@ import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatWorkspaceDateTime } from "./product-truth";
 import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
+import { filterQualityQueue, normalizeQualityQueue, normalizeQualitySearch, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
+import { QualityQueueFilters } from "./QualityQueueFilters";
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { deriveDispatchBacklog } from "./dispatch-backlog";
 import { formatMinorMoney } from "./view-models";
@@ -89,6 +91,8 @@ interface OperationalProductRouteProps {
   selectedRequestId?: string;
   selectedQuoteId?: string;
   selectedQualityCaseId?: string;
+  selectedQualityQueue?: string;
+  qualitySearchQuery?: string;
   selectedJobId?: string;
   selectedJobQueue?: string;
   selectedInvoiceId?: string;
@@ -2074,11 +2078,17 @@ function QualityView({
   data,
   workspaceSlug,
   selectedQualityCaseId,
+  selectedQualityQueue,
+  qualitySearchQuery,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedQualityCaseId?: string;
+  selectedQualityQueue?: string;
+  qualitySearchQuery?: string;
 }) {
+  const queue = normalizeQualityQueue(selectedQualityQueue);
+  const search = normalizeQualitySearch(qualitySearchQuery);
   async function qualityAction(formData: FormData) {
     "use server";
     const action = String(formData.get("action") ?? "") as
@@ -2097,7 +2107,7 @@ function QualityView({
       action,
       String(formData.get("resolutionNote") ?? ""),
     );
-    actionRedirect(workspaceSlug, "quality", result, "case=" + encodeURIComponent(qualityCaseId) + "&");
+    actionRedirect(workspaceSlug, "quality", result, qualityFeedbackPrefix(queue, search, qualityCaseId));
   }
 
   if (data.qualityCases.length === 0) {
@@ -2109,16 +2119,41 @@ function QualityView({
     return (stateWeight[left.state] ?? 9) - (stateWeight[right.state] ?? 9)
       || (left.dueAt ? Date.parse(left.dueAt) : Number.MAX_SAFE_INTEGER) - (right.dueAt ? Date.parse(right.dueAt) : Number.MAX_SAFE_INTEGER);
   });
-  const selected = orderedCases.find((qualityCase) => qualityCase.id === selectedQualityCaseId) ?? orderedCases[0];
-  const visit = data.visits.find((item) => item.id === selected.visitId);
+  const visitById = new Map(data.visits.map(visit => [visit.id, visit]));
+  const requestById = new Map(data.requests.map(request => [request.id, request]));
+  const customerById = new Map(data.customers.map(customer => [customer.id, customer]));
+  const lookupCase = (qualityCase: typeof orderedCases[number]) => {
+    const caseVisit = visitById.get(qualityCase.visitId);
+    const caseRequest = caseVisit ? requestById.get(caseVisit.requestId) : undefined;
+    const caseCustomer = caseRequest?.customerId ? customerById.get(caseRequest.customerId) : undefined;
+    return { caseRequest, caseCustomer };
+  };
+  const filteredCases = filterQualityQueue(orderedCases, queue, search, qualityCase => {
+    const { caseRequest, caseCustomer } = lookupCase(qualityCase);
+    return [qualityCase.summary, caseCustomer?.displayName, caseRequest?.serviceLabel, qualityCase.state, qualityCase.feedbackScore?.toString()];
+  });
+  const counts = qualityQueueCount(orderedCases);
+  if (!filteredCases.length) {
+    return (
+      <section className={styles.qualityWorkspace} aria-label="Quality review workspace">
+        <QualityQueueFilters queue={queue} search={search} counts={counts} visible={0} />
+        <EmptyState
+          title={search ? "No matching quality cases" : "No cases in this queue"}
+          detail={search ? "Try another customer, service or issue description." : "Choose another status or clear the filter to see existing cases."}
+        />
+      </section>
+    );
+  }
+  const selected = filteredCases.find(qualityCase => qualityCase.id === selectedQualityCaseId) ?? filteredCases[0];
+  const visit = visitById.get(selected.visitId);
   const request = visit ? data.requests.find((item) => item.id === visit.requestId) : undefined;
   const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
   const property = request?.propertyId ? data.properties.find((item) => item.id === request.propertyId) : undefined;
   const crew = visit?.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
   const evidence = data.visitEvidence.filter((item) => item.visitId === selected.visitId);
-  const openCount = orderedCases.filter((item) => item.state === "OPEN").length;
-  const reviewCount = orderedCases.filter((item) => item.state === "IN_REVIEW").length;
-  const resolvedCount = orderedCases.filter((item) => item.state === "RESOLVED").length;
+  const openCount = counts.open;
+  const reviewCount = counts.review;
+  const resolvedCount = counts.resolved;
 
   return (
     <section className={styles.qualityWorkspace} aria-label="Quality review workspace">
@@ -2131,17 +2166,17 @@ function QualityView({
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open jobs</a>
       </header>
 
+      <QualityQueueFilters queue={queue} search={search} counts={counts} visible={filteredCases.length} />
+
       <div className={styles.qualitySplit}>
         <aside className={styles.qualityQueue} aria-label="Quality case list">
-          {orderedCases.map((qualityCase) => {
-            const caseVisit = data.visits.find((item) => item.id === qualityCase.visitId);
-            const caseRequest = caseVisit ? data.requests.find((item) => item.id === caseVisit.requestId) : undefined;
-            const caseCustomer = caseRequest?.customerId ? data.customers.find((item) => item.id === caseRequest.customerId) : undefined;
+          {filteredCases.map((qualityCase) => {
+            const { caseRequest, caseCustomer } = lookupCase(qualityCase);
             const selectedCase = qualityCase.id === selected.id;
             return (
               <a
                 className={`${styles.qualityQueueItem} ${selectedCase ? styles.qualityQueueSelected : ""}`.trim()}
-                href={"?case=" + encodeURIComponent(qualityCase.id)}
+                href={qualityQueueHref(queue, search, qualityCase.id)}
                 aria-current={selectedCase ? "page" : undefined}
                 key={qualityCase.id}
               >
@@ -2171,13 +2206,13 @@ function QualityView({
               {selected.state === "OPEN" ? (
                 <form action={qualityAction} className={styles.qualityInlineActions}>
                   <input type="hidden" name="qualityCaseId" value={selected.id} />
-                  <button className="app-button-secondary" name="action" value="ASSIGN">Assign to me</button>
-                  <button className="app-button-primary" name="action" value="START_REVIEW">Start review</button>
+                  <StaffSubmitButton className="app-button-secondary" name="action" value="ASSIGN" pendingLabel="Assigning case…">Assign to me</StaffSubmitButton>
+                  <StaffSubmitButton className="app-button-primary" name="action" value="START_REVIEW" pendingLabel="Starting review…">Start review</StaffSubmitButton>
                 </form>
               ) : selected.state === "RESOLVED" && selected.reviewRequestState === "ELIGIBLE" ? (
                 <form action={qualityAction}>
                   <input type="hidden" name="qualityCaseId" value={selected.id} />
-                  <button className="app-button-primary" name="action" value="REQUEST_REVIEW">Request customer review</button>
+                  <StaffSubmitButton className="app-button-primary" name="action" value="REQUEST_REVIEW" pendingLabel="Requesting review…">Request customer review</StaffSubmitButton>
                 </form>
               ) : null}
             </div>
@@ -2237,7 +2272,7 @@ function QualityView({
                     <TextArea id={id} name="resolutionNote" rows={4} required describedBy={describedBy} invalid={invalid} placeholder="Describe what was resolved" />
                   )}
                 </FormField>
-                <button className="app-button-primary" name="action" value="RESOLVE">Resolve case</button>
+                <StaffSubmitButton className="app-button-primary" name="action" value="RESOLVE" pendingLabel="Resolving case…">Resolve case</StaffSubmitButton>
               </form>
             </section>
           ) : null}
@@ -4154,6 +4189,8 @@ function renderModule(
   selectedJobQueue?: string,
   selectedScheduleFrom?: string,
   selectedScheduleDay?: string,
+  selectedQualityQueue?: string,
+  qualitySearchQuery?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -4179,7 +4216,7 @@ function renderModule(
     case "invoices":
       return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} searchQuery={searchQuery} />;
     case "quality":
-      return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} />;
+      return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} selectedQualityQueue={selectedQualityQueue} qualitySearchQuery={qualitySearchQuery} />;
     case "automations":
       return <AutomationsView data={data} workspaceSlug={workspaceSlug} />;
     case "reports":
@@ -4245,6 +4282,8 @@ export async function OperationalProductRoute({
   selectedRequestId,
   selectedQuoteId,
   selectedQualityCaseId,
+  selectedQualityQueue,
+  qualitySearchQuery,
   selectedJobId,
   selectedJobQueue,
   selectedInvoiceId,
@@ -4271,7 +4310,7 @@ export async function OperationalProductRoute({
       {result.ok ? (
         <>
           {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay)}
+          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay, selectedQualityQueue, qualitySearchQuery)}
         </>
       ) : (
         <Panel>

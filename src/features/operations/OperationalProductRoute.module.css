@@ -1933,3 +1933,13 @@
 .scheduleOverflowNotice { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 13px 18px; border-top: 1px solid #dce9ea; background: #eff7f6; color: #486a73; font-size: .77rem; font-weight: 650; }
 .scheduleOverflowNotice a { color: #0a6e64; font-weight: 770; text-decoration: underline; text-underline-offset: 3px; }
 .scheduleOverflowNotice a:focus-visible { outline: 3px solid #158b7e; outline-offset: 3px; }
+
+/* Quality case triage operates on authenticated records only. */
+.qualityWorkspace { gap:16px; }
+.qualityQueue { scrollbar-color:#bed2d5 transparent; }
+.qualityQueueSelected { background:#e5f5f0; box-shadow:inset 3px 0 #0d8173; }
+.qualityQueueItem { min-height:100px; padding:15px; }
+.qualityQueueItem:focus-visible { outline:3px solid #198d81; outline-offset:-3px; }
+.qualityQueueTop strong { font-size:.85rem; font-weight:740; }
+.qualityQueueCustomer { font-size:.77rem; }
+@media(max-width:800px) { .qualitySplit { grid-template-columns:minmax(0,1fr); min-height:0; } .qualityQueue { max-height:340px; border-right:0; border-bottom:1px solid #dce7e9; } .qualityDetailHeader { align-items:flex-start; flex-wrap:wrap; } }
