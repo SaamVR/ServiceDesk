@@ -132,7 +132,7 @@ describe("V4 model-backed cleaning request copilot", () => {
 
   it("never exports provider receipts or executes a proposed action through the HTTP endpoint", async () => {
     const run = vi.fn(async () => ({ ok: true as const, value: {
-      state: "AI_DRAFT_REQUIRES_REVIEW", requestId, source: "AUTHORIZED_SAVED_REQUEST",
+      state: "AI_DRAFT_REQUIRES_REVIEW" as const, requestId, source: "AUTHORIZED_SAVED_REQUEST" as const,
       model: "gpt-test", briefing: "Review the missing information.",
     } }));
     const response = await handleRequestBriefPost(new Request("https://studio.example/api/internal/ai/request-brief", {
