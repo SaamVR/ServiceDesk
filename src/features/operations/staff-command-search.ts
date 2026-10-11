@@ -37,5 +37,6 @@ export function searchStaffDestinations(
   });
   return results.sort((a, b) => a.score - b.score || a.index - b.index)
     .slice(0, Math.max(0, Math.min(13, Math.floor(Number.isFinite(limit) ? limit : 13))))
-    .map(({ score: _score, index: _index, ...destination }) => destination);
+    .map(item => ({ module: item.module, label: item.label, eyebrow: item.eyebrow,
+      description: item.description, href: item.href }));
 }
