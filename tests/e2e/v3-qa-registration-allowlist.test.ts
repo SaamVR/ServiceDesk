@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ownerRegistrationAvailable, ownerRegistrationEmailAllowed, ownerRegistrationMode, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 
 const env: NodeJS.ProcessEnv = {
+  NODE_ENV: "test",
   NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
   SERVICEDESK_AUTH_REDIRECT_ORIGIN: "https://servicedesk-v3-frontend-review.onrender.com",
