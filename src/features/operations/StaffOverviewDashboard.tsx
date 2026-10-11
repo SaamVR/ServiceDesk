@@ -8,7 +8,12 @@ import type {
   OperationalVisit,
 } from "./operational-product-runtime";
 import { summarizeOutstandingInvoices } from "./product-truth";
+import { buildQuotePipeline } from "./quote-pipeline";
+import { isOverdueQualityCase, prioritizeQualityFollowUp } from "./quality-queue";
 import { formatMinorMoney } from "./view-models";
+import { createLocalDayKey } from "./staff-local-day";
+import { indexStaffById } from "./staff-snapshot-index";
+import { buildInboxTriage } from "./inbox-triage";
 import styles from "./StaffOverviewDashboard.module.css";
 
 function attentionTone(severity: "INFO" | "WARNING" | "CRITICAL") {
@@ -21,21 +26,6 @@ function readable(value: string) {
   return value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function dateParts(value: string, timeZone: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return undefined;
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
-  const year = part("year");
-  const month = part("month");
-  const day = part("day");
-  return year && month && day ? `${year}-${month}-${day}` : undefined;
-}
 
 function formatTime(value: string, timeZone: string) {
   const date = new Date(value);
@@ -94,19 +84,22 @@ function KpiCard({
   label,
   value,
   detail,
+  href,
   emphasis = "default",
 }: {
   label: string;
   value: string | number;
   detail: string;
+  href: string;
   emphasis?: "default" | "warning" | "danger";
 }) {
   return (
-    <article className={`${styles.kpiCard} ${styles[`kpi_${emphasis}`]}`}>
+    <Link className={`${styles.kpiCard} ${styles[`kpi_${emphasis}`]}`} href={href}>
       <p>{label}</p>
       <strong>{value}</strong>
       <span>{detail}</span>
-    </article>
+      <span className={styles.kpiGo} aria-hidden="true">↗</span>
+    </Link>
   );
 }
 
@@ -124,22 +117,28 @@ function EmptyBlock({ title, description }: { title: string; description: string
 
 function ScheduleRow({
   visit,
-  snapshot,
+  timeZone,
+  records,
   workspace,
 }: {
   visit: OperationalVisit;
-  snapshot: Pick<OperationalStaffSnapshot, "workspace" | "requests" | "customers" | "crews">;
+  timeZone: string;
+  records: {
+    requests: ReadonlyMap<string, OperationalStaffSnapshot["requests"][number]>;
+    customers: ReadonlyMap<string, OperationalStaffSnapshot["customers"][number]>;
+    crews: ReadonlyMap<string, OperationalStaffSnapshot["crews"][number]>;
+  };
   workspace: string;
 }) {
-  const request = snapshot.requests.find((item) => item.id === visit.requestId);
+  const request = records.requests.get(visit.requestId);
   const customer = request?.customerId
-    ? snapshot.customers.find((item) => item.id === request.customerId)
+    ? records.customers.get(request.customerId)
     : undefined;
-  const crew = visit.crewId ? snapshot.crews.find((item) => item.id === visit.crewId) : undefined;
+  const crew = visit.crewId ? records.crews.get(visit.crewId) : undefined;
 
   return (
     <Link className={styles.scheduleRow} href={`/app/${encodeURIComponent(workspace)}/jobs?job=${encodeURIComponent(visit.id)}`}>
-      <time className={styles.scheduleTime}>{formatTime(visit.startAt, snapshot.workspace.timezone)}</time>
+      <time className={styles.scheduleTime}>{formatTime(visit.startAt, timeZone)}</time>
       <span className={styles.scheduleMarker} aria-hidden="true" />
       <span className={styles.scheduleCopy}>
         <strong>{request?.serviceLabel ?? "Service visit"}</strong>
@@ -153,7 +152,6 @@ function ScheduleRow({
 export function StaffOverviewDashboard({
   workspace,
   snapshot,
-  errorMessage,
 }: {
   workspace: string;
   snapshot?: Pick<
@@ -168,7 +166,7 @@ export function StaffOverviewDashboard({
     | "attentionItems"
     | "qualityCases"
     | "crews"
-  >;
+  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages">>;
   errorMessage?: string;
 }) {
   if (!snapshot) {
@@ -177,14 +175,15 @@ export function StaffOverviewDashboard({
         <header className={styles.pageHeader}>
           <div>
             <p className={styles.eyebrow}>Operations</p>
-            <h1>Overview</h1>
+            <h1>Today</h1>
             <p>Current workspace activity could not be loaded.</p>
           </div>
         </header>
         <FeedbackBanner
           title="Workspace activity is unavailable"
-          description={errorMessage ?? "Refresh the page or try again shortly."}
+          description="The latest operational records could not be verified. Retry the view; if an action was just submitted, inspect the saved record before repeating it."
           tone="danger"
+          action={<Link className="app-button-secondary" href={buildStaffModuleHref(workspace, "overview")}>Retry loading Today</Link>}
         />
       </div>
     );
@@ -192,21 +191,42 @@ export function StaffOverviewDashboard({
 
   const attention = snapshot.attentionItems.filter((item) => item.status !== "RESOLVED");
   const waitingRequests = snapshot.requests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status));
-  const waitingQuotes = snapshot.quotes.filter((quote) => quote.status === "SENT");
-  const qualityIssues = snapshot.qualityCases.filter((qualityCase) => qualityCase.state !== "RESOLVED");
-  const outstanding = summarizeOutstandingInvoices(snapshot.invoices);
+  const waitingQuoteCount = buildQuotePipeline(snapshot.quotes).awaitingCustomer;
+  // The reply queue is derived from stored external-message direction, not a fake unread badge.
+  // Older server test fixtures can omit these optional records without implying zero replies.
+  const replyTriage = snapshot.conversations && snapshot.messages
+    ? buildInboxTriage(snapshot.conversations, snapshot.messages, snapshot.customers, "all")
+    : undefined;
+  const waitingReplies = replyTriage?.counts["needs-reply"];
+  const qualityIssues = prioritizeQualityFollowUp(snapshot.qualityCases, snapshot.loadedAt)
+    .filter((qualityCase) => qualityCase.state !== "RESOLVED");
+  const overdueQualityCount = qualityIssues.filter((qualityCase) => isOverdueQualityCase(qualityCase, snapshot.loadedAt)).length;
+  const outstanding = summarizeOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId)));
   const outstandingValue = outstanding.currency && outstanding.totalMinor !== undefined
     ? formatMinorMoney(outstanding.totalMinor, outstanding.currency)
     : outstanding.multipleCurrencies
       ? "Multiple currencies"
       : "—";
 
-  const todayKey = dateParts(snapshot.loadedAt, snapshot.workspace.timezone);
-  const todayVisits = snapshot.visits
-    .filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status))
-    .filter((visit) => dateParts(visit.startAt, snapshot.workspace.timezone) === todayKey)
-    .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt));
+  // A single timezone formatter per request avoids repeated Intl construction.
+  // Invalid snapshot dates must never silently match invalid visit dates.
+  const dayKey = createLocalDayKey(snapshot.workspace.timezone);
+  const todayKey = dayKey(snapshot.loadedAt);
+  const todayVisits = todayKey
+    ? snapshot.visits
+      .filter((visit) => !["COMPLETED", "CANCELLED"].includes(visit.status))
+      .filter((visit) => dayKey(visit.startAt) === todayKey)
+      .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt))
+    : [];
+  const records = {
+    requests: indexStaffById(snapshot.requests),
+    customers: indexStaffById(snapshot.customers),
+    crews: indexStaffById(snapshot.crews),
+  };
   const unassignedToday = todayVisits.filter((visit) => !visit.crewId).length;
+  const briefingModule = attention.length ? "automations" : unassignedToday ? "schedule" : waitingReplies ? "inbox" : "schedule";
+  const briefingLink = buildStaffModuleHref(workspace, briefingModule) + (briefingModule === "inbox" ? "?queue=needs-reply" : briefingModule === "schedule" && unassignedToday ? "?queue=unassigned" : "");
+  const briefingAction = attention.length ? "Review priorities" : unassignedToday ? "Assign crews" : waitingReplies ? "Reply to customers" : "Open dispatch";
   const inProgressToday = todayVisits.filter((visit) => ["IN_PROGRESS", "EN_ROUTE"].includes(visit.status)).length;
   const criticalAttention = attention.filter((item) => item.severity === "CRITICAL").length;
   const sortedAttention = [...attention].sort((left, right) => {
@@ -221,68 +241,78 @@ export function StaffOverviewDashboard({
     <div className={styles.dashboard}>
       <header className={styles.pageHeader}>
         <div>
-          <p className={styles.eyebrow}>Operations command center</p>
-          <h1>Overview</h1>
-          <p>{formatDate(snapshot.loadedAt, snapshot.workspace.timezone)} · {snapshot.workspace.name}</p>
+          <p className={styles.eyebrow}>Your workday / operations</p>
+          <h1>Today</h1>
+          <p>{formatDate(snapshot.loadedAt, snapshot.workspace.timezone)} <span aria-hidden="true">·</span> {snapshot.workspace.name} <span aria-hidden="true">·</span> Snapshot updated {formatTime(snapshot.loadedAt, snapshot.workspace.timezone)}</p>
         </div>
         <div className={styles.headerActions}>
           <Link className="app-button-secondary" href={buildStaffModuleHref(workspace, "schedule")}>View schedule</Link>
-          <Link className="app-button-primary" href={buildStaffModuleHref(workspace, "inbox")}>Open inbox</Link>
+          <Link className="app-button-primary" href={buildStaffModuleHref(workspace, "inbox") + (waitingReplies ? "?queue=needs-reply" : "")}>
+            {waitingReplies ? `Reply to customers (${waitingReplies})` : "Open inbox"}
+          </Link>
         </div>
       </header>
 
-      <section className={styles.kpiGrid} aria-label="Operations summary">
+      <section className={styles.workdayBrief} aria-label="Workday briefing">
+        <div className={styles.briefingLabel}>
+          <span className={styles.liveMarker} aria-hidden="true" />
+          <span>Operational brief</span>
+        </div>
+        <p>
+          {criticalAttention > 0
+            ? `${criticalAttention} critical item${criticalAttention === 1 ? "" : "s"} require a decision.`
+            : attention.length
+              ? `${attention.length} open item${attention.length === 1 ? "" : "s"} to work through.`
+              : "No outstanding operational escalations."}
+          {" "}
+          {unassignedToday > 0
+            ? `${unassignedToday} visit${unassignedToday === 1 ? "" : "s"} still need a crew.`
+            : todayVisits.length
+              ? "Today's visits have crew coverage."
+              : "No visits are scheduled for today."}
+          {waitingReplies ? " " + waitingReplies + " customer conversation" + (waitingReplies === 1 ? "" : "s") + " awaiting reply." : ""}
+        </p>
+        <Link href={briefingLink}>
+          {briefingAction} <span aria-hidden="true">↗</span>
+        </Link>
+      </section>
+
+      <nav className={styles.kpiGrid} aria-label="Open operational queues">
         <KpiCard
           label="Today's jobs"
+          href={buildStaffModuleHref(workspace, "schedule") + (unassignedToday ? "?queue=unassigned" : "")}
           value={todayVisits.length}
           detail={unassignedToday ? `${unassignedToday} need crew` : `${inProgressToday} underway`}
           emphasis={unassignedToday ? "warning" : "default"}
         />
         <KpiCard
           label="Needs attention"
+          href={buildStaffModuleHref(workspace, "automations")}
           value={attention.length}
           detail={criticalAttention ? `${criticalAttention} critical` : "No critical issues"}
           emphasis={criticalAttention ? "danger" : attention.length ? "warning" : "default"}
         />
         <KpiCard
           label="Waiting pipeline"
-          value={waitingRequests.length + waitingQuotes.length}
-          detail={`${waitingRequests.length} requests · ${waitingQuotes.length} quotes`}
+          href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
+          value={waitingRequests.length + waitingQuoteCount}
+          detail={`${waitingRequests.length} requests · ${waitingQuoteCount} quotes`}
         />
         <KpiCard
           label="Outstanding"
+          href={buildStaffModuleHref(workspace, "invoices")}
           value={outstandingValue}
-          detail={outstanding.count ? `${outstanding.count} open invoice${outstanding.count === 1 ? "" : "s"}` : "Nothing to collect"}
+          detail={outstanding.count ? `${outstanding.count} customer invoice${outstanding.count === 1 ? "" : "s"} to collect` : "No customer invoices to collect"}
         />
-      </section>
+      </nav>
 
       <div className={styles.primaryGrid}>
-        <section className={styles.card} aria-labelledby="today-heading">
-          <div className={styles.cardHeader}>
-            <div>
-              <p className={styles.cardEyebrow}>Today</p>
-              <h2 id="today-heading">Schedule</h2>
-              <p>{todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` : "No active visits are scheduled for today."}</p>
-            </div>
-            <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "schedule")}>Full schedule →</Link>
-          </div>
-          {todayVisits.length ? (
-            <div className={styles.scheduleList}>
-              {todayVisits.slice(0, 8).map((visit) => (
-                <ScheduleRow key={visit.id} visit={visit} snapshot={snapshot} workspace={workspace} />
-              ))}
-            </div>
-          ) : (
-            <EmptyBlock title="Schedule is clear" description="New confirmed visits will appear here automatically." />
-          )}
-        </section>
-
         <section className={`${styles.card} ${styles.attentionCard}`} aria-labelledby="attention-heading">
           <div className={styles.cardHeader}>
             <div>
               <p className={styles.cardEyebrow}>Priority queue</p>
-              <h2 id="attention-heading">Needs attention</h2>
-              <p>Highest-risk operational items first.</p>
+              <h2 id="attention-heading">Decisions waiting for you</h2>
+              <p>Decision queue ordered by severity and due time.</p>
             </div>
             <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "automations")}>All items →</Link>
           </div>
@@ -303,6 +333,26 @@ export function StaffOverviewDashboard({
             <EmptyBlock title="No open attention items" description="There is no operational recovery work waiting right now." />
           )}
         </section>
+        <section className={styles.card} aria-labelledby="today-heading">
+          <div className={styles.cardHeader}>
+            <div>
+              <p className={styles.cardEyebrow}>Today</p>
+              <h2 id="today-heading">Today&apos;s field plan</h2>
+              <p>{todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` : "No active visits are scheduled for today."}</p>
+            </div>
+            <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "schedule")}>Open dispatch →</Link>
+          </div>
+          {todayVisits.length ? (
+            <div className={styles.scheduleList}>
+              {todayVisits.slice(0, 8).map((visit) => (
+                <ScheduleRow key={visit.id} visit={visit} timeZone={snapshot.workspace.timezone} records={records} workspace={workspace} />
+              ))}
+            </div>
+          ) : (
+            <EmptyBlock title="Schedule is clear" description="New confirmed visits will appear here automatically." />
+          )}
+        </section>
+
       </div>
 
       <div className={styles.secondaryGrid}>
@@ -322,11 +372,11 @@ export function StaffOverviewDashboard({
             </Link>
             <Link href={buildStaffModuleHref(workspace, "quotes")} className={styles.pipelineItem}>
               <span>Quotes with customer</span>
-              <strong>{waitingQuotes.length}</strong>
+              <strong>{waitingQuoteCount}</strong>
               <small>Waiting for customer reply</small>
             </Link>
             <Link href={buildStaffModuleHref(workspace, "invoices")} className={styles.pipelineItem}>
-              <span>Invoices to collect</span>
+              <span>Customer invoices to collect</span>
               <strong>{outstanding.count}</strong>
               <small>{outstandingValue}</small>
             </Link>
@@ -339,7 +389,9 @@ export function StaffOverviewDashboard({
               <p className={styles.cardEyebrow}>Service quality</p>
               <h2 id="quality-heading">Completion follow-up</h2>
             </div>
-            <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "quality")}>Quality queue →</Link>
+            <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "quality") + (overdueQualityCount ? "?queue=overdue" : "")}>
+              {overdueQualityCount ? `${overdueQualityCount} overdue · review →` : "Quality queue →"}
+            </Link>
           </div>
           {qualityIssues.length ? (
             <div className={styles.qualityList}>
@@ -349,7 +401,9 @@ export function StaffOverviewDashboard({
                     <strong>{item.summary}</strong>
                     <small>{item.feedbackScore !== undefined ? `Feedback ${item.feedbackScore}/5` : "Follow-up required"}</small>
                   </span>
-                  <StatusBadge tone={item.state === "OPEN" ? "warning" : "info"}>{readable(item.state)}</StatusBadge>
+                  <StatusBadge tone={isOverdueQualityCase(item, snapshot.loadedAt) ? "danger" : item.state === "OPEN" ? "warning" : "info"}>
+                    {isOverdueQualityCase(item, snapshot.loadedAt) ? "Overdue" : readable(item.state)}
+                  </StatusBadge>
                 </Link>
               ))}
             </div>

@@ -1,0 +1,89 @@
+name: ServiceDesk V3 public browser proof
+
+# No secrets, no auth, no customer data, no provider sends.
+on:
+  push:
+    branches:
+      - feat/servicedesk-v3-combined-acceptance-20261011
+    paths:
+      - "scripts/release/v3-public-browser-proof.mjs"
+      - "tests/e2e/v3-marketing-nav-redesign.test.ts"
+      - ".github/workflows/v3-public-browser-proof.yml"
+      - "src/components/shell/**"
+      - "src/features/product/**"
+      - "src/features/auth/RegistrationShell*"
+      - "src/app/page.tsx"
+      - "src/app/features/**"
+      - "src/app/pricing/**"
+      - "src/app/integrations/**"
+      - "src/app/contact/**"
+      - "src/app/auth/sign-in/**"
+  pull_request:
+    branches:
+      - feat/servicedesk-v3-combined-acceptance-20261011
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "scripts/release/v3-public-browser-proof.mjs"
+      - "tests/e2e/v3-marketing-nav-redesign.test.ts"
+      - ".github/workflows/v3-public-browser-proof.yml"
+      - "src/components/shell/**"
+      - "src/features/product/**"
+      - "src/features/auth/RegistrationShell*"
+      - "src/app/page.tsx"
+      - "src/app/features/**"
+      - "src/app/pricing/**"
+      - "src/app/integrations/**"
+      - "src/app/contact/**"
+      - "src/app/auth/sign-in/**"
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v3-public-browser-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  public-chromium:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install pinned dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build exact PR candidate
+        run: pnpm build
+      - name: Setup actual Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+      - name: Boot local read-only app
+        shell: bash
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/servicedesk-public-web.log" 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Local Next app did not become ready."
+          exit 1
+      - name: Capture real Chrome public responsive pages
+        env:
+          V3_PUBLIC_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V3_PUBLIC_OUTPUT: ${{ runner.temp }}/servicedesk-public-proof
+        run: V3_PUBLIC_CHECKOUT_SHA="$(git rev-parse HEAD)" node scripts/release/v3-public-browser-proof.mjs
+      - name: Upload public-only QA screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-public-chromium-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/servicedesk-public-proof/
+          retention-days: 7
+          if-no-files-found: error

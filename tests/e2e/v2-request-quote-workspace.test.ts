@@ -11,9 +11,9 @@ describe("V2 request and quote operational workspaces", () => {
 
     expect(page).toContain("request?: string");
     expect(page).toContain("selectedRequestId={query.request}");
-    expect(route).toContain('orderedRequests.find((request) => request.id === selectedRequestId)');
+    expect(route).toContain('visibleRequests.find((request) => request.id === selectedRequestId)');
     expect(route).toContain('selected ? styles.salesQueueSelected : ""');
-    expect(route).toContain('href={"?request=" + encodeURIComponent(request.id)}');
+    expect(route).toContain('href={directoryRecordHref("request", request.id, search)}');
     expect(route).toContain('"request=" + encodeURIComponent(requestId) + "&"');
   });
 
@@ -23,9 +23,9 @@ describe("V2 request and quote operational workspaces", () => {
 
     expect(page).toContain("quote?: string");
     expect(page).toContain("selectedQuoteId={query.quote}");
-    expect(route).toContain('orderedQuotes.find((quote) => quote.id === selectedQuoteId)');
+    expect(route).toContain('visibleQuotes.find((quote) => quote.id === selectedQuoteId)');
     expect(route).toContain('selected ? styles.salesQueueSelected : ""');
-    expect(route).toContain('href={"?quote=" + encodeURIComponent(quote.id)}');
+    expect(route).toContain('href={directoryRecordHref("quote", quote.id, search)}');
     expect(route).toContain('"quote=" + encodeURIComponent(quoteId) + "&"');
   });
 });

@@ -28,7 +28,7 @@ describe("V2 product truth helpers", () => {
 
   it("sums outstanding balances only when every open invoice shares one currency", () => {
     const summary = summarizeOutstandingInvoices([
-      { status: "OPEN", currency: "USD", balanceMinor: 1200 },
+      { status: "ISSUED", currency: "USD", balanceMinor: 1200 },
       { status: "PARTIALLY_PAID", currency: "USD", balanceMinor: 800 },
       { status: "VOID", currency: "EUR", balanceMinor: 9999 },
     ]);
@@ -41,10 +41,21 @@ describe("V2 product truth helpers", () => {
     });
   });
 
+  it("keeps unissued draft amounts out of operator cash collection summaries", () => {
+    expect(summarizeOutstandingInvoices([
+      {status: "DRAFT", currency: "USD", balanceMinor: 99900},
+      {status: "ISSUED", currency: "USD", balanceMinor: 6500},
+      {status: "PARTIALLY_PAID", currency: "USD", balanceMinor: 1700},
+      {status: "PAID", currency: "USD", balanceMinor: 0},
+      {status: "VOID", currency: "EUR", balanceMinor: 4000},
+      {status: "ISSUED", currency: "USD", balanceMinor: 0},
+    ])).toEqual({count: 2, currency: "USD", totalMinor: 8200, multipleCurrencies: false});
+  });
+
   it("never presents a cross-currency balance as one monetary total", () => {
     const summary = summarizeOutstandingInvoices([
-      { status: "OPEN", currency: "USD", balanceMinor: 1200 },
-      { status: "OPEN", currency: "EUR", balanceMinor: 900 },
+      { status: "ISSUED", currency: "USD", balanceMinor: 1200 },
+      { status: "ISSUED", currency: "EUR", balanceMinor: 900 },
     ]);
 
     expect(summary.count).toBe(2);

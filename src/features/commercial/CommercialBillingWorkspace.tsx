@@ -7,6 +7,8 @@ import {
   TextInput,
 } from "@/components/product";
 import { applyOperationalManualPayment } from "@/features/operations/operational-product-runtime";
+import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
+import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import {
   createCommercialBillingDraft,
   finalizeCommercialBillingDraft,
@@ -24,7 +26,7 @@ function redirectResult(workspaceSlug: string, result: CommercialFinanceActionRe
   redirect(
     "/app/" +
       encodeURIComponent(workspaceSlug) +
-      "/invoices?" +
+      "/invoices?surface=commercial&" +
       key +
       "=" +
       encodeURIComponent(result.message),
@@ -89,10 +91,34 @@ function parseAmountMinor(value: string): number | undefined {
 
 export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceSlug: string }) {
   const result = await loadCommercialFinanceSnapshot(workspaceSlug);
-  if (!result.ok) return null;
+  if (!result.ok) {
+    // A failed commercial read must not look like an empty account or a successful load.
+    // Keep internal data-access errors out of the public-facing workbench.
+    return (
+      <section className={styles.workspace} aria-label="Commercial contract billing">
+        <FeedbackBanner
+          tone="danger"
+          title="Commercial accounts could not be loaded"
+          description="We couldn't retrieve your commercial billing records. No invoices or payments were changed. Retry or check your workspace access."
+          action={<a href="?surface=commercial">Try again</a>}
+        />
+      </section>
+    );
+  }
 
   const { portfolio, drafts, invoices, billingReady, accounting, accountingBackfill, accountingReady, directCosts, directCostsReady, profitability, profitabilityReady, taxProfiles, taxProfilesReady, canManageTax, timeZone } = result.value;
-  if (!portfolio.feature.enabled) return null;
+  if (!portfolio.feature.enabled) {
+    return (
+      <section className={styles.workspace} aria-label="Commercial contract billing">
+        <FeedbackBanner
+          tone="neutral"
+          title="Commercial accounts are not enabled"
+          description="Contract billing is not active for this workspace. Customer collections remain available separately."
+          action={<a href="?surface=customers">Go to customer collections</a>}
+        />
+      </section>
+    );
+  }
 
   const contracts = portfolio.contracts.filter((contract) => contract.status === "ACTIVE");
   const activeContractIds = new Set(contracts.map((contract) => contract.id));
@@ -506,14 +532,14 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
                             />
                           )}
                         </FormField>
-                        <button className="app-button-primary" type="submit">Record review</button>
+                        <StaffSubmitButton className="app-button-primary" pendingLabel="Recording review…">Record review</StaffSubmitButton>
                       </form>
                     ) : null}
                     {canManageTax ? (
                       <form action={retireTaxProfileAction} className={styles.taxRetireForm}>
                         <input type="hidden" name="profileId" value={profile.id} />
                         <input type="hidden" name="expectedVersion" value={profile.version} />
-                        <button className="app-button-secondary" type="submit">Retire profile</button>
+                        <StaffSubmitButton className="app-button-secondary" pendingLabel="Retiring tax profile…">Retire profile</StaffSubmitButton>
                       </form>
                     ) : null}
                   </article>
@@ -570,7 +596,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
                 </FormGrid>
                 <div className={styles.formFooter}>
                   <p>Review must be recorded separately before this profile is treated as reviewed configuration.</p>
-                  <button className="app-button-primary" type="submit">Save tax draft</button>
+                  <StaffSubmitButton className="app-button-primary" pendingLabel="Saving tax draft…">Save tax draft</StaffSubmitButton>
                 </div>
               </form>
             ) : (
@@ -629,7 +655,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
                 </FormGrid>
                 <div className={styles.formFooter}>
                   <p>Draft creation never charges a payment method or marks an invoice paid.</p>
-                  <button className="app-button-primary" type="submit">Build invoice draft</button>
+                  <StaffSubmitButton className="app-button-primary" pendingLabel="Creating invoice draft…">Build invoice draft</StaffSubmitButton>
                 </div>
               </form>
             ) : (
@@ -706,7 +732,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
                                   <input type="hidden" name="lineId" value={line.id} />
                                   <input type="hidden" name="expectedVersion" value={draft.version} />
                                   <input type="hidden" name="state" value={line.state === "INCLUDED" ? "EXCLUDED" : "INCLUDED"} />
-                                  <button className="app-button-secondary" type="submit">{line.state === "INCLUDED" ? "Exclude" : "Include"}</button>
+                                  <StaffSubmitButton className="app-button-secondary" pendingLabel="Updating line item…">{line.state === "INCLUDED" ? "Exclude" : "Include"}</StaffSubmitButton>
                                 </form>
                               ) : null}
                             </div>
@@ -720,7 +746,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
                           <form action={finalizeAction}>
                             <input type="hidden" name="draftId" value={draft.id} />
                             <input type="hidden" name="expectedVersion" value={draft.version} />
-                            <button className="app-button-primary" type="submit" disabled={included.length === 0 || draft.netTotalMinor <= 0}>Issue invoice</button>
+                            <StaffSubmitButton className="app-button-primary" disabled={included.length === 0 || draft.netTotalMinor <= 0} pendingLabel="Issuing invoice…">Issue invoice</StaffSubmitButton>
                           </form>
                         </footer>
                       ) : invoice ? (
@@ -751,7 +777,7 @@ export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceS
                                   <TextInput id={id} name="reference" placeholder="Bank reference or receipt number" required describedBy={describedBy} invalid={invalid} />
                                 )}
                               </FormField>
-                              <button className="app-button-primary" type="submit">Record payment</button>
+                              <StaffSubmitButton className="app-button-primary" pendingLabel="Recording payment…">Record payment</StaffSubmitButton>
                             </form>
                           ) : null}
                         </footer>

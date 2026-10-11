@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
+import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import type {
   ActorContext,
   ConversationDTO,
@@ -473,9 +474,14 @@ function rows(data: unknown): Row[] {
 
 function runtimeConfig() {
   const publicConfig = supabasePublicConfig();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!publicConfig || !serviceRoleKey) return undefined;
-  return { url: publicConfig.url, anonKey: publicConfig.publishableKey, serviceRoleKey };
+  const mode = operationalDatabaseMode();
+  if (!publicConfig || mode === "DISABLED") return undefined;
+  return {
+    url: publicConfig.url,
+    anonKey: publicConfig.publishableKey,
+    mode,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
 }
 
 function branchCookieName(workspaceId: string) {
@@ -589,9 +595,14 @@ export async function resolveStaffActor(workspaceSlug: string): Promise<
     };
   }
 
-  const service = createClient(config.url, config.serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  // The QA fallback reuses this already verified session as the database
+  // client: every query and mutation is subject to authenticated user RLS.
+  // Privileged clients are never created from browser inputs or cookies.
+  const service = config.mode === "SERVICE_ROLE" && config.serviceRoleKey
+    ? createClient(config.url, config.serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    : auth;
 
   const workspaceResult = await service
     .from("workspaces")

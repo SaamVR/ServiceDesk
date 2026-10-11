@@ -1,0 +1,30 @@
+name: ServiceDesk V3 anonymous definer privilege safety
+on:
+  push:
+    branches: [fix/servicedesk-v3-anon-definer-rpc-20261011]
+  pull_request:
+    branches: [feat/servicedesk-v3-combined-acceptance-20261011]
+    paths:
+      - "supabase/migrations/0060_v3_restrict_anonymous_branch_helpers.sql"
+      - "tests/e2e/v3-anonymous-definer-closure.test.ts"
+      - ".github/workflows/v3-anon-definer-closure.yml"
+permissions:
+  contents: read
+jobs:
+  anonymous-rpc-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.20.0, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Privileged RPC denial regression
+        run: pnpm exec vitest run tests/e2e/v3-anonymous-definer-closure.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts
+      - name: TypeScript
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm exec eslint tests/e2e/v3-anonymous-definer-closure.test.ts

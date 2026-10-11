@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
+import "./v3-studio-submit-pending.test";
+// Reuse the existing cached frontend CI job for the new real-operation queues.
+import "./v3-quality-triage.test";
+import "./v3-studio-invoice-queue.test";
+import "./v3-studio-finance-workspaces.test";
+import "./v3-inbox-search.test";
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import {
   buildInboxTriage,
   inboxQueueHref,
   normalizeInboxQueue,
+  searchInboxQueue,
+  indexLatestInboxMessages,
+  indexLatestExternalInboxMessages,
   type InboxTriageConversation,
   type InboxTriageMessage,
 } from "../../src/features/operations/inbox-triage";
@@ -43,6 +53,7 @@ describe("V3 operational Inbox triage", () => {
     expect(counts).toEqual({
       all: 4,
       "needs-reply": 2,
+      "delivery-issues": 0,
       handover: 1,
       unverified: 2,
     });
@@ -52,6 +63,37 @@ describe("V3 operational Inbox triage", () => {
     expect(threadFlags.get("c-unverified")?.unverified).toBe(true);
   });
 
+  it("retains failed and suppressed outbound threads as actionable and visible recovery", () => {
+    const conversations = [
+      thread("failed", "customer-1", false, "2026-10-11T12:00:00Z"),
+      thread("suppressed", "customer-1", false, "2026-10-11T11:00:00Z"),
+      thread("provider-accepted", "customer-1", false, "2026-10-11T10:00:00Z"),
+      thread("delivered", "customer-1", false, "2026-10-11T09:00:00Z"),
+      thread("plain-outbound", "customer-1", false, "2026-10-11T08:00:00Z"),
+    ];
+    const messages = conversations.flatMap((conversation) => [
+      { conversationId: conversation.id, direction: "INBOUND" as const, createdAt: "2026-10-11T07:00:00Z" },
+      { conversationId: conversation.id, direction: "OUTBOUND" as const, createdAt: conversation.lastMessageAt!,
+        deliveryState: conversation.id === "failed" ? "FAILED"
+          : conversation.id === "suppressed" ? "SUPPRESSED"
+          : conversation.id === "provider-accepted" ? "PROVIDER_ACCEPTED"
+          : conversation.id === "delivered" ? "DELIVERED" : undefined },
+    ]);
+    const triage = buildInboxTriage(conversations, messages, customers, "all");
+    expect(triage.counts).toEqual({ all: 5, "needs-reply": 2, "delivery-issues": 2, handover: 0, unverified: 0 });
+    expect(triage.threadFlags.get("failed")).toMatchObject({needsReply:true,deliveryIssue:true});
+    expect(triage.threadFlags.get("suppressed")).toMatchObject({needsReply:true,deliveryIssue:true});
+    expect(triage.threadFlags.get("provider-accepted")).toMatchObject({needsReply:false,deliveryIssue:false});
+    expect(triage.threadFlags.get("delivered")).toMatchObject({needsReply:false,deliveryIssue:false});
+    expect(buildInboxTriage(conversations, messages, customers, "delivery-issues").visible.map(x => x.id))
+      .toEqual(["failed","suppressed"]);
+    expect(buildInboxTriage(conversations, [...messages].reverse(), customers, "delivery-issues").visible.map(x => x.id))
+      .toEqual(["failed","suppressed"]);
+    expect(inboxQueueHref("delivery-issues","failed","Briar & Co"))
+      .toBe("?queue=delivery-issues&conversation=failed&search=Briar+%26+Co");
+    expect(normalizeInboxQueue("delivery-issues")).toBe("delivery-issues");
+  });
+
   it("preserves distinct handover, unverified and last-inbound queues", () => {
     expect(buildInboxTriage(conversations, messages, customers, "needs-reply").visible.map(c => c.id))
       .toEqual(["c-unverified", "c-inbound"]);
@@ -59,6 +101,19 @@ describe("V3 operational Inbox triage", () => {
       .toEqual(["c-unverified"]);
     expect(buildInboxTriage(conversations, messages, customers, "unverified").visible.map(c => c.id))
       .toEqual(["c-unverified", "c-stale"]);
+  });
+
+  it("distinguishes red delivery recovery from teal reply queues with 44px targets", () => {
+    const route=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
+    const css=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.module.css"),"utf8");
+    const queueStart=css.indexOf(".inboxQueueNav {");
+    const queueCss=css.slice(queueStart,css.indexOf(".inboxPaneHeader,",queueStart));
+    expect(route).toContain("className={styles.inboxDeliveryIssue}>Delivery issue");
+    expect(queueCss).toContain("min-height: 44px");
+    expect(queueCss).toContain("var(--app-surface-subtle, #f3f6f7)");
+    expect(queueCss).toContain(".inboxDeliveryIssue { color: #b42318;");
+    expect(queueCss).toContain(".inboxNeedsReply { color: #08695f;");
+    expect(queueCss).not.toContain("min-height: 39px");
   });
 
   it("does not mark internal notes as outbound customer replies", () => {
@@ -82,6 +137,26 @@ describe("V3 operational Inbox triage", () => {
     expect(result.visible).toHaveLength(0);
   });
 
+  it("conservatively flags inbound messages at identical external timestamps regardless of row order", () => {
+    const tied = [
+      message("tied", "OUTBOUND", "2026-10-10T10:00:00Z"),
+      message("tied", "INBOUND", "2026-10-10T10:00:00Z"),
+    ];
+    for (const input of [tied, [...tied].reverse()]) {
+      const result = buildInboxTriage([thread("tied", "customer-1")], input, customers, "needs-reply");
+      expect(result.visible.map(item => item.id)).toEqual(["tied"]);
+      expect(result.counts["needs-reply"]).toBe(1);
+    }
+  });
+
+  it("stabilizes displayed order for equal conversation timestamps", () => {
+    const rows = [thread("b", "customer-1"), thread("a", "customer-1")];
+    for (const input of [rows, [...rows].reverse()]) {
+      const result = buildInboxTriage(input, [], customers, "all");
+      expect(result.visible.map(item => item.id)).toEqual(["a", "b"]);
+    }
+  });
+
   it("whitelists queue URLs and encodes selected conversation references", () => {
     expect(normalizeInboxQueue("handover")).toBe("handover");
     expect(normalizeInboxQueue("unverified")).toBe("unverified");
@@ -92,19 +167,117 @@ describe("V3 operational Inbox triage", () => {
     expect(inboxQueueHref("handover", "a/b&c")).toBe("?queue=handover&conversation=a%2Fb%26c");
   });
 
+  it("searches only customer, channel and latest external message over triage-approved threads", () => {
+    const rows = [
+      { id: "thread-a", customerId: "customer-a", handoverActive: false, channel: "EMAIL" },
+      { id: "thread-b", customerId: undefined, handoverActive: false, channel: "WHATSAPP" },
+    ];
+    const customerRows = [{ id: "customer-a", displayName: "Avery Patel" }];
+    const messageRows = [
+      { conversationId: "thread-a", direction: "INBOUND" as const, createdAt: "2026-10-11T01:00:00Z", body: "Old message" },
+      { conversationId: "thread-a", direction: "OUTBOUND" as const, createdAt: "2026-10-11T02:00:00Z", body: "Booking confirmed" },
+      { conversationId: "thread-a", direction: "INTERNAL" as const, createdAt: "2026-10-11T03:00:00Z", body: "Secret internal note" },
+    ];
+    expect(searchInboxQueue(rows, messageRows, customerRows, "avery").map((item) => item.id)).toEqual(["thread-a"]);
+    expect(searchInboxQueue(rows, messageRows, customerRows, "WHATSAPP").map((item) => item.id)).toEqual(["thread-b"]);
+    expect(searchInboxQueue(rows, messageRows, customerRows, "confirmed").map((item) => item.id)).toEqual(["thread-a"]);
+    expect(searchInboxQueue(rows, messageRows, customerRows, "Old message")).toEqual([]);
+    expect(searchInboxQueue(rows, messageRows, customerRows, "Secret internal note")).toEqual([]);
+    expect(rows).toHaveLength(2);
+  });
+
+  it("keeps inbound conversation previews consistent with needs-reply triage under timestamp ties", () => {
+    const base = "2026-10-11T09:00:00Z";
+    const incoming = { conversationId: "tied", direction: "INBOUND" as const, createdAt: base, body: "Please reply" };
+    const outgoing = { conversationId: "tied", direction: "OUTBOUND" as const, createdAt: base, body: "Earlier draft" };
+    const note = { conversationId: "tied", direction: "INTERNAL" as const, createdAt: "2026-10-11T10:00:00Z", body: "Private memo" };
+    for (const messages of [[incoming, outgoing, note], [outgoing, note, incoming]]) {
+      expect(indexLatestExternalInboxMessages(messages).get("tied")).toBe(incoming);
+      expect(searchInboxQueue([{ id: "tied", channel: "EMAIL", handoverActive: false }], messages, [], "please reply"))
+        .toHaveLength(1);
+      expect(searchInboxQueue([{ id: "tied", channel: "EMAIL", handoverActive: false }], messages, [], "private memo"))
+        .toHaveLength(0);
+    }
+  });
+
+  it("indexes the latest stored preview in one pass with stable timestamp ties", () => {
+    const a = { conversationId: "a", direction: "INBOUND" as const, createdAt: "2026-10-11T08:00:00Z", body: "A first" };
+    const b = { conversationId: "b", direction: "INBOUND" as const, createdAt: "2026-10-11T09:00:00Z", body: "B current" };
+    const newerA = { conversationId: "a", direction: "OUTBOUND" as const, createdAt: "2026-10-11T10:00:00Z", body: "A latest" };
+    const tiedA = { conversationId: "a", direction: "INTERNAL" as const, createdAt: "2026-10-11T10:00:00Z", body: "A tied" };
+    const result = indexLatestInboxMessages([a, b, newerA, tiedA]);
+    expect(result.get("a")).toBe(newerA);
+    expect(result.get("b")).toBe(b);
+    expect(result.size).toBe(2);
+  });
+
+  it("carries search state safely through queue links", () => {
+    expect(inboxQueueHref("handover", "a/b&c", "Briar & Co")).toBe("?queue=handover&conversation=a%2Fb%26c&search=Briar+%26+Co");
+    expect(inboxQueueHref("all", undefined, "  Cleaning ")).toBe("?search=Cleaning");
+  });
+
+  it("fails closed without explicit isolated QA authorization", () => {
+    const run = spawnSync(process.execPath, ["tests/e2e/v3-capture-workroom.mjs"], {
+      encoding: "utf8",
+      timeout: 10000,
+      env: { ...process.env, V3_QA_ISOLATED: "0" },
+    });
+    expect(run.error).toBeUndefined();
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain("Isolated QA permission required");
+  });
+
+  it("does not mistake viewport capture for actual deployment SHA verification", () => {
+    const source = readFileSync(join(process.cwd(), "tests/e2e/v3-capture-workroom.mjs"), "utf8");
+    expect(source).toContain("Emulation.setDeviceMetricsOverride");
+    expect(source).toContain("Page.captureScreenshot");
+    expect(source).toContain("validatePNG");
+    expect(source).toContain("Horizontal overflow at");
+    expect(source).toContain("independentlyVerifiedSourceSha: false");
+  });
+
+  it("keeps the standalone Chromium visual acceptance runner syntactically valid", () => {
+    const run = spawnSync(process.execPath, ["--check", "tests/e2e/v3-capture-workroom.mjs"], {
+      encoding: "utf8",
+      timeout: 10000,
+    });
+    expect(run.error).toBeUndefined();
+    expect(run.status, run.stderr).toBe(0);
+  });
+
   it("integrates query state, honest queue labels and preserved server commands", () => {
     const page = readFileSync(join(process.cwd(), "src/app/app/[workspace]/inbox/page.tsx"), "utf8");
     const main = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.tsx"), "utf8");
     const css = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.module.css"), "utf8");
     expect(page).toContain('selectedQueue={query.queue}');
     expect(main).toContain("buildInboxTriage(data.conversations, data.messages, data.customers, queue)");
-    expect(main).toContain('<InboxQueueNavigation queue={queue} counts={triage.counts} />');
+    expect(main).toContain('<InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />');
+    expect(main).toContain('searchInboxQueue(triage.visible, data.messages, data.customers, search)');
+    expect(main).toContain("indexLatestExternalInboxMessages(data.messages)");
+    expect(main).toContain('<InboxSearchForm queue={queue} search={search} />');
+    expect(page).toContain('searchQuery={query.search}');
     expect(main).toContain('aria-label="Conversation queues"');
-    expect(main).toContain('href={inboxQueueHref(queue, conversation.id)}');
-    expect(main).toContain('href={inboxQueueHref("all", conversation.id)}');
+    expect(main).toContain('"delivery-issues": "Delivery issues"');
+    expect(main).toContain("triage.threadFlags.get(selected.id)?.deliveryIssue");
+    expect(main).toContain("Outbound delivery needs review");
+    expect(main).toContain("Check the provider status, recipient identity and consent");
+    expect(main).toContain("Delivery issue</span>");
+    expect(main).toContain('href={inboxQueueHref(queue, conversation.id, search) + "#active-inbox-thread"}');
+    expect(main).toContain('href={inboxQueueHref("all", conversation.id, search)}');
     expect(main).toContain("toggleInboxHandover(workspaceSlug");
-    expect(main).toContain("enqueueInboxReply(workspaceSlug");
+    expect(main).toContain("queueApprovedInboxReply({");
+    expect(main).toContain('name="sourceMessageId" value={latestInbound?.id ?? ""}');
+    expect(main).toContain('name="confirmedByStaff" value="yes" required');
     expect(main).toContain("resolveOperationalConversationIdentity(");
+    expect(main).toContain('aria-live="polite"');
+    expect(main).toContain('href="#inbox-conversation-list"');
+    expect(main).toContain('id="active-inbox-thread"');
+    expect(main).toContain("activeQuote.status");
+    expect(main).toContain("relatedVisit.status");
+    expect(main).toContain("relatedInvoice.status");
+    expect(main).toContain('href={inboxQueueHref(queue)}>Clear search</a>');
+    expect(css).toContain(".inboxResultsBar");
+    expect(css).toContain(".inboxMobileJump");
     expect(css).toContain(".inboxQueueNav");
     expect(css).toContain("@media (max-width: 800px)");
   });

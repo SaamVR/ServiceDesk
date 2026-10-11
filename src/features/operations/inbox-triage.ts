@@ -3,7 +3,7 @@
  * never decides message delivery, verified identity, or handover authority.
  * The last external message determines whether a reply might be needed.
  */
-export const inboxQueues = ["all", "needs-reply", "handover", "unverified"] as const;
+export const inboxQueues = ["all", "needs-reply", "delivery-issues", "handover", "unverified"] as const;
 export type InboxQueue = typeof inboxQueues[number];
 
 export interface InboxTriageConversation {
@@ -17,6 +17,7 @@ export interface InboxTriageMessage {
   conversationId: string;
   direction: "INBOUND" | "OUTBOUND" | "INTERNAL";
   createdAt: string;
+  deliveryState?: string | null;
 }
 
 export interface InboxTriageCustomer {
@@ -32,12 +33,36 @@ export function normalizeInboxQueue(value?: string | null): InboxQueue {
 export function inboxQueueHref(
   queue: InboxQueue,
   conversationId?: string,
+  search?: string,
 ): string {
   const params = new URLSearchParams();
   if (queue !== "all") params.set("queue", queue);
   if (conversationId) params.set("conversation", conversationId);
-  const search = params.toString();
-  return search ? "?" + search : "?";
+  if (search?.trim()) params.set("search", search.trim().slice(0, 120));
+  const queryString = params.toString();
+  return queryString ? "?" + queryString : "?";
+}
+
+/** Latest non-internal message is the only customer-preview/search truth.
+ * On identical provider timestamps prefer inbound: it must never be concealed
+ * by nondeterministic outbound row ordering while a reply may still be due.
+ */
+export function indexLatestExternalInboxMessages<Message extends InboxTriageMessage>(
+  messages: readonly Message[],
+): Map<string, Message> {
+  const latest = new Map<string, Message>();
+  for (const message of messages) {
+    if (message.direction === "INTERNAL") continue;
+    const when = Date.parse(message.createdAt);
+    if (!Number.isFinite(when)) continue;
+    const previous = latest.get(message.conversationId);
+    const earlier = previous ? Date.parse(previous.createdAt) : Number.NEGATIVE_INFINITY;
+    if (!previous || when > earlier ||
+      (when === earlier && message.direction === "INBOUND" && previous.direction !== "INBOUND")) {
+      latest.set(message.conversationId, message);
+    }
+  }
+  return latest;
 }
 
 export function buildInboxTriage<
@@ -51,46 +76,46 @@ export function buildInboxTriage<
   queue: InboxQueue,
 ) {
   const knownCustomers = new Set(customers.map((customer) => customer.id));
-  const recentExternal = new Map<string, Message>();
-
-  for (const message of messages) {
-    if (message.direction === "INTERNAL") continue;
-    const previous = recentExternal.get(message.conversationId);
-    const when = Date.parse(message.createdAt);
-    const earlier = previous ? Date.parse(previous.createdAt) : Number.NEGATIVE_INFINITY;
-    if (Number.isFinite(when) && when > (Number.isFinite(earlier) ? earlier : Number.NEGATIVE_INFINITY)) {
-      recentExternal.set(message.conversationId, message);
-    }
-  }
+  const recentExternal = indexLatestExternalInboxMessages(messages);
 
   const sorted = [...conversations].sort((a, b) => {
     const aTime = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
     const bTime = b.lastMessageAt ? Date.parse(b.lastMessageAt) : 0;
-    return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+    return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0) ||
+      a.id.localeCompare(b.id);
   });
 
   const counts: InboxQueueCounts = {
     all: sorted.length,
     "needs-reply": 0,
+    "delivery-issues": 0,
     handover: 0,
     unverified: 0,
   };
 
   const threadFlags = new Map<string, {
     needsReply: boolean;
+    deliveryIssue: boolean;
     handover: boolean;
     unverified: boolean;
   }>();
 
   for (const conversation of sorted) {
     const last = recentExternal.get(conversation.id);
+    // Only persisted explicit failures/suppression justify delivery-recovery
+    // triage. Queued/provider-accepted states are not proof of delivery, but
+    // also are not evidence of failure: do not encourage duplicate sends.
+    const deliveryIssue = last?.direction === "OUTBOUND" &&
+      (last.deliveryState === "FAILED" || last.deliveryState === "SUPPRESSED");
     const flags = {
-      needsReply: last?.direction === "INBOUND",
+      needsReply: last?.direction === "INBOUND" || deliveryIssue,
+      deliveryIssue,
       handover: conversation.handoverActive,
       unverified: !conversation.customerId || !knownCustomers.has(conversation.customerId),
     };
     threadFlags.set(conversation.id, flags);
     if (flags.needsReply) counts["needs-reply"]++;
+    if (flags.deliveryIssue) counts["delivery-issues"]++;
     if (flags.handover) counts.handover++;
     if (flags.unverified) counts.unverified++;
   }
@@ -99,6 +124,7 @@ export function buildInboxTriage<
     const flags = threadFlags.get(thread.id);
     switch (queue) {
       case "needs-reply": return flags?.needsReply;
+      case "delivery-issues": return flags?.deliveryIssue;
       case "handover": return flags?.handover;
       case "unverified": return flags?.unverified;
       default: return true;
@@ -106,4 +132,61 @@ export function buildInboxTriage<
   });
 
   return { visible, counts, threadFlags };
+}
+
+/**
+ * Filter an already tenant-authorized triage queue using visible conversation
+ * metadata and the latest external message. Presentation only: this is not a
+ * server-side search permission, identity verification or provider lookup.
+ */
+/**
+ * O(messages) preview index rather than filtering and sorting the entire
+ * message collection once per conversation. Ties remain stable: first stored
+ * message wins, matching the old stable-sort rendering semantics.
+ * Uses only messages from the already authorized workspace snapshot.
+ */
+export function indexLatestInboxMessages<
+  Message extends { conversationId: string; createdAt: string },
+>(messages: readonly Message[]): Map<string, Message> {
+  const latest = new Map<string, Message>();
+  for (const message of messages) {
+    const previous = latest.get(message.conversationId);
+    if (!previous) {
+      latest.set(message.conversationId, message);
+      continue;
+    }
+    const nextAt = Date.parse(message.createdAt);
+    const prevAt = Date.parse(previous.createdAt);
+    if (Number.isFinite(nextAt) && (!Number.isFinite(prevAt) || nextAt > prevAt)) {
+      latest.set(message.conversationId, message);
+    }
+  }
+  return latest;
+}
+
+export function searchInboxQueue<
+  Conversation extends InboxTriageConversation & { channel?: string },
+  Message extends InboxTriageMessage & { body?: string | null },
+  Customer extends InboxTriageCustomer & { displayName?: string | null },
+>(
+  conversations: readonly Conversation[],
+  messages: readonly Message[],
+  customers: readonly Customer[],
+  rawSearch?: string | null,
+): Conversation[] {
+  const query = (rawSearch ?? "").trim().replace(/\s+/g, " ").slice(0, 120).toLocaleLowerCase("en");
+  if (!query) return [...conversations];
+  const tokens = query.split(" ").filter(Boolean);
+
+  const names = new Map(customers.map((customer) =>
+    [customer.id, customer.displayName?.toLocaleLowerCase() ?? ""] as const));
+  const latest = indexLatestExternalInboxMessages(messages);
+  return conversations.filter((conversation) => {
+    const fields = [
+      names.get(conversation.customerId ?? "") ?? "",
+      conversation.channel ?? "",
+      latest.get(conversation.id)?.body ?? "",
+    ].map((value) => value.toLocaleLowerCase("en"));
+    return tokens.every((token) => fields.some((field) => field.includes(token)));
+  });
 }

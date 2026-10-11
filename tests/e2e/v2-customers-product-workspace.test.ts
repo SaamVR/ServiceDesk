@@ -11,14 +11,14 @@ describe("V2 customers operational workspace", () => {
 
     expect(page).toContain("customer?: string");
     expect(page).toContain("selectedCustomerId={query.customer}");
-    expect(route).toContain('orderedCustomers.find((customer) => customer.id === selectedCustomerId)');
+    expect(route).toContain('visibleCustomers.find((customer) => customer.id === selectedCustomerId)');
     expect(route).toContain('selected ? styles.crmQueueSelected : ""');
   });
 
   it("renders one customer context instead of expanding many customer panels", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
 
-    expect(route).toContain('href={"?customer=" + encodeURIComponent(customer.id)}');
+    expect(route).toContain('href={directoryRecordHref("customer", customer.id, search)}');
     expect(route).toContain("selectedProperties");
     expect(route).toContain("selectedRequests");
     expect(route).not.toContain("data.customers.slice(0, 8).map");

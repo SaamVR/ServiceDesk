@@ -17,7 +17,10 @@ describe("V2 professional shared inbox UI", () => {
   it("preserves authoritative handover and reply server actions", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
     expect(route).toContain("toggleInboxHandover");
-    expect(route).toContain("enqueueInboxReply");
+    expect(route).toContain("queueApprovedInboxReply");
+    expect(route).toContain("sourceMessageId");
+    expect(route).toContain("idempotencyKey");
+    expect(route).toContain("confirmedByStaff");
     expect(route).toContain("conversationId");
     expect(route).toContain("deliveryState");
   });

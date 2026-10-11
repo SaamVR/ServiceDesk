@@ -1,0 +1,23 @@
+.panel { display: grid; gap: 11px; padding: 14px; border-top: 1px solid var(--app-border,#dce5e8); background: var(--app-surface,#fff); }
+.header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.header h3 { margin: 0; color: var(--app-text,#1a3039); font-size: .9rem; font-weight: 780; }
+.header p, .feedback p { margin: 4px 0 0; color: var(--app-text-muted,#4e626c); font-size: .8rem; line-height: 1.52; }
+.feedback { display: grid; gap: 11px; min-width: 0; }
+.label { color: var(--app-text,#1a3039); font-size: .8rem; font-weight: 730; }
+.input { display: block; width: 100%; min-height: 120px; resize: vertical; padding: 11px 12px; color: var(--app-text,#1a3039); background: #fff; border: 1px solid var(--app-border-strong,#a9c6c9); border-radius: 8px; font: inherit; font-size: .88rem; line-height: 1.5; }
+.input:disabled { background: #eef2f3; }
+.limit { font-size: .75rem !important; }
+.confirm { display: flex; align-items: flex-start; gap: 11px; min-height: 44px; color: var(--app-text,#1a3039); font-size: .79rem; line-height: 1.5; cursor: pointer; }
+.confirm input { width: 19px; height: 19px; margin-top: 2px; accent-color: var(--app-accent,#0b746d); flex: 0 0 auto; }
+.primary,.secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 9px 13px; border-radius: 8px; cursor: pointer; font-size: .8rem; font-weight: 760; }
+.primary { border: 1px solid var(--app-accent,#0b746d); background: var(--app-accent,#0b746d); color: white; }
+.secondary { border: 1px solid var(--app-border-strong,#a9c6c9); background: white; color: var(--app-accent,#0b746d); }
+.primary:hover:not(:disabled) { background: #075c56; }
+.secondary:hover:not(:disabled) { background: #e4f5f0; }
+.primary:disabled,.secondary:disabled { opacity: .56; cursor: not-allowed; }
+.primary:focus-visible,.secondary:focus-visible,.input:focus-visible,.confirm input:focus-visible { outline: 3px solid #18877b; outline-offset: 2px; }
+.warning { padding: 10px 12px; border-left: 3px solid #bf8529; background: #fff7e9; }
+.receipt { padding: 10px 12px; border: 1px solid #add6c2; border-radius: 8px; background: #effaf4; }
+.receipt strong { color: #1a5544; font-size: .83rem; }
+@media (max-width: 420px) { .panel { padding: 12px; } .secondary { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .primary,.secondary { transition: none; } }

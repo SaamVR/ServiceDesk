@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { trustedAuthDestination } from "@/features/auth/email-origin";
+import { loadAuthorizedWorkspaceDecision } from "@/features/auth/authorized-workspace-access";
+import { ownerAfterLoginHref } from "@/features/auth/verified-owner-workspace";
 
 function go(path: string) {
   const destination = trustedAuthDestination(path);
@@ -37,27 +39,13 @@ export async function GET() {
   if (error || !data.user) return go("/auth/sign-in");
   if (!data.user.email_confirmed_at) return go("/auth/sign-up/check-email");
 
-  const membership = await auth.from("memberships")
-    .select("workspace_id,role,status")
-    .eq("user_id", data.user.id)
-    .eq("status", "ACTIVE")
-    .limit(10);
-  if (membership.error) return go("/auth/sign-in?error=Workspace%20lookup%20unavailable");
+  const loaded = await loadAuthorizedWorkspaceDecision(auth, data.user.id);
+  if (!loaded.ok) return go("/auth/sign-in?error=Workspace%20lookup%20unavailable");
 
-  const ordered = [...(membership.data ?? [])].sort((a, b) => {
-    const rank = (role: string) => role === "OWNER" ? 0 : role === "DISPATCHER" ? 1 : 2;
-    return rank(a.role) - rank(b.role);
-  });
-
-  for (const member of ordered) {
-    if (member.role === "CREW") return go("/crew/today");
-    const ws = await auth.from("workspaces")
-      .select("slug").eq("id", member.workspace_id).maybeSingle();
-    if (ws.error) return go("/auth/sign-in?error=Workspace%20lookup%20unavailable");
-    if (ws.data?.slug) {
-      return go("/app/" + encodeURIComponent(String(ws.data.slug)) + "/overview");
-    }
-  }
+  const decision = loaded.decision;
+  if (decision.kind === "CREW") return go("/crew/today");
+  if (decision.kind === "STAFF") return go(ownerAfterLoginHref(decision.workspace));
+  if (decision.kind === "CHOOSE") return go("/auth/select-workspace");
 
   const customers = await auth.from("customers")
     .select("id").eq("auth_user_id", data.user.id).limit(1);

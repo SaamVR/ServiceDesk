@@ -5,7 +5,7 @@ export default async function StaffSchedulePage({
   searchParams,
 }: {
   params: Promise<{ workspace: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
+  searchParams: Promise<{ queue?: string; from?: string; day?: string; notice?: string; error?: string }>;
 }) {
   const { workspace } = await params;
   const query = await searchParams;
@@ -13,6 +13,9 @@ export default async function StaffSchedulePage({
     <OperationalProductRoute
       workspaceSlug={workspace}
       module="schedule"
+      selectedScheduleQueue={query.queue}
+      selectedScheduleFrom={query.from}
+      selectedScheduleDay={query.day}
       notice={query.notice}
       error={query.error}
     />
