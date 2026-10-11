@@ -6,6 +6,16 @@ export interface SerializedProviderRecoveryRecord {
   record: ProviderRecoveryQueueRecord;
 }
 
+const expectedActionByQueue: Record<ProviderRecoveryQueueRecord["queue"], ProviderRecoveryQueueRecord["action"]> = {
+  "provider-retry": "RETRY",
+  "provider-reconciliation": "RECONCILE",
+  "provider-operator-review": "OPERATOR_REVIEW",
+  "provider-dead-letter": "DEAD_LETTER",
+  "provider-configuration-blocked": "BLOCKED_CONFIGURATION",
+};
+const providerNames = new Set(["WHATSAPP", "GOOGLE_CALENDAR", "PAYMENT", "EMAIL", "WEBHOOK", "AI"]);
+const operationNames = new Set(["OUTBOUND_SEND", "INBOUND_PARSE", "STATUS_CALLBACK", "SYNC", "CALLBACK_APPLY", "DELIVERY"]);
+
 const SECRET_PATTERNS = [
   /access[_-]?token\s*=\s*[^\s,;]+/gi,
   /refresh[_-]?token\s*=\s*[^\s,;]+/gi,
@@ -58,9 +68,12 @@ export function deserializeRecoveryRecord(input: SerializedProviderRecoveryRecor
     "provider-dead-letter", "provider-configuration-blocked"]);
   if (typeof record.workspaceId !== "string" || !record.workspaceId.trim() ||
       typeof record.idempotencyKey !== "string" || !record.idempotencyKey.trim() ||
-      !queues.has(record.queue) || typeof record.provider !== "string" || !record.provider ||
-      typeof record.operation !== "string" || !record.operation ||
-      typeof record.action !== "string" || !record.action ||
+      !queues.has(record.queue) || !providerNames.has(record.provider) ||
+      !operationNames.has(record.operation) ||
+      record.action !== expectedActionByQueue[record.queue] ||
+      record.operatorVisible !== !["provider-retry", "provider-reconciliation"].includes(record.queue) ||
+      (record.redactedTarget !== undefined && typeof record.redactedTarget !== "string") ||
+      (record.leasedBy !== undefined && typeof record.leasedBy !== "string") ||
       !Array.isArray(record.notes) || record.notes.some(note => typeof note !== "string") ||
       !Number.isSafeInteger(record.attempts) || record.attempts < 0 ||
       !Number.isSafeInteger(record.maxAttempts) || record.maxAttempts < 1) {
@@ -69,8 +82,10 @@ export function deserializeRecoveryRecord(input: SerializedProviderRecoveryRecor
 
   if (!Number.isFinite(Date.parse(record.queuedAt)) ||
       !Number.isFinite(Date.parse(record.occurredAt)) ||
-      (record.nextAttemptAt !== undefined && !Number.isFinite(Date.parse(record.nextAttemptAt))) ||
-      (record.leaseExpiresAt !== undefined && !Number.isFinite(Date.parse(record.leaseExpiresAt)))) {
+      (record.nextAttemptAt !== undefined &&
+        (typeof record.nextAttemptAt !== "string" || !Number.isFinite(Date.parse(record.nextAttemptAt)))) ||
+      (record.leaseExpiresAt !== undefined &&
+        (typeof record.leaseExpiresAt !== "string" || !Number.isFinite(Date.parse(record.leaseExpiresAt))))) {
     return { ok: false, code: "RECOVERY_RECORD_SCHEDULE_INVALID", message: "Recovery record has an invalid scheduling timestamp." };
   }
 
