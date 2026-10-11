@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import styles from "./StaffWorkspaceV3.module.css";
+import cleanStyles from "./StaffCleanAirV4.module.css";
 import { StaffCommandPalette } from "./StaffCommandPalette";
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "@/features/operations/staff-modules";
 
@@ -161,7 +162,7 @@ export function StaffAppShell({
   const workspaceName = workspaceDisplayName(workspace);
 
   return (
-    <div className={`app-shell ${styles.v3Shell}`}>
+    <div className={`app-shell ${styles.v3Shell} ${cleanStyles.cleanShell}`}>
       <a className="app-skip-link" href="#app-main-content">Skip to main content</a>
       <aside className="app-sidebar">
         <Link className="app-brand" href={buildStaffModuleHref(workspace, "overview")} aria-label={`${workspaceName} overview`}>
