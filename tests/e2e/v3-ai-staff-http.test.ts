@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { AssistantTurn } from "../../src/server/ai/types";
 import { handleStaffAiHttpPost } from "../../src/server/api-handlers/ai-staff-http";
 
@@ -106,5 +108,15 @@ describe("same-origin operational AI draft HTTP boundary", () => {
     });
     expect(r.status).toBe(415);
     expect(called).toBe(false);
+  });
+});
+
+describe("integrated AI draft route handoff", () => {
+  it("binds the staff-authenticated HTTP handler without separate frontend permission logic", () => {
+    const source = readFileSync(join(process.cwd(), "src/app/api/internal/ai/draft/route.ts"), "utf8");
+    expect(source).toContain('import { handleStaffAiHttpPost } from "@/server/api-handlers/ai-staff-http"');
+    expect(source).toContain("return handleStaffAiHttpPost(request)");
+    expect(source).toContain('export const dynamic = "force-dynamic"');
+    expect(source).toContain('export const runtime = "nodejs"');
   });
 });
