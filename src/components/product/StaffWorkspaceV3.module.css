@@ -70,7 +70,7 @@
 }
 .v3Shell :global(.app-sidebar) :global(.app-brand-copy) span {
   color: #acc6c9;
-  font-size: .73rem;
+  font-size: .75rem;
   font-weight: 520;
 }
 .navigation { display: grid; align-content: start; }
@@ -79,7 +79,7 @@
 .navGroupLabel {
   margin: 0 12px 8px !important;
   color: #a5c0c3 !important;
-  font-size: .67rem !important;
+  font-size: .75rem !important;
   font-weight: 740 !important;
   letter-spacing: .11em !important;
   text-transform: uppercase;
@@ -145,7 +145,7 @@
 }
 .v3Shell :global(.app-sidebar) :global(.app-product-caption) {
   color: #a6c1c5;
-  font-size: .7rem;
+  font-size: .75rem;
   letter-spacing: .015em;
 }
 .v3Shell :global(.app-main-column) { min-width: 0; background: var(--app-canvas); }
