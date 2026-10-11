@@ -17,13 +17,20 @@ describe("Studio OS live workflow decision badges", () => {
         { crewId: undefined, status: "COMPLETED" },
       ],
       invoices: [
-        { balanceMinor: 2000, currency: "USD", status: "ISSUED" },
-        { balanceMinor: 0, currency: "USD", status: "PAID" },
+        { balanceMinor: 2000, currency: "USD", status: "ISSUED", quoteId: "customer-q1" },
+        { balanceMinor: 0, currency: "USD", status: "PAID", quoteId: "customer-q2" },
+        { balanceMinor: 9000, currency: "USD", status: "ISSUED", commercialBillingDraftId: "contract-billing-1" },
+        { balanceMinor: 5000, currency: "USD", status: "DRAFT", quoteId: "customer-draft" },
       ],
     };
     const counts = operationalJourneyCounts(snapshot as unknown as Parameters<typeof operationalJourneyCounts>[0]);
     expect(counts).toEqual({ inbox: 1, requests: 1, quotes: 1, schedule: 1, jobs: 1, invoices: 1 });
   });
+  it("excludes commercial contract receivables from the customer-collections navigation badge", () => {
+    const source = readFileSync(join(process.cwd(), "src/features/operations/operational-journey-counts.ts"), "utf8");
+    expect(source).toContain('snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId))');
+  });
+
   it("keeps counts behind tenant authorization and labels them accurately", () => {
     const source = readFileSync(join(process.cwd(),
       "src/features/operations/OperationalProductRoute.tsx"), "utf8");
