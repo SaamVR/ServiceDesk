@@ -1,0 +1,39 @@
+name: ServiceDesk V3 marketing entry RC
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v3-combined-acceptance-20261011
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/components/shell/MarketingShell.tsx"
+      - "src/app/page.tsx"
+      - "src/features/auth/marketing-entry-policy.ts"
+      - "tests/e2e/v3-marketing-entry-truth.test.ts"
+      - ".github/workflows/v3-marketing-entry-rc.yml"
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-marketing-rc-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  marketing-entry-release-gate:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify disabled signup and marketing entry links
+        run: pnpm exec vitest run tests/e2e/v3-marketing-entry-truth.test.ts
+      - name: Full repository RC gate
+        run: pnpm check:rc
