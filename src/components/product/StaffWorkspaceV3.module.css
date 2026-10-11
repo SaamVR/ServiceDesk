@@ -326,3 +326,10 @@
 @media (prefers-reduced-motion: reduce) {
   .v3Shell :global(.app-sidebar) .navLink { transition: none; }
 }
+
+@media (max-width: 680px) {
+  /* The primary Inbox remains in mobile navigation, so keep account and
+     workspace switching usable at 320px rather than overflowing the topbar. */
+  .v3Shell :global(.app-topbar-actions) > :global(.app-topbar-link):first-child { display: none; }
+  .v3Shell :global(.app-account-link) span:last-child { display: none; }
+}
