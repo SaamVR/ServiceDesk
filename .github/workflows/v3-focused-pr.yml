@@ -46,6 +46,7 @@ on:
       - "src/server/ai/model-transport.ts"
       - "tests/providers/ai-model-transport-hardening.test.ts"
       - "src/server/api-handlers/provider-whatsapp-runtime.ts"
+      - "src/server/integrations/whatsapp/adapter.ts"
       - "src/server/integrations/whatsapp/inbound-config.ts"
       - "tests/providers/whatsapp-runtime-inbound.test.ts"
       - "scripts/release/v3-staging-auth-smoke.mjs"
