@@ -65,6 +65,7 @@ interface OperationalProductRouteProps {
   selectedConversationId?: string;
   selectedQueue?: string;
   searchQuery?: string;
+  selectedScheduleQueue?: string;
   selectedCustomerId?: string;
   selectedRequestId?: string;
   selectedQuoteId?: string;
@@ -1234,9 +1235,11 @@ function QuotesView({
 function ScheduleView({
   data,
   workspaceSlug,
+  selectedScheduleQueue,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
+  selectedScheduleQueue?: string;
 }) {
   async function assignCrew(formData: FormData) {
     "use server";
@@ -1278,6 +1281,9 @@ function ScheduleView({
       .map((hold) => hold.slotId),
   );
   const unassignedUpcoming = upcoming.filter((visit) => !visit.crewId).length;
+  // A read-only view of already authorized visits; never affects assignment authority.
+  const showUnassigned = selectedScheduleQueue === "unassigned";
+  const visibleUpcoming = showUnassigned ? upcoming.filter((visit) => !visit.crewId) : upcoming;
   const activeHolds = data.slotHolds.filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now).length;
   const dispatch = buildOperationalDispatchIntelligence(data);
   const visitLabels = Object.fromEntries(data.visits.map((visit) => {
@@ -1323,16 +1329,25 @@ function ScheduleView({
         )}
       />
 
+      <nav className={styles.scheduleQueueNav} aria-label="Schedule visit filters">
+        <a href="?" aria-current={!showUnassigned ? "page" : undefined}>
+          All visits <strong>{upcoming.length}</strong>
+        </a>
+        <a href="?queue=unassigned" aria-current={showUnassigned ? "page" : undefined}>
+          Need crew <strong>{unassignedUpcoming}</strong>
+        </a>
+      </nav>
+
       <div className={styles.schedulePlanningGrid}>
         <section className={styles.scheduleCard} aria-labelledby="next-seven-days-heading">
           <div className={styles.scheduleCardHeader}>
-            <div><p className={styles.scheduleCardEyebrow}>Upcoming</p><h3 id="next-seven-days-heading">Next 7 days</h3><p>{upcoming.length} scheduled visit{upcoming.length === 1 ? "" : "s"}.</p></div>
+            <div><p className={styles.scheduleCardEyebrow}>Upcoming</p><h3 id="next-seven-days-heading">{showUnassigned ? "Visits waiting for crew" : "Next 7 days"}</h3><p>{visibleUpcoming.length} visit{visibleUpcoming.length === 1 ? "" : "s"} shown from the verified schedule.</p></div>
           </div>
-          {upcoming.length === 0 ? (
-            <div className={styles.scheduleEmpty}><strong>No upcoming visits</strong><p>No visits are scheduled in the next seven days.</p></div>
+          {visibleUpcoming.length === 0 ? (
+            <div className={styles.scheduleEmpty}><strong>{showUnassigned ? "Crew coverage complete" : "No upcoming visits"}</strong><p>{showUnassigned ? "All scheduled visits in this window have a crew." : "No visits are scheduled in the next seven days."}</p></div>
           ) : (
             <div className={styles.scheduleVisitList}>
-              {upcoming.slice(0, 12).map((visit) => {
+              {visibleUpcoming.slice(0, 12).map((visit) => {
                 const request = data.requests.find((item) => item.id === visit.requestId);
                 const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
                 const crew = visit.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
@@ -3935,6 +3950,7 @@ function renderModule(
   selectedInvoiceId?: string,
   selectedQueue?: string,
   searchQuery?: string,
+  selectedScheduleQueue?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -3954,7 +3970,7 @@ function renderModule(
     case "quotes":
       return <QuotesView data={data} workspaceSlug={workspaceSlug} selectedQuoteId={selectedQuoteId} />;
     case "schedule":
-      return <ScheduleView data={data} workspaceSlug={workspaceSlug} />;
+      return <ScheduleView data={data} workspaceSlug={workspaceSlug} selectedScheduleQueue={selectedScheduleQueue} />;
     case "jobs":
       return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} />;
     case "invoices":
@@ -3978,6 +3994,7 @@ export async function OperationalProductRoute({
   selectedConversationId,
   selectedQueue,
   searchQuery,
+  selectedScheduleQueue,
   selectedCustomerId,
   selectedRequestId,
   selectedQuoteId,
@@ -4003,7 +4020,7 @@ export async function OperationalProductRoute({
       {result.ok ? (
         <>
           {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery)}
+          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue)}
         </>
       ) : (
         <Panel>
