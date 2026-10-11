@@ -204,7 +204,7 @@ describe("V3 operational Inbox triage", () => {
     expect(main).toContain("buildInboxTriage(data.conversations, data.messages, data.customers, queue)");
     expect(main).toContain('<InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />');
     expect(main).toContain('searchInboxQueue(triage.visible, data.messages, data.customers, search)');
-    expect(main).toContain("indexLatestInboxMessages(data.messages)");
+    expect(main).toContain("indexLatestExternalInboxMessages(data.messages)");
     expect(main).toContain('<InboxSearchForm queue={queue} search={search} />');
     expect(page).toContain('searchQuery={query.search}');
     expect(main).toContain('aria-label="Conversation queues"');
