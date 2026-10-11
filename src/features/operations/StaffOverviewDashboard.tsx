@@ -11,6 +11,7 @@ import { summarizeOutstandingInvoices } from "./product-truth";
 import { formatMinorMoney } from "./view-models";
 import { createLocalDayKey } from "./staff-local-day";
 import { indexStaffById } from "./staff-snapshot-index";
+import { buildInboxTriage } from "./inbox-triage";
 import styles from "./StaffOverviewDashboard.module.css";
 
 function attentionTone(severity: "INFO" | "WARNING" | "CRITICAL") {
@@ -164,7 +165,7 @@ export function StaffOverviewDashboard({
     | "attentionItems"
     | "qualityCases"
     | "crews"
-  >;
+  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages">>;
   errorMessage?: string;
 }) {
   if (!snapshot) {
@@ -189,6 +190,12 @@ export function StaffOverviewDashboard({
   const attention = snapshot.attentionItems.filter((item) => item.status !== "RESOLVED");
   const waitingRequests = snapshot.requests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status));
   const waitingQuotes = snapshot.quotes.filter((quote) => quote.status === "SENT");
+  // The reply queue is derived from stored external-message direction, not a fake unread badge.
+  // Older server test fixtures can omit these optional records without implying zero replies.
+  const replyTriage = snapshot.conversations && snapshot.messages
+    ? buildInboxTriage(snapshot.conversations, snapshot.messages, snapshot.customers, "all")
+    : undefined;
+  const waitingReplies = replyTriage?.counts["needs-reply"];
   const qualityIssues = snapshot.qualityCases.filter((qualityCase) => qualityCase.state !== "RESOLVED");
   const outstanding = summarizeOutstandingInvoices(snapshot.invoices);
   const outstandingValue = outstanding.currency && outstanding.totalMinor !== undefined
@@ -213,6 +220,9 @@ export function StaffOverviewDashboard({
     crews: indexStaffById(snapshot.crews),
   };
   const unassignedToday = todayVisits.filter((visit) => !visit.crewId).length;
+  const briefingModule = attention.length ? "automations" : unassignedToday ? "schedule" : waitingReplies ? "inbox" : "schedule";
+  const briefingLink = buildStaffModuleHref(workspace, briefingModule) + (briefingModule === "inbox" ? "?queue=needs-reply" : briefingModule === "schedule" && unassignedToday ? "?queue=unassigned" : "");
+  const briefingAction = attention.length ? "Review priorities" : unassignedToday ? "Assign crews" : waitingReplies ? "Reply to customers" : "Open dispatch";
   const inProgressToday = todayVisits.filter((visit) => ["IN_PROGRESS", "EN_ROUTE"].includes(visit.status)).length;
   const criticalAttention = attention.filter((item) => item.severity === "CRITICAL").length;
   const sortedAttention = [...attention].sort((left, right) => {
@@ -233,7 +243,9 @@ export function StaffOverviewDashboard({
         </div>
         <div className={styles.headerActions}>
           <Link className="app-button-secondary" href={buildStaffModuleHref(workspace, "schedule")}>View schedule</Link>
-          <Link className="app-button-primary" href={buildStaffModuleHref(workspace, "inbox")}>Open inbox</Link>
+          <Link className="app-button-primary" href={buildStaffModuleHref(workspace, "inbox") + (waitingReplies ? "?queue=needs-reply" : "")}>
+            {waitingReplies ? `Reply to customers (${waitingReplies})` : "Open inbox"}
+          </Link>
         </div>
       </header>
 
@@ -254,9 +266,10 @@ export function StaffOverviewDashboard({
             : todayVisits.length
               ? "Today's visits have crew coverage."
               : "No visits are scheduled for today."}
+          {waitingReplies ? " " + waitingReplies + " customer conversation" + (waitingReplies === 1 ? "" : "s") + " awaiting reply." : ""}
         </p>
-        <Link href={buildStaffModuleHref(workspace, criticalAttention || attention.length ? "automations" : "schedule")}>
-          {attention.length ? "Review priorities" : "Open dispatch"} <span aria-hidden="true">↗</span>
+        <Link href={briefingLink}>
+          {briefingAction} <span aria-hidden="true">↗</span>
         </Link>
       </section>
 
