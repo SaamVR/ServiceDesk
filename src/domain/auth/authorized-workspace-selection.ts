@@ -35,15 +35,16 @@ const staffRoleRank: Record<StaffWorkspaceRole, number> = {
   DISPATCHER: 1,
 };
 
-function allowedSlug(slug: string): boolean {
-  // Do not turn unvalidated database values into untrusted URL paths.
-  return slug.length >= 3 && slug.length <= 40 &&
+function allowedSlug(slug: unknown): slug is string {
+  // Schema types describe expected DB shape, not proof that connector rows
+  // or partially migrated workspaces always preserve it at runtime.
+  return typeof slug === "string" && slug.length >= 3 && slug.length <= 40 &&
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
 }
 
-function validWorkspaceId(value: string): boolean {
+function validWorkspaceId(value: unknown): value is string {
   // Domain IDs may be non-UUID in unit fixtures, but never arbitrary paths.
-  return value.length > 0 && value.length <= 128 &&
+  return typeof value === "string" && value.length > 0 && value.length <= 128 &&
     /^[a-zA-Z0-9_-]+$/.test(value);
 }
 
@@ -73,7 +74,7 @@ export function resolveAuthorizedWorkspaceDestination(
     const next: AuthorizedStaffDestination = {
       workspaceId: row.workspaceId,
       slug: row.slug,
-      name: row.name.trim().slice(0, 120) || row.slug,
+      name: (typeof row.name === "string" ? row.name.trim().slice(0, 120) : "") || row.slug,
       role: row.role,
       href: "/app/" + encodeURIComponent(row.slug) + "/overview",
     };

@@ -85,9 +85,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function scopedResourceAllowed(scope: AiToolScope, args: Record<string, unknown>): boolean {
-  if (typeof args.workspaceId === "string" && args.workspaceId !== scope.workspaceId) return false;
-  if (typeof args.requestId === "string" && scope.allowedRequestIds && !scope.allowedRequestIds.includes(args.requestId)) return false;
-  if (typeof args.customerId === "string" && scope.allowedCustomerIds && !scope.allowedCustomerIds.includes(args.customerId)) return false;
+  // Invalid types (including null, arrays, numeric IDs and empty strings)
+  // must not silently bypass workspace/request/customer scoping.
+  if (typeof scope.workspaceId !== "string" || !scope.workspaceId.trim()) return false;
+  for (const [key, permitted] of [
+    ["workspaceId", [scope.workspaceId]],
+    ["requestId", scope.allowedRequestIds],
+    ["customerId", scope.allowedCustomerIds],
+  ] as const) {
+    if (!Object.prototype.hasOwnProperty.call(args, key)) continue;
+    const id = args[key];
+    if (typeof id !== "string" || !id.trim() || (permitted && !permitted.includes(id))) return false;
+  }
   return true;
 }
 
@@ -107,9 +116,24 @@ export function planAiToolOrchestration(input: {
   requestedToolCalls: unknown[];
   maxToolCalls?: number;
 }): AiToolOrchestrationPlan {
-  const maxToolCalls = Math.max(0, Math.min(Math.floor(input.maxToolCalls ?? 6), 6));
+  const requestedBudget = input.maxToolCalls ?? 6;
+  // NaN/infinity used to disable the cap because comparisons against NaN
+  // always fail. Invalid model-provided budgets must allow no actions.
+  const maxToolCalls = Number.isFinite(requestedBudget)
+    ? Math.max(0, Math.min(Math.floor(requestedBudget), 6))
+    : 0;
   const accepted: AcceptedAiToolCall[] = [];
   const rejected: RejectedAiToolCall[] = [];
+
+  if (!Array.isArray(input.requestedToolCalls)) {
+    return {
+      accepted,
+      rejected: [reject("unknown", "SCHEMA_VIOLATION")],
+      requiresHumanReview: true,
+      businessMutationAllowed: false,
+      privateReasoningStored: false,
+    };
+  }
 
   for (const raw of input.requestedToolCalls) {
     if (!isRecord(raw) || typeof raw.name !== "string" || (raw.arguments !== undefined && !isRecord(raw.arguments))) {
