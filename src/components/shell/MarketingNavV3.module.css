@@ -240,7 +240,7 @@
     padding-top: 18px;
     border-top: 1px solid #e7eeea;
   }
-  .mobileMenuFooter a { color: #456457; font-size: .82rem; font-weight: 710; text-decoration: none; }
+  .mobileMenuFooter a { display: inline-flex; align-items: center; min-height: 44px; color: #456457; font-size: .82rem; font-weight: 710; text-decoration: none; }
   .mobileMenuFooter a span { margin-left: 3px; color: #167e5b; }
   .mobileMenuFooter a:hover { color: #086b4e; text-decoration: underline; }
 }
