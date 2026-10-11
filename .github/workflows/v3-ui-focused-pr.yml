@@ -1,0 +1,68 @@
+name: ServiceDesk V3 frontend PR integrity
+
+# One short, dependency-cached UI gate per changed PR. No secrets,
+# provider calls, browser login, preview deploy or production mutation.
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v3-coordination-20261011
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/components/product/StaffAppShell.tsx"
+      - "src/components/product/StaffCommandPalette*"
+      - "src/components/product/StaffWorkspaceV3.module.css"
+      - "src/features/operations/staff-command-search.ts"
+      - "src/features/operations/inbox-triage.ts"
+      - "src/features/operations/StaffOverviewDashboard*"
+      - "tests/e2e/staff-v3-navigation.test.tsx"
+      - "tests/e2e/v3-staff-command-search.test.ts"
+      - "tests/e2e/v3-inbox-triage.test.ts"
+      - "tests/e2e/v2-professional-dashboard-ui.test.ts"
+      - ".github/workflows/v3-ui-focused-pr.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servicedesk-v3-ui-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ui-contracts:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install pinned dependencies
+        run: pnpm install --frozen-lockfile
+      - name: UI and triage regression tests
+        run: >-
+          pnpm exec vitest run
+          tests/e2e/v3-staff-command-search.test.ts
+          tests/e2e/staff-v3-navigation.test.tsx
+          tests/e2e/v3-inbox-triage.test.ts
+          tests/e2e/v2-professional-dashboard-ui.test.ts
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint changed UI
+        run: >-
+          pnpm exec eslint
+          src/components/product/StaffAppShell.tsx
+          src/components/product/StaffCommandPalette.tsx
+          src/features/operations/staff-command-search.ts
+          src/features/operations/inbox-triage.ts
+          src/features/operations/StaffOverviewDashboard.tsx
+          tests/e2e/staff-v3-navigation.test.tsx
+          tests/e2e/v3-staff-command-search.test.ts
+          tests/e2e/v3-inbox-triage.test.ts
