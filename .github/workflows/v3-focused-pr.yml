@@ -1,0 +1,50 @@
+name: ServiceDesk V3 focused PR safety
+
+# Narrow validation only. Complete RC and browser acceptance remain owned by
+# GPT Runtime, not by a recurring CI job or real provider credentials.
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v3-coordination-20261011
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/domain/auth/authorized-workspace-selection.ts"
+      - "tests/domain/authorized-workspace-selection.test.ts"
+      - "src/server/integrations/email/transport.ts"
+      - "tests/providers/resend-transactional-email-contract.test.ts"
+      - "scripts/release/v3-staging-auth-smoke.mjs"
+      - "scripts/release/v3-staging-auth-smoke.test.mjs"
+      - ".github/workflows/v3-focused-pr.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servicedesk-v3-focused-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  focused-contracts:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install reproducible dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify release smoke safety
+        run: node --test scripts/release/v3-staging-auth-smoke.test.mjs
+      - name: Focused domain and Resend regression
+        run: pnpm exec vitest run tests/domain/authorized-workspace-selection.test.ts tests/providers/resend-transactional-email-contract.test.ts
+      - name: Typecheck
+        run: pnpm typecheck
