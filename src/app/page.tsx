@@ -4,7 +4,7 @@ import { ownerRegistrationAvailable, ownerRegistrationPubliclyAvailable } from "
 import { BrightHomeExperience } from "@/features/product/BrightHomeExperience";
 
 export const metadata: Metadata = {
-  title: "A cleaner way to run your cleaning business",
+  title: "A cleaner way to run your cleaning business | ServiceDesk AI",
   description: "A brighter, calmer way to manage a cleaning business. ServiceDesk AI connects customer enquiries, human-reviewed quotes, schedules, field teams and follow-ups.",
   openGraph: {
     type: "website",
