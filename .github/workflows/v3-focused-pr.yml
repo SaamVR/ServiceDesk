@@ -14,6 +14,8 @@ on:
       - "tests/providers/resend-transactional-email-contract.test.ts"
       - "src/server/ai/tool-orchestration.ts"
       - "tests/providers/ai-tool-orchestration.test.ts"
+      - "src/server/integrations/outbox/dispatch-router.ts"
+      - "tests/providers/outbox-dispatch-router.test.ts"
       - "scripts/release/v3-staging-auth-smoke.mjs"
       - "scripts/release/v3-staging-auth-smoke.test.mjs"
       - ".github/workflows/v3-focused-pr.yml"
@@ -52,5 +54,6 @@ jobs:
           tests/domain/authorized-workspace-selection.test.ts
           tests/providers/resend-transactional-email-contract.test.ts
           tests/providers/ai-tool-orchestration.test.ts
+          tests/providers/outbox-dispatch-router.test.ts
       - name: Typecheck
         run: pnpm typecheck
