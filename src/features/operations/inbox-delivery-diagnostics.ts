@@ -58,7 +58,7 @@ export function parseInboxDeliveryDiagnostics(value: unknown): InboxDeliveryDiag
         (item.channel !== "WHATSAPP" && item.channel !== "EMAIL") ||
         typeof item.deliveryState !== "string" || !validState.has(item.deliveryState) ||
         typeof item.health !== "string" || !validHealth.has(item.health) ||
-        !validCount(item.ageMinutes) && !(typeof item.ageMinutes === "number" && Number.isSafeInteger(item.ageMinutes) && item.ageMinutes > 200) ||
+        !(typeof item.ageMinutes === "number" && Number.isSafeInteger(item.ageMinutes) && item.ageMinutes >= 0) ||
         (item.reason !== undefined && (typeof item.reason !== "string" || !validReasons.has(item.reason)))) {
       return undefined;
     }
