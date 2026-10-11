@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import "./v3-studio-submit-pending.test";
+// Reuse the existing cached frontend CI job for the new real-operation queues.
+import "./v3-quality-triage.test";
+import "./v3-studio-invoice-queue.test";
 import "./v3-inbox-search.test";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
