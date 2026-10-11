@@ -26,6 +26,7 @@ test("real Chrome expected headings agree with route-authored product text", () 
   const home = file("src/app/page.tsx");
   const staticPage = file("src/features/product/StaticProductPage.tsx");
   const signIn = file("src/app/auth/sign-in/page.tsx");
+  const tour = file("src/app/tour/page.tsx");
   const expected = [
     "A cleaner way to run your cleaning business.",
     "Everything a cleaning operations team needs to move work forward.",
@@ -40,9 +41,9 @@ test("real Chrome expected headings agree with route-authored product text", () 
   ];
   for (const title of expected) {
     assert.ok(script.includes(title), title);
-    assert.ok(home.includes(title) || staticPage.includes(title) || signIn.includes(title), title);
+    assert.ok(home.includes(title) || staticPage.includes(title) || signIn.includes(title) || tour.includes(title), title);
   }
-  assert.equal((script.match(/\{ slug: "(?:home|features|cleaning|pricing|integrations|contact|help|privacy|terms|sign-in)"/g) ?? []).length, 10);
+  assert.equal((script.match(/\{ slug: "(?:home|features|cleaning|pricing|integrations|contact|help|privacy|terms|tour|sign-in)"/g) ?? []).length, 11);
 });
 
 test("public Chrome requires page-specific bright workboards rather than repeated V3 cards", () => {
@@ -58,10 +59,11 @@ test("public Chrome requires page-specific bright workboards rather than repeate
     "Illustrative integration control system",
     "An illustrative cleaning workflow conversation",
     "help overview", "privacy overview", "terms overview",
+    "Bright cleaning workspace and illustrative service journey",
   ];
   for (const name of names) {
     assert.ok(script.includes('heroLabel: "' + name + '"'), name);
-    assert.ok(component.includes(name) || home.includes(name), name);
+    assert.ok(component.includes(name) || home.includes(name) || tourPage.includes(name), name);
   }
   assert.ok(script.includes("state.heroLabel !== page.heroLabel"));
   assert.ok(shell.includes('brightEdition'));
@@ -136,4 +138,17 @@ test("new Clean Air homepage retains semantic photo-led layouts and a real contr
   assert.ok(css.includes("@media (prefers-reduced-motion: reduce)"));
   assert.ok(css.includes('images.unsplash.com'));
   assert.ok(css.includes('color: #fff'));
+});
+
+
+test("Chrome checks eleven public routes including the real expandable V4 product tour", () => {
+  const script = file("scripts/release/v3-public-browser-proof.mjs");
+  const tour = file("src/app/tour/page.tsx");
+  assert.ok(script.includes('slug: "tour"'));
+  assert.ok(script.includes('path: "/tour"'));
+  assert.ok(script.includes('page.slug === "tour" && (width === 390 || width === 1280)'));
+  assert.ok(script.includes("V4 tour scenario disclosure failed"));
+  assert.ok(tour.includes('id={scenario.id}'));
+  assert.ok(tour.includes("No real charges, messages or bookings."));
+  assert.ok(tour.includes('href="/sandbox"'));
 });
