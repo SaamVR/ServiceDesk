@@ -198,7 +198,7 @@ export function createPostgresConversationFacadeMethods(
         ? "servicedesk_apply_inbound_email_message"
         : "servicedesk_apply_inbound_message";
       const { data, error } = await client.rpc<RpcRow>(rpcName, { p_event: event });
-      return asResult(data, error, "INBOUND_RPC_ERROR", (row) => {
+      const parsed = asResult(data, error, "INBOUND_RPC_ERROR", (row) => {
         const messageRow = asRow(row.message) ?? (row.messageId || row.message_id ? row : undefined);
         return {
           state: String(row.state) as InboundMessageApplicationOutcome["state"],
@@ -206,6 +206,23 @@ export function createPostgresConversationFacadeMethods(
           message: messageRow ? messageFromRpc(messageRow) : undefined,
         };
       });
+      if (!parsed.ok) return parsed;
+      const { state, conversation, message } = parsed.value;
+      // These RPCs run under a trusted server client, so a malformed or
+      // cross-tenant projection must fail closed before reaching the inbox.
+      if (state !== "APPLIED" && state !== "DUPLICATE") {
+        return { ok: false, code: "INBOUND_RPC_INVALID_STATE",
+          message: "Conversation RPC returned an invalid inbound state." };
+      }
+      if (!conversation.id || conversation.id === "undefined" ||
+          conversation.workspaceId !== event.workspaceId ||
+          (message && (message.workspaceId !== event.workspaceId ||
+            message.conversationId !== conversation.id ||
+            (message.providerMessageId && message.providerMessageId !== event.providerMessageId)))) {
+        return { ok: false, code: "INBOUND_RPC_SCOPE_MISMATCH",
+          message: "Conversation RPC returned an invalid tenant or message identity." };
+      }
+      return parsed;
     },
 
     async setConversationHandover(ctx: ActorContext, id: string, input: ConversationHandoverInput, meta): Promise<Result<ConversationDTO>> {
