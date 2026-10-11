@@ -3,7 +3,7 @@
 .tour {
   --ink: #203638;
   --aqua: #219d9b;
-  --coral: #fa785f;
+  --coral: #bd4b36;
   --border: #e1eee9;
   --porcelain: #f7fbfa;
   --display: "Manrope","DM Sans","Segoe UI",system-ui,sans-serif;
@@ -35,7 +35,7 @@
   font-size: .86rem; font-weight: 830; box-shadow: 0 10px 23px rgb(250 120 95 / 15%);
   transition: background 180ms ease,transform 180ms ease,box-shadow 180ms ease;
 }
-.primaryAction:hover { transform: translateY(-2px); background: #e96b54; color: #fff; box-shadow: 0 13px 27px rgb(250 120 95 / 20%); }
+.primaryAction:hover { transform: translateY(-2px); background: #a93b2b; color: #fff; box-shadow: 0 13px 27px rgb(250 120 95 / 20%); }
 .secondaryAction { display: inline-flex; align-items: center; gap: 12px; min-height: 50px; color: #276e66; font-size: .84rem; font-weight: 770; }
 .primaryAction:focus-visible,.secondaryAction:focus-visible { outline: 3px solid #1e9a8e; outline-offset: 4px; }
 .heroDisclosure { display: flex; align-items: center; gap: 10px; margin-top: 29px; max-width: 480px; color: #7f938c; font-size: .75rem; line-height: 1.6; }
@@ -128,7 +128,9 @@
   .heroPhoto { inset: 0 4% 27px 0; border-radius: 95px 12px 70px 13px; }
   .heroCard { padding: 12px; width: min(81%,280px); }
   .cardHeader { padding-bottom: 8px; }
-  .cardStage { padding: 8px 0; gap: 5px; grid-template-columns: 20px 1fr auto; }
+  /* Readable status text gets its own row instead of crowding the title. */
+  .cardStage { padding: 9px 0; gap: 4px 7px; grid-template-columns: 20px minmax(0,1fr); }
+  .cardStage small { grid-column: 2; text-align: left; overflow-wrap: anywhere; }
   .cardStage strong { font-size: .75rem; }
   .cardStage small { font-size: .75rem; }
   .cardNote { font-size: .75rem; }
