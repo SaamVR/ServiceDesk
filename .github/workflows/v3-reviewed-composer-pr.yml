@@ -1,0 +1,52 @@
+name: ServiceDesk V3 reviewed composer RC
+
+# This isolated feature lane must pass the COMPLETE repository gate before it
+# can be integrated; never treats mock tests as browser/provider acceptance.
+on:
+  push:
+    branches:
+      - feat/servicedesk-v3-reviewed-reply-composer-20261011
+  pull_request:
+    branches:
+      - feat/servicedesk-v3-combined-acceptance-20261011
+    paths:
+      - "src/features/operations/OperationalProductRoute.tsx"
+      - "src/features/operations/OperationalProductRoute.module.css"
+      - "tests/e2e/v3-studio-reviewed-composer.test.ts"
+      - "tests/e2e/v2-professional-inbox-ui.test.ts"
+      - ".github/workflows/v3-reviewed-composer-pr.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servicedesk-v3-reviewed-composer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reviewed-composer-full-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install pinned dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Focused human-reviewed reply regressions
+        run: >-
+          pnpm exec vitest run
+          tests/e2e/v3-studio-reviewed-composer.test.ts
+          tests/e2e/v2-professional-inbox-ui.test.ts
+          tests/providers/v3-reviewed-inbox-reply.test.ts
+          tests/e2e/v3-reviewed-reply-http.test.ts
+      - name: Complete repository RC (typecheck, all tests, lint, Next build)
+        run: pnpm check:rc
