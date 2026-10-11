@@ -33,6 +33,9 @@ describe("Cleaning-first automation starter playbooks", () => {
     expect(route).toContain('name={`action${index}Type`} defaultValue={index === 1 ? "CREATE_ATTENTION" : "NONE"}');
     expect(route).toContain("synthetic preview required before publish");
     expect(route).toContain("publishOperationalWorkflowVersion(");
+    expect(route).toContain('workflowBackendWritable = operationalDatabaseMode() === "SERVICE_ROLE"');
+    expect(route).toContain("Workflow authoring backend not connected");
+    expect(route).toContain("This QA-session preview can read workflow history");
     expect(page).toContain("automationTemplate={query.template}");
   });
 });
