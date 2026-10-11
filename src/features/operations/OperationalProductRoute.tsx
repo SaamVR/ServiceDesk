@@ -50,6 +50,9 @@ import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { InboxThreadNavigator } from "./InboxThreadNavigator";
 import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
+import { AiRequestBrief } from "./AiRequestBrief";
+import { AiOperationsStatus } from "./AiOperationsStatus";
+import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { settingsFeedbackFragment } from "./settings-navigation";
@@ -1126,6 +1129,12 @@ function RequestsView({
                 <div className={styles.salesNote}><span>Service notes</span><p>{selectedRequestProperty.serviceNotes}</p></div>
               ) : null}
             </section>
+
+            <AiRequestBrief
+              workspaceSlug={workspaceSlug}
+              requestId={selectedRequest.id}
+              configured={readConfiguredAiRuntimeConfig().ok}
+            />
 
             <section className={styles.salesSection}>
               <div className={styles.salesSectionHeader}>
@@ -2878,6 +2887,10 @@ function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapsh
   if (openItems.length === 0) {
     return (
       <>
+        <AiOperationsStatus
+          workspaceSlug={workspaceSlug}
+          publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
+        />
         <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} />
         <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
         <header className={styles.recoveryHeader}>
@@ -2905,6 +2918,10 @@ function AutomationsView({ data, workspaceSlug }: { data: OperationalStaffSnapsh
 
   return (
     <>
+      <AiOperationsStatus
+          workspaceSlug={workspaceSlug}
+          publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
+        />
       <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} />
       <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
       <header className={styles.recoveryHeader}>
