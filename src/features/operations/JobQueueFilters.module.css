@@ -10,11 +10,11 @@
 }
 .nav a:hover { background: #e8e1d7; }
 .nav a[aria-current="page"] {
-  background: #fffefa; color: #343d32;
-  box-shadow: 0 1px 5px rgb(42 43 35 / 9%), inset 0 -2px #ae583b;
+  background: #ffffff; color: #343d32;
+  box-shadow: 0 1px 5px rgb(42 43 35 / 9%), inset 0 -2px #0b746d;
 }
 .nav strong { font-size: .72rem; font-weight: 820; font-variant-numeric: tabular-nums; }
-.nav a:focus-visible { outline: 3px solid #ad633f; outline-offset: 3px; }
+.nav a:focus-visible { outline: 3px solid #1b8c7f; outline-offset: 3px; }
 @media (max-width: 620px) {
   .nav { gap: 5px; padding: 6px; }
   .nav a { min-height: 44px; padding: 8px 10px; flex: 1 1 auto; justify-content: center; }
