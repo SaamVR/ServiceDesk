@@ -55,13 +55,18 @@ jobs:
             return body;
           }
           let health;
-          for(let i=0;i<18;i++){
-            try{ health=JSON.parse(await get("/health"));break; }
-            catch(err){ if(i===17)throw err;await sleep(5000); }
-          }
-          if(!health?.ok || health?.sourceSha!==expectedSha ||
-             health?.sourceProvider!=="render" || health?.service!=="servicedesk"){
-            throw Error("Wrong source commit or provider: "+JSON.stringify(health));
+          for(let i=0;i<36;i++){
+            try {
+              health=JSON.parse(await get("/health"));
+              if(health?.ok===true && health?.sourceSha===expectedSha &&
+                 health?.sourceProvider==="render" && health?.service==="servicedesk"){
+                break;
+              }
+              if(i===35) throw Error("Render never served pinned commit: "+JSON.stringify(health));
+            } catch(err) {
+              if(i===35) throw err;
+            }
+            await sleep(5000);
           }
           console.log("PASS exact Render source "+expectedSha);
           for(const [route,title]of paths){
