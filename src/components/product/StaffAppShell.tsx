@@ -126,6 +126,19 @@ export function StaffAppShell({
 }) {
   const pathname = usePathname();
   const mobileMenu = useRef<HTMLDetailsElement>(null);
+  function closeMobileNavigation() {
+    if (mobileMenu.current) mobileMenu.current.open = false;
+  }
+  function handleMobileNavigationKeyDown(event: React.KeyboardEvent<HTMLDetailsElement>) {
+    if (event.key !== "Escape" || !mobileMenu.current?.open) return;
+    event.preventDefault();
+    closeMobileNavigation();
+    mobileMenu.current?.querySelector("summary")?.focus();
+  }
+  function handleMobileNavigationClick(event: React.MouseEvent<HTMLDivElement>) {
+    // Close on both same-route links and route changes. Native <details> stays keyboard operable.
+    if ((event.target as HTMLElement).closest("a")) closeMobileNavigation();
+  }
   useEffect(() => {
     // Navigating from an open mobile drawer must not hide the destination page.
     if (mobileMenu.current) mobileMenu.current.open = false;
@@ -155,12 +168,12 @@ export function StaffAppShell({
 
       <div className="app-main-column">
         <header className="app-topbar">
-          <details className="app-mobile-nav" ref={mobileMenu}>
+          <details className="app-mobile-nav" ref={mobileMenu} onKeyDown={handleMobileNavigationKeyDown}>
             <summary aria-label="Open workspace navigation">
               <span aria-hidden="true">☰</span>
               <span>Menu</span>
             </summary>
-            <div className="app-mobile-nav-panel">
+            <div className="app-mobile-nav-panel" onClick={handleMobileNavigationClick}>
               <div className="app-mobile-workspace">
                 <strong>{workspaceName}</strong>
                 <span>{pageLabel}</span>
