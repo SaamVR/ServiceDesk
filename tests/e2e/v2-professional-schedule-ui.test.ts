@@ -31,6 +31,22 @@ describe("V2 professional schedule UI", () => {
     expect(route).toContain("Visitor enquiry");
   });
 
+  it("lets operators narrow the real seven-day schedule to visits needing crew", () => {
+    const route = source("src/features/operations/OperationalProductRoute.tsx");
+    const page = source("src/app/app/[workspace]/schedule/page.tsx");
+    const css = source("src/features/operations/OperationalProductRoute.module.css");
+    expect(route).toContain('const showUnassigned = selectedScheduleQueue === "unassigned"');
+    expect(route).toContain("upcoming.filter((visit) => !visit.crewId) : upcoming");
+    expect(route).toContain('aria-label="Schedule visit filters"');
+    expect(route).toContain('scheduleCoverageHref("unassigned", selectedDay, window.from, window.today)');
+    expect(route).toContain("scheduleWindowFeedbackPrefix(window, currentQueue)");
+    expect(page).toContain("selectedScheduleFrom={query.from}");
+    expect(route).toContain("visibleUpcoming.slice(0, 12)");
+    expect(route).toContain("assignOperationalCrew(workspaceSlug");
+    expect(page).toContain("selectedScheduleQueue={query.queue}");
+    expect(css).toContain(".scheduleQueueNav");
+  });
+
   it("supports responsive planning layouts", () => {
     const css = source("src/features/operations/OperationalProductRoute.module.css");
     expect(css).toContain("scheduleWorkspace");

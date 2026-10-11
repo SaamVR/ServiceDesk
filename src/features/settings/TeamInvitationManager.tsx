@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import type { TeamInvitationDTO } from "@/contracts";
+import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import {
   createTeamInvitationAction,
   revokeTeamInvitationAction,
@@ -39,12 +40,21 @@ export function TeamInvitationManager({
 }) {
   const [state, formAction, pending] = useActionState(createTeamInvitationAction, initialState);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
 
   async function copyInviteLink() {
     if (!state.ok || !state.invitePath) return;
     const absolute = window.location.origin + state.invitePath;
-    await navigator.clipboard.writeText(absolute);
-    setCopied(true);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(absolute);
+      setCopied(true);
+      setCopyError(false);
+    } catch {
+      // Never print or report an invitation token as an error.
+      setCopied(false);
+      setCopyError(true);
+    }
   }
 
   return (
@@ -86,6 +96,7 @@ export function TeamInvitationManager({
                 {copied ? "Copied" : "Copy invite link"}
               </button>
               <code>{state.invitePath}</code>
+              {copyError ? <p role="alert" className={styles.copyError}>Clipboard unavailable. Select and copy the invitation path shown.</p> : null}
             </div>
           ) : null}
         </div>
@@ -115,7 +126,7 @@ export function TeamInvitationManager({
                 <form action={revokeTeamInvitationAction}>
                   <input type="hidden" name="workspaceSlug" value={workspaceSlug} />
                   <input type="hidden" name="invitationId" value={invite.id} />
-                  <button className="app-button-secondary" type="submit">Revoke</button>
+                  <StaffSubmitButton className="app-button-secondary" pendingLabel="Revoking invitation…">Revoke</StaffSubmitButton>
                 </form>
               ) : null}
             </article>
