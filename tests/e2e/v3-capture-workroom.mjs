@@ -38,7 +38,17 @@ const output = resolve(process.env.V3_QA_OUTPUT || join(tmpdir(), "servicedesk-v
 const root = resolve(process.cwd());
 if (output === root || output.startsWith(root + "/")) throw new Error("Private evidence must stay outside Git.");
 mkdirSync(output, { recursive: true });
-const modules = ["overview", "inbox", "schedule", "jobs", "requests", "quotes", "customers", "invoices"];
+// Release acceptance matrix: 8 distinct staff surfaces at 5 viewport widths.
+const scenarios = [
+  { name: "today", module: "overview" },
+  { name: "inbox", module: "inbox" },
+  { name: "schedule", module: "schedule" },
+  { name: "jobs", module: "jobs" },
+  { name: "quality", module: "quality" },
+  { name: "customer-collections", module: "invoices", surface: "customers" },
+  { name: "commercial-accounts", module: "invoices", surface: "commercial" },
+  { name: "settings", module: "settings" },
+];
 const widths = [320, 390, 834, 1280, 1440];
 const screenshots = [];
 
@@ -112,19 +122,28 @@ async function evaluate(cdp, expression) {
   if (result.exceptionDetails) throw new Error("Browser failed to evaluate public layout metrics.");
   return result.result?.value;
 }
-async function authenticatedPage(cdp, path) {
-  const expression = '(() => ({ path: location.pathname, ready: document.readyState,' +
-    'staff: Boolean(document.getElementById("app-main-content")),' +
-    'unauth: Boolean(document.querySelector(".app-auth-entry-link")),' +
-    'unavailable: Boolean(document.body?.textContent?.includes("Workspace unavailable")) }))()';
+async function authenticatedPage(cdp, path, scenario) {
+  const expression = '(() => { const main = document.getElementById("app-main-content");' +
+    ' const selected = document.querySelector(\'[aria-label="Invoice workspace views"] a[aria-current="page"]\');' +
+    ' return { path: location.pathname, ready: document.readyState, heading: Boolean(main?.querySelector("h1")),' +
+    ' staff: Boolean(main), surface: new URLSearchParams(location.search).get("surface"),' +
+    ' selectedSurface: selected?.getAttribute("href")?.includes("surface=" + new URLSearchParams(location.search).get("surface")) ?? false,' +
+    ' unauth: Boolean(document.querySelector(".app-auth-entry-link")),' +
+    ' unavailable: Boolean(document.body?.textContent?.includes("Workspace unavailable")),' +
+    ' commercialBlocked: Boolean(document.body?.textContent?.includes("Commercial accounts are not enabled") ||' +
+    ' document.body?.textContent?.includes("Commercial accounts could not be loaded")) }; })()';
   for (let i = 0; i < 75; i++) {
     const page = await evaluate(cdp, expression);
     if (page?.path?.startsWith("/auth/") || page?.unauth) throw new Error("Staff session is not authenticated.");
     if (page?.unavailable) throw new Error("Tenant staff snapshot is unavailable.");
-    if (page?.path === path && page.staff && page.ready === "complete") return;
+    if (scenario.name === "commercial-accounts" && page?.commercialBlocked) {
+      throw new Error("Commercial finance is not enabled/available in the isolated QA tenant.");
+    }
+    const surfaceReady = !scenario.surface || (page?.surface === scenario.surface && page?.selectedSurface);
+    if (page?.path === path && page.staff && page.heading && surfaceReady && page.ready === "complete") return;
     await sleep(200);
   }
-  throw new Error("Staff route did not finish loading: " + path.split("/").at(-1));
+  throw new Error("Staff surface did not finish loading: " + scenario.name);
 }
 function validatePNG(png, width, height) {
   if (png.length < 25 || png.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" ||
@@ -140,10 +159,12 @@ try {
   cdp = await connect(browser.wsUrl);
   await cdp.send("Page.enable");
   await cdp.send("Runtime.enable");
-  for (const module of modules) {
-    const path = "/app/" + encodeURIComponent(workspace) + "/" + module;
-    await cdp.send("Page.navigate", { url: new URL(path, base).toString() });
-    await authenticatedPage(cdp, path);
+  for (const scenario of scenarios) {
+    const path = "/app/" + encodeURIComponent(workspace) + "/" + scenario.module;
+    const target = new URL(path, base);
+    if (scenario.surface) target.searchParams.set("surface", scenario.surface);
+    await cdp.send("Page.navigate", { url: target.toString() });
+    await authenticatedPage(cdp, path, scenario);
     for (const width of widths) {
       const height = width <= 390 ? 812 : 900;
       await cdp.send("Emulation.setDeviceMetricsOverride", {
@@ -157,24 +178,25 @@ try {
         'body:document.body.scrollWidth, document:document.documentElement.scrollWidth,' +
         'controls:document.querySelectorAll("a,button,input,select,textarea,summary").length }))()');
       if (layout.width !== width || layout.height !== height) {
-        throw new Error("Browser emulation refused required viewport: " + module + " / " + width);
+        throw new Error("Browser emulation refused required viewport: " + scenario.name + " / " + width);
       }
       if (Math.max(layout.body, layout.document) > width + 2) {
-        throw new Error("Horizontal overflow at " + module + " / " + width);
+        throw new Error("Horizontal overflow at " + scenario.name + " / " + width);
       }
       const frame = await cdp.send("Page.captureScreenshot", {
         format: "png", fromSurface: true, captureBeyondViewport: false,
       });
       const png = Buffer.from(frame.data || "", "base64");
       validatePNG(png, width, height);
-      const name = module + "-" + width + ".png";
+      const name = scenario.name + "-" + width + ".png";
       writeFileSync(join(output, name), png, { mode: 0o600 });
-      screenshots.push({ module, width, height, controls: layout.controls, file: name });
+      screenshots.push({ surface: scenario.name, module: scenario.module, width, height, controls: layout.controls, file: name });
     }
   }
   writeFileSync(join(output, "manifest.json"), JSON.stringify({
     status: "CAPTURED_NOT_YET_VISUALLY_ACCEPTED",
     screenshots,
+    acceptanceMatrix: scenarios.map(({ name, module, surface }) => ({ name, module, surface })),
     origin: base.origin,
     operatorSuppliedSourceSha: sourceSha,
     independentlyVerifiedSourceSha: false,
