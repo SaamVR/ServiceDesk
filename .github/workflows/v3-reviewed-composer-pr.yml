@@ -3,9 +3,6 @@ name: ServiceDesk V3 reviewed composer RC
 # This isolated feature lane must pass the COMPLETE repository gate before it
 # can be integrated; never treats mock tests as browser/provider acceptance.
 on:
-  push:
-    branches:
-      - feat/servicedesk-v3-reviewed-reply-composer-20261011
   pull_request:
     branches:
       - feat/servicedesk-v3-combined-acceptance-20261011
