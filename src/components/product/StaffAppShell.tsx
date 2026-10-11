@@ -181,6 +181,7 @@ export function StaffAppShell({
             <Link className="app-topbar-link" href={buildStaffModuleHref(workspace, "inbox")}>Inbox</Link>
             {signedIn ? (
               <>
+                <Link className="app-topbar-link" href="/auth/select-workspace">Switch workspace</Link>
                 <Link className="app-account-link" href={buildStaffModuleHref(workspace, "settings")} aria-label="Open account and workspace settings">
                   <span className="app-avatar" aria-hidden="true">SD</span>
                   <span>Account</span>
