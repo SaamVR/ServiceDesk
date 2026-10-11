@@ -47,7 +47,15 @@ export function StaticProductPage({ kind }: { kind: StaticProductPageKind }) {
   const page = copy[kind];
 
   return (
-    <MarketingShell title={page.title} description={page.description}>
+    <MarketingShell
+      title={page.title}
+      description={page.description}
+      heroStory={kind === "features" || kind === "integrations" || kind === "pricing" || kind === "contact"
+        ? kind
+        : undefined}
+      secondaryHref={kind === "contact" ? "/tour" : "/contact"}
+      secondaryLabel={kind === "contact" ? "Explore product tour" : "Plan a walkthrough"}
+    >
       {kind === "features" && <LifecycleProof />}
       {kind === "integrations" && <IntegrationStatusGrid />}
       {kind === "cleaning" && <CustomerJourneyPreview />}
