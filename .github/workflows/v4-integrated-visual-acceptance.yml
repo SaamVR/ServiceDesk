@@ -1,0 +1,69 @@
+name: ServiceDesk V4 Integrated Visual Acceptance
+
+# Combined exact-head CSS/UX acceptance. No secrets, database, auth or provider traffic.
+on:
+  push:
+    branches:
+      - feat/servicedesk-v4-full-visual-candidate-20261011
+    paths:
+      - ".github/workflows/v4-integrated-visual-acceptance.yml"
+      - "src/features/operations/StaffOverviewDashboard.module.css"
+      - "src/features/sandbox/SandboxJourney.module.css"
+      - "tests/e2e/v4-today-clean-air.test.ts"
+      - "tests/e2e/v4-sandbox-clean-air.test.ts"
+
+permissions:
+  contents: read
+jobs:
+  combined-v4-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Frozen dependency install
+        run: pnpm install --frozen-lockfile
+      - name: Full exact-head RC test, typecheck, lint and Next.js build
+        run: pnpm check:rc
+      - name: Install actual Chrome for UI
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+      - name: Boot read-only local Next
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/v4-integrated-web.log" 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/sandbox >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Combined V4 app did not boot"
+          exit 1
+      - name: Verify all public pages in actual Chrome
+        env:
+          V3_PUBLIC_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V3_PUBLIC_OUTPUT: ${{ runner.temp }}/v4-combined-public
+          V3_PUBLIC_CHECKOUT_SHA: ${{ github.sha }}
+        run: node scripts/release/v3-public-browser-proof.mjs
+      - name: Verify real synthetic cleaning workflow in actual Chrome
+        env:
+          V3_SANDBOX_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V3_SANDBOX_OUTPUT: ${{ runner.temp }}/v4-combined-sandbox
+        run: node scripts/release/v3-sandbox-browser.mjs
+      - name: Upload public page and synthetic sandbox evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-combined-clean-air-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/v4-combined-public/
+            ${{ runner.temp }}/v4-combined-sandbox/
+          retention-days: 7
+          if-no-files-found: error
