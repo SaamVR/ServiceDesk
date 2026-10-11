@@ -82,6 +82,26 @@ describe("V3 operational Inbox triage", () => {
     expect(result.visible).toHaveLength(0);
   });
 
+  it("conservatively flags inbound messages at identical external timestamps regardless of row order", () => {
+    const tied = [
+      message("tied", "OUTBOUND", "2026-10-10T10:00:00Z"),
+      message("tied", "INBOUND", "2026-10-10T10:00:00Z"),
+    ];
+    for (const input of [tied, [...tied].reverse()]) {
+      const result = buildInboxTriage([thread("tied", "customer-1")], input, customers, "needs-reply");
+      expect(result.visible.map(item => item.id)).toEqual(["tied"]);
+      expect(result.counts["needs-reply"]).toBe(1);
+    }
+  });
+
+  it("stabilizes displayed order for equal conversation timestamps", () => {
+    const rows = [thread("b", "customer-1"), thread("a", "customer-1")];
+    for (const input of [rows, [...rows].reverse()]) {
+      const result = buildInboxTriage(input, [], customers, "all");
+      expect(result.visible.map(item => item.id)).toEqual(["a", "b"]);
+    }
+  });
+
   it("whitelists queue URLs and encodes selected conversation references", () => {
     expect(normalizeInboxQueue("handover")).toBe("handover");
     expect(normalizeInboxQueue("unverified")).toBe("unverified");
