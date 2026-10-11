@@ -52,7 +52,7 @@ function HeroVisual() {
     <div className={styles.heroVisual}>
       <div className={styles.heroImage} role="img" aria-label="A sunlit, beautifully kept white kitchen with warm natural materials" />
       <div className={styles.heroImageLabel}><span className={styles.whiteDot} /> A clearer view of every clean.</div>
-      <div className={styles.heroSignal} aria-label="Illustrative AI-assisted service request">
+      <div className={styles.heroSignal} role="group" aria-label="Illustrative AI-assisted service request">
         <div className={styles.signalTop}>
           <span className={styles.signalAvatar}>✳</span>
           <div><strong>Service request</strong><span>AI-assisted intake · example</span></div>
@@ -103,14 +103,14 @@ function ServiceGallery() {
 export function BrightHomeExperience({ canRegister }: { canRegister: boolean }) {
   return (
     <div className={styles.experience}>
-      <section className={styles.hero} id="public-main-content" aria-labelledby="clean-home-heading">
+      <section className={styles.hero} id="public-main-content" tabIndex={-1} aria-labelledby="clean-home-heading">
         <div className={styles.heroContent}>
           <span className={styles.heroEyebrow}><span className={styles.heroEyebrowStar}>✳</span> FOR THE PEOPLE BEHIND EVERY GREAT CLEAN</span>
           <h1 id="clean-home-heading">A cleaner way <span>to run your</span> cleaning business<span className={styles.headlinePeriod}>.</span></h1>
           <p className={styles.heroLead}>Beautifully simple for your team. Thoughtfully intelligent behind the scenes. Meet the cleaner, calmer way to manage enquiries, quotes, schedules and every last detail.</p>
           <div className={styles.heroActions}>
-            <Link className={styles.mainCta} href={canRegister ? "/auth/sign-up" : "/tour"}>{canRegister ? "Create your workspace" : "Explore the product"} <Arrow diagonal /></Link>
-            <Link className={styles.textCta} href="#how-it-works">See how it works <Arrow /></Link>
+            <Link data-home-cta className={styles.mainCta} href={canRegister ? "/auth/sign-up" : "/tour"}>{canRegister ? "Create your workspace" : "Explore the product"} <Arrow diagonal /></Link>
+            <Link data-home-link className={styles.textCta} href="#how-it-works">See how it works <Arrow /></Link>
           </div>
           <div className={styles.heroFootnote}>
             <span className={styles.tinyCircles} aria-hidden="true"><i /><i /><i /></span>
