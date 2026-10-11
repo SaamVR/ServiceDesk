@@ -20,6 +20,7 @@ interface MarketingShellProps {
   secondaryLabel?: string;
   heroStory?: ProductStoryHeroKind;
   homeEdition?: boolean;
+  brightEdition?: boolean;
 }
 
 export function MarketingShell({
@@ -33,14 +34,15 @@ export function MarketingShell({
   secondaryLabel = "Plan a walkthrough",
   heroStory,
   homeEdition = false,
+  brightEdition = false,
 }: MarketingShellProps) {
   const registrationEnabled = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
   const registration = marketingRegistrationEntry(registrationEnabled);
   const heroAction = marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
   return (
-    <main className={homeEdition ? `site-shell ${brightStyles.shell}` : "site-shell"}>
+    <main className={homeEdition ? `site-shell ${brightStyles.shell}` : brightEdition ? `site-shell ${brightStyles.shell}` : "site-shell"}>
       <a className={styles.skipLink} href="#public-main-content">Skip to content</a>
-      <header className={"site-header " + styles.header + (homeEdition ? " " + styles.brightHeader : "")} aria-label="Product navigation">
+      <header className={"site-header " + styles.header + ((homeEdition || brightEdition) ? " " + styles.brightHeader : "")} aria-label="Product navigation">
         <Link className={styles.brand} href="/" aria-label="ServiceDesk AI home">
           <span className={styles.brandIcon} aria-hidden="true">
             <svg width="38" height="38" viewBox="0 0 38 38" fill="none" focusable="false">
@@ -83,7 +85,7 @@ export function MarketingShell({
         </div>
       </header>
 
-      {!homeEdition && <section id="public-main-content" tabIndex={-1} className={`hero-grid section-card marketing-hero ${heroStyles.heroSection}`}>
+      {!(homeEdition || brightEdition) && <section id="public-main-content" tabIndex={-1} className={`hero-grid section-card marketing-hero ${heroStyles.heroSection}`}>
         <div className={`stack-lg marketing-hero-copy ${heroStyles.heroCopy}`}>
           <p className="eyebrow">{eyebrow}</p>
           <h1>{title}</h1>

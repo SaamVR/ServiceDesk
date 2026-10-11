@@ -1,0 +1,46 @@
+name: ServiceDesk V4 Clean Air public release check
+
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v3-combined-acceptance-20261011
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/app/tour/**"
+      - "src/features/product/Bright*"
+      - "src/components/shell/MarketingShell.tsx"
+      - "src/features/auth/RegistrationShell.module.css"
+      - "tests/e2e/v4-clean-*.test.ts"
+      - "tests/e2e/v4-clean-*.test.tsx"
+      - "tests/e2e/product-server-boundary.test.ts"
+      - "scripts/release/v3-public-browser-proof.*"
+      - ".github/workflows/v4-clean-air-public-rc.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servicedesk-v4-public-release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-product-rc:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck, all regression tests, lint and Next production build
+        run: pnpm check:rc

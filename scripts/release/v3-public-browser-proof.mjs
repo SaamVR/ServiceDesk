@@ -11,10 +11,15 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 const pages = [
   { slug: "home", path: "/", title: "A cleaner way to run your cleaning business.", heroLabel: "Illustrative AI-assisted service request" },
-  { slug: "features", path: "/features", title: "Everything a cleaning operations team needs to move work forward.", heroLabel: "Feature workflow from intake through quality" },
-  { slug: "pricing", path: "/pricing", title: "Service quote pricing stays transparent and controlled.", heroLabel: "Illustrative service quote breakdown, not subscription prices" },
-  { slug: "integrations", path: "/integrations", title: "Connect the systems your operation already uses.", heroLabel: "Integration readiness categories, not live provider status" },
-  { slug: "contact", path: "/contact", title: "See ServiceDesk against your real cleaning workflow.", heroLabel: "ServiceDesk walkthrough preparation agenda" },
+  { slug: "features", path: "/features", title: "Everything a cleaning operations team needs to move work forward.", heroLabel: "Illustrative request-to-visit workboard" },
+  { slug: "cleaning", path: "/use-cases/cleaning", title: "Built for residential cleaning operations.", heroLabel: "Bright, tidy home illustrating cleaning-service operations" },
+  { slug: "pricing", path: "/pricing", title: "Service quote pricing stays transparent and controlled.", heroLabel: "Example service quote with transparent total and deposit" },
+  { slug: "integrations", path: "/integrations", title: "Connect the systems your operation already uses.", heroLabel: "Illustrative integration control system" },
+  { slug: "contact", path: "/contact", title: "See ServiceDesk against your real cleaning workflow.", heroLabel: "An illustrative cleaning workflow conversation" },
+  { slug: "help", path: "/help", title: "Help for the workflows your team uses every day.", heroLabel: "help overview" },
+  { slug: "privacy", path: "/privacy", title: "Privacy starts with workspace and role boundaries.", heroLabel: "privacy overview" },
+  { slug: "terms", path: "/terms", title: "Clear product boundaries before launch.", heroLabel: "terms overview" },
+  { slug: "tour", path: "/tour", title: "See how a little clarity changes the whole workday.", heroLabel: "Bright cleaning workspace and illustrative service journey" },
   { slug: "sign-in", path: "/auth/sign-in", title: "Ready for what's next?" },
 ];
 const widths = [320, 390, 834, 1280, 1440];
@@ -96,7 +101,7 @@ async function inspect(expression) {
   const result = await channel.send("Runtime.evaluate", {
     expression, returnByValue: true, awaitPromise: true,
   });
-  if (result.exceptionDetails) throw new Error("Chrome page inspection failed.");
+  if (result.exceptionDetails) throw new Error("Chrome page inspection failed: " + String(result.exceptionDetails.text || result.exceptionDetails.exception?.description || "unknown").slice(0, 400));
   return result.result?.value;
 }
 async function loaded(page) {
@@ -140,8 +145,8 @@ async function layoutCheck(page, width) {
     'title:document.title,metaDescription:document.querySelector("meta[name=description]")?.content||"",' +
     'robots:document.querySelector("meta[name=robots]")?.content||"",' +
     'passwords:document.querySelectorAll("input[type=password]").length,' +
-    'heroLabel:(document.querySelector("[data-ai-example]")||document.querySelector(".marketing-hero aside[aria-label]"))?.getAttribute("aria-label")||"",' +
-    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header > div > a[href],.marketing-hero .button-primary,.marketing-hero .button-secondary,a[data-home-cta],a[data-home-link]")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height),tag:el.tagName,href:el.getAttribute("href")||""}))}))()'
+    'heroLabel:(document.querySelector("[data-ai-example]")||document.querySelector("[data-public-hero] > [aria-label]")||document.querySelector("[data-tour-hero]")||document.querySelector(".marketing-hero aside[aria-label]"))?.getAttribute("aria-label")||"",' +
+    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header > div > a[href],.marketing-hero .button-primary,.marketing-hero .button-secondary,a[data-home-cta],a[data-home-link],a[data-public-primary],a[data-public-secondary]")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height),tag:el.tagName,href:el.getAttribute("href")||""}))}))()'
   );
   if (state.width !== width || state.height !== height(width) || !state.reduced) {
     throw new Error("Chrome viewport/reduced-motion mismatch: " + page.slug + " " + width);
@@ -220,6 +225,45 @@ try {
           throw new Error("V4 public AI workflow interaction failed: " + width);
         }
         captures.push(await snapshot(page, width, "ai-scheduling-selected"));
+      }
+      // Product interactions are actual React client controls, not static
+      // art. Confirm their visible selection and text on two viewport sizes.
+      if ((width === 390 || width === 1280) && ["features", "integrations", "pricing", "contact"].includes(page.slug)) {
+        const proof = await inspect(
+          '(async () => {' +
+          'const pageKey = location.pathname === "/features" ? "features" : location.pathname === "/integrations" ? "integrations" : location.pathname === "/pricing" ? "pricing" : "contact";' +
+          'const button = pageKey === "features" ? [...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Dispatch")) :' +
+          'pageKey === "integrations" ? [...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Scheduling")) :' +
+          'pageKey === "pricing" ? [...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Review controls")) : null;' +
+          'if(pageKey === "contact") { const box=document.querySelector("input[type=checkbox]");if(!box)return{ok:false};box.click();' +
+          'await new Promise(r=>setTimeout(r,210));return{ok:box.checked,text:document.body.textContent||""};}' +
+          'if(!button)return{ok:false};button.click();await new Promise(r=>setTimeout(r,210));' +
+          'return{ok:button.getAttribute("aria-pressed")==="true",text:document.querySelector("[aria-live=polite]")?.textContent||""};' +
+          '})()'
+        );
+        const expected = page.slug === "features" ? "capacity" :
+          page.slug === "integrations" ? "Google Calendar" :
+          page.slug === "pricing" ? "AI suggestions cannot set" : "1 topic selected";
+        if (!proof?.ok || !proof.text.includes(expected)) {
+          throw new Error("V4 product interaction failed: " + page.slug + " " + width + " " +
+            JSON.stringify({ ok: proof?.ok, expected, excerpt: proof?.text?.slice(0, 180) }));
+        }
+        captures.push(await snapshot(page, width, "interactive-selected"));
+      }
+      if (page.slug === "tour" && (width === 390 || width === 1280)) {
+        const tourProof = await inspect(
+          '(() => { const details=document.querySelector("#enquiry-to-paid-job details");' +
+          'if(!details) return {ok:false}; const trigger=details.querySelector("summary");' +
+          'if(!trigger) return {ok:false}; trigger.click();' +
+          'return {ok:details.open,content:details.textContent||""};})()'
+        );
+        if (!tourProof?.ok ||
+            !tourProof.content.includes("Enquiry capture") ||
+            !tourProof.content.includes("Deterministic quote") ||
+            !tourProof.content.includes("FIXTURE UI ONLY")) {
+          throw new Error("V4 tour scenario disclosure failed: " + width);
+        }
+        captures.push(await snapshot(page, width, "scenario-open"));
       }
       // Open the actual native mobile disclosure; closed-menu screenshots
       // alone cannot prove destinations are accessible to mobile visitors.
