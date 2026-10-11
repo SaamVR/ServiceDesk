@@ -1,0 +1,77 @@
+name: ServiceDesk V3 interactive sandbox acceptance
+
+# Synthetic UI and domain checks only. No provider, database or deployment credentials.
+on:
+  push:
+    branches: [feat/servicedesk-v3-interactive-sandbox-20261011]
+    paths:
+      - "src/features/sandbox/**"
+      - "src/app/sandbox/**"
+      - "tests/e2e/v3-sandbox-workflow.test.ts"
+      - ".github/workflows/v3-sandbox-rc.yml"
+      - "scripts/release/v3-sandbox-browser.mjs"
+  pull_request:
+    branches: [feat/servicedesk-v3-combined-acceptance-20261011]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/features/sandbox/**"
+      - "src/app/sandbox/**"
+      - "src/app/tour/page.tsx"
+      - "tests/e2e/v3-sandbox-workflow.test.ts"
+      - ".github/workflows/v3-sandbox-rc.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sandbox-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install frozen dependency graph
+        run: pnpm install --frozen-lockfile
+      - name: Sandbox invariant and transaction tests
+        run: pnpm exec vitest run tests/e2e/v3-sandbox-workflow.test.ts
+      - name: Static type safety
+        run: pnpm typecheck
+      - name: Targeted lint
+        run: pnpm exec eslint src/features/sandbox/ src/app/sandbox/ tests/e2e/v3-sandbox-workflow.test.ts
+      - name: Production build
+        run: pnpm build
+      - name: Install real Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+      - name: Boot isolated local Next server
+        shell: bash
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/servicedesk-sandbox-app.log" 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/sandbox >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Sandbox app never started"
+          exit 1
+      - name: Exercise real Chrome sandbox workflow and screenshots
+        env:
+          V3_SANDBOX_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V3_SANDBOX_OUTPUT: ${{ runner.temp }}/servicedesk-sandbox-proof
+        run: node scripts/release/v3-sandbox-browser.mjs
+      - name: Upload synthetic Chrome screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-sandbox-chrome
+          path: ${{ runner.temp }}/servicedesk-sandbox-proof/
+          retention-days: 7
+          if-no-files-found: error
