@@ -20,6 +20,15 @@ describe("Studio OS command palette authorized record lookup",()=>{
   expect(decodeURIComponent(buildStaffRecordSearches("a","x".repeat(250))[1].href.split("search=")[1])).toHaveLength(100);
   expect(buildStaffRecordSearches("west/branch","Review overdue")[5].href).toBe("/app/west%2Fbranch/quality?q=Review%20overdue");
  });
+ it("keeps query parameters aligned with the actual authorized page parsers",()=>{
+  const jobs=readFileSync(join(process.cwd(),"src/app/app/[workspace]/jobs/page.tsx"),"utf8");
+  const quality=readFileSync(join(process.cwd(),"src/app/app/[workspace]/quality/page.tsx"),"utf8");
+  expect(jobs).toContain("searchQuery={query.search}");
+  expect(quality).toContain("qualitySearchQuery={query.q}");
+  const palette=readFileSync(join(process.cwd(),"src/components/product/StaffCommandPalette.tsx"),"utf8");
+  expect(palette).toContain("Search pages, customers, jobs, quality cases");
+  expect(palette).toContain("filtered, authorized workspace view");
+ });
  it("retains keyboard movement, focus and clear limits for actual routes",()=>{
   const component=readFileSync(join(process.cwd(),"src/components/product/StaffCommandPalette.tsx"),"utf8");
   expect(component).toContain("maxLength={100}");
