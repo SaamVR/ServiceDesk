@@ -68,6 +68,7 @@ export function createPostgresConversationReplyIntentResolver(
             message.conversation_id !== payload.conversationId ||
             message.sender_kind !== "STAFF" || message.direction !== "OUTBOUND" ||
             !text(message.body) || !text(message.outbound_idempotency_key) ||
+            !text(message.created_at) || !Number.isFinite(Date.parse(message.created_at)) ||
             event.idempotencyKey !==
               `conversation.reply:${event.workspaceId}:${message.outbound_idempotency_key}` ||
             (text(event.payload.messageId) && message.id !== event.payload.messageId) ||
