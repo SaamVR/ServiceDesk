@@ -12,7 +12,7 @@ describe("V2 controlled workflow builder product", () => {
     expect(route).toContain("Workflow builder");
     expect(route).toContain("Recovery queue");
     expect(route).toContain("Recovery remains human-owned");
-    expect(route).toContain("<WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} />");
+    expect(route).toContain("<WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />");
   });
 
   it("exposes only the fixed event and action catalogues", () => {

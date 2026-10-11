@@ -1,0 +1,18 @@
+.panel { padding: clamp(18px, 3vw, 27px); border: 1px solid #cee9de; border-radius: 17px; background: linear-gradient(115deg, #f0faf6, #fff 63%); display: grid; gap: 18px; color: #23483f; }
+.head { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 14px; }
+.head > div { flex: 1 1 360px; }
+.kicker { color: #177b69; text-transform: uppercase; font-size: .7rem; font-weight: 800; letter-spacing: .11em; margin: 0 0 8px; }
+.head h2 { color: #1e4e41; font-size: clamp(1.14rem, 1.6vw, 1.4rem); font-weight: 820; margin: 0 0 9px; line-height: 1.3; }
+.head p:not(.kicker) { font-size: .83rem; line-height: 1.65; color: #537369; max-width: 730px; margin: 0; }
+.configured,.unconfigured { font-size: .7rem; font-weight: 800; padding: 8px 10px; border-radius: 18px; line-height: 1.4; }
+.configured { color: #176b4d; background: #dff5e9; border: 1px solid #b6dec8; }
+.unconfigured { color: #81591d; background: #fff4de; border: 1px solid #efd9b1; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.grid > div { display: flex; flex-direction: column; gap: 9px; border: 1px solid #e0efe7; background: white; border-radius: 12px; padding: 15px; min-width: 0; }
+.grid strong { font-size: .84rem; color: #294e42; }
+.grid p { margin: 0; flex: 1; color: #607d72; font-size: .79rem; line-height: 1.65; }
+.grid a { color: #126b61; font-size: .8rem; font-weight: 750; text-decoration: none; align-self: start; }
+.grid a:hover { text-decoration: underline; }
+.grid a:focus-visible { outline: 3px solid #148577; outline-offset: 3px; }
+.note { color: #52736a; margin: 0; font-size: .76rem; line-height: 1.5; }
+@media(max-width: 840px) { .grid { grid-template-columns: 1fr; } }
