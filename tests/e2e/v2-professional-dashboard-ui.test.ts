@@ -9,6 +9,7 @@ describe("V2 professional operations UI", () => {
     const dashboard = source("src/features/operations/StaffOverviewDashboard.tsx");
     expect(dashboard).toContain("Your workday / operations");
     expect(dashboard).toContain("Operational brief");
+    expect(dashboard).toContain('(unassignedToday ? "?queue=unassigned" : "")');
     expect(dashboard).toContain("Decisions waiting for you");
     expect(dashboard).toContain("Today's jobs");
     expect(dashboard).toContain("Needs attention");
