@@ -54,10 +54,18 @@ comments, CI artifacts or public chat. Browser capture is not an accessibility
 audit or owner signoff: inspect keyboard focus, scroll/overflow, content density,
 contrast and workflows personally in the approved staging tenant.
 
+The harness now first checks the exact source SHA reported by the hosting
+platform at `/health`, rejecting an old, misrouted or unidentifiable preview
+**before launching Chromium**. It also requires a route-specific labelled
+workbench instead of accepting a generic signed-in shell with an h1.
+For the preflight and operator-approved staging host variables see
+`docs/design/v3-staging-provenance-acceptance-20261011.md`.
+
 The manifest deliberately records `CAPTURED_NOT_YET_VISUALLY_ACCEPTED`
-and `independentlyVerifiedSourceSha: false`; operator-provided SHA is not
-deployment verification. Independently establish the deployed commit via
-trusted deployment metadata before release. A full
+and `independentlyVerifiedSourceSha: false`; host-reported and
+operator-provided SHA matches are not **independent** deployment verification.
+Independently establish the deployed commit via authenticated hosting-provider
+deployment metadata before release. A full
 `pnpm install --frozen-lockfile && pnpm typecheck && pnpm build`
 on the exact integration SHA remains a **separate required release gate**.
 
