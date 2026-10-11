@@ -41,6 +41,9 @@ const copy = {
   },
 } as const;
 
+/** Shared source of editorial truth for public page HTML and metadata. */
+export const publicProductPageCopy = copy;
+
 export type StaticProductPageKind = keyof typeof copy;
 
 export function StaticProductPage({ kind }: { kind: StaticProductPageKind }) {
