@@ -15,6 +15,7 @@ function row(value: unknown): Row | undefined {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Row : undefined;
 }
 const suppressed = (reason: string) => fail("OUTBOX_SUPPRESSED:" + reason);
+const retryable = (reason: string) => fail("OUTBOX_RETRYABLE:" + reason);
 
 /**
  * Reconstructs a queued STAFF message from the transactional outbox record
@@ -40,7 +41,8 @@ export function createPostgresConversationReplyIntentResolver(
           .select("id,workspace_id,topic,payload,status,idempotency_key")
           .eq("id", event.id).eq("workspace_id", event.workspaceId)
           .eq("topic", "conversation.reply").maybeSingle();
-        if (o.error || !row(o.data)) return fail("OUTBOX_REPLY_EVENT_UNAVAILABLE");
+        if (o.error) return retryable("EVENT_READ_FAILED");
+        if (!row(o.data)) return fail("OUTBOX_REPLY_EVENT_UNAVAILABLE");
         const outbox = o.data as Row;
         const payload = row(outbox.payload);
         if (outbox.id !== event.id || outbox.workspace_id !== event.workspaceId ||
@@ -59,7 +61,8 @@ export function createPostgresConversationReplyIntentResolver(
           .eq("workspace_id", event.workspaceId)
           .eq("outbox_event_id", event.id)
           .eq("direction", "OUTBOUND").limit(2);
-        if (m.error || !Array.isArray(m.data)) return fail("OUTBOX_REPLY_MESSAGE_READ_FAILED");
+        if (m.error) return retryable("MESSAGE_READ_FAILED");
+        if (!Array.isArray(m.data)) return fail("OUTBOX_REPLY_MESSAGE_READ_FAILED");
         if (m.data.length !== 1) return fail("OUTBOX_REPLY_MESSAGE_AMBIGUOUS");
         const message = row(m.data[0]);
         if (!message || !text(message.id) ||
@@ -79,7 +82,8 @@ export function createPostgresConversationReplyIntentResolver(
           .select("id,workspace_id,customer_id,channel,version,handover_active")
           .eq("workspace_id", event.workspaceId).eq("id", payload.conversationId)
           .maybeSingle();
-        if (c.error || !row(c.data)) return fail("OUTBOX_REPLY_CONVERSATION_READ_FAILED");
+        if (c.error) return retryable("CONVERSATION_READ_FAILED");
+        if (!row(c.data)) return fail("OUTBOX_REPLY_CONVERSATION_READ_FAILED");
         const conv = c.data as Row;
         if (conv.workspace_id !== event.workspaceId || conv.id !== payload.conversationId ||
             conv.channel !== payload.channel || !text(conv.customer_id) ||
@@ -94,9 +98,8 @@ export function createPostgresConversationReplyIntentResolver(
           .eq("workspace_id", event.workspaceId).eq("customer_id", String(conv.customer_id))
           .eq("kind", kind).order("is_primary", { ascending: false })
           .order("created_at", { ascending: true }).limit(1).maybeSingle();
-        if (contact.error || !row(contact.data)) {
-          return fail("OUTBOX_REPLY_CONTACT_UNAVAILABLE");
-        }
+        if (contact.error) return retryable("CONTACT_READ_FAILED");
+        if (!row(contact.data)) return suppressed("RECIPIENT_NO_LONGER_AVAILABLE");
         const recipient = contact.data as Row;
         if (recipient.workspace_id !== event.workspaceId ||
             recipient.customer_id !== conv.customer_id ||
@@ -114,7 +117,7 @@ export function createPostgresConversationReplyIntentResolver(
           .eq("channel", String(conv.channel))
           .order("recorded_at", { ascending: false })
           .order("created_at", { ascending: false }).limit(1).maybeSingle();
-        if (consent.error) return fail("OUTBOX_REPLY_CONSENT_READ_FAILED");
+        if (consent.error) return retryable("CONSENT_READ_FAILED");
         const approval = row(consent.data);
         if (!approval || approval.workspace_id !== event.workspaceId ||
             approval.customer_id !== conv.customer_id ||
@@ -127,7 +130,7 @@ export function createPostgresConversationReplyIntentResolver(
           .eq("conversation_id", String(conv.id))
           .eq("direction", "INBOUND").eq("sender_kind", "CUSTOMER")
           .order("created_at", { ascending: false }).limit(1).maybeSingle();
-        if (inbound.error) return fail("OUTBOX_REPLY_INBOUND_READ_FAILED");
+        if (inbound.error) return retryable("INBOUND_READ_FAILED");
         const latestInbound = row(inbound.data);
         let lastInboundAt: string | undefined;
         if (latestInbound) {
@@ -158,7 +161,7 @@ export function createPostgresConversationReplyIntentResolver(
           lastInboundAt,
         });
       } catch {
-        return fail("OUTBOX_REPLY_SOURCE_UNAVAILABLE");
+        return retryable("SOURCE_READ_FAILED");
       }
     },
   };
