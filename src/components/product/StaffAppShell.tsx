@@ -102,16 +102,16 @@ function StaffNavigation({ workspace, mobile = false }: { workspace: string; mob
     <nav className={`${mobile ? "app-mobile-links" : "app-sidebar-nav"} ${styles.navigation}`} aria-label={mobile ? "Mobile workspace" : "Workspace"}>
       {navGroups.map((group) => group.collapsible ? (
         <details
-          className={styles.moreTools}
+          className={`app-more-tools ${styles.moreTools}`}
           key={group.label}
           // A deep link to a secondary route must expose its selected navigation item.
           open={group.modules.some(moduleIsActive) ? true : undefined}
         >
-          <summary className={styles.moreToolsTrigger}>
+          <summary className={`app-more-tools-trigger ${styles.moreToolsTrigger}`}>
             <span>More tools</span>
             <span className={styles.moreToolsChevron} aria-hidden="true">⌄</span>
           </summary>
-          <div className={styles.moreToolsItems}>{group.modules.map(linkFor)}</div>
+          <div className={`app-more-tools-items ${styles.moreToolsItems}`}>{group.modules.map(linkFor)}</div>
         </details>
       ) : (
         <div className={`app-nav-group ${styles.navGroup}`} key={group.label}>
@@ -193,7 +193,7 @@ export function StaffAppShell({
               </div>
               <StaffNavigation workspace={workspace} mobile />
               {signedIn ? (
-                <div className={styles.mobileAccountActions}>
+                <div className={`app-mobile-account-actions ${styles.mobileAccountActions}`}>
                   <Link href="/auth/select-workspace" onClick={closeMobileNavigation}>Switch workspace</Link>
                   <Link href={buildStaffModuleHref(workspace, "settings")} onClick={closeMobileNavigation}>Account settings</Link>
                 </div>
