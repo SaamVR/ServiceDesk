@@ -1,0 +1,33 @@
+name: ServiceDesk V4 read-only live Studio denied 13-page browser audit
+on:
+  push:
+    branches: [feat/servicedesk-v4-auth-guest-route-proof-20261012]
+    paths:
+      - scripts/release/v4-anonymous-studio-browser.mjs
+      - .github/workflows/v4-anon-studio-route-only-live.yml
+permissions: {contents: read}
+jobs:
+  denied-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2}
+      - run: node --check scripts/release/v4-anonymous-studio-browser.mjs
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Visit all thirteen protected modules at seven widths with NO account session
+        env:
+          V4_ANON_ROUTE_ONLY: "true"
+          V4_ANON_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_ANON_OUTPUT: ${{ runner.temp }}/v4-guest-studio
+        run: node scripts/release/v4-anonymous-studio-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: denied-guest-studio-13x7-${{ github.sha }}
+          path: ${{ runner.temp }}/v4-guest-studio/
+          retention-days: 4
+          if-no-files-found: warn
