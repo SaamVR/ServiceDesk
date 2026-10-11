@@ -7,7 +7,9 @@ const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8")
 describe("V2 professional operations UI", () => {
   it("treats the staff overview as an operational command center", () => {
     const dashboard = source("src/features/operations/StaffOverviewDashboard.tsx");
-    expect(dashboard).toContain("Operations command center");
+    expect(dashboard).toContain("Your workday / operations");
+    expect(dashboard).toContain("Operational brief");
+    expect(dashboard).toContain("Decisions waiting for you");
     expect(dashboard).toContain("Today's jobs");
     expect(dashboard).toContain("Needs attention");
     expect(dashboard).toContain("Customer pipeline");
