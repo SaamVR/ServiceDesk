@@ -34,6 +34,27 @@ export function filterInvoiceQueue<T extends InvoiceCollectionRecord>(records:re
   if(queue==="all")return [...records];
   return records.filter(x=>invoiceQueueOf(x)===queue);
 }
+/** Financial queue ordering is status-first and then currency-local.
+ * Comparing minor units from different currencies exaggerates priority and is
+ * not a meaningful money comparison. This only sorts an authorized snapshot.
+ */
+export function orderCustomerCollectionInvoices<T extends InvoiceCollectionRecord & { currency: string }>(
+  records: readonly T[],
+): T[] {
+  const priority: Record<Exclude<InvoiceQueue, "all">, number> = {
+    open: 0, other: 1, paid: 2, void: 3,
+  };
+  return [...records].sort((left, right) => {
+    const group = priority[invoiceQueueOf(left)] - priority[invoiceQueueOf(right)];
+    if (group) return group;
+    const currency = left.currency.localeCompare(right.currency);
+    if (currency) return currency;
+    const leftMinor = Number.isFinite(left.balanceMinor) ? left.balanceMinor : 0;
+    const rightMinor = Number.isFinite(right.balanceMinor) ? right.balanceMinor : 0;
+    return rightMinor - leftMinor || left.id.localeCompare(right.id);
+  });
+}
+
 /** Parse a human-entered two-decimal amount exactly in integer minor units.
  * Never round fractional cents, accept exponent notation or pass imprecise
  * Number values into the authorized payment command.
