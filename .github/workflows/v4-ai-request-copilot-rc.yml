@@ -1,0 +1,46 @@
+name: ServiceDesk V4 AI request copilot exact-head RC
+
+on:
+  push:
+    branches:
+      - feat/v4-ai-request-copilot-20261012
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+    paths:
+      - "src/server/ai/request-brief.ts"
+      - "src/server/api-handlers/ai-request-brief-http.ts"
+      - "src/app/api/internal/ai/request-brief/**"
+      - "src/features/operations/AiRequestBrief*"
+      - "src/features/operations/AiOperationsStatus*"
+      - "src/features/operations/OperationalProductRoute.tsx"
+      - "src/features/operations/StaffOverviewDashboard.tsx"
+      - "tests/e2e/v4-ai-request-copilot.test.ts"
+      - ".github/workflows/v4-ai-request-copilot-rc.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servicedesk-ai-copilot-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ai-copilot-full-rc:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Focused real-model boundary and Studio visibility tests
+        run: pnpm exec vitest run tests/e2e/v4-ai-request-copilot.test.ts tests/e2e/v3-ai-staff-http.test.ts tests/providers/ai-model-transport-hardening.test.ts
+      - name: Exact-head TypeScript, all tests, lint and production build
+        run: pnpm check:rc
