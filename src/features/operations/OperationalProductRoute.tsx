@@ -59,7 +59,7 @@ import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatWorkspaceDateTime } from "./product-truth";
 import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
-import { filterQualityQueue, normalizeQualityQueue, normalizeQualitySearch, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
+import { filterQualityQueue, isOverdueQualityCase, normalizeQualityQueue, normalizeQualitySearch, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
 import { QualityQueueFilters } from "./QualityQueueFilters";
 import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue } from "./invoice-collection-queue";
 import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
@@ -2137,7 +2137,8 @@ function QualityView({
 
   const orderedCases = [...data.qualityCases].sort((left, right) => {
     const stateWeight: Record<string, number> = { IN_REVIEW: 0, OPEN: 1, RESOLVED: 2 };
-    return (stateWeight[left.state] ?? 9) - (stateWeight[right.state] ?? 9)
+    return Number(isOverdueQualityCase(right, data.loadedAt)) - Number(isOverdueQualityCase(left, data.loadedAt))
+      || (stateWeight[left.state] ?? 9) - (stateWeight[right.state] ?? 9)
       || (left.dueAt ? Date.parse(left.dueAt) : Number.MAX_SAFE_INTEGER) - (right.dueAt ? Date.parse(right.dueAt) : Number.MAX_SAFE_INTEGER);
   });
   const visitById = new Map(data.visits.map(visit => [visit.id, visit]));
@@ -2152,8 +2153,8 @@ function QualityView({
   const filteredCases = filterQualityQueue(orderedCases, queue, search, qualityCase => {
     const { caseRequest, caseCustomer } = lookupCase(qualityCase);
     return [qualityCase.summary, caseCustomer?.displayName, caseRequest?.serviceLabel, qualityCase.state, qualityCase.feedbackScore?.toString()];
-  });
-  const counts = qualityQueueCount(orderedCases);
+  }, data.loadedAt);
+  const counts = qualityQueueCount(orderedCases, data.loadedAt);
   if (!filteredCases.length) {
     return (
       <section className={styles.qualityWorkspace} aria-label="Quality review workspace">
@@ -2182,7 +2183,7 @@ function QualityView({
         <div>
           <p className={styles.qualityEyebrow}>Issue management</p>
           <h2>Quality review queue</h2>
-          <p>{openCount} open · {reviewCount} in review · {resolvedCount} resolved</p>
+          <p>{openCount} open · {reviewCount} in review · {counts.overdue} overdue · {resolvedCount} resolved</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open jobs</a>
       </header>
@@ -2203,7 +2204,9 @@ function QualityView({
               >
                 <span className={styles.qualityQueueTop}>
                   <strong>{qualityCase.summary}</strong>
-                  <StatusBadge tone={statusBadgeTone(qualityCase.state)}>{qualityCase.state.replaceAll("_", " ")}</StatusBadge>
+                  {isOverdueQualityCase(qualityCase, data.loadedAt)
+                    ? <StatusBadge tone="danger">Overdue</StatusBadge>
+                    : <StatusBadge tone={statusBadgeTone(qualityCase.state)}>{qualityCase.state.replaceAll("_", " ")}</StatusBadge>}
                 </span>
                 <span className={styles.qualityQueueCustomer}>{caseCustomer?.displayName ?? caseRequest?.serviceLabel ?? "Service visit"}</span>
                 <span className={styles.qualityQueueMeta}>
@@ -2224,6 +2227,7 @@ function QualityView({
             </div>
             <div className={styles.qualityHeaderActions}>
               <StatusBadge tone={statusBadgeTone(selected.state)}>{selected.state.replaceAll("_", " ")}</StatusBadge>
+              {isOverdueQualityCase(selected, data.loadedAt) ? <StatusBadge tone="danger">Deadline passed</StatusBadge> : null}
               {selected.state === "OPEN" ? (
                 <form action={qualityAction} className={styles.qualityInlineActions}>
                   <input type="hidden" name="qualityCaseId" value={selected.id} />
@@ -2242,7 +2246,8 @@ function QualityView({
           <section className={styles.qualityMetrics} aria-label="Quality case summary">
             <div><span>Feedback</span><strong>{selected.feedbackScore !== undefined ? `${selected.feedbackScore}/5` : "—"}</strong></div>
             <div><span>Owner</span><strong>{selected.ownerUserId ? "Assigned" : "Unassigned"}</strong></div>
-            <div><span>Deadline</span><strong>{formatWhen(selected.dueAt, data.workspace.timezone)}</strong></div>
+            <div><span>Deadline</span><strong>{formatWhen(selected.dueAt, data.workspace.timezone)}</strong>
+              {isOverdueQualityCase(selected, data.loadedAt) ? <small>Overdue as of snapshot</small> : null}</div>
             <div><span>Evidence</span><strong>{evidence.length}</strong></div>
           </section>
 
