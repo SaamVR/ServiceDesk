@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ActorContext } from "../../src/contracts";
 import { executeAuthorizedStaffAiTurn } from "../../src/server/ai/staff-invocation";
+import { ApprovedKnowledgeIndex } from "../../src/server/ai/knowledge";
 import type { ResolvedStaffActor } from "../../src/features/operations/operational-product-runtime";
 
 const actor: ActorContext = { userId: "user-1", role: "OWNER", workspaceId: "ws-1" };
 const conversation = { id: "conv-1", workspace_id: "ws-1", request_id: "req-1",
-  customer_id: "customer-1", handover_active: false };
+  customer_id: "customer-1", channel: "WHATSAPP", handover_active: false };
 const message = { id: "msg-1", workspace_id: "ws-1", conversation_id: "conv-1",
   direction: "INBOUND", sender_kind: "CUSTOMER", body: "Can I book a deep cleaning?",
   created_at: "2026-10-11T03:00:00.000Z" };
@@ -57,7 +58,7 @@ function fixture(config: {
     resolveActor: async () => config.authFailed
       ? { ok: false as const, kind: "authentication", message: "Sign in required" }
       : { ok: true as const, value: staff },
-    env, promptVersion: "controlled-v3-inbox",
+    env, knowledge: new ApprovedKnowledgeIndex([]), promptVersion: "controlled-v3-inbox",
     fetchPort: async () => { network++; return new Response(reply, { status: 200 }); },
   };
   return { opts, calls: () => ({ network, lookups }) };
