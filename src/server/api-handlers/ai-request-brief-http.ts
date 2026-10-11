@@ -31,9 +31,9 @@ export async function handleRequestBriefPost(
   let ownOrigin: string;
   try { ownOrigin = new URL(request.url).origin; }
   catch { return json(400, { code: "REQUEST_URL_INVALID" }); }
+  const fetchSite = request.headers.get("sec-fetch-site");
   if (!origin || origin !== ownOrigin ||
-      (request.headers.get("sec-fetch-site") &&
-       !["same-origin", "none"].includes(request.headers.get("sec-fetch-site")))) {
+      (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
     return json(403, { code: "SAME_ORIGIN_REQUIRED" });
   }
   let body: Awaited<ReturnType<typeof readBoundedWebhookBody>>;
