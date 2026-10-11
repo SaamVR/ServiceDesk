@@ -167,7 +167,7 @@ export function StaffOverviewDashboard({
     | "attentionItems"
     | "qualityCases"
     | "crews"
-  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages">>;
+  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions">>;
   errorMessage?: string;
 }) {
   if (!snapshot) {
