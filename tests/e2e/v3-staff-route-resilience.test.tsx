@@ -28,6 +28,8 @@ describe("V3 authenticated workroom streaming and recovery", () => {
     }));
     expect(html).toContain("This workspace did not load");
     expect(html).toContain("Retry this view");
+    expect(html).toContain("check the saved record");
+    expect(html).not.toContain("have not been changed");
     expect(html).toContain("/app/review-space/overview");
     expect(html).not.toContain("sensitive operational token");
     expect(html).not.toContain("private customer");
