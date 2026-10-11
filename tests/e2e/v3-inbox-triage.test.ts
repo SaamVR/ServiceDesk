@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import "./v3-studio-submit-pending.test";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
