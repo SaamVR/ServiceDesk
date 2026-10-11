@@ -243,7 +243,8 @@ function InboxView({
   }
 
   const threadPosition = inboxThreadPosition(orderedConversations, selected.id, queue, search);
-  const customer = data.customers.find((item) => item.id === selected.customerId);
+  const customersById = indexStaffById(data.customers);
+  const customer = customersById.get(selected.customerId ?? "");
   const request = data.requests.find((item) => item.id === selected.requestId);
   const property = request?.propertyId
     ? data.properties.find((item) => item.id === request.propertyId)
@@ -337,7 +338,7 @@ function InboxView({
         <a className={styles.inboxMobileJump} href="#active-inbox-thread">Jump to selected conversation ↓</a>
         <div id="inbox-conversation-list" className={styles.conversationList} role="list">
           {orderedConversations.map((conversation) => {
-            const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
+            const threadCustomer = customersById.get(conversation.customerId ?? "");
             const latest = lastMessageByConversation.get(conversation.id);
             const selectedThread = conversation.id === selected.id;
             return (
@@ -1386,6 +1387,15 @@ function ScheduleView({
 
   const now = Date.parse(data.loadedAt);
 
+  const requestById = indexStaffById(data.requests);
+  const customerById = indexStaffById(data.customers);
+  const crewById = indexStaffById(data.crews);
+  const activeHoldByQuote = new Map<string, OperationalStaffSnapshot["slotHolds"][number]>();
+  for (const hold of data.slotHolds) {
+    if (hold.status === "HELD" && Date.parse(hold.expiresAt) > now && !activeHoldByQuote.has(hold.quoteId)) {
+      activeHoldByQuote.set(hold.quoteId, hold);
+    }
+  }
   const { unscheduled, acceptedQuotes } = deriveDispatchBacklog(data.requests, data.quotes, data.visits);
   const heldSlotIds = new Set(
     data.slotHolds
@@ -1403,8 +1413,8 @@ function ScheduleView({
   const activeHolds = data.slotHolds.filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now).length;
   const dispatch = buildOperationalDispatchIntelligence(data);
   const visitLabels = Object.fromEntries(data.visits.map((visit) => {
-    const request = data.requests.find((item) => item.id === visit.requestId);
-    const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
+    const request = requestById.get(visit.requestId);
+    const customer = request?.customerId ? customerById.get(request.customerId) : undefined;
     return [visit.id, `${request?.serviceLabel ?? "Service visit"}${customer ? ` · ${customer.displayName}` : ""}`];
   }));
   const visitMeta = Object.fromEntries(data.visits.map((visit) => [visit.id, formatWhen(visit.startAt, data.workspace.timezone)]));
@@ -1485,9 +1495,9 @@ function ScheduleView({
           ) : (
             <div className={styles.scheduleVisitList}>
               {visibleUpcoming.slice(0, 12).map((visit) => {
-                const request = data.requests.find((item) => item.id === visit.requestId);
-                const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
-                const crew = visit.crewId ? data.crews.find((item) => item.id === visit.crewId) : undefined;
+                const request = requestById.get(visit.requestId);
+                const customer = request?.customerId ? customerById.get(request.customerId) : undefined;
+                const crew = visit.crewId ? crewById.get(visit.crewId) : undefined;
                 return (
                   <a className={styles.scheduleVisitRow} href={`/app/${encodeURIComponent(workspaceSlug)}/jobs?job=${encodeURIComponent(visit.id)}`} key={visit.id}>
                     <time>{formatWhen(visit.startAt, data.workspace.timezone)}</time>
@@ -1515,9 +1525,9 @@ function ScheduleView({
           ) : (
             <div className={styles.bookingQueue}>
               {acceptedQuotes.map((quote) => {
-                const request = data.requests.find((item) => item.id === quote.requestId);
-                const customer = request?.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
-                const activeHold = data.slotHolds.find((hold) => hold.quoteId === quote.id && hold.status === "HELD" && Date.parse(hold.expiresAt) > now);
+                const request = requestById.get(quote.requestId);
+                const customer = request?.customerId ? customerById.get(request.customerId) : undefined;
+                const activeHold = activeHoldByQuote.get(quote.id);
                 const requiredMinutes = quote.durationMinutes + quote.bufferMinutes;
                 const candidates = data.capacitySlots.filter((slot) => {
                   const start = Date.parse(slot.startAt);
@@ -1561,7 +1571,7 @@ function ScheduleView({
         ) : (
           <div className={styles.unscheduledGrid}>
             {unscheduled.slice(0, 12).map((request) => {
-              const customer = request.customerId ? data.customers.find((item) => item.id === request.customerId) : undefined;
+              const customer = request.customerId ? customerById.get(request.customerId) : undefined;
               return (
                 <a href={`/app/${encodeURIComponent(workspaceSlug)}/requests?request=${encodeURIComponent(request.id)}`} key={request.id}>
                   <span><strong>{request.serviceLabel}</strong><small>{customer?.displayName ?? "Visitor enquiry"} · Requested {formatWhen(request.requestedStartAt, data.workspace.timezone)}</small></span>
