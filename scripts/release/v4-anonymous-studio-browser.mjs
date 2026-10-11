@@ -86,8 +86,10 @@ try {
   ];
   for(const a of attempts){
     const response=await fetch(endpoint,{method:"POST",headers:a.headers,body:a.body,redirect:"manual"});
-    if(!a.statuses.includes(response.status))throw Error("ANON_AI_ENDPOINT_"+a.name+"_"+response.status);
-    manifest.checks.push({type:"ai-denial",name:a.name,status:response.status});
+    const decoded=await response.json().catch(()=>null);
+    const code=typeof decoded?.code==="string"&&/^[A-Z_]+$/.test(decoded.code)?decoded.code:"UNKNOWN_RESPONSE";
+    if(!a.statuses.includes(response.status))throw Error("ANON_AI_ENDPOINT_"+a.name+"_"+response.status+"_"+code);
+    manifest.checks.push({type:"ai-denial",name:a.name,status:response.status,code});
   }
   conn=await connect(await launch());await conn.send("Page.enable");await conn.send("Runtime.enable");
   await conn.send("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
