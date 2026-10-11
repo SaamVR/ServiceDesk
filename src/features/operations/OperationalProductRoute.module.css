@@ -1573,3 +1573,37 @@
 @media (max-width: 360px) {
   .contextActions { grid-template-columns: 1fr; }
 }
+
+
+/* Read-only crew-coverage view: values come from the authenticated visit list. */
+.scheduleQueueNav {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 5px;
+  justify-self: start;
+  width: fit-content;
+  padding: 4px;
+  border: 1px solid #ded8cb;
+  border-radius: 7px;
+  background: #ece7dd;
+}
+.scheduleQueueNav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 39px;
+  padding: 8px 14px;
+  border-radius: 5px;
+  color: #575e53;
+  font-size: .8rem;
+  font-weight: 730;
+  text-decoration: none;
+}
+.scheduleQueueNav a strong { font-variant-numeric: tabular-nums; font-size: .75rem; }
+.scheduleQueueNav a:hover { background: #f7f2e9; text-decoration: none; }
+.scheduleQueueNav a[aria-current="page"] { background: #fffefa; color: #7c3b29; box-shadow: 0 1px 3px rgb(54 47 37 / 8%); }
+@media (max-width: 430px) {
+  .scheduleQueueNav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .scheduleQueueNav a { justify-content: center; padding-inline: 8px; }
+}
