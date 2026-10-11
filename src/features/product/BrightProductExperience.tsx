@@ -60,11 +60,11 @@ function RightArrow() {
   return <span aria-hidden="true">↗</span>;
 }
 
-function SectionTitle({ label, title, description }: { label: string; title: string; description: string }) {
+function SectionTitle({ label, title, description, id }: { label: string; title: string; description: string; id?: string }) {
   return (
     <div className={styles.sectionHeading}>
       <span className={styles.eyebrow}>{label}</span>
-      <h2>{title}</h2>
+      <h2 id={id}>{title}</h2>
       <p>{description}</p>
     </div>
   );
@@ -210,7 +210,7 @@ function FeaturesSections() {
     <>
       <section className={styles.section + " " + styles.whiteSection} id="details" aria-labelledby="features-workflow-title">
         <div className={styles.sectionContainer}>
-          <SectionTitle label="A CONNECTED WORKDAY" title="From the first hello to the finishing touch." description="Explore the responsibilities and decisions behind one beautifully run cleaning operation." />
+          <SectionTitle id="features-workflow-title" label="A CONNECTED WORKDAY" title="From the first hello to the finishing touch." description="Explore the responsibilities and decisions behind one beautifully run cleaning operation." />
           <WorkflowExplorer />
         </div>
       </section>
@@ -245,7 +245,7 @@ function CleaningSections() {
         <div className={styles.sectionContainer + " " + styles.cleaningStory}>
           <div className={styles.photoFrame} role="img" aria-label="Naturally lit, freshly cleaned home interior"/>
           <div className={styles.cleaningStoryText}>
-            <SectionTitle label="MADE FOR REAL CLEANING TEAMS" title="A thoughtful service needs a thoughtful system." description="Every detail—from arrival notes to customer preferences—deserves to move smoothly between the office, the cleaner and the customer."/>
+            <SectionTitle id="cleaning-story-title" label="MADE FOR REAL CLEANING TEAMS" title="A thoughtful service needs a thoughtful system." description="Every detail—from arrival notes to customer preferences—deserves to move smoothly between the office, the cleaner and the customer."/>
             <p>Instead of losing context across messages and calendars, the people doing the work can focus on delivering it well.</p>
             <Link className={styles.textLink} href="/features">Explore the operations platform <RightArrow/></Link>
           </div>
@@ -269,7 +269,7 @@ function IntegrationsSections() {
     <>
       <section className={styles.section + " " + styles.whiteSection} id="details" aria-labelledby="integration-explore-title">
         <div className={styles.sectionContainer}>
-          <SectionTitle label="CLEAR CONNECTIONS" title="Know exactly what a connection is doing." description="Explore how messaging, calendars, payment events and AI assistance fit into cleaning operations without overstating their release status." />
+          <SectionTitle id="integration-explore-title" label="CLEAR CONNECTIONS" title="Know exactly what a connection is doing." description="Explore how messaging, calendars, payment events and AI assistance fit into cleaning operations without overstating their release status." />
           <IntegrationExplorer />
         </div>
       </section>
@@ -293,7 +293,7 @@ function PricingSections() {
     <>
       <section className={styles.section + " " + styles.whiteSection} id="details" aria-labelledby="pricing-example-heading">
         <div className={styles.sectionContainer + " " + styles.pricingBreakdown}>
-          <div><SectionTitle label="A QUOTE YOU CAN EXPLAIN" title="Thoughtful pricing, without the guesswork." description="Your cleaning business sets the rates. ServiceDesk keeps the service, scope, timing, deposit and balance visible for staff review."/>
+          <div><SectionTitle id="pricing-example-heading" label="A QUOTE YOU CAN EXPLAIN" title="Thoughtful pricing, without the guesswork." description="Your cleaning business sets the rates. ServiceDesk keeps the service, scope, timing, deposit and balance visible for staff review."/>
             <p className={styles.smallCopy}>This is a cleaning-service quote illustration—not a ServiceDesk subscription offer. No real charge or account is created when exploring it.</p>
           </div>
           <QuoteExplorer />
@@ -320,7 +320,7 @@ function ContactSections() {
       <section className={styles.section + " " + styles.whiteSection} id="details" aria-labelledby="contact-discussion-title">
         <div className={styles.sectionContainer + " " + styles.contactLayout}>
           <div className={styles.contactCopy}>
-            <SectionTitle label="A USEFUL FIRST CONVERSATION" title="Tell us about the work—not a sales pitch." description="A meaningful product review starts with the channels, teams and processes you already have."/>
+            <SectionTitle id="contact-discussion-title" label="A USEFUL FIRST CONVERSATION" title="Tell us about the work—not a sales pitch." description="A meaningful product review starts with the channels, teams and processes you already have."/>
             <div className={styles.contactTopics}>
               <p><span>01</span> Your core cleaning services and pricing rules</p>
               <p><span>02</span> Your dispatch, crew and customer handoffs</p>
@@ -352,7 +352,7 @@ function HelpSections() {
   return (
     <section className={styles.section + " " + styles.whiteSection} id="details" aria-labelledby="help-topics-heading">
       <div className={styles.sectionContainer}>
-        <SectionTitle label="HELP WITHOUT THE HUNT" title="Find the operational answer quickly." description="Practical starting points for teams running a real cleaning operation." />
+        <SectionTitle id="help-topics-heading" label="HELP WITHOUT THE HUNT" title="Find the operational answer quickly." description="Practical starting points for teams running a real cleaning operation." />
         <div className={styles.faqList}>
           {helpTopics.map(([title, description]) => <details key={title}><summary>{title}<span aria-hidden="true">＋</span></summary><p>{description}</p></details>)}
         </div>
