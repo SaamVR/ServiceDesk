@@ -56,7 +56,7 @@ async function verifyIsolation(actor, foreign) {
     ["invoices", "workspace_id", foreign.id],
   ];
   for (const [table, column, id] of checks) {
-    const { data, error } = await actor.client.from(table).select("id").eq(column, id).limit(1);
+    const { data, error } = await actor.client.from(table).select(column).eq(column, id).limit(1);
     if (error || !Array.isArray(data) || data.length !== 0) fail("CROSS_TENANT_RLS_" + table.toUpperCase());
   }
   const own = await actor.client.from("workspaces").select("id").eq("id", actor.id).maybeSingle();
