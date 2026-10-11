@@ -39,7 +39,23 @@ function providerIds(payload: Record<string, unknown>): { ids: string[]; hasStat
       if (!isRecord(metadata) || typeof metadata.phone_number_id !== "string" ||
           !metadata.phone_number_id.trim()) return undefined;
       ids.push(metadata.phone_number_id);
-      if (Array.isArray(change.value.statuses) && change.value.statuses.length > 0) hasStatuses = true;
+      // Never acknowledge a signed status payload that was not actually
+      // understood. Meta would stop retrying and the Inbox would incorrectly
+      // continue to display a stale delivered/read state.
+      if ("statuses" in change.value) {
+        if (!Array.isArray(change.value.statuses)) return undefined;
+        for (const status of change.value.statuses) {
+          if (!isRecord(status) ||
+              typeof status.id !== "string" || !status.id.trim() ||
+              typeof status.timestamp !== "string" ||
+              !/^\\d{1,13}$/.test(status.timestamp) ||
+              !["sent", "delivered", "read", "failed"].includes(String(status.status))) {
+            return undefined;
+          }
+        }
+        if (change.value.statuses.length > 0) hasStatuses = true;
+      }
+      if ("messages" in change.value && !Array.isArray(change.value.messages)) return undefined;
     }
   }
   return { ids, hasStatuses };
