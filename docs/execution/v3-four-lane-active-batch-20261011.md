@@ -49,3 +49,11 @@ This packet is an execution contract and measured status receipt, NOT an asserti
 - Platform rejected connected-project migration 0037. Do not bypass the safety gate. See https://github.com/SaamVR/ServiceDesk/issues/75
 - Auth email receipts, authenticated end-to-end owner journey and real provider acceptance still pending.
 - Keep V2/main untouched. No resets, rebases or force-pushes. Only merge after path review and real checks; update this ledger with exact acceptance evidence.
+
+## Candidate B and focused PR validation checkpoint
+
+- Exact read-only CAS compare verified candidate B branch `feat/servicedesk-v3-candidate-b-20261011` is **four commits ahead, zero behind** coordinator base `62cc6fd9087d2b52a6ed928df393c19332c5d979`; only the four W1/W2 owned source and test paths changed. Candidate head `7b9f4f1a00a87524397dd45d498d8fb4b7d7db09`.
+- Review PR: https://github.com/SaamVR/ServiceDesk/pull/82 — now ready for review but **not merged**. `IMPLEMENTED` with isolated source tests; full `pnpm check:rc` and staged Render browser evidence still required. Coordinator remains free from these unverified changes.
+- Controller-only low-cost CI added in `.github/workflows/v3-focused-pr.yml` at `d08faab0f4156899804b2ea1891ab9219cbb4068`: triggers on relevant V3 coordinator-targeted pull requests, one eight-minute job, Node smoke unit check, targeted W1+W2 Vitest and TypeScript check, read-only GitHub permissions, no secrets. This is **workflow implementation**, not a claim that CI has run.
+- When checked, GitHub's `fetch_commit_workflow_runs` returned **zero runs** for the candidate SHA. Do not claim GitHub Actions PASS until run conclusion/commit and logs are observed. Do not rerun unchanged infrastructure on every turn.
+- Public Render page retrieval was unavailable via the current read-only web tool. Render connector did not have a user-selected workspace and required the owner to choose one; no Render workspace or deployment operations performed, no live browser assertions made.
