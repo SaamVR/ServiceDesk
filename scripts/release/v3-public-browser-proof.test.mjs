@@ -26,6 +26,8 @@ test("real Chrome expected headings agree with route-authored product text", () 
   const home = file("src/app/page.tsx");
   const staticPage = file("src/features/product/StaticProductPage.tsx");
   const signIn = file("src/app/auth/sign-in/page.tsx");
+  const tour = file("src/app/tour/page.tsx");
+  const sandbox = file("src/features/sandbox/SandboxJourney.tsx");
   const expected = [
     "A cleaner way to run your cleaning business.",
     "Everything a cleaning operations team needs to move work forward.",
@@ -36,13 +38,15 @@ test("real Chrome expected headings agree with route-authored product text", () 
     "Help for the workflows your team uses every day.",
     "Privacy starts with workspace and role boundaries.",
     "Clear product boundaries before launch.",
+    "Controlled tour in an isolated showcase workspace.",
+    "One job. Every step. Your decisions.",
     "Ready for what's next?",
   ];
   for (const title of expected) {
     assert.ok(script.includes(title), title);
-    assert.ok(home.includes(title) || staticPage.includes(title) || signIn.includes(title), title);
+    assert.ok(home.includes(title) || staticPage.includes(title) || signIn.includes(title) || tour.includes(title) || sandbox.includes(title), title);
   }
-  assert.equal((script.match(/\{ slug: "(?:home|features|cleaning|pricing|integrations|contact|help|privacy|terms|sign-in)"/g) ?? []).length, 10);
+  assert.equal((script.match(/\{ slug: "(?:home|features|cleaning|pricing|integrations|contact|help|privacy|terms|tour|sandbox|sign-in)"/g) ?? []).length, 12);
 });
 
 test("public Chrome requires page-specific bright workboards rather than repeated V3 cards", () => {
@@ -77,6 +81,22 @@ test("V4 public Chrome exercises local-only interactive workflows and mobile act
   assert.ok(script.includes("a[data-public-primary],a[data-public-secondary]"));
   assert.ok(pages.includes('aria-pressed={'));
   assert.ok(!pages.includes("fetch("));
+});
+
+test("guided tour and sandbox remain local-only and Chrome exercises sample progression", () => {
+  const source = file("scripts/release/v3-public-browser-proof.mjs");
+  const tour = file("src/app/tour/page.tsx");
+  const sandbox = file("src/features/sandbox/SandboxJourney.tsx");
+  const css = file("src/features/sandbox/SandboxJourney.module.css");
+  assert.ok(source.includes('heroLabel: "Clean Air product tour introduction"'));
+  assert.ok(source.includes('page.slug === "sandbox" && (width === 390 || width === 1280)'));
+  assert.ok(source.includes("V4 local-only sandbox quote progression failed"));
+  assert.ok(source.includes("sample-quote-prepared"));
+  assert.ok(tour.includes('data-v4-tour'));
+  assert.ok(tour.includes('<OperationalFixtureRoute'));
+  assert.ok(tour.includes('href="/sandbox"'));
+  assert.ok(sandbox.includes("All customers, transactions, messages and provider states here are synthetic"));
+  assert.ok(css.includes("#fa785f"));
 });
 
 test("browser acceptance remains fully public, five-width, no secrets, and labelled as partial evidence", () => {
