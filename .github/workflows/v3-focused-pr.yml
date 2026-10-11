@@ -49,6 +49,10 @@ on:
       - "src/server/integrations/whatsapp/adapter.ts"
       - "src/server/integrations/whatsapp/inbound-config.ts"
       - "tests/providers/whatsapp-runtime-inbound.test.ts"
+      - "src/server/core/conversation-postgres.ts"
+      - "src/server/api-handlers/provider-whatsapp.ts"
+      - "tests/db/v3-inbound-rpc-scope.test.ts"
+      - "tests/providers/whatsapp-handler-hardening.test.ts"
       - "scripts/release/v3-staging-auth-smoke.mjs"
       - "scripts/release/v3-staging-auth-smoke.test.mjs"
       - ".github/workflows/v3-focused-pr.yml"
@@ -95,6 +99,8 @@ jobs:
           tests/providers/provider-recovery-serialization.test.ts
           tests/providers/ai-model-transport-hardening.test.ts
           tests/providers/whatsapp-runtime-inbound.test.ts
+          tests/db/v3-inbound-rpc-scope.test.ts
+          tests/providers/whatsapp-handler-hardening.test.ts
           tests/db/outbox-worker.test.ts
       - name: Complete repository RC gate (typecheck, all tests, lint, Next build)
         run: pnpm check:rc
