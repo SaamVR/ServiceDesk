@@ -384,7 +384,7 @@ function InboxView({
                     {conversation.handoverActive
                       ? <span className={styles.takeoverDot}>Human takeover</span>
                       : triage.threadFlags.get(conversation.id)?.deliveryIssue
-                        ? <span className={styles.inboxNeedsReply}>Delivery issue</span>
+                        ? <span className={styles.inboxDeliveryIssue}>Delivery issue</span>
                         : triage.threadFlags.get(conversation.id)?.needsReply
                           ? <span className={styles.inboxNeedsReply}>Reply due</span>
                           : <span>Open</span>}
