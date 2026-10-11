@@ -71,11 +71,15 @@ describe("V4 owner-only actual model connection probe", () => {
 
   it("refuses an unexpectedly different model answer or proposed tool call", async () => {
     const t = setup();
-    t.callModel.mockImplementationOnce(async () => ({
-      ok: true, value: { output: {}, replyDraft: "Unexpected response",
+    const rogueModel = vi.fn(async () => ({
+      ok: true as const, value: { output: {}, replyDraft: "Unexpected response",
         requestedToolCalls: [{ name: "sendWhatsapp" }], citations: [] },
     }));
-    expect(await testAuthorizedAiModelConnection("fictional-qa", t.deps))
+    const deps: AiConnectionTestDependencies = {
+      ...t.deps,
+      callModel: rogueModel as unknown as NonNullable<AiConnectionTestDependencies["callModel"]>,
+    };
+    expect(await testAuthorizedAiModelConnection("fictional-qa", deps))
       .toMatchObject({ ok: false, code: "AI_DIAGNOSTIC_RESPONSE_UNVERIFIED" });
   });
 
