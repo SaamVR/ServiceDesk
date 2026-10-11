@@ -1886,3 +1886,12 @@
   .inboxContextPane { display: block; grid-column: auto; border-left: 1px solid #dbe6e8; }
   .contextSection { border-right: 0; }
 }
+
+/* CSS Modules must export every conversation state referenced by the view.
+   Inbound is intentionally the neutral message rather than outbound green. */
+.messageInbound .messageBubble {
+  border: 1px solid #dbe6e8;
+  background: #ffffff;
+  color: #2c4148;
+}
+.messageInbound .messageSender { color: #526c74; }

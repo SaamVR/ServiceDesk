@@ -211,3 +211,6 @@
   .kpiCard,.attentionRow,.scheduleRow,.qualityRow,.workdayBrief a { transition: none; }
   .kpiCard:hover { transform: none; }
 }
+
+/* Neutral KPI is a real CSS module export, not an undefined dynamic key. */
+.kpi_default { border-left-color: #dce6e9; }
