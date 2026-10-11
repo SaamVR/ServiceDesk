@@ -61,7 +61,7 @@ import { formatWorkspaceDateTime } from "./product-truth";
 import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
 import { filterQualityQueue, normalizeQualityQueue, normalizeQualitySearch, qualityFeedbackPrefix, qualityQueueCount, qualityQueueHref } from "./quality-queue";
 import { QualityQueueFilters } from "./QualityQueueFilters";
-import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, normalizeInvoiceQueue } from "./invoice-collection-queue";
+import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue } from "./invoice-collection-queue";
 import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { deriveDispatchBacklog } from "./dispatch-backlog";
@@ -608,7 +608,7 @@ function CustomersView({ data, selectedCustomerId, searchQuery }: { data: Operat
   const selectedQuotes = data.quotes.filter((quote) => selectedRequestIds.has(quote.requestId));
   const selectedQuoteIds = new Set(selectedQuotes.map((quote) => quote.id));
   const selectedInvoices = data.invoices.filter((invoice) => invoice.quoteId && selectedQuoteIds.has(invoice.quoteId));
-  const openInvoices = selectedInvoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
+  const openInvoices = selectedInvoices.filter(isCollectibleInvoice);
   const openInvoiceTotal = openInvoices.reduce((sum, invoice) => sum + invoice.balanceMinor, 0);
   const openInvoiceCurrency = openInvoices.length > 0 && openInvoices.every((invoice) => invoice.currency === openInvoices[0].currency)
     ? openInvoices[0].currency
@@ -1931,8 +1931,8 @@ function InvoicesView({
   }
 
   const orderedInvoices = [...customerInvoices].sort((left, right) => {
-    const leftOpen = left.balanceMinor > 0 && left.status !== "VOID" ? 0 : 1;
-    const rightOpen = right.balanceMinor > 0 && right.status !== "VOID" ? 0 : 1;
+    const leftOpen = isCollectibleInvoice(left) ? 0 : 1;
+    const rightOpen = isCollectibleInvoice(right) ? 0 : 1;
     return leftOpen - rightOpen || right.balanceMinor - left.balanceMinor;
   });
   const counts = invoiceQueueCounts(orderedInvoices);
@@ -1957,8 +1957,8 @@ function InvoicesView({
   const selectedInvoiceRequest = requestById.get(selectedInvoiceQuote?.requestId ?? "");
   const selectedInvoiceCustomer = customerById.get(selectedInvoiceRequest?.customerId ?? "");
   const selectedInvoiceProperty = data.properties.find((property) => property.id === selectedInvoiceRequest?.propertyId);
-  const selectedInvoiceCanRecordPayment = selectedInvoice.balanceMinor > 0 && selectedInvoice.status !== "VOID";
-  const openInvoices = orderedInvoices.filter((invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID");
+  const selectedInvoiceCanRecordPayment = isCollectibleInvoice(selectedInvoice);
+  const openInvoices = orderedInvoices.filter(isCollectibleInvoice);
   const paidInvoices = orderedInvoices.filter((invoice) => invoice.status === "PAID").length;
 
   return (
@@ -1993,7 +1993,7 @@ function InvoicesView({
                 </span>
                 <span className={styles.financeQueueService}>{request?.serviceLabel ?? "Service invoice"}</span>
                 <span className={styles.financeQueueMoney}>
-                  <span>{formatMinorMoney(invoice.balanceMinor, invoice.currency)} {invoice.status === "VOID" ? "balance · void" : invoice.status === "PAID" ? "balance · paid" : "due"}</span>
+                  <span>{formatMinorMoney(invoice.balanceMinor, invoice.currency)} {invoice.status === "VOID" ? "void" : invoice.status === "PAID" ? "paid" : invoice.status === "DRAFT" ? "draft · not due" : isCollectibleInvoice(invoice) ? "due" : "balance · review"}</span>
                   <small>Invoice {invoice.id.slice(0, 8)}</small>
                 </span>
               </a>
@@ -2013,9 +2013,13 @@ function InvoicesView({
 
           <section className={styles.invoiceHero} aria-label="Invoice balance summary">
             <div className={styles.invoiceBalance}>
-              <span>Outstanding balance</span>
+              <span>{selectedInvoice.status === "DRAFT" ? "Draft balance" : "Outstanding balance"}</span>
               <strong>{formatMinorMoney(selectedInvoice.balanceMinor, selectedInvoice.currency)}</strong>
-              <small>{selectedInvoice.status === "PAID" ? "Paid in full" : selectedInvoice.status === "VOID" ? "Invoice void" : "Current amount still to collect"}</small>
+              <small>{selectedInvoice.status === "PAID" ? "Paid in full"
+                : selectedInvoice.status === "VOID" ? "Invoice void"
+                : selectedInvoice.status === "DRAFT" ? "Not due until the invoice is issued"
+                : isCollectibleInvoice(selectedInvoice) ? "Current amount still to collect"
+                : "Status requires review before payment recording"}</small>
             </div>
             <div><span>Invoice total</span><strong>{formatMinorMoney(selectedInvoice.totalMinor, selectedInvoice.currency)}</strong></div>
             <div><span>Allocated</span><strong>{formatMinorMoney(selectedInvoice.allocatedMinor, selectedInvoice.currency)}</strong></div>
@@ -2070,8 +2074,17 @@ function InvoicesView({
                 </form>
               ) : (
                 <div className={styles.financeClosedState}>
-                  <span aria-hidden="true">✓</span>
-                  <div><strong>{selectedInvoice.status === "VOID" ? "Invoice void" : "Nothing outstanding"}</strong><p>{selectedInvoice.status === "VOID" ? "Payments cannot be recorded on this invoice." : "This invoice has no outstanding balance."}</p></div>
+                  <span aria-hidden="true">{selectedInvoice.status === "PAID" ? "✓" : "—"}</span>
+                  <div>
+                    <strong>{selectedInvoice.status === "VOID" ? "Invoice void"
+                      : selectedInvoice.status === "DRAFT" ? "Draft awaiting issue"
+                      : selectedInvoice.status === "PAID" ? "Paid in full"
+                      : "No collectible balance"}</strong>
+                    <p>{selectedInvoice.status === "VOID" ? "Payments cannot be recorded on a void invoice."
+                      : selectedInvoice.status === "DRAFT" ? "This draft is not yet due; issue the invoice through the authorized workflow before recording a collection."
+                      : selectedInvoice.status === "PAID" ? "The authoritative invoice status is paid."
+                      : "This invoice is not currently eligible for payment recording. Review its status before taking action."}</p>
+                  </div>
                 </div>
               )}
             </section>
