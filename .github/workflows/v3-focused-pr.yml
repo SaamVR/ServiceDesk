@@ -48,6 +48,9 @@ on:
       - "src/server/ai/configured-service.ts"
       - "src/server/ai/index.ts"
       - "tests/providers/ai-configured-service.test.ts"
+      - "src/server/ai/fetch-transport.ts"
+      - "src/server/ai/runtime-config.ts"
+      - "tests/providers/ai-fetch-runtime.test.ts"
       - "src/server/ai/postgres-conversation-store.ts"
       - "src/server/ai/postgres-configured-service.ts"
       - "tests/db/v3-ai-durable-conversation-store.test.ts"
@@ -106,6 +109,7 @@ jobs:
           tests/providers/provider-recovery-serialization.test.ts
           tests/providers/ai-model-transport-hardening.test.ts
           tests/providers/ai-configured-service.test.ts
+          tests/providers/ai-fetch-runtime.test.ts
           tests/db/v3-ai-durable-conversation-store.test.ts
           tests/providers/ai-postgres-configured-service.test.ts
           tests/providers/whatsapp-runtime-inbound.test.ts
