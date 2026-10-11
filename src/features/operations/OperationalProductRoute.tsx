@@ -1458,7 +1458,7 @@ function ScheduleView({
             <div><p className={styles.scheduleCardEyebrow}>Verified visits</p><h3 id="next-seven-days-heading">{showUnassigned ? "Visits waiting for crew" : window.isCurrent ? "Next 7 days" : "Selected 7 days"}</h3><p>{visibleUpcoming.length} visit{visibleUpcoming.length === 1 ? "" : "s"} shown from {window.from} through {window.end}.</p></div>
           </div>
           {visibleUpcoming.length === 0 ? (
-            <div className={styles.scheduleEmpty}><strong>{showUnassigned ? "Crew coverage complete" : "No upcoming visits"}</strong><p>{showUnassigned ? "All scheduled visits in this window have a crew." : "No visits are scheduled in the next seven days."}</p></div>
+            <div className={styles.scheduleEmpty}><strong>{showUnassigned ? "Crew coverage complete" : "No scheduled visits"}</strong><p>{showUnassigned ? "All scheduled visits in this window have a crew." : `No visits are scheduled from ${window.from} through ${window.end}.`}</p></div>
           ) : (
             <div className={styles.scheduleVisitList}>
               {visibleUpcoming.slice(0, 12).map((visit) => {
@@ -1473,6 +1473,12 @@ function ScheduleView({
                   </a>
                 );
               })}
+              {visibleUpcoming.length > 12 ? (
+                <div className={styles.scheduleOverflowNotice}>
+                  <span>Showing 12 of {visibleUpcoming.length} scheduled visits.</span>
+                  <a href={buildStaffModuleHref(workspaceSlug, "jobs")}>Open all jobs →</a>
+                </div>
+              ) : null}
             </div>
           )}
         </section>
