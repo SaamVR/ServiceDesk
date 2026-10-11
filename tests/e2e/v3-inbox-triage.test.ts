@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import {
   buildInboxTriage,
@@ -147,6 +148,15 @@ describe("V3 operational Inbox triage", () => {
   it("carries search state safely through queue links", () => {
     expect(inboxQueueHref("handover", "a/b&c", "Briar & Co")).toBe("?queue=handover&conversation=a%2Fb%26c&search=Briar+%26+Co");
     expect(inboxQueueHref("all", undefined, "  Cleaning ")).toBe("?search=Cleaning");
+  });
+
+  it("keeps the standalone Chromium visual acceptance runner syntactically valid", () => {
+    const run = spawnSync(process.execPath, ["--check", "tests/e2e/v3-capture-workroom.mjs"], {
+      encoding: "utf8",
+      timeout: 10000,
+    });
+    expect(run.error).toBeUndefined();
+    expect(run.status, run.stderr).toBe(0);
   });
 
   it("integrates query state, honest queue labels and preserved server commands", () => {
