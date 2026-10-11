@@ -1,0 +1,63 @@
+name: ServiceDesk V4 deployed live Chrome full public page audit
+on:
+  push:
+    branches: [feat/servicedesk-v4-deep-visual-browser-audit-20261012]
+    paths:
+      - scripts/release/v4-live-deep-browser-audit.mjs
+      - .github/workflows/v4-live-page-audit.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-live-page-audit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  public-pages-on-deployed-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Parse live browser audit
+        run: node --check scripts/release/v4-live-deep-browser-audit.mjs
+      - name: Warm read-only published Render review
+        shell: bash
+        run: |
+          for i in $(seq 1 35); do
+            if curl -fsS --max-time 15 https://servicedesk-v3-frontend-review.onrender.com/ >/dev/null; then exit 0; fi
+            sleep 5
+          done
+          echo "Live Render homepage not reachable" >&2
+          exit 1
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Navigate all 11 deployed marketing/auth routes at 7 viewports and exercise tabs
+        env:
+          V4_LIVE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_LIVE_OUTPUT: ${{ runner.temp }}/servicedesk-live-pages
+          V4_LIVE_CHECKOUT_SHA: ${{ github.sha }}
+          V4_LIVE_BASE: https://servicedesk-v3-frontend-review.onrender.com
+        run: node scripts/release/v4-live-deep-browser-audit.mjs
+      - name: Emit concise typography/clipping report
+        if: success()
+        env:
+          REPORT: ${{ runner.temp }}/servicedesk-live-pages/manifest.json
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync } from "node:fs";
+          const j = JSON.parse(readFileSync(process.env.REPORT, "utf8"));
+          const rows = j.layout.filter(x => x.deep.small.length || x.deep.clipped.length || x.deep.blankActions);
+          console.log(JSON.stringify({status:j.status,origin:j.liveBrowserOrigin,checkedOutSha:j.checkedOutSha,routes:j.pages.length,widths:j.widths,screenshots:j.captures.length,potentialVisualDefects:rows.map(x=>({page:x.page,width:x.width,small:x.deep.small,clipped:x.deep.clipped,blankActions:x.deep.blankActions}))},null,2).slice(0,25000));
+          JS
+      - name: Retain live public page screenshots and JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: servicedesk-v4-live-public-seven-widths-${{ github.sha }}
+          path: ${{ runner.temp }}/servicedesk-live-pages/
+          retention-days: 7
+          if-no-files-found: warn
