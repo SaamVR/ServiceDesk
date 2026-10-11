@@ -209,4 +209,40 @@ describe("outbox retry and worker behavior", () => {
     expect(JSON.stringify(result)).not.toContain("extremely-private-token");
   });
 
+
+  it("fails retention campaigns closed when the execution-time consent guard is not configured", async () => {
+    const calls: string[] = [];
+    const events = ["marketing", "quote"].map((id) => ({
+      id,
+      workspaceId: "ws-safe",
+      topic: id === "marketing" ? "retention.campaign" : "quote.sent",
+      payload: {}, idempotencyKey: id, attempt: 1, claimedAt: now, lockedBy: "worker-a",
+    }));
+    const repo: DurableOutboxRepository = {
+      claimReady: async () => ({ ok: true, value: events }),
+      markSent: async (id) => { calls.push(`persist:sent:${id}`); return { ok: true, value: {} as never }; },
+      markRetry: async () => ({ ok: true, value: {} as never }),
+      markFailed: async (id, _worker, _time, _attempt, code) => {
+        calls.push(`persist:failed:${id}:${code}`);
+        return { ok: true, value: {} as never };
+      },
+      markSuppressed: async () => ({ ok: true, value: {} as never }),
+    };
+    const executor: OutboxExecutionPort = { execute: async (event) => {
+      calls.push(`provider:${event.id}`);
+      return { ok: true, value: { outcome: "SENT", completedAt: now } };
+    } };
+    const result = await runOutboxBatch({
+      repository: repo, executor, workerId: "worker-a", now,
+      leaseSeconds: 60, maxAttempts: 3, limit: 10,
+    });
+    expect(result).toMatchObject({ ok: true, value: { claimed: 2, failed: 1, sent: 1,
+      items: [{ eventId: "marketing", status: "FAILED", code: "OUTBOX_EXECUTION_GUARD_REQUIRED" },
+        { eventId: "quote", status: "SENT" }],
+    } });
+    expect(calls).toEqual([
+      "persist:failed:marketing:OUTBOX_EXECUTION_GUARD_REQUIRED",
+      "provider:quote", "persist:sent:quote",
+    ]);
+  });
 });
