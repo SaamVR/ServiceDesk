@@ -10,7 +10,11 @@ describe("Studio OS live workflow decision badges", () => {
       messages: [{ conversationId: "a", direction: "INBOUND", createdAt: "2026-10-11T08:00:00Z" }],
       customers: [{ id: "c1" }],
       requests: [{ status: "NEW" }, { status: "ACCEPTED" }],
-      quotes: [{ status: "APPROVED" }, { status: "SENT" }],
+      quotes: [
+        { id: "q-old", requestId: "r1", version: 1, status: "APPROVED" },
+        { id: "q-current", requestId: "r1", version: 2, status: "SENT" },
+        { id: "q-ready", requestId: "r2", version: 1, status: "APPROVED" },
+      ],
       visits: [
         { crewId: undefined, status: "CONFIRMED" },
         { crewId: "crew-1", status: "EN_ROUTE" },
