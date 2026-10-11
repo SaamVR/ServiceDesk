@@ -55,7 +55,6 @@ jobs:
           pnpm exec vitest run
           tests/e2e/v3-staff-command-search.test.ts
           tests/e2e/v3-authorized-workspace-access.test.ts
-          tests/e2e/v3-authorized-workspace-access.test.ts
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-inbox-triage.test.ts
           tests/e2e/v2-professional-dashboard-ui.test.ts
@@ -74,4 +73,5 @@ jobs:
           src/features/operations/StaffOverviewDashboard.tsx
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-staff-command-search.test.ts
+          tests/e2e/v3-authorized-workspace-access.test.ts
           tests/e2e/v3-inbox-triage.test.ts
