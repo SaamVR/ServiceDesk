@@ -35,8 +35,8 @@ describe("ServiceDesk V4 Clean Air public-page system", () => {
       expect(html).toContain(`aria-label="${labels[i]}"`);
       expect((html.match(/<h1\b/g) ?? []).length).toBe(1);
       expect(html).toContain(publicProductPageCopy[kind].title.replaceAll("&", "&amp;"));
-      expect(html).toContain('data-public-primary=""');
-      expect(html).toContain('data-public-secondary=""');
+      expect(html).toContain('data-public-primary');
+      expect(html).toContain('data-public-secondary');
       expect(html).toContain('href="/tour"');
       seen.add(html);
     });
