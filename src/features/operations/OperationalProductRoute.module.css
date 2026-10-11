@@ -1868,3 +1868,21 @@
 @media(prefers-reduced-motion:reduce) {
   .conversationItem,.salesQueueItem,.crmQueueItem,.financeQueueItem,.jobsQueueItem { transition: none; }
 }
+
+
+/* Responsive precedence: the earlier 1450px two-pane rule must not override
+   a true mobile one-column Inbox at 320–800px. */
+@media (min-width: 1390px) {
+  .inboxWorkspace { grid-template-columns: minmax(250px, 292px) minmax(0, 1fr) minmax(242px, 270px); }
+  .inboxContextPane {
+    grid-column: auto; display: block; border-top: 0;
+    border-left: 1px solid #dce7e9;
+  }
+  .inboxContextPane > .inboxPaneHeader { grid-column: auto; }
+  .contextSection { border-right: 0; border-bottom: 1px solid #e3ecee; }
+}
+@media (max-width: 800px) {
+  .inboxWorkspace { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .inboxContextPane { display: block; grid-column: auto; border-left: 1px solid #dbe6e8; }
+  .contextSection { border-right: 0; }
+}
