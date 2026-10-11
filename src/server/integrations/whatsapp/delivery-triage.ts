@@ -57,7 +57,8 @@ export async function readOperationalDeliveryTriage(
       (actor.role !== "OWNER" && actor.role !== "DISPATCHER")) {
     return fail("DELIVERY_TRIAGE_UNAUTHORIZED", "Staff access does not authorize this workspace.");
   }
-  if (branchScope.mode === "BRANCH" && !validId(branchScope.selectedBranchId)) {
+  if ((actor.role === "DISPATCHER" && branchScope.mode === "ALL") ||
+      (branchScope.mode === "BRANCH" && !validId(branchScope.selectedBranchId))) {
     return fail("DELIVERY_TRIAGE_BRANCH_UNAVAILABLE", "The selected branch is not authorized.");
   }
   const now = (deps.now ?? (() => new Date()))();

@@ -43,10 +43,11 @@ describe("read-only delivery triage HTTP", () => {
 
   it("rejects cross-site requests without reading the tenant snapshot", async () => {
     let called = 0;
-    for (const headers of [
+    const invalidHeaders: Array<Record<string, string>> = [
       { "sec-fetch-site": "cross-site" },
       { origin: "https://other.example.test" },
-    ]) {
+    ];
+    for (const headers of invalidHeaders) {
       const response = await handleDeliveryTriageHttpGet(new Request(url, { headers }), async () => {
         called++;
         return { ok: true, value: snapshot };

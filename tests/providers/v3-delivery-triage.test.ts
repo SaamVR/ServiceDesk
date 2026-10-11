@@ -112,6 +112,7 @@ describe("real outbound delivery triage", () => {
   it("does not read database for unauthenticated, crew or invalid workspace scopes", async () => {
     for (const h of [
       fixture({ authorized: false }), fixture({ role: "CREW" }),
+      fixture({ role: "DISPATCHER" }),
     ]) {
       expect((await readOperationalDeliveryTriage("service-desk", h.deps)).ok).toBe(false);
       expect(h.seen).toEqual([]);
