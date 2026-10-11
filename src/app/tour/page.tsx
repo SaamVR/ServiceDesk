@@ -5,7 +5,7 @@ import { tourScenarios } from "@/features/product/story-model";
 import styles from "./tour.module.css";
 
 export const metadata: Metadata = {
-  title: "Explore the cleaning operations journey",
+  title: "See how a little clarity changes the whole workday.",
   description: "See how ServiceDesk connects cleaning enquiries, quotes, schedules, field work and aftercare through transparent, human-reviewed workflows and a local sample sandbox.",
   robots: { index: false, follow: false },
 };
