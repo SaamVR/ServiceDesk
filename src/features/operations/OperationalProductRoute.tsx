@@ -182,7 +182,7 @@ function InboxSearchForm({ queue, search }: { queue: InboxQueue; search?: string
       <div className={styles.inboxSearchControl}>
         <input id="inbox-search" type="search" name="search" defaultValue={search ?? ""}
           placeholder="Name, channel, or message" maxLength={120} autoComplete="off" />
-        <StaffSubmitButton type="submit" aria-label="Search conversations" pendingLabel="Searching…">Search</StaffSubmitButton>
+        <StaffSubmitButton aria-label="Search conversations" pendingLabel="Searching…">Search</StaffSubmitButton>
       </div>
     </form>
   );
@@ -382,7 +382,7 @@ function InboxView({
             <form action={handover}>
               <input type="hidden" name="conversationId" value={selected.id} />
               <input type="hidden" name="active" value={selected.handoverActive ? "false" : "true"} />
-              <StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Updating handover…">
+              <StaffSubmitButton className="app-button-secondary" pendingLabel="Updating handover…">
                 {selected.handoverActive ? "Release" : "Take over"}
               </StaffSubmitButton>
             </form>
@@ -399,7 +399,7 @@ function InboxView({
             <form action={resolveIdentity}>
               <input type="hidden" name="conversationId" value={selected.id} />
               <input type="hidden" name="expectedVersion" value={selected.version} />
-              <StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Verifying identity…">Resolve verified identity</StaffSubmitButton>
+              <StaffSubmitButton className="app-button-secondary" pendingLabel="Verifying identity…">Resolve verified identity</StaffSubmitButton>
               <span>Only an exact, unique verified contact match can be linked. Human takeover stays active.</span>
             </form>
           </div>
@@ -459,7 +459,7 @@ function InboxView({
           </FormField>
           <div className={styles.composerFooter}>
             <span>{replySupported ? `Reply via ${selected.channel}` : !customer ? "Identity must be verified before reply" : "Read-only conversation"}</span>
-            <StaffSubmitButton className="app-button-primary" type="submit" disabled={!replySupported} pendingLabel="Queueing reply…">
+            <StaffSubmitButton className="app-button-primary" disabled={!replySupported} pendingLabel="Queueing reply…">
               Queue reply
             </StaffSubmitButton>
           </div>
@@ -720,9 +720,9 @@ function CustomersView({ data, selectedCustomerId, searchQuery }: { data: Operat
                         {verified && data.retentionAvailable ? (
                           <form action={retentionControlAction}>
                             <input name="channel" type="hidden" value={channel} />
-                            <StaffSubmitButton className="app-button-secondary" name="status" type="submit" value="ACTIVE" pendingLabel="Updating hold…">Clear hold</StaffSubmitButton>
-                            <StaffSubmitButton className="app-button-secondary" name="status" type="submit" value="PAUSED" pendingLabel="Pausing…">Pause</StaffSubmitButton>
-                            <StaffSubmitButton className="app-button-secondary" name="status" type="submit" value="SUPPRESSED" pendingLabel="Suppressing…">Suppress</StaffSubmitButton>
+                            <StaffSubmitButton className="app-button-secondary" name="status" value="ACTIVE" pendingLabel="Updating hold…">Clear hold</StaffSubmitButton>
+                            <StaffSubmitButton className="app-button-secondary" name="status" value="PAUSED" pendingLabel="Pausing…">Pause</StaffSubmitButton>
+                            <StaffSubmitButton className="app-button-secondary" name="status" value="SUPPRESSED" pendingLabel="Suppressing…">Suppress</StaffSubmitButton>
                           </form>
                         ) : null}
                       </div>
@@ -1004,7 +1004,7 @@ function RequestsView({
                     name="state"
                     value={selectedRequest.callbackRequired ? "RESOLVED" : "PENDING"}
                   />
-                  <StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Updating callback…">
+                  <StaffSubmitButton className="app-button-secondary" pendingLabel="Updating callback…">
                     {selectedRequest.callbackRequired ? "Mark callback complete" : "Reopen callback"}
                   </StaffSubmitButton>
                   <span>
@@ -1047,7 +1047,7 @@ function RequestsView({
                   </ul>
                   <form action={calculateQuote} className={styles.salesPrimaryAction}>
                     <input type="hidden" name="requestId" value={selectedRequest.id} />
-                    <StaffSubmitButton className="app-button-primary" type="submit" disabled={!selectedRequestCanCalculate} pendingLabel="Calculating quote…">Calculate quote</StaffSubmitButton>
+                    <StaffSubmitButton className="app-button-primary" disabled={!selectedRequestCanCalculate} pendingLabel="Calculating quote…">Calculate quote</StaffSubmitButton>
                     {!selectedRequestCanCalculate ? <span>Complete the missing intake details before pricing.</span> : <span>Uses the current authoritative pricing rules.</span>}
                   </form>
                 </>
@@ -1140,8 +1140,8 @@ function RequestsView({
                                   <input name="requestId" type="hidden" value={selectedRequest.id} />
                                   <input name="suggestionId" type="hidden" value={latestSuggestion.id} />
                                   <input name="expectedVersion" type="hidden" value={latestSuggestion.version} />
-                                  <StaffSubmitButton className="app-button-primary" name="decision" type="submit" value="ACCEPTED" pendingLabel="Accepting suggestion…">Accept for review</StaffSubmitButton>
-                                  <StaffSubmitButton className="app-button-secondary" name="decision" type="submit" value="REJECTED" pendingLabel="Rejecting suggestion…">Reject suggestion</StaffSubmitButton>
+                                  <StaffSubmitButton className="app-button-primary" name="decision" value="ACCEPTED" pendingLabel="Accepting suggestion…">Accept for review</StaffSubmitButton>
+                                  <StaffSubmitButton className="app-button-secondary" name="decision" value="REJECTED" pendingLabel="Rejecting suggestion…">Reject suggestion</StaffSubmitButton>
                                 </form>
                               ) : null}
                               <p className={styles.photoSafetyNote}>
@@ -1308,7 +1308,7 @@ function QuotesView({
                     <p>The quote is approved internally and ready to send to the customer.</p>
                     <form action={sendQuote}>
                       <input type="hidden" name="quoteId" value={selectedQuote.id} />
-                      <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Sending quote…">Send quote</StaffSubmitButton>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Sending quote…">Send quote</StaffSubmitButton>
                     </form>
                   </>
                 ) : selectedQuote.status === "SENT" ? (
@@ -1419,7 +1419,7 @@ function ScheduleView({
             <input type="hidden" name="visitId" value={recommendation.visitId} />
             <input type="hidden" name="crewId" value={candidate.candidateCrewId} />
             <input type="hidden" name="expectedVersion" value={recommendation.visitVersion} />
-            <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Assigning crew…">Assign crew</StaffSubmitButton>
+            <StaffSubmitButton className="app-button-primary" pendingLabel="Assigning crew…">Assign crew</StaffSubmitButton>
           </form>
         )}
       />
@@ -1490,7 +1490,7 @@ function ScheduleView({
                           <form action={holdSlot} key={slot.id}>
                             <input type="hidden" name="quoteId" value={quote.id} />
                             <input type="hidden" name="slotId" value={slot.id} />
-                            <StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Holding slot…">Hold {formatWhen(slot.startAt, data.workspace.timezone)}</StaffSubmitButton>
+                            <StaffSubmitButton className="app-button-secondary" pendingLabel="Holding slot…">Hold {formatWhen(slot.startAt, data.workspace.timezone)}</StaffSubmitButton>
                           </form>
                         ))}
                       </div>
@@ -1771,7 +1771,7 @@ function JobsView({
                     )}
                   </FormField>
                 </FormGrid>
-                <StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Saving note…">Save note</StaffSubmitButton>
+                <StaffSubmitButton className="app-button-secondary" pendingLabel="Saving note…">Save note</StaffSubmitButton>
               </form>
             </section>
 
@@ -1806,7 +1806,7 @@ function JobsView({
                     {({ id, describedBy, invalid }) => <TextInput id={id} name="note" describedBy={describedBy} invalid={invalid} placeholder="Optional note" />}
                   </FormField>
                 </FormGrid>
-                <StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Updating checklist…">Mark complete</StaffSubmitButton>
+                <StaffSubmitButton className="app-button-secondary" pendingLabel="Updating checklist…">Mark complete</StaffSubmitButton>
               </form>
             </section>
           </div>
@@ -1982,7 +1982,7 @@ function InvoicesView({
                       {({ id, describedBy, invalid }) => <TextInput id={id} name="reference" placeholder="Bank reference or receipt number" required describedBy={describedBy} invalid={invalid} />}
                     </FormField>
                   </FormGrid>
-                  <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Recording payment…">Record payment</StaffSubmitButton>
+                  <StaffSubmitButton className="app-button-primary" pendingLabel="Recording payment…">Record payment</StaffSubmitButton>
                   <p>Use this only for money already received outside the online checkout flow. It does not simulate online settlement.</p>
                 </form>
               ) : (
@@ -2509,7 +2509,7 @@ function WorkflowBuilderPanel({
 
                 <div className={styles.workflowFormFooter}>
                   <p>External template actions are never auto-approved. A later action record must be approved by an owner before delivery can be queued.</p>
-                  <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Saving draft…">Save draft version</StaffSubmitButton>
+                  <StaffSubmitButton className="app-button-primary" pendingLabel="Saving draft…">Save draft version</StaffSubmitButton>
                 </div>
               </form>
             </section>
@@ -2561,12 +2561,12 @@ function WorkflowBuilderPanel({
                             <input type="hidden" name="branchId" value={draft.branchId} />
                             <input type="hidden" name="eventType" value={draft.eventType} />
                             <WorkflowPreviewFields eventType={draft.eventType} />
-                            <StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Running preview…">Run synthetic preview</StaffSubmitButton>
+                            <StaffSubmitButton className="app-button-secondary" pendingLabel="Running preview…">Run synthetic preview</StaffSubmitButton>
                           </form>
                           <form action={publishAction}>
                             <input type="hidden" name="versionId" value={draft.id} />
                             <input type="hidden" name="branchId" value={draft.branchId} />
-                            <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Publishing…">Publish tested draft</StaffSubmitButton>
+                            <StaffSubmitButton className="app-button-primary" pendingLabel="Publishing…">Publish tested draft</StaffSubmitButton>
                           </form>
                         </>
                       ) : null}
@@ -2582,7 +2582,7 @@ function WorkflowBuilderPanel({
                             <input type="hidden" name="ruleId" value={rule.id} />
                             <input type="hidden" name="branchId" value={rule.branchId} />
                             <input type="hidden" name="targetVersionNumber" value={version.versionNumber} />
-                            <StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Publishing version…">Republish v{version.versionNumber} as a new version</StaffSubmitButton>
+                            <StaffSubmitButton className="app-button-secondary" pendingLabel="Publishing version…">Republish v{version.versionNumber} as a new version</StaffSubmitButton>
                           </form>
                         ))}
                       </div>
@@ -2641,13 +2641,13 @@ function WorkflowBuilderPanel({
                             {action.errorCode ? <code>{action.errorCode}</code> : null}
                             <div className={styles.workflowActionControls}>
                               {action.state === "PENDING" && action.actionType === "CREATE_ATTENTION" ? (
-                                <form action={runInternalAction}><input type="hidden" name="actionExecutionId" value={action.id} /><StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Running internal action…">Run internal action</StaffSubmitButton></form>
+                                <form action={runInternalAction}><input type="hidden" name="actionExecutionId" value={action.id} /><StaffSubmitButton className="app-button-secondary" pendingLabel="Running internal action…">Run internal action</StaffSubmitButton></form>
                               ) : null}
                               {action.state === "APPROVAL_REQUIRED" && data.actor.role === "OWNER" ? (
-                                <form action={approveAction}><input type="hidden" name="actionExecutionId" value={action.id} /><StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Submitting approval…">Approve external send</StaffSubmitButton></form>
+                                <form action={approveAction}><input type="hidden" name="actionExecutionId" value={action.id} /><StaffSubmitButton className="app-button-primary" pendingLabel="Submitting approval…">Approve external send</StaffSubmitButton></form>
                               ) : null}
                               {action.state === "FAILED" && data.actor.role === "OWNER" ? (
-                                <form action={replayAction}><input type="hidden" name="actionExecutionId" value={action.id} /><StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Replaying action…">Replay this action only</StaffSubmitButton></form>
+                                <form action={replayAction}><input type="hidden" name="actionExecutionId" value={action.id} /><StaffSubmitButton className="app-button-secondary" pendingLabel="Replaying action…">Replay this action only</StaffSubmitButton></form>
                               ) : null}
                             </div>
                           </div>
@@ -3371,7 +3371,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         </span>
                       </label>
 
-                      <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Saving settings…">Save</StaffSubmitButton>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Saving settings…">Save</StaffSubmitButton>
                     </form>
                   ) : (
                     <article className={styles.serviceSettingRow} key={service.id}>
@@ -3506,7 +3506,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         <input name="active" type="checkbox" defaultChecked />
                         <span><strong>Active</strong><small>Allow operational records and staff assignments.</small></span>
                       </label>
-                      <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Creating branch…">Create branch</StaffSubmitButton>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Creating branch…">Create branch</StaffSubmitButton>
                     </form>
                   </section>
                 ) : null}
@@ -3535,7 +3535,6 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                                 <StaffSubmitButton
                                   className="app-button-secondary"
                                   name="status"
-                                  type="submit"
                                   value={assignment ? "REVOKED" : "ACTIVE"}
                                  pendingLabel="Updating membership…">
                                   {assignment ? "Revoke" : "Grant"}
@@ -3642,7 +3641,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         <input name="active" type="checkbox" defaultChecked />
                         <span><strong>Active</strong><small>Accept new touches for this code.</small></span>
                       </label>
-                      <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Saving referral code…">Save referral code</StaffSubmitButton>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Saving referral code…">Save referral code</StaffSubmitButton>
                     </form>
                   ) : null}
 
@@ -3707,7 +3706,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                         <label><span>Quiet from</span><input className="app-input" name="quietHoursStart" type="time" /></label>
                         <label><span>Quiet until</span><input className="app-input" name="quietHoursEnd" type="time" /></label>
                       </div>
-                      <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Saving campaign…">Save campaign policy</StaffSubmitButton>
+                      <StaffSubmitButton className="app-button-primary" pendingLabel="Saving campaign…">Save campaign policy</StaffSubmitButton>
                     </form>
                   ) : null}
 
@@ -3825,7 +3824,6 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                                 className="app-button-secondary"
                                 disabled={!grant && !allBranchEligible}
                                 name="status"
-                                type="submit"
                                 value={grant ? "REVOKED" : "ACTIVE"}
                                pendingLabel="Updating delegation…">
                                 {grant ? "Revoke delegation" : "Delegate catalog"}
@@ -3889,7 +3887,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                           <span>Reason</span>
                           <input className="app-input" name="reason" minLength={4} maxLength={240} placeholder="Investigate provider delivery issue" required />
                         </label>
-                        <StaffSubmitButton className="app-button-primary" type="submit" pendingLabel="Authorizing…">Authorize temporary read-only scope</StaffSubmitButton>
+                        <StaffSubmitButton className="app-button-primary" pendingLabel="Authorizing…">Authorize temporary read-only scope</StaffSubmitButton>
                       </form>
 
                       <div className={styles.governanceRows}>
@@ -3904,7 +3902,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                               {active ? (
                                 <form action={supportAccessRevokeAction}>
                                   <input name="grantId" type="hidden" value={grant.id} />
-                                  <StaffSubmitButton className="app-button-secondary" type="submit" pendingLabel="Revoking access…">Revoke</StaffSubmitButton>
+                                  <StaffSubmitButton className="app-button-secondary" pendingLabel="Revoking access…">Revoke</StaffSubmitButton>
                                 </form>
                               ) : (
                                 <StatusBadge tone="neutral">{grant.revokedAt ? "revoked" : "expired"}</StatusBadge>
