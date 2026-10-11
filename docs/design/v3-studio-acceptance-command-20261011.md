@@ -49,7 +49,9 @@ authorized finance snapshot; disabled or unavailable finance fails closed.
 The isolated profile and screenshot output must stay outside Git. The script
 rejects a profile with an existing DevTools port and requires an empty,
 owner-private output directory, defaulting to a unique path under the system
-temporary directory. Do not attach customer screenshots to GitHub issue
+temporary directory. Both profile and output are checked against their **real
+filesystem paths**; symlinks that redirect a seemingly private location into
+the Git checkout are rejected before Chrome launches or PNGs are written. Do not attach customer screenshots to GitHub issue
 comments, CI artifacts or public chat. Browser capture is not an accessibility
 audit or owner signoff: inspect keyboard focus, scroll/overflow, content density,
 contrast and workflows personally in the approved staging tenant.
