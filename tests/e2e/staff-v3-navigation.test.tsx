@@ -111,6 +111,14 @@ describe("V3 staff workday shell", () => {
     expect(html).toContain('href="/app/crew%25work/overview"');
   });
 
+  it("keeps request workday quote context bound to the latest valid version", () => {
+    const routeSource = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.tsx"), "utf8");
+    const requests = routeSource.slice(routeSource.indexOf("function RequestsView("), routeSource.indexOf("function QuotesView("));
+    expect(requests).toContain("indexCurrentQuoteByRequest(data.quotes)");
+    expect(requests).toContain("!quoteByRequestId.has(request.id)");
+    expect(requests).not.toContain("!data.quotes.some(");
+  });
+
   it("retains encoded workspace routing and safe account sign-out semantics", () => {
     const html = renderStaffShell("/app/east%2Fwest/quality", "east/west");
     expect(html).toContain('href="/app/east%2Fwest/quality"');
