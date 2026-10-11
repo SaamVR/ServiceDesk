@@ -103,6 +103,18 @@ describe("V3 operational Inbox triage", () => {
       .toEqual(["c-unverified", "c-stale"]);
   });
 
+  it("distinguishes red delivery recovery from teal reply queues with 44px targets", () => {
+    const route=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
+    const css=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.module.css"),"utf8");
+    const queueCss=css.slice(css.indexOf(".inboxQueueNav {"),css.indexOf(".inboxPaneHeader,"));
+    expect(route).toContain("className={styles.inboxDeliveryIssue}>Delivery issue");
+    expect(queueCss).toContain("min-height: 44px");
+    expect(queueCss).toContain("var(--app-surface-subtle, #f3f6f7)");
+    expect(queueCss).toContain(".inboxDeliveryIssue { color: #b42318;");
+    expect(queueCss).toContain(".inboxNeedsReply { color: #08695f;");
+    expect(queueCss).not.toContain("min-height: 39px");
+  });
+
   it("does not mark internal notes as outbound customer replies", () => {
     const result = buildInboxTriage(
       [thread("c", "customer-1")],
