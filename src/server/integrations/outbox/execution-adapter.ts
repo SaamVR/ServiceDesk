@@ -15,6 +15,12 @@ function terminal(code: string, at: string): Result<OutboxExecutionOutcome> {
 }
 
 function resolverFailureOutcome(code: string, at: string): Result<OutboxExecutionOutcome> {
+  // Database connectivity and temporary source-read failures are not
+  // proof a staff reply is invalid. Preserve the job for bounded retry.
+  if (code.startsWith("OUTBOX_RETRYABLE:")) {
+    return { ok: true, value: { outcome: "RETRYABLE_FAILURE", failedAt: at,
+      code: code.slice("OUTBOX_RETRYABLE:".length) || "OUTBOX_SOURCE_UNAVAILABLE" } };
+  }
   // Real-time consent, contact and inbound-message changes invalidate
   // already-queued staff replies. Suppression is not a provider error: do
   // not retry/send a stale reply or mark a customer opt-out as delivery failure.
