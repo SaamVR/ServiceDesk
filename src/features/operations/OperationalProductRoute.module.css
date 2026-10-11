@@ -172,7 +172,14 @@
 .messageSender strong { color: var(--app-text); font-size: .75rem; }
 .messageSender span { color: var(--app-text-subtle); font-size: .75rem; }
 .messageBubble p { margin: 0; color: var(--app-text); font-size: .75rem; line-height: 1.48; white-space: pre-wrap; }
-.deliveryState { display: block; margin-top: 5px; color: var(--app-text-subtle); font-size: .75rem; text-align: right; text-transform: capitalize; }
+.deliveryState { display: flex; justify-content: flex-end; margin-top: 7px; min-width: 0; }
+.deliveryState :global(.app-status) {
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.4;
+  text-align: right;
+  font-size: .75rem;
+}
 
 .inboxEmpty { min-height: 240px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--app-text-muted); }
 .inboxEmpty > span { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--app-border-strong); border-radius: 50%; }
