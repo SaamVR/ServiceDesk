@@ -1661,3 +1661,13 @@
 @media (prefers-reduced-motion: reduce) {
   .inboxThreadPane { scroll-behavior: auto; }
 }
+
+/* Deep-linked settings feedback remains visible below the Workroom topbar. */
+.settingsCard[id] { scroll-margin-top: 102px; }
+.settingsCard:target {
+  border-color: #b57254;
+  box-shadow: 0 0 0 2px rgb(181 114 84 / 16%);
+}
+@media (max-width: 900px) {
+  .settingsCard[id] { scroll-margin-top: 76px; }
+}

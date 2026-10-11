@@ -43,6 +43,7 @@ import { RecordDirectorySearch } from "./RecordDirectorySearch";
 import { filterJobsQueue, indexJobProgress, jobsQueueHref, normalizeJobsQueue } from "./jobs-queue";
 import { JobQueueFilters } from "./JobQueueFilters";
 import { countStaffBy, indexStaffById } from "./staff-snapshot-index";
+import { settingsFeedbackFragment } from "./settings-navigation";
 import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
@@ -99,7 +100,8 @@ function actionRedirect(
       extra +
       key +
       "=" +
-      encodeURIComponent(result.message),
+      encodeURIComponent(result.message) +
+      settingsFeedbackFragment(module, extra),
   );
 }
 
