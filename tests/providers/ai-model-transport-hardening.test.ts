@@ -77,4 +77,84 @@ describe("bounded configured AI model transport", () => {
     expect(JSON.stringify(authFailure)).not.toContain(config.apiKey);
     expect(JSON.stringify(timeoutFailure)).not.toContain("secret-token");
   });
+
+  it("uses the official OpenAI Responses request shape without provider-side storage", async () => {
+    let request: AiModelHttpRequest | undefined;
+    const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
+    const responseText = JSON.stringify({
+      output: { serviceCode: "DEEP", bedrooms: 2 },
+      replyDraft: "A staff member can review the request.",
+      requestedToolCalls: [], citations: [],
+    });
+    const result = await callAiModel(official, input, async captured => {
+      request = captured;
+      return { status: 200, body: JSON.stringify({
+        object: "response", status: "completed",
+        output: [
+          { type: "reasoning", summary: [] },
+          { type: "message", content: [{ type: "output_text", text: responseText }] },
+        ],
+      }) };
+    });
+
+    expect(result).toMatchObject({ ok: true, value: {
+      output: { serviceCode: "DEEP", bedrooms: 2 },
+      replyDraft: "A staff member can review the request.",
+    } });
+    expect(request?.url).toBe("https://api.openai.com/v1/responses");
+    const body = JSON.parse(request!.body);
+    expect(body.model).toBe(config.model);
+    expect(body.text.format).toEqual({ type: "json_object" });
+    expect(body.store).toBe(false);
+    expect(body).not.toHaveProperty("response_format");
+    expect(body.metadata).toEqual({
+      prompt_version: input.promptVersion,
+      conversation_id: input.conversationId,
+      workspace_id: input.workspaceId,
+      knowledge_refs: "",
+    });
+    expect(Object.values(body.metadata).every(value => typeof value === "string")).toBe(true);
+    expect(result.ok).toBe(true);
+    expect(JSON.stringify(result)).not.toContain(config.apiKey);
+  });
+
+  it("refuses incomplete, malformed and explicit refusal Responses envelopes", async () => {
+    const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
+    const bodies = [
+      { object: "response", status: "incomplete", output: [] },
+      { object: "response", status: "failed", output: [] },
+      { object: "response", status: "completed", output: [] },
+      { object: "response", status: "completed", output: [
+        { type: "message", content: [{ type: "refusal", refusal: "Cannot comply" }] },
+      ] },
+      { object: "response", status: "completed", output: [
+        { type: "message", content: [{ type: "output_text", text: "not-json" }] },
+      ] },
+    ];
+    for (const response of bodies) {
+      const result = await callAiModel(official, input, async () => ({
+        status: 200, body: JSON.stringify(response),
+      }));
+      expect(result).toMatchObject({ ok: false, code: "AI_MODEL_INVALID_RESPONSE" });
+      expect(JSON.stringify(result)).not.toContain("Cannot comply");
+    }
+  });
+
+  it("blocks malformed official API origins before any credential-bearing call", async () => {
+    let attempts = 0;
+    for (const apiBaseUrl of [
+      "http://api.openai.com/v1",
+      "https://api.openai.com/v1?unsafe=1",
+      "https://api.openai.com/v1/responses",
+      "https://user:pass@api.openai.com/v1",
+    ]) {
+      const result = await callAiModel({ ...config, apiBaseUrl }, input, async () => {
+        attempts += 1;
+        return { status: 200, body: JSON.stringify({ output: {} }) };
+      });
+      expect(result).toMatchObject({ ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED" });
+    }
+    expect(attempts).toBe(0);
+  });
+
 });
