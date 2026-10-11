@@ -41,7 +41,7 @@ export function filterInvoiceQueue<T extends InvoiceCollectionRecord>(records:re
 export function parseManualPaymentAmountMinor(raw: string): number | undefined {
   const value = raw.trim();
   if (!value || value.length > 32) return undefined;
-  const match = /^(\\d+)(?:\\.(\\d{1,2}))?$/.exec(value);
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(value);
   if (!match) return undefined;
   const minor = BigInt(match[1]) * 100n + BigInt((match[2] ?? "").padEnd(2, "0"));
   if (minor <= 0n || minor > BigInt(Number.MAX_SAFE_INTEGER)) return undefined;
