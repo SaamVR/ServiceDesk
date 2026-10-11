@@ -154,7 +154,7 @@ describe("explicit human approval of reviewed inbox reply", () => {
       idempotency_key: "conversation.reply:ws1:reviewed-reply-unique-0001" };
     for (const h of [
       harness({ existing: { ...valid, body: "Other body" }, priorOutbox: outbox }),
-      harness({ existing: { ...valid, workspace_id: "foreign" }, priorOutbox: outbox }),
+      harness({ existing: { ...valid, conversation_id: "other-conversation" }, priorOutbox: outbox }),
       harness({ existing: { ...valid, created_at: "2026-10-11T04:00:00Z" }, priorOutbox: outbox }),
       harness({ existing: valid, priorOutbox: { ...outbox, topic: "retention.campaign" } }),
       harness({ existing: valid, priorOutbox: null }),
