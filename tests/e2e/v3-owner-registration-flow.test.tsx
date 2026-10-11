@@ -64,7 +64,7 @@ describe("V3 customer-safe account creation and onboarding", () => {
     expect(sql).not.toMatch(/grant execute[^;]+to anon;/i);
   });
 
-  it("keeps the responsive marketing navigation reachable without crushing the brand", () => {
+  it("keeps responsive navigation reachable without crowding the brand or leaking signup", () => {
     const shell = file("src/components/shell/MarketingShell.tsx");
     const css = file("src/components/shell/MarketingNavV3.module.css");
     expect(shell).toContain("styles.mobileMenu");
@@ -73,10 +73,11 @@ describe("V3 customer-safe account creation and onboarding", () => {
     expect(shell).toContain("href={registration.href}");
     expect(shell).toContain("ownerRegistrationAvailable()");
     expect(shell).toContain('href="/auth/sign-in"');
-    expect(css).toContain("width: auto !important");
-    expect(css).toContain("min-width: max-content");
-    expect(css).toContain(".desktopNav { display: none !important; }");
+    expect(shell).not.toContain('href="/auth/sign-up"');
+    expect(css).toContain(".brandIcon");
+    expect(css).toContain(".desktopNav { display: none; }");
     expect(css).toContain("min-height: 44px");
+    expect(css).toContain("@media (max-width: 350px)");
   });
 
   it("refuses owner signup until the explicit deploy switch, keys and trusted email origin agree", () => {
