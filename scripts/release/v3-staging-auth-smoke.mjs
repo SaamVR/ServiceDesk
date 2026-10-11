@@ -51,10 +51,10 @@ export function safePublicRedirect(base, rawLocation, expectedPath) {
  * Browser/RLS verification remains a separate release requirement.
  */
 export function disabledSubmitPresent(html) {
-  const buttons = [...html.matchAll(/<button\\b([^>]*)>/gi)];
-  const submitButtons = buttons.filter(match => /\\btype\\s*=\\s*["']?submit\\b/i.test(match[1]));
+  const buttons = [...html.matchAll(/<button\b([^>]*)>/gi)];
+  const submitButtons = buttons.filter(match => /\btype\s*=\s*["']?submit\b/i.test(match[1]));
   return submitButtons.length > 0 &&
-    submitButtons.every(match => /(?:^|\\s)disabled(?:\\s|=|$)/i.test(match[1]));
+    submitButtons.every(match => /(?:^|\s)disabled(?:\s|=|$)/i.test(match[1]));
 }
 
 export function assessSmokeResult(base, spec, response) {
