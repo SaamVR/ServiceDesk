@@ -17,7 +17,7 @@ describe("V2 operator-facing module language", () => {
       "Field operations",
       "Finance",
       "Service quality",
-      "Operations control",
+      "AI-assisted operations",
       "Insights",
       "Administration",
     ]) {
@@ -30,7 +30,7 @@ describe("V2 operator-facing module language", () => {
 
   it("describes operator jobs instead of implementation concepts", () => {
     expect(modules).toContain("Plan capacity, assign crews, and resolve scheduling conflicts.");
-    expect(modules).toContain("Resolve workflow exceptions and failed handoffs that need human action.");
+    expect(modules).toContain("Generate staff-reviewed intake briefs, assess model readiness, and build controlled event-driven workflows.");
     expect(modules).toContain("Manage the ServiceDesk subscription and workspace usage limits.");
     expect(modules).not.toContain("freshness and conflict review");
     expect(modules).not.toContain("suppression and owned recovery actions");
