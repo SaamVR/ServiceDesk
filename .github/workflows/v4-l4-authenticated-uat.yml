@@ -1,0 +1,58 @@
+name: ServiceDesk V4 authenticated workspace UAT
+# Push checks are source-only. Manual UAT signs in with a fictional QA account
+# on the designated review service. Never logs secrets, cookies, tokens or PII.
+on:
+  push:
+    branches: [feat/servicedesk-v4-l4-e2e-20261012]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-authenticated-uat-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Validate private Auth Chrome UAT script
+        run: node --check scripts/release/v4-authenticated-sidebar-chrome.mjs
+      - name: Validate signed-in auth, staff nav and bounded QA operations
+        run: pnpm exec vitest run tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/staff-v3-navigation.test.tsx tests/e2e/v4-studio-sidebar-visibility.test.ts
+      - run: pnpm typecheck
+  authenticated-seven-widths:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: source-preflight
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2 }
+      - name: Install real Chromium
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+      - name: Validate REAL confirmed owner session and sidebar (no customer/provider action)
+        env:
+          V4_AUTH_QA_EMAIL: ${{ secrets.SERVICEDESK_QA_TEST_EMAIL }}
+          V4_AUTH_QA_PASSWORD: ${{ secrets.SERVICEDESK_QA_TEST_PASSWORD }}
+          V4_AUTH_QA_WORKSPACE: ${{ secrets.SERVICEDESK_QA_TEST_WORKSPACE }}
+          V4_AUTH_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_AUTH_OUTPUT: ${{ runner.temp }}/private-signed-in-sidebar
+        run: node scripts/release/v4-authenticated-sidebar-chrome.mjs
+      - name: Retain PRIVATE fictional QA screenshots for one day
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-v4-authenticated-studio-${{ github.sha }}
+          path: ${{ runner.temp }}/private-signed-in-sidebar/
+          retention-days: 1
+          if-no-files-found: error
