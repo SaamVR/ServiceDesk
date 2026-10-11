@@ -53,6 +53,7 @@ describe("V3 operational Inbox triage", () => {
     expect(counts).toEqual({
       all: 4,
       "needs-reply": 2,
+      "delivery-issues": 0,
       handover: 1,
       unverified: 2,
     });
@@ -60,6 +61,37 @@ describe("V3 operational Inbox triage", () => {
     expect(threadFlags.get("c-inbound")?.needsReply).toBe(true);
     expect(threadFlags.get("c-answered")?.needsReply).toBe(false);
     expect(threadFlags.get("c-unverified")?.unverified).toBe(true);
+  });
+
+  it("retains failed and suppressed outbound threads as actionable and visible recovery", () => {
+    const conversations = [
+      thread("failed", "customer-1", false, "2026-10-11T12:00:00Z"),
+      thread("suppressed", "customer-1", false, "2026-10-11T11:00:00Z"),
+      thread("provider-accepted", "customer-1", false, "2026-10-11T10:00:00Z"),
+      thread("delivered", "customer-1", false, "2026-10-11T09:00:00Z"),
+      thread("plain-outbound", "customer-1", false, "2026-10-11T08:00:00Z"),
+    ];
+    const messages = conversations.flatMap((conversation) => [
+      { conversationId: conversation.id, direction: "INBOUND" as const, createdAt: "2026-10-11T07:00:00Z" },
+      { conversationId: conversation.id, direction: "OUTBOUND" as const, createdAt: conversation.lastMessageAt!,
+        deliveryState: conversation.id === "failed" ? "FAILED"
+          : conversation.id === "suppressed" ? "SUPPRESSED"
+          : conversation.id === "provider-accepted" ? "PROVIDER_ACCEPTED"
+          : conversation.id === "delivered" ? "DELIVERED" : undefined },
+    ]);
+    const triage = buildInboxTriage(conversations, messages, customers, "all");
+    expect(triage.counts).toEqual({ all: 5, "needs-reply": 2, "delivery-issues": 2, handover: 0, unverified: 0 });
+    expect(triage.threadFlags.get("failed")).toMatchObject({needsReply:true,deliveryIssue:true});
+    expect(triage.threadFlags.get("suppressed")).toMatchObject({needsReply:true,deliveryIssue:true});
+    expect(triage.threadFlags.get("provider-accepted")).toMatchObject({needsReply:false,deliveryIssue:false});
+    expect(triage.threadFlags.get("delivered")).toMatchObject({needsReply:false,deliveryIssue:false});
+    expect(buildInboxTriage(conversations, messages, customers, "delivery-issues").visible.map(x => x.id))
+      .toEqual(["failed","suppressed"]);
+    expect(buildInboxTriage(conversations, [...messages].reverse(), customers, "delivery-issues").visible.map(x => x.id))
+      .toEqual(["failed","suppressed"]);
+    expect(inboxQueueHref("delivery-issues","failed","Briar & Co"))
+      .toBe("?queue=delivery-issues&conversation=failed&search=Briar+%26+Co");
+    expect(normalizeInboxQueue("delivery-issues")).toBe("delivery-issues");
   });
 
   it("preserves distinct handover, unverified and last-inbound queues", () => {
