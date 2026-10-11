@@ -15,6 +15,7 @@ import { createLocalDayKey } from "./staff-local-day";
 import { indexStaffById } from "./staff-snapshot-index";
 import { buildInboxTriage } from "./inbox-triage";
 import { AiOperationsStatus } from "./AiOperationsStatus";
+import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import styles from "./StaffOverviewDashboard.module.css";
 
 function attentionTone(severity: "INFO" | "WARNING" | "CRITICAL") {
@@ -167,7 +168,7 @@ export function StaffOverviewDashboard({
     | "attentionItems"
     | "qualityCases"
     | "crews"
-  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions">>;
+  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions" | "serviceCatalog">>;
   errorMessage?: string;
 }) {
   if (!snapshot) {
@@ -277,6 +278,8 @@ export function StaffOverviewDashboard({
           {briefingAction} <span aria-hidden="true">↗</span>
         </Link>
       </section>
+
+      <CatalogReadinessBanner workspaceSlug={workspace} serviceCatalog={snapshot.serviceCatalog} />
 
       <AiOperationsStatus
         workspaceSlug={workspace}
