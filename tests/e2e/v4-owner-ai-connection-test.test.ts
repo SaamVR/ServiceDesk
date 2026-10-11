@@ -101,6 +101,34 @@ describe("V4 owner-only actual model connection probe", () => {
     expect(run).toHaveBeenCalledOnce();
   });
 
+  it("allows only a configured trusted public HTTPS Origin behind Render's internal proxy", async () => {
+    const previous = process.env.SERVICEDESK_AI_ALLOWED_ORIGIN;
+    const run = vi.fn(async () => ({ ok: false as const, code: "AI_RUNTIME_DISABLED", message: "off" }));
+    try {
+      process.env.SERVICEDESK_AI_ALLOWED_ORIGIN = "https://servicedesk-review.example";
+      function req(origin: string, forwarded?: string) {
+        return new Request("http://127.0.0.1:3000/api/internal/ai/connection-test", {
+          method: "POST",
+          headers: {
+            origin, "content-type": "application/json",
+            "sec-fetch-site": "same-origin",
+            ...(forwarded ? { "x-forwarded-host": forwarded } : {}),
+          },
+          body: JSON.stringify({ workspaceSlug: "fictional-qa" }),
+        });
+      }
+      expect((await handleAiOwnerProbePost(req("https://servicedesk-review.example"), run)).status).toBe(503);
+      expect(run).toHaveBeenCalledOnce();
+      expect((await handleAiOwnerProbePost(req("https://attacker.example", "servicedesk-review.example"), run)).status).toBe(403);
+      expect(run).toHaveBeenCalledOnce();
+      process.env.SERVICEDESK_AI_ALLOWED_ORIGIN = "http://servicedesk-review.example";
+      expect((await handleAiOwnerProbePost(req("https://servicedesk-review.example"), run)).status).toBe(403);
+    } finally {
+      if (previous === undefined) delete process.env.SERVICEDESK_AI_ALLOWED_ORIGIN;
+      else process.env.SERVICEDESK_AI_ALLOWED_ORIGIN = previous;
+    }
+  });
+
   it("exposes diagnostic only on the protected owner Automation route", () => {
     const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
     const status = read("src/features/operations/AiOperationsStatus.tsx");
