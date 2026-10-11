@@ -1,5 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
+import { randomUUID } from "node:crypto";
+import { queueApprovedInboxReply } from "@/server/core/reviewed-inbox-reply";
 import {
   addOperationalVisitNote,
   assignOperationalCrew,
@@ -7,7 +9,6 @@ import {
   applyOperationalRecurrenceAction,
   applyOperationalQualityAction,
   calculateOperationalQuote,
-  enqueueInboxReply,
   holdOperationalSlot,
   loadOperationalStaffSnapshot,
   resolveOperationalConversationIdentity,
@@ -285,6 +286,14 @@ function InboxView({
   const messages = data.messages
     .filter((item) => item.conversationId === selected.id)
     .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
+  // Bind the approval to the latest actual inbound customer message. Never
+  // attach a draft to an outgoing or internal message or to another thread.
+  const latestInbound = [...messages].reverse().find(
+    (item) => item.direction === "INBOUND" && item.senderKind === "CUSTOMER",
+  );
+  // Stable for every submission from this exact rendered composer. A retry
+  // uses the same SQL idempotency key; opening a new composer gets a new key.
+  const replyApprovalKey = "staff-reply-" + randomUUID();
   const lastMessageByConversation = indexLatestExternalInboxMessages(data.messages);
 
   async function handover(formData: FormData) {
@@ -320,14 +329,32 @@ function InboxView({
   async function reply(formData: FormData) {
     "use server";
     const conversationId = String(formData.get("conversationId") ?? "");
-    const body = String(formData.get("body") ?? "");
-    const result = await enqueueInboxReply(workspaceSlug, conversationId, body);
-    actionRedirect(
+    const redirectPrefix = "conversation=" + encodeURIComponent(conversationId) +
+      "&queue=" + encodeURIComponent(queue) + "&search=" + encodeURIComponent(search) + "&";
+    // The checkbox is human approval, not an AI completion or an inbound hook.
+    // Even forged FormData must pass trusted current-message, version, consent,
+    // membership, branch and replay checks in queueApprovedInboxReply.
+    if (formData.get("confirmedByStaff") !== "yes") {
+      actionRedirect(workspaceSlug, "inbox",
+        { ok: false, message: "Review and confirm the reply before queuing." },
+        redirectPrefix);
+    }
+    const result = await queueApprovedInboxReply({
       workspaceSlug,
-      "inbox",
-      result,
-      "conversation=" + encodeURIComponent(conversationId) + "&queue=" + encodeURIComponent(queue) + "&search=" + encodeURIComponent(search) + "&",
-    );
+      conversationId,
+      sourceMessageId: String(formData.get("sourceMessageId") ?? ""),
+      reviewedBody: String(formData.get("body") ?? ""),
+      expectedVersion: Number(formData.get("expectedVersion") ?? 0),
+      idempotencyKey: String(formData.get("idempotencyKey") ?? ""),
+      confirmedByStaff: true,
+    });
+    actionRedirect(workspaceSlug, "inbox",
+      result.ok
+        ? { ok: true, message: result.value.state === "EXISTING_REPLY"
+          ? "Previously queued reply verified. Check delivery status before sending again."
+          : "Reply queued. Provider delivery is not yet confirmed." }
+        : { ok: false, message: result.message },
+      redirectPrefix);
   }
 
   const relatedConversations = customer
@@ -336,7 +363,7 @@ function InboxView({
     : [];
   const participantLabel = customer?.displayName ?? "Unverified sender";
   const identityResolutionSupported = selected.channel === "WHATSAPP" || selected.channel === "EMAIL";
-  const replySupported = identityResolutionSupported && Boolean(customer);
+  const replySupported = identityResolutionSupported && Boolean(customer) && Boolean(latestInbound);
 
   return (
     <section className={styles.inboxWorkspace} aria-label="Customer conversations">
@@ -498,13 +525,16 @@ function InboxView({
 
         <form action={reply} className={styles.replyComposer}>
           <input type="hidden" name="conversationId" value={selected.id} />
+          <input type="hidden" name="sourceMessageId" value={latestInbound?.id ?? ""} />
+          <input type="hidden" name="expectedVersion" value={selected.version} />
+          <input type="hidden" name="idempotencyKey" value={replyApprovalKey} />
           <FormField id="reply-body" label="Reply" required>
             {({ id, describedBy, invalid }) => (
               <TextArea
                 id={id}
                 name="body"
                 rows={3}
-                placeholder={replySupported ? "Write a reply…" : !customer ? "Verify and link this sender before replying" : "Replies are unavailable for this channel"}
+                placeholder={replySupported ? "Write a reply…" : !customer ? "Verify and link this sender before replying" : !latestInbound ? "Await an inbound customer message before replying" : "Replies are unavailable for this channel"}
                 disabled={!replySupported}
                 required
                 describedBy={describedBy}
@@ -512,8 +542,12 @@ function InboxView({
               />
             )}
           </FormField>
+          <label className={styles.replyReviewConfirm}>
+            <input type="checkbox" name="confirmedByStaff" value="yes" required disabled={!replySupported} />
+            <span>I reviewed this reply and approve queueing it for delivery.</span>
+          </label>
           <div className={styles.composerFooter}>
-            <span>{replySupported ? `Reply via ${selected.channel}` : !customer ? "Identity must be verified before reply" : "Read-only conversation"}</span>
+            <span>{replySupported ? `Reply via ${selected.channel} · delivery not guaranteed` : !customer ? "Identity must be verified before reply" : !latestInbound ? "Await a customer message before replying" : "Read-only conversation"}</span>
             <StaffSubmitButton className="app-button-primary" disabled={!replySupported} pendingLabel="Queueing reply…">
               Queue reply
             </StaffSubmitButton>

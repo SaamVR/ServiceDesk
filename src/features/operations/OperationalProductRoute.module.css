@@ -195,6 +195,10 @@
 }
 .replyComposer :global(.app-form-field) { margin: 0; }
 .replyComposer textarea { min-height: 72px; resize: vertical; }
+.replyReviewConfirm { display: flex; align-items: flex-start; gap: 9px; color: var(--app-text-muted); font-size: .77rem; line-height: 1.45; cursor: pointer; }
+.replyReviewConfirm input { width: 17px; height: 17px; flex: none; margin: 1px 0 0; accent-color: var(--app-primary); }
+.replyReviewConfirm input:focus-visible { outline: 2px solid var(--app-focus, currentColor); outline-offset: 3px; }
+.replyReviewConfirm:has(input:disabled) { opacity: .65; cursor: not-allowed; }
 .composerFooter { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .composerFooter > span { color: var(--app-text-subtle); font-size: .75rem; }
 
