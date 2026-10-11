@@ -21,6 +21,7 @@ on:
       - "src/features/operations/OperationalProductRoute.tsx"
       - "src/features/operations/RecordDirectorySearch*"
       - "src/features/operations/record-directory.ts"
+      - "src/features/operations/staff-snapshot-index.ts"
       - "src/app/app/[workspace]/**"
       - "tests/e2e/v3-record-directory.test.tsx"
       - "tests/e2e/v3-jobs-queue.test.tsx"
@@ -65,6 +66,7 @@ jobs:
           tests/e2e/v3-inbox-triage.test.ts
           src/features/operations/RecordDirectorySearch.tsx
           src/features/operations/record-directory.ts
+          src/features/operations/staff-snapshot-index.ts
           src/app/app/'[workspace]'/error.tsx
           src/app/app/'[workspace]'/loading.tsx
           tests/e2e/v3-record-directory.test.tsx
