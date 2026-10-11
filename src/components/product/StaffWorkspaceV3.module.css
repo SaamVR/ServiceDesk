@@ -242,7 +242,29 @@
   .v3Shell :global(.app-topbar) { gap: 10px; padding-inline: 20px; }
   .v3Shell :global(.app-topbar-context) > span:first-child { display: none; }
 }
+/* The switch action is kept in the mobile drawer, not squeezed into the
+   320px topbar alongside navigation, search and account controls. */
+.mobileAccountActions { display: none; }
 @media (max-width: 900px) {
+  .mobileAccountActions {
+    display: grid;
+    gap: 4px;
+    margin-top: 12px;
+    padding-top: 14px;
+    border-top: 1px solid #d8e4e7;
+  }
+  .mobileAccountActions a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 8px;
+    color: #26464d;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .mobileAccountActions a:hover { background: #e6f1f1; }
+
   .v3Shell :global(.app-topbar) { height: 60px; gap: 10px; padding-inline: 18px; }
   .v3Shell :global(.app-mobile-nav) > summary {
     display: inline-flex; align-items: center; justify-content: center;
@@ -273,6 +295,7 @@
   .v3Shell :global(.app-mobile-links) .moreToolsTrigger { color: #314e53; }
 }
 @media (max-width: 680px) {
+  .v3Shell .desktopWorkspaceSwitch { display: none; }
   .v3Shell :global(.app-topbar-actions) > :global(.app-topbar-link):first-child { display: none; }
   .v3Shell :global(.app-account-link) span:last-child { display: none; }
 }
