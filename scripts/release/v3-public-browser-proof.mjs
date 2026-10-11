@@ -139,7 +139,7 @@ async function layoutCheck(page, width) {
     'links:document.querySelectorAll("a[href]").length,' +
     'passwords:document.querySelectorAll("input[type=password]").length,' +
     'heroLabel:document.querySelector(".marketing-hero aside[aria-label]")?.getAttribute("aria-label")||"",' +
-    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header > div a[href],.marketing-hero .button-primary,.marketing-hero .button-secondary")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height),tag:el.tagName,href:el.getAttribute("href")||""}))}))()'
+    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header > div > a[href],.marketing-hero .button-primary,.marketing-hero .button-secondary")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height),tag:el.tagName,href:el.getAttribute("href")||""}))}))()'
   );
   if (state.width !== width || state.height !== height(width) || !state.reduced) {
     throw new Error("Chrome viewport/reduced-motion mismatch: " + page.slug + " " + width);
