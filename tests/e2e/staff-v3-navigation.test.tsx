@@ -1,4 +1,6 @@
 import { createElement } from "react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { staffModuleConfig, buildStaffModuleHref } from "../../src/features/operations/staff-modules";
@@ -18,6 +20,14 @@ function renderStaffShell(pathname: string, workspace = "acme-west") {
 }
 
 describe("V3 staff workday shell", () => {
+  it("provides Escape and link-click close paths for mobile workspace navigation", () => {
+    const source = readFileSync(join(process.cwd(), "src/components/product/StaffAppShell.tsx"), "utf8");
+    expect(source).toContain('event.key !== "Escape"');
+    expect(source).toContain('mobileMenu.current?.querySelector("summary")?.focus()');
+    expect(source).toContain('onKeyDown={handleMobileNavigationKeyDown}');
+    expect(source).toContain('onClick={handleMobileNavigationClick}');
+  });
+
   it("retains access to all thirteen existing operational destinations in desktop and mobile navigation", () => {
     const html = renderStaffShell("/app/acme-west/overview");
     for (const staffModule of Object.keys(staffModuleConfig) as Array<keyof typeof staffModuleConfig>) {
@@ -28,6 +38,8 @@ describe("V3 staff workday shell", () => {
     expect(html).toContain('aria-label="Workspace"');
     expect(html).toContain('aria-label="Mobile workspace"');
     expect(html).toContain('aria-label="Open workspace navigation"');
+    expect(html).toContain('class="app-mobile-nav-panel"');
+
     expect(html).toContain('href="#app-main-content"');
   });
 
