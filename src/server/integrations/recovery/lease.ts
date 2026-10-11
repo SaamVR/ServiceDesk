@@ -22,7 +22,7 @@ export interface ProviderRecoveryLeaseDecision {
 }
 
 function clampLeaseDurationSeconds(value: number | undefined): number {
-  const requested = Math.floor(value ?? 60);
+  const requested = value === undefined || !Number.isFinite(value) ? 60 : Math.floor(value);
   return Math.max(30, Math.min(requested, 300));
 }
 
@@ -34,6 +34,22 @@ export function planProviderRecoveryLease(input: ProviderRecoveryLeaseInput): Pr
   const durationSeconds = clampLeaseDurationSeconds(input.leaseDurationSeconds);
   const existingExpiry = input.leaseExpiresAt ? new Date(input.leaseExpiresAt).getTime() : undefined;
   const now = new Date(input.now).getTime();
+  const clockValid = Number.isFinite(now) && Math.abs(now) <= 8.64e15 - durationSeconds * 1_000;
+  const identityValid = Boolean(input.workspaceId?.trim() && input.idempotencyKey?.trim() && input.workerId?.trim());
+  const ambiguousExistingLease = Boolean(input.leaseOwner && !Number.isFinite(existingExpiry));
+  if (!clockValid || !identityValid || ambiguousExistingLease) {
+    return {
+      action: "HELD",
+      workspaceId: input.workspaceId,
+      idempotencyKey: input.idempotencyKey,
+      holder: input.leaseOwner || "UNASSIGNED",
+      canExecute: false,
+      leaseExpiresAt: input.leaseExpiresAt || (clockValid ? new Date(now).toISOString() : "1970-01-01T00:00:00.000Z"),
+      mutatesBusinessTruth: false,
+      notes: ["Invalid lease clock, worker identity or existing lease expiry; require operator reconciliation before replay."],
+    };
+  }
+
   const activeLease = Boolean(input.leaseOwner && existingExpiry !== undefined && existingExpiry > now);
 
   if (activeLease && input.leaseOwner !== input.workerId) {
