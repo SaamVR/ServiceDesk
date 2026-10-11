@@ -50,7 +50,7 @@ export function normalizeCoverageDay(input: string | undefined, days: readonly D
 
 export function scheduleCoverageHref(queue: string | undefined, day?: string, from?: string, today?: string): string {
   const params = new URLSearchParams();
-  if (from && from !== today && /^\\d{4}-\\d{2}-\\d{2}$/.test(from)) params.set("from", from);
+  if (from && from !== today && /^\d{4}-\d{2}-\d{2}$/.test(from)) params.set("from", from);
   if (queue === "unassigned") params.set("queue", "unassigned");
   if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) params.set("day", day);
   const value = params.toString();
