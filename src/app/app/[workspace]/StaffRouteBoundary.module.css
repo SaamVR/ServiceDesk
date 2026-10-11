@@ -2,25 +2,26 @@
   width: min(100%, 850px);
   margin: 12px auto 0;
   padding: clamp(22px, 4vw, 40px);
-  border: 1px solid #e3ded4;
+  border: 1px solid var(--app-border, #dce5e8);
   border-radius: 14px;
   background: #ffffff;
-  box-shadow: 0 10px 38px rgb(34 35 30 / 5%);
-  color: #303831;
+  box-shadow: 0 10px 30px rgb(22 47 59 / 5%);
+  color: var(--app-text, #1a3039);
 }
-.eyebrow { color: #0b776d; font-size: .7rem; font-weight: 780; letter-spacing: .11em; text-transform: uppercase; }
-.title { font: 600 clamp(1.7rem, 3vw, 2.3rem)/1.18 Georgia, Cambria, serif; letter-spacing: -.035em; margin: 14px 0; }
-.description { max-width: 53ch; line-height: 1.65; color: #5f665f; font-size: .93rem; }
+.eyebrow { color: var(--app-accent, #0b746d); font-size: .75rem; font-weight: 780; letter-spacing: .09em; text-transform: uppercase; }
+.title { font: 750 clamp(1.65rem, 2.8vw, 2.2rem)/1.2 Inter, "Segoe UI", sans-serif; letter-spacing: -.04em; margin: 14px 0; }
+.description { max-width: 63ch; line-height: 1.65; color: var(--app-text-muted, #4e626c); font-size: .93rem; }
 .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
 .action, .secondary {
   display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
   padding: 10px 17px; border-radius: 7px; font-size: .84rem; font-weight: 730; cursor: pointer;
   text-decoration: none;
 }
-.action { border: 1px solid #0b746d; background: #0b746d; color: #fff; }
-.secondary { border: 1px solid #d8d1c5; background: #fff; color: #393e35; }
-.action:hover { background: #833a29; }
-.action:focus-visible, .secondary:focus-visible { outline: 3px solid #b55b3c; outline-offset: 3px; }
+.action { border: 1px solid var(--app-accent, #0b746d); background: var(--app-accent, #0b746d); color: #fff; }
+.secondary { border: 1px solid var(--app-border-strong, #bbced2); background: #fff; color: var(--app-text, #1a3039); }
+.action:hover { background: var(--app-accent-hover, #075c56); border-color: var(--app-accent-hover, #075c56); }
+.secondary:hover { background: var(--app-accent-soft, #e5f5f2); border-color: #9ac5bd; }
+.action:focus-visible, .secondary:focus-visible { outline: 3px solid #18877b; outline-offset: 3px; }
 .placeholder { display: grid; gap: 11px; margin-top: 26px; }
 .placeholderHead { width: 58%; height: 24px; }
 .placeholderLine { width: 100%; height: 14px; }
@@ -28,7 +29,7 @@
 .placeholderGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; margin-top: 18px; }
 .placeholderCard { height: 116px; border-radius: 9px; }
 .placeholderHead,.placeholderLine,.placeholderCard {
-  border-radius: 7px; background: linear-gradient(100deg,#eeeae2 10%,#f8f6f0 40%,#eeeae2 70%); background-size: 200% 100%;
+  border-radius: 7px; background: linear-gradient(100deg,#e6eff0 10%,#f6fafb 40%,#e6eff0 70%); background-size: 200% 100%;
   animation: loading-sheen 1.8s ease-in-out infinite;
 }
 @keyframes loading-sheen { from { background-position: 100% 0; } to { background-position: -100% 0; } }
@@ -39,5 +40,5 @@
   .placeholderCard:last-child { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .placeholderHead,.placeholderLine,.placeholderCard { animation: none; background: #eeeae2; }
+  .placeholderHead,.placeholderLine,.placeholderCard { animation: none; background: #e6eff0; }
 }
