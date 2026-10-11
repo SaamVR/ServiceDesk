@@ -94,6 +94,7 @@ describe("real outbound delivery triage", () => {
     const result = await readOperationalDeliveryTriage("service-desk", h.deps);
     expect(result).toMatchObject({ ok: true, value: {
       counts: { ok: 0, pending: 1, review: 1 },
+      scannedOutboundMessages: 2, truncated: true,
       items: [{ messageId: "msg1" }, { messageId: "msg4" }],
     } });
     expect(JSON.stringify(result)).not.toContain("msg2");
@@ -105,8 +106,19 @@ describe("real outbound delivery triage", () => {
     const result = await readOperationalDeliveryTriage("service-desk", h.deps);
     expect(result).toMatchObject({ ok: true, value: {
       counts: { ok: 1, pending: 0, review: 1 },
+      scannedOutboundMessages: 2, truncated: true,
       items: [{ messageId: "msg2" }, { messageId: "msg3" }],
     } });
+  });
+
+  it("does not disclose workspace-wide volume when a branch has no authorized records", async () => {
+    const h = fixture({ role: "DISPATCHER", branch: "unassigned" });
+    const result = await readOperationalDeliveryTriage("service-desk", h.deps);
+    expect(result).toMatchObject({ ok: true, value: {
+      scannedOutboundMessages: 0, truncated: true,
+      counts: { ok: 0, pending: 0, review: 0 }, items: [],
+    } });
+    expect(JSON.stringify(result)).not.toMatch(/msg1|msg2|msg3|msg4/);
   });
 
   it("does not read database for unauthenticated, crew or invalid workspace scopes", async () => {

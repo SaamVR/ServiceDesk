@@ -79,7 +79,10 @@ export async function readOperationalDeliveryTriage(
     const scanned = outbound.data.length > 200 ? outbound.data.slice(0, 200) : outbound.data;
     if (scanned.length === 0) {
       return { ok: true, value: {
-        workspaceId: workspace.id, generatedAt: now.toISOString(), truncated: false,
+        workspaceId: workspace.id, generatedAt: now.toISOString(),
+        // Branch views sample a workspace-wide bounded window, so never claim
+        // exhaustiveness or reveal workspace-wide raw row counts.
+        truncated: branchScope.mode === "BRANCH",
         scannedOutboundMessages: 0, counts: { ok: 0, pending: 0, review: 0 }, items: [],
       } };
     }
@@ -174,8 +177,10 @@ export async function readOperationalDeliveryTriage(
     return { ok: true, value: {
       workspaceId: workspace.id,
       generatedAt: now.toISOString(),
-      truncated: outbound.data.length > 200,
-      scannedOutboundMessages: scanned.length, counts, items,
+      truncated: branchScope.mode === "BRANCH" || outbound.data.length > 200,
+      // A dispatcher may only see the number of rows actually authorized
+      // in their branch, never the workspace-wide window size.
+      scannedOutboundMessages: items.length, counts, items,
     } };
   } catch {
     return fail("DELIVERY_TRIAGE_READ_FAILED", "Operational delivery records are temporarily unavailable.");
