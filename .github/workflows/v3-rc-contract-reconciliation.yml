@@ -1,0 +1,44 @@
+name: ServiceDesk V3 RC contract reconciliation
+
+on:
+  push:
+    branches:
+      - fix/v3-rc-auth-rls-migration-contracts-20261012
+  pull_request:
+    branches:
+      - feat/servicedesk-v3-combined-acceptance-20261011
+    paths:
+      - "tests/e2e/v2-auth-product.test.ts"
+      - "tests/e2e/v3-supabase-public-auth-runtime.test.ts"
+      - "tests/providers/v2-migration-rehearsal.test.ts"
+      - ".github/workflows/v3-rc-contract-reconciliation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servicedesk-v3-rc-contracts-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exact-head-rc:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - name: Install reproducible dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Exact-head release candidate gate
+        run: pnpm check:rc
