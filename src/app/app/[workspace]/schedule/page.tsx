@@ -5,7 +5,7 @@ export default async function StaffSchedulePage({
   searchParams,
 }: {
   params: Promise<{ workspace: string }>;
-  searchParams: Promise<{ queue?: string; from?: string; notice?: string; error?: string }>;
+  searchParams: Promise<{ queue?: string; from?: string; day?: string; notice?: string; error?: string }>;
 }) {
   const { workspace } = await params;
   const query = await searchParams;
@@ -15,6 +15,7 @@ export default async function StaffSchedulePage({
       module="schedule"
       selectedScheduleQueue={query.queue}
       selectedScheduleFrom={query.from}
+      selectedScheduleDay={query.day}
       notice={query.notice}
       error={query.error}
     />

@@ -51,6 +51,8 @@ import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBa
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { DispatcherIntelligence } from "@/features/dispatch/DispatcherIntelligence";
+import { DispatchCoverageWeek } from "./DispatchCoverageWeek";
+import { buildDispatchCoverageWeek, normalizeCoverageDay, scheduleCoverageHref } from "./dispatch-coverage-week";
 import { CommercialBillingWorkspace } from "@/features/commercial/CommercialBillingWorkspace";
 import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
@@ -59,6 +61,7 @@ import { operationalJourneyCounts, type OperationalJourneyModule } from "./opera
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { deriveDispatchBacklog } from "./dispatch-backlog";
 import { formatMinorMoney } from "./view-models";
+import { createLocalDayKey } from "./staff-local-day";
 import { buildOperationalReleaseReadiness } from "./release-readiness-runtime";
 import styles from "./OperationalProductRoute.module.css";
 import {
@@ -80,6 +83,7 @@ interface OperationalProductRouteProps {
   searchQuery?: string;
   selectedScheduleQueue?: string;
   selectedScheduleFrom?: string;
+  selectedScheduleDay?: string;
   selectedCustomerId?: string;
   selectedRequestId?: string;
   selectedQuoteId?: string;
@@ -1346,15 +1350,21 @@ function ScheduleView({
   workspaceSlug,
   selectedScheduleQueue,
   selectedScheduleFrom,
+  selectedScheduleDay,
 }: {
   data: OperationalStaffSnapshot;
   workspaceSlug: string;
   selectedScheduleQueue?: string;
   selectedScheduleFrom?: string;
+  selectedScheduleDay?: string;
 }) {
   const window = buildScheduleWindow(data.loadedAt, data.workspace.timezone, selectedScheduleFrom);
+  const upcoming = filterScheduleWindow(data.visits, data.workspace.timezone, window);
+  const coverageDays = buildDispatchCoverageWeek(upcoming, data.loadedAt, data.workspace.timezone, window.from);
+  const selectedDay = normalizeCoverageDay(selectedScheduleDay, coverageDays);
   const currentQueue = selectedScheduleQueue === "unassigned" ? "unassigned" : "all";
-  const redirectPrefix = scheduleWindowFeedbackPrefix(window, currentQueue);
+  const redirectPrefix = scheduleWindowFeedbackPrefix(window, currentQueue)
+    + (selectedDay ? "day=" + encodeURIComponent(selectedDay) + "&" : "");
   async function assignCrew(formData: FormData) {
     "use server";
     const visitId = String(formData.get("visitId") ?? "");
@@ -1375,7 +1385,7 @@ function ScheduleView({
   }
 
   const now = Date.parse(data.loadedAt);
-  const upcoming = filterScheduleWindow(data.visits, data.workspace.timezone, window);
+
   const { unscheduled, acceptedQuotes } = deriveDispatchBacklog(data.requests, data.quotes, data.visits);
   const heldSlotIds = new Set(
     data.slotHolds
@@ -1385,7 +1395,11 @@ function ScheduleView({
   const unassignedUpcoming = upcoming.filter((visit) => !visit.crewId).length;
   // A read-only view of already authorized visits; never affects assignment authority.
   const showUnassigned = selectedScheduleQueue === "unassigned";
-  const visibleUpcoming = showUnassigned ? upcoming.filter((visit) => !visit.crewId) : upcoming;
+  const queueVisits = showUnassigned ? upcoming.filter((visit) => !visit.crewId) : upcoming;
+  const localDayKey = createLocalDayKey(data.workspace.timezone);
+  const visibleUpcoming = selectedDay
+    ? queueVisits.filter((visit) => localDayKey(visit.startAt) === selectedDay)
+    : queueVisits;
   const activeHolds = data.slotHolds.filter((hold) => hold.status === "HELD" && Date.parse(hold.expiresAt) > now).length;
   const dispatch = buildOperationalDispatchIntelligence(data);
   const visitLabels = Object.fromEntries(data.visits.map((visit) => {
@@ -1425,6 +1439,15 @@ function ScheduleView({
         <div><span>Active holds</span><strong>{activeHolds}</strong><small>Temporary capacity holds</small></div>
       </section>
 
+      <DispatchCoverageWeek
+        days={coverageDays}
+        selectedDay={selectedDay}
+        queue={selectedScheduleQueue}
+        timeZone={data.workspace.timezone}
+        from={window.from}
+        today={window.today}
+      />
+
       <DispatcherIntelligence
         recommendations={dispatch.recommendations}
         timeline={dispatch.timeline}
@@ -1444,10 +1467,10 @@ function ScheduleView({
       />
 
       <nav className={styles.scheduleQueueNav} aria-label="Schedule visit filters">
-        <a href={scheduleWindowHref(window.from, "all", window.today)} aria-current={!showUnassigned ? "page" : undefined}>
+        <a href={scheduleCoverageHref("all", selectedDay, window.from, window.today)} aria-current={!showUnassigned ? "page" : undefined}>
           All visits <strong>{upcoming.length}</strong>
         </a>
-        <a href={scheduleWindowHref(window.from, "unassigned", window.today)} aria-current={showUnassigned ? "page" : undefined}>
+        <a href={scheduleCoverageHref("unassigned", selectedDay, window.from, window.today)} aria-current={showUnassigned ? "page" : undefined}>
           Need crew <strong>{unassignedUpcoming}</strong>
         </a>
       </nav>
@@ -4108,6 +4131,7 @@ function renderModule(
   selectedScheduleQueue?: string,
   selectedJobQueue?: string,
   selectedScheduleFrom?: string,
+  selectedScheduleDay?: string,
 ) {
   switch (module) {
     case "inbox":
@@ -4127,7 +4151,7 @@ function renderModule(
     case "quotes":
       return <QuotesView data={data} workspaceSlug={workspaceSlug} selectedQuoteId={selectedQuoteId} searchQuery={searchQuery} />;
     case "schedule":
-      return <ScheduleView data={data} workspaceSlug={workspaceSlug} selectedScheduleQueue={selectedScheduleQueue} selectedScheduleFrom={selectedScheduleFrom} />;
+      return <ScheduleView data={data} workspaceSlug={workspaceSlug} selectedScheduleQueue={selectedScheduleQueue} selectedScheduleFrom={selectedScheduleFrom} selectedScheduleDay={selectedScheduleDay} />;
     case "jobs":
       return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} selectedJobQueue={selectedJobQueue} />;
     case "invoices":
@@ -4194,6 +4218,7 @@ export async function OperationalProductRoute({
   searchQuery,
   selectedScheduleQueue,
   selectedScheduleFrom,
+  selectedScheduleDay,
   selectedCustomerId,
   selectedRequestId,
   selectedQuoteId,
@@ -4224,7 +4249,7 @@ export async function OperationalProductRoute({
       {result.ok ? (
         <>
           {module === "invoices" ? <CommercialBillingWorkspace workspaceSlug={workspaceSlug} /> : null}
-          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom)}
+          {renderModule(module, result.value, workspaceSlug, selectedConversationId, selectedCustomerId, selectedRequestId, selectedQuoteId, selectedQualityCaseId, selectedJobId, selectedInvoiceId, selectedQueue, searchQuery, selectedScheduleQueue, selectedJobQueue, selectedScheduleFrom, selectedScheduleDay)}
         </>
       ) : (
         <Panel>
