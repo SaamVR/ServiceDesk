@@ -146,7 +146,7 @@ export function ConsultationPlanner() {
     setSelected((items) => checked ? [...items, value].slice(0, 5) : items.filter((item) => item !== value));
   };
   return (
-    <div className={styles.consultationWidget}>
+    <div className={styles.consultationWidget} role="group" aria-label="Consultation focus selector">
       <span className={styles.miniEyebrow}>PREPARE YOUR WALKTHROUGH</span>
       <h3>What would you like to improve?</h3>
       <p>Choose the parts of your operation you&apos;d like to examine. The selection stays on this page.</p>
