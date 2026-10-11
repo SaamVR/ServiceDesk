@@ -59,21 +59,26 @@ describe("V2 professional public product presentation", () => {
     expect(shell).toContain("marketingRegistrationEntry(registrationEnabled)");
     expect(shell).toContain('aria-label="Mobile product navigation"');
     expect(shell).toContain('aria-label="Open product menu"');
-    expect(css).toContain(".signIn { display: none !important; }");
-    expect(css).toContain(".mobileMenuPanel a");
+    expect(css).toMatch(/\.signIn\s*\{\s*display:\s*none;/);
+    expect(css).toContain(".mobileMenuFooter a");
     expect(css).toContain("min-height: 44px");
   });
 
-  it("preserves all five primary product destinations in a mobile disclosure rather than wrapping the header", () => {
+  it("uses concise desktop navigation and four descriptive mobile destinations instead of wrapping the header", () => {
     const shell = source("src/components/shell/MarketingShell.tsx");
+    const links = source("src/components/shell/MarketingNavLinks.tsx");
     const css = source("src/components/shell/MarketingNavV3.module.css");
-    expect(shell.match(/productRoutes.slice\(1, 6\)/g)).toHaveLength(2);
-    expect(shell).toContain("site-nav site-primary-nav");
+    expect(shell).toContain('<MarketingNavLinks variant="desktop" />');
+    expect(shell).toContain('<MarketingNavLinks variant="mobile" />');
     expect(shell).toContain("styles.desktopNav");
     expect(shell).toContain("styles.mobileMenu");
-    expect(css).toContain(".desktopNav { display: none !important; }");
-    expect(css).toContain("width: auto !important");
+    for (const href of ["/features", "/use-cases/cleaning", "/integrations", "/pricing"]) {
+      expect(links).toContain('href: "' + href + '"');
+    }
+    expect(links).toContain('aria-current={pathname === item.href');
+    expect(css).toContain(".desktopNav { display: none; }");
     expect(css).toContain("white-space: nowrap");
+    expect(css).toContain("@media (max-width: 350px)");
   });
 
   it("has dedicated responsive hero composition instead of relying on the global h1 scale", () => {
