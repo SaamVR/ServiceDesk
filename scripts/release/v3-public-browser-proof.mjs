@@ -138,7 +138,8 @@ async function layoutCheck(page, width) {
     'heading:document.querySelector("main h1")?.textContent?.trim()?.length || 0,' +
     'links:document.querySelectorAll("a[href]").length,' +
     'passwords:document.querySelectorAll("input[type=password]").length,' +
-    'heroLabel:document.querySelector(".marketing-hero aside[aria-label]")?.getAttribute("aria-label")||""}))()'
+    'heroLabel:document.querySelector(".marketing-hero aside[aria-label]")?.getAttribute("aria-label")||"",' +
+    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header a.site-auth-link,.marketing-hero .button-primary,.marketing-hero .button-secondary")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height)}))}))()'
   );
   if (state.width !== width || state.height !== height(width) || !state.reduced) {
     throw new Error("Chrome viewport/reduced-motion mismatch: " + page.slug + " " + width);
@@ -152,7 +153,16 @@ async function layoutCheck(page, width) {
       (page.slug === "sign-in" && state.passwords !== 1)) {
     throw new Error("Public page is missing visible content/form controls: " + page.slug);
   }
-  return { page: page.slug, width, links: state.links, horizontalOverflow: false };
+  if (width <= 390 && page.heroLabel) {
+    const targets = state.touchTargets;
+    if (!Array.isArray(targets) || targets.length < 3 ||
+        targets.some(item => item.w < 44 || item.h < 44)) {
+      throw new Error("Public mobile navigation/action target below 44 CSS pixels: " + page.slug + " " + width);
+    }
+  }
+  return { page: page.slug, width, links: state.links,
+    touchTargetCount: width <= 390 ? state.touchTargets.length : undefined,
+    horizontalOverflow: false };
 }
 
 const captures = [];
