@@ -15,6 +15,7 @@ import "./v3-studio-contrast.test";
 import "./v3-studio-coverage.test";
 import "./v3-studio-command-record-search.test";
 import "./v3-studio-reply-brief.test";
+import "./v3-studio-finance-workspaces.test";
 import "./v3-studio-schedule-window.test";
 import "./v3-studio-operational-continuity.test";
 import "./v3-dispatch-coverage-week.test";
@@ -85,6 +86,25 @@ describe("V3 staff workday shell", () => {
     expect(html).toContain('aria-label="Close workspace navigation"');
     expect(html).toContain('href="/app/acme-west/jobs"');
     expect(html).toContain('href="/app/acme-west/inbox"');
+  });
+
+  it("keeps workspace switching reachable when compact topbars hide desktop actions", () => {
+    const html = renderStaffShell("/app/acme-west/inbox");
+    const css = readFileSync(join(process.cwd(), "src/components/product/StaffWorkspaceV3.module.css"), "utf8");
+    const source = readFileSync(join(process.cwd(), "src/components/product/StaffAppShell.tsx"), "utf8");
+    expect(html.split('href="/auth/select-workspace"')).toHaveLength(3);
+    expect(html).toContain("Account settings");
+    expect(source).toContain('onToggle={handleMobileNavigationToggle}');
+    expect(source).toContain('mobileNavOpen ? "Close workspace navigation" : "Open workspace navigation"');
+    expect(css).toContain(".v3Shell .desktopWorkspaceSwitch { display: none; }");
+    expect(css).toContain(".mobileAccountActions a");
+    expect(css).toContain("min-height: 44px");
+  });
+
+  it("does not crash on literal percent signs in an authorized workspace name", () => {
+    const html = renderStaffShell("/app/crew%25work/overview", "crew%work");
+    expect(html).toContain("Crew%Work");
+    expect(html).toContain('href="/app/crew%25work/overview"');
   });
 
   it("retains encoded workspace routing and safe account sign-out semantics", () => {
