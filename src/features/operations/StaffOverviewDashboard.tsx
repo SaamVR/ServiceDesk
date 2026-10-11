@@ -225,7 +225,7 @@ export function StaffOverviewDashboard({
       <header className={styles.pageHeader}>
         <div>
           <p className={styles.eyebrow}>Your workday / operations</p>
-          <h1>Overview</h1>
+          <h1>Today</h1>
           <p>{formatDate(snapshot.loadedAt, snapshot.workspace.timezone)} <span aria-hidden="true">·</span> {snapshot.workspace.name} <span aria-hidden="true">·</span> Updated {formatTime(snapshot.loadedAt, snapshot.workspace.timezone)}</p>
         </div>
         <div className={styles.headerActions}>
