@@ -153,7 +153,7 @@ export function createConfiguredEmailTransport(config: EmailTransportConfig, htt
           !validResendEndpoint(config)) {
         return { ok: false, code: "EMAIL_CONFIGURATION_BLOCKED", message: "Resend endpoint must use the official HTTPS /emails API." };
       }
-      if (isResendEndpoint(config) && !/^[\\x21-\\x7E]{1,256}$/.test(job.idempotencyKey)) {
+      if (isResendEndpoint(config) && !/^[\x21-\x7E]{1,256}$/.test(job.idempotencyKey)) {
         return { ok: false, code: "EMAIL_IDEMPOTENCY_KEY_INVALID", message: "Resend idempotency key must be 1–256 printable ASCII characters without whitespace." };
       }
 
