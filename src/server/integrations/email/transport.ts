@@ -65,7 +65,40 @@ function evidence(config: EmailTransportConfig, providerMessageId: string, job: 
   };
 }
 
+function isResendEndpoint(config: EmailTransportConfig): boolean {
+  try {
+    return new URL(config.endpointUrl).hostname.toLowerCase() === "api.resend.com";
+  } catch {
+    return false;
+  }
+}
+
+function validResendEndpoint(config: EmailTransportConfig): boolean {
+  try {
+    const uri = new URL(config.endpointUrl);
+    return uri.protocol === "https:" && uri.hostname === "api.resend.com" &&
+      uri.pathname === "/emails" && !uri.search && !uri.hash &&
+      !uri.username && !uri.password && !uri.port;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resend's /emails API has a narrow payload schema. The legacy generic
+ * transport envelope includes business-only metadata which must NOT be
+ * included in direct Resend API requests.
+ */
 function bodyFor(config: EmailTransportConfig, job: TransactionalEmailJob): string {
+  if (isResendEndpoint(config)) {
+    return JSON.stringify({
+      from: config.senderAddress,
+      to: [job.to],
+      subject: job.subject,
+      text: job.text,
+      html: job.html,
+    });
+  }
   return JSON.stringify({
     from: config.senderAddress,
     to: job.to,
@@ -78,11 +111,18 @@ function bodyFor(config: EmailTransportConfig, job: TransactionalEmailJob): stri
   });
 }
 
-function parseProviderMessageId(body: string): Result<string> {
+function parseProviderMessageId(body: string, resend: boolean): Result<string> {
   try {
-    const parsed = JSON.parse(body) as { id?: unknown; messageId?: unknown };
-    const id = typeof parsed.id === "string" ? parsed.id : typeof parsed.messageId === "string" ? parsed.messageId : undefined;
-    if (!id?.trim()) return { ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE", message: "Email provider response is missing message id." };
+    const parsed = JSON.parse(body) as { id?: unknown; messageId?: unknown } | null;
+    // Resend documents an "id" field: a legacy generic transport's
+    // "messageId" alias is not evidence of acceptance by Resend.
+    const id = resend
+      ? parsed?.id
+      : (typeof parsed?.id === "string" ? parsed.id : parsed?.messageId);
+    if (typeof id !== "string" || !id.trim() ||
+        (resend && !/^[A-Za-z0-9_-]{1,128}$/.test(id))) {
+      return { ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE", message: "Email provider response has no valid message id." };
+    }
     return { ok: true, value: id };
   } catch {
     return { ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE", message: "Email provider response was malformed JSON." };
@@ -114,6 +154,16 @@ export function createConfiguredEmailTransport(config: EmailTransportConfig, htt
         return { ok: false, code: "EMAIL_CONFIGURATION_BLOCKED", message: "Transactional email configuration is incomplete." };
       }
 
+      // Avoid sending a production provider key to a misspelled, insecure or
+      // substituted endpoint. Generic connector transports remain unchanged.
+      if ((config.providerName.trim().toLowerCase() === "resend" || isResendEndpoint(config)) &&
+          !validResendEndpoint(config)) {
+        return { ok: false, code: "EMAIL_CONFIGURATION_BLOCKED", message: "Resend endpoint must use the official HTTPS /emails API." };
+      }
+      if (isResendEndpoint(config) && !/^[\x21-\x7E]{1,256}$/.test(job.idempotencyKey)) {
+        return { ok: false, code: "EMAIL_IDEMPOTENCY_KEY_INVALID", message: "Resend idempotency key must be 1–256 printable ASCII characters without whitespace." };
+      }
+
       const suppression = shouldSuppressTransactionalEmail(job);
       if (suppression) return { ok: false, code: suppression, message: "Transactional email suppressed before provider call." };
       if (!isValidEmailRef(job.to) || !isValidEmailRef(config.senderAddress)) {
@@ -143,7 +193,7 @@ export function createConfiguredEmailTransport(config: EmailTransportConfig, htt
         });
 
         if (response.status < 200 || response.status >= 300) return providerFailure(response.status);
-        const providerMessageId = parseProviderMessageId(response.body);
+        const providerMessageId = parseProviderMessageId(response.body, isResendEndpoint(config));
         if (!providerMessageId.ok) return providerMessageId;
 
         return {
