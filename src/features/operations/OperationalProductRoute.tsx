@@ -53,6 +53,7 @@ import { CommercialBillingWorkspace } from "@/features/commercial/CommercialBill
 import { TeamInvitationManager } from "@/features/settings/TeamInvitationManager";
 import { buildOperationalDispatchIntelligence } from "./dispatch-product-adapter";
 import { formatWorkspaceDateTime } from "./product-truth";
+import { operationalJourneyCounts, type OperationalJourneyModule } from "./operational-journey-counts";
 import { formatMinorMoney } from "./view-models";
 import { buildOperationalReleaseReadiness } from "./release-readiness-runtime";
 import styles from "./OperationalProductRoute.module.css";
@@ -4118,22 +4119,25 @@ function renderModule(
   }
 }
 
-const operationalJourney: ReadonlyArray<{ module: "inbox" | "requests" | "quotes" | "schedule" | "jobs" | "invoices"; label: string }> = [
-  { module: "inbox", label: "Inbox" },
-  { module: "requests", label: "Requests" },
-  { module: "quotes", label: "Quotes" },
-  { module: "schedule", label: "Dispatch" },
-  { module: "jobs", label: "Jobs" },
-  { module: "invoices", label: "Invoices" },
+const operationalJourney: ReadonlyArray<{ module: OperationalJourneyModule; label: string; countHint: string }> = [
+  { module: "inbox", label: "Inbox", countHint: "need reply" },
+  { module: "requests", label: "Requests", countHint: "need intake" },
+  { module: "quotes", label: "Quotes", countHint: "ready to send" },
+  { module: "schedule", label: "Dispatch", countHint: "need crew" },
+  { module: "jobs", label: "Jobs", countHint: "underway" },
+  { module: "invoices", label: "Invoices", countHint: "open balances" },
 ];
 
 function OperationalJourneyNav({
   workspace,
   module,
+  data,
 }: {
   workspace: string;
   module: OperationalProductRouteProps["module"];
+  data: OperationalStaffSnapshot;
 }) {
+  const counts = operationalJourneyCounts(data);
   return (
     <nav className={styles.workflowRail} aria-label="Service workflow shortcuts">
       <span className={styles.workflowRailLabel}>Workflow</span>
@@ -4141,9 +4145,15 @@ function OperationalJourneyNav({
         <a
           href={buildStaffModuleHref(workspace, item.module)}
           aria-current={module === item.module ? "page" : undefined}
+          aria-label={counts[item.module]
+            ? item.label + ": " + counts[item.module] + " " + item.countHint
+            : item.label}
           key={item.module}
         >
           {item.label}
+          {counts[item.module] > 0 ? (
+            <span className={styles.workflowCount} aria-hidden="true">{counts[item.module]}</span>
+          ) : null}
         </a>
       ))}
     </nav>
@@ -4178,8 +4188,8 @@ export async function OperationalProductRoute({
         description={config.description}
       />
 
-      {operationalJourney.some((item) => item.module === module) ? (
-        <OperationalJourneyNav workspace={workspaceSlug} module={module} />
+      {result.ok && operationalJourney.some((item) => item.module === module) ? (
+        <OperationalJourneyNav workspace={workspaceSlug} module={module} data={result.value} />
       ) : null}
 
       <Notice notice={notice} error={error} />
