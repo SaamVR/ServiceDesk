@@ -2,6 +2,21 @@ name: ServiceDesk V3 public browser proof
 
 # No secrets, no auth, no customer data, no provider sends.
 on:
+  push:
+    branches:
+      - feat/servicedesk-v3-combined-acceptance-20261011
+    paths:
+      - "scripts/release/v3-public-browser-proof.mjs"
+      - ".github/workflows/v3-public-browser-proof.yml"
+      - "src/components/shell/**"
+      - "src/features/product/**"
+      - "src/features/auth/RegistrationShell*"
+      - "src/app/page.tsx"
+      - "src/app/features/**"
+      - "src/app/pricing/**"
+      - "src/app/integrations/**"
+      - "src/app/contact/**"
+      - "src/app/auth/sign-in/**"
   pull_request:
     branches:
       - feat/servicedesk-v3-combined-acceptance-20261011
@@ -21,11 +36,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: servicedesk-v3-public-browser-${{ github.event.pull_request.number }}
+  group: servicedesk-v3-public-browser-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
   public-chromium:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
@@ -66,7 +81,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: v3-public-chromium-${{ github.event.pull_request.head.sha }}
+          name: v3-public-chromium-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ runner.temp }}/servicedesk-public-proof/
           retention-days: 7
           if-no-files-found: error
