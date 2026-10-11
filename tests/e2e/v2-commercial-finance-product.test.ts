@@ -8,9 +8,10 @@ describe("V2 commercial finance product workspace", () => {
   it("integrates commercial billing into the professional invoices route without replacing customer collections", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
     expect(route).toContain('import { CommercialBillingWorkspace }');
-    expect(route).toContain('module === "invoices" ? <CommercialBillingWorkspace');
+    expect(route).toContain('module === "invoices" && invoiceSurface === "commercial" ? (');
+    expect(route).toContain('<CommercialBillingWorkspace workspaceSlug={workspaceSlug} />');
     expect(route).toContain("const customerInvoices = data.invoices.filter((invoice) => Boolean(invoice.quoteId))");
-    expect(route).toContain("Commercial contract invoices are managed above");
+    expect(route).toContain("Commercial accounts remain available in the adjacent workspace.");
   });
 
   it("loads real commercial portfolio and billing records behind authenticated staff resolution", () => {
