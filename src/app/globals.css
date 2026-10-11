@@ -2350,3 +2350,6 @@ p { color: var(--muted); }
     width: 100%;
   }
 }
+
+/* Marketing sample quote: make fixture values visibly distinct from live billing. */
+.pricing-illustrative-note { margin: 12px 0 0; color: var(--muted); font-size: .83rem; line-height: 1.6; }
