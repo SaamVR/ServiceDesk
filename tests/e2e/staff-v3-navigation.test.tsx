@@ -14,6 +14,7 @@ import "./v3-studio-brand-continuity.test";
 import "./v3-studio-contrast.test";
 import "./v3-studio-coverage.test";
 import "./v3-studio-command-record-search.test";
+import "./v3-record-directory.test";
 import "./v3-studio-reply-brief.test";
 import "./v3-studio-finance-workspaces.test";
 import "./v3-studio-quote-version-safety.test";
