@@ -309,7 +309,7 @@
   border-color: #afd9ca;
   box-shadow: 0 14px 28px rgb(35 99 80 / 9%);
 }
-.kpiCard p { color: #638276; font-size: .75rem; font-weight: 730; }
+.kpiCard p { color: #536f64; font-size: .75rem; font-weight: 730; }
 .kpiCard strong {
   color: #285747;
   font-family: "Manrope", "DM Sans", sans-serif;
@@ -317,7 +317,7 @@
   font-weight: 810;
   letter-spacing: -.065em;
 }
-.kpiCard span:not(.kpiGo) { color: #83998f; font-size: .75rem; }
+.kpiCard span:not(.kpiGo) { color: #557066; font-size: .75rem; }
 .kpiCard .kpiGo { color: #24978b; }
 .kpi_warning { border-left: 3px solid #c59045; }
 .kpi_danger { border-left: 3px solid #c75a61; }
@@ -341,7 +341,7 @@
   font-weight: 800;
 }
 .cardHeader p:last-child:not(.cardEyebrow) {
-  color: #73897f;
+  color: #566f64;
   font-size: .76rem;
   line-height: 1.6;
 }
@@ -365,7 +365,7 @@
   font-weight: 740;
 }
 .attentionCopy small,.scheduleCopy small,.qualityRow small {
-  color: #74897e;
+  color: #536b61;
   font-size: .75rem;
 }
 .scheduleTime { color: #326354; font-weight: 780; }
@@ -383,7 +383,7 @@
   font-size: 1.84rem;
   font-weight: 810;
 }
-.pipelineItem small { color: #7b9186; }
+.pipelineItem small { color: #557066; }
 .quickActions { gap: 9px; border-color: #e1ede7; }
 .quickActions > span { color: #658477; font-size: .75rem; font-weight: 820; }
 .quickActions a {
@@ -396,7 +396,7 @@
 .quickActions a:hover { background: #ebf9f2; color: #157c66; }
 .emptyBlock > span { background: #e2f7eb; color: #21836b; }
 .emptyBlock strong { color: #2c594b; }
-.emptyBlock p { color: #759188; }
+.emptyBlock p { color: #526d61; }
 @media (max-width: 1230px) {
   .workdayBrief { grid-template-columns: minmax(0,1fr) auto; }
   .briefingLabel { grid-column: 1 / -1; }
