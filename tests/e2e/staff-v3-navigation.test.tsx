@@ -108,6 +108,18 @@ describe("V3 staff workday shell", () => {
     expect(html.match(/<details[^>]*open=""/g)).toBeNull();
   });
 
+  it("makes AI automation a first-class Workday destination on desktop and mobile", () => {
+    const shell = readFileSync(join(process.cwd(), "src/components/product/StaffAppShell.tsx"), "utf8");
+    expect(shell).toContain('label: "Workday", modules: ["overview", "inbox", "automations", "schedule", "jobs"]');
+    expect(shell).not.toContain('modules: ["quality", "automations", "reports"');
+    const html = renderStaffShell("/app/acme-west/automations");
+    expect(html).toContain("AI &amp; Automation");
+    expect(html.split('href="/app/acme-west/automations"').length - 1).toBeGreaterThanOrEqual(2);
+    expect(html).toMatch(/aria-current="page"[^>]*href="\\/app\\/acme-west\\/automations"/);
+    // AI is not hidden behind a collapsed secondary tools section.
+    expect(html.match(/<details[^>]*open=""/g)).toBeNull();
+  });
+
   it("opens secondary navigation when a deep linked route needs an active item", () => {
     const html = renderStaffShell("/app/acme-west/settings");
     expect(html.match(/<details[^>]*open=""/g)).toHaveLength(2);
