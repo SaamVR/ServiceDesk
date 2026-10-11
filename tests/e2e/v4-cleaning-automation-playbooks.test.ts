@@ -31,7 +31,7 @@ describe("Cleaning-first automation starter playbooks", () => {
     expect(route).toContain('defaultValue={playbook?.eventType ?? "INVOICE_PAID"}');
     expect(route).toContain('defaultValue={index === 1 ? playbook?.actionDetail : undefined}');
     expect(route).toContain('name={`action${index}Type`} defaultValue={index === 1 ? "CREATE_ATTENTION" : "NONE"}');
-    expect(route).toContain("Synthetic preview required");
+    expect(route).toContain("synthetic preview required before publish");
     expect(route).toContain("publishOperationalWorkflowVersion(");
     expect(page).toContain("automationTemplate={query.template}");
   });
