@@ -77,14 +77,14 @@
   gap: 18px;
   padding: 13px 0 20px;
 }
-.cleanShell:global(.app-shell) .navGroupLabel {
+.cleanShell:global(.app-shell) :global(.app-nav-label) {
   color: #49695d !important;
   font-size: .67rem !important;
   margin: 0 13px 9px !important;
   font-weight: 830 !important;
   letter-spacing: .115em !important;
 }
-.cleanShell:global(.app-shell) .navLink {
+.cleanShell:global(.app-shell) :global(.app-nav-link) {
   min-height: 45px;
   gap: 11px;
   padding-inline: 13px;
@@ -93,36 +93,36 @@
   font-weight: 700;
   transition: background 170ms ease, color 170ms ease, transform 170ms ease;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link) {
   color: #3a5d52;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink :global(.app-nav-icon) {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link) :global(.app-nav-icon) {
   width: 18px;
   height: 18px;
   color: #426e62;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink:hover {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link):hover {
   color: #196f65;
   background: #edf9f4;
   transform: translateX(2px);
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink[aria-current="page"] {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link)[aria-current="page"] {
   background: #e3f7ef;
   color: #0f7366;
   box-shadow: inset 3px 0 #2da68e;
   font-weight: 820;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink[aria-current="page"] :global(.app-nav-icon) {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link)[aria-current="page"] :global(.app-nav-icon) {
   color: #15897b;
 }
-.cleanShell:global(.app-shell) .moreTools { padding-top: 13px; border-top: 1px solid #e5f0eb; }
-.cleanShell:global(.app-shell) .moreToolsTrigger {
+.cleanShell:global(.app-shell) :global(.app-more-tools) { padding-top: 13px; border-top: 1px solid #e5f0eb; }
+.cleanShell:global(.app-shell) :global(.app-more-tools-trigger) {
   min-height: 45px;
   color: #365b50;
   font-size: .8rem;
   border-radius: 9px;
 }
-.cleanShell:global(.app-shell) .moreToolsTrigger:hover { color: #1b7566; background: #eff9f4; }
+.cleanShell:global(.app-shell) :global(.app-more-tools-trigger):hover { color: #1b7566; background: #eff9f4; }
 .cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-sidebar-footer) {
   margin: auto 5px 0;
   border-top: 1px solid #e5efea;
@@ -146,39 +146,39 @@
   scrollbar-gutter: stable;
   overscroll-behavior-y: contain;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link) {
   display: flex;
   align-items: center;
   min-width: 0;
   text-decoration: none;
   opacity: 1;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink > span:last-child {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link) > span:last-child {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink :global(.app-nav-icon) {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link) :global(.app-nav-icon) {
   flex: 0 0 18px;
   stroke: currentColor;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink[aria-current="page"] {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link)[aria-current="page"] {
   border: 1px solid #c6e8db;
   background: #e3f7ef;
   color: #0f7366;
   box-shadow: inset 3px 0 #2da68e;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink[aria-current="page"] :global(.app-nav-icon) {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link)[aria-current="page"] :global(.app-nav-icon) {
   color: #0f7366;
 }
-.cleanShell:global(.app-shell) :global(.app-sidebar) .moreToolsTrigger {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-more-tools-trigger) {
   display: flex;
   align-items: center;
   opacity: 1;
   color: #365b50;
 }
 .cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-sidebar-footer-link):focus-visible,
-.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink:focus-visible,
-.cleanShell:global(.app-shell) :global(.app-sidebar) .moreToolsTrigger:focus-visible {
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link):focus-visible,
+.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-more-tools-trigger):focus-visible {
   outline: 3px solid #167c73;
   outline-offset: 2px;
 }
@@ -336,19 +336,19 @@
     box-shadow: 0 22px 43px rgb(39 91 77 / 16%);
   }
   .cleanShell :global(.app-mobile-nav) > summary { color: #2a6153; }
-  .cleanShell:global(.app-shell) :global(.app-mobile-links) .navLink {
+  .cleanShell:global(.app-shell) :global(.app-mobile-links) :global(.app-nav-link) {
     min-height: 48px; color: #365d50;
   }
-  .cleanShell:global(.app-shell) :global(.app-mobile-links) .navLink:hover { background: #eaf7f1; }
-  .cleanShell:global(.app-shell) :global(.app-mobile-links) .navLink[aria-current="page"] {
+  .cleanShell:global(.app-shell) :global(.app-mobile-links) :global(.app-nav-link):hover { background: #eaf7f1; }
+  .cleanShell:global(.app-shell) :global(.app-mobile-links) :global(.app-nav-link)[aria-current="page"] {
     color: #117969; background: #e1f7eb;
     box-shadow: inset 3px 0 #2da68e;
   }
-  .cleanShell:global(.app-shell) :global(.app-mobile-links) .navGroupLabel { color: #4b6d5f !important; }
-  .cleanShell:global(.app-shell) .moreToolsTrigger { color: #365e51; }
+  .cleanShell:global(.app-shell) :global(.app-mobile-links) :global(.app-nav-label) { color: #4b6d5f !important; }
+  .cleanShell:global(.app-shell) :global(.app-more-tools-trigger) { color: #365e51; }
   .cleanShell :global(.app-content) { padding: 30px 22px 65px; }
-  .cleanShell .mobileAccountActions { border-color: #e0ede7; }
-  .cleanShell .mobileAccountActions a { color: #30685b; }
+  .cleanShell :global(.app-mobile-account-actions) { border-color: #e0ede7; }
+  .cleanShell :global(.app-mobile-account-actions) a { color: #30685b; }
 }
 @media (max-width: 620px) {
   .cleanShell :global(.app-content) { padding: 26px 15px 48px; }
