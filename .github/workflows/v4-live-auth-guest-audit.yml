@@ -1,0 +1,36 @@
+name: ServiceDesk V4 live guest auth and legacy presentation visual audit
+on:
+  push:
+    branches: [feat/servicedesk-v4-deep-visual-browser-audit-20261012]
+    paths:
+      - scripts/release/v4-live-guest-auth-browser.mjs
+      - .github/workflows/v4-live-auth-guest-audit.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  guest-auth-screens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2 }
+      - run: node --check scripts/release/v4-live-guest-auth-browser.mjs
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Live registration, recovery and presentation at seven responsive widths
+        env:
+          V4_GUEST_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_GUEST_OUTPUT: ${{ runner.temp }}/servicedesk-v4-live-guest
+          V4_GUEST_SHA: ${{ github.sha }}
+        run: node scripts/release/v4-live-guest-auth-browser.mjs
+      - name: Retain screenshots and metadata for secondary public routes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: servicedesk-v4-guest-auth-browser-${{ github.sha }}
+          path: ${{ runner.temp }}/servicedesk-v4-live-guest/
+          retention-days: 7
+          if-no-files-found: warn
