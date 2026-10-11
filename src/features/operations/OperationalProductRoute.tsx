@@ -44,6 +44,8 @@ import { filterJobsQueue, indexJobProgress, jobsActionFeedbackPrefix, jobsQueueH
 import { JobQueueFilters } from "./JobQueueFilters";
 import { countStaffBy, indexStaffById } from "./staff-snapshot-index";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
+import { InboxThreadNavigator } from "./InboxThreadNavigator";
+import { inboxThreadPosition } from "./inbox-thread-navigation";
 import { settingsFeedbackFragment } from "./settings-navigation";
 import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
@@ -236,6 +238,7 @@ function InboxView({
     );
   }
 
+  const threadPosition = inboxThreadPosition(orderedConversations, selected.id, queue, search);
   const customer = data.customers.find((item) => item.id === selected.customerId);
   const request = data.requests.find((item) => item.id === selected.requestId);
   const property = request?.propertyId
@@ -392,6 +395,13 @@ function InboxView({
             </form>
           </div>
         </header>
+
+        <InboxThreadNavigator
+          current={threadPosition.index}
+          total={threadPosition.total}
+          previousHref={threadPosition.previousHref}
+          nextHref={threadPosition.nextHref}
+        />
 
         {!customer && identityResolutionSupported ? (
           <div className={styles.identityReview}>
