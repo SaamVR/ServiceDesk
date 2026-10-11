@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createSupabaseWhatsAppStatusPersistence } from "../../src/server/integrations/whatsapp/status-postgres";
 import { createPostgresWhatsAppDeliveryStatusStore, type WhatsAppOutboundMessage,
   type WhatsAppOutboundReceipt, type WhatsAppStatusPersistencePort, type WhatsAppStatusUpdate
 } from "../../src/server/integrations/whatsapp/status-postgres";
@@ -47,6 +49,63 @@ function memory(options: {
   };
   return { port, updates, setMessage: (v: WhatsAppOutboundMessage[]) => { messages = v; } };
 }
+
+describe("Supabase conditional delivery persistence transport", () => {
+  it("uses workspace-scoped outbox/message identities and an atomic state+timestamp CAS", async () => {
+    const operations: Array<{ table: string; name: string; values: unknown[] }> = [];
+    let table = "";
+    let reply: unknown[] = [];
+    function chain() {
+      const query = {
+        eq(...args: unknown[]) { operations.push({ table, name: "eq", values: args }); return this; },
+        in(...args: unknown[]) { operations.push({ table, name: "in", values: args }); return this; },
+        or(...args: unknown[]) { operations.push({ table, name: "or", values: args }); return this; },
+        limit(...args: unknown[]) { operations.push({ table, name: "limit", values: args }); return this; },
+        select(...args: unknown[]) { operations.push({ table, name: "select", values: args }); return this; },
+        then(resolve: (input: unknown) => unknown) { return Promise.resolve(resolve({ data: reply, error: null })); },
+      };
+      return query;
+    }
+    const client = {
+      from(name: string) {
+        table = name;
+        return {
+          select(columns: string) {
+            operations.push({ table, name: "select", values: [columns] });
+            return chain();
+          },
+          update(patch: unknown) {
+            operations.push({ table, name: "update", values: [patch] });
+            return chain();
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+    const db = createSupabaseWhatsAppStatusPersistence(client);
+    reply = [receipt];
+    expect(await db.findReceipts("ws-1", "wamid-controlled")).toEqual([receipt]);
+    reply = [stored];
+    expect(await db.findMessages("ws-1", "outbox-1")).toEqual([stored]);
+    reply = [{ ...stored, delivery_state: "READ", provider_occurred_at: "2026-10-11T04:00:00.000Z" }];
+    await db.updateIfCurrent({
+      workspaceId: "ws-1", messageId: "message-1",
+      previousStates: ["QUEUED", "DELIVERED"], deliveryState: "READ",
+      providerMessageId: "wamid-controlled", providerAccountId: "phone-123",
+      providerOccurredAt: "2026-10-11T04:00:00.000Z",
+    });
+    const update = operations.find(o => o.name === "update");
+    expect(update?.values[0]).toMatchObject({
+      delivery_state: "READ", provider_message_id: "wamid-controlled",
+      provider_account_id: "phone-123",
+    });
+    expect(operations.some(o => o.name === "in" &&
+      o.values[0] === "delivery_state")).toBe(true);
+    expect(operations.some(o => o.name === "or" &&
+      String(o.values[0]).includes("provider_occurred_at.lte.2026-10-11T04:00:00.000Z"))).toBe(true);
+    expect(operations.some(o => o.name === "eq" &&
+      o.values[0] === "workspace_id" && o.values[1] === "ws-1")).toBe(true);
+  });
+});
 
 describe("PostgreSQL WhatsApp delivery callback reconciliation", () => {
   it("advances a matching SENT WhatsApp outbox + staff message and replays idempotently", async () => {
