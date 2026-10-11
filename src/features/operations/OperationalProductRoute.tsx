@@ -4377,7 +4377,9 @@ export async function OperationalProductRoute({
         <Panel>
           <FeedbackBanner
             title={result.kind === "authentication" ? "Staff sign-in required" : "Workspace unavailable"}
-            description={result.message}
+            description={result.kind === "authentication"
+              ? "Your staff session could not be confirmed. Sign in to access authorized records."
+              : "The latest workspace records could not be verified. Retry this read-only view, and check saved records before repeating any action."}
             tone={result.kind === "authentication" ? "warning" : "danger"}
             action={
               result.kind === "authentication" ? (
@@ -4395,7 +4397,11 @@ export async function OperationalProductRoute({
                 >
                   Sign in
                 </a>
-              ) : undefined
+              ) : (
+                <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, module)}>
+                  Retry view
+                </a>
+              )
             }
           />
         </Panel>
