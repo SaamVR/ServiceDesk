@@ -317,7 +317,7 @@ export function StaffOverviewDashboard({
           <div className={styles.cardHeader}>
             <div>
               <p className={styles.cardEyebrow}>Today</p>
-              <h2 id="today-heading">Today's field plan</h2>
+              <h2 id="today-heading">Today&apos;s field plan</h2>
               <p>{todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` : "No active visits are scheduled for today."}</p>
             </div>
             <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "schedule")}>Open dispatch →</Link>
