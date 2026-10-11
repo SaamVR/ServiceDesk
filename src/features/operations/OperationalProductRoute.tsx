@@ -209,6 +209,9 @@ function InboxView({
         </div>
         <InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />
         <InboxSearchForm queue={queue} search={search} />
+        {search ? (
+          <a className={styles.inboxClearSearch} href={inboxQueueHref(queue)}>Clear search and see this queue</a>
+        ) : null}
         <EmptyState
           title={search ? "No matching conversations" : triage.counts.all ? "No conversations in this queue" : "Inbox is clear"}
           detail={search ? "Try a different name, channel or message phrase." : triage.counts.all
@@ -223,6 +226,18 @@ function InboxView({
   const request = data.requests.find((item) => item.id === selected.requestId);
   const property = request?.propertyId
     ? data.properties.find((item) => item.id === request.propertyId)
+    : undefined;
+  const activeQuote = request
+    ? [...data.quotes]
+      .filter((quote) => quote.requestId === request.id && quote.status !== "SUPERSEDED")
+      .sort((a, b) => b.version - a.version)[0]
+    : undefined;
+  const relatedVisit = request
+    ? data.visits.find((visit) => visit.requestId === request.id && !["COMPLETED", "CANCELLED"].includes(visit.status))
+      ?? data.visits.find((visit) => visit.requestId === request.id)
+    : undefined;
+  const relatedInvoice = activeQuote
+    ? data.invoices.find((invoice) => invoice.quoteId === activeQuote.id)
     : undefined;
   const messages = data.messages
     .filter((item) => item.conversationId === selected.id)
@@ -299,7 +314,14 @@ function InboxView({
         </header>
         <InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />
         <InboxSearchForm queue={queue} search={search} />
-        <div className={styles.conversationList} role="list">
+        <div className={styles.inboxResultsBar} aria-live="polite">
+          <span>{search
+            ? `${orderedConversations.length} matching conversation${orderedConversations.length === 1 ? "" : "s"}`
+            : `${orderedConversations.length} conversation${orderedConversations.length === 1 ? "" : "s"} in this queue`}</span>
+          {search ? <a href={inboxQueueHref(queue)}>Clear search</a> : null}
+        </div>
+        <a className={styles.inboxMobileJump} href="#active-inbox-thread">Jump to selected conversation ↓</a>
+        <div id="inbox-conversation-list" className={styles.conversationList} role="list">
           {orderedConversations.map((conversation) => {
             const threadCustomer = data.customers.find((item) => item.id === conversation.customerId);
             const latest = lastMessageByConversation.get(conversation.id);
@@ -307,7 +329,7 @@ function InboxView({
             return (
               <a
                 className={`${styles.conversationItem} ${selectedThread ? styles.conversationSelected : ""}`.trim()}
-                href={inboxQueueHref(queue, conversation.id, search)}
+                href={inboxQueueHref(queue, conversation.id, search) + "#active-inbox-thread"}
                 aria-current={selectedThread ? "page" : undefined}
                 aria-label={(threadCustomer?.displayName ?? "Unverified sender") + " " + conversation.channel + " conversation"}
                 role="listitem"
@@ -340,7 +362,8 @@ function InboxView({
         </div>
       </aside>
 
-      <section className={styles.inboxThreadPane} aria-label={customer ? customer.displayName + " conversation" : "Unverified sender conversation"}>
+      <section id="active-inbox-thread" className={styles.inboxThreadPane} aria-label={customer ? customer.displayName + " conversation" : "Unverified sender conversation"}>
+        <a className={styles.inboxBackToList} href="#inbox-conversation-list">↑ Back to conversations</a>
         <header className={styles.threadHeader}>
           <div className={styles.threadIdentity}>
             <span className={styles.threadAvatar} aria-hidden="true">{participantLabel.slice(0, 1).toUpperCase()}</span>
@@ -459,6 +482,21 @@ function InboxView({
             {request ? (
               <a href={`/app/${encodeURIComponent(workspaceSlug)}/requests?request=${encodeURIComponent(request.id)}`}>
                 Service request <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+            {activeQuote ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/quotes?quote=${encodeURIComponent(activeQuote.id)}`}>
+                Quote · {activeQuote.status.replaceAll("_", " ").toLowerCase()} <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+            {relatedVisit ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/jobs?job=${encodeURIComponent(relatedVisit.id)}`}>
+                Job · {relatedVisit.status.replaceAll("_", " ").toLowerCase()} <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
+            {relatedInvoice ? (
+              <a href={`/app/${encodeURIComponent(workspaceSlug)}/invoices?invoice=${encodeURIComponent(relatedInvoice.id)}`}>
+                Invoice · {relatedInvoice.status.replaceAll("_", " ").toLowerCase()} <span aria-hidden="true">↗</span>
               </a>
             ) : null}
           </nav>
