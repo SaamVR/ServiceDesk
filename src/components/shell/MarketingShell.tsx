@@ -33,6 +33,7 @@ export function MarketingShell({
   const heroAction = marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
   return (
     <main className="site-shell">
+      <a className={styles.skipLink} href="#public-main-content">Skip to content</a>
       <header className={"site-header " + styles.header} aria-label="Product navigation">
         <Link className={styles.brand} href="/" aria-label="ServiceDesk AI home">
           <span className={styles.brandIcon} aria-hidden="true">
@@ -76,7 +77,7 @@ export function MarketingShell({
         </div>
       </header>
 
-      <section className={`hero-grid section-card marketing-hero ${heroStyles.heroSection}`}>
+      <section id="public-main-content" tabIndex={-1} className={`hero-grid section-card marketing-hero ${heroStyles.heroSection}`}>
         <div className={`stack-lg marketing-hero-copy ${heroStyles.heroCopy}`}>
           <p className="eyebrow">{eyebrow}</p>
           <h1>{title}</h1>
