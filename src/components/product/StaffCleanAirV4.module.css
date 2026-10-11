@@ -145,6 +145,13 @@
   scrollbar-width: thin;
   scrollbar-gutter: stable;
   overscroll-behavior-y: contain;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 2;
 }
 .cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link) {
   display: flex;
@@ -328,6 +335,7 @@
 @media (max-width: 900px) {
   .cleanShell :global(.app-topbar) { height: 62px; }
   .cleanShell :global(.app-mobile-nav-panel) {
+    z-index: 50;
     inset: 62px 0 auto 0;
     max-height: calc(100dvh - 62px);
     border-top: 1px solid #deeee5;
