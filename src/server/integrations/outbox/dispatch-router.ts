@@ -29,15 +29,37 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
   }
 
   try {
-    return await dispatcher.dispatch({
+    const result = await dispatcher.dispatch({
       job: input.job,
       committedAt: input.committedAt,
       attempt: input.attempt,
       expectedWorkspaceId: input.expectedWorkspaceId,
       expectedChannel: input.job.channel,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown dispatch error";
-    return { ok: true, value: classifyProviderFailure({ job: input.job, code: "UNKNOWN_PROVIDER_FAILURE", message }) };
+    if (!result.ok) return result;
+
+    // A success receipt must not be applied to a different committed job.
+    // Connector implementations and provider payloads cannot authorize a
+    // cross-workspace, cross-channel or unrelated idempotency transition.
+    const outcome = result.value;
+    if (!outcome || outcome.jobId !== input.job.id ||
+        outcome.workspaceId !== input.job.workspaceId ||
+        outcome.channel !== input.job.channel ||
+        outcome.purpose !== input.job.purpose ||
+        outcome.idempotencyKey !== input.job.idempotencyKey ||
+        !["ACCEPTED", "RETRYABLE_FAILURE", "TERMINAL_FAILURE", "SUPPRESSED"].includes(outcome.outcome) ||
+        (outcome.outcome === "ACCEPTED" &&
+          (typeof outcome.providerMessageId !== "string" || !outcome.providerMessageId.trim()))) {
+      return failure(input, "DISPATCH_OUTCOME_IDENTITY_MISMATCH",
+        "Provider adapter returned an invalid receipt for the claimed outbox job; manual review required.");
+    }
+    return result;
+  } catch {
+    // Never persist raw exceptions from provider transports: they can contain
+    // URLs, customer identifiers, credentials or response bodies.
+    return { ok: true, value: classifyProviderFailure({
+      job: input.job, code: "UNKNOWN_PROVIDER_FAILURE",
+      message: "Provider adapter threw an unexpected exception; manual review required.",
+    }) };
   }
 }

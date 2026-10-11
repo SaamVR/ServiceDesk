@@ -47,4 +47,75 @@ describe("committed outbox dispatch router", () => {
     const unsupported = await dispatchCommittedOutboxJob({ job: job({ channel: "WEBHOOK" }), committedAt: "2026-10-04T12:01:00.000Z", attempt: 1, dispatchers: { WHATSAPP: dispatcher } });
     expect(unsupported.ok && unsupported.value).toMatchObject({ outcome: "TERMINAL_FAILURE", code: "UNSUPPORTED_DISPATCH_CHANNEL" });
   });
+
+  test("rejects mismatched adapter receipts before downstream outbox accounting", async () => {
+    const claimed = job();
+    const base = {
+      ...dispatchOutcomeBase(claimed),
+      outcome: "ACCEPTED" as const,
+      providerMessageId: "synthetic-receipt",
+      acceptedAt: "2026-10-11T00:00:00Z",
+      providerMode: "FIXTURE" as const,
+      evidence: { provider: "WHATSAPP" as const, mode: "FIXTURE" as const, verification: "CONTRACT_TESTED" as const,
+        capturedAt: "2026-10-11T00:00:00Z", notes: [] },
+    };
+    for (const invalid of [
+      { jobId: "different" },
+      { workspaceId: "foreign-workspace" },
+      { channel: "EMAIL" as const },
+      { purpose: "INVOICE" as const },
+      { idempotencyKey: "foreign-idempotency-key" },
+      { providerMessageId: " " },
+    ]) {
+      const response = await dispatchCommittedOutboxJob({
+        job: claimed, committedAt: "2026-10-11T00:00:00Z", attempt: 1,
+        expectedWorkspaceId: "ws-1",
+        dispatchers: { WHATSAPP: {
+          async dispatch() { return { ok: true as const, value: { ...base, ...invalid } }; },
+        } },
+      });
+      expect(response).toMatchObject({
+        ok: true,
+        value: {
+          outcome: "TERMINAL_FAILURE",
+          code: "DISPATCH_OUTCOME_IDENTITY_MISMATCH",
+          jobId: claimed.id,
+          workspaceId: claimed.workspaceId,
+        },
+      });
+      expect(JSON.stringify(response)).not.toContain("foreign-idempotency-key");
+    }
+  });
+
+  test("does not expose thrown provider exception messages in persistent dispatch outcome", async () => {
+    const sensitive = "Bearer super-secret-key customer@example.test token=do-not-log";
+    const response = await dispatchCommittedOutboxJob({
+      job: job(), committedAt: "2026-10-11T00:00:00Z", attempt: 1,
+      dispatchers: { WHATSAPP: {
+        async dispatch() { throw new Error(sensitive); },
+      } },
+    });
+    expect(response).toMatchObject({
+      ok: true, value: { outcome: "TERMINAL_FAILURE", code: "UNKNOWN_PROVIDER_FAILURE" },
+    });
+    expect(JSON.stringify(response)).not.toContain("super-secret-key");
+    expect(JSON.stringify(response)).not.toContain("customer@example.test");
+    expect(JSON.stringify(response)).not.toContain("do-not-log");
+  });
+
+  test("preserves legitimate retry and suppression outcomes with the original job identity", async () => {
+    for (const outcome of ["RETRYABLE_FAILURE", "SUPPRESSED"] as const) {
+      const claimed = job();
+      const response = await dispatchCommittedOutboxJob({
+        job: claimed, committedAt: "2026-10-11T00:00:00Z", attempt: 1,
+        dispatchers: { WHATSAPP: {
+          async dispatch() { return { ok: true as const, value: {
+            ...dispatchOutcomeBase(claimed), outcome, code: "CONTROLLED", message: "Controlled provider result",
+          } }; },
+        } },
+      });
+      expect(response).toMatchObject({ ok: true, value: { outcome, jobId: claimed.id } });
+    }
+  });
+
 });
