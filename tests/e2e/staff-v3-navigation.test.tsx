@@ -1,4 +1,5 @@
 import "./v3-hosting-commit-identity.test";
+import "./v3-public-story-hero.test";
 import "./v3-private-qa-paths.test";
 import { createElement } from "react";
 import { readFileSync } from "node:fs";
