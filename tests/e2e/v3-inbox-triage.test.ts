@@ -6,6 +6,7 @@ import {
   inboxQueueHref,
   normalizeInboxQueue,
   searchInboxQueue,
+  indexLatestInboxMessages,
   type InboxTriageConversation,
   type InboxTriageMessage,
 } from "../../src/features/operations/inbox-triage";
@@ -132,6 +133,17 @@ describe("V3 operational Inbox triage", () => {
     expect(rows).toHaveLength(2);
   });
 
+  it("indexes the latest stored preview in one pass with stable timestamp ties", () => {
+    const a = { conversationId: "a", direction: "INBOUND" as const, createdAt: "2026-10-11T08:00:00Z", body: "A first" };
+    const b = { conversationId: "b", direction: "INBOUND" as const, createdAt: "2026-10-11T09:00:00Z", body: "B current" };
+    const newerA = { conversationId: "a", direction: "OUTBOUND" as const, createdAt: "2026-10-11T10:00:00Z", body: "A latest" };
+    const tiedA = { conversationId: "a", direction: "INTERNAL" as const, createdAt: "2026-10-11T10:00:00Z", body: "A tied" };
+    const result = indexLatestInboxMessages([a, b, newerA, tiedA]);
+    expect(result.get("a")).toBe(newerA);
+    expect(result.get("b")).toBe(b);
+    expect(result.size).toBe(2);
+  });
+
   it("carries search state safely through queue links", () => {
     expect(inboxQueueHref("handover", "a/b&c", "Briar & Co")).toBe("?queue=handover&conversation=a%2Fb%26c&search=Briar+%26+Co");
     expect(inboxQueueHref("all", undefined, "  Cleaning ")).toBe("?search=Cleaning");
@@ -145,6 +157,7 @@ describe("V3 operational Inbox triage", () => {
     expect(main).toContain("buildInboxTriage(data.conversations, data.messages, data.customers, queue)");
     expect(main).toContain('<InboxQueueNavigation queue={queue} counts={triage.counts} search={search} />');
     expect(main).toContain('searchInboxQueue(triage.visible, data.messages, data.customers, search)');
+    expect(main).toContain("indexLatestInboxMessages(data.messages)");
     expect(main).toContain('<InboxSearchForm queue={queue} search={search} />');
     expect(page).toContain('searchQuery={query.search}');
     expect(main).toContain('aria-label="Conversation queues"');
