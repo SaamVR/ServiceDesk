@@ -67,7 +67,7 @@ jobs:
             ["/auth/sign-up", "Build a calmer workday."],
             ["/auth/sign-up/check-email", "Check your email."],
             ["/auth/forgot-password", "Get back to work."],
-            ["/tour", "Controlled tour in an isolated showcase workspace."],
+            ["/tour", "See how a little clarity changes"],
             ["/sandbox", "One job. Every step. Your decisions."],
           ];
           for (const [path, expected] of routes) {
