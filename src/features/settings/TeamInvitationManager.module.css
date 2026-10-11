@@ -169,3 +169,6 @@
   .state { grid-column: 2; justify-self: start; }
   .invitationRow form { grid-column: 2; }
 }
+
+/* The token is never logged or copied into exception messages. */
+.copyError { grid-column: 1 / -1; margin: 5px 0 0; color: #a53b42; font-size: .73rem; font-weight: 680; }
