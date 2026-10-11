@@ -3,7 +3,7 @@ name: ServiceDesk V4 QA session RLS proof
 # require two distinct existing, email-confirmed fictional owner accounts.
 on:
   push:
-    branches: [feat/servicedesk-v4-l3-auth-rc-20261012, feat/servicedesk-v4-real-rls-uat-20261012, feat/servicedesk-v4-protected-qa-preflight-20261012]
+    branches: [feat/servicedesk-v4-l3-auth-rc-20261012, feat/servicedesk-v4-real-rls-uat-20261012, feat/servicedesk-v4-protected-qa-preflight-20261012, qa/servicedesk-v4-two-owner-rls-latest-20261012]
   workflow_dispatch:
 permissions:
   contents: read
@@ -29,7 +29,7 @@ jobs:
       - run: pnpm typecheck
       - run: node --check scripts/release/v4-protected-qa-preflight.mjs
   real-session-rls:
-    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'feat/servicedesk-v4-real-rls-uat-20261012'
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'feat/servicedesk-v4-real-rls-uat-20261012' || github.ref_name == 'qa/servicedesk-v4-two-owner-rls-latest-20261012'
     needs: auth-source
     runs-on: ubuntu-latest
     timeout-minutes: 15
