@@ -51,7 +51,7 @@ export async function generateAuthorizedRequestBrief(
 ): Promise<Result<RequestBrief>> {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.workspaceSlug) ||
       input.workspaceSlug.length > 40 ||
-      !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(input.requestId)) {
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.requestId)) {
     return fail("AI_BRIEF_INPUT_INVALID", "Choose a valid saved request.");
   }
 
