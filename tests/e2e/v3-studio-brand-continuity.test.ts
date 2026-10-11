@@ -20,7 +20,12 @@ describe("Studio OS public-to-staff brand continuity", () => {
     const marketing = read("src/app/page.tsx");
     expect(marketing).toContain('primaryHref={canRegister ? "/auth/sign-up" : "/tour"}');
     expect(marketing).toContain("ownerRegistrationAvailable()");
-    expect(marketing).toContain("<StaffWorkspacePreview />");
-    expect(marketing).toContain("<CustomerJourneyPreview />");
+    expect(marketing).toContain("<BrightHomeExperience canRegister={canRegister} />");
+    expect(marketing).toContain("ownerRegistrationPubliclyAvailable()");
+    const experience = read("src/features/product/BrightHomeExperience.tsx");
+    expect(experience).toContain("Every customer feels looked after.");
+    expect(experience).toContain("illustrative connected cleaning operations workspace".replace("illustrative", "Illustrative"));
+    expect(experience).toContain("Human decision");
+    expect(experience).toContain("<BrightHomeInteractions />");
   });
 });
