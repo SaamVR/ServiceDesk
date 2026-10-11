@@ -29,6 +29,18 @@ describe("real inbox search over authorized snapshot data", () => {
     expect(searchInboxQueue(conversations, messages, customers, "CONFIDENTIAL_ESCALATION")).toEqual([]);
     expect(searchInboxQueue(conversations, messages, customers, "afternoon")).toEqual([]);
   });
+  it("matches multiword staff searches across customer, channel and latest external message only", () => {
+    expect(searchInboxQueue(conversations, messages, customers, "amira Tuesday").map((item) => item.id))
+      .toEqual(["thread-1"]);
+    expect(searchInboxQueue(conversations, messages, customers, "Briar window").map((item) => item.id))
+      .toEqual(["thread-2"]);
+    expect(searchInboxQueue(conversations, messages, customers, "WHATSAPP Tuesday").map((item) => item.id))
+      .toEqual(["thread-1"]);
+    expect(searchInboxQueue(conversations, messages, customers, "Amira afternoon")).toEqual([]);
+    expect(searchInboxQueue(conversations, messages, customers, "Amira CONFIDENTIAL_ESCALATION")).toEqual([]);
+    expect(searchInboxQueue(conversations, messages, customers, "Briar Tuesday")).toEqual([]);
+  });
+
   it("preserves the existing triage order without editing authoritative records", () => {
     const input = [...conversations];
     expect(searchInboxQueue(input, messages, customers, " ")).toEqual(conversations);
