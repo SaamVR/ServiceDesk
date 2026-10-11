@@ -144,10 +144,18 @@ function statusBadgeTone(status: string): "neutral" | "success" | "warning" | "d
   return "neutral";
 }
 
-function EmptyState({ title, detail }: { title: string; detail: string }) {
+function EmptyState({ title, detail, action }: {
+  title: string;
+  detail: string;
+  action?: { label: string; href: string };
+}) {
   return (
     <Panel>
-      <AppEmptyState title={title} description={detail} />
+      <AppEmptyState
+        title={title}
+        description={detail}
+        action={action ? <a className="app-button-secondary" href={action.href}>{action.label}</a> : undefined}
+      />
     </Panel>
   );
 }
@@ -582,7 +590,7 @@ function InboxView({
 
 function CustomersView({ data, selectedCustomerId, searchQuery }: { data: OperationalStaffSnapshot; selectedCustomerId?: string; searchQuery?: string }) {
   if (data.customers.length === 0) {
-    return <EmptyState title="No customers yet" detail="Customers will appear here after enquiries are linked to a customer record." />;
+    return <EmptyState title="No customers yet" detail="Customers will appear here after enquiries are linked to a customer record." action={{ label: "Open conversations", href: buildStaffModuleHref(data.workspace.slug, "inbox") }} />;
   }
 
   const orderedCustomers = [...data.customers].sort((left, right) => left.displayName.localeCompare(right.displayName));
@@ -893,7 +901,7 @@ function RequestsView({
   }
 
   if (data.requests.length === 0) {
-    return <EmptyState title="No requests in the queue" detail="New enquiries will appear here as persisted requests." />;
+    return <EmptyState title="No requests in the queue" detail="New enquiries will appear here as persisted requests." action={{ label: "Review conversations", href: buildStaffModuleHref(workspaceSlug, "inbox") }} />;
   }
 
   const orderedRequests = [...data.requests].sort((left, right) =>
@@ -1223,7 +1231,7 @@ function QuotesView({
   }
 
   if (data.quotes.length === 0) {
-    return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." />;
+    return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." action={{ label: "Review service requests", href: buildStaffModuleHref(workspaceSlug, "requests") }} />;
   }
 
   const { currentQuoteByRequest, orderedQuotes, readyToSend, awaitingCustomer } = buildQuotePipeline(data.quotes);
@@ -1667,7 +1675,7 @@ function JobsView({
   };
 
   if (data.visits.length === 0) {
-    return <EmptyState title="No jobs yet" detail="Paid and scheduled visits will appear here." />;
+    return <EmptyState title="No jobs yet" detail="Paid and scheduled visits will appear here." action={{ label: "Open schedule", href: buildStaffModuleHref(workspaceSlug, "schedule") }} />;
   }
 
   const orderedVisits = [...data.visits].sort((left, right) => {
@@ -1930,7 +1938,7 @@ function InvoicesView({
 
   const customerInvoices = data.invoices.filter((invoice) => Boolean(invoice.quoteId));
   if (customerInvoices.length === 0) {
-    return <EmptyState title="No customer invoices yet" detail="Quote-backed customer invoices will appear here after billable visits are created. Commercial contract invoices are managed above." />;
+    return <EmptyState title="No customer invoices yet" detail="Quote-backed customer invoices will appear here after billable visits are created. Commercial accounts remain available in the adjacent workspace." action={{ label: "Review jobs", href: buildStaffModuleHref(workspaceSlug, "jobs") }} />;
   }
 
   const orderedInvoices = [...customerInvoices].sort((left, right) => {
@@ -2135,7 +2143,7 @@ function QualityView({
   }
 
   if (data.qualityCases.length === 0) {
-    return <EmptyState title="No quality cases" detail="Customer feedback that requires operational review will appear here." />;
+    return <EmptyState title="No quality cases" detail="Customer feedback that requires operational review will appear here." action={{ label: "Review completed jobs", href: buildStaffModuleHref(workspaceSlug, "jobs") }} />;
   }
 
   const orderedCases = [...data.qualityCases].sort((left, right) => {
