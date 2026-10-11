@@ -11,7 +11,7 @@ Make a genuine operational SaaS feel fast, trustworthy, and saleable without rep
 These references are workflow benchmarks, not designs to copy.
 
 ## Approved implementation scope
-Frontend-owned presentation files only: staff shell, page hierarchy, operational dashboard, inbox, dispatch, CRM queues, quotes, jobs, invoice collection, empty/loading/error states. Never modify customer portal styling, backend contracts, auth, migrations, payment flows or provider credentials.
+Frontend-owned presentation files only: staff shell, page hierarchy, operational dashboard, inbox, dispatch, CRM queues, quotes, jobs, invoice collection, empty/loading/error states, public marketing color identity and registration styling. Never modify customer portal styling, authentication behavior, backend contracts, migrations, payment flows or provider credentials.
 
 ## Visual language
 - **Graphite sidebar** (#142B33), not beige editorial or indigo Signal Desk.
@@ -23,7 +23,7 @@ Frontend-owned presentation files only: staff shell, page hierarchy, operational
 - **Truth:** all counts, statuses and timestamps derive from authorized snapshot. Avoid fake AI confidence/revenue/online state.
 - **Responsive:** 320, 390, 834, 1280 and 1440px tested against real authorized states when an isolated preview is available.
 
-## Acceptance
+## Accessibility target\nFollow WCAG 2.2 principles for focus visibility and usable targets; measure text contrast against actual colors, not visual intuition. Reference: https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance and https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum . The automated palette assertions cover selected colors only; browser accessibility acceptance remains mandatory.\n\n## Acceptance
 1. Operator can understand needs-attention, today's schedule, outstanding payments and intake work within 10 seconds.
 2. Inbox preserves triage/search + conversation context and navigates to real linked records.
 3. Dispatch surfaces unassigned visits, crew context and actual slot state without implying a capacity hold equals a confirmed job.
