@@ -3,7 +3,7 @@ import { resolveStaffActor, type ResolvedStaffActor } from "../../../features/op
 
 export type DeliveryHealth = "OK" | "PENDING" | "NEEDS_REVIEW";
 export type DeliveryState =
-  "QUEUED" | "RUNNING" | "PROVIDER_ACCEPTED" | "DELIVERED" | "READ" | "FAILED" | "SUPPRESSED";
+  "QUEUED" | "RUNNING" | "PROVIDER_ACCEPTED" | "DELIVERED" | "READ" | "FAILED" | "SUPPRESSED" | "UNKNOWN";
 export interface DeliveryTriageItem {
   messageId: string;
   conversationId: string;
@@ -12,7 +12,7 @@ export interface DeliveryTriageItem {
   createdAt: string;
   ageMinutes: number;
   health: DeliveryHealth;
-  reason?: "PROVIDER_FAILURE" | "SUPPRESSED_BY_POLICY" | "STALE_PENDING";
+  reason?: "PROVIDER_FAILURE" | "SUPPRESSED_BY_POLICY" | "STALE_PENDING" | "STATUS_MISSING";
 }
 export interface DeliveryTriageSnapshot {
   workspaceId: string;
@@ -85,7 +85,7 @@ export async function readOperationalDeliveryTriage(
     for (const row of scanned) {
       if (row.workspace_id !== workspace.id || !validId(row.id) ||
           !validId(row.conversation_id) || row.direction !== "OUTBOUND" ||
-          !states.has(row.delivery_state) ||
+          (row.delivery_state !== null && !states.has(row.delivery_state)) ||
           typeof row.created_at !== "string" ||
           !Number.isFinite(Date.parse(row.created_at))) {
         return fail("DELIVERY_TRIAGE_MESSAGE_SCOPE_INVALID", "Persisted delivery row did not match this workspace.");
@@ -145,11 +145,14 @@ export async function readOperationalDeliveryTriage(
       const conversation = conversations.get(row.conversation_id)!;
       if (permittedRequestIds &&
           (!conversation.requestId || !permittedRequestIds.has(conversation.requestId))) continue;
-      const deliveryState = row.delivery_state as DeliveryState;
+      const deliveryState = (row.delivery_state === null ? "UNKNOWN" : row.delivery_state) as DeliveryState;
       const ageMinutes = Math.max(0, Math.floor((now.getTime() - Date.parse(row.created_at)) / 60000));
       let health: DeliveryHealth = "OK";
       let reason: DeliveryTriageItem["reason"];
-      if (deliveryState === "FAILED" || deliveryState === "SUPPRESSED") {
+      if (deliveryState === "UNKNOWN") {
+        health = "NEEDS_REVIEW";
+        reason = "STATUS_MISSING";
+      } else if (deliveryState === "FAILED" || deliveryState === "SUPPRESSED") {
         health = "NEEDS_REVIEW";
         reason = deliveryState === "FAILED" ? "PROVIDER_FAILURE" : "SUPPRESSED_BY_POLICY";
       } else if (["QUEUED", "RUNNING", "PROVIDER_ACCEPTED"].includes(deliveryState)) {
