@@ -82,3 +82,16 @@ test("mobile header controls meet the 44 CSS pixel minimum and Chrome enforces i
   assert.ok(chrome.includes("width <= 390 && page.heroLabel"));
   assert.ok(chrome.includes("Public mobile navigation/action target below 44 CSS pixels"));
 });
+
+test("real Chrome checks truthful page titles and blocks unapproved preview indexing", () => {
+  const script = file("scripts/release/v3-public-browser-proof.mjs");
+  const root = file("src/app/layout.tsx");
+  assert.ok(script.includes("state.title.includes(\"ServiceDesk AI\")"));
+  assert.ok(script.includes("state.title.includes(page.title)"));
+  assert.ok(script.includes("state.metaDescription.length < 20"));
+  assert.ok(script.includes('meta[name=robots]'));
+  assert.ok(script.includes('process.env.SERVICEDESK_PUBLIC_INDEXING_ENABLED !== "true"'));
+  assert.ok(script.includes("Unapproved public preview unexpectedly permits search engine indexing"));
+  assert.ok(root.includes('index: publicIndexingEnabled'));
+  assert.ok(root.includes('follow: publicIndexingEnabled'));
+});
