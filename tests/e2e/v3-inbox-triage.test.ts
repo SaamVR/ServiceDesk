@@ -5,6 +5,7 @@ import {
   buildInboxTriage,
   inboxQueueHref,
   normalizeInboxQueue,
+  searchInboxQueue,
   type InboxTriageConversation,
   type InboxTriageMessage,
 } from "../../src/features/operations/inbox-triage";
@@ -110,6 +111,30 @@ describe("V3 operational Inbox triage", () => {
     expect(normalizeInboxQueue("all")).toBe("all");
     expect(inboxQueueHref("all")).toBe("?");
     expect(inboxQueueHref("handover", "a/b&c")).toBe("?queue=handover&conversation=a%2Fb%26c");
+  });
+
+  it("searches only customer, channel and latest external message over triage-approved threads", () => {
+    const rows = [
+      { id: "thread-a", customerId: "customer-a", handoverActive: false, channel: "EMAIL" },
+      { id: "thread-b", customerId: undefined, handoverActive: false, channel: "WHATSAPP" },
+    ];
+    const customerRows = [{ id: "customer-a", displayName: "Avery Patel" }];
+    const messageRows = [
+      { conversationId: "thread-a", direction: "INBOUND" as const, createdAt: "2026-10-11T01:00:00Z", body: "Old message" },
+      { conversationId: "thread-a", direction: "OUTBOUND" as const, createdAt: "2026-10-11T02:00:00Z", body: "Booking confirmed" },
+      { conversationId: "thread-a", direction: "INTERNAL" as const, createdAt: "2026-10-11T03:00:00Z", body: "Secret internal note" },
+    ];
+    expect(searchInboxQueue(rows, messageRows, customerRows, "avery").map((item) => item.id)).toEqual(["thread-a"]);
+    expect(searchInboxQueue(rows, messageRows, customerRows, "WHATSAPP").map((item) => item.id)).toEqual(["thread-b"]);
+    expect(searchInboxQueue(rows, messageRows, customerRows, "confirmed").map((item) => item.id)).toEqual(["thread-a"]);
+    expect(searchInboxQueue(rows, messageRows, customerRows, "Old message")).toEqual([]);
+    expect(searchInboxQueue(rows, messageRows, customerRows, "Secret internal note")).toEqual([]);
+    expect(rows).toHaveLength(2);
+  });
+
+  it("carries search state safely through queue links", () => {
+    expect(inboxQueueHref("handover", "a/b&c", "Briar & Co")).toBe("?queue=handover&conversation=a%2Fb%26c&search=Briar+%26+Co");
+    expect(inboxQueueHref("all", undefined, "  Cleaning ")).toBe("?search=Cleaning");
   });
 
   it("integrates query state, honest queue labels and preserved server commands", () => {
