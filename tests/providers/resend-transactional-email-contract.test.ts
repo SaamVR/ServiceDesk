@@ -92,6 +92,22 @@ describe("Resend REST transport compatibility", () => {
     });
   });
 
+  it("rejects header injection, whitespace and non-ASCII idempotency keys before sending", async () => {
+    let sends = 0;
+    const provider = createConfiguredEmailTransport(config, async () => {
+      sends++;
+      return { status: 200, body: JSON.stringify({ id: "unexpected" }) };
+    });
+    for (const unsafe of ["abc\\r\\nX-Evil: injected", "two words", "tab\\tkey", "newline\\nkey", "café", " leading", "trailing "]) {
+      expect(await provider.send({ ...job, idempotencyKey: unsafe })).toMatchObject({
+        ok: false, code: "EMAIL_IDEMPOTENCY_KEY_INVALID",
+      });
+    }
+    expect(sends).toBe(0);
+    expect(await provider.send({ ...job, idempotencyKey: "x".repeat(256) })).toMatchObject({ ok: true });
+    expect(sends).toBe(1);
+  });
+
   it("preserves suppression and response classification without sending", async () => {
     let count = 0;
     const provider = createConfiguredEmailTransport(config, async () => {
