@@ -41,7 +41,18 @@ function validateSource(event: ClaimedOutboxEvent, source: ConversationReplyAuth
   if (source.eventId !== event.id) return fail("OUTBOX_EVENT_ID_MISMATCH", "Authoritative conversation reply source did not match claimed event id.");
   if (source.workspaceId !== event.workspaceId) return fail("WORKSPACE_MISMATCH", "Authoritative conversation reply workspace did not match claimed event workspace.");
   if (stringPayload(event, "conversationId") !== source.conversationId) return fail("CONVERSATION_ID_MISMATCH", "Claimed conversation id did not match authoritative source.");
-  if (stringPayload(event, "messageId") !== source.messageId) return fail("MESSAGE_ID_MISMATCH", "Claimed message id did not match authoritative source.");
+  // The deployed enqueue RPC persists the message ID on messages.outbox_event_id,
+  // not in outbox_events.payload. Accept that deployed payload shape while
+  // rejecting a contradictory explicit messageId from newer callers.
+  if (event.payload.messageId !== undefined &&
+      stringPayload(event, "messageId") !== source.messageId) {
+    return fail("MESSAGE_ID_MISMATCH", "Claimed message id did not match authoritative source.");
+  }
+  if ((event.payload.channel !== undefined && event.payload.channel !== source.channel) ||
+      (event.payload.recipient !== undefined && event.payload.recipient !== source.recipient.recipientRef) ||
+      (event.payload.body !== undefined && event.payload.body !== source.body)) {
+    return fail("OUTBOX_REPLY_PAYLOAD_MISMATCH", "Queued reply did not match authoritative message and contact.");
+  }
   if (source.senderKind !== "STAFF") return fail("SENDER_KIND_UNSUPPORTED", "Only authorized STAFF conversation replies may become provider dispatch intents.");
   if (source.channel !== "WHATSAPP" && source.channel !== "EMAIL") return fail("CHANNEL_UNSUPPORTED", "Conversation reply channel must be WHATSAPP or EMAIL.");
   if (!source.recipient.recipientRef.trim()) return fail("RECIPIENT_MISSING", "Authoritative conversation reply recipient is missing.");
