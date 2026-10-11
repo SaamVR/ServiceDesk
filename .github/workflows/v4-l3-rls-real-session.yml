@@ -3,7 +3,7 @@ name: ServiceDesk V4 QA session RLS proof
 # require two distinct existing, email-confirmed fictional owner accounts.
 on:
   push:
-    branches: [feat/servicedesk-v4-l3-auth-rc-20261012, feat/servicedesk-v4-real-rls-uat-20261012]
+    branches: [feat/servicedesk-v4-l3-auth-rc-20261012, feat/servicedesk-v4-real-rls-uat-20261012, feat/servicedesk-v4-protected-qa-preflight-20261012]
   workflow_dispatch:
 permissions:
   contents: read
@@ -27,6 +27,7 @@ jobs:
       - name: Auth, owner bootstrap, verified identity and QA seed regression
         run: pnpm exec vitest run tests/e2e/v3-qa-registration-allowlist.test.ts tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-anonymous-definer-closure.test.ts tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts
       - run: pnpm typecheck
+      - run: node --check scripts/release/v4-protected-qa-preflight.mjs
   real-session-rls:
     if: github.event_name == 'workflow_dispatch' || github.ref_name == 'feat/servicedesk-v4-real-rls-uat-20261012'
     needs: auth-source
@@ -40,9 +41,19 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22.23.2, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      - name: Verify protected fictional QA secrets before expensive build or network checks
+        env:
+          SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+          SERVICEDESK_QA_OWNER_A_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_A_EMAIL }}
+          SERVICEDESK_QA_OWNER_A_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_A_PASSWORD }}
+          SERVICEDESK_QA_OWNER_A_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_A_WORKSPACE }}
+          SERVICEDESK_QA_OWNER_B_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_B_EMAIL }}
+          SERVICEDESK_QA_OWNER_B_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_B_PASSWORD }}
+          SERVICEDESK_QA_OWNER_B_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_B_WORKSPACE }}
+        run: node scripts/release/v4-protected-qa-preflight.mjs two-owner-rls
       - name: Verify cross-tenant denials under two real authenticated QA owner sessions
         env:
-          V4_QA_SUPABASE_URL: ${{ secrets.SERVICEDESK_QA_SUPABASE_URL }}
+          V4_QA_SUPABASE_URL: https://cpmmgivhlkfbiwzhlcey.supabase.co
           V4_QA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
           V4_QA_OWNER_A_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_A_EMAIL }}
           V4_QA_OWNER_A_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_A_PASSWORD }}
