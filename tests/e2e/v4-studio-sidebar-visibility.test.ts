@@ -21,7 +21,7 @@ function specificity(selector: string): number {
     + (selector.match(/\[aria-current/g) ?? []).length;
 }
 function ruleBody(selector: string): string {
-  const start = css.indexOf(selector + " {");
+  const start = css.lastIndexOf(selector + " {");
   expect(start, selector).toBeGreaterThanOrEqual(0);
   return css.slice(start + selector.length + 2).split("}")[0];
 }
