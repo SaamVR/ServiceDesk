@@ -1,335 +1,251 @@
-/* V3 staff application chrome. Scoped to the authenticated shell only.
-   Do not change public/customer/crew pages or the domain runtime. */
+/* ServiceDesk / Workroom: editorial precision for an operational product.
+   The authentication, workspace links and domain state remain server-owned.
+   Scope these tokens to staff surfaces; never restyle customer portals. */
 .v3Shell {
-  --app-sidebar-width: 254px;
-  --app-canvas: #f5f7fb;
-  --app-surface-muted: #eef2fb;
-  --app-text: #202a44;
-  --app-text-muted: #596780;
-  --app-text-subtle: #6d7890;
-  --app-border: #dfe4ef;
-  --app-accent: #4257af;
-  --app-accent-soft: #edf0ff;
-  --app-radius-sm: 7px;
-  --app-radius-md: 10px;
-  --app-radius-lg: 13px;
+  --app-sidebar-width: 242px;
+  --app-canvas: #f7f5f0;
+  --app-surface: #fffefb;
+  --app-surface-subtle: #faf8f3;
+  --app-surface-muted: #f0ede5;
+  --app-text: #202823;
+  --app-text-muted: #566058;
+  --app-text-subtle: #707a72;
+  --app-border: #e3e0d7;
+  --app-border-strong: #cbc7bc;
+  --app-accent: #ab5139;
+  --app-accent-hover: #853b29;
+  --app-accent-soft: #f8eee8;
+  --app-success: #246749;
+  --app-warning: #8b570a;
+  --app-danger: #aa3e35;
+  --app-info: #315e71;
+  --app-radius-sm: 6px;
+  --app-radius-md: 9px;
+  --app-radius-lg: 12px;
+  --app-shadow-sm: 0 1px 2px rgb(48 43 33 / 4%);
   min-width: 0;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
 }
-
 .v3Shell :global(.app-sidebar) {
   gap: 0;
-  padding: 25px 17px 18px;
-  border-right: 0;
-  background: #151f39;
-  scrollbar-color: #46547a #151f39;
+  padding: 26px 13px 18px;
+  border-right: 1px solid #dfd9ce;
+  background: #f0ede6;
+  scrollbar-color: #c6c0b4 transparent;
 }
-
 .v3Shell :global(.app-sidebar) :global(.app-brand) {
-  gap: 12px;
-  min-height: 65px;
-  margin-bottom: 6px;
-  padding: 0 7px 18px;
-  border-bottom: 1px solid #344362;
-  color: #f6f9f7;
+  min-height: 70px;
+  align-items: center;
+  gap: 11px;
+  margin: 0 6px 15px;
+  padding: 0 2px 22px;
+  border-bottom: 1px solid #d9d4c9;
+  color: #252923;
 }
-
 .v3Shell :global(.app-sidebar) :global(.app-brand-mark) {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  background: #b9c7ff;
-  box-shadow: none;
-  color: #1c2d63;
-  font-size: 1rem;
-  font-weight: 800;
+  position: relative;
+  width: 39px;
+  height: 39px;
+  border-radius: 10px;
+  background: #b45940;
+  color: #fff8f2;
+  font-family: Georgia, Cambria, serif;
+  font-size: 1.45rem;
+  font-weight: 500;
+  letter-spacing: -.11em;
+  box-shadow: 0 3px 0 #853b29;
 }
-
 .v3Shell :global(.app-sidebar) :global(.app-brand-copy) strong {
-  color: #f5f7ff;
   font-size: .99rem;
-  font-weight: 720;
-  letter-spacing: -.025em;
+  font-weight: 760;
+  letter-spacing: -.035em;
+  color: #202823;
 }
-
 .v3Shell :global(.app-sidebar) :global(.app-brand-copy) span {
-  color: #a9b7d9;
-  font-size: .77rem;
+  color: #656e64;
+  font-size: .75rem;
+  font-weight: 520;
 }
-
-.navigation {
-  display: grid;
-  align-content: start;
-}
-
-.v3Shell :global(.app-sidebar) .navigation {
-  gap: 23px;
-  padding: 24px 0 20px;
-}
-
-.navGroup {
-  display: grid;
-  gap: 4px;
-}
-
+.navigation { display: grid; align-content: start; }
+.v3Shell :global(.app-sidebar) .navigation { gap: 22px; padding: 12px 0 20px; }
+.navGroup { display: grid; gap: 3px; }
 .navGroupLabel {
-  margin: 0 13px 9px !important;
-  color: #95a7cf !important;
-  font-size: .7rem !important;
-  font-weight: 710 !important;
-  letter-spacing: .055em !important;
+  margin: 0 10px 8px !important;
+  color: #767c71 !important;
+  font-size: .66rem !important;
+  font-weight: 820 !important;
+  letter-spacing: .10em !important;
+  text-transform: uppercase;
 }
-
 .navLink {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 43px;
-  padding: 0 13px;
-  border-radius: 8px;
-  font-size: .87rem;
-  font-weight: 560;
+  gap: 11px;
+  min-height: 41px;
+  padding: 0 11px;
+  border-radius: 7px;
+  font-size: .83rem;
+  font-weight: 600;
   text-decoration: none;
+  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
 }
-
-.v3Shell :global(.app-sidebar) .navLink {
-  color: #c8d3ef;
-}
-
+.v3Shell :global(.app-sidebar) .navLink { color: #50584f; }
 .v3Shell :global(.app-sidebar) .navLink :global(.app-nav-icon) {
   width: 18px;
   height: 18px;
-  color: #93a4cd;
+  color: #80867b;
 }
-
 .v3Shell :global(.app-sidebar) .navLink:hover {
-  background: #293858;
-  color: #fff;
+  background: #e7e2d7;
+  color: #202823;
 }
-
 .v3Shell :global(.app-sidebar) .navLink[aria-current="page"] {
-  background: #354777;
-  color: #fff;
-  font-weight: 700;
+  background: #fffefb;
+  box-shadow: 0 1px 3px rgb(48 43 33 / 8%), inset 3px 0 #b45940;
+  color: #262b25;
+  font-weight: 760;
 }
-
-.v3Shell :global(.app-sidebar) .navLink[aria-current="page"] :global(.app-nav-icon) {
-  color: #c4d0ff;
-}
-
-.v3Shell :global(.app-sidebar) .navLink[aria-current="page"]::before {
-  left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  background: #b9c7ff;
-}
-
-.moreTools {
-  border-top: 1px solid #344362;
-  padding-top: 14px;
-}
-
+.v3Shell :global(.app-sidebar) .navLink[aria-current="page"] :global(.app-nav-icon) { color: #a74e38; }
+.moreTools { border-top: 1px solid #d9d4c9; padding-top: 14px; }
 .moreToolsTrigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 44px;
-  margin: 0;
-  padding: 0 13px;
-  border-radius: 8px;
-  color: #c8d3ef;
+  min-height: 40px;
+  padding: 0 11px;
+  border-radius: 7px;
+  color: #50584f;
   cursor: pointer;
-  font-size: .86rem;
-  font-weight: 650;
+  font-size: .82rem;
+  font-weight: 710;
   list-style: none;
 }
-
 .moreToolsTrigger::-webkit-details-marker { display: none; }
-.moreToolsTrigger:hover { background: #293858; color: #fff; }
-.moreToolsTrigger:focus-visible { outline: 2px solid #b9c7ff; outline-offset: 2px; }
-
-.moreToolsChevron {
-  display: inline-block;
-  font-size: 1.2rem;
-  line-height: 1;
-  transform: rotate(0deg);
-  transition: transform 150ms ease;
-}
-
+.moreToolsTrigger:hover { background: #e7e2d7; }
+.moreToolsChevron { font-size: 1.15rem; transition: transform 160ms ease; }
 .moreTools[open] .moreToolsChevron { transform: rotate(180deg); }
-
-.moreToolsItems {
-  display: grid;
-  gap: 4px;
-  padding: 6px 0 2px;
-}
-
+.moreToolsItems { display: grid; gap: 3px; padding: 4px 0; }
 .v3Shell :global(.app-sidebar) :global(.app-sidebar-footer) {
-  border-top: 1px solid #344362;
-  padding-top: 17px;
-  padding-left: 11px;
+  border-top: 1px solid #d9d4c9;
+  padding: 18px 10px 1px;
 }
-
-.v3Shell :global(.app-sidebar) :global(.app-sidebar-footer-link) {
-  color: #e4eaff;
-  font-size: .84rem;
-}
-
-.v3Shell :global(.app-sidebar) :global(.app-product-caption) {
-  color: #a9b7d9;
-  font-size: .76rem;
-}
-
+.v3Shell :global(.app-sidebar) :global(.app-sidebar-footer-link) { color: #353c34; font-size: .8rem; }
+.v3Shell :global(.app-sidebar) :global(.app-product-caption) { color: #767c71; font-size: .71rem; }
 .v3Shell :global(.app-topbar) {
-  height: 66px;
-  padding: 0 34px;
-  border-bottom: 1px solid #e0e5f0;
-  background: rgb(255 255 255 / 97%);
-  box-shadow: none;
-}
-
-.v3Shell :global(.app-topbar-context) {
-  gap: 11px;
-  font-size: .87rem;
-}
-
-.v3Shell :global(.app-topbar-context) strong {
-  font-weight: 700;
-}
-
-.v3Shell :global(.app-content) {
-  max-width: 1480px;
-  padding: 36px 38px 64px;
-}
-
-.v3Shell :global(.app-page-heading) h1 {
-  font-size: clamp(2rem, 2.5vw, 2.65rem);
-  letter-spacing: -.048em;
-}
-
-.v3Shell :global(.app-page-heading) p {
-  font-size: .95rem;
-  line-height: 1.55;
-}
-
-.v3Shell :global(.app-button-primary),
-.v3Shell :global(.app-button-secondary) {
-  min-height: 39px;
-}
-
-@media (max-width: 1120px) {
-  .v3Shell :global(.app-content) { padding-inline: 24px; }
-}
-
-@media (max-width: 900px) {
-  .v3Shell :global(.app-topbar) { height: 58px; padding: 0 16px; }
-  .v3Shell :global(.app-mobile-nav-panel) {
-    inset: 58px 0 auto 0;
-    max-height: calc(100dvh - 58px);
-    padding: 19px 18px 30px;
-  }
-  .v3Shell :global(.app-content) { padding: 26px 20px 52px; }
-  .navigation { gap: 18px; }
-  .navGroupLabel { color: #5b6d69 !important; margin-bottom: 6px !important; }
-  .v3Shell :global(.app-mobile-links) .navLink {
-    min-height: 46px;
-    color: #334a49;
-  }
-  .v3Shell :global(.app-mobile-links) .navLink:hover { background: #edf3ee; }
-  .v3Shell :global(.app-mobile-links) .navLink[aria-current="page"] {
-    background: #e5f3ed;
-    color: #0c6149;
-    font-weight: 720;
-  }
-  .v3Shell :global(.app-mobile-links) .moreTools {
-    border-color: #e0e7e2;
-  }
-  .v3Shell :global(.app-mobile-links) .moreToolsTrigger { color: #344f48; }
-  .v3Shell :global(.app-mobile-links) .moreToolsTrigger:hover { background: #edf3ee; }
-  .v3Shell :global(.app-mobile-links) .moreToolsTrigger:focus-visible { outline-color: #126b50; }
-}
-
-@media (max-width: 620px) {
-  .v3Shell :global(.app-content) { padding: 24px 15px 44px; }
-  .v3Shell :global(.app-page-heading) h1 { font-size: 1.85rem; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .moreToolsChevron { transition: none; }
-}
-
-/* Signal Desk: clear navigation hierarchy without a heavy dashboard hero.
-   Accent is reserved for focus/selected actions, never status semantics. */
-.v3Shell {
-  --app-surface: #fff;
-  --app-focus: #839bff;
-  font-family: Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-}
-.v3Shell :global(.app-sidebar) {
-  box-shadow: inset -1px 0 #263552;
-}
-.v3Shell :global(.app-sidebar) .navLink {
-  transition: background 160ms ease, color 160ms ease;
-}
-.v3Shell :global(.app-sidebar) .navLink[aria-current="page"] {
-  box-shadow: inset 3px 0 #a7b9ff;
-}
-.v3Shell :global(.app-main-column) {
-  min-width: 0;
-}
-.v3Shell :global(.app-topbar) {
-  gap: 16px;
+  height: 68px;
+  gap: 18px;
+  padding: 0 36px;
+  border-bottom: 1px solid #e7e2d9;
+  background: rgb(255 254 251 / 96%);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 70%);
 }
 .v3Shell :global(.app-topbar-context) {
+  gap: 10px;
   min-width: 0;
   flex: 0 0 auto;
+  color: #858980;
+  font-size: .81rem;
 }
-.v3Shell :global(.app-topbar-actions) {
-  margin-left: auto;
+.v3Shell :global(.app-topbar-context) strong {
+  color: #2a322c;
+  font-weight: 760;
+}
+.v3Shell :global(.app-topbar-actions) { gap: 10px; margin-left: auto; }
+.v3Shell :global(.app-topbar-actions) :global(.app-topbar-link),
+.v3Shell :global(.app-account-link) {
+  color: #50584f;
+  font-size: .76rem;
+  font-weight: 700;
+}
+.v3Shell :global(.app-account-link) :global(.app-avatar) {
+  background: #e9dfd2;
+  color: #7a4938;
+  border-radius: 50%;
 }
 .v3Shell :global(.app-content) {
   width: 100%;
-  max-width: 1660px;
+  max-width: 1590px;
+  padding: 37px clamp(22px, 3vw, 52px) 76px;
+}
+.v3Shell :global(.app-page-header) { margin-bottom: 26px; }
+.v3Shell :global(.app-page-heading) h1 {
+  font-family: Georgia, Cambria, "Times New Roman", serif;
+  font-size: clamp(2rem, 2.55vw, 2.7rem);
+  font-weight: 600;
+  letter-spacing: -.045em;
+  line-height: 1.16;
+}
+.v3Shell :global(.app-page-heading) p { font-size: .87rem; line-height: 1.6; }
+.v3Shell :global(.app-eyebrow) { color: #a64c35 !important; }
+.v3Shell :global(.app-panel) {
+  box-shadow: 0 2px 8px rgb(46 43 34 / 3%);
 }
 .v3Shell :global(.app-button-primary) {
-  background: #4257af;
-  border-color: #4257af;
+  background: #a84e36;
+  border-color: #a84e36;
   color: #fff;
 }
 .v3Shell :global(.app-button-primary):hover {
-  background: #304495;
+  background: #843a28;
+  border-color: #843a28;
 }
+.v3Shell :global(.app-button-secondary) {
+  background: #fffefa;
+  border-color: #d6d0c4;
+  color: #343b34;
+}
+.v3Shell :global(.app-button-secondary):hover { background: #f1ece3; border-color: #b9b1a4; }
 .v3Shell :global(a):focus-visible,
-.v3Shell :global(button):focus-visible {
-  outline: 3px solid #839bff;
-  outline-offset: 2px;
+.v3Shell :global(button):focus-visible,
+.v3Shell :global(input):focus-visible,
+.v3Shell :global(textarea):focus-visible,
+.v3Shell summary:focus-visible {
+  outline: 3px solid #ad633f;
+  outline-offset: 3px;
 }
+.v3Shell :global(.app-status-warning) { background: #fcf0d9; color: #80530a; }
+.v3Shell :global(.app-status-danger) { background: #fbe7e2; color: #9d392c; }
+.v3Shell :global(.app-status-success) { background: #e4f1e7; color: #245b40; }
+.v3Shell :global(.app-status-info) { background: #e5f0f1; color: #2a5c6e; }
 @media (max-width: 1280px) {
   .v3Shell :global(.app-topbar) { gap: 10px; padding-inline: 20px; }
   .v3Shell :global(.app-topbar-context) > span:first-child { display: none; }
 }
 @media (max-width: 900px) {
-  .v3Shell :global(.app-topbar) { gap: 8px; padding-inline: 16px; }
-  .v3Shell :global(.app-topbar-context) { font-size: .79rem; }
-  .v3Shell :global(.app-mobile-links) .navLink[aria-current="page"] {
-    color: #304495;
-    background: #e9edff;
+  .v3Shell :global(.app-topbar) { height: 60px; gap: 9px; padding-inline: 17px; }
+  .v3Shell :global(.app-mobile-nav-panel) {
+    inset: 60px 0 auto 0;
+    max-height: calc(100dvh - 60px);
+    padding: 15px 16px 25px;
+    background: #faf8f3;
   }
-  .v3Shell :global(.app-mobile-links) .navLink:hover { background: #eef1fc; }
-  .v3Shell :global(.app-mobile-links) .moreToolsTrigger:focus-visible { outline-color: #657cda; }
+  .v3Shell :global(.app-content) { padding: 27px 22px 54px; }
+  .navigation { gap: 17px; }
+  .v3Shell :global(.app-mobile-links) .navLink { min-height: 46px; color: #3a413a; }
+  .v3Shell :global(.app-mobile-links) .navLink:hover { background: #ebe5db; }
+  .v3Shell :global(.app-mobile-links) .navLink[aria-current="page"] {
+    background: #fff; box-shadow: inset 3px 0 #b45940; color: #302f29;
+  }
+  .v3Shell :global(.app-mobile-links) .moreToolsTrigger { color: #363d35; }
+}
+@media (max-width: 680px) {
+  .v3Shell :global(.app-topbar-actions) > :global(.app-topbar-link):first-child { display: none; }
+  .v3Shell :global(.app-account-link) span:last-child { display: none; }
+}
+@media (max-width: 620px) {
+  .v3Shell :global(.app-content) { padding: 23px 15px 43px; }
+  .v3Shell :global(.app-page-heading) h1 { font-size: 2rem; }
+  .v3Shell :global(.app-topbar-context) { font-size: .75rem; }
+  .v3Shell :global(.app-topbar-actions) { gap: 4px; }
 }
 @media (max-width: 390px) {
   .v3Shell :global(.app-topbar) { padding-inline: 10px; }
-  .v3Shell :global(.app-topbar-actions) { gap: 4px; }
   .v3Shell :global(.app-topbar-context) { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .v3Shell :global(.app-sidebar) .navLink { transition: none; }
-}
-
-@media (max-width: 680px) {
-  /* The primary Inbox remains in mobile navigation, so keep account and
-     workspace switching usable at 320px rather than overflowing the topbar. */
-  .v3Shell :global(.app-topbar-actions) > :global(.app-topbar-link):first-child { display: none; }
-  .v3Shell :global(.app-account-link) span:last-child { display: none; }
+  .navLink, .moreToolsChevron { transition: none; }
 }
