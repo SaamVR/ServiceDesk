@@ -8,6 +8,7 @@ import {
 } from "@/components/product";
 import { applyOperationalManualPayment } from "@/features/operations/operational-product-runtime";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
+import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import {
   createCommercialBillingDraft,
   finalizeCommercialBillingDraft,
@@ -90,10 +91,34 @@ function parseAmountMinor(value: string): number | undefined {
 
 export async function CommercialBillingWorkspace({ workspaceSlug }: { workspaceSlug: string }) {
   const result = await loadCommercialFinanceSnapshot(workspaceSlug);
-  if (!result.ok) return null;
+  if (!result.ok) {
+    // A failed commercial read must not look like an empty account or a successful load.
+    // Keep internal data-access errors out of the public-facing workbench.
+    return (
+      <section className={styles.workspace} aria-label="Commercial contract billing">
+        <FeedbackBanner
+          tone="danger"
+          title="Commercial accounts could not be loaded"
+          description="We couldn't retrieve your commercial billing records. No invoices or payments were changed. Retry or check your workspace access."
+          action={<a href="?surface=commercial">Try again</a>}
+        />
+      </section>
+    );
+  }
 
   const { portfolio, drafts, invoices, billingReady, accounting, accountingBackfill, accountingReady, directCosts, directCostsReady, profitability, profitabilityReady, taxProfiles, taxProfilesReady, canManageTax, timeZone } = result.value;
-  if (!portfolio.feature.enabled) return null;
+  if (!portfolio.feature.enabled) {
+    return (
+      <section className={styles.workspace} aria-label="Commercial contract billing">
+        <FeedbackBanner
+          tone="neutral"
+          title="Commercial accounts are not enabled"
+          description="Contract billing is not active for this workspace. Customer collections remain available separately."
+          action={<a href="?surface=customers">Go to customer collections</a>}
+        />
+      </section>
+    );
+  }
 
   const contracts = portfolio.contracts.filter((contract) => contract.status === "ACTIVE");
   const activeContractIds = new Set(contracts.map((contract) => contract.id));
