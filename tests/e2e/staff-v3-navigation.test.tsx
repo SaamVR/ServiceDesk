@@ -115,7 +115,7 @@ describe("V3 staff workday shell", () => {
     const html = renderStaffShell("/app/acme-west/automations");
     expect(html).toContain("AI &amp; Automation");
     expect(html.split('href="/app/acme-west/automations"').length - 1).toBeGreaterThanOrEqual(2);
-    expect(html).toMatch(/aria-current="page"[^>]*href="\\/app\\/acme-west\\/automations"/);
+    expect(html).toMatch(new RegExp('aria-current="page"[^>]*href="/app/acme-west/automations"'));
     // AI is not hidden behind a collapsed secondary tools section.
     expect(html.match(/<details[^>]*open=""/g)).toBeNull();
   });
