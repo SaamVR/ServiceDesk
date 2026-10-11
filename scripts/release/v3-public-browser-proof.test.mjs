@@ -37,6 +37,7 @@ test("real Chrome expected headings agree with route-authored product text", () 
     "Help for the workflows your team uses every day.",
     "Privacy starts with workspace and role boundaries.",
     "Clear product boundaries before launch.",
+    "See how a little clarity changes the whole workday.",
     "Ready for what's next?",
   ];
   for (const title of expected) {
@@ -50,6 +51,7 @@ test("public Chrome requires page-specific bright workboards rather than repeate
   const script = file("scripts/release/v3-public-browser-proof.mjs");
   const component = file("src/features/product/BrightProductExperience.tsx");
   const home = file("src/features/product/BrightHomeExperience.tsx");
+  const tourPage = file("src/app/tour/page.tsx");
   const shell = file("src/components/shell/MarketingShell.tsx");
   const names = [
     "Illustrative AI-assisted service request",
