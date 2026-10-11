@@ -111,6 +111,13 @@ describe("V3 staff workday shell", () => {
     expect(html).toContain('href="/app/crew%25work/overview"');
   });
 
+  it("keeps Today and workflow counts scoped to the customer collections destination", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src/features/operations/StaffOverviewDashboard.tsx"), "utf8");
+    const counts = readFileSync(join(process.cwd(), "src/features/operations/operational-journey-counts.ts"), "utf8");
+    expect(dashboard).toContain("summarizeOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId)))");
+    expect(counts).toContain("summarizeOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId))).count");
+  });
+
   it("keeps request workday quote context bound to the latest valid version", () => {
     const routeSource = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.tsx"), "utf8");
     const requests = routeSource.slice(routeSource.indexOf("function RequestsView("), routeSource.indexOf("function QuotesView("));
