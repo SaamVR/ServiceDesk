@@ -107,7 +107,7 @@ describe("provider recovery scheduler", () => {
     const broken = [
       record({ idempotencyKey: "invalid-due", nextAttemptAt: "not-a-date" }),
       record({ idempotencyKey: "invalid-queue", queuedAt: "not-a-date" }),
-      record({ idempotencyKey: "missing-key", idempotencyKey: "" }),
+      record({ idempotencyKey: "" }),
       record({ idempotencyKey: "valid" }),
     ];
     const scheduled = planProviderRecoveryBatch({
