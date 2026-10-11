@@ -19,6 +19,8 @@ const pages = [
   { slug: "help", path: "/help", title: "Help for the workflows your team uses every day.", heroLabel: "help overview" },
   { slug: "privacy", path: "/privacy", title: "Privacy starts with workspace and role boundaries.", heroLabel: "privacy overview" },
   { slug: "terms", path: "/terms", title: "Clear product boundaries before launch.", heroLabel: "terms overview" },
+  { slug: "tour", path: "/tour", title: "Controlled tour in an isolated showcase workspace.", heroLabel: "Clean Air product tour introduction" },
+  { slug: "sandbox", path: "/sandbox", title: "One job. Every step. Your decisions." },
   { slug: "sign-in", path: "/auth/sign-in", title: "Ready for what's next?" },
 ];
 const widths = [320, 390, 834, 1280, 1440];
@@ -248,6 +250,20 @@ try {
             JSON.stringify({ ok: proof?.ok, expected, excerpt: proof?.text?.slice(0, 180) }));
         }
         captures.push(await snapshot(page, width, "interactive-selected"));
+      }
+      if (page.slug === "sandbox" && (width === 390 || width === 1280)) {
+        const proof = await inspect(
+          '(async () => {' +
+          'const button=[...document.querySelectorAll("button")].find(el=>el.textContent?.includes("Prepare sample quote"));' +
+          'if(!button)return{ok:false};button.click();await new Promise(r=>setTimeout(r,200));' +
+          'const text=document.body.textContent||"";' +
+          'return{ok:text.includes("Simulate quote acceptance"),notices:[...document.querySelectorAll("[role=status]")].map(el=>el.textContent||"")};' +
+          '})()'
+        );
+        if (!proof?.ok || !proof.notices?.some(x => x.includes("real pricing function"))) {
+          throw new Error("V4 local-only sandbox quote progression failed: " + width);
+        }
+        captures.push(await snapshot(page, width, "sample-quote-prepared"));
       }
       // Open the actual native mobile disclosure; closed-menu screenshots
       // alone cannot prove destinations are accessible to mobile visitors.
