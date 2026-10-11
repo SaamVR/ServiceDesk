@@ -40,7 +40,9 @@ function memory(options: {
       messages = messages.map(m => matched.includes(m) ? {
         ...m, delivery_state: change.deliveryState, provider_occurred_at: change.providerOccurredAt,
       } : m);
-      return matched;
+      return matched.map(m => ({
+        ...m, delivery_state: change.deliveryState, provider_occurred_at: change.providerOccurredAt,
+      }));
     },
   };
   return { port, updates, setMessage: (v: WhatsAppOutboundMessage[]) => { messages = v; } };
