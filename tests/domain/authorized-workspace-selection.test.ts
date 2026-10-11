@@ -213,3 +213,33 @@ describe("duplicate authenticated membership integrity", () => {
     }
   });
 });
+
+describe("malformed authorized database projection resilience", () => {
+  it("ignores null and non-string workspace identifiers without throwing", () => {
+    for (const value of [null, 123, [], { nested: "one" }]) {
+      const invalid = member("OWNER", "one", { workspaceId: value as unknown as string });
+      expect(resolveAuthorizedWorkspaceDestination([invalid])).toEqual({ kind: "NONE" });
+      expect(resolveAuthorizedStaffWorkspaceSelection([invalid], "one")).toEqual({ kind: "NONE" });
+    }
+  });
+
+  it("skips malformed slugs and recovers a safe name fallback", () => {
+    for (const slug of [null, undefined, {}, [], 123]) {
+      expect(resolveAuthorizedWorkspaceDestination([
+        member("OWNER", "one", { slug: slug as string }),
+      ])).toEqual({ kind: "NONE" });
+    }
+    expect(resolveAuthorizedWorkspaceDestination([
+      member("OWNER", "one", { name: null as unknown as string, slug: "north-office" }),
+    ])).toMatchObject({ kind: "STAFF", workspace: { name: "north-office" } });
+  });
+
+  it("preserves safe active staff records when adjacent membership data is corrupt", () => {
+    const decision = resolveAuthorizedWorkspaceDestination([
+      member("OWNER", "bad", { slug: {} as string }),
+      member("DISPATCHER", "good", { slug: "clean-office" }),
+      member("OWNER", "missing", { workspaceId: null as unknown as string }),
+    ]);
+    expect(decision).toMatchObject({ kind: "STAFF", href: "/app/clean-office/overview" });
+  });
+});
