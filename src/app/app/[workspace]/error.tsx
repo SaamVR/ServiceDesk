@@ -14,7 +14,7 @@ export default function WorkspaceError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const { workspace } = useParams<{ workspace?: string }>();
+  const { workspace } = useParams<{ workspace: string }>();
   const overviewHref = workspace
     ? "/app/" + encodeURIComponent(workspace) + "/overview"
     : "/auth/select-workspace";
