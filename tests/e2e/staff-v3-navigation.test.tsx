@@ -17,6 +17,7 @@ import "./v3-studio-command-record-search.test";
 import "./v3-studio-reply-brief.test";
 import "./v3-studio-finance-workspaces.test";
 import "./v3-studio-invoice-queue.test";
+import "./v3-quality-triage.test";
 import "./v2-product-truth.test";
 import "./v3-studio-schedule-window.test";
 import "./v3-studio-operational-continuity.test";
