@@ -19,7 +19,7 @@ jobs:
       - name: Check live Render build identity and public routes
         env:
           REVIEW_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
-          EXPECTED_SHA: 92efdc81538a0524220b022bc11bebce62435d8c
+          EXPECTED_SHA: 404721bc5b0462b7663c6b112ac5ed3a48701d86
         run: |
           node --input-type=module <<'JS'
           const origin = process.env.REVIEW_ORIGIN;
@@ -65,6 +65,7 @@ jobs:
             ["/contact", "See ServiceDesk against your real cleaning workflow."],
             ["/auth/sign-in", "Ready for what's next?"],
             ["/tour", "Controlled tour in an isolated showcase workspace."],
+            ["/sandbox", "One job. Every step. Your decisions."],
           ];
           for (const [path, expected] of routes) {
             const html = await get(path);
