@@ -15,7 +15,7 @@ export function normalizeInvoiceQueue(input?: string | null): InvoiceQueue {
  * Drafts are not bills sent to a customer, even when their calculated balance is
  * positive. The payment backend remains authoritative for all mutations.
  */
-export function isCollectibleInvoice(invoice: InvoiceCollectionRecord): boolean {
+export function isCollectibleInvoice(invoice: Pick<InvoiceCollectionRecord, "status" | "balanceMinor">): boolean {
   return (invoice.status === "ISSUED" || invoice.status === "PARTIALLY_PAID")
     && Number.isFinite(invoice.balanceMinor) && invoice.balanceMinor > 0;
 }
