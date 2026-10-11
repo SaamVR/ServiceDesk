@@ -1,36 +1,20 @@
 name: ServiceDesk V3 frontend PR integrity
 
-# One short, dependency-cached UI gate per changed PR. No secrets,
-# provider calls, browser login, preview deploy or production mutation.
+# One cached, isolated frontend gate. No external providers, production
+# migrations, screenshots containing customer data, or live write calls.
 on:
   pull_request:
     branches:
       - feat/servicedesk-v3-coordination-20261011
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - "src/components/product/StaffAppShell.tsx"
-      - "src/components/product/StaffCommandPalette*"
-      - "src/components/product/StaffWorkspaceV3.module.css"
-      - "src/features/operations/staff-command-search.ts"
-      - "src/features/operations/inbox-triage.ts"
-      - "src/features/operations/StaffOverviewDashboard*"
-      - "tests/e2e/staff-v3-navigation.test.tsx"
-      - "tests/e2e/v3-staff-command-search.test.ts"
-      - "tests/e2e/v3-inbox-triage.test.ts"
-      - "tests/e2e/v2-professional-dashboard-ui.test.ts"
-      - "src/features/operations/OperationalProductRoute.tsx"
-      - "src/features/operations/RecordDirectorySearch*"
-      - "src/features/operations/record-directory.ts"
-      - "src/features/operations/staff-snapshot-index.ts"
-      - "src/features/operations/settings-navigation.ts"
-      - "tests/e2e/v3-settings-context.test.ts"
+      - "src/components/product/**"
+      - "src/features/operations/**"
       - "src/app/app/[workspace]/**"
-      - "tests/e2e/v3-record-directory.test.tsx"
-      - "tests/e2e/v3-jobs-queue.test.tsx"
-      - "src/features/operations/jobs-queue.ts"
-      - "src/features/operations/JobQueueFilters*"
-      - "tests/e2e/v3-staff-route-resilience.test.tsx"
-      - "tests/e2e/v3-inbox-search.test.ts"
+      - "tests/e2e/v3-*.test.ts"
+      - "tests/e2e/v3-*.test.tsx"
+      - "tests/e2e/staff-v3-navigation.test.tsx"
+      - "tests/e2e/v2-professional-dashboard-ui.test.ts"
       - "tests/e2e/v2-professional-schedule-ui.test.ts"
       - ".github/workflows/v3-ui-focused-pr.yml"
 
@@ -45,7 +29,7 @@ jobs:
   ui-contracts:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 9
+    timeout-minutes: 14
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,41 +44,43 @@ jobs:
           cache: pnpm
       - name: Install pinned dependencies
         run: pnpm install --frozen-lockfile
-      - name: UI and triage regression tests
+      - name: Frontend product and accessibility regression
         run: >-
           pnpm exec vitest run
           tests/e2e/v3-staff-command-search.test.ts
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-inbox-triage.test.ts
-          src/features/operations/RecordDirectorySearch.tsx
-          src/features/operations/record-directory.ts
-          src/features/operations/staff-snapshot-index.ts
-          src/features/operations/settings-navigation.ts
-          tests/e2e/v3-settings-context.test.ts
-          src/app/app/'[workspace]'/error.tsx
-          src/app/app/'[workspace]'/loading.tsx
-          tests/e2e/v3-record-directory.test.tsx
-          tests/e2e/v3-jobs-queue.test.tsx
-          tests/e2e/v3-settings-context.test.ts
-          tests/e2e/v3-staff-route-resilience.test.tsx
-          tests/e2e/v3-jobs-queue.test.tsx
-          src/features/operations/jobs-queue.ts
-          src/features/operations/JobQueueFilters.tsx
-          tests/e2e/v2-professional-dashboard-ui.test.ts
-          tests/e2e/v3-record-directory.test.tsx
-          tests/e2e/v3-staff-route-resilience.test.tsx
           tests/e2e/v3-inbox-search.test.ts
+          tests/e2e/v3-record-directory.test.tsx
+          tests/e2e/v3-jobs-queue.test.tsx
+          tests/e2e/v3-staff-route-resilience.test.tsx
+          tests/e2e/v3-settings-context.test.ts
+          tests/e2e/v3-studio-visual-standard.test.ts
+          tests/e2e/v3-studio-dashboard.test.ts
+          tests/e2e/v3-studio-workspaces.test.ts
+          tests/e2e/v2-professional-dashboard-ui.test.ts
           tests/e2e/v2-professional-schedule-ui.test.ts
       - name: Typecheck
         run: pnpm typecheck
-      - name: Lint changed UI
+      - name: Lint redesigned frontend
         run: >-
           pnpm exec eslint
           src/components/product/StaffAppShell.tsx
           src/components/product/StaffCommandPalette.tsx
-          src/features/operations/staff-command-search.ts
-          src/features/operations/inbox-triage.ts
           src/features/operations/StaffOverviewDashboard.tsx
+          src/features/operations/OperationalProductRoute.tsx
+          src/features/operations/inbox-triage.ts
+          src/features/operations/record-directory.ts
+          src/features/operations/RecordDirectorySearch.tsx
+          src/features/operations/JobQueueFilters.tsx
+          src/features/operations/jobs-queue.ts
+          src/features/operations/staff-snapshot-index.ts
+          src/features/operations/settings-navigation.ts
+          src/app/app/'[workspace]'/error.tsx
+          src/app/app/'[workspace]'/loading.tsx
           tests/e2e/staff-v3-navigation.test.tsx
-          tests/e2e/v3-staff-command-search.test.ts
-          tests/e2e/v3-inbox-triage.test.ts
+          tests/e2e/v3-studio-visual-standard.test.ts
+          tests/e2e/v3-studio-dashboard.test.ts
+          tests/e2e/v3-studio-workspaces.test.ts
+      - name: Compile Next production frontend
+        run: pnpm build
