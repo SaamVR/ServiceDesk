@@ -28,6 +28,13 @@ function citationKey(citation: KnowledgeCitation): string {
 export function createConfiguredAiService(deps: ConfiguredAiServiceDependencies): AiService {
   return {
     async respond(ctx: ActorContext, conversationId: string, input: AiMessageInput): Promise<Result<AssistantTurn>> {
+      // Only an authenticated, workspace-scoped staff actor may ask the
+      // configured service to analyze already persisted customer messages.
+      // Customer/visitor supplied workspace IDs are never authority.
+      if (!ctx.userId?.trim() || (ctx.role !== "OWNER" && ctx.role !== "DISPATCHER")) {
+        return { ok: false, code: "AI_STAFF_AUTH_REQUIRED",
+          message: "Configured AI requires an authenticated workspace staff actor." };
+      }
       if (!ctx.workspaceId?.trim() || !conversationId?.trim() || !input.messageId?.trim() ||
           !input.text?.trim() || input.text.length > 8_000 ||
           !Number.isFinite(Date.parse(input.receivedAt))) {
