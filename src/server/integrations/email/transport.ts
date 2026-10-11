@@ -111,11 +111,18 @@ function bodyFor(config: EmailTransportConfig, job: TransactionalEmailJob): stri
   });
 }
 
-function parseProviderMessageId(body: string): Result<string> {
+function parseProviderMessageId(body: string, resend: boolean): Result<string> {
   try {
-    const parsed = JSON.parse(body) as { id?: unknown; messageId?: unknown };
-    const id = typeof parsed.id === "string" ? parsed.id : typeof parsed.messageId === "string" ? parsed.messageId : undefined;
-    if (!id?.trim()) return { ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE", message: "Email provider response is missing message id." };
+    const parsed = JSON.parse(body) as { id?: unknown; messageId?: unknown } | null;
+    // Resend documents an "id" field: a legacy generic transport's
+    // "messageId" alias is not evidence of acceptance by Resend.
+    const id = resend
+      ? parsed?.id
+      : (typeof parsed?.id === "string" ? parsed.id : parsed?.messageId);
+    if (typeof id !== "string" || !id.trim() ||
+        (resend && !/^[A-Za-z0-9_-]{1,128}$/.test(id))) {
+      return { ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE", message: "Email provider response has no valid message id." };
+    }
     return { ok: true, value: id };
   } catch {
     return { ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE", message: "Email provider response was malformed JSON." };
@@ -186,7 +193,7 @@ export function createConfiguredEmailTransport(config: EmailTransportConfig, htt
         });
 
         if (response.status < 200 || response.status >= 300) return providerFailure(response.status);
-        const providerMessageId = parseProviderMessageId(response.body);
+        const providerMessageId = parseProviderMessageId(response.body, isResendEndpoint(config));
         if (!providerMessageId.ok) return providerMessageId;
 
         return {

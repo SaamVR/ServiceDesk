@@ -56,6 +56,9 @@ export function resolveAuthorizedWorkspaceDestination(
   rows: readonly AuthorizedWorkspaceMembership[],
 ): AuthorizedWorkspaceDecision {
   const staff = new Map<string, AuthorizedStaffDestination>();
+  // A membership join must not map the same immutable workspace ID to
+  // different slugs. Fail closed rather than making routing row-order-dependent.
+  const conflictingSlugs = new Set<string>();
   let hasCrewAccess = false;
 
   for (const row of rows) {
@@ -74,8 +77,15 @@ export function resolveAuthorizedWorkspaceDestination(
       role: row.role,
       href: "/app/" + encodeURIComponent(row.slug) + "/overview",
     };
+    if (conflictingSlugs.has(row.workspaceId)) continue;
     const previous = staff.get(row.workspaceId);
-    if (!previous || staffRoleRank[next.role] < staffRoleRank[previous.role]) {
+    if (previous && previous.slug !== next.slug) {
+      conflictingSlugs.add(row.workspaceId);
+      staff.delete(row.workspaceId);
+      continue;
+    }
+    if (!previous || staffRoleRank[next.role] < staffRoleRank[previous.role] ||
+      (next.role === previous.role && next.name.localeCompare(previous.name) < 0)) {
       staff.set(row.workspaceId, next);
     }
   }

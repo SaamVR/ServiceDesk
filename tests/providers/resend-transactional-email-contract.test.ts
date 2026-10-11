@@ -108,6 +108,36 @@ describe("Resend REST transport compatibility", () => {
     expect(sends).toBe(1);
   });
 
+  it("rejects malformed, alias-only or untrusted Resend success receipts", async () => {
+    const cases = [
+      { messageId: "generic-alias-only" },
+      { id: "" },
+      { id: "embedded\\nnewline" },
+      { id: "x".repeat(129) },
+      { id: 42 },
+      null,
+    ];
+    for (const body of cases) {
+      const provider = createConfiguredEmailTransport(config, async () => ({
+        status: 200, body: JSON.stringify(body),
+      }));
+      const result = await provider.send(job);
+      expect(result).toMatchObject({ ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE" });
+      expect(JSON.stringify(result)).not.toContain("controlled-recipient@example.test");
+    }
+  });
+
+  it("does not confuse HTTP acceptance with account-verification delivery", async () => {
+    const provider = createConfiguredEmailTransport(config, async () => ({
+      status: 202, body: JSON.stringify({ id: "synthetic-message-202" }),
+    }));
+    const result = await provider.send(job);
+    expect(result).toMatchObject({
+      ok: true,
+      value: { providerMessageId: "synthetic-message-202", evidence: { verification: "CONTRACT_TESTED" } },
+    });
+  });
+
   it("preserves suppression and response classification without sending", async () => {
     let count = 0;
     const provider = createConfiguredEmailTransport(config, async () => {
