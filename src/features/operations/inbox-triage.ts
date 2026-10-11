@@ -174,18 +174,19 @@ export function searchInboxQueue<
   customers: readonly Customer[],
   rawSearch?: string | null,
 ): Conversation[] {
-  const query = rawSearch?.trim().slice(0, 120).toLocaleLowerCase();
+  const query = (rawSearch ?? "").trim().replace(/\s+/g, " ").slice(0, 120).toLocaleLowerCase("en");
   if (!query) return [...conversations];
+  const tokens = query.split(" ").filter(Boolean);
 
   const names = new Map(customers.map((customer) =>
     [customer.id, customer.displayName?.toLocaleLowerCase() ?? ""] as const));
   const latest = indexLatestExternalInboxMessages(messages);
   return conversations.filter((conversation) => {
-    const searchable = [
+    const fields = [
       names.get(conversation.customerId ?? "") ?? "",
       conversation.channel ?? "",
       latest.get(conversation.id)?.body ?? "",
-    ].join(" ").toLocaleLowerCase();
-    return searchable.includes(query);
+    ].map((value) => value.toLocaleLowerCase("en"));
+    return tokens.every((token) => fields.some((field) => field.includes(token)));
   });
 }
