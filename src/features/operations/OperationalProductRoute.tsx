@@ -43,7 +43,7 @@ import { RecordDirectorySearch } from "./RecordDirectorySearch";
 import { filterJobsQueue, filterJobsSearch, indexJobProgress, jobsActionFeedbackPrefix, jobsQueueHref, normalizeJobsQueue, normalizeJobsSearch } from "./jobs-queue";
 import { JobQueueSearch } from "./JobQueueSearch";
 import { JobQueueFilters } from "./JobQueueFilters";
-import { countStaffBy, indexStaffById } from "./staff-snapshot-index";
+import { countStaffBy, indexCurrentQuoteByRequest, indexStaffById } from "./staff-snapshot-index";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { InboxThreadNavigator } from "./InboxThreadNavigator";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
@@ -902,10 +902,7 @@ function RequestsView({
   const search = normalizeDirectoryQuery(searchQuery);
   const customerById = indexStaffById(data.customers);
   const customerNameById = new Map(data.customers.map((customer) => [customer.id, customer.displayName]));
-  const quoteByRequestId = new Map<string, OperationalStaffSnapshot["quotes"][number]>();
-  for (const quote of data.quotes) {
-    if (quote.status !== "SUPERSEDED" && !quoteByRequestId.has(quote.requestId)) quoteByRequestId.set(quote.requestId, quote);
-  }
+  const quoteByRequestId = indexCurrentQuoteByRequest(data.quotes);
   const visibleRequests = filterDirectoryRows(orderedRequests, search, (request) => {
     return [request.serviceLabel, request.status, request.sourceChannel, request.customerId ? customerNameById.get(request.customerId) : undefined];
   });
@@ -936,9 +933,7 @@ function RequestsView({
     selectedRequest.bedrooms === undefined ? "Bedrooms" : undefined,
     selectedRequest.bathrooms === undefined ? "Bathrooms" : undefined,
   ].filter((item): item is string => Boolean(item));
-  const requestsWithoutQuote = orderedRequests.filter((request) =>
-    !data.quotes.some((quote) => quote.requestId === request.id && quote.status !== "SUPERSEDED"),
-  ).length;
+  const requestsWithoutQuote = orderedRequests.filter((request) => !quoteByRequestId.has(request.id)).length;
   const reviewRequests = orderedRequests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status)).length;
 
   return (
