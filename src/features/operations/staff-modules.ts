@@ -102,10 +102,10 @@ export const staffModuleConfig: Record<
     primarySurface: "quality-review",
   },
   automations: {
-    label: "Automations",
+    label: "AI & Automation",
     group: "operations",
-    eyebrow: "Operations control",
-    description: "Resolve workflow exceptions and failed handoffs that need human action.",
+    eyebrow: "AI-assisted operations",
+    description: "Generate staff-reviewed intake briefs, assess model readiness, and build controlled event-driven workflows.",
     primarySurface: "recovery-actions",
   },
   reports: {
