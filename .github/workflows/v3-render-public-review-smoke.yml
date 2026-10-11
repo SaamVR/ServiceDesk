@@ -58,7 +58,7 @@ jobs:
           }
           console.log("PASS /health exact host-reported commit " + sha);
           const routes = [
-            ["/", "A cleaner way to run your cleaning business."],
+            ["/", "ServiceDesk"],
             ["/features", "Everything a cleaning operations team needs to move work forward."],
             ["/pricing", "Service quote pricing stays transparent and controlled."],
             ["/integrations", "Connect the systems your operation already uses."],
