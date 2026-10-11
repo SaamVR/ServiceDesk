@@ -1,6 +1,6 @@
 import type { Result } from "../../../contracts";
 import { resolveStaffActor, type ResolvedStaffActor } from "../../../features/operations/operational-product-runtime";
-import { reconcileOutboundDelivery, type DeliveryEvidenceSource, type DeliveryOutboxEvidence } from "./delivery-outbox-evidence";
+import { reconcileOutboundDelivery, type DeliveryEvidenceSource, type DeliveryOutboxEvidence, type ReconciledDelivery } from "./delivery-outbox-evidence";
 
 export type DeliveryHealth = "OK" | "PENDING" | "NEEDS_REVIEW";
 export type DeliveryState =
@@ -92,6 +92,7 @@ export async function readOperationalDeliveryTriage(
       if (row.workspace_id !== workspace.id || !validId(row.id) ||
           !validId(row.conversation_id) || row.direction !== "OUTBOUND" ||
           (row.delivery_state !== null && !states.has(row.delivery_state)) ||
+          (row.outbox_event_id != null && !validId(row.outbox_event_id)) ||
           typeof row.created_at !== "string" ||
           !Number.isFinite(Date.parse(row.created_at))) {
         return fail("DELIVERY_TRIAGE_MESSAGE_SCOPE_INVALID", "Persisted delivery row did not match this workspace.");
@@ -181,7 +182,7 @@ export async function readOperationalDeliveryTriage(
     const items: DeliveryTriageItem[] = [];
     for (const row of authorized) {
       const persisted = (row.delivery_state === null ? "UNKNOWN" : row.delivery_state) as DeliveryState;
-      const reconciled = typeof row.outbox_event_id === "string"
+      const reconciled: ReconciledDelivery = typeof row.outbox_event_id === "string"
         ? reconcileOutboundDelivery(persisted, evidenceById.get(row.outbox_event_id))
         : { deliveryState: persisted, evidenceSource: "MESSAGE_STATE" as const };
       const deliveryState = reconciled.deliveryState;
