@@ -1,0 +1,30 @@
+name: ServiceDesk QA tenant synthetic seed acceptance
+on:
+  push:
+    branches: [feat/servicedesk-v3-qa-synthetic-tenant-seed-20261011]
+  pull_request:
+    branches: [feat/servicedesk-v3-combined-acceptance-20261011]
+    paths:
+      - src/features/auth/qa-sample-seed.ts
+      - src/app/onboarding/verified/**
+      - tests/e2e/v3-qa-synthetic-persistence.test.ts
+      - .github/workflows/v3-qa-seed.yml
+permissions:
+  contents: read
+jobs:
+  qa-seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.20.0, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Seed idempotency and fail-closed authorization regressions
+        run: pnpm exec vitest run tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts tests/e2e/v3-owner-first-login.test.ts
+      - run: pnpm typecheck
+      - run: pnpm exec eslint src/features/auth/qa-sample-seed.ts src/app/onboarding/verified/ tests/e2e/v3-qa-synthetic-persistence.test.ts
+      - run: pnpm build
