@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { normalizeReturnPath } from "@/features/auth/return-path";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
-import { ownerRegistrationAvailable, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
+import { ownerRegistrationAvailable, ownerRegistrationMode, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 import { marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 import { signInWithPassword } from "./actions";
 import styles from "./page.module.css";
@@ -14,6 +14,7 @@ export default async function SignInPage({
   const query = await searchParams;
   const next = normalizeReturnPath(query.next ?? "/auth/continue");
   const registrationAvailable = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
+  const inviteOnly = ownerRegistrationMode() === "QA_ONLY";
   const newVisitorEntry = marketingRegistrationEntry(registrationAvailable);
 
   return (
@@ -46,6 +47,12 @@ export default async function SignInPage({
           <strong>{registrationAvailable ? "Create your account" : "Explore the product tour"}</strong>
         </Link>
       </p>
+      {inviteOnly ? (
+        <p className={styles.notice} role="note">
+          Approved tester? <Link href="/auth/sign-up"><strong>Create your test account →</strong></Link>
+          {" "}This review environment requires an invited email address; other emails cannot register.
+        </p>
+      ) : null}
       <p className={styles.help}>Joining a team? Use your existing account and the invitation link you received.</p>
     </RegistrationShell>
   );
