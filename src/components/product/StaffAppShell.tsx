@@ -14,9 +14,9 @@ const navGroups: ReadonlyArray<{
   modules: readonly StaffModule[];
   collapsible?: boolean;
 }> = [
-  { label: "Workday", modules: ["overview", "inbox", "schedule", "jobs"] },
+  { label: "Workday", modules: ["overview", "inbox", "automations", "schedule", "jobs"] },
   { label: "Customer work", modules: ["requests", "quotes", "customers", "invoices"] },
-  { label: "More tools", modules: ["quality", "automations", "reports", "billing", "settings"], collapsible: true },
+  { label: "More tools", modules: ["quality", "reports", "billing", "settings"], collapsible: true },
 ];
 
 function NavIcon({ module }: { module: StaffModule }) {
