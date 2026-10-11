@@ -1,14 +1,20 @@
-import { createElement } from "react";
+import { createElement, type ComponentProps, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { StaffSubmitButton } from "../../src/components/product/StaffSubmitButton";
 
+// React.createElement receives children as a separate argument. This type-only
+// adapter preserves the component's required JSX children contract.
+const SubmitForElement = StaffSubmitButton as ComponentType<
+  Omit<ComponentProps<typeof StaffSubmitButton>, "children">
+>;
+
 describe("Studio OS server-action submission reliability", () => {
   it("preserves native name/value, initial disabled and submit semantics", () => {
     const html = renderToStaticMarkup(createElement("form", { action: "/offline-test" },
-      createElement(StaffSubmitButton, {
+      createElement(SubmitForElement, {
         name: "decision", value: "ACCEPTED", className: "app-button-primary",
         disabled: false, pendingLabel: "Approving…",
       }, "Approve now")));
@@ -22,7 +28,7 @@ describe("Studio OS server-action submission reliability", () => {
 
   it("never enables a permission-disabled action and exposes an actual busy guard", () => {
     const html = renderToStaticMarkup(createElement("form", null,
-      createElement(StaffSubmitButton, { disabled: true }, "Not authorized")));
+      createElement(SubmitForElement, { disabled: true }, "Not authorized")));
     expect(html).toContain("disabled");
     const component = readFileSync(join(process.cwd(),
       "src/components/product/StaffSubmitButton.tsx"), "utf8");
