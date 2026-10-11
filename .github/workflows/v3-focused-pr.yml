@@ -12,6 +12,8 @@ on:
       - "tests/domain/authorized-workspace-selection.test.ts"
       - "src/server/integrations/email/transport.ts"
       - "tests/providers/resend-transactional-email-contract.test.ts"
+      - "src/server/ai/tool-orchestration.ts"
+      - "tests/providers/ai-tool-orchestration.test.ts"
       - "scripts/release/v3-staging-auth-smoke.mjs"
       - "scripts/release/v3-staging-auth-smoke.test.mjs"
       - ".github/workflows/v3-focused-pr.yml"
@@ -45,6 +47,10 @@ jobs:
       - name: Verify release smoke safety
         run: node --test scripts/release/v3-staging-auth-smoke.test.mjs
       - name: Focused domain and Resend regression
-        run: pnpm exec vitest run tests/domain/authorized-workspace-selection.test.ts tests/providers/resend-transactional-email-contract.test.ts
+        run: >-
+          pnpm exec vitest run
+          tests/domain/authorized-workspace-selection.test.ts
+          tests/providers/resend-transactional-email-contract.test.ts
+          tests/providers/ai-tool-orchestration.test.ts
       - name: Typecheck
         run: pnpm typecheck
