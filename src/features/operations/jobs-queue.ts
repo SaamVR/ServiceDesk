@@ -26,10 +26,12 @@ export function filterJobsQueue<T extends { status: string; crewId?: string }>(
   });
 }
 
-export function jobsQueueHref(queue: JobsQueue, visitId?: string): string {
+export function jobsQueueHref(queue: JobsQueue, visitId?: string, search?: string): string {
   const params = new URLSearchParams();
   if (queue !== "all") params.set("queue", queue);
   if (visitId) params.set("job", visitId);
+ if (normalizeJobsSearch(search)) params.set("search", normalizeJobsSearch(search));
+  if (normalizeJobsSearch(search)) params.set("search", normalizeJobsSearch(search));
   const query = params.toString();
   return query ? "?" + query : "?";
 }
@@ -60,9 +62,26 @@ export function indexJobProgress<E extends { visitId: string }, C extends { visi
  * The action may move a visit out of the selected queue; preserve the filter
  * but let the viewer choose the next visible job on revalidation.
  */
-export function jobsActionFeedbackPrefix(queue: JobsQueue, visitId: string): string {
+export function jobsActionFeedbackPrefix(queue: JobsQueue, visitId: string, search?: string): string {
  const params = new URLSearchParams();
  if (queue !== "all") params.set("queue", queue);
  params.set("job", visitId);
  return params.toString() + "&";
+}
+
+/** Search only the current workspace's authorized snapshot fields. */
+export function normalizeJobsSearch(raw?: string): string {
+  return (raw ?? "").slice(0, 200).trim().replace(/\s+/g, " ").slice(0, 90);
+}
+export function filterJobsSearch<T>(
+  visits: readonly T[],
+  query: string,
+  fields: (visit: T) => readonly (string | null | undefined)[],
+): T[] {
+  const terms = normalizeJobsSearch(query).toLocaleLowerCase().split(" ").filter(Boolean);
+  if (!terms.length) return [...visits];
+  return visits.filter((visit) => {
+    const text = fields(visit).map((value) => (value ?? "").toLocaleLowerCase());
+    return terms.every((term) => text.some((part) => part.includes(term)));
+  });
 }
