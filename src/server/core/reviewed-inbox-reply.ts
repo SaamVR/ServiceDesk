@@ -95,9 +95,6 @@ export async function approveReviewedInboxReply(
       return failure("REVIEWED_REPLY_CONVERSATION_UNAVAILABLE", "Conversation is unavailable.");
     }
     const current = conversation.data;
-    if (current.version !== input.expectedVersion) {
-      return failure("REVIEWED_REPLY_VERSION_CONFLICT", "Conversation changed; refresh and review again.");
-    }
     if ((current.channel !== "WHATSAPP" && current.channel !== "EMAIL") ||
         typeof current.customer_id !== "string") {
       return failure("REVIEWED_REPLY_CHANNEL_OR_CUSTOMER_INVALID", "Reply channel or verified customer is unavailable.");
@@ -124,6 +121,63 @@ export async function approveReviewedInboxReply(
         typeof lastMessage.data.created_at !== "string" ||
         !Number.isFinite(Date.parse(lastMessage.data.created_at))) {
       return failure("REVIEWED_REPLY_SOURCE_STALE", "A newer customer message requires another review.");
+    }
+
+    // Staff may retry after a network timeout even though the first RPC
+    // already queued the message and incremented conversation.version.
+    // Look up the SAME approved idempotency key only after authorizing the
+    // latest inbound message. A replay is read-only; never queue another send.
+    const prior = await service.from("messages")
+      .select("id,workspace_id,conversation_id,outbound_idempotency_key,outbox_event_id,direction,sender_kind,body,delivery_state,created_at")
+      .eq("workspace_id", workspace.id)
+      .eq("outbound_idempotency_key", input.idempotencyKey)
+      .maybeSingle();
+    if (prior.error) {
+      return failure("REVIEWED_REPLY_REPLAY_READ_FAILED", "Prior approved reply could not be verified.");
+    }
+    if (prior.data) {
+      const m = prior.data;
+      if (!validId(m.id) || m.workspace_id !== workspace.id ||
+          m.conversation_id !== input.conversationId ||
+          m.outbound_idempotency_key !== input.idempotencyKey ||
+          m.direction !== "OUTBOUND" || m.sender_kind !== "STAFF" ||
+          m.body !== body || !validId(m.outbox_event_id) ||
+          typeof m.created_at !== "string" ||
+          !Number.isFinite(Date.parse(m.created_at)) ||
+          Date.parse(m.created_at) < Date.parse(lastMessage.data.created_at) ||
+          !["QUEUED", "RUNNING", "PROVIDER_ACCEPTED", "DELIVERED", "READ", "FAILED", "SUPPRESSED"].includes(m.delivery_state)) {
+        return failure("REVIEWED_REPLY_RECEIPT_MISMATCH", "An existing idempotency key was used for another reply.");
+      }
+      const event = await service.from("outbox_events")
+        .select("id,workspace_id,topic,idempotency_key,status,provider_reference")
+        .eq("id", m.outbox_event_id)
+        .eq("workspace_id", workspace.id)
+        .maybeSingle();
+      const o = event.data;
+      if (event.error || !o || o.id !== m.outbox_event_id ||
+          o.workspace_id !== workspace.id || o.topic !== "conversation.reply" ||
+          o.idempotency_key !==
+            `conversation.reply:${workspace.id}:${input.idempotencyKey}` ||
+          !["PENDING", "SENT", "FAILED", "SUPPRESSED"].includes(o.status)) {
+        return failure("REVIEWED_REPLY_RECEIPT_MISMATCH", "A previous reply has no verified outbox event.");
+      }
+      // The outbound message may still say QUEUED after the outbox records
+      // provider acceptance/terminal state. Never call that DELIVERED or READ.
+      let deliveryState: MessageDeliveryState = m.delivery_state;
+      if (deliveryState === "QUEUED" || deliveryState === "RUNNING") {
+        if (o.status === "SENT" && typeof o.provider_reference === "string" &&
+            o.provider_reference.trim()) deliveryState = "PROVIDER_ACCEPTED";
+        else if (o.status === "FAILED") deliveryState = "FAILED";
+        else if (o.status === "SUPPRESSED") deliveryState = "SUPPRESSED";
+      }
+      return { ok: true, value: {
+        state: "EXISTING_REPLY", workspaceId: workspace.id,
+        conversationId: input.conversationId, sourceMessageId: input.sourceMessageId,
+        outboundMessageId: m.id, outboxEventId: o.id, deliveryState,
+      } };
+    }
+    if (current.version !== input.expectedVersion) {
+      return failure("REVIEWED_REPLY_VERSION_CONFLICT", "Conversation changed; refresh and review again.");
     }
 
     const queued: Result<ConversationReplyOutcome> =
