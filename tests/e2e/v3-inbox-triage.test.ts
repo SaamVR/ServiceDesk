@@ -106,7 +106,8 @@ describe("V3 operational Inbox triage", () => {
   it("distinguishes red delivery recovery from teal reply queues with 44px targets", () => {
     const route=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
     const css=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.module.css"),"utf8");
-    const queueCss=css.slice(css.indexOf(".inboxQueueNav {"),css.indexOf(".inboxPaneHeader,"));
+    const queueStart=css.indexOf(".inboxQueueNav {");
+    const queueCss=css.slice(queueStart,css.indexOf(".inboxPaneHeader,",queueStart));
     expect(route).toContain("className={styles.inboxDeliveryIssue}>Delivery issue");
     expect(queueCss).toContain("min-height: 44px");
     expect(queueCss).toContain("var(--app-surface-subtle, #f3f6f7)");
