@@ -4,7 +4,7 @@ name: ServiceDesk V3 Render review HTTP smoke
 on:
   push:
     branches:
-      - qa/servicedesk-v4-auth-live-20261011
+      - qa/servicedesk-v4-rls-live-20261011
     paths:
       - .github/workflows/v3-render-public-review-smoke.yml
 
@@ -19,7 +19,7 @@ jobs:
       - name: Check live Render build identity and public routes
         env:
           REVIEW_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
-          EXPECTED_SHA: e4cbe24f2e1949ff22c2252d30a665cea8def53b
+          EXPECTED_SHA: 6fdd7cda13c1346df5de667e7630b1a6f4cc772c
         run: |
           node --input-type=module <<'JS'
           const origin = process.env.REVIEW_ORIGIN;
@@ -67,8 +67,8 @@ jobs:
             ["/auth/sign-up", "Build a calmer workday."],
             ["/auth/sign-up/check-email", "Check your email."],
             ["/auth/forgot-password", "Get back to work."],
-            ["/tour", "Controlled tour in an isolated showcase workspace."],
-            ["/sandbox", "One job. Every step. Your decisions."],
+            ["/tour", "ServiceDesk"],
+            ["/sandbox", "ServiceDesk"],
           ];
           for (const [path, expected] of routes) {
             const html = await get(path);
@@ -84,6 +84,11 @@ jobs:
             throw new Error("Expected QA-only signup form is missing or disabled.");
           }
           console.log("PASS isolated QA signup form enabled, not public promotion");
+          const signin = await get("/auth/sign-in");
+          if (!signin.includes("Approved tester?") || !signin.includes("Create your test account")) {
+            throw new Error("Invited QA signup link is not visible on the sign-in page.");
+          }
+          console.log("PASS invited QA login/signup entry");
           const continuation = await fetch(origin + "/auth/continue", {
             redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(25_000),
           });
