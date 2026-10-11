@@ -150,6 +150,26 @@ describe("V3 operational Inbox triage", () => {
     expect(inboxQueueHref("all", undefined, "  Cleaning ")).toBe("?search=Cleaning");
   });
 
+  it("fails closed without explicit isolated QA authorization", () => {
+    const run = spawnSync(process.execPath, ["tests/e2e/v3-capture-workroom.mjs"], {
+      encoding: "utf8",
+      timeout: 10000,
+      env: { ...process.env, V3_QA_ISOLATED: "0" },
+    });
+    expect(run.error).toBeUndefined();
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain("Isolated QA permission required");
+  });
+
+  it("does not mistake viewport capture for actual deployment SHA verification", () => {
+    const source = readFileSync(join(process.cwd(), "tests/e2e/v3-capture-workroom.mjs"), "utf8");
+    expect(source).toContain("Emulation.setDeviceMetricsOverride");
+    expect(source).toContain("Page.captureScreenshot");
+    expect(source).toContain("validatePNG");
+    expect(source).toContain("Horizontal overflow at");
+    expect(source).toContain("independentlyVerifiedSourceSha: false");
+  });
+
   it("keeps the standalone Chromium visual acceptance runner syntactically valid", () => {
     const run = spawnSync(process.execPath, ["--check", "tests/e2e/v3-capture-workroom.mjs"], {
       encoding: "utf8",
