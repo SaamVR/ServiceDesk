@@ -74,6 +74,9 @@ try {
     const response=await fetch(origin+"/app/"+slug+"/"+module,{redirect:"manual"});
     if(response.status>=500)throw Error("ANON_STUDIO_HTTP_5XX_"+module);
   }
+  const routeOnly = process.env.V4_ANON_ROUTE_ONLY === "true";
+  if (routeOnly) manifest.kind = "ANONYMOUS_STUDIO_ROUTE_ONLY_AI_SECURITY_UNTESTED";
+  if (!routeOnly) {
   // These must reject cross-origin, malformed and valid-but-unauthorized actions
   // even when no provider is configured or available.
   const endpoint=origin+"/api/internal/ai/request-brief";
@@ -90,6 +93,7 @@ try {
     const code=typeof decoded?.code==="string"&&/^[A-Z_]+$/.test(decoded.code)?decoded.code:"UNKNOWN_RESPONSE";
     if(!a.statuses.includes(response.status))throw Error("ANON_AI_ENDPOINT_"+a.name+"_"+response.status+"_"+code);
     manifest.checks.push({type:"ai-denial",name:a.name,status:response.status,code});
+  }
   }
   conn=await connect(await launch());await conn.send("Page.enable");await conn.send("Runtime.enable");
   await conn.send("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
@@ -114,7 +118,7 @@ try {
   }
   writeFileSync(join(output,"manifest.json"),JSON.stringify(manifest,null,2),{mode:0o600});
   console.log("ANON_STUDIO_DENIAL_PASS: "+modules.length+" protected routes x "+widths.length+
-    " widths; "+attempts.length+" AI API reject cases; "+manifest.screenshots.length+
+    " widths; "+(routeOnly?"AI gate omitted in route-only mode":attempts.length+" AI API reject cases")+"; "+manifest.screenshots.length+
     " fictional workspace screenshots. NOT REAL-AUTH ACCEPTANCE.");
 }finally{
   conn?.close();child?.kill();
