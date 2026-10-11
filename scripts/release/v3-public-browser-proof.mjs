@@ -229,5 +229,11 @@ try {
 } finally {
   channel?.close();
   child?.kill();
-  rmSync(profile, { recursive: true, force: true });
+  // Chrome can still write profile data while exiting; do not hide a real
+  // screenshot/layout failure behind an ENOTEMPTY cleanup race.
+  try {
+    rmSync(profile, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 });
+  } catch (error) {
+    console.warn("Ephemeral Chrome profile cleanup deferred:", error?.code || "unknown");
+  }
 }
