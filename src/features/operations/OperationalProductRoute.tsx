@@ -183,6 +183,7 @@ function InboxQueueNavigation({
   const labels: Record<InboxQueue, string> = {
     all: "All",
     "needs-reply": "Needs reply",
+    "delivery-issues": "Delivery issues",
     handover: "Human takeover",
     unverified: "Identity review",
   };
@@ -382,9 +383,11 @@ function InboxView({
                     <span>{conversation.channel}</span>
                     {conversation.handoverActive
                       ? <span className={styles.takeoverDot}>Human takeover</span>
-                      : triage.threadFlags.get(conversation.id)?.needsReply
-                        ? <span className={styles.inboxNeedsReply}>Reply due</span>
-                        : <span>Open</span>}
+                      : triage.threadFlags.get(conversation.id)?.deliveryIssue
+                        ? <span className={styles.inboxNeedsReply}>Delivery issue</span>
+                        : triage.threadFlags.get(conversation.id)?.needsReply
+                          ? <span className={styles.inboxNeedsReply}>Reply due</span>
+                          : <span>Open</span>}
                     {triage.threadFlags.get(conversation.id)?.unverified
                       ? <span className={styles.inboxUnverified}>Identity review</span>
                       : null}
