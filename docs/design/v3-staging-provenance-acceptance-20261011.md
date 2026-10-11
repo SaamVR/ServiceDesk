@@ -53,6 +53,30 @@ Regressions are run through the existing Node release-smoke gate:
 new no-network `v3-staging-source-preflight.test.mjs` suite. The TS host
 identity tests run in the existing frontend test aggregation.
 
+## Pending migration source manifest (never an apply receipt)
+
+A bounded local-source inventory can be supplied to the authorized database
+operator without a Supabase connection:
+
+```sh
+node scripts/release/v3-migration-source-audit.mjs
+```
+
+It checks that **exactly one** SQL file exists for each ordered migration
+0037 through 0059, records each source SHA-256 and verifies the 0059
+verified-email owner-bootstrap function and restrictive
+`EXECUTE` grant markers. The status
+`SOURCE_CHAIN_PRESENT_DB_APPLICATION_UNVERIFIED` explicitly means that
+**no connected database migration was verified or executed** by the audit.
+The audit is also exercised by the existing Node release-smoke CI tests.
+It does not grant migration authorization or bypass the open #75 0037
+execution safety block.
+
+As of the 2026-10-11 read-only connector check, the authorized ServiceDesk
+Supabase project reported 43 migration-history entries, ending at
+`sd_0036_v2_commercial_direct_cost_schema`. Do not enable owner registration
+until 0037..0059 are safely applied and validated in the approved target.
+
 ## Remaining mandatory acceptance
 
 - Verify the exact deployment/source SHA *out of band* using hosting metadata
