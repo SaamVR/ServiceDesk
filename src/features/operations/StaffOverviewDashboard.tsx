@@ -180,7 +180,7 @@ export function StaffOverviewDashboard({
         <header className={styles.pageHeader}>
           <div>
             <p className={styles.eyebrow}>Operations</p>
-            <h1>Overview</h1>
+            <h1>Today</h1>
             <p>Current workspace activity could not be loaded.</p>
           </div>
         </header>
@@ -224,15 +224,38 @@ export function StaffOverviewDashboard({
     <div className={styles.dashboard}>
       <header className={styles.pageHeader}>
         <div>
-          <p className={styles.eyebrow}>Operations command center</p>
+          <p className={styles.eyebrow}>Your workday / operations</p>
           <h1>Overview</h1>
-          <p>{formatDate(snapshot.loadedAt, snapshot.workspace.timezone)} · {snapshot.workspace.name}</p>
+          <p>{formatDate(snapshot.loadedAt, snapshot.workspace.timezone)} <span aria-hidden="true">·</span> {snapshot.workspace.name} <span aria-hidden="true">·</span> Updated {formatTime(snapshot.loadedAt, snapshot.workspace.timezone)}</p>
         </div>
         <div className={styles.headerActions}>
           <Link className="app-button-secondary" href={buildStaffModuleHref(workspace, "schedule")}>View schedule</Link>
           <Link className="app-button-primary" href={buildStaffModuleHref(workspace, "inbox")}>Open inbox</Link>
         </div>
       </header>
+
+      <section className={styles.workdayBrief} aria-label="Workday briefing">
+        <div className={styles.briefingLabel}>
+          <span className={styles.liveMarker} aria-hidden="true" />
+          <span>Operational brief</span>
+        </div>
+        <p>
+          {criticalAttention > 0
+            ? `${criticalAttention} critical item${criticalAttention === 1 ? "" : "s"} require a decision.`
+            : attention.length
+              ? `${attention.length} open item${attention.length === 1 ? "" : "s"} to work through.`
+              : "No outstanding operational escalations."}
+          {" "}
+          {unassignedToday > 0
+            ? `${unassignedToday} visit${unassignedToday === 1 ? "" : "s"} still need a crew.`
+            : todayVisits.length
+              ? "Today's visits have crew coverage."
+              : "No visits are scheduled for today."}
+        </p>
+        <Link href={buildStaffModuleHref(workspace, criticalAttention || attention.length ? "automations" : "schedule")}>
+          {attention.length ? "Review priorities" : "Open dispatch"} <span aria-hidden="true">↗</span>
+        </Link>
+      </section>
 
       <nav className={styles.kpiGrid} aria-label="Open operational queues">
         <KpiCard
@@ -264,32 +287,12 @@ export function StaffOverviewDashboard({
       </nav>
 
       <div className={styles.primaryGrid}>
-        <section className={styles.card} aria-labelledby="today-heading">
-          <div className={styles.cardHeader}>
-            <div>
-              <p className={styles.cardEyebrow}>Today</p>
-              <h2 id="today-heading">Schedule</h2>
-              <p>{todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` : "No active visits are scheduled for today."}</p>
-            </div>
-            <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "schedule")}>Full schedule →</Link>
-          </div>
-          {todayVisits.length ? (
-            <div className={styles.scheduleList}>
-              {todayVisits.slice(0, 8).map((visit) => (
-                <ScheduleRow key={visit.id} visit={visit} snapshot={snapshot} workspace={workspace} />
-              ))}
-            </div>
-          ) : (
-            <EmptyBlock title="Schedule is clear" description="New confirmed visits will appear here automatically." />
-          )}
-        </section>
-
         <section className={`${styles.card} ${styles.attentionCard}`} aria-labelledby="attention-heading">
           <div className={styles.cardHeader}>
             <div>
               <p className={styles.cardEyebrow}>Priority queue</p>
-              <h2 id="attention-heading">Needs attention</h2>
-              <p>Highest-risk operational items first.</p>
+              <h2 id="attention-heading">Decisions waiting for you</h2>
+              <p>Decision queue ordered by severity and due time.</p>
             </div>
             <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "automations")}>All items →</Link>
           </div>
@@ -310,6 +313,26 @@ export function StaffOverviewDashboard({
             <EmptyBlock title="No open attention items" description="There is no operational recovery work waiting right now." />
           )}
         </section>
+        <section className={styles.card} aria-labelledby="today-heading">
+          <div className={styles.cardHeader}>
+            <div>
+              <p className={styles.cardEyebrow}>Today</p>
+              <h2 id="today-heading">Today's field plan</h2>
+              <p>{todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` : "No active visits are scheduled for today."}</p>
+            </div>
+            <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "schedule")}>Open dispatch →</Link>
+          </div>
+          {todayVisits.length ? (
+            <div className={styles.scheduleList}>
+              {todayVisits.slice(0, 8).map((visit) => (
+                <ScheduleRow key={visit.id} visit={visit} snapshot={snapshot} workspace={workspace} />
+              ))}
+            </div>
+          ) : (
+            <EmptyBlock title="Schedule is clear" description="New confirmed visits will appear here automatically." />
+          )}
+        </section>
+
       </div>
 
       <div className={styles.secondaryGrid}>
