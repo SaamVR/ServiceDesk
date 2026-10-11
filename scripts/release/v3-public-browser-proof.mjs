@@ -100,7 +100,7 @@ async function inspect(expression) {
   const result = await channel.send("Runtime.evaluate", {
     expression, returnByValue: true, awaitPromise: true,
   });
-  if (result.exceptionDetails) throw new Error("Chrome page inspection failed.");
+  if (result.exceptionDetails) throw new Error("Chrome page inspection failed: " + String(result.exceptionDetails.text || result.exceptionDetails.exception?.description || "unknown").slice(0, 400));
   return result.result?.value;
 }
 async function loaded(page) {
@@ -230,10 +230,10 @@ try {
       if ((width === 390 || width === 1280) && ["features", "integrations", "pricing", "contact"].includes(page.slug)) {
         const proof = await inspect(
           '(async () => {' +
-          'const button = pageKey => pageKey === "features" ? [...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Dispatch")) :' +
+          'const pageKey = location.pathname === "/features" ? "features" : location.pathname === "/integrations" ? "integrations" : location.pathname === "/pricing" ? "pricing" : "contact";' +
+          'const button = pageKey === "features" ? [...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Dispatch")) :' +
           'pageKey === "integrations" ? [...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Scheduling")) :' +
           'pageKey === "pricing" ? [...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Review controls")) : null;' +
-          'const pageKey = location.pathname === "/features" ? "features" : location.pathname === "/integrations" ? "integrations" : location.pathname === "/pricing" ? "pricing" : "contact";' +
           'if(pageKey === "contact") { const box=document.querySelector("input[type=checkbox]");if(!box)return{ok:false};box.click();' +
           'await new Promise(r=>setTimeout(r,210));return{ok:box.checked,text:document.body.textContent||""};}' +
           'if(!button)return{ok:false};button.click();await new Promise(r=>setTimeout(r,210));' +
