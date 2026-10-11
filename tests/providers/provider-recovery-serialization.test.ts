@@ -74,6 +74,12 @@ describe("provider recovery serialization", () => {
       { schemaVersion: 1, record: { ...valid.record, idempotencyKey: 123 } },
       { schemaVersion: 1, record: { ...valid.record, attempts: Number.POSITIVE_INFINITY } },
       { schemaVersion: 1, record: { ...valid.record, queue: "arbitrary-dispatch" } },
+      { schemaVersion: 1, record: { ...valid.record, provider: "UNTRUSTED" } },
+      { schemaVersion: 1, record: { ...valid.record, operation: "PAYMENT_UPDATE" } },
+      { schemaVersion: 1, record: { ...valid.record, action: "DEAD_LETTER" } },
+      { schemaVersion: 1, record: { ...valid.record, operatorVisible: true } },
+      { schemaVersion: 1, record: { ...valid.record, redactedTarget: { raw: "customer@example.test" } } },
+      { schemaVersion: 1, record: { ...valid.record, leasedBy: 123 } },
     ];
     for (const candidate of invalid) {
       expect(() => deserializeRecoveryRecord(candidate as any)).not.toThrow();
