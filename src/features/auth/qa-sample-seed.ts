@@ -129,5 +129,32 @@ export async function seedQaWorkspaceData(
   }
   if (!isUuid(requestId)) return { ok: false, stage: "request" };
 
+  // A successful insert response alone is not release evidence. Prove all
+  // three rows can be read by the SAME authenticated session and workspace.
+  // These reads intentionally cannot fall back to a service-role client.
+  const [customerProof, propertyProof, requestProof] = await Promise.all([
+    auth.from("customers").select("id")
+      .eq("id", customerId).eq("workspace_id", workspace.id)
+      .eq("lead_source", QA_SEED_SOURCE).maybeSingle(),
+    auth.from("properties").select("id")
+      .eq("id", propertyId).eq("workspace_id", workspace.id)
+      .eq("customer_id", customerId).eq("branch_id", branchId).maybeSingle(),
+    auth.from("requests").select("id")
+      .eq("id", requestId).eq("workspace_id", workspace.id)
+      .eq("customer_id", customerId).eq("property_id", propertyId)
+      .eq("branch_id", branchId)
+      .contains("structured_fields", { qa_sample_version: QA_SEED_FIELDS.qa_sample_version })
+      .maybeSingle(),
+  ]);
+  if (customerProof.error || customerProof.data?.id !== customerId) {
+    return { ok: false, stage: "customer" };
+  }
+  if (propertyProof.error || propertyProof.data?.id !== propertyId) {
+    return { ok: false, stage: "property" };
+  }
+  if (requestProof.error || requestProof.data?.id !== requestId) {
+    return { ok: false, stage: "request" };
+  }
+
   return { ok: true, customerId, requestId, reused };
 }
