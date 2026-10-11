@@ -1,0 +1,53 @@
+name: ServiceDesk V4 QA session RLS proof
+# Push checks never read credentials. Manual QA checks are READ-ONLY and
+# require two distinct existing, email-confirmed fictional owner accounts.
+on:
+  push:
+    branches: [feat/servicedesk-v4-l3-auth-rc-20261012]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-qa-session-rls-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  auth-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Parse private RLS proof program without connecting
+        run: node --check scripts/release/v4-private-rls-proof.mjs
+      - name: Auth, owner bootstrap, verified identity and QA seed regression
+        run: pnpm exec vitest run tests/e2e/v3-qa-registration-allowlist.test.ts tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-anonymous-definer-closure.test.ts tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts
+      - run: pnpm typecheck
+  real-session-rls:
+    if: github.event_name == 'workflow_dispatch'
+    needs: auth-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Verify cross-tenant denials under two real authenticated QA owner sessions
+        env:
+          V4_QA_SUPABASE_URL: ${{ secrets.SERVICEDESK_QA_SUPABASE_URL }}
+          V4_QA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+          V4_QA_OWNER_A_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_A_EMAIL }}
+          V4_QA_OWNER_A_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_A_PASSWORD }}
+          V4_QA_OWNER_A_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_A_WORKSPACE }}
+          V4_QA_OWNER_B_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_B_EMAIL }}
+          V4_QA_OWNER_B_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_B_PASSWORD }}
+          V4_QA_OWNER_B_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_B_WORKSPACE }}
+        run: node scripts/release/v4-private-rls-proof.mjs
