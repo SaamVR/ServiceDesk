@@ -27,7 +27,7 @@ describe("V3 authenticated workroom streaming and recovery", () => {
     const fallback = workroom.slice(workroom.lastIndexOf('title={result.kind === "authentication"'));
     expect(dashboard).toContain('href={buildStaffModuleHref(workspace, "overview")}');
     expect(dashboard).toContain("Retry loading Today");
-    expect(dashboard).toContain("check the saved record before repeating it");
+    expect(dashboard).toContain("inspect the saved record before repeating it");
     expect(dashboard).not.toContain('description={errorMessage ??');
     expect(fallback).toContain("Retry view");
     expect(fallback).toContain('href={buildStaffModuleHref(workspaceSlug, module)}');
