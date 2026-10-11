@@ -51,7 +51,7 @@ describe("configured Meta WhatsApp inbound runtime boundary", () => {
       receiptKey: "workspace-alpha:10001001:wamid.real-1",
       providerMessageId: "wamid.real-1",
       senderRef: "15551112222",
-      occurredAt: "2026-10-04T11:20:00.000Z",
+      occurredAt: "2026-10-04T10:00:00.000Z",
       text: "Please quote my cleaning.",
       contentKind: "TEXT",
     });
