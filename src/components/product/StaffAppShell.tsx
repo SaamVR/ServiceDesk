@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import styles from "./StaffWorkspaceV3.module.css";
 import { StaffCommandPalette } from "./StaffCommandPalette";
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "@/features/operations/staff-modules";
@@ -61,7 +61,14 @@ function NavIcon({ module }: { module: StaffModule }) {
 }
 
 function workspaceDisplayName(workspace: string) {
-  const decoded = decodeURIComponent(workspace);
+  // Workspace slugs are already decoded by routing in some entry paths.
+  // Literal '%' or malformed escapes must never crash the signed-in shell.
+  let decoded = workspace;
+  try {
+    decoded = decodeURIComponent(workspace);
+  } catch {
+    // Preserve the supplied slug for display, without changing route authorization.
+  }
   return decoded
     .replace(/[-_]+/g, " ")
     .replace(/\b\w/g, (character) => character.toUpperCase());
@@ -126,8 +133,13 @@ export function StaffAppShell({
 }) {
   const pathname = usePathname();
   const mobileMenu = useRef<HTMLDetailsElement>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   function closeMobileNavigation() {
     if (mobileMenu.current) mobileMenu.current.open = false;
+    setMobileNavOpen(false);
+  }
+  function handleMobileNavigationToggle(event: React.SyntheticEvent<HTMLDetailsElement>) {
+    setMobileNavOpen(event.currentTarget.open);
   }
   function handleMobileNavigationKeyDown(event: React.KeyboardEvent<HTMLDetailsElement>) {
     if (event.key !== "Escape" || !mobileMenu.current?.open) return;
@@ -168,8 +180,8 @@ export function StaffAppShell({
 
       <div className="app-main-column">
         <header className="app-topbar">
-          <details className="app-mobile-nav" ref={mobileMenu} onKeyDown={handleMobileNavigationKeyDown}>
-            <summary aria-label="Open workspace navigation">
+          <details className="app-mobile-nav" ref={mobileMenu} onToggle={handleMobileNavigationToggle} onKeyDown={handleMobileNavigationKeyDown}>
+            <summary aria-label={mobileNavOpen ? "Close workspace navigation" : "Open workspace navigation"}>
               <span aria-hidden="true">☰</span>
               <span>Menu</span>
             </summary>
@@ -179,6 +191,12 @@ export function StaffAppShell({
                 <span>{pageLabel}</span>
               </div>
               <StaffNavigation workspace={workspace} mobile />
+              {signedIn ? (
+                <div className={styles.mobileAccountActions}>
+                  <Link href="/auth/select-workspace" onClick={closeMobileNavigation}>Switch workspace</Link>
+                  <Link href={buildStaffModuleHref(workspace, "settings")} onClick={closeMobileNavigation}>Account settings</Link>
+                </div>
+              ) : null}
             </div>
           </details>
 
@@ -194,7 +212,7 @@ export function StaffAppShell({
             <Link className="app-topbar-link" href={buildStaffModuleHref(workspace, "inbox")}>Inbox</Link>
             {signedIn ? (
               <>
-                <Link className="app-topbar-link" href="/auth/select-workspace">Switch workspace</Link>
+                <Link className={`app-topbar-link ${styles.desktopWorkspaceSwitch}`} href="/auth/select-workspace">Switch workspace</Link>
                 <Link className="app-account-link" href={buildStaffModuleHref(workspace, "settings")} aria-label="Open account and workspace settings">
                   <span className="app-avatar" aria-hidden="true">SD</span>
                   <span>Account</span>
