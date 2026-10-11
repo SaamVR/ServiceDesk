@@ -44,18 +44,34 @@ export function searchStaffDestinations(
 /** Existing server-owned directory searches, not client-loaded customer data.
  * The route itself enforces tenant authorization before fetching results.
  */
-export interface StaffRecordSearchTarget { module: "inbox" | "customers" | "requests" | "quotes" | "invoices"; label:string; href:string; }
-const recordSearchModules: readonly {module:StaffRecordSearchTarget["module"];label:string}[] = [
- {module:"inbox",label:"Conversations"},
- {module:"customers",label:"Customers"},
- {module:"requests",label:"Requests"},
- {module:"quotes",label:"Quotes"},
- {module:"invoices",label:"Invoices"},
+export interface StaffRecordSearchTarget {
+  module: "inbox" | "customers" | "requests" | "quotes" | "invoices" | "jobs" | "quality";
+  label: string;
+  href: string;
+}
+/** Keep these query keys aligned with the actual authorized GET route parsers.
+ * Jobs uses 'search', while Quality uses 'q'. Both run only after server-side
+ * workspace authorization; no records are fetched into the command palette.
+ */
+const recordSearchModules: readonly {
+  module: StaffRecordSearchTarget["module"];
+  label: string;
+  queryKey: "search" | "q";
+}[] = [
+  { module: "inbox", label: "Conversations", queryKey: "search" },
+  { module: "customers", label: "Customers", queryKey: "search" },
+  { module: "requests", label: "Requests", queryKey: "search" },
+  { module: "quotes", label: "Quotes", queryKey: "search" },
+  { module: "jobs", label: "Jobs", queryKey: "search" },
+  { module: "quality", label: "Quality cases", queryKey: "q" },
+  { module: "invoices", label: "Invoices", queryKey: "search" },
 ];
 export function buildStaffRecordSearches(workspace:string, rawQuery:string):StaffRecordSearchTarget[] {
- const term = rawQuery.replace(/[\u0000-\u001f\u007f]/g," ").trim().slice(0,100);
- if (term.length < 2) return [];
- return recordSearchModules.map(({module,label})=>({
-   module,label,href:buildStaffModuleHref(workspace,module)+"?search="+encodeURIComponent(term),
- }));
+  const term = rawQuery.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 100);
+  if (term.length < 2) return [];
+  return recordSearchModules.map(({ module, label, queryKey }) => ({
+    module,
+    label,
+    href: buildStaffModuleHref(workspace, module) + "?" + queryKey + "=" + encodeURIComponent(term),
+  }));
 }
