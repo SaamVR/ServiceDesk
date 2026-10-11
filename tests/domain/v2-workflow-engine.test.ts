@@ -29,6 +29,7 @@ const event = {
   workspaceId: "workspace-1",
   branchId: "branch-1",
   eventType: "REQUEST_CREATED" as const,
+  sourceEventId: "request-00001",
   snapshot: {
     "request.serviceCode": "DEEP_CLEAN",
     "request.leadSource": "WEB",
@@ -57,6 +58,27 @@ describe("workflow evaluator", () => {
       .toMatchObject({ ok: false, code: "WORKFLOW_PUBLISHED_VERSION_REQUIRED" });
     expect(evaluateWorkflowRule({ ...version, state: "PUBLISHED" }, event, "LIVE"))
       .toMatchObject({ ok: true, value: { matched: true } });
+  });
+
+  it("never collapses two independent customer enquiries with identical snapshot fields", () => {
+    const published = { ...version, state: "PUBLISHED" as const };
+    const first = evaluateWorkflowRule(published, event, "LIVE");
+    const sameEventRetry = evaluateWorkflowRule(published, { ...event }, "LIVE");
+    const anotherEnquiry = evaluateWorkflowRule(published, { ...event, sourceEventId: "request-00002" }, "LIVE");
+    if (!first.ok || !sameEventRetry.ok || !anotherEnquiry.ok) throw Error("expected successful evaluations");
+    expect(first.value.eventFingerprint).toBe(sameEventRetry.value.eventFingerprint);
+    expect(first.value.eventFingerprint).not.toBe(anotherEnquiry.value.eventFingerprint);
+    const a = workflowExecutionKey({ mode: "LIVE", ruleVersionId: published.id, eventFingerprint: first.value.eventFingerprint });
+    const b = workflowExecutionKey({ mode: "LIVE", ruleVersionId: published.id, eventFingerprint: anotherEnquiry.value.eventFingerprint });
+    expect(a).not.toBe(b);
+  });
+
+  it("refuses source-less live execution rather than silently deduping unrelated records", () => {
+    const published = { ...version, state: "PUBLISHED" as const };
+    expect(evaluateWorkflowRule(published, { ...event, sourceEventId: undefined }, "LIVE"))
+      .toMatchObject({ ok: false, code: "WORKFLOW_SOURCE_EVENT_ID_REQUIRED" });
+    expect(validateWorkflowEventEnvelope({ ...event, sourceEventId: "someone@example.org" }))
+      .toMatchObject({ ok: false, code: "WORKFLOW_SOURCE_EVENT_ID_INVALID" });
   });
 
   it("does not plan actions when conditions do not match", () => {
