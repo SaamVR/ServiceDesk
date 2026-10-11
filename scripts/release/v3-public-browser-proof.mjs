@@ -4,7 +4,7 @@
  * tenant/workspace routes, or provider traffic. Not staff visual acceptance.
  */
 import { spawn } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, statSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, statSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -38,28 +38,26 @@ async function launch() {
   child = spawn(chrome, [
     "--headless=new", "--no-first-run", "--no-default-browser-check",
     "--disable-extensions", "--disable-background-networking", "--disable-dev-shm-usage",
-    "--remote-debugging-port=0", "--user-data-dir=" + profile,
+    "--no-sandbox", "--disable-setuid-sandbox",
+    "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=9222",
+    "--user-data-dir=" + profile,
     "--window-size=1440,900", "about:blank",
   ], { stdio: "ignore" });
-  const portFile = join(profile, "DevToolsActivePort");
+  // Chrome-for-Testing releases may omit DevToolsActivePort on Linux. A fixed
+  // loopback-only port is reliable in this ephemeral, credential-free CI job.
   for (let i = 0; i < 100; i++) {
     if (child.exitCode !== null) throw new Error("Chrome exited early.");
-    if (existsSync(portFile)) {
-      const port = Number(readFileSync(portFile, "utf8").split("\n")[0]);
-      if (port > 0 && port <= 65535) {
-        try {
-          const response = await fetch("http://127.0.0.1:" + port + "/json/list");
-          if (response.ok) {
-            const tabs = await response.json();
-            const tab = tabs.find((item) => item.type === "page" && item.webSocketDebuggerUrl);
-            if (tab) return tab.webSocketDebuggerUrl;
-          }
-        } catch { /* Browser is still opening. */ }
+    try {
+      const response = await fetch("http://127.0.0.1:9222/json/list");
+      if (response.ok) {
+        const tabs = await response.json();
+        const tab = tabs.find((item) => item.type === "page" && item.webSocketDebuggerUrl);
+        if (tab) return tab.webSocketDebuggerUrl;
       }
-    }
+    } catch { /* Browser is still opening. */ }
     await sleep(150);
   }
-  throw new Error("Chrome DevTools did not become ready.");
+  throw new Error("Chrome DevTools did not become ready on loopback port 9222.");
 }
 async function connect(wsUrl) {
   const ws = new WebSocket(wsUrl);
