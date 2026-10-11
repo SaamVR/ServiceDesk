@@ -4,6 +4,7 @@ name: ServiceDesk V3 public browser proof
 on:
   pull_request:
     branches:
+      - feat/servicedesk-v3-coordination-20261011
       - feat/servicedesk-v3-combined-acceptance-20261011
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
