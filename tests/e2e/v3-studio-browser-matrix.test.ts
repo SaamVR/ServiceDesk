@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -13,6 +14,39 @@ describe("V3 Studio OS browser acceptance capture matrix", () => {
       compilerOptions: { allowJs: true, module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
     });
     expect(result.diagnostics?.filter(diagnostic => diagnostic.category === ts.DiagnosticCategory.Error) ?? []).toEqual([]);
+  });
+
+  it("passes native Node syntax parsing without running any browser or network", () => {
+    const result = spawnSync(process.execPath, [
+      "--check", join(process.cwd(), "tests/e2e/v3-capture-workroom.mjs"),
+    ], { encoding: "utf8", timeout: 5_000 });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+  });
+
+  it("requires the host-reported integration SHA and scenario-specific real workbench before any capture", () => {
+    const source = capture();
+    expect(source).toContain("async function assertHostReportedSourceSha()");
+    expect(source).toContain('method: "GET"');
+    expect(source).toContain('credentials: "omit"');
+    expect(source).toContain('redirect: "manual"');
+    expect(source).toContain("const hostSourceProvider = await assertHostReportedSourceSha()");
+    expect(source).toContain("Preview-reported source SHA does not match");
+    expect(source).toContain("hostReportedSourceShaMatches: true");
+    expect(source).toContain("independentlyVerifiedSourceSha: false");
+    expect(source).toContain("page.regionReady");
+    for (const label of [
+      "Workday briefing",
+      "Customer conversations",
+      "Scheduling and dispatch workspace",
+      "Field jobs workspace",
+      "Quality review workspace",
+      "Invoice collection workspace",
+      "Commercial billing summary",
+      "Workspace settings console",
+    ]) {
+      expect(source).toContain(label);
+    }
   });
 
   it("captures all eight requested staff workspaces at five fixed mobile-to-desktop widths", () => {
