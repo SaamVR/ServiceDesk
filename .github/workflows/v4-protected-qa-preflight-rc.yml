@@ -1,0 +1,32 @@
+name: ServiceDesk V4 QA protected test config source gate
+on:
+  push:
+    branches: [feat/servicedesk-v4-protected-qa-preflight-20261012]
+    paths:
+      - scripts/release/v4-protected-qa-preflight.mjs
+      - .github/workflows/v4-l3-rls-real-session.yml
+      - .github/workflows/v4-l4-authenticated-uat.yml
+      - .github/workflows/v4-protected-qa-preflight-rc.yml
+permissions: {contents: read}
+jobs:
+  qa-gate-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2}
+      - run: node --check scripts/release/v4-protected-qa-preflight.mjs
+      - name: Assert missing fictional credentials are blocked without disclosing values
+        shell: bash
+        run: |
+          for profile in studio-owner two-owner-rls; do
+            if node scripts/release/v4-protected-qa-preflight.mjs "$profile" > "$RUNNER_TEMP/qa-preflight.log" 2>&1; then
+              echo "FAIL: UAT accepted credentials that were not supplied"; exit 1
+            fi
+            if ! grep -q "QA_PREFLIGHT_BLOCKED" "$RUNNER_TEMP/qa-preflight.log"; then
+              echo "FAIL: missing QA credentials not classified"; exit 1
+            fi
+          done
+          echo "PASS: protected QA gating rejects missing credentials before build"
