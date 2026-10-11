@@ -12,10 +12,14 @@ on:
       - "src/components/product/StaffCommandPalette*"
       - "src/components/product/StaffWorkspaceV3.module.css"
       - "src/features/operations/staff-command-search.ts"
+      - "src/features/auth/authorized-workspace-access.ts"
+      - "src/app/auth/continue/route.ts"
+      - "src/app/auth/select-workspace/**"
       - "src/features/operations/inbox-triage.ts"
       - "src/features/operations/StaffOverviewDashboard*"
       - "tests/e2e/staff-v3-navigation.test.tsx"
       - "tests/e2e/v3-staff-command-search.test.ts"
+      - "tests/e2e/v3-authorized-workspace-access.test.ts"
       - "tests/e2e/v3-inbox-triage.test.ts"
       - "tests/e2e/v2-professional-dashboard-ui.test.ts"
       - ".github/workflows/v3-ui-focused-pr.yml"
@@ -50,6 +54,8 @@ jobs:
         run: >-
           pnpm exec vitest run
           tests/e2e/v3-staff-command-search.test.ts
+          tests/e2e/v3-authorized-workspace-access.test.ts
+          tests/e2e/v3-authorized-workspace-access.test.ts
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-inbox-triage.test.ts
           tests/e2e/v2-professional-dashboard-ui.test.ts
@@ -61,6 +67,9 @@ jobs:
           src/components/product/StaffAppShell.tsx
           src/components/product/StaffCommandPalette.tsx
           src/features/operations/staff-command-search.ts
+          src/features/auth/authorized-workspace-access.ts
+          src/app/auth/continue/route.ts
+          src/app/auth/select-workspace/page.tsx
           src/features/operations/inbox-triage.ts
           src/features/operations/StaffOverviewDashboard.tsx
           tests/e2e/staff-v3-navigation.test.tsx
