@@ -265,7 +265,9 @@ describe("V3 operational Inbox triage", () => {
     expect(main).toContain('href={inboxQueueHref(queue, conversation.id, search) + "#active-inbox-thread"}');
     expect(main).toContain('href={inboxQueueHref("all", conversation.id, search)}');
     expect(main).toContain("toggleInboxHandover(workspaceSlug");
-    expect(main).toContain("enqueueInboxReply(workspaceSlug");
+    expect(main).toContain("queueApprovedInboxReply({");
+    expect(main).toContain('name="sourceMessageId" value={latestInbound?.id ?? ""}');
+    expect(main).toContain('name="confirmedByStaff" value="yes" required');
     expect(main).toContain("resolveOperationalConversationIdentity(");
     expect(main).toContain('aria-live="polite"');
     expect(main).toContain('href="#inbox-conversation-list"');

@@ -14,7 +14,7 @@ describe("Studio OS operational workspaces", () => {
     expect(route).toContain("loadOperationalStaffSnapshot(workspaceSlug)");
     expect(route).toContain("renderModule(module, result.value");
     expect(route).toContain("assignOperationalCrew");
-    expect(route).toContain("enqueueInboxReply");
+    expect(route).toContain("queueApprovedInboxReply({");
   });
   it("uses a coherent product workbench with accessible responsive panes", () => {
     const css = file("src/features/operations/OperationalProductRoute.module.css");
