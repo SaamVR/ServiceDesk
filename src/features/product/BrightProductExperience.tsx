@@ -189,12 +189,12 @@ function Hero({ kind, title, description }: { kind: Page; title: string; descrip
         <h1 id="bright-product-heading">{title}</h1>
         <p className={styles.heroLead}>{description}</p>
         <div className={styles.heroActions}>
-          <Link className={styles.primaryCta} href={kind === "contact" ? "/tour" : kind === "help" ? "/contact" : "#details"}>{identity.note}<RightArrow/></Link>
-          <Link className={styles.secondaryCta} href={kind === "contact" ? "/features" : "/tour"}>{kind === "contact" ? "Explore the platform" : "Product tour"} <span aria-hidden="true">→</span></Link>
+          <Link data-public-primary className={styles.primaryCta} href={kind === "contact" ? "/tour" : kind === "help" ? "/contact" : "#details"}>{identity.note}<RightArrow/></Link>
+          <Link data-public-secondary className={styles.secondaryCta} href={kind === "contact" ? "/features" : "/tour"}>{kind === "contact" ? "Explore the platform" : "Product tour"} <span aria-hidden="true">→</span></Link>
         </div>
         <div className={styles.heroFoot}><span className={styles.smallCircles} aria-hidden="true"><i/><i/><i/></span>{identity.accent} · Thoughtfully intelligent, human-controlled.</div>
       </div>
-      <div className={styles.heroArt}><HeroArt kind={kind}/></div>
+      <div data-public-hero className={styles.heroArt}><HeroArt kind={kind}/></div>
     </section>
   );
 }
