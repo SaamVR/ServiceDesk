@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import "./v3-signin-registration-truth.test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { marketingHeroEntry, marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
