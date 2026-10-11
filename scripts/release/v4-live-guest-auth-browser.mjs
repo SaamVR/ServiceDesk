@@ -18,7 +18,9 @@ const pages = [
 ];
 const widths = [320, 390, 834, 901, 1024, 1280, 1440];
 const height = (width) => width <= 390 ? 812 : 900;
-const origin = "https://servicedesk-v3-frontend-review.onrender.com";
+const origin = process.env.V4_GUEST_BASE || "https://servicedesk-v3-frontend-review.onrender.com";
+if (!["https://servicedesk-v3-frontend-review.onrender.com","http://127.0.0.1:3000"].includes(origin))
+  throw new Error("Unapproved public guest audit origin");
 const chrome = process.env.V4_GUEST_CHROME;
 if (!chrome || !existsSync(chrome) || !statSync(chrome).isFile()) {
   throw new Error("V3_PUBLIC_CHROME must point to Chrome.");
