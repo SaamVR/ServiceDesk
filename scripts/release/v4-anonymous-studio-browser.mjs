@@ -43,7 +43,7 @@ async function connect(url){
   await new Promise((ok,no)=>{let timer=setTimeout(()=>no(Error("ANON_WS_TIMEOUT")),10000);
     ws.onopen=()=>{clearTimeout(timer);ok()};ws.onerror=()=>no(Error("ANON_WS_FAILURE"))});
   ws.onmessage=e=>{const p=JSON.parse(String(e.data));const v=pending.get(p.id);if(!v)return;
-    pending.delete(p.id);clearTimeout(v.t);p.error?v.no(Error("CDP_ERROR")):v.ok(p.result)};
+    pending.delete(p.id);clearTimeout(v.t);if(p.error)v.no(Error("CDP_ERROR"));else v.ok(p.result)};
   return {send(method,params={}){return new Promise((ok,no)=>{const id=++seq;
     const t=setTimeout(()=>{pending.delete(id);no(Error("CDP_TIMEOUT_"+method))},30000);
     pending.set(id,{ok,no,t});ws.send(JSON.stringify({id,method,params}))})},close(){ws.close()}};
@@ -60,19 +60,19 @@ async function stable(expected){
     }catch{} await sleep(140);
   }throw Error("ANON_ROUTE_UNSTABLE");
 }
-async function screenshot(module,width){
+async function screenshot(staffModule,width){
   const r=await conn.send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false});
   const png=Buffer.from(r.data||"","base64");
   if(png.subarray(0,8).toString("hex")!=="89504e470d0a1a0a"||png.readUInt32BE(16)!==width)
     throw Error("ANON_SCREENSHOT_BAD");
-  const file=module+"-"+width+".png";writeFileSync(join(output,file),png,{mode:0o600});
+  const file=staffModule+"-"+width+".png";writeFileSync(join(output,file),png,{mode:0o600});
   manifest.screenshots.push(file);
 }
 try {
   // Host uses only a same-origin session cookie; no account is created.
-  for(const module of modules){
-    const response=await fetch(origin+"/app/"+slug+"/"+module,{redirect:"manual"});
-    if(response.status>=500)throw Error("ANON_STUDIO_HTTP_5XX_"+module);
+  for(const staffModule of modules){
+    const response=await fetch(origin+"/app/"+slug+"/"+staffModule,{redirect:"manual"});
+    if(response.status>=500)throw Error("ANON_STUDIO_HTTP_5XX_"+staffModule);
   }
   const routeOnly = process.env.V4_ANON_ROUTE_ONLY === "true";
   if (routeOnly) manifest.kind = "ANONYMOUS_STUDIO_ROUTE_ONLY_AI_SECURITY_UNTESTED";
@@ -100,10 +100,10 @@ try {
   for(const width of widths){
     await conn.send("Emulation.setDeviceMetricsOverride",{width,height:width<=390?812:900,
       screenWidth:width,screenHeight:width<=390?812:900,deviceScaleFactor:1,mobile:width<=390});
-    for(const module of modules){
-      const path="/app/"+slug+"/"+module;
-      const nav=await conn.send("Page.navigate",{url:origin+path});if(nav.errorText)throw Error("ANON_NAV_"+module);
-      const location=await stable(path);
+    for(const staffModule of modules){
+      const path="/app/"+slug+"/"+staffModule;
+      const nav=await conn.send("Page.navigate",{url:origin+path});if(nav.errorText)throw Error("ANON_NAV_"+staffModule);
+      await stable(path);
       const state=await evalInPage('(() => {const shown=e=>{if(!e)return false;const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none"};' +
         'return {path:location.pathname,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,' +
         'signin:shown(document.querySelector("a.app-auth-entry-link"))||!!document.querySelector("form[action] input[type=password]"),' +
@@ -111,9 +111,9 @@ try {
         'hasMain:!!document.querySelector("main"),errorOverlay:!!document.querySelector("nextjs-portal [data-nextjs-dialog-overlay]")};})()');
       if(state.errorOverlay||!state.hasMain||state.signout||state.privateAccount||
         (state.path===path&&!state.signin)||state.overflow>2)
-        throw Error("ANON_STUDIO_DENIAL_OR_LAYOUT_"+module+"_"+width+"_"+JSON.stringify(state));
-      manifest.checks.push({type:"anonymous-route",module,width,access:"denied",overflow:false});
-      if(width===320||width===1440)await screenshot(module,width);
+        throw Error("ANON_STUDIO_DENIAL_OR_LAYOUT_"+staffModule+"_"+width+"_"+JSON.stringify(state));
+      manifest.checks.push({type:"anonymous-route",module:staffModule,width,access:"denied",overflow:false});
+      if(width===320||width===1440)await screenshot(staffModule,width);
     }
   }
   writeFileSync(join(output,"manifest.json"),JSON.stringify(manifest,null,2),{mode:0o600});
