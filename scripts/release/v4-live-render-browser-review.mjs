@@ -11,7 +11,7 @@ import { join, resolve } from "node:path";
 import { setTimeout as pause } from "node:timers/promises";
 
 const origin = "https://servicedesk-v3-frontend-review.onrender.com";
-const expectedSha = "ffd8ceb12a817ec9e3bb6713e8ef43c0f38af1d1";
+const expectedSha = "000148aceff43c95ea6aa711ff94a300b7941a62";
 const expectedRoutes = [
   ["/", "A cleaner way to run your cleaning business"],
   ["/features", "Everything a cleaning operations team needs"],
@@ -191,6 +191,19 @@ try {
         const q=await evalInPage('(async()=>{const b=[...document.querySelectorAll("button[aria-pressed]")].find(x=>x.textContent?.includes("Dispatch"));if(!b)return{ok:false};b.click();await new Promise(r=>setTimeout(r,230));return{ok:b.getAttribute("aria-pressed")==="true",text:document.querySelector("[aria-live=polite]")?.textContent||""}})()');
         if(!q?.ok || !q.text.toLowerCase().includes("capacity"))throw Error("Live Features workflow tab is inert.");
         await snap(path,width,"workflow-selected");
+      }
+      if (width === 390 && path === "/sandbox") {
+        const q = await evalInPage(
+          '(async()=>{const first=[...document.querySelectorAll("button")].find(x=>x.textContent?.includes("Prepare sample quote"));' +
+          'if(!first)return{ok:false};first.click();await new Promise(r=>setTimeout(r,240));' +
+          'const stage=document.querySelector("section[aria-label=\\\"Live simulation totals\\\"] article:last-child strong")?.textContent||"";' +
+          'const notice=document.querySelector("[role=note]")?.textContent||"";' +
+          'return{ok:stage.trim()==="Quote prepared",notice};})()'
+        );
+        if (!q?.ok || !q.notice.includes("No emails, messages, API requests or payments are sent")) {
+          throw Error("Live redesigned synthetic sandbox workflow not interactive or safety disclosure missing.");
+        }
+        await snap(path,width,"sample-quote-prepared");
       }
       if (width === 390 && path === "/contact") {
         const q=await evalInPage('(async()=>{const b=document.querySelector("input[type=checkbox]");if(!b)return{ok:false};b.click();await new Promise(r=>setTimeout(r,220));return{ok:b.checked,text:document.body.textContent||""}})()');
