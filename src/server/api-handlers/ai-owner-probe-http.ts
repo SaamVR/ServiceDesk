@@ -32,7 +32,22 @@ export async function handleAiOwnerProbePost(
   catch { return response(400, { code: "REQUEST_URL_INVALID" }); }
   const origin = request.headers.get("origin");
   const fetchSite = request.headers.get("sec-fetch-site");
-  if (!origin || origin !== ownOrigin ||
+  // Next can receive an internal proxy URL on Render. Honor only the
+  // configured trusted external HTTPS origin, never untrusted forwarding
+  // headers supplied by a caller.
+  const configuredOrigin = process.env.SERVICEDESK_AI_ALLOWED_ORIGIN;
+  let trustedPublicOrigin: string | undefined;
+  if (configuredOrigin) {
+    try {
+      const candidate = new URL(configuredOrigin);
+      if (candidate.protocol === "https:" && candidate.pathname === "/" &&
+          !candidate.username && !candidate.password && !candidate.search &&
+          !candidate.hash && !candidate.port) {
+        trustedPublicOrigin = candidate.origin;
+      }
+    } catch { /* Malformed configuration fails closed. */ }
+  }
+  if (!origin || (origin !== ownOrigin && origin !== trustedPublicOrigin) ||
       (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
     return response(403, { code: "SAME_ORIGIN_REQUIRED" });
   }
