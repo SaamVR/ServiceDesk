@@ -1,8 +1,24 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { buildStaffModuleHref } from "../../src/features/operations/staff-modules";
 import { searchStaffDestinations } from "../../src/features/operations/staff-command-search";
 
 describe("V3 staff command palette navigation model", () => {
+  it("offers real arrow-key and Enter navigation rather than a mouse-only search", () => {
+    const source = readFileSync(join(process.cwd(), "src/components/product/StaffCommandPalette.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "src/components/product/StaffCommandPalette.module.css"), "utf8");
+    expect(source).toContain("handleSearchKeyDown");
+    expect(source).toContain("handleResultKeyDown");
+    expect(source).toContain('event.key === "Enter"');
+    expect(source).toContain("anchors[0].click()");
+    expect(source).toContain('event.key === "ArrowUp" && index === 0');
+    expect(source).toContain("input.current?.focus()");
+    expect(source).toContain("↑ ↓ to navigate");
+    expect(css).toContain(".result:focus-visible");
+    expect(css).not.toContain("#eef2ff");
+  });
+
   it("lists real routes in deterministic workday-first order", () => {
     const matches = searchStaffDestinations("west-side", "");
     expect(matches.map(entry => entry.module).slice(0, 4)).toEqual(["overview", "inbox", "schedule", "jobs"]);
