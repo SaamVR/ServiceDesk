@@ -60,7 +60,48 @@ function normalizedFailure(status: number): Result<never> {
   return { ok: false, code: "AI_MODEL_PROVIDER_REJECTED", message: "AI model provider rejected the request." };
 }
 
+function officialResponsesEndpoint(config: AiModelTransportConfig): boolean {
+  try {
+    const base = new URL(config.apiBaseUrl);
+    return base.protocol === "https:" && base.hostname === "api.openai.com" &&
+      base.pathname.replace(/\/+$/, "") === "/v1" &&
+      !base.username && !base.password && !base.port && !base.search && !base.hash;
+  } catch {
+    return false;
+  }
+}
+
+function hasOfficialOpenAiHost(config: AiModelTransportConfig): boolean {
+  try {
+    return new URL(config.apiBaseUrl).hostname === "api.openai.com";
+  } catch {
+    return false;
+  }
+}
+
 function buildModelBody(config: AiModelTransportConfig, input: AiModelCallInput): string {
+  if (officialResponsesEndpoint(config)) {
+    // OpenAI Responses uses "text.format", not the Chat Completions
+    // "response_format" field. Metadata values must be short strings, never
+    // arrays. Disable provider-side response storage for customer messages.
+    return JSON.stringify({
+      model: config.model,
+      store: false,
+      text: { format: { type: "json_object" } },
+      metadata: {
+        prompt_version: input.promptVersion.slice(0, 512),
+        conversation_id: input.conversationId.slice(0, 512),
+        workspace_id: input.workspaceId.slice(0, 512),
+        knowledge_refs: (input.approvedKnowledgeRefs ?? []).join(",").slice(0, 512),
+      },
+      input: [
+        { role: "system", content: "Return a single JSON object with output, replyDraft, requestedToolCalls and citations. No prices, payments, roles or confirmed availability. Tool calls are proposals for staff-approved execution only." },
+        { role: "user", content: input.userText },
+      ],
+    });
+  }
+  // Other explicitly configured provider gateways retain the existing
+  // adapter envelope until their individual contract is verified.
   return JSON.stringify({
     model: config.model,
     response_format: { type: "json_object" },
@@ -91,6 +132,47 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider must return a structured JSON object." };
+  }
+
+  // Official Responses API returns an envelope with output[] message items,
+  // not the business JSON payload directly. Extract only output_text chunks,
+  // then apply the SAME business-truth and tool-call guards as generic APIs.
+  if ((parsed as { object?: unknown }).object === "response") {
+    const response = parsed as {
+      status?: unknown;
+      output?: unknown;
+      output_text?: unknown;
+    };
+    if (response.status !== "completed") {
+      return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model response was incomplete or refused." };
+    }
+    let text: string | undefined = typeof response.output_text === "string"
+      ? response.output_text : undefined;
+    if (!text) {
+      const chunks: string[] = [];
+      if (Array.isArray(response.output)) {
+        for (const item of response.output) {
+          if (!item || typeof item !== "object" || item.type !== "message" || !Array.isArray(item.content)) continue;
+          for (const part of item.content) {
+            if (part && typeof part === "object" && part.type === "output_text" && typeof part.text === "string") {
+              chunks.push(part.text);
+            }
+          }
+        }
+      }
+      text = chunks.join("");
+    }
+    if (!text || text.length > 262_144) {
+      return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model response contained no bounded JSON output text." };
+    }
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model output text was not valid JSON." };
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model output text was not a structured JSON object." };
+    }
   }
 
   const output = (parsed as { output?: unknown }).output;
@@ -149,6 +231,9 @@ export async function callAiModel(
 ): Promise<Result<AiModelOutput>> {
   if (!config.apiBaseUrl || !config.apiKey || !config.model) {
     return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED", message: "AI model provider configuration is incomplete." };
+  }
+  if (hasOfficialOpenAiHost(config) && !officialResponsesEndpoint(config)) {
+    return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED", message: "Official OpenAI Responses transport requires an exact HTTPS /v1 base URL." };
   }
 
   const controller = new AbortController();
