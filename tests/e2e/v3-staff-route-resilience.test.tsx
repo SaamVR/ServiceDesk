@@ -21,6 +21,21 @@ describe("V3 authenticated workroom streaming and recovery", () => {
     expect(css).toContain(":focus-visible");
   });
 
+  it("makes failed authorized snapshot views recoverable with GET-only links", () => {
+    const dashboard = readFileSync(join(process.cwd(), "src/features/operations/StaffOverviewDashboard.tsx"), "utf8");
+    const workroom = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.tsx"), "utf8");
+    const fallback = workroom.slice(workroom.lastIndexOf('title={result.kind === "authentication"'));
+    expect(dashboard).toContain('href={buildStaffModuleHref(workspace, "overview")}');
+    expect(dashboard).toContain("Retry loading Today");
+    expect(dashboard).toContain("check the saved record before repeating it");
+    expect(dashboard).not.toContain('description={errorMessage ??');
+    expect(fallback).toContain("Retry view");
+    expect(fallback).toContain('href={buildStaffModuleHref(workspaceSlug, module)}');
+    expect(fallback).toContain("check saved records before repeating any action");
+    expect(fallback).not.toContain("description={result.message}");
+    expect(fallback).toContain("Your staff session could not be confirmed");
+  });
+
   it("renders a retry path without exposing exception details or touching a provider", () => {
     const html = renderToStaticMarkup(createElement(WorkspaceError, {
       error: new Error("sensitive operational token / private customer") as Error,
