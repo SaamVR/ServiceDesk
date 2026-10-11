@@ -48,7 +48,8 @@ function providerIds(payload: Record<string, unknown>): { ids: string[]; hasStat
           if (!isRecord(status) ||
               typeof status.id !== "string" || !status.id.trim() ||
               typeof status.timestamp !== "string" ||
-              !/^\\d{1,13}$/.test(status.timestamp) ||
+              !(status.timestamp.length > 0 && status.timestamp.length <= 13 &&
+                [...status.timestamp].every(char => char >= "0" && char <= "9")) ||
               !["sent", "delivered", "read", "failed"].includes(String(status.status))) {
             return undefined;
           }
