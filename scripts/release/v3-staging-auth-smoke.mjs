@@ -16,7 +16,7 @@ import { resolve } from "node:path";
 
 export const DEFAULT_PREVIEW = "https://servicedesk-v2-multilane-gate.onrender.com";
 export const PATHS = Object.freeze([
-  { key: "signup-disabled", path: "/auth/sign-up", phrase: "Account registration is not available on this preview yet." },
+  { key: "signup-disabled", path: "/auth/sign-up", phrase: "Account registration is not available on this preview yet.", requireDisabledSubmit: true },
   { key: "check-email-disabled", path: "/auth/sign-up/check-email", phrase: "New registration and verification messages are not enabled on this preview yet." },
   { key: "workspace-disabled", path: "/auth/create-workspace", phrase: "Workspace registration is not enabled on this preview." },
   { key: "password-recovery", path: "/auth/forgot-password", phrase: "Send reset link" },
@@ -29,8 +29,7 @@ export function validatedPreviewUrl(value) {
     if (url.protocol !== "https:" || !url.hostname ||
       url.username || url.password || url.search || url.hash || url.pathname !== "/") return null;
     // Avoid silently running smoke against an arbitrary production or internal host.
-    if (url.hostname !== "servicedesk-v2-multilane-gate.onrender.com" &&
-        !url.hostname.endsWith(".onrender.com")) return null;
+    if (url.hostname !== "servicedesk-v2-multilane-gate.onrender.com" || url.port) return null;
     return url.origin;
   } catch { return null; }
 }
@@ -45,6 +44,19 @@ export function safePublicRedirect(base, rawLocation, expectedPath) {
   } catch { return false; }
 }
 
+/**
+ * The presence of a disabled-registration notice alone is not evidence that
+ * the POST control is actually blocked. Fail the read-only gate if its form
+ * submits without the HTML disabled attribute, regardless of attribute order.
+ * Browser/RLS verification remains a separate release requirement.
+ */
+export function disabledSubmitPresent(html) {
+  const buttons = [...html.matchAll(/<button\\b([^>]*)>/gi)];
+  const submitButtons = buttons.filter(match => /\\btype\\s*=\\s*["']?submit\\b/i.test(match[1]));
+  return submitButtons.length > 0 &&
+    submitButtons.every(match => /(?:^|\\s)disabled(?:\\s|=|$)/i.test(match[1]));
+}
+
 export function assessSmokeResult(base, spec, response) {
   if (response.status === 503) return { key: spec.key, status: "COLD_START_503", http: 503 };
   if (spec.redirect) {
@@ -57,7 +69,9 @@ export function assessSmokeResult(base, spec, response) {
   }
   return {
     key: spec.key,
-    status: response.status === 200 && response.body.includes(spec.phrase) ? "PASS" : "FAIL",
+    status: response.status === 200 &&
+      response.body.includes(spec.phrase) &&
+      (!spec.requireDisabledSubmit || disabledSubmitPresent(response.body)) ? "PASS" : "FAIL",
     http: response.status,
   };
 }
