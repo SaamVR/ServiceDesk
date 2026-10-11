@@ -32,7 +32,7 @@ describe("V3 public navigation redesign", () => {
     const css = file("src/components/shell/MarketingNavV3.module.css");
     expect(links).toContain('aria-current={pathname === item.href');
     expect(shell).toContain('<details className={styles.mobileMenu}>');
-    expect(shell).toContain('aria-label="Toggle navigation menu"');
+    expect(shell).toContain('aria-label="Open product menu"');
     expect(shell).toContain('aria-label="Mobile product navigation"');
     expect(shell).toContain('href="/contact"');
     expect(shell).toContain('href="/help"');
