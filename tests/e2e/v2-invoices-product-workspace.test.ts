@@ -11,9 +11,9 @@ describe("V2 invoices operational workspace", () => {
 
     expect(page).toContain("invoice?: string");
     expect(page).toContain("selectedInvoiceId={query.invoice}");
-    expect(route).toContain('orderedInvoices.find((invoice) => invoice.id === selectedInvoiceId)');
+    expect(route).toContain('visibleInvoices.find((invoice) => invoice.id === selectedInvoiceId)');
     expect(route).toContain('selected ? styles.financeQueueSelected : ""');
-    expect(route).toContain('href={"?invoice=" + encodeURIComponent(invoice.id)}');
+    expect(route).toContain('href={invoiceQueueHref(queue, search, invoice.id)}');
   });
 
   it("applies manual payment only to the selected outstanding invoice", () => {
@@ -21,7 +21,7 @@ describe("V2 invoices operational workspace", () => {
 
     expect(route).toContain('value={selectedInvoice.id}');
     expect(route).toContain("selectedInvoiceCanRecordPayment");
-    expect(route).toContain('"invoice=" + encodeURIComponent(invoiceId) + "&"');
+    expect(route).toContain('invoiceFeedbackPrefix(queue, search, invoiceId)');
     expect(route).not.toContain("outstanding.slice(0, 6).map");
   });
 });
