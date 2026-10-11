@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { businessSlug, validateWorkspaceFields } from "@/features/auth/registration";
-import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { ownerRegistrationAvailable, ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
 
 function fail(code: string): never {
   redirect("/auth/create-workspace?error=" + encodeURIComponent(code));
@@ -41,6 +41,10 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
   const { data: actor, error: actorError } = await auth.auth.getUser();
   if (actorError || !actor.user || !actor.user.email_confirmed_at) {
     redirect("/auth/sign-in?notice=" + encodeURIComponent("Verify your email and sign in to create a workspace."));
+  }
+
+  if (!ownerRegistrationEmailAllowed(actor.user.email)) {
+    fail("Workspace creation is limited to approved test accounts on this preview.");
   }
 
   const { data, error } = await auth.rpc("servicedesk_register_owner_workspace", {

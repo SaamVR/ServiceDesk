@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifiedEmailRedirectOrigin } from "@/features/auth/email-origin";
-import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { ownerRegistrationAvailable, ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
 import { normalizedEmail } from "@/features/auth/registration";
 
 function back(message: string): never {
@@ -24,6 +24,10 @@ export async function resendSignupConfirmation(formData: FormData): Promise<neve
   const email = normalizedEmail(String(formData.get("email") ?? ""));
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     back("Enter a valid email address to request a new verification message.");
+  }
+
+  if (!ownerRegistrationEmailAllowed(email)) {
+    back("Account registration on this preview is limited to approved test accounts.");
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;

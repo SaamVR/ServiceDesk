@@ -1,5 +1,5 @@
 import { MarketingShell } from "@/components/shell/MarketingShell";
-import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { ownerRegistrationAvailable, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 import {
   BenefitGrid,
   CustomerJourneyPreview,
@@ -11,7 +11,7 @@ import {
 } from "@/features/product/ProductSections";
 
 export default function HomePage() {
-  const canRegister = ownerRegistrationAvailable();
+  const canRegister = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
   return (
     <MarketingShell
       title="Run cleaning operations from enquiry to paid job."
