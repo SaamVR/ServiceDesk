@@ -68,9 +68,11 @@ describe("V3 staff operational record discovery", () => {
   it("wires real tenant-authorized customers, requests, quotes and invoices to deep-link search", () => {
     const source = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
     const route = source("src/features/operations/OperationalProductRoute.tsx");
-    for (const key of ["customer", "request", "quote", "invoice"]) {
+    for (const key of ["customer", "request", "quote"]) {
       expect(route).toContain('directoryRecordHref("' + key + '"');
     }
+    // Invoice Collections intentionally owns queue/search/deep-link continuity.
+    expect(route).toContain("invoiceQueueHref(queue, search, invoice.id)");
     for (const key of ["customers", "requests", "quotes", "invoices"]) {
       expect(source("src/app/app/[workspace]/" + key + "/page.tsx")).toContain("searchQuery={query.search}");
     }
