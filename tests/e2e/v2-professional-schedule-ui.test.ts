@@ -38,7 +38,7 @@ describe("V2 professional schedule UI", () => {
     expect(route).toContain('const showUnassigned = selectedScheduleQueue === "unassigned"');
     expect(route).toContain("upcoming.filter((visit) => !visit.crewId) : upcoming");
     expect(route).toContain('aria-label="Schedule visit filters"');
-    expect(route).toContain('scheduleWindowHref(window.from, "unassigned", window.today)');
+    expect(route).toContain('scheduleCoverageHref("unassigned", selectedDay, window.from, window.today)');
     expect(route).toContain("scheduleWindowFeedbackPrefix(window, currentQueue)");
     expect(page).toContain("selectedScheduleFrom={query.from}");
     expect(route).toContain("visibleUpcoming.slice(0, 12)");
