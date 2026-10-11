@@ -1,3 +1,5 @@
+import { isCollectibleInvoice } from "./invoice-collection-queue";
+
 export interface StartableVisit {
   id: string;
   startAt: string;
@@ -60,9 +62,7 @@ export interface OutstandingInvoiceSummary {
 export function summarizeOutstandingInvoices(
   invoices: readonly InvoiceBalanceLike[],
 ): OutstandingInvoiceSummary {
-  const openInvoices = invoices.filter(
-    (invoice) => invoice.balanceMinor > 0 && invoice.status !== "VOID",
-  );
+  const openInvoices = invoices.filter(isCollectibleInvoice);
   const currencies = [...new Set(openInvoices.map((invoice) => invoice.currency))].sort();
 
   if (currencies.length !== 1) {
