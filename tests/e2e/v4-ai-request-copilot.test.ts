@@ -151,7 +151,7 @@ describe("V4 model-backed cleaning request copilot", () => {
     const panel = read("src/features/operations/AiRequestBrief.tsx");
     const ops = read("src/features/operations/OperationalProductRoute.tsx");
     const overview = read("src/features/operations/StaffOverviewDashboard.tsx");
-    expect(panel).toContain("AI not activated");
+    expect(panel).toContain("AI is not activated");
     expect(panel).toContain("Generate AI intake brief");
     expect(panel).toContain("/api/internal/ai/request-brief");
     expect(ops).toContain("<AiRequestBrief");
