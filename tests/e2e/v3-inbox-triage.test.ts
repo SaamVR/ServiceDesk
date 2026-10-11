@@ -244,6 +244,11 @@ describe("V3 operational Inbox triage", () => {
     expect(main).toContain('<InboxSearchForm queue={queue} search={search} />');
     expect(page).toContain('searchQuery={query.search}');
     expect(main).toContain('aria-label="Conversation queues"');
+    expect(main).toContain('"delivery-issues": "Delivery issues"');
+    expect(main).toContain("triage.threadFlags.get(selected.id)?.deliveryIssue");
+    expect(main).toContain("Outbound delivery needs review");
+    expect(main).toContain("Check the provider status, recipient identity and consent");
+    expect(main).toContain("Delivery issue</span>");
     expect(main).toContain('href={inboxQueueHref(queue, conversation.id, search) + "#active-inbox-thread"}');
     expect(main).toContain('href={inboxQueueHref("all", conversation.id, search)}');
     expect(main).toContain("toggleInboxHandover(workspaceSlug");
