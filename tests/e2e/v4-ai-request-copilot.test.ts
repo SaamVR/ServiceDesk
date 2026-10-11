@@ -18,6 +18,7 @@ function harness(options: {
   disabled?: boolean;
   absent?: boolean;
   modelTools?: boolean;
+  modelDraft?: string;
 } = {}) {
   const filters: Array<[string, unknown]> = [];
   const service = {
@@ -53,7 +54,7 @@ function harness(options: {
     expect(prompt.userText).toContain('"serviceCode":"MOVE_OUT"');
     return { ok: true as const, value: {
       output: {},
-      replyDraft: "Saved move-out enquiry: three bedrooms, two bathrooms. Confirm the cleaning scope and preferred timing with staff.",
+      replyDraft: options.modelDraft ?? "Saved move-out enquiry: three bedrooms, two bathrooms. Confirm the cleaning scope and preferred timing with staff.",
       requestedToolCalls: options.modelTools ? [{ name: "sendEmail" }] : [],
     } };
   });
@@ -115,6 +116,32 @@ describe("V4 model-backed cleaning request copilot", () => {
     const tools = harness({ modelTools: true });
     expect(await generateAuthorizedRequestBrief(input, tools.deps))
       .toMatchObject({ ok: false, code: "AI_BRIEF_OUTPUT_UNSAFE" });
+  });
+
+  it("rejects ungrounded AI-generated contacts, charges, dates, links, and falsely completed actions", async () => {
+    const dangerous = [
+      "Send to client@example.org right now.",
+      "See https://billing.example.org/checkout.",
+      "The total is $340, payable now.",
+      "Your booking is for 2026-11-10.",
+      "Call (555) 123-4567 to confirm.",
+      "We have charged the customer.",
+      "<script>alert(1)</script>",
+      "",
+    ];
+    for (const modelDraft of dangerous) {
+      const t = harness({ modelDraft });
+      const result = await generateAuthorizedRequestBrief(input, t.deps);
+      expect(result, modelDraft).toMatchObject({ ok: false, code: "AI_BRIEF_OUTPUT_INVALID" });
+      expect(t.model).toHaveBeenCalledOnce();
+    }
+  });
+
+  it("preserves ordinary grounded and non-authoritative review advice", async () => {
+    const t = harness({modelDraft: "  The saved MOVE_OUT enquiry shows 3 bedrooms and 2 bathrooms. Ask staff to confirm access instructions and preferred timing. "});
+    const result = await generateAuthorizedRequestBrief(input, t.deps);
+    expect(result).toMatchObject({ok:true,value:{state:"AI_DRAFT_REQUIRES_REVIEW"}});
+    if(result.ok) expect(result.value.briefing).toMatch(/^The saved MOVE_OUT enquiry/);
   });
 
   it("rejects wrong-origin requests, malformed IDs and oversized payloads", async () => {
