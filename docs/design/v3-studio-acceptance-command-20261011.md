@@ -36,6 +36,31 @@ pnpm build
 
 An owner-approved, **isolated authenticated nonproduction** preview must be traceable to the *exact* W4 SHA. Then use `tests/e2e/v3-capture-workroom.mjs` with the parameters documented in that file. Capture 8 staff routes at 320, 390, 834, 1280 and 1440 CSS pixels. Review overflow, contrast, keyboard navigation, reduced motion, focus state, read-only preview evidence and real record presentation. Keep screenshots containing customer data out of GitHub public artifacts. Never claim product/browser PASS from source assertions alone.
 
+## Exact Studio OS QA matrix (2026-10-11)
+
+The capture harness now covers these **eight distinct staff surfaces** in one isolated Chromium session:
+Today (`overview`), Inbox, Schedule, Jobs, Quality, Customer Collections
+(`invoices?surface=customers`), Commercial Accounts
+(`invoices?surface=commercial`) and Settings.
+Each is captured at **320, 390, 834, 1280 and 1440 CSS pixels**,
+for **40 screenshots** total. The commercial case must be backed by an enabled
+authorized finance snapshot; disabled or unavailable finance fails closed.
+
+The isolated profile and screenshot output must stay outside Git. The script
+rejects a profile with an existing DevTools port and requires an empty,
+owner-private output directory, defaulting to a unique path under the system
+temporary directory. Do not attach customer screenshots to GitHub issue
+comments, CI artifacts or public chat. Browser capture is not an accessibility
+audit or owner signoff: inspect keyboard focus, scroll/overflow, content density,
+contrast and workflows personally in the approved staging tenant.
+
+The manifest deliberately records `CAPTURED_NOT_YET_VISUALLY_ACCEPTED`
+and `independentlyVerifiedSourceSha: false`; operator-provided SHA is not
+deployment verification. Independently establish the deployed commit via
+trusted deployment metadata before release. A full
+`pnpm install --frozen-lockfile && pnpm typecheck && pnpm build`
+on the exact integration SHA remains a **separate required release gate**.
+
 ## Latest W4 design evidence
 
 - `docs/design/v3-studio-product-ux-standard-20261011.md`: industry references and design tokens.
