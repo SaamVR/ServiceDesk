@@ -49,6 +49,17 @@ describe("V3 staff workday shell", () => {
     expect(html).toMatch(/aria-current="page"[^>]*href="\/app\/acme-west\/settings"/);
   });
 
+  it("includes an accessible keyboard command palette without changing authorization or routes", () => {
+    const html = renderStaffShell("/app/acme-west/inbox");
+    expect(html).toContain("Jump to a workspace page");
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain('type="search"');
+    expect(html).toContain("Where do you want to go?");
+    expect(html).toContain('aria-label="Close workspace navigation"');
+    expect(html).toContain('href="/app/acme-west/jobs"');
+    expect(html).toContain('href="/app/acme-west/inbox"');
+  });
+
   it("retains encoded workspace routing and safe account sign-out semantics", () => {
     const html = renderStaffShell("/app/east%2Fwest/quality", "east/west");
     expect(html).toContain('href="/app/east%2Fwest/quality"');
