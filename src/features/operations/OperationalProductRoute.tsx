@@ -48,6 +48,7 @@ import { buildQuotePipeline, isCurrentApprovedQuote } from "./quote-pipeline";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { InboxThreadNavigator } from "./InboxThreadNavigator";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
+import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { settingsFeedbackFragment } from "./settings-navigation";
 import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
@@ -457,6 +458,9 @@ function InboxView({
                 : message.senderKind === "STAFF"
                   ? "Staff"
                   : message.senderKind;
+              const delivery = outbound && message.deliveryState
+                ? presentOutboundDelivery(message.deliveryState)
+                : undefined;
               return (
                 <article
                   className={`${styles.messageBubbleRow} ${outbound ? styles.messageOutbound : internal ? styles.messageInternal : styles.messageInbound}`}
@@ -468,8 +472,10 @@ function InboxView({
                       <span>{formatWhen(message.createdAt, data.workspace.timezone)}</span>
                     </div>
                     <p>{message.body ?? "Media message"}</p>
-                    {message.deliveryState ? (
-                      <small className={styles.deliveryState}>{message.deliveryState.replaceAll("_", " ").toLowerCase()}</small>
+                    {delivery ? (
+                      <span className={styles.deliveryState}>
+                        <StatusBadge tone={delivery.tone}>{delivery.label}</StatusBadge>
+                      </span>
                     ) : null}
                   </div>
                 </article>
