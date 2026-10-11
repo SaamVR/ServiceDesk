@@ -24,7 +24,7 @@ import "./v3-studio-invoice-queue.test";
 import "./v3-quality-triage.test";
 import "./v3-studio-browser-matrix.test";
 import "./v3-staff-boundary-theme.test";
-import "./v3-staff-route-resilience.test";
+
 import "./v2-product-truth.test";
 import "./v3-studio-schedule-window.test";
 import "./v3-studio-operational-continuity.test";
@@ -44,6 +44,20 @@ function renderStaffShell(pathname: string, workspace = "acme-west") {
     signedIn: true,
   }, createElement("p", null, "Operational workspace")));
 }
+
+describe("V3 safe snapshot recovery contracts", () => {
+  it("exposes GET-only retry destinations without raw provider errors", () => {
+    const today = readFileSync(join(process.cwd(), "src/features/operations/StaffOverviewDashboard.tsx"), "utf8");
+    const route = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.tsx"), "utf8");
+    const unavailable = route.slice(route.lastIndexOf('title={result.kind === "authentication"'));
+    expect(today).toContain('href={buildStaffModuleHref(workspace, "overview")}');
+    expect(today).toContain("Retry loading Today");
+    expect(today).not.toContain("description={errorMessage ??");
+    expect(unavailable).toContain("Retry view");
+    expect(unavailable).toContain("href={buildStaffModuleHref(workspaceSlug, module)}");
+    expect(unavailable).not.toContain("description={result.message}");
+  });
+});
 
 describe("V3 staff workday shell", () => {
   it("provides Escape and link-click close paths for mobile workspace navigation", () => {
