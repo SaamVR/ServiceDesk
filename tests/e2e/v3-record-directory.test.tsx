@@ -35,6 +35,18 @@ describe("V3 staff operational record discovery", () => {
     expect(rows[0].id).toBe("first");
   });
 
+  it("matches multiple operator terms across different authorized record fields", () => {
+    expect(filterDirectoryRows(rows, "briar email", (row) => [row.name, row.channel, row.status]).map((row) => row.id))
+      .toEqual(["second"]);
+    expect(filterDirectoryRows(rows, "READY WHATSAPP", (row) => [row.name, row.channel, row.status]).map((row) => row.id))
+      .toEqual(["first"]);
+    expect(filterDirectoryRows(rows, "briar ready", (row) => [row.name, row.channel, row.status])).toEqual([]);
+    expect(filterDirectoryRows(rows, "house sent", (row) => [row.name, row.channel, row.status]).map((row) => row.id))
+      .toEqual(["second"]);
+    expect(filterDirectoryRows(rows, "aVERY  home", (row) => [row.name]).map((row) => row.id))
+      .toEqual(["first"]);
+  });
+
   it("bounds search input and safely encodes route + selection state", () => {
     expect(normalizeDirectoryQuery("   a   b  ")).toBe("a b");
     expect(normalizeDirectoryQuery("a".repeat(500)).length).toBe(100);
