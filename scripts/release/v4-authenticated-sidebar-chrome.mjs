@@ -13,7 +13,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-const origin = "https://servicedesk-v3-frontend-review.onrender.com";
+const origin = process.env.V4_AUTH_TEST_ORIGIN || "https://servicedesk-v3-frontend-review.onrender.com";
+if (!["https://servicedesk-v3-frontend-review.onrender.com", "http://127.0.0.1:3000"].includes(origin)) {
+  throw new Error("AUTHENTICATED_STUDIO_UAT_BLOCKED: unapproved origin");
+}
 const { V4_AUTH_QA_EMAIL: email, V4_AUTH_QA_PASSWORD: password,
   V4_AUTH_QA_WORKSPACE: slug, V4_AUTH_CHROME: chrome, V4_AUTH_OUTPUT: outputDir } = process.env;
 if (!email || !password || !slug || !chrome || !outputDir ||
@@ -108,13 +111,13 @@ async function waitForWorkspace(path) {
 async function signIn() {
   await visit("/auth/sign-in");
   // Do not interpolate credentials into logs or URLs. Native setter fires React inputs.
-  const setFields = JSON.stringify({ email, password });
+  const setFields = JSON.stringify({ email, password, next: "/app/" + encodeURIComponent(slug) + "/overview" });
   const form = await evaluate('(() => { const p=' + setFields + ';' +
     'const e=document.querySelector("#sign-in-email"),s=document.querySelector("#sign-in-password");' +
-    'const f=e?.closest("form");if(!e||!s||!f)return false;' +
+    'const f=e?.closest("form"),next=f?.querySelector("input[name=next]");if(!e||!s||!f||!next)return false;' +
     'const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set;' +
     'for(const [field,value] of [[e,p.email],[s,p.password]]){setter.call(field,value);field.dispatchEvent(new Event("input",{bubbles:true}));field.dispatchEvent(new Event("change",{bubbles:true}));}' +
-    'f.requestSubmit();return true;})()');
+    'next.value=p.next;f.requestSubmit();return true;})()');
   if (!form) throw new Error("AUTHENTICATED_STUDIO_UAT_BLOCKED: real login form unavailable");
   await waitForWorkspace("/app/" + encodeURIComponent(slug) + "/overview");
 }
