@@ -75,7 +75,7 @@ describe("V4 Clean Air guided tour and controlled sandbox handoff", () => {
     const css = file("src/app/tour/tour.module.css");
     expect(css).toContain("--ink: #203638");
     expect(css).toContain("--aqua: #219d9b");
-    expect(css).toContain("--coral: #fa785f");
+    expect(css).toContain("--coral: #bd4b36");
     expect(css).toContain("Manrope");
     expect(css).toContain("DM Sans");
     expect(css).toContain("@media (max-width: 580px)");
