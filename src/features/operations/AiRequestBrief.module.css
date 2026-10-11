@@ -11,7 +11,7 @@
 .ready,.offline { font-size: .72rem; font-weight: 790; border: 1px solid; padding: 7px 10px; border-radius: 20px; }
 .ready { background: #e1f7e9; color: #146d4d; border-color: #b1dac3; }
 .offline { background: #fff7e9; color: #7b571b; border-color: #ecd6b2; }
-.action { cursor: pointer; justify-self: start; min-height: 42px; background: #176d64; color: #fff; border: 0; border-radius: 9px; padding: 10px 15px; font: 750 .84rem/1.35 inherit; }
+.action { cursor: pointer; justify-self: start; min-height: 42px; background: #176d64; color: #fff; border: 0; border-radius: 9px; padding: 10px 15px; font-family: inherit; font-weight: 750; font-size: .84rem; line-height: 1.35; }
 .action:hover { background: #115a53; }
 .action:disabled { cursor: wait; opacity: .7; }
 .action:focus-visible { outline: 3px solid #147c73; outline-offset: 3px; }
