@@ -9,7 +9,7 @@
   --app-surface-muted: #f0ede5;
   --app-text: #202823;
   --app-text-muted: #566058;
-  --app-text-subtle: #707a72;
+  --app-text-subtle: #626c63;
   --app-border: #e3e0d7;
   --app-border-strong: #cbc7bc;
   --app-accent: #ab5139;
@@ -74,7 +74,7 @@
 .navGroup { display: grid; gap: 3px; }
 .navGroupLabel {
   margin: 0 10px 8px !important;
-  color: #767c71 !important;
+  color: #5d645b !important;
   font-size: .66rem !important;
   font-weight: 820 !important;
   letter-spacing: .10em !important;
@@ -133,7 +133,7 @@
   padding: 18px 10px 1px;
 }
 .v3Shell :global(.app-sidebar) :global(.app-sidebar-footer-link) { color: #353c34; font-size: .8rem; }
-.v3Shell :global(.app-sidebar) :global(.app-product-caption) { color: #767c71; font-size: .71rem; }
+.v3Shell :global(.app-sidebar) :global(.app-product-caption) { color: #5d645b; font-size: .71rem; }
 .v3Shell :global(.app-topbar) {
   height: 68px;
   gap: 18px;
@@ -147,7 +147,7 @@
   gap: 10px;
   min-width: 0;
   flex: 0 0 auto;
-  color: #858980;
+  color: #61685f;
   font-size: .81rem;
 }
 .v3Shell :global(.app-topbar-context) strong {
