@@ -12,6 +12,7 @@ import { formatMinorMoney } from "./view-models";
 import { createLocalDayKey } from "./staff-local-day";
 import { indexStaffById } from "./staff-snapshot-index";
 import { buildInboxTriage } from "./inbox-triage";
+import { buildInboxTriage } from "./inbox-triage";
 import styles from "./StaffOverviewDashboard.module.css";
 
 function attentionTone(severity: "INFO" | "WARNING" | "CRITICAL") {
@@ -158,6 +159,8 @@ export function StaffOverviewDashboard({
     | "loadedAt"
     | "workspace"
     | "customers"
+    | "conversations"
+    | "messages"
     | "requests"
     | "quotes"
     | "visits"
@@ -190,6 +193,7 @@ export function StaffOverviewDashboard({
   const attention = snapshot.attentionItems.filter((item) => item.status !== "RESOLVED");
   const waitingRequests = snapshot.requests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status));
   const waitingQuotes = snapshot.quotes.filter((quote) => quote.status === "SENT");
+  const inboxNeedsReply = buildInboxTriage(snapshot.conversations, snapshot.messages, snapshot.customers, "needs-reply").counts["needs-reply"];
   // The reply queue is derived from stored external-message direction, not a fake unread badge.
   // Older server test fixtures can omit these optional records without implying zero replies.
   const replyTriage = snapshot.conversations && snapshot.messages
@@ -289,10 +293,11 @@ export function StaffOverviewDashboard({
           emphasis={criticalAttention ? "danger" : attention.length ? "warning" : "default"}
         />
         <KpiCard
-          label="Waiting pipeline"
-          href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
-          value={waitingRequests.length + waitingQuotes.length}
-          detail={`${waitingRequests.length} requests · ${waitingQuotes.length} quotes`}
+          label="Inbox needs reply"
+          href={buildStaffModuleHref(workspace, "inbox") + "?queue=needs-reply"}
+          value={inboxNeedsReply}
+          detail={inboxNeedsReply ? "Customer conversations waiting" : "No reply waiting"}
+          emphasis={inboxNeedsReply ? "warning" : "default"}
         />
         <KpiCard
           label="Outstanding"
