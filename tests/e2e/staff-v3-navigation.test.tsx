@@ -73,7 +73,9 @@ describe("V3 safe snapshot recovery contracts", () => {
 describe("V3 staff workday shell", () => {
   it("provides Escape and link-click close paths for mobile workspace navigation", () => {
     const source = readFileSync(join(process.cwd(), "src/components/product/StaffAppShell.tsx"), "utf8");
-    expect(source).toContain('event.key !== "Escape"');
+    expect(source).toContain('event.key === "Escape"');
+    expect(source).toContain('event.key !== "Tab"');
+    expect(source).toContain('document.activeElement === last');
     expect(source).toContain('mobileMenu.current?.querySelector("summary")?.focus()');
     expect(source).toContain('onKeyDown={handleMobileNavigationKeyDown}');
     expect(source).toContain('onClick={handleMobileNavigationClick}');
