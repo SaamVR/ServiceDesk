@@ -41,6 +41,24 @@ test("real Chrome expected headings agree with route-authored product text", () 
   assert.equal((script.match(/\{ slug: "(?:home|features|pricing|integrations|contact|sign-in)"/g) ?? []).length, 6);
 });
 
+test("public Chrome requires different authored storyboards instead of a repeated default illustration", () => {
+  const script = file("scripts/release/v3-public-browser-proof.mjs");
+  const component = file("src/components/shell/ProductStoryHero.tsx");
+  const shell = file("src/components/shell/MarketingShell.tsx");
+  for (const name of [
+    "Four stages of the cleaning operations workflow",
+    "Feature workflow from intake through quality",
+    "Illustrative service quote breakdown, not subscription prices",
+    "Integration readiness categories, not live provider status",
+    "ServiceDesk walkthrough preparation agenda",
+  ]) {
+    assert.ok(script.includes('heroLabel: "' + name + '"'), name);
+    assert.ok(component.includes(name) || file("src/components/shell/OperationalFlowHero.tsx").includes(name));
+  }
+  assert.ok(script.includes("state.heroLabel !== page.heroLabel"));
+  assert.ok(shell.includes('heroStory ? <ProductStoryHero kind={heroStory} /> : <OperationalFlowHero />'));
+});
+
 test("browser acceptance remains fully public, five-width, no secrets, and labelled as partial evidence", () => {
   const script = file("scripts/release/v3-public-browser-proof.mjs");
   assert.ok(script.includes("const widths = [320, 390, 834, 1280, 1440]"));
