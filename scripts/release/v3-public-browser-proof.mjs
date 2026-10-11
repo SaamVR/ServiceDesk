@@ -181,6 +181,25 @@ try {
       await sleep(120);
       layout.push(await layoutCheck(page, width));
       captures.push(await snapshot(page, width, "first-fold"));
+      // Open the actual native mobile disclosure; closed-menu screenshots
+      // alone cannot prove destinations are accessible to mobile visitors.
+      if (page.slug === "home" && width <= 834) {
+        const state = await inspect(
+          '(() => { const menu = document.querySelector("header details");' +
+          'if (!menu) return null; menu.querySelector("summary")?.click();' +
+          'const panel = menu.querySelector("nav"); if (!panel) return null;' +
+          'const rect = panel.getBoundingClientRect();' +
+          'return {open:menu.open,links:panel.querySelectorAll("a[href]").length,' +
+          'visible:getComputedStyle(panel).display !== "none",left:rect.left,right:rect.right}; })()'
+        );
+        if (!state?.open || !state.visible || state.links < 7 ||
+            state.left < -2 || state.right > width + 2) {
+          throw new Error("Public mobile navigation did not open with reachable links: " +
+            width + " " + JSON.stringify(state));
+        }
+        captures.push(await snapshot(page, width, "mobile-menu-open"));
+        await inspect('(() => { document.querySelector("header details").open = false; return true; })()');
+      }
       await inspect('(() => {window.scrollTo({top:Math.floor((document.documentElement.scrollHeight-innerHeight)/2),behavior:"instant"});return true;})()');
       await sleep(100);
       captures.push(await snapshot(page, width, "mid-page"));
