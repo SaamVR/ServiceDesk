@@ -44,6 +44,7 @@ import { filterJobsQueue, filterJobsSearch, indexJobProgress, jobsActionFeedback
 import { JobQueueSearch } from "./JobQueueSearch";
 import { JobQueueFilters } from "./JobQueueFilters";
 import { countStaffBy, indexCurrentQuoteByRequest, indexStaffById } from "./staff-snapshot-index";
+import { buildQuotePipeline, isCurrentApprovedQuote } from "./quote-pipeline";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { InboxThreadNavigator } from "./InboxThreadNavigator";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
@@ -1225,16 +1226,7 @@ function QuotesView({
     return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." />;
   }
 
-  const currentQuoteByRequest = indexCurrentQuoteByRequest(data.quotes);
-  const orderedQuotes = [...data.quotes].sort((left, right) => {
-    // Put current versions before historical records regardless of status.
-    const leftCurrent = currentQuoteByRequest.get(left.requestId)?.id === left.id;
-    const rightCurrent = currentQuoteByRequest.get(right.requestId)?.id === right.id;
-    const statusWeight: Record<string, number> = { APPROVED: 0, SENT: 1, ACCEPTED: 2, DRAFT: 3, EXPIRED: 4, DECLINED: 5, SUPERSEDED: 6 };
-    return Number(rightCurrent) - Number(leftCurrent)
-      || (statusWeight[left.status] ?? 9) - (statusWeight[right.status] ?? 9)
-      || right.version - left.version;
-  });
+  const { currentQuoteByRequest, orderedQuotes, readyToSend, awaitingCustomer } = buildQuotePipeline(data.quotes);
   const search = normalizeDirectoryQuery(searchQuery);
   const requestById = new Map(data.requests.map((request) => [request.id, request]));
   const customerById = new Map(data.customers.map((customer) => [customer.id, customer]));
@@ -1253,13 +1245,10 @@ function QuotesView({
   const selectedQuote = visibleQuotes.find((quote) => quote.id === selectedQuoteId) ?? visibleQuotes[0];
   const currentQuote = currentQuoteByRequest.get(selectedQuote.requestId);
   const selectedQuoteIsCurrent = currentQuote?.id === selectedQuote.id;
-  const selectedQuoteCanSend = selectedQuoteIsCurrent && selectedQuote.status === "APPROVED";
+  const selectedQuoteCanSend = isCurrentApprovedQuote(selectedQuote, currentQuoteByRequest);
   const selectedQuoteRequest = requestById.get(selectedQuote.requestId);
   const selectedQuoteCustomer = customerById.get(selectedQuoteRequest?.customerId ?? "");
   const selectedQuoteProperty = data.properties.find((property) => property.id === selectedQuoteRequest?.propertyId);
-  const activeQuotes = [...currentQuoteByRequest.values()];
-  const awaitingCustomer = activeQuotes.filter((quote) => quote.status === "SENT").length;
-  const readyToSend = activeQuotes.filter((quote) => quote.status === "APPROVED").length;
 
   return (
     <section className={styles.salesWorkspace} aria-label="Quote workspace">
