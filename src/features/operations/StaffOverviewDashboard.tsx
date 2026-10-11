@@ -9,6 +9,7 @@ import type {
 } from "./operational-product-runtime";
 import { summarizeOutstandingInvoices } from "./product-truth";
 import { buildQuotePipeline } from "./quote-pipeline";
+import { isOverdueQualityCase, prioritizeQualityFollowUp } from "./quality-queue";
 import { formatMinorMoney } from "./view-models";
 import { createLocalDayKey } from "./staff-local-day";
 import { indexStaffById } from "./staff-snapshot-index";
@@ -197,7 +198,9 @@ export function StaffOverviewDashboard({
     ? buildInboxTriage(snapshot.conversations, snapshot.messages, snapshot.customers, "all")
     : undefined;
   const waitingReplies = replyTriage?.counts["needs-reply"];
-  const qualityIssues = snapshot.qualityCases.filter((qualityCase) => qualityCase.state !== "RESOLVED");
+  const qualityIssues = prioritizeQualityFollowUp(snapshot.qualityCases, snapshot.loadedAt)
+    .filter((qualityCase) => qualityCase.state !== "RESOLVED");
+  const overdueQualityCount = qualityIssues.filter((qualityCase) => isOverdueQualityCase(qualityCase, snapshot.loadedAt)).length;
   const outstanding = summarizeOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId)));
   const outstandingValue = outstanding.currency && outstanding.totalMinor !== undefined
     ? formatMinorMoney(outstanding.totalMinor, outstanding.currency)
@@ -386,7 +389,9 @@ export function StaffOverviewDashboard({
               <p className={styles.cardEyebrow}>Service quality</p>
               <h2 id="quality-heading">Completion follow-up</h2>
             </div>
-            <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "quality")}>Quality queue →</Link>
+            <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "quality") + (overdueQualityCount ? "?queue=overdue" : "")}>
+              {overdueQualityCount ? `${overdueQualityCount} overdue · review →` : "Quality queue →"}
+            </Link>
           </div>
           {qualityIssues.length ? (
             <div className={styles.qualityList}>
@@ -396,7 +401,9 @@ export function StaffOverviewDashboard({
                     <strong>{item.summary}</strong>
                     <small>{item.feedbackScore !== undefined ? `Feedback ${item.feedbackScore}/5` : "Follow-up required"}</small>
                   </span>
-                  <StatusBadge tone={item.state === "OPEN" ? "warning" : "info"}>{readable(item.state)}</StatusBadge>
+                  <StatusBadge tone={isOverdueQualityCase(item, snapshot.loadedAt) ? "danger" : item.state === "OPEN" ? "warning" : "info"}>
+                    {isOverdueQualityCase(item, snapshot.loadedAt) ? "Overdue" : readable(item.state)}
+                  </StatusBadge>
                 </Link>
               ))}
             </div>
