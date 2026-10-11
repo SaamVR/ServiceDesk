@@ -466,3 +466,31 @@
   .kpiCard strong { font-size: 1.95rem; }
   .pageHeader h1 { font-size: 2rem; }
 }
+
+/* Signal Desk: operational summary is a compact, directly actionable queue
+   strip rather than large passive KPI cards. The domain snapshot is unchanged. */
+.kpiCard {
+  position: relative;
+  min-height: 89px;
+  gap: 1px;
+  padding: 12px 15px;
+  color: var(--app-text);
+  text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.kpiCard:hover, .kpiCard:focus-visible {
+  background: #f4f6ff;
+  border-color: #a9b9f0;
+  text-decoration: none;
+}
+.kpiCard strong { font-size: clamp(1.15rem, 1.7vw, 1.5rem); }
+.kpiCard .kpiGo { position: absolute; top: 10px; right: 11px; color: #6174b7; font-size: 1rem; }
+.kpi_warning::before { background: #a86f19; }
+.kpi_danger::before { background: #c24766; }
+@media (max-width: 620px) {
+  .kpiCard { min-height: 82px; padding: 11px 12px; }
+  .kpiCard strong { font-size: 1.2rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kpiCard { transition: none; }
+}
