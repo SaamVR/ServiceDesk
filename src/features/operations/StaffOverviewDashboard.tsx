@@ -152,7 +152,6 @@ function ScheduleRow({
 export function StaffOverviewDashboard({
   workspace,
   snapshot,
-  errorMessage,
 }: {
   workspace: string;
   snapshot?: Pick<
@@ -182,8 +181,9 @@ export function StaffOverviewDashboard({
         </header>
         <FeedbackBanner
           title="Workspace activity is unavailable"
-          description={errorMessage ?? "Refresh the page or try again shortly."}
+          description="The latest operational records could not be verified. Retry the view; if an action was just submitted, inspect the saved record before repeating it."
           tone="danger"
+          action={<Link className="app-button-secondary" href={buildStaffModuleHref(workspace, "overview")}>Retry loading Today</Link>}
         />
       </div>
     );
