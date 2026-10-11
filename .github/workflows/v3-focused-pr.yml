@@ -16,6 +16,13 @@ on:
       - "tests/providers/ai-tool-orchestration.test.ts"
       - "src/server/integrations/outbox/dispatch-router.ts"
       - "tests/providers/outbox-dispatch-router.test.ts"
+      - "src/server/jobs/outbox-worker.ts"
+      - "src/server/jobs/outbox-retry.ts"
+      - "tests/db/outbox-worker.test.ts"
+      - "src/server/integrations/recovery/lease.ts"
+      - "src/server/integrations/recovery/scheduler.ts"
+      - "tests/providers/provider-recovery-lease.test.ts"
+      - "tests/providers/provider-recovery-scheduler.test.ts"
       - "scripts/release/v3-staging-auth-smoke.mjs"
       - "scripts/release/v3-staging-auth-smoke.test.mjs"
       - ".github/workflows/v3-focused-pr.yml"
@@ -28,10 +35,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  focused-contracts:
+  backend-contracts-and-rc:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,12 +55,15 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify release smoke safety
         run: node --test scripts/release/v3-staging-auth-smoke.test.mjs
-      - name: Focused domain and Resend regression
+      - name: Focused provider, outbox and recovery regression
         run: >-
           pnpm exec vitest run
           tests/domain/authorized-workspace-selection.test.ts
           tests/providers/resend-transactional-email-contract.test.ts
           tests/providers/ai-tool-orchestration.test.ts
           tests/providers/outbox-dispatch-router.test.ts
-      - name: Typecheck
-        run: pnpm typecheck
+          tests/db/outbox-worker.test.ts
+          tests/providers/provider-recovery-lease.test.ts
+          tests/providers/provider-recovery-scheduler.test.ts
+      - name: Complete repository RC gate (typecheck, all tests, lint, Next build)
+        run: pnpm check:rc
