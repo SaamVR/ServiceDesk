@@ -1225,9 +1225,14 @@ function QuotesView({
     return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." />;
   }
 
+  const currentQuoteByRequest = indexCurrentQuoteByRequest(data.quotes);
   const orderedQuotes = [...data.quotes].sort((left, right) => {
+    // Put current versions before historical records regardless of status.
+    const leftCurrent = currentQuoteByRequest.get(left.requestId)?.id === left.id;
+    const rightCurrent = currentQuoteByRequest.get(right.requestId)?.id === right.id;
     const statusWeight: Record<string, number> = { APPROVED: 0, SENT: 1, ACCEPTED: 2, DRAFT: 3, EXPIRED: 4, DECLINED: 5, SUPERSEDED: 6 };
-    return (statusWeight[left.status] ?? 9) - (statusWeight[right.status] ?? 9)
+    return Number(rightCurrent) - Number(leftCurrent)
+      || (statusWeight[left.status] ?? 9) - (statusWeight[right.status] ?? 9)
       || right.version - left.version;
   });
   const search = normalizeDirectoryQuery(searchQuery);
@@ -1246,11 +1251,15 @@ function QuotesView({
     );
   }
   const selectedQuote = visibleQuotes.find((quote) => quote.id === selectedQuoteId) ?? visibleQuotes[0];
+  const currentQuote = currentQuoteByRequest.get(selectedQuote.requestId);
+  const selectedQuoteIsCurrent = currentQuote?.id === selectedQuote.id;
+  const selectedQuoteCanSend = selectedQuoteIsCurrent && selectedQuote.status === "APPROVED";
   const selectedQuoteRequest = requestById.get(selectedQuote.requestId);
   const selectedQuoteCustomer = customerById.get(selectedQuoteRequest?.customerId ?? "");
   const selectedQuoteProperty = data.properties.find((property) => property.id === selectedQuoteRequest?.propertyId);
-  const awaitingCustomer = orderedQuotes.filter((quote) => quote.status === "SENT").length;
-  const readyToSend = orderedQuotes.filter((quote) => quote.status === "APPROVED").length;
+  const activeQuotes = [...currentQuoteByRequest.values()];
+  const awaitingCustomer = activeQuotes.filter((quote) => quote.status === "SENT").length;
+  const readyToSend = activeQuotes.filter((quote) => quote.status === "APPROVED").length;
 
   return (
     <section className={styles.salesWorkspace} aria-label="Quote workspace">
@@ -1284,7 +1293,7 @@ function QuotesView({
                 <span className={styles.salesQueueCustomer}>{customer?.displayName ?? "Customer unavailable"}</span>
                 <span className={styles.salesQueueMeta}>
                   <span>{formatMinorMoney(quote.totalMinor, quote.currency)}</span>
-                  <span>v{quote.version}</span>
+                  <span>v{quote.version}{currentQuoteByRequest.get(quote.requestId)?.id !== quote.id ? " · history" : ""}</span>
                 </span>
               </a>
             );
@@ -1298,7 +1307,10 @@ function QuotesView({
               <h2>{selectedQuoteRequest?.serviceLabel ?? "Service quote"}</h2>
               <p>{selectedQuoteCustomer?.displayName ?? "Customer unavailable"} · {selectedQuoteProperty?.label ?? "No property linked"}</p>
             </div>
-            <StatusBadge tone={statusBadgeTone(selectedQuote.status)}>{selectedQuote.status.replaceAll("_", " ")}</StatusBadge>
+            <div className={styles.quoteHeaderBadges}>
+              <StatusBadge tone={statusBadgeTone(selectedQuote.status)}>{selectedQuote.status.replaceAll("_", " ")}</StatusBadge>
+              {!selectedQuoteIsCurrent ? <StatusBadge tone="warning">Historical version</StatusBadge> : null}
+            </div>
           </header>
 
           <section className={styles.quoteFinancials} aria-label="Quote financial summary">
@@ -1323,10 +1335,17 @@ function QuotesView({
 
             <section className={styles.salesSection}>
               <div className={styles.salesSectionHeader}>
-                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{selectedQuote.status === "APPROVED" ? "Ready to send" : selectedQuote.status === "SENT" ? "Waiting for customer" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
+                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{!selectedQuoteIsCurrent ? "Historical quote" : selectedQuote.status === "APPROVED" ? "Ready to send" : selectedQuote.status === "SENT" ? "Waiting for customer" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
               </div>
               <div className={styles.quoteNextStep}>
-                {selectedQuote.status === "APPROVED" ? (
+                {!selectedQuoteIsCurrent ? (
+                  <>
+                    <p>This is not the current quote version. Review the latest quote before taking another action.</p>
+                    <a className="app-button-secondary" href={currentQuote
+                      ? directoryRecordHref("quote", currentQuote.id, search)
+                      : buildStaffModuleHref(workspaceSlug, "requests")}>Open current record</a>
+                  </>
+                ) : selectedQuoteCanSend ? (
                   <>
                     <p>The quote is approved internally and ready to send to the customer.</p>
                     <form action={sendQuote}>
