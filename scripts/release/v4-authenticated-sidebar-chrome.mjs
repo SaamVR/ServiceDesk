@@ -17,6 +17,15 @@ const origin = process.env.V4_AUTH_TEST_ORIGIN || "https://servicedesk-v3-fronte
 if (!["https://servicedesk-v3-frontend-review.onrender.com", "http://127.0.0.1:3000"].includes(origin)) {
   throw new Error("AUTHENTICATED_STUDIO_UAT_BLOCKED: unapproved origin");
 }
+if (origin === "http://127.0.0.1:3000") {
+  let qaProject;
+  try { qaProject = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL); }
+  catch { throw new Error("AUTHENTICATED_STUDIO_UAT_BLOCKED: QA Supabase URL is missing"); }
+  if (qaProject.protocol !== "https:" || qaProject.hostname !== "cpmmgivhlkfbiwzhlcey.supabase.co" ||
+      qaProject.pathname !== "/" || qaProject.search || qaProject.hash) {
+    throw new Error("AUTHENTICATED_STUDIO_UAT_BLOCKED: refusing non-staging database");
+  }
+}
 const { V4_AUTH_QA_EMAIL: email, V4_AUTH_QA_PASSWORD: password,
   V4_AUTH_QA_WORKSPACE: slug, V4_AUTH_CHROME: chrome, V4_AUTH_OUTPUT: outputDir } = process.env;
 if (!email || !password || !slug || !chrome || !outputDir ||
