@@ -38,6 +38,8 @@ import {
   type OperationalStaffSnapshot,
 } from "./operational-product-runtime";
 import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "./staff-modules";
+import { filterDirectoryRows, directoryRecordHref, normalizeDirectoryQuery } from "./record-directory";
+import { RecordDirectorySearch } from "./RecordDirectorySearch";
 import { EmptyState as AppEmptyState, PageHeader, Panel, SectionHeader, StatusBadge } from "@/components/product/PagePrimitives";
 import { FormField, FormGrid, SelectInput, TextArea, TextInput } from "@/components/product/FormPrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
@@ -3996,17 +3998,17 @@ function renderModule(
         />
       );
     case "customers":
-      return <CustomersView data={data} selectedCustomerId={selectedCustomerId} />;
+      return <CustomersView data={data} selectedCustomerId={selectedCustomerId} searchQuery={searchQuery} />;
     case "requests":
-      return <RequestsView data={data} workspaceSlug={workspaceSlug} selectedRequestId={selectedRequestId} />;
+      return <RequestsView data={data} workspaceSlug={workspaceSlug} selectedRequestId={selectedRequestId} searchQuery={searchQuery} />;
     case "quotes":
-      return <QuotesView data={data} workspaceSlug={workspaceSlug} selectedQuoteId={selectedQuoteId} />;
+      return <QuotesView data={data} workspaceSlug={workspaceSlug} selectedQuoteId={selectedQuoteId} searchQuery={searchQuery} />;
     case "schedule":
       return <ScheduleView data={data} workspaceSlug={workspaceSlug} selectedScheduleQueue={selectedScheduleQueue} />;
     case "jobs":
       return <JobsView data={data} workspaceSlug={workspaceSlug} selectedJobId={selectedJobId} />;
     case "invoices":
-      return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} />;
+      return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} searchQuery={searchQuery} />;
     case "quality":
       return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} />;
     case "automations":
