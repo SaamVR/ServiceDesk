@@ -137,6 +137,8 @@ async function layoutCheck(page, width) {
     'reduced:matchMedia("(prefers-reduced-motion: reduce)").matches,' +
     'heading:document.querySelector("main h1")?.textContent?.trim()?.length || 0,' +
     'links:document.querySelectorAll("a[href]").length,' +
+    'title:document.title,metaDescription:document.querySelector("meta[name=description]")?.content||"",' +
+    'robots:document.querySelector("meta[name=robots]")?.content||"",' +
     'passwords:document.querySelectorAll("input[type=password]").length,' +
     'heroLabel:document.querySelector(".marketing-hero aside[aria-label]")?.getAttribute("aria-label")||"",' +
     'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header a.site-auth-link,.marketing-hero .button-primary,.marketing-hero .button-secondary")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height)}))}))()'
@@ -152,6 +154,15 @@ async function layoutCheck(page, width) {
       (page.heroLabel && state.heroLabel !== page.heroLabel) ||
       (page.slug === "sign-in" && state.passwords !== 1)) {
     throw new Error("Public page is missing visible content/form controls: " + page.slug);
+  }
+  if (!state.title.includes("ServiceDesk AI") ||
+      !state.metaDescription || state.metaDescription.length < 20 ||
+      (page.heroLabel && page.slug !== "home" && !state.title.includes(page.title))) {
+    throw new Error("Public page title/description metadata did not match the actual page: " + page.slug);
+  }
+  if (process.env.SERVICEDESK_PUBLIC_INDEXING_ENABLED !== "true" &&
+      !state.robots.toLowerCase().includes("noindex")) {
+    throw new Error("Unapproved public preview unexpectedly permits search engine indexing: " + page.slug);
   }
   if (width <= 390 && page.heroLabel) {
     const targets = state.touchTargets;
