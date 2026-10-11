@@ -31,7 +31,7 @@ describe("V4 Studio OS sidebar visibility", () => {
     expect(shell).toContain("cleanStyles.cleanShell");
     expect(shell).toContain("styles.v3Shell");
     const oldSelector = ".v3Shell :global(.app-sidebar) .navLink";
-    const newSelector = ".cleanShell:global(.app-shell) :global(.app-sidebar) .navLink";
+    const newSelector = ".cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link)";
     expect(oldCss).toContain(oldSelector);
     expect(css).toContain(newSelector);
     expect(specificity(newSelector)).toBeGreaterThan(specificity(oldSelector));
@@ -55,10 +55,13 @@ describe("V4 Studio OS sidebar visibility", () => {
     expect(contrast("#0f7366", "#e3f7ef")).toBeGreaterThanOrEqual(4.5);
     expect(css).toContain("color: #49695d !important");
     expect(css).toContain("color: #426e62");
+    expect(css).toContain(":global(.app-nav-label)");
+    expect(css).toContain(":global(.app-nav-icon)");
+    expect(css).toContain(":global(.app-nav-link)");
   });
 
   it("keeps selected navigation and focus rings visible independent of CSS order", () => {
-    const selector = '.cleanShell:global(.app-shell) :global(.app-sidebar) .navLink[aria-current="page"]';
+    const selector = '.cleanShell:global(.app-shell) :global(.app-sidebar) :global(.app-nav-link)[aria-current="page"]';
     const active = ruleBody(selector);
     expect(active).toContain("background: #e3f7ef");
     expect(active).toContain("color: #0f7366");
@@ -70,8 +73,8 @@ describe("V4 Studio OS sidebar visibility", () => {
 
   it("keeps the secondary tools disclosure readable and deep links expanded", () => {
     expect(shell).toContain('open={group.modules.some(moduleIsActive) ? true : undefined}');
-    expect(shell).toContain("className={styles.moreToolsTrigger}");
-    expect(css).toContain(".cleanShell:global(.app-shell) .moreToolsTrigger");
+    expect(shell).toContain("app-more-tools-trigger");
+    expect(css).toContain(".cleanShell:global(.app-shell) :global(.app-more-tools-trigger)");
     expect(css).toContain("min-height: 45px");
     expect(css).toContain("color: #365b50");
     expect(css).toContain("opacity: 1");
@@ -79,7 +82,7 @@ describe("V4 Studio OS sidebar visibility", () => {
 
   it("keeps a legible mobile drawer with real keyboard controls", () => {
     expect(css).toContain("@media (max-width: 900px)");
-    expect(css).toContain(".cleanShell:global(.app-shell) :global(.app-mobile-links) .navLink");
+    expect(css).toContain(".cleanShell:global(.app-shell) :global(.app-mobile-links) :global(.app-nav-link)");
     expect(css).toContain("min-height: 48px; color: #365d50");
     expect(css).toContain("background: #e1f7eb");
     expect(css).toContain("color: #4b6d5f !important");
