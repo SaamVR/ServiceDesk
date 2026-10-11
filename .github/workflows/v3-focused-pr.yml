@@ -53,6 +53,8 @@ on:
       - "tests/providers/ai-fetch-runtime.test.ts"
       - "src/server/ai/operational-runtime.ts"
       - "src/server/ai/staff-invocation.ts"
+      - "src/server/api-handlers/ai-staff-http.ts"
+      - "tests/e2e/v3-ai-staff-http.test.ts"
       - "src/server/ai/catalog-knowledge.ts"
       - "tests/providers/ai-staff-invocation.test.ts"
       - "tests/providers/ai-catalog-knowledge.test.ts"
@@ -122,6 +124,7 @@ jobs:
           tests/providers/ai-fetch-runtime.test.ts
           tests/providers/ai-operational-runtime.test.ts
           tests/providers/ai-staff-invocation.test.ts
+          tests/e2e/v3-ai-staff-http.test.ts
           tests/providers/ai-catalog-knowledge.test.ts
           tests/db/v3-ai-durable-conversation-store.test.ts
           tests/providers/ai-postgres-configured-service.test.ts
