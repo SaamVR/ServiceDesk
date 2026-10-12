@@ -53,6 +53,7 @@ export async function readOwnerQuoteAutomationSetting(
   const trusted = await verifiedOwner(workspaceSlug, deps);
   if (!trusted.ok) return trusted;
   const { workspace, service } = trusted.value;
+  try {
   const read = await service.from("workspace_feature_flags")
     .select("enabled,version")
     .eq("workspace_id", workspace.id)
@@ -67,6 +68,9 @@ export async function readOwnerQuoteAutomationSetting(
     enabled: read.data.enabled, version: read.data.version,
     deploymentEnabled: deploymentEnabled(),
   }};
+  } catch {
+    return fail("AUTO_QUOTE_FLAG_READ_UNAVAILABLE", "The workspace switch could not be verified.");
+  }
 }
 
 /**
@@ -87,6 +91,7 @@ export async function setOwnerQuoteAutomationSetting(
   const trusted = await verifiedOwner(workspaceSlug, deps);
   if (!trusted.ok) return trusted;
   const { actor, workspace, service } = trusted.value;
+  try {
   const flags = service.from("workspace_feature_flags");
   const previous = await flags.select("enabled,version")
     .eq("workspace_id", workspace.id)
@@ -125,6 +130,9 @@ export async function setOwnerQuoteAutomationSetting(
   return { ok: true, value: {
     enabled, version: expectedVersion + 1, deploymentEnabled: deploymentEnabled(),
   }};
+  } catch {
+    return fail("AUTO_QUOTE_WRITE_NOT_VERIFIED", "The settings connection could not be verified.");
+  }
 }
 
 /** The customer event may only trigger for an explicitly opted-in tenant. */
