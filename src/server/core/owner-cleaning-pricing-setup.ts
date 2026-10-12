@@ -126,9 +126,12 @@ export async function setupAuthorizedCleaningPricing(
   ]);
   const actual = new Set((catalog.data ?? []).filter(x => x.active).map(x => x.code));
   const exactOwnerNames = (catalog.data ?? []).length === 3 &&
-    (catalog.data ?? []).every(row => row.active === true &&
-      (row.code === "STANDARD" || row.code === "DEEP" || row.code === "MOVE_OUT") &&
-      row.name === payload.serviceNames[row.code]);
+    (catalog.data ?? []).every(row => {
+      const expectedName = row.code === "STANDARD" ? payload.serviceNames.STANDARD
+        : row.code === "DEEP" ? payload.serviceNames.DEEP
+        : row.code === "MOVE_OUT" ? payload.serviceNames.MOVE_OUT : null;
+      return row.active === true && expectedName !== null && row.name === expectedName;
+    });
   if (catalog.error || actual.size !== 3 || !exactOwnerNames ||
       !actual.has("STANDARD") || !actual.has("DEEP") || !actual.has("MOVE_OUT") ||
       rate.error || rate.data?.id !== saved.rateCardId ||
