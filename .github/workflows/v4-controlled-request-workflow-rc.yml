@@ -29,4 +29,6 @@ jobs:
         with: { node-version: 22.23.2, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vitest run tests/db/v4-owner-request-automation.test.ts tests/e2e/v4-request-workflow-owner-action.test.ts tests/domain/v2-workflow-engine.test.ts
-      - run: pnpm check:rc
+      - name: Full source validation on specialist push (canonical PR full RC covers every PR)
+        if: github.event_name == 'push'
+        run: pnpm check:rc

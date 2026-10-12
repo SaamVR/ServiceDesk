@@ -32,5 +32,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Owner pricing input, membership, pricing-readback and migration contract
         run: pnpm exec vitest run tests/e2e/v4-owner-first-run-pricing.test.ts tests/db/v4-operational-quote-rate-card.test.ts
-      - name: Complete release checks
+      - name: Full source validation on specialist push (canonical PR full RC covers every PR)
+        if: github.event_name == 'push'
         run: pnpm check:rc

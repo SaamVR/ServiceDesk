@@ -42,5 +42,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Focused real-model boundary and Studio visibility tests
         run: pnpm exec vitest run tests/e2e/v4-ai-request-copilot.test.ts tests/e2e/v4-cleaning-automation-playbooks.test.ts tests/e2e/v3-ai-staff-http.test.ts tests/providers/ai-model-transport-hardening.test.ts
-      - name: Exact-head TypeScript, all tests, lint and production build
+      - name: Full source validation on specialist push (canonical PR full RC covers every PR)
+        if: github.event_name == 'push'
         run: pnpm check:rc
