@@ -32,7 +32,7 @@ describe("V4 real-owner Studio UAT contract, not synthetic proof",()=>{
     expect(script).toContain("!audit.moreOpen");
     expect(script).toContain("audit.documentWidth > width + 2");
     expect(script).toContain("if (!expanded.open || expanded.count !== 4)");
-    expect(script).toContain('new KeyboardEvent(\\"keydown\\"');
+    expect(script).toContain('new KeyboardEvent("keydown"');
     expect(script).toContain("Authenticated drawer Escape failed");
   });
 
