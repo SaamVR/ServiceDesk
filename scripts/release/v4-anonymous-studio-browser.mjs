@@ -75,6 +75,7 @@ try {
     if(response.status>=500)throw Error("ANON_STUDIO_HTTP_5XX_"+staffModule);
   }
   const routeOnly = process.env.V4_ANON_ROUTE_ONLY === "true";
+  let aiAttemptCount = 0;
   if (routeOnly) manifest.kind = "ANONYMOUS_STUDIO_ROUTE_ONLY_AI_SECURITY_UNTESTED";
   if (!routeOnly) {
   // These must reject cross-origin, malformed and valid-but-unauthorized actions
@@ -87,6 +88,7 @@ try {
     {name:"invalid-schema",headers:{"content-type":"application/json","origin":origin},body:JSON.stringify({workspaceSlug:slug}),statuses:[400]},
     {name:"no-staff-session",headers:{"content-type":"application/json","origin":origin},body:JSON.stringify(valid),statuses:[401,403]},
   ];
+  aiAttemptCount = attempts.length;
   for(const a of attempts){
     const response=await fetch(endpoint,{method:"POST",headers:a.headers,body:a.body,redirect:"manual"});
     const decoded=await response.json().catch(()=>null);
@@ -118,7 +120,7 @@ try {
   }
   writeFileSync(join(output,"manifest.json"),JSON.stringify(manifest,null,2),{mode:0o600});
   console.log("ANON_STUDIO_DENIAL_PASS: "+modules.length+" protected routes x "+widths.length+
-    " widths; "+(routeOnly?"AI gate omitted in route-only mode":attempts.length+" AI API reject cases")+"; "+manifest.screenshots.length+
+    " widths; "+(routeOnly?"AI gate omitted in route-only mode":aiAttemptCount+" AI API reject cases")+"; "+manifest.screenshots.length+
     " fictional workspace screenshots. NOT REAL-AUTH ACCEPTANCE.");
 }finally{
   conn?.close();child?.kill();
