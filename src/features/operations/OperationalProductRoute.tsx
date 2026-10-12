@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { setupAuthorizedCleaningPricing } from "@/server/core/owner-cleaning-pricing-setup";
 import { OwnerCleaningPricingSetupForm } from "./OwnerCleaningPricingSetupForm";
+import { OwnerAutomationActivationChecklist } from "./OwnerAutomationActivationChecklist";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import { queueApprovedInboxReply } from "@/server/core/reviewed-inbox-reply";
 import { runOwnerSavedRequestAutomation } from "@/server/workflows/owner-request-automation";
@@ -3044,6 +3045,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
   if (openItems.length === 0) {
     return (
       <>
+        {data.actor.role === "OWNER" ? <OwnerAutomationActivationChecklist data={data} workspaceSlug={workspaceSlug} /> : null}
         <AiOperationsStatus
           workspaceSlug={workspaceSlug}
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
@@ -3078,6 +3080,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
 
   return (
     <>
+      {data.actor.role === "OWNER" ? <OwnerAutomationActivationChecklist data={data} workspaceSlug={workspaceSlug} /> : null}
       <AiOperationsStatus
           workspaceSlug={workspaceSlug}
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
