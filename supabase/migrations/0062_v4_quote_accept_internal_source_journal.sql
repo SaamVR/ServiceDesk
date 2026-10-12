@@ -80,6 +80,11 @@ begin
      or p_limit is null or p_limit < 1 or p_limit > 25 then
     raise exception 'QUOTE_SOURCE_CLAIM_INVALID';
   end if;
+  -- A crash on the final allowed attempt must not strand a leased row forever.
+  update public.workflow_source_events set
+    state='DEAD_LETTER',last_error_code='LEASE_EXPIRED_MAX_ATTEMPTS',
+    locked_by=null,locked_until=null,finished_at=now(),updated_at=now()
+  where state='PROCESSING' and attempts >= 8 and locked_until < now();
   return query
   with due as (
     select e.id
@@ -112,7 +117,7 @@ declare v_attempts integer;
 begin
   if p_id is null or p_worker is null
      or p_worker !~ '^[A-Za-z0-9_-]{8,80}$'
-     or p_outcome not in ('SUCCEEDED','FAILED','SKIPPED')
+     or p_outcome is null or p_outcome not in ('SUCCEEDED','FAILED','SKIPPED')
      or (p_error_code is not null and p_error_code !~ '^[A-Z0-9_]{1,80}$') then
     return jsonb_build_object('ok',false,'code','QUOTE_SOURCE_COMPLETION_INVALID');
   end if;
