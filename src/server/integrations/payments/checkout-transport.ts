@@ -51,6 +51,19 @@ function validateHttpsUrl(value: string): boolean {
   }
 }
 
+/** Stripe must return its own hosted checkout, not an arbitrary HTTPS redirect. */
+function validatedStripeCheckoutUrl(value: string): boolean {
+  if (!value || value.trim() !== value || value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "checkout.stripe.com" &&
+      !url.port && !url.username && !url.password && !url.hash &&
+      url.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
+
 function baseUrl(config: StripeCheckoutTransportConfig): string {
   return config.apiBaseUrl.replace(/\/+$/, "");
 }
@@ -111,7 +124,7 @@ function parseCheckoutResponse(body: string): Result<{ id: string; url: string }
 
   const id = (parsed as { id?: unknown }).id;
   const url = (parsed as { url?: unknown }).url;
-  if (typeof id !== "string" || !id.trim() || typeof url !== "string" || !validateHttpsUrl(url)) {
+  if (typeof id !== "string" || !/^cs_(?:test|live)_[A-Za-z0-9_]+$/.test(id) || typeof url !== "string" || !validatedStripeCheckoutUrl(url)) {
     return { ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID", message: "Payment provider checkout response is missing a valid session ID or URL." };
   }
 
