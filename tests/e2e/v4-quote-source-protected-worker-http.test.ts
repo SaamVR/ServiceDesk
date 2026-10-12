@@ -2,6 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type {
+  InternalSourceRecoverySummary, InternalSourceWorkerPorts,
+  InternalSourceWorkerDependencies,
+} from "../../src/server/workflows/customer-quote-source-recovery";
 import {
   handleInternalQuoteSourceWorkerPost,
   type QuoteSourceWorkerHttpDependencies,
@@ -22,9 +26,11 @@ const sample = {
   deadLetter: 0, completionNotVerified: 0, providerMessagesSent: 0 as const,
 };
 
-function harness(overrides: Partial<typeof settings> = {}, outcome = sample) {
+function harness(overrides: Partial<typeof settings> = {},
+  outcome: InternalSourceRecoverySummary = sample) {
   const createService = vi.fn(() => ({} as SupabaseClient));
-  const runBatch = vi.fn(async() => outcome);
+  const runBatch = vi.fn(async(_ports: InternalSourceWorkerPorts,
+    _deps?: InternalSourceWorkerDependencies) => outcome);
   const deps = {
     settings: () => ({ ...settings, ...overrides }),
     createService,
@@ -114,7 +120,7 @@ describe("V4 private quote-source replay entrypoint", () => {
 
   it("never exposes secrets or a database exception on worker failure",async()=>{
     const h=harness();
-    (h.runBatch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(
+    h.runBatch.mockRejectedValue(new Error(
       "database-failed with customer PII " + secret));
     const res=await handleInternalQuoteSourceWorkerPost(req(secret),h.deps);
     const body=await res.text();
