@@ -23,5 +23,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Exact tenant branch/card currency readback and no hidden conversion
         run: pnpm exec vitest run tests/db/v4-operational-quote-rate-card.test.ts
-      - name: Complete release tests, types, lint and production build
+      - name: Full source check on owned feature branch (PRs use central exact-head RC)
+        if: github.event_name == 'push'
         run: pnpm check:rc

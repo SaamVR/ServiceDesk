@@ -10,6 +10,7 @@ import {
 } from "@/components/product/PagePrimitives";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { loadOnboardingProduct } from "./onboarding-product-runtime";
+import { summarizeOwnerCommercialSetup } from "./onboarding-commercial-readiness";
 
 function setupState(done: boolean) {
   return done ? (
@@ -64,18 +65,24 @@ export async function OnboardingProductRoute({
     );
   }
 
-  const { workspace, ownerSettings, platformBilling } = result.value;
-  const enabledServices =
-    ownerSettings?.services.filter((service) => service.enabled) ?? [];
+  const { workspace, ownerSettings, platformBilling, serviceCatalog, branchScope, ownerPricingBookProof, workflowRuleVersions } = result.value;
+  // Only persisted, scope-authorized operational catalog rows establish actual
+  // service setup; legacy settings labels cannot stand in for real pricing.
+  const enabledServices = serviceCatalog.filter(service => service.active);
+  const commercial = summarizeOwnerCommercialSetup({
+    catalog: serviceCatalog, scope: branchScope, proof: ownerPricingBookProof,
+  });
   const activeMembers =
     ownerSettings?.members.filter((member) => member.active) ?? [];
   const businessReady = Boolean(workspace.name && workspace.timezone);
   const servicesReady = enabledServices.length > 0;
   const teamReady = activeMembers.length > 0;
-  const billingReady = Boolean(platformBilling?.subscription.status);
-  const readyCount = [businessReady, servicesReady, teamReady, billingReady].filter(
-    Boolean,
-  ).length;
+  // A recorded subscription is not necessarily usable: past-due and
+  // cancelled records must never count as completed owner setup.
+  const billingReady = platformBilling?.subscription.status === "ACTIVE" ||
+    platformBilling?.subscription.status === "TRIALING";
+  const pricingVerified = commercial.state === "VERIFIED";
+  const readyCount = [businessReady, servicesReady, pricingVerified, teamReady, billingReady].filter(Boolean).length;
   const workspaceBase =
     "/app/" + encodeURIComponent(workspace.slug);
 
@@ -84,7 +91,7 @@ export async function OnboardingProductRoute({
       <PageHeader
         eyebrow="Workspace setup"
         title="Finish setting up ServiceDesk"
-        description="Complete the operational basics below, then configure external connections from Settings."
+        description="Check your saved services and branch prices first. These five setup signals are not a live-provider or customer-workflow certification."
         actions={
           <Link className="app-button-primary" href={workspaceBase + "/overview"}>
             Open workspace
@@ -95,14 +102,21 @@ export async function OnboardingProductRoute({
       <MetricStrip
         items={[
           {
-            label: "Setup complete",
-            value: String(readyCount) + "/4",
-            detail: "Core workspace checks",
+            label: "Setup signals verified",
+            value: String(readyCount) + "/5",
+            detail: "Not a launch approval",
           },
           {
             label: "Services",
             value: enabledServices.length,
             detail: "Enabled services",
+          },
+          {
+            label: "Branch pricing",
+            value: pricingVerified ? "Verified" : "Needs review",
+            detail: commercial.missingPriceBookBranches
+              ? `${commercial.missingPriceBookBranches} USD branch book(s) missing`
+              : "Saved price-book proof",
           },
           {
             label: "Team",
@@ -140,12 +154,29 @@ export async function OnboardingProductRoute({
                 <p>
                   {servicesReady
                     ? String(enabledServices.length) +
-                      " enabled service" +
-                      (enabledServices.length === 1 ? "" : "s")
-                    : "Add at least one service customers can request."}
+                      " active service" +
+                      (enabledServices.length === 1 ? "" : "s") +
+                      " saved in the operational catalog."
+                    : "No active service is saved. Set up the real cleaning catalog and owner-entered prices."}
                 </p>
+                {!servicesReady ? <Link href={workspaceBase + "/settings"}>Configure actual services →</Link> : null}
               </div>
               <div className="app-row-meta">{setupState(servicesReady)}</div>
+            </article>
+
+            <article className="app-row">
+              <div>
+                <h3>Branch price books</h3>
+                <p>{commercial.detail}</p>
+                {!pricingVerified ? (
+                  <Link href={workspaceBase + "/settings"}>Review branch pricing in Settings →</Link>
+                ) : null}
+              </div>
+              <div className="app-row-meta">
+                {pricingVerified
+                  ? <StatusBadge tone="success">Book verified</StatusBadge>
+                  : <StatusBadge tone="warning">{commercial.state === "UNVERIFIED" ? "Unverified" : "Action needed"}</StatusBadge>}
+              </div>
             </article>
 
             <article className="app-row">
@@ -164,12 +195,13 @@ export async function OnboardingProductRoute({
 
             <article className="app-row">
               <div>
-                <h3>Subscription</h3>
-                <p>
-                  {billingReady
-                    ? "Subscription information is available."
-                    : "Subscription information is not available yet."}
-                </p>
+                <h3>Workspace plan</h3>
+                <p>{billingReady
+                  ? `Plan status: ${platformBilling?.subscription.status}. This is account access status, not proof of a real customer payment.`
+                  : platformBilling?.subscription.status
+                    ? `Plan status: ${platformBilling.subscription.status}. Review billing before relying on your workspace plan.`
+                    : "Plan status has not been verified. Review account billing."}</p>
+                {!billingReady ? <Link href={workspaceBase + "/billing"}>Review workspace plan →</Link> : null}
               </div>
               <div className="app-row-meta">{setupState(billingReady)}</div>
             </article>
@@ -183,16 +215,29 @@ export async function OnboardingProductRoute({
           />
           <EmptyState
             title="Review integrations in Settings"
-            description="Connection health is not inferred from local UI state. Open Settings to configure and review provider connections."
+            description="Connection health is not inferred from local UI state. A configured key, workflow draft or simulated preview does not prove model inference or external delivery."
             action={
-              <Link
-                className="app-button-secondary"
-                href={workspaceBase + "/settings"}
-              >
-                Open settings
+              <Link className="app-button-secondary" href={workspaceBase + "/settings"}>
+                Open provider settings
               </Link>
             }
           />
+          <div className="app-row-list">
+            <article className="app-row">
+              <div>
+                <h3>AI &amp; Automation</h3>
+                <p>{(workflowRuleVersions ?? []).filter(item => item.state === "PUBLISHED").length} published workflow version(s). Actual event receipts and provider deliveries require separate evidence.</p>
+              </div>
+              <Link href={workspaceBase + "/automations"}>Review automations →</Link>
+            </article>
+            <article className="app-row">
+              <div>
+                <h3>Start with a real request</h3>
+                <p>Once your catalog and branch rates are configured, record or review an authorized cleaning request before generating a quote.</p>
+              </div>
+              <Link href={workspaceBase + "/requests"}>Open requests →</Link>
+            </article>
+          </div>
         </Panel>
       </div>
     </StaffAppShell>

@@ -8,6 +8,7 @@ import { loadVerifiedOwnerWorkspace } from "@/features/auth/verified-owner-works
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
 import { seedVerifiedQaWorkspace } from "./qa-seed-actions";
+import { RegistrationSubmitButton } from "@/features/auth/RegistrationSubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -95,9 +96,8 @@ export default async function VerifiedOwnerWorkspacePage({
               {seedNotice ? <p role="status">{seedNotice}</p> : null}
               <form action={seedVerifiedQaWorkspace}>
                 <input type="hidden" name="workspace" value={workspace.slug} />
-                <button type="submit" style={{padding:"12px 16px",background:"#135d49",color:"#fff",border:0,borderRadius:9,fontWeight:750,cursor:"pointer"}}>
-                  Add fictional QA records
-                </button>
+                <RegistrationSubmitButton className="app-button-primary"
+                  label="Add fictional QA records" pendingLabel="Saving QA records…" />
               </form>
             </section>
           ) : null}
