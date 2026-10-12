@@ -74,6 +74,27 @@ describe("private authenticated QA preflight (synthetic/local, no provider)", ()
     assert.match(result.output, /DISTINCT_QA_OWNERS_AND_TENANTS_REQUIRED/);
   });
 
+  it("accepts a normal owner email and password containing r/n/u characters", () => {
+    const result = run("two-owner-rls", {
+      ...ownerA, ...ownerB,
+      SERVICEDESK_QA_OWNER_A_EMAIL: "owner.one@example.test",
+      SERVICEDESK_QA_OWNER_A_PASSWORD: "Runner2026Passphrase",
+    });
+    assert.equal(result.code, 0);
+    assert.match(result.output, /QA_PREFLIGHT_CONFIG_READY:two-owner-rls/);
+  });
+
+  it("rejects carriage return and null byte in owner password without echoing values", () => {
+    for (const secret of ["safe-prefix\\runsafe-value", "safe-prefix\\u0000unsafe-value"]) {
+      const result = run("two-owner-rls", {
+        ...ownerA, ...ownerB, SERVICEDESK_QA_OWNER_A_PASSWORD: secret,
+      });
+      assert.notEqual(result.code, 0);
+      assert.match(result.output, /INVALID_SERVICEDESK_QA_OWNER_A_PASSWORD/);
+      assert.doesNotMatch(result.output, /unsafe-value|safe-prefix/);
+    }
+  });
+
   it("never accepts privileged Supabase credentials in public-key preflight", () => {
     const result = run("two-owner-rls", {
       ...ownerA, ...ownerB, SUPABASE_SERVICE_ROLE_KEY: "never-log-me-service-role",
