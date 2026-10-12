@@ -6,6 +6,7 @@ import { OwnerCleaningPricingSetupForm } from "./OwnerCleaningPricingSetupForm";
 import { completeOperationalRequestQuoteInputs } from "./request-quote-input-action";
 import { OwnerAutomationActivationChecklist } from "./OwnerAutomationActivationChecklist";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
+import { quotePriceReadiness } from "./request-quote-price-readiness";
 import { queueApprovedInboxReply } from "@/server/core/reviewed-inbox-reply";
 import { runOwnerSavedRequestAutomation } from "@/server/workflows/owner-request-automation";
 import {
@@ -1059,14 +1060,21 @@ function RequestsView({
     .includes(selectedRequest.status) &&
     (data.actor.role === "OWNER" || data.actor.role === "DISPATCHER") &&
     !selectedRequestQuote;
+  const pricingReadiness = quotePriceReadiness({
+    request: selectedRequest, actorRole: data.actor.role,
+    branchScope: data.branchScope, ownerPricingBookProof: data.ownerPricingBookProof,
+  });
   const selectedRequestCanCalculate = chosenServiceActive
     && selectedRequest.bedrooms !== undefined
     && selectedRequest.bathrooms !== undefined
-    && !["BOOKED", "LOST", "CLOSED"].includes(selectedRequest.status);
+    && !["BOOKED", "LOST", "CLOSED"].includes(selectedRequest.status)
+    && (data.actor.role !== "OWNER" || pricingReadiness.state === "VERIFIED");
   const selectedMissing = [
     !chosenServiceActive ? "Service" : undefined,
     selectedRequest.bedrooms === undefined ? "Bedrooms" : undefined,
     selectedRequest.bathrooms === undefined ? "Bathrooms" : undefined,
+    data.actor.role === "OWNER" && pricingReadiness.state !== "VERIFIED"
+      ? "Verified branch pricing" : undefined,
   ].filter((item): item is string => Boolean(item));
   const requestsWithoutQuote = orderedRequests.filter((request) => !quoteByRequestId.has(request.id)).length;
   const reviewRequests = orderedRequests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status)).length;
@@ -1234,6 +1242,13 @@ function RequestsView({
                     <li className={chosenServiceActive ? styles.ready : styles.notReady}><span>{chosenServiceActive ? "✓" : "!"}</span><strong>Service</strong><small>{chosenServiceActive ? selectedRequest.serviceCode : "Not assigned or inactive"}</small></li>
                     <li className={selectedRequest.bedrooms !== undefined ? styles.ready : styles.notReady}><span>{selectedRequest.bedrooms !== undefined ? "✓" : "!"}</span><strong>Bedrooms</strong><small>{selectedRequest.bedrooms ?? "Missing"}</small></li>
                     <li className={selectedRequest.bathrooms !== undefined ? styles.ready : styles.notReady}><span>{selectedRequest.bathrooms !== undefined ? "✓" : "!"}</span><strong>Bathrooms</strong><small>{selectedRequest.bathrooms ?? "Missing"}</small></li>
+                    {data.actor.role === "OWNER" ? (
+                      <li className={pricingReadiness.state === "VERIFIED" ? styles.ready : styles.notReady}>
+                        <span>{pricingReadiness.state === "VERIFIED" ? "✓" : "!"}</span>
+                        <strong>Saved branch pricing</strong>
+                        <small>{pricingReadiness.state === "VERIFIED" ? "Verified" : "Setup required"}</small>
+                      </li>
+                    ) : null}
                   </ul>
                   {requestCanBeCompleted ? (
                     <section aria-label="Complete this request for real pricing"
@@ -1293,7 +1308,11 @@ function RequestsView({
                   <form action={calculateQuote} className={styles.salesPrimaryAction}>
                     <input type="hidden" name="requestId" value={selectedRequest.id} />
                     <StaffSubmitButton className="app-button-primary" disabled={!selectedRequestCanCalculate} pendingLabel="Calculating quote…">Calculate quote</StaffSubmitButton>
-                    {!selectedRequestCanCalculate ? <span>Complete the missing intake details before pricing.</span> : <span>Uses the current authoritative pricing rules.</span>}
+                    <span>{selectedRequestCanCalculate
+                      ? pricingReadiness.message
+                      : data.actor.role === "OWNER" && pricingReadiness.state !== "VERIFIED"
+                        ? pricingReadiness.message
+                        : "Complete the missing intake details before pricing."}</span>
                   </form>
                 </>
               )}
