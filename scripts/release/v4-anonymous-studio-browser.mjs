@@ -96,6 +96,30 @@ try {
     if(!a.statuses.includes(response.status))throw Error("ANON_AI_ENDPOINT_"+a.name+"_"+response.status+"_"+code);
     manifest.checks.push({type:"ai-denial",name:a.name,status:response.status,code});
   }
+  // The owner-only live model diagnostic must never be reachable without a
+  // real owner session. No model key, account, customer or inference is used.
+  // Validate exact public errors rather than merely accepting arbitrary 4xx.
+  const ownerProbe=origin+"/api/internal/ai/connection-test";
+  const ownerAttempts=[
+    {name:"probe-missing-origin",headers:{"content-type":"application/json"},
+      body:JSON.stringify({workspaceSlug:slug}),status:403,code:"SAME_ORIGIN_REQUIRED"},
+    {name:"probe-foreign-origin",headers:{"content-type":"application/json","origin":"https://example.org"},
+      body:JSON.stringify({workspaceSlug:slug}),status:403,code:"SAME_ORIGIN_REQUIRED"},
+    {name:"probe-invalid-json-shape",headers:{"content-type":"application/json","origin":origin},
+      body:"[]",status:400,code:"REQUEST_SCHEMA_INVALID"},
+    {name:"probe-no-owner-session",headers:{"content-type":"application/json","origin":origin},
+      body:JSON.stringify({workspaceSlug:slug}),status:401,code:"AI_DIAGNOSTIC_AUTH_REQUIRED"},
+  ];
+  for(const a of ownerAttempts){
+    const response=await fetch(ownerProbe,{method:"POST",headers:a.headers,body:a.body,redirect:"manual"});
+    const decoded=await response.json().catch(()=>null);
+    const code=typeof decoded?.code==="string" && /^[A-Z_]+$/.test(decoded.code)
+      ? decoded.code : "UNKNOWN_RESPONSE";
+    if(response.status!==a.status||code!==a.code)
+      throw Error("ANON_OWNER_PROBE_NOT_DENIED_"+a.name+"_"+response.status+"_"+code);
+    manifest.checks.push({type:"ai-owner-probe-denial",name:a.name,status:response.status,code});
+  }
+  aiAttemptCount += ownerAttempts.length;
   }
   conn=await connect(await launch());await conn.send("Page.enable");await conn.send("Runtime.enable");
   await conn.send("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
