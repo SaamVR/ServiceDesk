@@ -1,4 +1,5 @@
 import type { Result } from "@/contracts";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveStaffActor } from "@/features/operations/operational-product-runtime";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 
@@ -128,7 +129,7 @@ export async function setOwnerQuoteAutomationSetting(
 
 /** The customer event may only trigger for an explicitly opted-in tenant. */
 export async function workspaceQuoteAutomationEnabled(
-  service: { from: (table: string) => any }, workspaceId: string,
+  service: Pick<SupabaseClient, "from">, workspaceId: string,
 ): Promise<boolean> {
   if (!uuid(workspaceId)) return false;
   try {
