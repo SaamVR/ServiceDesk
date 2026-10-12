@@ -31,6 +31,8 @@ jobs:
         run: pnpm exec vitest run tests/e2e/v3-qa-registration-allowlist.test.ts tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-anonymous-definer-closure.test.ts tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts
       - run: pnpm typecheck
       - run: node --check scripts/release/v4-protected-qa-preflight.mjs
+      - name: Validate protected QA credential shapes (fictional inputs only)
+        run: node --test scripts/release/v4-protected-qa-preflight.test.mjs
   real-session-rls:
     if: github.event_name == 'workflow_dispatch' || github.ref_name == 'feat/servicedesk-v4-real-rls-uat-20261012'
     needs: auth-source
