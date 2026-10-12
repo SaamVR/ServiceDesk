@@ -18,7 +18,7 @@ or messages. Existing `outbox_events` remains reserved for outbound provider int
 
 **Explicit tradeoff:** if ledger insertion fails, SQL aborts the quote transition
 rather than pretending both succeeded. This can reduce quote availability during
-DB outages; the owner must accept this tradeoff before deploying 0062.
+DB outages; the owner must accept this tradeoff before deploying migration 0063.
 
 ## Current verified Supabase baseline (2026-10-12)
 
@@ -34,8 +34,10 @@ workflow versions. No real customer flow acceptance has been recorded.
 ## Release stages (require explicit database migration approval)
 
 1. Confirm isolated **staging** project ID and exact migration checksum.
-   Check no parallel branch has introduced another 0062 migration or changed
-   `quotes`, feature flags or the accepted-quote RPC.
+   Verify the already-applied 0062 branch-trigger repair remains in migration
+   history, that 0063 is not yet installed, and that no concurrent branch
+   introduced another 0063 or changed `quotes`, feature flags, or the
+   accepted-quote RPC.
 2. Read-only preflight:
 
    ```sql
@@ -89,13 +91,17 @@ workflow versions. No real customer flow acceptance has been recorded.
 - Immediately disable the server kill switch; do not merely hide the UI.
 - Do not drop the trigger/table while unprocessed rows or locked workers exist.
   Drain or export audit metadata safely before separately approved cleanup.
-- If 0062 causes acceptance failures, revert the release in an explicit
+- If migration 0063 causes acceptance failures, disable the worker and quote
+  automation opt-ins; prepare a separately approved recovery in an explicit
   maintenance window, preserving event records for investigation.
 - Recorded status means internal workflow bookkeeping, **not** provider delivery,
   real end-to-end acceptance, or transactional outbox operational success.
 - Avoid reusing the provider `outbox_events` table for these internal topics;
   an external channel dispatcher might otherwise attempt unknown intents.
 
-CI covers source/type/lint and mocked replay contracts; real Postgres
-migration execution, SQL rollback, two-tenant session RLS and production
-readiness remain independently required.
+CI includes disposable PostgreSQL 17 migration, rollback, concurrency,
+  opt-in isolation and lease/dead-letter regressions. Additional connected
+  staging SQL was rehearsed in BEGIN/ROLLBACK using two fictional workspaces;
+  0063 remains unapplied. Neither CI nor simulated JWT role tests establish
+  two real authenticated owner/customer sessions, business-approved rates,
+  scheduler activation, provider delivery, or production readiness.
