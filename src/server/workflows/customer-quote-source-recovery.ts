@@ -9,13 +9,6 @@ const isUuid = (value: unknown): value is string =>
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
 const validWorker = (value: string) => /^[A-Za-z0-9_-]{8,80}$/.test(value);
 type Outcome = "SUCCEEDED" | "FAILED" | "SKIPPED";
-interface SourceEvent {
-  id: string;
-  workspace_id: string;
-  quote_id: string;
-  event_type: "QUOTE_ACCEPTED";
-  state: "PROCESSING";
-}
 export interface InternalSourceRecoverySummary {
   state: "NO_DEPLOYMENT_OPT_IN" | "BATCH_PROCESSED" | "CLAIM_UNVERIFIED";
   claimed: number;
