@@ -1,0 +1,27 @@
+name: ServiceDesk V4 approved branch-currency quote gate
+on:
+  push:
+    branches: [fix/v4-quote-branch-currency-alignment-20261012]
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-quote-currency-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  quote-currency-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Exact tenant branch/card currency readback and no hidden conversion
+        run: pnpm exec vitest run tests/db/v4-operational-quote-rate-card.test.ts
+      - name: Complete release tests, types, lint and production build
+        run: pnpm check:rc

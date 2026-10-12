@@ -96,6 +96,24 @@ export async function loadOperationalQuoteRateCard(
   if (!request.data || !asId(request.data.branch_id) || !asId(request.data.service_id)) {
     return fail("QUOTE_RATE_REQUEST_INCOMPLETE", "Choose a saved request with an assigned cleaning service.");
   }
+  // Price cards are denominated in currency minor units. A branch and a
+  // card with different currencies must never produce a valid quote: the
+  // amount may look plausible while representing the wrong denomination.
+  const branch = await db.from("workspace_branches")
+    .select("id,currency,active")
+    .eq("workspace_id", workspaceId)
+    .eq("id", request.data.branch_id)
+    .maybeSingle();
+  if (branch.error) return fail("QUOTE_RATE_BRANCH_UNAVAILABLE", "The request branch currency could not be checked.");
+  if (!branch.data || branch.data.active !== true) {
+    return fail("QUOTE_RATE_BRANCH_INACTIVE", "The cleaning branch is not active.");
+  }
+  const branchCurrency = typeof branch.data.currency === "string"
+    ? branch.data.currency.trim() : "";
+  if (!/^[A-Z]{3}$/.test(branchCurrency)) {
+    return fail("QUOTE_RATE_BRANCH_CURRENCY_INVALID", "The branch currency is invalid.");
+  }
+
   const service = await db.from("service_catalog")
     .select("code,active").eq("workspace_id", workspaceId)
     .eq("id", request.data.service_id).maybeSingle();
@@ -129,5 +147,11 @@ export async function loadOperationalQuoteRateCard(
     .eq("id", active[0].rate_card_id)
     .eq("active", true).maybeSingle();
   if (card.error) return fail("QUOTE_RATE_CARD_UNAVAILABLE", "Current branch rate card could not be read.");
-  return parsePersistedQuoteRateCard(card.data);
+  const validated = parsePersistedQuoteRateCard(card.data);
+  if (!validated.ok) return validated;
+  if (validated.value.currency !== branchCurrency) {
+    return fail("QUOTE_RATE_BRANCH_CURRENCY_MISMATCH",
+      "The approved rate card currency does not match the request branch. Correct pricing configuration before quoting.");
+  }
+  return validated;
 }
