@@ -56,8 +56,17 @@ export async function handleStaffAiHttpPost(
       }
     } catch { /* Invalid origin configuration fails closed. */ }
   }
+  // A Next production app explicitly bound to loopback may normalize its
+  // internal Request.url host as 'localhost' even when the browser connects
+  // to 127.0.0.1. Trust only this *exact* local development pair on port 3000.
+  // Never trust X-Forwarded-Host, user-supplied Host, arbitrary local ports or
+  // an HTTP alias to any configured production HTTPS public origin.
+  const localDevOrigins = ["http://127.0.0.1:3000", "http://localhost:3000"];
+  const exactLoopbackPair = !!origin && localDevOrigins.includes(origin) &&
+    localDevOrigins.includes(requestOrigin);
   const fetchSite = request.headers.get("sec-fetch-site");
-  if (!origin || (origin !== requestOrigin && origin !== trustedPublicOrigin) ||
+  if (!origin || (origin !== requestOrigin && origin !== trustedPublicOrigin &&
+      !exactLoopbackPair) ||
       (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
     return response(403, { code: "SAME_ORIGIN_REQUIRED" });
   }
