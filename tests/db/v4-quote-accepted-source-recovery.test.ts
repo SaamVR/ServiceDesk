@@ -23,6 +23,7 @@ function harness(options:{
   bridgeFails?:boolean;
   optedOut?:boolean;
   badCompletion?:boolean;
+  deadLetter?:boolean;
   throwBridge?:boolean;
   claimError?:boolean;
 }={}){
@@ -51,7 +52,9 @@ function harness(options:{
         :{data:options.entries??[claimed],error:null};
     if(fn==="servicedesk_complete_quote_source_event")
       return options.badCompletion?{data:{ok:false},error:null}
-        :{data:{ok:true,state:args.p_outcome},error:null};
+        :{data:{ok:true,state:args.p_outcome === "FAILED"
+          ? (options.deadLetter ? "DEAD_LETTER" : "RETRY_PENDING")
+          : args.p_outcome},error:null};
     return {data:null,error:{code:"UNKNOWN_RPC"}};
   })} as unknown as SupabaseRpcClient;
   const bridge=vi.fn(async() => {
@@ -101,6 +104,11 @@ describe("V4 trusted internal quote source recovery worker",()=>{
     expect(await run(h)).toMatchObject({retryPending:1,completed:0});
     expect(h.events[1].args).toMatchObject({p_outcome:"FAILED",
       p_error_code:"QUOTE_AUTOMATION_RULES_UNAVAILABLE"});
+  });
+  it("reports final-attempt dead letters as terminal failures, not retry successes",async()=>{
+    const h=harness({bridgeFails:true,deadLetter:true});
+    expect(await run(h)).toMatchObject({claimed:1,deadLetter:1,retryPending:0,completed:0,
+      providerMessagesSent:0});
   });
   it("denies unaccepted or foreign-scoped customer facts before invoking rules",async()=>{
     for(const options of [{quoteStatus:"SENT"},{foreignRequest:true}]){
