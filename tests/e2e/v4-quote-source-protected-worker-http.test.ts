@@ -98,7 +98,7 @@ describe("V4 private quote-source replay entrypoint", () => {
     }),h.deps);
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ok:true,claimed:2,completed:1,retried:1,
-      providerMessagesSent:0});
+      allEventsCompleted:false,providerMessagesSent:0});
     expect(h.runBatch).toHaveBeenCalledTimes(1);
     const payload=h.runBatch.mock.calls[0][0] as {workerId:string;maxBatch:number};
     expect(payload.workerId).toBe("recovery_qa_001");
@@ -116,6 +116,34 @@ describe("V4 private quote-source replay entrypoint", () => {
       const res=await handleInternalQuoteSourceWorkerPost(req(secret),h.deps);
       expect(res.status).toBe(503);
     }
+  });
+
+  it("reports full internal completion distinctly from accepted retry/dead-letter batches",async()=>{
+    const success = harness({}, {...sample,claimed:1,completed:1,retryPending:0});
+    const ok = await handleInternalQuoteSourceWorkerPost(req(secret),success.deps);
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toMatchObject({ok:true,allEventsCompleted:true,
+      completed:1,providerMessagesSent:0});
+
+    const terminal = harness({}, {...sample,claimed:1,completed:0,
+      retryPending:0,deadLetter:1});
+    const failed = await handleInternalQuoteSourceWorkerPost(req(secret),terminal.deps);
+    expect(failed.status).toBe(200);
+    expect(await failed.json()).toMatchObject({ok:true,
+      allEventsCompleted:false,deadLetter:1,providerMessagesSent:0});
+  });
+
+  it("fails closed without disclosing malformed settings reader exceptions",async()=>{
+    const h=harness();
+    const deps={...h.deps,settings:()=>{ throw new Error(
+      "secret leak should never render: "+secret); }};
+    const res=await handleInternalQuoteSourceWorkerPost(req(secret),deps);
+    expect(res.status).toBe(503);
+    const body=await res.text();
+    expect(body).toContain("BACKEND_UNAVAILABLE");
+    expect(body).not.toContain(secret);
+    expect(h.createService).not.toHaveBeenCalled();
+    expect(h.runBatch).not.toHaveBeenCalled();
   });
 
   it("never exposes secrets or a database exception on worker failure",async()=>{
