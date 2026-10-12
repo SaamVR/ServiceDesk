@@ -103,6 +103,55 @@ describe("same-origin operational AI draft HTTP boundary", () => {
     }
   });
 
+  it("accepts only the exact local 127/localhost alias from a real loopback Next proxy", async () => {
+    const request=(url:string,origin:string,extra:Record<string,string>={}) =>
+      new Request(url,{
+        method:"POST",
+        headers:{"content-type":"application/json",origin,...extra},
+        body:JSON.stringify(entry),
+      });
+    let called=0;
+    for(const [url,origin] of [
+      ["http://localhost:3000/api/internal/ai/draft", "http://127.0.0.1:3000"],
+      ["http://127.0.0.1:3000/api/internal/ai/draft", "http://localhost:3000"],
+    ]) {
+      const result=await handleStaffAiHttpPost(request(url,origin,
+        {"sec-fetch-site":"same-origin"}),async()=>{
+        called++;
+        return {ok:false,code:"AI_STAFF_UNAUTHORIZED",
+          message:"no signed in staff session"};
+      });
+      expect(result.status).toBe(401);
+      expect(await result.json()).toEqual({code:"AI_STAFF_UNAUTHORIZED"});
+    }
+    expect(called).toBe(2);
+    for(const [url,origin,headers] of [
+      ["http://localhost:3000/api/internal/ai/draft",
+        "http://127.0.0.1:3001",{}],
+      ["http://internal:3000/api/internal/ai/draft",
+        "http://127.0.0.1:3000",{"x-forwarded-host":"127.0.0.1:3000"}],
+      ["http://localhost:3000/api/internal/ai/draft",
+        "http://127.0.0.1:3000",{"sec-fetch-site":"cross-site"}],
+      ["http://localhost:3000/api/internal/ai/draft",
+        "https://127.0.0.1:3000",{}],
+    ] as const) {
+      const result=await handleStaffAiHttpPost(request(url,origin,headers),
+        async()=>{called++;return {ok:true,value:turn};});
+      expect(result.status).toBe(403);
+      expect(await result.json()).toEqual({code:"SAME_ORIGIN_REQUIRED"});
+    }
+    expect(called).toBe(2);
+    const injected=await handleStaffAiHttpPost(
+      new Request("http://localhost:3000/api/internal/ai/draft",{
+        method:"POST",headers:{"content-type":"application/json",
+          origin:"http://127.0.0.1:3000"},
+        body:JSON.stringify({...entry,role:"OWNER"}),
+      }),async()=>{called++;return {ok:true,value:turn};});
+    expect(injected.status).toBe(400);
+    expect(await injected.json()).toEqual({code:"REQUEST_SCHEMA_INVALID"});
+    expect(called).toBe(2);
+  });
+
   it("rejects cross-origin browser requests before invoking the staff actor resolver", async () => {
     let calls = 0;
     const invalidHeaders: Array<Record<string, string>> = [
