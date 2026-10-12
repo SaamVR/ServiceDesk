@@ -8,7 +8,7 @@ type Input = Pick<OperationalStaffSnapshot,
 
 const empty: Input = {
   branchScope: { mode: "BRANCH", selectedBranchId: "branch-1", branches: [{
-    id: "branch-1", code: "US-N", name: "North", currency: "USD", timezone: "America/New_York",
+    id: "branch-1", code: "US-N", name: "North", currency: "USD", timezone: "America/New_York", isDefault: true,
   }] },
   serviceCatalog: [],
   workflowAvailable: true,
@@ -140,7 +140,7 @@ describe("owner automation activation evidence", () => {
 
   it("does not mix pricing in branch A with published rules or successful attention in branch B", () => {
     const branchTwo = { id: "branch-2", code: "US-S", name: "South",
-      currency: "USD", timezone: "America/Chicago" };
+      currency: "USD", timezone: "America/Chicago", isDefault: false };
     const mixed: Input = {
       ...empty,
       branchScope: { mode: "ALL", branches: [...empty.branchScope!.branches, branchTwo] },
