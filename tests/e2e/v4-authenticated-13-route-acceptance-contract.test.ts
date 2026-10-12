@@ -31,6 +31,11 @@ describe("V4 real-owner Studio UAT contract, not synthetic proof",()=>{
     expect(script).toContain('["quality","reports","settings","billing"]');
     expect(script).toContain("!audit.moreOpen");
     expect(script).toContain("audit.documentWidth > width + 2");
+    expect(script).toContain("AUTHENTICATED_OVERVIEW_REAL_WORKSPACE_SNAPSHOT_UNAVAILABLE");
+    expect(script).toContain("result.unavailable");
+    expect(script).toContain("audit.unavailable");
+    expect(script).toContain("Workspace unavailable");
+    expect(script).toContain("Staff sign-in required");
     expect(script).toContain("if (!expanded.open || expanded.count !== 4)");
     expect(script).toContain('new KeyboardEvent("keydown"');
     expect(script).toContain("Authenticated drawer Escape failed");
