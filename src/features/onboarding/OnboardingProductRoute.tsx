@@ -12,6 +12,7 @@ import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { loadOnboardingProduct } from "./onboarding-product-runtime";
 import { summarizeOwnerCommercialSetup } from "./onboarding-commercial-readiness";
 import { OnboardingOperationalEvidencePanel } from "./OnboardingOperationalEvidencePanel";
+import { availableFirstRunUsdBranches } from "@/features/operations/owner-pricing-readiness";
 
 function setupState(done: boolean) {
   return done ? (
@@ -122,6 +123,12 @@ export async function OnboardingProductRoute({
   const readyCount = [businessReady, servicesReady, pricingVerified, teamReady, billingReady].filter(Boolean).length;
   const workspaceBase =
     "/app/" + encodeURIComponent(workspace.slug);
+  const canEnterFirstRunRates =
+    availableFirstRunUsdBranches(branchScope, ownerPricingBookProof).length > 0;
+  const settingsHref = workspaceBase + "/settings";
+  const realPricingHref = settingsHref +
+    (canEnterFirstRunRates ? "#owner-first-run-pricing" : "");
+  const needsPricing = !servicesReady || !pricingVerified;
 
   return (
     <StaffAppShell workspace={workspace.slug}>
@@ -130,8 +137,11 @@ export async function OnboardingProductRoute({
         title="Finish setting up ServiceDesk"
         description="Check your saved services and branch prices first. These five setup signals are not a live-provider or customer-workflow certification."
         actions={
-          <Link className="app-button-primary" href={workspaceBase + "/overview"}>
-            Open workspace
+          <Link className="app-button-primary"
+            href={needsPricing ? realPricingHref : workspaceBase + "/overview"}>
+            {needsPricing
+              ? canEnterFirstRunRates ? "Enter actual cleaning rates" : "Review business pricing"
+              : "Open workspace"}
           </Link>
         }
       />
@@ -196,7 +206,7 @@ export async function OnboardingProductRoute({
                       " saved in the operational catalog."
                     : "No active service is saved. Set up the real cleaning catalog and owner-entered prices."}
                 </p>
-                {!servicesReady ? <Link href={workspaceBase + "/settings"}>Configure actual services →</Link> : null}
+                {!servicesReady ? <Link href={realPricingHref}>Configure actual services →</Link> : null}
               </div>
               <div className="app-row-meta">{setupState(servicesReady)}</div>
             </article>
@@ -206,7 +216,7 @@ export async function OnboardingProductRoute({
                 <h3>Branch price books</h3>
                 <p>{commercial.detail}</p>
                 {!pricingVerified ? (
-                  <Link href={workspaceBase + "/settings"}>Review branch pricing in Settings →</Link>
+                  <Link href={realPricingHref}>Review branch pricing in Settings →</Link>
                 ) : null}
               </div>
               <div className="app-row-meta">

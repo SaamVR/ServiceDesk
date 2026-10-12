@@ -22,8 +22,13 @@ export function CatalogReadinessBanner({
 }) {
   if (!serviceCatalog) return null;
 
+  const settingsHref = buildStaffModuleHref(workspaceSlug, "settings");
   const settingsLink = <Link className="app-button-secondary"
-    href={buildStaffModuleHref(workspaceSlug, "settings")}>Review service setup</Link>;
+    href={settingsHref}>Review service setup</Link>;
+  const canStartRates = availableFirstRunUsdBranches(branchScope, ownerPricingBookProof).length > 0;
+  const rateSetupLink = canStartRates ? <Link className="app-button-secondary"
+    href={settingsHref + "#owner-first-run-pricing"}>Enter actual branch rates</Link>
+    : settingsLink;
 
   if (!serviceCatalog.some(item => item.active)) {
     return (
@@ -31,7 +36,7 @@ export function CatalogReadinessBanner({
         title="Quoting setup incomplete · no active cleaning service"
         description="This workspace has no active service in its saved catalog. Customer enquiries can be recorded, but a priced quote cannot be treated as operationally ready until an authorized owner configures services and pricing. No sample price or provider status is being invented."
         tone="warning"
-        action={settingsLink}
+        action={rateSetupLink}
       />
     );
   }
@@ -59,7 +64,7 @@ export function CatalogReadinessBanner({
         ? `The USD branch “${unconfigured[0].name}” has no verified active branch price book. An authorized owner must configure its actual rates before treating its customer quotes as ready. Other branches may already be configured.`
         : `${unconfigured.length} USD branches in this owner view have no verified active branch price book. An authorized owner must configure actual rates before treating quotes for those branches as ready. Other branches may already be configured.`}
       tone="warning"
-      action={settingsLink}
+      action={rateSetupLink}
     />
   );
 }

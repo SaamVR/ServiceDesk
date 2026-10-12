@@ -15,7 +15,7 @@ export function OnboardingOperationalEvidencePanel({
 }: {
   workspaceSlug: string;
   snapshot: Pick<OperationalStaffSnapshot,
-    "requests" | "quotes" | "visits" | "invoices" |
+    "requests" | "quotes" | "visits" | "invoices" | "branchScope" |
     "workflowAvailable" | "workflowExecutions" | "workflowActionExecutions">;
 }) {
   const evidence = summarizeOwnerOperationalEvidence(snapshot);

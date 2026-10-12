@@ -28,6 +28,8 @@ jobs:
         run: pnpm exec vitest run tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/staff-v3-navigation.test.tsx tests/e2e/v4-studio-sidebar-visibility.test.ts
       - run: pnpm typecheck
       - run: node --check scripts/release/v4-protected-qa-preflight.mjs
+      - name: Validate protected QA credential shapes (fictional inputs only)
+        run: node --test scripts/release/v4-protected-qa-preflight.test.mjs
   authenticated-seven-widths:
     if: github.event_name == 'workflow_dispatch' || github.ref_name == 'feat/servicedesk-v4-real-auth-uat-20261012'
     runs-on: ubuntu-latest

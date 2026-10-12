@@ -20,10 +20,24 @@ export interface OwnerOperationalEvidence {
  */
 export function summarizeOwnerOperationalEvidence(input: Pick<
   OperationalStaffSnapshot,
-  "requests" | "quotes" | "visits" | "invoices" |
+  "requests" | "quotes" | "visits" | "invoices" | "branchScope" |
   "workflowAvailable" | "workflowExecutions" | "workflowActionExecutions"
 >): OwnerOperationalEvidence {
-  const requestIds = new Set(input.requests.map(request => request.id));
+  const branches = input.branchScope;
+  // A selected branch must not inherit request, visit or automation successes
+  // from another branch in the same workspace. A legacy snapshot that has no
+  // verified branch scope remains read-only historical counts.
+  const inScope = (branchId?: string) =>
+    !branches || branches.mode === "LEGACY" ||
+    (typeof branchId === "string" &&
+      (branches.mode === "BRANCH"
+        ? branchId === branches.selectedBranchId &&
+          branches.branches.some(branch => branch.id === branchId)
+        : branches.branches.some(branch => branch.id === branchId)));
+  const requests = new Map(input.requests
+    .filter(request => inScope(request.branchId))
+    .map(request => [request.id, request]));
+  const requestIds = new Set(requests.keys());
   const quoteRows = input.quotes.filter(quote =>
     requestIds.has(quote.requestId) &&
     Number.isSafeInteger(quote.totalMinor) &&
@@ -36,17 +50,28 @@ export function summarizeOwnerOperationalEvidence(input: Pick<
   const acceptedById = new Map(accepted.map(quote => [quote.id, quote]));
   const visits = input.visits.filter(visit => {
     const quote = acceptedById.get(visit.quoteId);
-    return quote?.requestId === visit.requestId;
+    const request = requests.get(visit.requestId);
+    return quote?.requestId === visit.requestId &&
+      inScope(visit.branchId) &&
+      (!request?.branchId || !visit.branchId ||
+        request.branchId === visit.branchId);
   });
-  const invoices = input.invoices.filter(invoice =>
-    typeof invoice.quoteId === "string" &&
-    acceptedById.has(invoice.quoteId));
+  const acceptedVisitById = new Map(visits.map(visit => [visit.id, visit]));
+  const invoices = input.invoices.filter(invoice => {
+    const accepted = typeof invoice.quoteId === "string" &&
+      acceptedById.has(invoice.quoteId);
+    if (!accepted) return false;
+    // A linked invoice cannot borrow an unrelated visit's success.
+    if (!invoice.visitId) return true;
+    return acceptedVisitById.get(invoice.visitId)?.quoteId === invoice.quoteId;
+  });
 
   let completedInternalAttention: number | null = null;
   if (input.workflowAvailable === true &&
       Array.isArray(input.workflowExecutions) &&
       Array.isArray(input.workflowActionExecutions)) {
     const live = new Map(input.workflowExecutions.filter(execution =>
+      inScope(execution.branchId) &&
       execution.mode === "LIVE" &&
       execution.eventType === "QUOTE_ACCEPTED" &&
       execution.matched === true &&

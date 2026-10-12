@@ -46,6 +46,39 @@ function truthy(env: RuntimeEnvironment, ...keys: string[]): boolean {
   return keys.some((key) => ["1", "true", "yes", "ready"].includes((env[key] ?? "").trim().toLowerCase()));
 }
 
+function safeHttpsEndpoint(value: string | undefined): URL | null {
+  if (!value || value.trim() !== value || value.length > 2048) return null;
+  try {
+    const parsed = new URL(value);
+    // Configuration presence is not a valid endpoint when it can target a
+    // local host, contain userinfo, or use HTTP. Never echo the URL in UI.
+    const hostname = parsed.hostname.toLowerCase();
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password ||
+        parsed.hash || parsed.port || !hostname.includes(".") ||
+        hostname === "localhost" || hostname.endsWith(".localhost") ||
+        hostname.endsWith(".local") || hostname.endsWith(".internal") ||
+        hostname.endsWith(".test") || hostname.endsWith(".example") ||
+        /^\d+\.\d+\.\d+\.\d+$/.test(hostname) ||
+        hostname.startsWith("127.") || hostname === "169.254.169.254") {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function configuredHttpsEndpoint(env: RuntimeEnvironment, ...keys: string[]): boolean {
+  return keys.some(key => safeHttpsEndpoint(env[key]) !== null);
+}
+
+function exactAllowedHostEndpoint(env: RuntimeEnvironment): boolean {
+  const allowedHost = (env.N8N_ALLOWED_HOST ?? env.WEBHOOK_ALLOWED_HOST ?? "").trim().toLowerCase();
+  if (!allowedHost || !/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(allowedHost)) return false;
+  const endpoint = safeHttpsEndpoint(env.N8N_WEBHOOK_URL ?? env.WEBHOOK_ENDPOINT_URL);
+  return endpoint?.hostname.toLowerCase() === allowedHost;
+}
+
 function inboundReadiness(
   provider: InboundProofChannel,
   env: RuntimeEnvironment,
@@ -128,7 +161,7 @@ function configuredRequirements(provider: V1Provider, env: RuntimeEnvironment): 
     if (present(env, "WHATSAPP_APP_SECRET", "META_APP_SECRET")) configured.add("APP_SECRET_SIGNATURE_VALIDATION");
     if (present(env, "WHATSAPP_ACCESS_TOKEN", "META_ACCESS_TOKEN")) configured.add("ACCESS_TOKEN");
     if (present(env, "WHATSAPP_CONTROLLED_RECIPIENT")) configured.add("CONTROLLED_SENDER_RECIPIENT");
-    if (present(env, "WHATSAPP_CALLBACK_URL")) configured.add("CALLBACK_URL");
+    if (configuredHttpsEndpoint(env, "WHATSAPP_CALLBACK_URL")) configured.add("CALLBACK_URL");
     if (present(env, "WHATSAPP_VERIFY_TOKEN")) configured.add("VERIFY_TOKEN");
     if (configured.size > 0) configured.add("DURABLE_RECEIPT_CORE_HANDOFF");
   }
@@ -138,7 +171,7 @@ function configuredRequirements(provider: V1Provider, env: RuntimeEnvironment): 
       present(env, "GOOGLE_CALENDAR_CLIENT_ID", "GOOGLE_CLIENT_ID")
       && present(env, "GOOGLE_CALENDAR_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET")
     ) configured.add("OAUTH_CLIENT");
-    if (present(env, "GOOGLE_CALENDAR_REDIRECT_URI", "GOOGLE_REDIRECT_URI")) configured.add("REDIRECT_URI");
+    if (configuredHttpsEndpoint(env, "GOOGLE_CALENDAR_REDIRECT_URI", "GOOGLE_REDIRECT_URI")) configured.add("REDIRECT_URI");
     if (present(env, "GOOGLE_CALENDAR_REFRESH_TOKEN")) configured.add("REFRESH_TOKEN_TEST_ACCOUNT");
     if (present(env, "GOOGLE_CALENDAR_ID", "GOOGLE_CALENDAR_TEST_ID")) configured.add("TEST_CALENDAR");
     if (present(env, "GOOGLE_CALENDAR_SCOPES")) configured.add("FREEBUSY_EVENTS_SCOPES");
@@ -154,11 +187,11 @@ function configuredRequirements(provider: V1Provider, env: RuntimeEnvironment): 
   }
 
   if (provider === "WEBHOOK_N8N") {
-    if (present(env, "N8N_WEBHOOK_URL", "WEBHOOK_ENDPOINT_URL")) configured.add("AUTHORITATIVE_ENDPOINT");
+    if (exactAllowedHostEndpoint(env)) configured.add("AUTHORITATIVE_ENDPOINT");
     if (present(env, "N8N_SIGNING_SECRET", "WEBHOOK_SIGNING_SECRET")) configured.add("SIGNING_SECRET_REFERENCE");
-    if (present(env, "N8N_ALLOWED_HOST", "WEBHOOK_ALLOWED_HOST")) configured.add("ALLOWED_HOST");
+    if (exactAllowedHostEndpoint(env)) configured.add("ALLOWED_HOST");
     if (present(env, "N8N_WORKFLOW_ID")) configured.add("N8N_WORKFLOW_ID");
-    if (present(env, "N8N_COMPLETION_CALLBACK_URL")) configured.add("COMPLETION_CALLBACK_MAPPING");
+    if (configuredHttpsEndpoint(env, "N8N_COMPLETION_CALLBACK_URL")) configured.add("COMPLETION_CALLBACK_MAPPING");
   }
 
 
