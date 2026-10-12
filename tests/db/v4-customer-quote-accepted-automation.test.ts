@@ -33,6 +33,7 @@ function fixture(options: {
   pending?: boolean;
   externalOnly?: boolean;
   workspaceOptedOut?: boolean;
+  deploymentOff?: boolean;
 }={}) {
   let pending = options.pending ?? true;
   const rows: Record<string,Record<string,unknown>[]> = {
@@ -99,7 +100,10 @@ function fixture(options: {
   return {service,rpc,seen,evaluateAndRecord,executeAttentionAction,
     input:{workspaceId:workspace,customerId:customer,quoteId:quote,
       service,rpc:rpc as unknown as SupabaseRpcClient},
-    deps:{portFactory:()=>({evaluateAndRecord,executeAttentionAction})} as unknown as TrustedQuoteFollowUpDeps};
+    deps:{
+      portFactory:()=>({evaluateAndRecord,executeAttentionAction}),
+      deploymentEnabled:()=>!options.deploymentOff,
+    } as unknown as TrustedQuoteFollowUpDeps};
 }
 describe("V4 trusted post-accept automation bridge",()=>{
   it("records the real accepted quote event and completes only persisted internal attention",async()=>{
@@ -124,6 +128,28 @@ describe("V4 trusted post-accept automation bridge",()=>{
       expect(result.ok).toBe(false);
       expect(t.evaluateAndRecord).not.toHaveBeenCalled();
       expect(t.executeAttentionAction).not.toHaveBeenCalled();
+    }
+  });
+  it("prevents internal writes when deployment is disabled, even for an opted-in tenant",async()=>{
+    const t=fixture({deploymentOff:true});
+    const result=await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps);
+    expect(result).toMatchObject({ok:false,code:"QUOTE_AUTOMATION_DEPLOYMENT_DISABLED"});
+    expect(t.seen).toHaveLength(0);
+    expect(t.evaluateAndRecord).not.toHaveBeenCalled();
+    expect(t.executeAttentionAction).not.toHaveBeenCalled();
+  });
+  it("defaults to server-side kill switch off when no test override is supplied",async()=>{
+    const t=fixture();
+    const deps={portFactory:t.deps.portFactory};
+    const original=process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED;
+    try {
+      delete process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED;
+      expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,deps))
+        .toMatchObject({ok:false,code:"QUOTE_AUTOMATION_DEPLOYMENT_DISABLED"});
+      expect(t.seen).toHaveLength(0);
+    } finally {
+      if(original===undefined) delete process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED;
+      else process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED=original;
     }
   });
   it("never evaluates any rule for a tenant lacking its own persisted opt-in",async()=>{
