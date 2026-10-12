@@ -75,9 +75,17 @@ export async function runInternalQuoteSourceRecoveryBatch(
     const id = row.id;
     const workspaceId = row.workspace_id;
     const quoteId = row.quote_id;
+    // A well-formed RPC response is not sufficient. The worker must prove
+    // it still owns an unexpired lease before creating any side effect.
+    const leaseUntil = typeof row.locked_until === "string"
+      ? Date.parse(row.locked_until) : NaN;
     if (!isUuid(id) || !isUuid(workspaceId) || !isUuid(quoteId) ||
         seen.has(id) || row.event_type !== "QUOTE_ACCEPTED" ||
-        row.state !== "PROCESSING") {
+        row.state !== "PROCESSING" ||
+        row.locked_by !== ports.workerId ||
+        !Number.isFinite(leaseUntil) || leaseUntil <= Date.now() ||
+        !Number.isSafeInteger(row.attempts) || (row.attempts as number) < 1 ||
+        (row.attempts as number) > 8) {
       summary.completionNotVerified++;
       continue;
     }
