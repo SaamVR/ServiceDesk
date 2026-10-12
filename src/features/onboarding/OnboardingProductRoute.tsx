@@ -77,7 +77,10 @@ export async function OnboardingProductRoute({
   const businessReady = Boolean(workspace.name && workspace.timezone);
   const servicesReady = enabledServices.length > 0;
   const teamReady = activeMembers.length > 0;
-  const billingReady = Boolean(platformBilling?.subscription.status);
+  // A recorded subscription is not necessarily usable: past-due and
+  // cancelled records must never count as completed owner setup.
+  const billingReady = platformBilling?.subscription.status === "ACTIVE" ||
+    platformBilling?.subscription.status === "TRIALING";
   const pricingVerified = commercial.state === "VERIFIED";
   const readyCount = [businessReady, servicesReady, pricingVerified, teamReady, billingReady].filter(Boolean).length;
   const workspaceBase =
@@ -192,12 +195,13 @@ export async function OnboardingProductRoute({
 
             <article className="app-row">
               <div>
-                <h3>Subscription</h3>
-                <p>
-                  {billingReady
-                    ? "Subscription information is available."
-                    : "Subscription information is not available yet."}
-                </p>
+                <h3>Workspace plan</h3>
+                <p>{billingReady
+                  ? `Plan status: ${platformBilling?.subscription.status}. This is account access status, not proof of a real customer payment.`
+                  : platformBilling?.subscription.status
+                    ? `Plan status: ${platformBilling.subscription.status}. Review billing before relying on your workspace plan.`
+                    : "Plan status has not been verified. Review account billing."}</p>
+                {!billingReady ? <Link href={workspaceBase + "/billing"}>Review workspace plan →</Link> : null}
               </div>
               <div className="app-row-meta">{setupState(billingReady)}</div>
             </article>
