@@ -37,7 +37,7 @@ function fixture(options: {
   workspaceOptedOut?: boolean;
   deploymentOff?: boolean;
 }={}) {
-  let pending = options.pending ?? true;
+  const pending = options.pending ?? true;
   const rows: Record<string,Record<string,unknown>[]> = {
     workspace_feature_flags: options.workspaceOptedOut ? [] : [{
       workspace_id: workspace, feature_key: "AUTO_INTERNAL_QUOTE_ACCEPTED", enabled: true,
@@ -96,7 +96,6 @@ function fixture(options: {
         actionPlans:[{requiresOwnerApproval:false},{requiresOwnerApproval:true}]}}};
   });
   const executeAttentionAction=vi.fn(async()=>{
-    pending=false;
     const saved = rows.workflow_action_executions.find(row=>row.id===actionId);
     if (saved) saved.state = "SUCCEEDED";
     return {ok:true as const,value:{attentionItemId:attentionId,actionExecutionId:actionId}};
