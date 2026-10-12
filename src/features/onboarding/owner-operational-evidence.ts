@@ -2,6 +2,18 @@ import type {
   OperationalStaffSnapshot,
 } from "@/features/operations/operational-product-runtime";
 
+// A database read should normally have unique IDs, but joined or merged
+// read-model snapshots can accidentally duplicate the same record. Only one
+// persisted identity may contribute to an owner-facing evidence count.
+function uniqueSavedRecords<T extends { id: string }>(rows: readonly T[]): T[] {
+  const seen = new Set<string>();
+  return rows.filter(row => {
+    if (!row.id || seen.has(row.id)) return false;
+    seen.add(row.id);
+    return true;
+  });
+}
+
 export interface OwnerOperationalEvidence {
   savedRequests: number;
   sentQuotes: number;
@@ -38,7 +50,7 @@ export function summarizeOwnerOperationalEvidence(input: Pick<
     .filter(request => inScope(request.branchId))
     .map(request => [request.id, request]));
   const requestIds = new Set(requests.keys());
-  const quoteRows = input.quotes.filter(quote => {
+  const quoteRows = uniqueSavedRecords(input.quotes).filter(quote => {
     const request = requests.get(quote.requestId);
     // A valid ISO-like currency code alone is not a valid priced quote:
     // the saved quote must use the currency of the request's authorized
@@ -59,7 +71,7 @@ export function summarizeOwnerOperationalEvidence(input: Pick<
     quote.status === "SENT" || quote.status === "ACCEPTED");
   const accepted = sentQuotes.filter(quote => quote.status === "ACCEPTED");
   const acceptedById = new Map(accepted.map(quote => [quote.id, quote]));
-  const visits = input.visits.filter(visit => {
+  const visits = uniqueSavedRecords(input.visits).filter(visit => {
     const quote = acceptedById.get(visit.quoteId);
     const request = requests.get(visit.requestId);
     return quote?.requestId === visit.requestId &&
@@ -68,7 +80,7 @@ export function summarizeOwnerOperationalEvidence(input: Pick<
         request.branchId === visit.branchId);
   });
   const acceptedVisitById = new Map(visits.map(visit => [visit.id, visit]));
-  const invoices = input.invoices.filter(invoice => {
+  const invoices = uniqueSavedRecords(input.invoices).filter(invoice => {
     const accepted = typeof invoice.quoteId === "string" &&
       acceptedById.has(invoice.quoteId);
     if (!accepted) return false;
