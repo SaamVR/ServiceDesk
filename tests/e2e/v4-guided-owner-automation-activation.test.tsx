@@ -19,7 +19,7 @@ const base = {
 };
 type Snapshot = Parameters<typeof summarizeAutomationActivation>[0];
 const steps=(snapshot:Snapshot)=>summarizeAutomationActivation(snapshot).steps
-  .filter(step=>step.id!=="execution-proof" && step.status!=="READY");
+  .filter(step=>step.id!=="execution-proof" && step.id!=="accepted-quote" && step.status!=="READY");
 
 describe("V4 guided owner quote automation activation",()=>{
   it("exposes real missing catalog and published rule before allowing first opt-in",()=>{
@@ -39,7 +39,8 @@ describe("V4 guided owner quote automation activation",()=>{
         actions:[{type:"CREATE_ATTENTION"}],maxActionsPerEvent:1,createdAt:"2026-10-13"}],
     };
     expect(steps(complete)).toEqual([]);
-    expect(summarizeAutomationActivation(complete).steps[3].status).toBe("ACTION_REQUIRED");
+    expect(summarizeAutomationActivation(complete).steps[3].status).toBe("UNVERIFIED");
+    expect(summarizeAutomationActivation(complete).steps[4].status).toBe("ACTION_REQUIRED");
   });
 
   it("renders actual requirements for authorized owner in BOTH automation studio states",()=>{
@@ -51,6 +52,7 @@ describe("V4 guided owner quote automation activation",()=>{
       .toBe(2);
     expect(panel).toContain("summarizeAutomationActivation(snapshot)");
     expect(panel).toContain('step.id !== "execution-proof"');
+    expect(panel).toContain('step.id !== "accepted-quote"');
     expect(panel).toContain("missingSetup.length === 0");
     expect(panel).toContain("Before enabling automatic follow-up");
     expect(panel).toContain("Open Settings");
