@@ -60,6 +60,8 @@ export async function handleAiOwnerProbePost(
       sameLoopbackHostOrigin = requested.protocol === "http:" &&
         browser.protocol === "http:" &&
         loopback(requested.hostname) && loopback(browser.hostname) &&
+        requested.port === browser.port &&
+        requested.port === "3000" &&
         browser.origin === origin &&
         request.headers.get("host") === browser.host;
     } catch { /* Unparseable Origins are always denied. */ }
