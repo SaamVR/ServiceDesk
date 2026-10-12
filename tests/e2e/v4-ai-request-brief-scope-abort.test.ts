@@ -32,6 +32,24 @@ describe("V4 request AI copilot tenant and request switch handling",()=>{
     expect(source).toContain("clearTimeout(timeout)");
     expect(source).toContain("20_000");
   });
+  it("provides a user-initiated cancel that aborts in-flight HTTP and cannot publish stale output",()=>{
+    expect(source).toContain("function cancelBrief()");
+    expect(source).toContain("const pending = pendingRequest.current;");
+    expect(source).toContain("if (!pending || !busy) return;");
+    expect(source).toContain("pending.abort()");
+    expect(source).toContain("pendingRequest.current = null;");
+    expect(source).toContain("previous?.scopeKey === scopeKey");
+    expect(source).toContain("Saved requests, quotes and customer records are unchanged.");
+    expect(source).toContain("aria-label=\"Cancel AI request briefing\"");
+    expect(source).toContain("onClick={cancelBrief}");
+    expect(source).toContain("{busy ? (");
+    expect(source).toContain("pendingRequest.current === request");
+    expect(source).toContain("if (!request.signal.aborted || timedOut) {");
+    const styles = readFileSync(join(process.cwd(),
+      "src/features/operations/AiRequestBrief.module.css"),"utf8");
+    expect(styles).toContain(".cancelAction:focus-visible");
+    expect(styles).toContain(".actionRow { display: grid; }");
+  });
   it("retains explicit staff click, safe output parsing and no model auto-provider execution",()=>{
     expect(source).toContain('method: "POST"');
     expect(source).toContain('credentials: "same-origin"');
