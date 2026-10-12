@@ -123,6 +123,20 @@ async function main() {
       body: attempt.body, signal: AbortSignal.timeout(16000),
     });
     const data = await reply.json().catch(() => null);
+    if (reply.status !== attempt.status || data?.code !== attempt.code) {
+      // Emit only numeric HTTP status + constrained error category; never log
+      // request body, cookies, customer data, model output or auth headers.
+      const observedCode = typeof data?.code === "string" &&
+        /^[A-Z][A-Z0-9_]{2,79}$/.test(data.code)
+          ? data.code : "UNRECOGNIZED_OR_MISSING_CODE";
+      console.error("V4_GUEST_DENIAL_DIAGNOSTIC", JSON.stringify({
+        case: attempt.name,
+        expectedStatus: attempt.status,
+        observedStatus: reply.status,
+        expectedCode: attempt.code,
+        observedCode,
+      }));
+    }
     check(reply.status === attempt.status &&
       data?.code === attempt.code, "anonymous-staff-ai-" + attempt.name);
     check((reply.headers.get("cache-control") ?? "").includes("no-store"),
