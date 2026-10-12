@@ -34,8 +34,12 @@ export async function OwnerQuoteAcceptedAutomationControl({
       redirect("/app/" + encodeURIComponent(workspaceSlug) + "/automations?autoQuote=invalid");
     }
     const result = await setOwnerQuoteAutomationSetting(workspaceSlug, raw === "true", expectedVersion);
-    const status = result.ok ? "saved" : "review";
-    redirect("/app/" + encodeURIComponent(workspaceSlug) + "/automations?autoQuote=" + status);
+    const kind = result.ok ? "notice" : "error";
+    const message = result.ok
+      ? "Workspace automation choice saved. Verify real event receipts before claiming an automatic follow-up ran."
+      : result.message;
+    redirect("/app/" + encodeURIComponent(workspaceSlug) + "/automations?" +
+      kind + "=" + encodeURIComponent(message));
   }
 
   return (
