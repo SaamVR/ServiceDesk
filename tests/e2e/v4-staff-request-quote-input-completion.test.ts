@@ -3,9 +3,12 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { parseRequestQuoteInputs } from "../../src/features/operations/request-quote-input";
 
-const resolveStaffActor = vi.fn();
-const requireOperationalBranchResource = vi.fn();
-const createFacade = vi.fn();
+const { resolveStaffActor, requireOperationalBranchResource, createFacade } =
+  vi.hoisted(() => ({
+    resolveStaffActor: vi.fn(),
+    requireOperationalBranchResource: vi.fn(),
+    createFacade: vi.fn(),
+  }));
 vi.mock("../../src/features/operations/operational-product-runtime", () => ({
   resolveStaffActor, requireOperationalBranchResource,
 }));
