@@ -36,15 +36,29 @@ export async function handleStaffAiHttpPost(
     return response(415, { code: "CONTENT_TYPE_REQUIRED" });
   }
 
-  // Cookie-backed server actions must reject cross-origin POSTs before
-  // resolving Auth or issuing a billable model call.
+  // Render may pass an internal proxy URL to Next while the browser uses
+  // our actual public HTTPS origin. Accept ONLY the explicitly configured
+  // public origin, never X-Forwarded-Host from an untrusted request. The same
+  // strict policy is shared by request-brief and owner model diagnostics.
   const origin = request.headers.get("origin");
   let requestOrigin: string;
   try { requestOrigin = new URL(request.url).origin; }
   catch { return response(400, { code: "REQUEST_URL_INVALID" }); }
-  if (!origin || origin !== requestOrigin ||
-      (request.headers.get("sec-fetch-site") &&
-        !["same-origin", "none"].includes(request.headers.get("sec-fetch-site")!))) {
+  const configuredOrigin = process.env.SERVICEDESK_AI_ALLOWED_ORIGIN;
+  let trustedPublicOrigin: string | undefined;
+  if (configuredOrigin) {
+    try {
+      const candidate = new URL(configuredOrigin);
+      if (candidate.protocol === "https:" && candidate.pathname === "/" &&
+          !candidate.username && !candidate.password &&
+          !candidate.search && !candidate.hash && !candidate.port) {
+        trustedPublicOrigin = candidate.origin;
+      }
+    } catch { /* Invalid origin configuration fails closed. */ }
+  }
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (!origin || (origin !== requestOrigin && origin !== trustedPublicOrigin) ||
+      (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
     return response(403, { code: "SAME_ORIGIN_REQUIRED" });
   }
 
