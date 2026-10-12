@@ -23,4 +23,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: 27 safe playbooks event/condition/action regression
         run: pnpm exec vitest run tests/e2e/v4-cleaning-automation-playbooks.test.ts
-      - run: pnpm check:rc
+      - name: Full source check on owned feature branch (PRs use central exact-head RC)
+        if: github.event_name == 'push'
+        run: pnpm check:rc
