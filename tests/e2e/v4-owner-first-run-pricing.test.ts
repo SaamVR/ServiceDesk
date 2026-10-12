@@ -42,6 +42,8 @@ function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS
   const rows: Record<string,Record<string,unknown>[]> = {
     service_catalog: ["STANDARD","DEEP","MOVE_OUT"].map(code => ({
       workspace_id:workspaceId,code,active:true,
+      name: code === "STANDARD" ? "Standard cleaning" :
+        code === "DEEP" ? "Deep cleaning" : "Move-out cleaning",
     })),
     rate_cards: options.missingProof ? [] : [{
       id:rateCardId, workspace_id:workspaceId,version:"owner-cleaning-"+setupId,
@@ -136,6 +138,14 @@ describe("V4 first-run owner cleaning price configuration",()=>{
     expect(h.seen.sort()).toEqual(["branch_price_books","rate_cards","service_catalog"]);
   });
 
+  it("does not falsely acknowledge owner names if the stored catalog differs",async()=>{
+    const h=harness();
+    const wrongName=form();
+    wrongName.set("nameStandard","Owner renamed standard clean");
+    expect(await setupAuthorizedCleaningPricing("fictional-qa",wrongName,h.deps))
+      .toMatchObject({ok:false,code:"PRICING_SETUP_READBACK_UNVERIFIED"});
+  });
+
   it("never reports saved pricing when a DB-acknowledged row is missing on readback",async()=>{
     const h=harness({missingProof:true});
     expect(await setupAuthorizedCleaningPricing("fictional-qa",form(),h.deps))
@@ -150,6 +160,8 @@ describe("V4 first-run owner cleaning price configuration",()=>{
     expect(sql).toContain("servicedesk_actor_has_branch_access");
     expect(sql).toContain("from public.branch_price_books");
     expect(sql).toContain("pg_advisory_xact_lock");
+    expect(sql).toContain("on conflict (workspace_id,code) do update");
+    expect(sql).toContain("sc.name=trim(v_names->>'STANDARD')");
     expect(sql).toContain("from public,anon,authenticated");
     expect(sql).toContain("to service_role");
     expect(sql).not.toContain("security definer");
