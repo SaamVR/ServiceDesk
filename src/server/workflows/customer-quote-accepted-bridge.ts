@@ -193,6 +193,33 @@ export async function runTrustedAcceptedQuoteInternalAutomation(
       }
       completedAttentionActions++;
     }
+
+    // A previously recorded execution is NOT equivalent to successful
+    // internal follow-up. On replay an action could have been FAILED,
+    // suppressed, still PENDING or missing after an interrupted worker.
+    // Verify one persisted SUCCEEDED action for *each* CREATE_ATTENTION index
+    // before acknowledging this published rule as handled. Other outbound
+    // template actions remain approval-only; they never count here.
+    const requiredIndexes = dto.actions.flatMap((action, index) =>
+      action.type === "CREATE_ATTENTION" ? [index] : []);
+    if (requiredIndexes.length) {
+      const proof = await service.from("workflow_action_executions")
+        .select("id,action_index,state")
+        .eq("workspace_id", workspaceId).eq("branch_id", branchId)
+        .eq("execution_id", saved.value.executionId)
+        .eq("action_type", "CREATE_ATTENTION").limit(25);
+      if (proof.error || !Array.isArray(proof.data)) {
+        return fail("QUOTE_AUTOMATION_ATTENTION_PROOF_UNAVAILABLE");
+      }
+      const successful = new Set(proof.data
+        .filter(row => row.state === "SUCCEEDED" &&
+          typeof row.id === "string" && isUuid(row.id) &&
+          Number.isSafeInteger(row.action_index) && row.action_index >= 0)
+        .map(row => row.action_index as number));
+      if (requiredIndexes.some(index => !successful.has(index))) {
+        return fail("QUOTE_AUTOMATION_ATTENTION_NOT_COMPLETED");
+      }
+    }
   }
   // No eligible PUBLISHED QUOTE_ACCEPTED rule means nothing was evaluated.
   // Do not call this a completed durable source: the future lease worker
