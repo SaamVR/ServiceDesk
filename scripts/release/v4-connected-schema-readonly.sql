@@ -38,7 +38,7 @@ WITH bindings AS (
   JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public'
     AND p.proname = 'servicedesk_setup_owner_cleaning_pricing'
-    AND pg_get_function_identity_arguments(p.oid) = 'p_input jsonb'
+    AND p.oid = to_regprocedure('public.servicedesk_setup_owner_cleaning_pricing(jsonb)')
 ), source AS (
   SELECT c.relrowsecurity AS rls_enabled
   FROM pg_class c
