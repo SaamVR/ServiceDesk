@@ -99,8 +99,21 @@ export class WebhookCommittedOutboxDispatcher implements CommittedOutboxDispatch
         code: "WORKSPACE_MISMATCH", message: "Webhook outbox job is not owned by the expected workspace." }) };
     }
 
-    const resolved = await this.resolver.resolve(input.job);
-    if (!resolved.ok) return { ok: true, value: classifyProviderFailure({ job: input.job, code: resolved.code, message: resolved.message }) };
+    let resolved: Awaited<ReturnType<WebhookDeliveryIntentResolver["resolve"]>>;
+    try {
+      resolved = await this.resolver.resolve(input.job);
+    } catch {
+      // A resolver may fail while loading server-held endpoint credentials.
+      // Its exception is untrusted and must never enter the persisted outbox.
+      return { ok: true, value: classifyProviderFailure({
+        job: input.job, code: "WEBHOOK_CONFIG_INVALID",
+        message: "Authoritative webhook delivery configuration is unavailable.",
+      }) };
+    }
+    if (!resolved.ok) return { ok: true, value: classifyProviderFailure({
+      job: input.job, code: resolved.code,
+      message: "Authoritative webhook destination could not be resolved.",
+    }) };
     if (!validUrl(resolved.value.url) ||
         !headersAreSafe(resolved.value.headers ?? {})) {
       return { ok: true, value: classifyProviderFailure({ job: input.job, code: "WEBHOOK_CONFIG_INVALID", message: "Server-resolved webhook endpoint URL is invalid." }) };
@@ -142,9 +155,13 @@ export class WebhookCommittedOutboxDispatcher implements CommittedOutboxDispatch
           evidence: resolved.value.evidence,
         }),
       };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "unknown webhook transport failure";
-      return { ok: true, value: classifyProviderFailure({ job: input.job, code: "NETWORK_ERROR", message }) };
+    } catch {
+      // Transport errors can embed provider keys, request bodies, host URLs
+      // and customer data that a regex redactor cannot safely enumerate.
+      return { ok: true, value: classifyProviderFailure({
+        job: input.job, code: "NETWORK_ERROR",
+        message: "Webhook transport failed before a verified provider response.",
+      }) };
     }
   }
 }
