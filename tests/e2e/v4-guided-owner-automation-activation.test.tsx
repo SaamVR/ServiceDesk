@@ -60,7 +60,7 @@ describe("V4 guided owner quote automation activation",()=>{
 
   it("always keeps the disable control available and preserves protected server reauthorization",()=>{
     const panel=read("src/features/operations/OwnerQuoteAcceptedAutomationControl.tsx");
-    expect(panel).toContain("enabled || missingSetup.length === 0");
+    expect(panel).toContain("enabled || (journalReady && missingSetup.length === 0)");
     expect(panel).toContain("Disable automatic internal follow-up");
     expect(panel).toContain("setOwnerQuoteAutomationSetting(workspaceSlug, raw === \"true\", expectedVersion)");
     expect(panel).toContain("readOwnerQuoteAutomationSetting(workspaceSlug)");
