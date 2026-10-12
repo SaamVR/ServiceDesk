@@ -103,6 +103,58 @@ describe("V4 owner live operational evidence, never synthetic proof", () => {
     expect(result.completedInternalAttention).toBe(1);
   });
 
+  it("counts a saved LIVE internal attention while outbound template approval remains pending", () => {
+    const result = summarizeOwnerOperationalEvidence(values({
+      workflowAvailable: true,
+      workflowExecutions: [
+        { id: "live", mode: "LIVE", eventType: "QUOTE_ACCEPTED",
+          matched: true, state: "ACTIONS_PENDING", branchId: "north" },
+      ],
+      workflowActionExecutions: [
+        { executionId: "live", branchId: "north", actionType: "CREATE_ATTENTION",
+          state: "SUCCEEDED" },
+        { executionId: "live", branchId: "north", actionType: "SEND_EMAIL_TEMPLATE",
+          state: "APPROVAL_REQUIRED" },
+      ],
+    } as unknown as Partial<Snapshot>));
+    expect(result.completedInternalAttention).toBe(1);
+  });
+
+  it("never counts awaiting or rejected internal attention as a successful partial workflow", () => {
+    for (const state of ["PENDING", "FAILED", "APPROVAL_REQUIRED", "SUPPRESSED"]) {
+      const result = summarizeOwnerOperationalEvidence(values({
+        workflowAvailable: true,
+        workflowExecutions: [
+          { id: "live", mode: "LIVE", eventType: "QUOTE_ACCEPTED",
+            matched: true, state: "ACTIONS_PENDING", branchId: "north" },
+        ],
+        workflowActionExecutions: [
+          { executionId: "live", branchId: "north",
+            actionType: "CREATE_ATTENTION", state },
+        ],
+      } as unknown as Partial<Snapshot>));
+      expect(result.completedInternalAttention).toBe(0);
+    }
+  });
+
+  it("never treats unmatched, preview, foreign branch or partial-failed runs as saved success", () => {
+    const withExecution = (state: string, mode = "LIVE", branchId = "north", matched = true) =>
+      summarizeOwnerOperationalEvidence(values({
+        workflowAvailable: true,
+        branchScope: { mode: "BRANCH", selectedBranchId: "north",
+          branches: [{ id: "north", name: "North", code: "US-N", timezone: "America/New_York",
+            currency: "USD" }] },
+        workflowExecutions: [{ id: "live", mode, eventType: "QUOTE_ACCEPTED",
+          matched, state, branchId }],
+        workflowActionExecutions: [{ executionId: "live", branchId,
+          actionType: "CREATE_ATTENTION", state: "SUCCEEDED" }],
+      } as unknown as Partial<Snapshot>)).completedInternalAttention;
+    expect(withExecution("PARTIAL_FAILED")).toBe(0);
+    expect(withExecution("ACTIONS_PENDING", "PREVIEW")).toBe(0);
+    expect(withExecution("ACTIONS_PENDING", "LIVE", "south")).toBe(0);
+    expect(withExecution("ACTIONS_PENDING", "LIVE", "north", false)).toBe(0);
+  });
+
   it("distinguishes unavailable workflow proof from an available empty ledger", () => {
     expect(summarizeOwnerOperationalEvidence(values({
       workflowAvailable: true, workflowExecutions: [], workflowActionExecutions: [],
