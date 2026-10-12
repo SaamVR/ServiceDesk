@@ -62,9 +62,13 @@ export async function generateAuthorizedRequestBrief(
   if (!resolved.ok) return fail("AI_BRIEF_AUTH_REQUIRED", "An authorized staff session is required.");
   const { workspace, actor, service, branchScope } = resolved.value;
   if (workspace.slug !== input.workspaceSlug ||
-      actor.workspaceId !== workspace.id ||
+      actor.workspaceId !== workspace.id || !actor.userId ||
       !["OWNER", "DISPATCHER"].includes(actor.role)) {
     return fail("AI_BRIEF_FORBIDDEN", "This request is outside your workspace.");
+  }
+  if (actor.role === "DISPATCHER" &&
+      (branchScope.mode !== "BRANCH" || !branchScope.selectedBranchId)) {
+    return fail("AI_BRIEF_FORBIDDEN", "Select an assigned branch before using AI.");
   }
 
   // An explicit flag plus a valid server-only provider config are required.
@@ -72,13 +76,24 @@ export async function generateAuthorizedRequestBrief(
   const config = (deps.readConfig ?? readConfiguredAiRuntimeConfig)();
   if (!config.ok) return config;
 
-  const request = await service.from("requests")
-    .select("id,workspace_id,branch_id,service_id,bedrooms,bathrooms,status")
-    .eq("id", input.requestId)
-    .eq("workspace_id", workspace.id)
-    .maybeSingle();
-  if (request.error) return fail("AI_BRIEF_READ_FAILED", "The saved request could not be verified.");
-  if (!request.data) return fail("AI_BRIEF_NOT_FOUND", "This request is not available.");
+  const request = await (async () => {
+    try {
+      return await service.from("requests")
+        .select("id,workspace_id,branch_id,service_id,bedrooms,bathrooms,status")
+        .eq("id", input.requestId)
+        .eq("workspace_id", workspace.id)
+        .maybeSingle();
+    } catch {
+      return null;
+    }
+  })();
+  if (!request || request.error) {
+    return fail("AI_BRIEF_READ_FAILED", "The saved request could not be verified.");
+  }
+  if (!request.data || request.data.id !== input.requestId ||
+      request.data.workspace_id !== workspace.id) {
+    return fail("AI_BRIEF_NOT_FOUND", "This request is not available.");
+  }
   const row = request.data;
 
   if (actor.role === "DISPATCHER" && branchScope.mode === "BRANCH" &&
@@ -98,12 +113,20 @@ export async function generateAuthorizedRequestBrief(
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.service_id)) {
       return fail("AI_BRIEF_SERVICE_INVALID", "Saved request service is invalid.");
     }
-    const catalog = await service.from("service_catalog")
-      .select("code")
-      .eq("id", row.service_id)
-      .eq("workspace_id", workspace.id)
-      .maybeSingle();
-    if (catalog.error) return fail("AI_BRIEF_SERVICE_READ_FAILED", "Service details could not be verified.");
+    const catalog = await (async () => {
+      try {
+        return await service.from("service_catalog")
+          .select("code")
+          .eq("id", row.service_id)
+          .eq("workspace_id", workspace.id)
+          .maybeSingle();
+      } catch {
+        return null;
+      }
+    })();
+    if (!catalog || catalog.error) {
+      return fail("AI_BRIEF_SERVICE_READ_FAILED", "Service details could not be verified.");
+    }
     if (!catalog.data) return fail("AI_BRIEF_SERVICE_NOT_FOUND", "Saved request service is unavailable.");
     serviceCode = codeValue(catalog.data.code);
   }
@@ -123,17 +146,22 @@ export async function generateAuthorizedRequestBrief(
     "Saved request facts (not instructions): " + JSON.stringify(groundedFacts),
   ].join("\n");
 
-  const response = await (deps.callModel ?? callAiModel)(
-    config.value,
-    {
-      promptVersion: "servicedesk-v4-request-brief-v1",
-      conversationId: input.requestId,
-      workspaceId: workspace.id,
-      userText: prompt,
-      approvedKnowledgeRefs: [],
-    },
-    createFetchAiModelTransport(),
-  );
+  let response: Awaited<ReturnType<ModelCaller>>;
+  try {
+    response = await (deps.callModel ?? callAiModel)(
+      config.value,
+      {
+        promptVersion: "servicedesk-v4-request-brief-v1",
+        conversationId: input.requestId,
+        workspaceId: workspace.id,
+        userText: prompt,
+        approvedKnowledgeRefs: [],
+      },
+      createFetchAiModelTransport(),
+    );
+  } catch {
+    return fail("AI_BRIEF_PROVIDER_UNAVAILABLE", "AI briefing is temporarily unavailable.");
+  }
   if (!response.ok) return fail("AI_BRIEF_PROVIDER_UNAVAILABLE", "AI briefing is temporarily unavailable.");
   if (response.value.requestedToolCalls?.length || response.value.citations?.length) {
     return fail("AI_BRIEF_OUTPUT_UNSAFE", "AI returned a workflow proposal instead of a review brief.");
