@@ -1,0 +1,44 @@
+name: ServiceDesk V4 server-enforced signed-in Studio entry
+on:
+  push:
+    branches: [feat/servicedesk-v4-studio-server-auth-redirect-20261012]
+permissions:
+  contents: read
+jobs:
+  studio-auth-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: pnpm/action-setup@v4
+        with: {version: 10.17.1,run_install: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2, cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - name: Test signed-out protected Studio redirects and return path validation
+        run: pnpm exec vitest run tests/e2e/v4-studio-server-auth-entry.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v4-studio-sidebar-visibility.test.ts
+      - name: Full production build, lint, typecheck, all regression tests
+        run: pnpm check:rc
+      - name: Boot exact source production Next and verify anonymous access to all 13 modules
+        shell: bash
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/servicedesk-guest-auth-test.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS --max-time 3 http://127.0.0.1:3000/auth/sign-in >/dev/null; then break; fi
+            sleep 2
+          done
+          node --input-type=module <<'NODE'
+          const modules=["overview","inbox","customers","requests","quotes","schedule",
+            "jobs","invoices","quality","automations","reports","settings","billing"];
+          for(const segment of modules){
+            const res=await fetch("http://127.0.0.1:3000/app/fictional-no-auth/"+segment,
+              {redirect:"manual",signal:AbortSignal.timeout(10000)});
+            const location=res.headers.get("location")||"";
+            if(![302,303,307,308].includes(res.status)||
+                !location.includes("/auth/sign-in?next=")||
+                !location.includes("%2Fapp%2Ffictional-no-auth%2Foverview"))
+              throw Error("ANON_STAFF_LAYOUT_REDIRECT_FAILED:"+segment+":"+res.status);
+          }
+          console.log("REAL_NEXT_ANONYMOUS_STUDIO_REDIRECT_PASS: 13 routes, zero session, no private shell");
+          NODE

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { StaffAppShell } from "@/components/product/StaffAppShell";
 import { hasAuthenticatedSession } from "@/features/auth/server-session";
 import { BranchScopeBar } from "@/features/operations/BranchScopeBar";
@@ -13,7 +14,14 @@ export default async function StaffWorkspaceLayout({
 }) {
   const { workspace } = await params;
   const signedIn = await hasAuthenticatedSession();
-  const branchContext = signedIn ? await loadOperationalBranchScope(workspace) : undefined;
+  // Rendering the whole staff rail to a guest makes a failed login look
+  // superficially authenticated. Always gate the Studio at the server
+  // boundary, before fetching workspace or branch information.
+  if (!signedIn) {
+    redirect("/auth/sign-in?next=" +
+      encodeURIComponent("/app/" + encodeURIComponent(workspace) + "/overview"));
+  }
+  const branchContext = await loadOperationalBranchScope(workspace);
 
   async function branchScopeAction(formData: FormData) {
     "use server";
