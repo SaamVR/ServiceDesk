@@ -1,0 +1,21 @@
+name: ServiceDesk V4 truthful AI and external provider readiness RC
+on:
+  push:
+    branches: [feat/servicedesk-v4-integration-status-evidence-20261012]
+permissions: {contents: read}
+jobs:
+  provider-truth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: pnpm/action-setup@v4
+        with: {version: 10.17.1,run_install: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2,cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - name: Reject false key-only AI setup and payment sandbox external-provider claims
+        run: pnpm exec vitest run tests/e2e/v2-integration-health-runtime.test.ts tests/e2e/v2-settings-integration-health.test.ts tests/e2e/v2-release-readiness-settings.test.ts
+      - name: Full product RC and build
+        run: pnpm check:rc

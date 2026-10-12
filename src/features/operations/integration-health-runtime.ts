@@ -6,6 +6,7 @@ import {
   type ProviderMode,
   type V1Provider,
 } from "@/server/integrations/readiness/provider-readiness";
+import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import {
   parseInboundControlledProof,
   validateInboundControlledProof,
@@ -160,17 +161,50 @@ function configuredRequirements(provider: V1Provider, env: RuntimeEnvironment): 
     if (present(env, "N8N_COMPLETION_CALLBACK_URL")) configured.add("COMPLETION_CALLBACK_MAPPING");
   }
 
-  if (provider === "AI") {
-    const providerConfigured = present(env, "OPENAI_API_KEY", "AI_API_KEY");
-    if (providerConfigured) {
-      configured.add("AI_PROVIDER_CONFIGURATION");
-      configured.add("MODEL_CONTRACT_PROOF");
-      configured.add("NO_BUSINESS_AUTHORITY_BOUNDARY");
-    }
-    if (present(env, "AI_MODEL_HEALTH_ENDPOINT") || truthy(env, "AI_MODEL_HEALTH_READY")) configured.add("MODEL_HEALTH_CHECK");
-  }
+
 
   return [...configured];
+}
+
+/**
+ * AI model readiness must use the SAME explicit enablement, model, key and
+ * exact-origin validation as the actual server-side inference transport.
+ * A stray API key or AI_MODEL_HEALTH_READY flag cannot be called connected.
+ * Owner-initiated model probes remain ephemeral until real receipt evidence.
+ */
+function configuredAiHealth(env: RuntimeEnvironment): OperationalIntegrationHealth {
+  const config = readConfiguredAiRuntimeConfig(env);
+  const active = env.SERVICEDESK_AI_ENABLED === "true";
+  const keyPresent = present(env, "OPENAI_API_KEY");
+  const modelValid = /^[A-Za-z0-9._:-]{2,100}$/.test((env.SERVICEDESK_AI_MODEL ?? "").trim());
+  const origin = (env.SERVICEDESK_AI_API_BASE_URL ?? "https://api.openai.com/v1").trim();
+  const validOrigin = origin === "https://api.openai.com/v1" ||
+    origin === "https://api.openai.com/v1/";
+  const missingConfiguration = [
+    ...(!active ? ["AI_EXPLICIT_ENABLEMENT"] : []),
+    ...(!keyPresent ? ["OPENAI_API_KEY"] : []),
+    ...(!modelValid ? ["AUTHORIZED_MODEL"] : []),
+    ...(!validOrigin ? ["AUTHORIZED_PROVIDER_ORIGIN"] : []),
+    ...(!config.ok && active && keyPresent && modelValid && validOrigin
+      ? ["VALID_RUNTIME_TIMEOUT"] : []),
+  ];
+  const hasSomeInputs = active || keyPresent || Boolean(env.SERVICEDESK_AI_MODEL?.trim()) ||
+    Boolean(env.SERVICEDESK_AI_API_BASE_URL?.trim());
+  return {
+    provider: "AI",
+    label: "AI assistant",
+    mode: "LIVE",
+    configurationState: config.ok ? "CONFIGURED" : hasSomeInputs ? "PARTIAL" : "NOT_CONFIGURED",
+    verificationState: "IMPLEMENTED",
+    missingConfiguration,
+    canRunControlledProof: config.ok,
+    source: "SERVER_CONFIGURATION_PRESENCE",
+    message: config.ok
+      ? "AI inference is enabled and its server-only model configuration is valid. An explicit owner model test is still required. Controlled provider proof is still required; no message, booking or payment is verified."
+      : hasSomeInputs
+        ? "AI is not runnable yet. Check the explicit enablement, model, credentials, approved provider origin and bounded timeout. A configured key or health flag is not a successful model response."
+        : "AI inference is disabled; no server-only model configuration is present. No model call or provider delivery is verified.",
+  };
 }
 
 function messageFor(input: {
@@ -207,7 +241,9 @@ export function buildOperationalIntegrationHealth(
     })),
   );
 
-  const providerHealth: OperationalIntegrationHealth[] = reports.map((report) => ({
+  const providerHealth: OperationalIntegrationHealth[] = reports.map((report) => report.provider === "AI"
+    ? configuredAiHealth(env)
+    : ({
     provider: report.provider,
     label: labels[report.provider],
     mode: report.mode,

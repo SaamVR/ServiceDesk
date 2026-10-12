@@ -57,7 +57,9 @@ describe("V2 operational integration health", () => {
       N8N_WORKFLOW_ID: "workflow",
       N8N_COMPLETION_CALLBACK_URL: "https://example.test/n8n/callback",
 
+      SERVICEDESK_AI_ENABLED: "true",
       OPENAI_API_KEY: "model-secret-value",
+      SERVICEDESK_AI_MODEL: "gpt-4o-mini",
       AI_MODEL_HEALTH_READY: "true",
     };
 
@@ -80,6 +82,61 @@ describe("V2 operational integration health", () => {
     expect(serialized).not.toContain("voice-inbound-secret-value");
     expect(serialized).not.toContain("mailbox-1");
     expect(serialized).not.toContain("voice-1");
+  });
+
+  it("never marks AI runnable from a stray secret or the synthetic health flag alone", () => {
+    const env = {
+      OPENAI_API_KEY: "redacted-qa-model-key",
+      AI_MODEL_HEALTH_READY: "true",
+    };
+    const ai = buildOperationalIntegrationHealth(env).find(x => x.provider === "AI");
+    expect(ai).toMatchObject({
+      configurationState: "PARTIAL",
+      verificationState: "IMPLEMENTED",
+      canRunControlledProof: false,
+      source: "SERVER_CONFIGURATION_PRESENCE",
+    });
+    expect(ai?.missingConfiguration).toContain("AI_EXPLICIT_ENABLEMENT");
+    expect(ai?.missingConfiguration).toContain("AUTHORIZED_MODEL");
+    expect(ai?.message).toContain("not a successful model response");
+    expect(JSON.stringify(ai)).not.toContain("redacted-qa-model-key");
+  });
+
+  it("matches actual server AI enablement and rejects a spoofed model origin", () => {
+    const env = {
+      SERVICEDESK_AI_ENABLED: "true",
+      OPENAI_API_KEY: "redacted-qa-model-key",
+      SERVICEDESK_AI_MODEL: "gpt-4o-mini",
+      SERVICEDESK_AI_API_BASE_URL: "https://evil.example/api",
+      AI_MODEL_HEALTH_READY: "true",
+    };
+    const bad = buildOperationalIntegrationHealth(env).find(x => x.provider === "AI");
+    expect(bad).toMatchObject({
+      configurationState: "PARTIAL",
+      canRunControlledProof: false,
+    });
+    expect(bad?.missingConfiguration).toContain("AUTHORIZED_PROVIDER_ORIGIN");
+    const good = buildOperationalIntegrationHealth({...env,SERVICEDESK_AI_API_BASE_URL:"https://api.openai.com/v1"})
+      .find(x => x.provider === "AI");
+    expect(good).toMatchObject({
+      configurationState: "CONFIGURED",
+      verificationState: "IMPLEMENTED",
+      missingConfiguration: [],
+      canRunControlledProof: true,
+    });
+    expect(good?.message).toContain("explicit owner model test");
+    expect(good?.verificationState).not.toBe("PROVIDER_VERIFIED");
+    expect(JSON.stringify(good)).not.toContain("redacted-qa-model-key");
+  });
+
+  it("does not let an invalid timeout masquerade as runnable AI", () => {
+    const ai = buildOperationalIntegrationHealth({
+      SERVICEDESK_AI_ENABLED:"true", OPENAI_API_KEY:"redacted-key",
+      SERVICEDESK_AI_MODEL:"gpt-4o-mini", SERVICEDESK_AI_TIMEOUT_MS:"999999"
+    }).find(x=>x.provider==="AI");
+    expect(ai?.configurationState).toBe("PARTIAL");
+    expect(ai?.missingConfiguration).toContain("VALID_RUNTIME_TIMEOUT");
+    expect(ai?.canRunControlledProof).toBe(false);
   });
 
   it("reports partial configuration without exposing configured values", () => {

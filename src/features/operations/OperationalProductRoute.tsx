@@ -3561,7 +3561,10 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     !grant.revokedAt && Date.parse(grant.expiresAt) > Date.parse(data.loadedAt));
   const activeMembers = snapshot.members.filter((member) => member.active).length;
   const pendingInvitations = snapshot.invitations.filter((invite) => invite.state === "PENDING").length;
-  const configuredIntegrations = data.integrations.filter(
+  // Internal payment sandbox is test infrastructure, not an externally
+  // configured payment gateway. Keep it outside provider-readiness counts.
+  const externalIntegrations = data.integrations.filter((integration) => integration.provider !== "PAYMENT");
+  const configuredIntegrations = externalIntegrations.filter(
     (integration) => integration.configurationState === "CONFIGURED",
   ).length;
   const releaseReadiness = buildOperationalReleaseReadiness(data.integrations);
@@ -3590,8 +3593,8 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
           <strong>{pendingInvitations}</strong>
         </div>
         <div>
-          <span>Configured integrations</span>
-          <strong>{configuredIntegrations}/{data.integrations.length}</strong>
+          <span>Configured external integrations</span>
+          <strong>{configuredIntegrations}/{externalIntegrations.length}</strong>
         </div>
         <div>
           <span>Release blockers</span>
@@ -4294,7 +4297,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                   description="Connection readiness and verification status without exposing credentials."
                 />
               </div>
-              <StatusBadge tone="neutral">{configuredIntegrations}/{data.integrations.length} configured</StatusBadge>
+              <StatusBadge tone="neutral">{configuredIntegrations}/{externalIntegrations.length} externally configured</StatusBadge>
             </div>
 
             <div className={styles.integrationGrid}>
@@ -4302,7 +4305,7 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
                 const readyForProof = integration.configurationState === "CONFIGURED";
                 const providerVerified = integration.verificationState === "PROVIDER_VERIFIED";
                 const statusLabel = integration.provider === "PAYMENT"
-                  ? "Sandbox ready"
+                  ? "Internal sandbox only"
                   : providerVerified
                     ? "Provider verified"
                     : readyForProof
