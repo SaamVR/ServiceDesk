@@ -40,7 +40,7 @@ jobs:
         run: pnpm build
       - name: Start exact built Next on localhost
         run: |
-          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/v4-guest-ai-server.log" 2>&1 &
+          SERVICEDESK_AI_HTTP_DIAGNOSTICS=true pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/v4-guest-ai-server.log" 2>&1 &
           for i in $(seq 1 90); do
             if curl -fsS http://127.0.0.1:3000/ >/dev/null; then exit 0; fi
             sleep 2
@@ -51,3 +51,7 @@ jobs:
         env:
           V4_GUEST_ROUTE_ORIGIN: http://127.0.0.1:3000
         run: node scripts/release/v4-studio-guest-release-contract.mjs
+      - name: Show sanitized CSRF mismatch classification on failure only
+        if: failure()
+        run: |
+          grep AI_HTTP_CSRF_DIAGNOSTIC "$RUNNER_TEMP/v4-guest-ai-server.log" | tail -n 15 || true
