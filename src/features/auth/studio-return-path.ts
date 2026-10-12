@@ -23,6 +23,10 @@ export function verifiedStudioReturnPath(workspace: string, requested?: string |
   if (!Object.prototype.hasOwnProperty.call(staffModuleConfig, module)) return fallback;
   if (segments.some(segment => !segment || segment === "." || segment === ".." ||
     /%(?:2e|2f|5c)/i.test(segment))) return fallback;
+  // Studio uses one page per module with record selection through query parameters.
+  // There is no /jobs/[id] or /requests/[id] route; do not preserve a 404
+  // as an apparent post-login destination.
+  if (segments.length > 0) return root + module;
   // The shared normalizer rejects external, control-character and auth-loop URLs.
   const safe = normalizeReturnPath(requested);
   return safe === "/auth/continue" ? fallback : safe;
