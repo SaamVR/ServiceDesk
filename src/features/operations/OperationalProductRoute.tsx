@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { setupAuthorizedCleaningPricing } from "@/server/core/owner-cleaning-pricing-setup";
 import { OwnerCleaningPricingSetupForm } from "./OwnerCleaningPricingSetupForm";
+import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import { queueApprovedInboxReply } from "@/server/core/reviewed-inbox-reply";
 import { runOwnerSavedRequestAutomation } from "@/server/workflows/owner-request-automation";
 import {
@@ -3643,10 +3644,17 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
               <StatusBadge tone="neutral">{activeServices} active</StatusBadge>
             </div>
 
+            {data.actor.role === "OWNER" && data.ownerPricingBookProof?.state === "UNAVAILABLE" ? (
+              <p role="status">Branch pricing could not be verified. Refresh before changing rates; no setup action is available.</p>
+            ) : null}
             {data.actor.role === "OWNER" &&
-              data.serviceCatalog.filter(service => service.active &&
-                ["STANDARD", "DEEP", "MOVE_OUT"].includes(service.code)).length < 3 ? (
-              <OwnerCleaningPricingSetupForm scope={data.branchScope} action={firstRunCleaningPricingAction} />
+              availableFirstRunUsdBranches(data.branchScope, data.ownerPricingBookProof).length > 0 ? (
+              <OwnerCleaningPricingSetupForm scope={data.branchScope}
+                proof={data.ownerPricingBookProof} action={firstRunCleaningPricingAction} />
+            ) : null}
+            {data.actor.role === "OWNER" && data.ownerPricingBookProof?.state === "VERIFIED" &&
+              availableFirstRunUsdBranches(data.branchScope, data.ownerPricingBookProof).length === 0 ? (
+              <p role="status">No unconfigured USD branches were found. Existing branch prices are not overwritten by first-run setup.</p>
             ) : null}
 
             {data.serviceCatalog.length === 0 ? (

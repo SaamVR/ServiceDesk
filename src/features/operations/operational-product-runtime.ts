@@ -392,6 +392,7 @@ export interface OperationalStaffSnapshot {
   qualityCases: OperationalQualityCase[];
   recurrenceRules: OperationalRecurrence[];
   serviceCatalog: OperationalServiceCatalogItem[];
+  ownerPricingBookProof?: { state: "VERIFIED" | "UNAVAILABLE"; activeBranchIds: string[] };
   workflowAvailable?: boolean;
   workflowRules?: OperationalWorkflowRule[];
   workflowRuleVersions?: OperationalWorkflowRuleVersion[];
@@ -768,6 +769,22 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return resolved;
   const { workspace, actor, service, rpc, branchScope } = resolved.value;
+
+  // Pricing readiness must come from persisted branch price books, not the
+  // number of catalog services. Query only for a verified owner session.
+  const ownerPriceBookRead = actor.role === "OWNER"
+    ? await service.from("branch_price_books")
+      .select("branch_id,active").eq("workspace_id", workspace.id)
+      .eq("active", true).limit(201)
+    : null;
+  const ownerPricingBookProof = actor.role !== "OWNER" ? undefined
+    : ownerPriceBookRead?.error || !Array.isArray(ownerPriceBookRead?.data)
+      || ownerPriceBookRead.data.length >= 201
+      ? { state: "UNAVAILABLE" as const, activeBranchIds: [] }
+      : { state: "VERIFIED" as const,
+          activeBranchIds: ownerPriceBookRead.data
+            .filter((row) => row.active === true && typeof row.branch_id === "string")
+            .map((row) => row.branch_id as string) };
 
   const tableReads = await Promise.all([
     service
@@ -1467,6 +1484,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         nextOccurrenceOn: textValue(row, "next_occurrence_on"),
         version: numberValue(row, "version", 1),
       })),
+      ownerPricingBookProof,
       serviceCatalog: serviceRows.map((row) => ({
         id: String(row.id),
         code: String(row.code),

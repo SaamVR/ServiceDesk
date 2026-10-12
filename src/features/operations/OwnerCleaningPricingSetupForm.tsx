@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { OperationalBranchScope } from "./operational-product-runtime";
+import { availableFirstRunUsdBranches, type OwnerPricingBookProof } from "./owner-pricing-readiness";
 
 type PriceService = {
   label: string;
@@ -37,14 +38,14 @@ function MinutesField({ label, name }: { label: string; name: string }) {
 /** No monetary preset is ever supplied: the owner must enter real prices. */
 export function OwnerCleaningPricingSetupForm({
   scope,
+  proof,
   action,
 }: {
   scope?: OperationalBranchScope;
+  proof?: OwnerPricingBookProof;
   action: (formData: FormData) => Promise<void>;
 }) {
-  const branches = (scope?.branches ?? [])
-    .filter(branch => branch.currency === "USD" &&
-      (scope?.mode !== "BRANCH" || scope.selectedBranchId === branch.id));
+  const branches = availableFirstRunUsdBranches(scope, proof);
   if (branches.length === 0) return (
     <p role="status">Create or select an authorized USD cleaning branch before configuring pricing.</p>
   );
