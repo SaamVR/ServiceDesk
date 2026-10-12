@@ -139,6 +139,70 @@ describe("owner automation activation evidence", () => {
     expect(summary.allEvidenceReady).toBe(true);
   });
 
+  it("credits saved internal attention when external email approval remains pending", () => {
+    const data: Input = {
+      ...empty,
+      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
+      workflowActionExecutions: [
+        completedAttention,
+        { ...completedAttention, id: "outbound", actionIndex: 1,
+          actionType: "SEND_EMAIL_TEMPLATE", state: "APPROVAL_REQUIRED" },
+      ],
+      requests: [acceptedRequest], quotes: [acceptedQuote],
+    };
+    const summary = summarizeAutomationActivation(data);
+    expect(summary.steps[4].status).toBe("READY");
+    expect(summary.allEvidenceReady).toBe(true);
+    for (const state of ["PENDING", "APPROVAL_REQUIRED", "FAILED", "SUPPRESSED"] as const) {
+      const denied = summarizeAutomationActivation({
+        ...data,
+        workflowActionExecutions: [{ ...completedAttention, state }],
+      });
+      expect(denied.steps[4].status).toBe("ACTION_REQUIRED");
+      expect(denied.allEvidenceReady).toBe(false);
+    }
+    expect(summarizeAutomationActivation({
+      ...data, workflowExecutions: [{ ...live, state: "PARTIAL_FAILED" }],
+    }).steps[4].status).toBe("ACTION_REQUIRED");
+    expect(summarizeAutomationActivation({
+      ...data, workflowExecutions: [{ ...live, mode: "PREVIEW" }],
+    }).steps[4].status).toBe("ACTION_REQUIRED");
+  });
+
+  it("requires every planned internal attention action, not one action from a partially executed rule", () => {
+    const internalSecond = { ...completedAttention, id: "action-second",
+      actionIndex: 2, state: "PENDING" as const };
+    const data: Input = {
+      ...empty,
+      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      workflowRules: [activeRule],
+      workflowRuleVersions: [{ ...published, maxActionsPerEvent: 3, actions: [
+        { type: "CREATE_ATTENTION" },
+        { type: "SEND_EMAIL_TEMPLATE" },
+        { type: "CREATE_ATTENTION" },
+      ] }],
+      workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
+      workflowActionExecutions: [completedAttention, internalSecond],
+      requests: [acceptedRequest], quotes: [acceptedQuote],
+    };
+    expect(summarizeAutomationActivation(data).steps[4].status).toBe("ACTION_REQUIRED");
+    const completed = summarizeAutomationActivation({
+      ...data,
+      workflowActionExecutions: [completedAttention, { ...internalSecond, state: "SUCCEEDED" }],
+    });
+    expect(completed.steps[4].status).toBe("READY");
+    expect(completed.allEvidenceReady).toBe(true);
+    expect(summarizeAutomationActivation({
+      ...data,
+      workflowActionExecutions: [completedAttention,
+        { ...internalSecond, state: "SUCCEEDED", actionIndex: 3 }],
+    }).steps[4].status).toBe("ACTION_REQUIRED");
+  });
+
   it("requires an accepted saved quote, not merely a published rule and internal action", () => {
     const data: Input = {
       ...empty, requests: [], quotes: [],
