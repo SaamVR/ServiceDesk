@@ -18,15 +18,23 @@ export function AiRequestBrief({
   requestId: string;
   configured: boolean;
 }) {
-  const [busy, setBusy] = useState(false);
-  const [brief, setBrief] = useState<Brief>();
-  const [error, setError] = useState<string>();
+  // React can reuse this panel as the operator switches requests or tenants.
+  // Previous asynchronous results must never appear under a different scope.
+  const scopeKey = workspaceSlug + "\\0" + requestId;
+  const [status, setStatus] = useState<{
+    scopeKey: string; busy: boolean; brief?: Brief; error?: string;
+  }>();
+  const scoped = status?.scopeKey === scopeKey ? status : undefined;
+  const busy = scoped?.busy ?? false;
+  const brief = scoped?.brief;
+  const error = scoped?.error;
 
   async function generate() {
     if (!configured || busy) return;
-    setBusy(true);
-    setError(undefined);
-    setBrief(undefined);
+    const submittedScope = scopeKey;
+    setStatus({ scopeKey: submittedScope, busy: true });
+    let verifiedBrief: Brief | undefined;
+    let message: string | undefined;
     try {
       const response = await fetch("/api/internal/ai/request-brief", {
         method: "POST",
@@ -40,17 +48,21 @@ export function AiRequestBrief({
           (result as Brief).state !== "AI_DRAFT_REQUIRES_REVIEW" ||
           (result as Brief).source !== "AUTHORIZED_SAVED_REQUEST" ||
           (result as Brief).requestId !== requestId ||
+          typeof (result as Brief).model !== "string" ||
+          !(result as Brief).model.trim() ||
           typeof (result as Brief).briefing !== "string" ||
           !(result as Brief).briefing.trim() ||
           (result as Brief).briefing.length > 900) {
-        setError("AI couldn't prepare a verified request brief. Use the saved request details instead.");
-        return;
+        message = "AI couldn't prepare a verified request brief. Use the saved request details instead.";
+      } else {
+        verifiedBrief = result as Brief;
       }
-      setBrief(result as Brief);
     } catch {
-      setError("The AI connection couldn't be reached. No request or customer record was changed.");
+      message = "The AI connection couldn't be reached. No request or customer record was changed.";
     } finally {
-      setBusy(false);
+      setStatus(previous => previous?.scopeKey === submittedScope
+        ? { scopeKey: submittedScope, busy: false, brief: verifiedBrief, error: message }
+        : previous);
     }
   }
 
