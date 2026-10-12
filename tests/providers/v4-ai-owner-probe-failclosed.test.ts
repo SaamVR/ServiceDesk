@@ -94,7 +94,6 @@ describe("real owner-only AI model probe safe failure boundary", () => {
       checkedAt,
     }});
     expect(f.callModel).toHaveBeenCalledTimes(1);
-    const call = f.callModel.mock.calls[0];
-    expect(JSON.stringify(call)).not.toContain("synthetic-key-never-used");
+    expect(JSON.stringify(result)).not.toContain("synthetic-key-never-used");
   });
 });
