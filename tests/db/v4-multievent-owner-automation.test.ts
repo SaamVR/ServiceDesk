@@ -10,20 +10,23 @@ const invoice = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 const serviceId = "11111111-1111-4111-8111-111111111111";
 const attentionId = "22222222-2222-4222-8222-222222222222";
 const actionId = "33333333-3333-4333-8333-333333333333";
+const exceptionId = "44444444-4444-4444-8444-444444444444";
 
 const cases: Array<{ kind: OwnerOperationalEventType; id: string; expected: Record<string,unknown> }> = [
   { kind:"QUOTE_ACCEPTED",id:quote,expected:{"quote.currency":"USD","quote.branchCode":"MAIN","request.serviceCode":"MOVE_OUT"}},
   { kind:"VISIT_COMPLETED",id:visit,expected:{"visit.branchCode":"MAIN","request.serviceCode":"MOVE_OUT"}},
   { kind:"INVOICE_PAID",id:invoice,expected:{"invoice.currency":"USD","invoice.branchCode":"MAIN","request.serviceCode":"MOVE_OUT"}},
+  { kind:"ATTENTION_OPENED",id:exceptionId,expected:{"attention.type":"REQUEST_DELAYED","attention.severity":"CRITICAL","attention.branchCode":"MAIN"}},
 ];
 
 function fixture(eventType: OwnerOperationalEventType,options:{
   role?:string;mode?:"SERVICE_ROLE"|"QA_SESSION_RLS";sourceStatus?:string;
-  otherTenant?:boolean;wrongBranch?:boolean;duplicate?:boolean;drift?:boolean;
+  otherTenant?:boolean;wrongBranch?:boolean;duplicate?:boolean;drift?:boolean;workflowGenerated?:boolean;
 }={}) {
   let isPending = true;
   const selectedStatus = options.sourceStatus ??
-    (eventType === "QUOTE_ACCEPTED" ? "ACCEPTED" : eventType === "VISIT_COMPLETED" ? "COMPLETED" : "PAID");
+    (eventType === "QUOTE_ACCEPTED" ? "ACCEPTED" : eventType === "VISIT_COMPLETED" ? "COMPLETED" :
+      eventType === "ATTENTION_OPENED" ? "OPEN" : "PAID");
   const rows: Record<string,Record<string,unknown>[]> = {
     quotes:[{id:quote,workspace_id:options.otherTenant?"foreign":workspace,request_id:request,
       status:eventType==="QUOTE_ACCEPTED"?selectedStatus:"ACCEPTED",currency:"USD",service_code:"MOVE_OUT"}],
@@ -44,7 +47,14 @@ function fixture(eventType: OwnerOperationalEventType,options:{
       rule_version_id:"version-1",matched:true,event_fingerprint:options.drift?"old-fingerprint":"current-fingerprint"}],
     workflow_action_executions:[{id:actionId,workspace_id:workspace,branch_id:branch,
       execution_id:"execution-1",action_type:"CREATE_ATTENTION",state:"PENDING"}],
-    attention_items:[{id:attentionId,workspace_id:workspace}],
+    attention_items:[
+      {id:exceptionId,workspace_id:options.otherTenant?"foreign":workspace,
+        status:eventType==="ATTENTION_OPENED"?selectedStatus:"OPEN",
+        type:"REQUEST_DELAYED",severity:"CRITICAL",
+        resource_type:options.workflowGenerated?"WORKFLOW_EXECUTION":"request",
+        resource_id:request},
+      {id:attentionId,workspace_id:workspace},
+    ],
   };
   const tableNames:string[]=[];
   const service = { from(table:string) {
@@ -124,6 +134,13 @@ describe("Owner-run persisted operational milestones",()=>{
     expect(await runOwnerSavedOperationalAutomation("fictional-qa","VISIT_COMPLETED",visit,drift.deps))
       .toMatchObject({ok:false,code:"OPERATIONAL_AUTOMATION_BRANCH_DRIFT"});
   });
+  it("refuses workflow-generated attention items to stop recursive exception fan-out",async()=>{
+    const t=fixture("ATTENTION_OPENED",{workflowGenerated:true});
+    expect(await runOwnerSavedOperationalAutomation("fictional-qa","ATTENTION_OPENED",exceptionId,t.deps))
+      .toMatchObject({ok:false,code:"OPERATIONAL_AUTOMATION_SOURCE_NOT_READY"});
+    expect(t.evaluateAndRecord).not.toHaveBeenCalled();
+  });
+
   it("verifies stored fingerprint before resuming a retry; no double attention",async()=>{
     const replay=fixture("QUOTE_ACCEPTED",{duplicate:true});
     expect(await runOwnerSavedOperationalAutomation("fictional-qa","QUOTE_ACCEPTED",quote,replay.deps))
