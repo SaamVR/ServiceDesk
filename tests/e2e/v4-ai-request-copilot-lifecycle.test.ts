@@ -32,10 +32,10 @@ describe("saved AI request copilot browser evidence", () => {
   it("client request is abortable, time bounded and refuses non-JSON success", () => {
     const source=readFileSync(join(process.cwd(),
       "src/features/operations/AiRequestBrief.tsx"),"utf8");
-    expect(source).toContain("const pending = new AbortController()");
-    expect(source).toContain("pending.abort()");
+    expect(source).toContain("const request = new AbortController()");
+    expect(source).toContain("request.abort()");
     expect(source).toContain("20_000");
-    expect(source).toContain("signal: pending.signal");
+    expect(source).toContain("signal: request.signal");
     expect(source).toContain('response.headers.get("content-type")');
     expect(source).toContain("parseSavedAiRequestBrief(result, requestId)");
     expect(source).toContain("previous?.scopeKey === submittedScope");
