@@ -35,7 +35,7 @@ function form() {
   for (const [name,value] of Object.entries(values)) data.set(name,value);
   return data;
 }
-function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS"; missingProof?: boolean; disabledBranch?: boolean }={}) {
+function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS"; missingProof?: boolean; disabledBranch?: boolean; throwOnReadback?: boolean }={}) {
   const parsed = parseOwnerCleaningPricingSetup(form());
   if (!parsed.ok) throw new Error(parsed.message);
   const savedRules = parsed.value.rules;
@@ -58,6 +58,9 @@ function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS
   const service = {
     from(table:string) {
       seen.push(table);
+      if (options.throwOnReadback && table === "rate_cards") {
+        throw new Error("simulated transient database timeout after the RPC committed");
+      }
       const filters: Array<[string,unknown]>=[];
       let codes: string[] | undefined;
       const query = {
@@ -150,6 +153,23 @@ describe("V4 first-run owner cleaning price configuration",()=>{
     const h=harness({missingProof:true});
     expect(await setupAuthorizedCleaningPricing("fictional-qa",form(),h.deps))
       .toMatchObject({ok:false,code:"PRICING_SETUP_READBACK_UNVERIFIED"});
+  });
+
+  it("handles a database exception AFTER the potentially committed owner RPC without claiming rollback",async()=>{
+    const h=harness({throwOnReadback:true});
+    const proof=await setupAuthorizedCleaningPricing("fictional-qa",form(),h.deps);
+    expect(proof).toMatchObject({
+      ok:false,code:"PRICING_SETUP_READBACK_UNVERIFIED",
+    });
+    if (!proof.ok) {
+      expect(proof.message).toContain("may have saved");
+      expect(proof.message).toContain("before retrying");
+      expect(proof.message).not.toContain("No prices have been saved");
+    }
+    // The owner RPC executed exactly once. A failed readback never replays a
+    // potentially committed transaction, and it never emits false success.
+    expect(h.rpc.rpc).toHaveBeenCalledOnce();
+    expect(h.seen).toContain("rate_cards");
   });
 
   it("keeps the migration service-role-only, invoker-secured and owner-scoped",()=>{
