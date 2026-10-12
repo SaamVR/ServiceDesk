@@ -111,7 +111,7 @@ export class WebhookCommittedOutboxDispatcher implements CommittedOutboxDispatch
       }) };
     }
     if (!resolved.ok) return { ok: true, value: classifyProviderFailure({
-      job: input.job, code: resolved.code,
+      job: input.job, code: "WEBHOOK_CONFIG_INVALID",
       message: "Authoritative webhook destination could not be resolved.",
     }) };
     if (!validUrl(resolved.value.url) ||
