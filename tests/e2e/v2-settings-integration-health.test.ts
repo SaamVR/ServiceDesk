@@ -21,7 +21,9 @@ describe("V2 production settings integration health", () => {
   it("replaces the disabled integration control with real readiness rows", () => {
     expect(route).toContain('id="integrations"');
     expect(route).toContain("data.integrations.map");
-    expect(route).toContain("Sandbox ready");
+    expect(route).toContain("Internal sandbox only");
+    expect(route).toContain('integration.provider !== "PAYMENT"');
+    expect(route).toContain("{configuredIntegrations}/{externalIntegrations.length} externally configured");
     expect(route).toContain("Ready for proof");
     expect(route).toContain("Partial setup");
     expect(route).toContain("Setup required");
