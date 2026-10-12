@@ -13,8 +13,12 @@ const quote="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const request="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const customer="dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const id="eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
-const claimed={id,workspace_id:workspace,quote_id:quote,event_type:"QUOTE_ACCEPTED",state:"PROCESSING"};
 const workerId="worker_qa_20261012";
+const claimed={
+  id, workspace_id:workspace, quote_id:quote,
+  event_type:"QUOTE_ACCEPTED", state:"PROCESSING",
+  locked_by:workerId, locked_until:new Date(Date.now()+60_000).toISOString(), attempts:1,
+};
 
 function harness(options:{
   entries?:unknown[];
@@ -127,6 +131,21 @@ describe("V4 trusted internal quote source recovery worker",()=>{
     expect(crash.events[1].args.p_error_code).toBe("QUOTE_SOURCE_REPLAY_EXCEPTION");
     const noAck=harness({badCompletion:true});
     expect(await run(noAck)).toMatchObject({claimed:1,completionNotVerified:1,completed:0});
+  });
+  it("cannot execute an event leased by another worker or after its lease expires",async()=>{
+    const cases=[
+      {...claimed,locked_by:"foreign_worker_99"},
+      {...claimed,locked_until:"2020-01-01T00:00:00Z"},
+      {...claimed,locked_until:"invalid"},
+      {...claimed,attempts:9},
+      {...claimed,attempts:0},
+    ];
+    for(const row of cases){
+      const h=harness({entries:[row]});
+      expect(await run(h)).toMatchObject({claimed:0,completed:0,completionNotVerified:1});
+      expect(h.bridge).not.toHaveBeenCalled();
+      expect(h.events.map(e=>e.fn)).toEqual(["servicedesk_claim_quote_source_events"]);
+    }
   });
   it("rejects non-lease/foreign/malformed results rather than fabricating completion",async()=>{
     const h=harness({entries:[{...claimed,id:"not-a-uuid"},{...claimed,workspace_id:"different"},claimed,claimed]});
