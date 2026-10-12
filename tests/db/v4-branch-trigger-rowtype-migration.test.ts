@@ -20,7 +20,7 @@ describe("V4 shared branch trigger row-type regression", () => {
   it("procedurally isolates every table-specific NEW field from unrelated trigger row types", () => {
     // Boolean 'tg_table_name = ... AND NEW.field' is NOT a safe row-type guard.
     // It caused the real owner RLS properties insert to fail with SQLSTATE 42703.
-    expect(sql).not.toMatch(/tg_table_name\s*=\s*'[^']+'\s+and\s+new\./i);
+    expect(sql.replace(/--[^\n]*/g, "")).not.toMatch(/tg_table_name\s*=\s*'[^']+'\s+and\s+new\./i);
     for (const table of [
       "requests", "conversations", "capacity_slots", "visits", "recurrence_rules",
     ]) {
