@@ -4,6 +4,15 @@ on:
     branches: [fix/v4-pricing-sql-preflight-20261012]
   pull_request:
     branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - ".github/workflows/v4-pricing-preflight-rc.yml"
+      - "supabase/migrations/0061_v4_owner_first_run_pricing.sql"
+      - "src/server/core/owner-cleaning-pricing-*.ts"
+      - "src/features/operations/OwnerCleaningPricingSetupForm.tsx"
+      - "src/features/operations/owner-pricing-readiness.ts"
+      - "src/features/operations/verified-owner-price-evidence.ts"
+      - "tests/e2e/v4-owner-first-run-pricing.test.ts"
+      - "tests/e2e/v4-owner-price-name-readback.test.ts"
 permissions:
   contents: read
 concurrency:
