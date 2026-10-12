@@ -25,6 +25,15 @@ export interface PricingSetupDependencies {
 function fail(code: string, message: string): Result<never> {
   return { ok: false, code, message };
 }
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
+  if (value !== null && typeof value === "object") {
+    const data = value as Record<string, unknown>;
+    return "{" + Object.keys(data).sort()
+      .map(key => JSON.stringify(key) + ":" + canonicalJson(data[key])).join(",") + "}";
+  }
+  return JSON.stringify(value);
+}
 const uuid = (s: unknown): s is string =>
   typeof s === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
@@ -121,7 +130,7 @@ export async function setupAuthorizedCleaningPricing(
       rate.error || rate.data?.id !== saved.rateCardId ||
       rate.data?.active !== true || rate.data?.version !== saved.rateVersion ||
       rate.data?.currency?.trim() !== "USD" ||
-      JSON.stringify(rate.data?.rules) !== JSON.stringify(payload.rules) ||
+      canonicalJson(rate.data?.rules) !== canonicalJson(payload.rules) ||
       book.error || book.data?.id !== saved.priceBookId ||
       book.data?.rate_card_id !== saved.rateCardId ||
       book.data?.branch_id !== branch.id || book.data?.active !== true) {
