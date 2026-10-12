@@ -46,7 +46,13 @@ describe("server-only AI model fetch", () => {
       body: "{}", signal: new AbortController().signal,
     };
     for (const url of ["http://api.openai.com/v1/responses", "https://user:pass@api.openai.com/v1/responses",
-      "https://api.openai.com/v1/responses?token=secret", "not-a-url"]) {
+      "https://api.openai.com/v1/responses?token=secret",
+      "https://api.openai.com:8443/v1/responses",
+      "https://api.openai.com/v1/other",
+      "https://evil.example/v1/responses",
+      "https://api.openai.com.attacker.org/v1/responses",
+      "https://169.254.169.254/v1/responses",
+      "https://api.openai.com/v1/responses#fragment", "not-a-url"]) {
       await expect(transport({ ...request, url })).rejects.toThrow("AI_MODEL_HTTP_URL_INVALID");
     }
     expect(calls).toBe(0);

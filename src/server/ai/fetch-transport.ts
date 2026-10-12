@@ -26,8 +26,9 @@ export function createFetchAiModelTransport(
     } catch {
       throw new Error("AI_MODEL_HTTP_URL_INVALID");
     }
-    if (url.protocol !== "https:" || url.username || url.password ||
-        url.hash || url.search) {
+    if (url.protocol !== "https:" || url.hostname !== "api.openai.com" ||
+        url.port || url.pathname !== "/v1/responses" ||
+        url.username || url.password || url.hash || url.search) {
       throw new Error("AI_MODEL_HTTP_URL_INVALID");
     }
 

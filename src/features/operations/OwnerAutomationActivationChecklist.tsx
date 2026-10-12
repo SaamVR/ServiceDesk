@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buildStaffModuleHref } from "./staff-modules";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
+import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import styles from "./OwnerAutomationActivationChecklist.module.css";
 
 /**
@@ -16,6 +17,13 @@ export function OwnerAutomationActivationChecklist({
   workspaceSlug: string;
 }) {
   const summary = summarizeAutomationActivation(data);
+  // The real first-run pricing form is on Settings, below the general
+  // configuration panels. Deep-link only when it is actually offered to
+  // this authorized owner/branch; never lead to a missing or foreign form.
+  const canOpenPricingForm = availableFirstRunUsdBranches(
+    data.branchScope, data.ownerPricingBookProof,
+  ).length > 0;
+  const settingsHref = buildStaffModuleHref(workspaceSlug, "settings");
   return (
     <section className={styles.panel} aria-labelledby="owner-activation-title">
       <header className={styles.header}>
@@ -44,8 +52,14 @@ export function OwnerAutomationActivationChecklist({
             </div>
             <h3>{step.title}</h3>
             <p>{step.detail}</p>
-            <Link href={buildStaffModuleHref(workspaceSlug, step.module)}>
-              {step.module === "settings" ? "Open Settings" : "Open Automation Studio"}
+            <Link href={step.module === "settings"
+              ? settingsHref +
+                (canOpenPricingForm && step.status !== "READY"
+                  ? "#owner-first-run-pricing" : "")
+              : buildStaffModuleHref(workspaceSlug, "automations")}>
+              {step.module !== "settings" ? "Open Automation Studio"
+                : canOpenPricingForm && step.status !== "READY"
+                  ? "Enter actual cleaning rates" : "Open Settings"}
               <span aria-hidden="true"> ↗</span>
             </Link>
           </article>
