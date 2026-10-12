@@ -47,6 +47,11 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-baseline-repro.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0062_v4_branch_trigger_rowtype_guard.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-acceptance.sql
+          psql -v ON_ERROR_STOP=1 -f scripts/release/v4-connected-schema-readonly.sql > /tmp/servicedesk-schema-proof.txt
+          grep -q '"branchGuard0062Applied": true' /tmp/servicedesk-schema-proof.txt
+          grep -q '"branchTriggerBindings": 7' /tmp/servicedesk-schema-proof.txt
+          grep -q '"coreSchemaState": "CORE_SCHEMA_BLOCKED"' /tmp/servicedesk-schema-proof.txt
+          grep -q '"quoteRecoverySchemaState": "RECOVERY_MIGRATION_NOT_VERIFIED"' /tmp/servicedesk-schema-proof.txt
       - uses: pnpm/action-setup@v4
         with:
           version: 10.17.1
