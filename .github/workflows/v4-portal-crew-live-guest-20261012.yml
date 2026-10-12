@@ -17,11 +17,17 @@ jobs:
         run: node --check scripts/release/v4-portal-crew-guest-chrome.mjs
       - uses: browser-actions/setup-chrome@v2
         id: chrome
-      - name: Validate current Render exact source is the reviewed release
+      - name: Verify live Render exact source, tolerate cold-start empty replies
         shell: bash
         run: |
-          curl -fsS --max-time 25 https://servicedesk-v3-frontend-review.onrender.com/health |
-          node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>{const j=JSON.parse(s);if(!j.ok||j.sourceProvider!=="render"||j.sourceSha!=="9a240096bd1961c8ef4bda002747bc64fd2c4882")process.exit(1);console.log("Published source verified")})'
+          for attempt in $(seq 1 16); do
+            current="$(curl -fsS --max-time 18 https://servicedesk-v3-frontend-review.onrender.com/health 2>/dev/null | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>{try{const j=JSON.parse(s);process.stdout.write(j.ok&&j.sourceProvider==="render"?j.sourceSha:"")}catch{}})' || true)"
+            if [[ "$current" == "9a240096bd1961c8ef4bda002747bc64fd2c4882" ]]; then
+              echo "Published Render review source verified"; exit 0
+            fi
+            sleep 6
+          done
+          echo "Live review does not report the exact approved source SHA"; exit 1
       - name: Browser audit 18 routes by 7 breakpoints, no privileged account or actions
         env:
           V4_GUEST_EXTENDED_CHROME: ${{ steps.chrome.outputs.chrome-path }}
