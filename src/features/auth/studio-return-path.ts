@@ -1,4 +1,4 @@
-import { buildStaffModuleHref, staffModuleConfig, type StaffModule } from "@/features/operations/staff-modules";
+import { buildStaffModuleHref, staffModuleConfig } from "@/features/operations/staff-modules";
 import { normalizeReturnPath } from "./return-path";
 
 /**
