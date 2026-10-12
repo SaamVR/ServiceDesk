@@ -166,7 +166,9 @@ try {
       'count:rail.querySelectorAll("a.app-nav-link").length,' +
       'background:getComputedStyle(rail).backgroundColor,link:getComputedStyle(link).color,' +
       'icon:getComputedStyle(link.querySelector(".app-nav-icon")).color,' +
-      'box:rail.getBoundingClientRect().toJSON(),height:rail.clientHeight,scrollHeight:rail.scrollHeight}})()');
+      'box:rail.getBoundingClientRect().toJSON(),height:rail.clientHeight,scrollHeight:rail.scrollHeight,' +
+      'unavailable:(document.querySelector("#app-main-content")?.textContent||"").includes("Current workspace activity could not be loaded.")}})()');
+    if (result.unavailable) throw new Error("AUTHENTICATED_OVERVIEW_REAL_WORKSPACE_SNAPSHOT_UNAVAILABLE");
     if (result.width !== width || result.documentWidth > width + 2) throw new Error("Authenticated viewport overflow");
     if (width > 900) {
       if (!result.rail || result.menu || result.count !== 13 || result.active !== 1 || result.box.width < 240 ||
@@ -205,10 +207,11 @@ try {
         'signedIn:!!document.querySelector("form.app-signout-form")&&!document.querySelector("a.app-auth-entry-link"),' +
         'navCount:links.length,activeCount:selected.length,activeText:active?.textContent?.trim()||"",moreOpen:m?.open,' +
         'mainVisible:main.getBoundingClientRect().width>0,headerCount:text.length,' +
+        'unavailable:text.includes("Workspace unavailable")||text.includes("Staff sign-in required"),' +
         'errorOverlay:!!document.querySelector("nextjs-portal [data-nextjs-dialog-overlay]")};})()');
       if (audit.route !== target || audit.width !== width || audit.documentWidth > width + 2 ||
           !audit.signedIn || audit.navCount !== 13 || audit.activeCount !== 1 ||
-          !audit.mainVisible || !audit.headerCount || audit.errorOverlay)
+          !audit.mainVisible || !audit.headerCount || audit.errorOverlay || audit.unavailable)
         throw new Error("AUTHENTICATED_STUDIO_ROUTE_AUDIT_FAILED:" + staffModule + ":" + width);
       if (["quality","reports","settings","billing"].includes(staffModule) && !audit.moreOpen)
         throw new Error("AUTHENTICATED_DEEP_LINK_SECONDARY_NAV_HIDDEN:" + staffModule);
