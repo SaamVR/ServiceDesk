@@ -71,6 +71,9 @@ begin
       and rate_card_id=v_existing.id and active
     order by created_at desc limit 1;
     if found and v_existing.active and v_existing.currency=v_currency
+       and v_existing.deposit_percent = (p_input->>'depositPercent')::integer
+       and v_existing.valid_hours = (p_input->>'validHours')::integer
+       and v_existing.buffer_minutes = (p_input->>'bufferMinutes')::integer
        and v_existing.rules=v_rules
        and (
          select count(*) from public.service_catalog sc
