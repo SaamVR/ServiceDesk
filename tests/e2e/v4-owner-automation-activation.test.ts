@@ -45,6 +45,11 @@ const completedAttention: NonNullable<Input["workflowActionExecutions"]>[number]
   createdAt: "2026-10-12T12:00:00Z",
 };
 
+const priced: Input = {
+  ...empty,
+  ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+};
+
 describe("owner automation activation evidence", () => {
   it("never calls empty workspace or unavailable pricing an operational success", () => {
     const summary = summarizeAutomationActivation(empty);
@@ -52,7 +57,7 @@ describe("owner automation activation evidence", () => {
     expect(summary.total).toBe(4);
     expect(summary.allEvidenceReady).toBe(false);
     expect(summary.steps.map(s => s.status))
-      .toEqual(["ACTION_REQUIRED", "UNVERIFIED", "ACTION_REQUIRED", "ACTION_REQUIRED"]);
+      .toEqual(["ACTION_REQUIRED", "UNVERIFIED", "UNVERIFIED", "UNVERIFIED"]);
   });
 
   it("requires active catalog and verified price-book evidence independently", () => {
@@ -76,25 +81,25 @@ describe("owner automation activation evidence", () => {
       { ...published, id: "v3", actions: [{ type: "SEND_EMAIL_TEMPLATE" }] },
     ];
     const summary = summarizeAutomationActivation({
-      ...empty, workflowRules: [activeRule], workflowRuleVersions: versions,
+      ...priced, workflowRules: [activeRule], workflowRuleVersions: versions,
     });
     expect(summary.steps[2].status).toBe("ACTION_REQUIRED");
   });
 
   it("does not credit archived rules or old published versions", () => {
     expect(summarizeAutomationActivation({
-      ...empty, workflowRules: [{ ...activeRule, status: "ARCHIVED" }],
+      ...priced, workflowRules: [{ ...activeRule, status: "ARCHIVED" }],
       workflowRuleVersions: [published],
     }).steps[2].status).toBe("ACTION_REQUIRED");
     expect(summarizeAutomationActivation({
-      ...empty, workflowRules: [{ ...activeRule, publishedVersionNumber: 3 }],
+      ...priced, workflowRules: [{ ...activeRule, publishedVersionNumber: 3 }],
       workflowRuleVersions: [published],
     }).steps[2].status).toBe("ACTION_REQUIRED");
   });
 
   it("does not credit previews, other rule executions or unsucceeded actions", () => {
     const summary = summarizeAutomationActivation({
-      ...empty,
+      ...priced,
       workflowRules: [activeRule],
       workflowRuleVersions: [published],
       workflowExecutions: [{ ...live, mode: "PREVIEW" }, { ...live, id: "execution-2", ruleVersionId: "other" }],
@@ -103,7 +108,7 @@ describe("owner automation activation evidence", () => {
     expect(summary.steps[2].status).toBe("READY");
     expect(summary.steps[3].status).toBe("ACTION_REQUIRED");
     expect(summarizeAutomationActivation({
-      ...empty, workflowRules: [activeRule], workflowRuleVersions: [published],
+      ...priced, workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live],
       workflowActionExecutions: [{ ...completedAttention, state: "APPROVAL_REQUIRED" }],
     }).steps[3].status).toBe("ACTION_REQUIRED");
