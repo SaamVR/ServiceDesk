@@ -65,7 +65,18 @@ export function AiOperationsStatus({
         </div>
       ) : null}
       {allowOwnerModelTest && !compact ? <AiOwnerModelProbe workspaceSlug={workspaceSlug} configured={ready} /> : null}
-      {!compact ? <p className={styles.note}>Configuration status is not a successful provider connection test. AI suggestions cannot execute quotes, scheduling, outbound messages or charges.</p> : null}
+      {!compact ? (
+        <>
+          <p className={styles.note} role="status" aria-label="Automatic quote-accepted trigger status">
+            <strong>Customer quote acceptance → internal automation:</strong>{" "}
+            {process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED === "true"
+              ? "Server opt-in enabled. Only saved owner-published rules can create internal attention; saved execution receipts are still required before claiming any workflow ran."
+              : "Server opt-in disabled. Accepting a quote does not automatically run an internal follow-up. Authorized staff can review and execute published event rules from this workspace."}
+            {" "}External email and WhatsApp actions always require separate approval.
+          </p>
+          <p className={styles.note}>AI configuration is not a successful provider connection test. AI suggestions cannot execute quotes, scheduling, outbound messages or charges.</p>
+        </>
+      ) : null}
     </section>
   );
 }
