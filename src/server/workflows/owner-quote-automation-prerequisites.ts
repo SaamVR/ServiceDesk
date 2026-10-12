@@ -1,13 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * This check is about whether the saved workspace has ANY eligible real,
- * internal rule to execute. It is not permission to send customer messages,
- * proof of a quote, provider connection, or authorization to publish a rule.
- *
- * The caller independently verified OWNER membership and workspace identity.
- * Every query below is constrained to that trusted workspace. Unknown/partial
- * snapshots fail CLOSED rather than converting a failed query into "zero".
+ * An enabled automation needs evidence of a REAL priced service in the exact
+ * eligible USD branch, not merely an active price-book pointer. Every read is
+ * scoped to the already verified owner workspace and fails closed.
  */
 export type QuoteAutomationActivationProof =
   | { ok: true; branchId: string; ruleId: string }
@@ -24,40 +20,87 @@ const uuid = (value: unknown): value is string =>
 const unverified = (): QuoteAutomationActivationProof =>
   ({ ok: false, code: "AUTO_QUOTE_PREREQUISITES_UNVERIFIED" });
 
+const serviceRuleName: Record<string, "standard" | "deep" | "moveOut"> = {
+  STANDARD: "standard", DEEP: "deep", MOVE_OUT: "moveOut",
+};
+
+function positiveInteger(value: unknown): boolean {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function cardHasQuotableService(rules: unknown, serviceCodes: Set<string>): boolean {
+  if (!rules || typeof rules !== "object" || Array.isArray(rules)) return false;
+  const fields = rules as Record<string, unknown>;
+  return [...serviceCodes].some(code => {
+    const rule = fields[serviceRuleName[code]];
+    if (!rule || typeof rule !== "object" || Array.isArray(rule)) return false;
+    const values = rule as Record<string, unknown>;
+    // A catalog item with no real base price/duration is not a configured
+    // cleaning service merely because a rate-card row is active.
+    return positiveInteger(values.baseMinor) && positiveInteger(values.baseMinutes);
+  });
+}
+
+function effectiveNow(start: unknown, end: unknown, now: number): boolean {
+  const bound = (value: unknown): number | null => {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== "string") return NaN;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  };
+  const begins = bound(start), ends = bound(end);
+  return (begins === null || Number.isFinite(begins) && begins <= now) &&
+    (ends === null || Number.isFinite(ends) && ends > now);
+}
+
 export async function verifyOwnerQuoteAutomationPrerequisites(
   service: ServiceReader,
   trustedWorkspaceId: string,
 ): Promise<QuoteAutomationActivationProof> {
   if (!uuid(trustedWorkspaceId)) return unverified();
   try {
-    // Bounded queries: truncation is never assumed to mean all records were
-    // checked. Those cases must be reviewed rather than activating blind.
-    const [catalog, branches, books, rules] = await Promise.all([
-      service.from("service_catalog").select("id,active")
-        .eq("workspace_id", trustedWorkspaceId).eq("active", true).limit(2),
+    // Query size is bounded; a truncated result can never approve automation.
+    const [catalog, branches, books, rateCards, rules] = await Promise.all([
+      service.from("service_catalog").select("id,code,active")
+        .eq("workspace_id", trustedWorkspaceId).eq("active", true).limit(201),
       service.from("workspace_branches").select("id,currency,active")
         .eq("workspace_id", trustedWorkspaceId).eq("active", true).limit(201),
-      service.from("branch_price_books").select("branch_id,active")
+      service.from("branch_price_books")
+        .select("branch_id,rate_card_id,active,starts_at,ends_at")
         .eq("workspace_id", trustedWorkspaceId).eq("active", true).limit(201),
+      service.from("rate_cards").select("id,currency,active,rules")
+        .eq("workspace_id", trustedWorkspaceId).eq("active", true)
+        .eq("currency", "USD").limit(201),
       service.from("workflow_rules").select("id,branch_id,published_version_number,status")
         .eq("workspace_id", trustedWorkspaceId).eq("status", "ACTIVE").limit(201),
     ]);
-    if (catalog.error || branches.error || books.error || rules.error ||
-        !Array.isArray(catalog.data) || !Array.isArray(branches.data) ||
-        !Array.isArray(books.data) || !Array.isArray(rules.data) ||
-        branches.data.length >= 201 || books.data.length >= 201 ||
-        rules.data.length >= 201) return unverified();
+    const lists = [catalog, branches, books, rateCards, rules];
+    if (lists.some(result => result.error || !Array.isArray(result.data) ||
+        result.data.length >= 201)) return unverified();
 
-    if (!catalog.data.some(row => uuid(row.id) && row.active === true)) {
+    const supportedServices = new Set(catalog.data
+      .filter(row => uuid(row.id) && row.active === true &&
+        typeof row.code === "string" && row.code in serviceRuleName)
+      .map(row => row.code as string));
+    if (!supportedServices.size) {
       return { ok: false, code: "AUTO_QUOTE_SERVICE_MISSING" };
     }
+
     const usdBranches = new Set(branches.data.filter(row =>
-      uuid(row.id) && row.currency === "USD" && row.active === true,
-    ).map(row => row.id));
+      uuid(row.id) && row.currency?.trim() === "USD" && row.active === true,
+    ).map(row => row.id as string));
+    const cards = new Map(rateCards.data.filter(row => uuid(row.id) &&
+      row.active === true && row.currency?.trim() === "USD" &&
+      cardHasQuotableService(row.rules, supportedServices),
+    ).map(row => [row.id as string, row]));
+    const now = Date.now();
     const pricedBranches = new Set(books.data.filter(row =>
-      uuid(row.branch_id) && row.active === true && usdBranches.has(row.branch_id),
-    ).map(row => row.branch_id));
-    if (pricedBranches.size === 0) {
+      uuid(row.branch_id) && uuid(row.rate_card_id) &&
+      row.active === true && usdBranches.has(row.branch_id) &&
+      cards.has(row.rate_card_id) &&
+      effectiveNow(row.starts_at, row.ends_at, now),
+    ).map(row => row.branch_id as string));
+    if (!pricedBranches.size) {
       return { ok: false, code: "AUTO_QUOTE_PRICING_MISSING" };
     }
 
