@@ -3,16 +3,25 @@ import { buildStaffModuleHref } from "./staff-modules";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import styles from "./AiOperationsStatus.module.css";
 import { AiOwnerModelProbe } from "./AiOwnerModelProbe";
+import { summarizeWorkflowEvidence } from "./workflow-evidence-summary";
+import type { OperationalWorkflowExecution, OperationalWorkflowActionExecution } from "./operational-product-runtime";
 
 export function AiOperationsStatus({
   workspaceSlug, publishedRuleCount, compact = false, allowOwnerModelTest = false,
+  executions, actions,
 }: {
   workspaceSlug: string;
   publishedRuleCount: number;
   compact?: boolean;
   allowOwnerModelTest?: boolean;
+  executions?: readonly OperationalWorkflowExecution[];
+  actions?: readonly OperationalWorkflowActionExecution[];
 }) {
   const ready = readConfiguredAiRuntimeConfig().ok;
+  // A partial or failed snapshot must not be rendered as a trustworthy zero.
+  const evidence = executions && actions
+    ? summarizeWorkflowEvidence({ workflowExecutions: executions, workflowActionExecutions: actions })
+    : undefined;
   return (
     <section className={styles.panel} aria-label="AI and automation operating status">
       <div className={styles.head}>
@@ -44,6 +53,17 @@ export function AiOperationsStatus({
           <Link href={buildStaffModuleHref(workspaceSlug, "automations")}>Review rules <span aria-hidden="true">↗</span></Link>
         </div>
       </div>
+      {compact && evidence ? (
+        <div className={styles.proof} aria-label="Persisted AI and automation activity">
+          <div><strong>{evidence.recordedLiveExecutions}</strong><span>Recorded live rule decisions</span></div>
+          <div><strong>{evidence.internalAttentionSucceeded}</strong><span>Completed internal attention records</span></div>
+          <div><strong>{evidence.externalApprovalRequired}</strong><span>External actions requiring approval</span></div>
+          <div><strong>{evidence.failedActions}</strong><span>Failed action records</span></div>
+          <p>Authorized database records · simulated previews excluded · no provider delivery verified.
+            <Link href={buildStaffModuleHref(workspaceSlug, "automations")}> Review execution evidence →</Link>
+          </p>
+        </div>
+      ) : null}
       {allowOwnerModelTest && !compact ? <AiOwnerModelProbe workspaceSlug={workspaceSlug} configured={ready} /> : null}
       {!compact ? <p className={styles.note}>Configuration status is not a successful provider connection test. AI suggestions cannot execute quotes, scheduling, outbound messages or charges.</p> : null}
     </section>
