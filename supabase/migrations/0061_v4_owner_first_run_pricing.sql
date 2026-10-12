@@ -71,7 +71,16 @@ begin
       and rate_card_id=v_existing.id and active
     order by created_at desc limit 1;
     if found and v_existing.active and v_existing.currency=v_currency
-       and v_existing.rules=v_rules then
+       and v_existing.rules=v_rules
+       and (
+         select count(*) from public.service_catalog sc
+         where sc.workspace_id=v_workspace and sc.active
+           and (
+             (sc.code='STANDARD' and sc.name=trim(v_names->>'STANDARD'))
+             or (sc.code='DEEP' and sc.name=trim(v_names->>'DEEP'))
+             or (sc.code='MOVE_OUT' and sc.name=trim(v_names->>'MOVE_OUT'))
+           )
+       ) = 3 then
       return jsonb_build_object('ok',true,'duplicate',true,
         'rateCardId',v_existing.id,'priceBookId',v_book.id,
         'branchId',v_branch,'rateVersion',v_existing.version);
@@ -160,7 +169,9 @@ begin
   foreach v_code in array array['STANDARD','DEEP','MOVE_OUT'] loop
     insert into public.service_catalog(workspace_id,code,name,active,requires_review)
     values (v_workspace,v_code,trim(v_names->>v_code),true,false)
-    on conflict (workspace_id,code) do nothing;
+    on conflict (workspace_id,code) do update
+       set name=excluded.name, updated_at=now()
+       where public.service_catalog.active;
   end loop;
   select count(*) into v_active_count from public.service_catalog
   where workspace_id=v_workspace and active

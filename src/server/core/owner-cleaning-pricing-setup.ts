@@ -116,7 +116,7 @@ export async function setupAuthorizedCleaningPricing(
   // Proof is RLS-scope-bound by the same authorized SSR/privileged server
   // context. The SQL response alone must never become a success banner.
   const [catalog, rate, book] = await Promise.all([
-    service.from("service_catalog").select("code,active")
+    service.from("service_catalog").select("code,active,name")
       .eq("workspace_id", workspace.id).in("code", ["STANDARD","DEEP","MOVE_OUT"]),
     service.from("rate_cards").select("id,version,active,rules,currency")
       .eq("workspace_id", workspace.id).eq("id", saved.rateCardId).maybeSingle(),
@@ -125,7 +125,14 @@ export async function setupAuthorizedCleaningPricing(
       .eq("id", saved.priceBookId).maybeSingle(),
   ]);
   const actual = new Set((catalog.data ?? []).filter(x => x.active).map(x => x.code));
-  if (catalog.error || actual.size !== 3 ||
+  const exactOwnerNames = (catalog.data ?? []).length === 3 &&
+    (catalog.data ?? []).every(row => {
+      const expectedName = row.code === "STANDARD" ? payload.serviceNames.STANDARD
+        : row.code === "DEEP" ? payload.serviceNames.DEEP
+        : row.code === "MOVE_OUT" ? payload.serviceNames.MOVE_OUT : null;
+      return row.active === true && expectedName !== null && row.name === expectedName;
+    });
+  if (catalog.error || actual.size !== 3 || !exactOwnerNames ||
       !actual.has("STANDARD") || !actual.has("DEEP") || !actual.has("MOVE_OUT") ||
       rate.error || rate.data?.id !== saved.rateCardId ||
       rate.data?.active !== true || rate.data?.version !== saved.rateVersion ||
