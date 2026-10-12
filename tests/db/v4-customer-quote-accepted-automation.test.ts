@@ -29,6 +29,7 @@ function fixture(options: {
   duplicate?: boolean;
   drift?: boolean;
   noRules?: boolean;
+  wrongEvent?: boolean;
   pending?: boolean;
   externalOnly?: boolean;
   workspaceOptedOut?: boolean;
@@ -50,7 +51,7 @@ function fixture(options: {
       branch_id:branch,status:"ACTIVE",published_version_number:1}],
     workflow_rule_versions:[{id:versionId,rule_id:"rule-1",branch_id:branch,
       workspace_id:workspace,version_number:1,state:"PUBLISHED",
-      event_type:"QUOTE_ACCEPTED",conditions:[],actions:[
+      event_type:options.wrongEvent?"REQUEST_CREATED":"QUOTE_ACCEPTED",conditions:[],actions:[
         {type:"CREATE_ATTENTION",severity:"WARNING",summaryKey:"DISPATCH_REVIEW"},
         {type:"SEND_EMAIL_TEMPLATE",templateKey:"quote-follow-up",recipient:"CUSTOMER_PRIMARY"}],
       max_actions_per_event:3,created_at:"2026-10-12T01:00:00.000Z"}],
@@ -133,12 +134,14 @@ describe("V4 trusted post-accept automation bridge",()=>{
     expect(t.executeAttentionAction).not.toHaveBeenCalled();
     expect(t.seen.some(row=>row.table==="quotes")).toBe(false);
   });
-  it("has no new execution when the verified branch has no owner-published rules",async()=>{
-    const t=fixture({noRules:true});
-    expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))
-      .toMatchObject({ok:true,value:{newlyRecordedRuleExecutions:0,
-        completedAttentionActions:0,providerMessagesSent:0}});
-    expect(t.evaluateAndRecord).not.toHaveBeenCalled();
+  it("returns a retryable failure when no owner-published internal quote rule can be evaluated",async()=>{
+    for (const options of [{noRules:true},{wrongEvent:true}]) {
+      const t=fixture(options);
+      expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))
+        .toMatchObject({ok:false,code:"QUOTE_AUTOMATION_NO_ELIGIBLE_PUBLISHED_RULE"});
+      expect(t.evaluateAndRecord).not.toHaveBeenCalled();
+      expect(t.executeAttentionAction).not.toHaveBeenCalled();
+    }
   });
   it("deduplicates a prior accepted quote event and does not duplicate completed attention",async()=>{
     const t=fixture({duplicate:true,pending:false});
