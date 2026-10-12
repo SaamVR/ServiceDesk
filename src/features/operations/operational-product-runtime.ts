@@ -20,6 +20,7 @@ import type { SupabaseRpcClient } from "@/server/core/payment-application-postgr
 import { createPostgresReportingPlatformFacadeMethods } from "@/server/core/reporting-platform-postgres";
 import { createPostgresRecurrenceFacadeMethods } from "@/server/core/recurrence-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
+import { loadOperationalQuoteRateCard } from "@/server/core/operational-quote-rate-card";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
 import { createPostgresVoiceMissedCallCommandPort } from "@/server/core/voice-missed-call-postgres";
 import { buildOperationalIntegrationHealth, type OperationalIntegrationHealth } from "./integration-health-runtime";
@@ -1885,7 +1886,14 @@ export async function calculateOperationalQuote(
   if (!resolved.ok) return { ok: false, message: resolved.message };
   const branchAccess = await requireOperationalBranchResource(resolved.value, "request", requestId);
   if (branchAccess) return branchAccess;
-  const facade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc);
+  const pricing = await loadOperationalQuoteRateCard(
+    resolved.value.service, resolved.value.workspace.id, requestId,
+  );
+  if (!pricing.ok) return {
+    ok: false,
+    message: pricing.message + " No synthetic prices were used.",
+  };
+  const facade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc, pricing.value);
   const result = await facade.calculateQuote(resolved.value.actor, requestId);
   return result.ok
     ? { ok: true, message: "Quote calculated and saved." }
