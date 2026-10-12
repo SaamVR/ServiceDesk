@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+afterEach(() => vi.unstubAllEnvs());
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AssistantTurn } from "../../src/server/ai/types";
@@ -41,6 +43,64 @@ describe("same-origin operational AI draft HTTP boundary", () => {
       toolProposals: [{ name: "getServiceCatalog", allowed: true, reason: "Safe proposal only" }],
     });
     expect(calls).toBe(1);
+  });
+
+  it("allows only a precisely configured public HTTPS origin behind a private Render proxy", async () => {
+    vi.stubEnv("SERVICEDESK_AI_ALLOWED_ORIGIN", "https://servicedesk-review.example.test");
+    const makeProxy = (origin: string, extraHeaders: Record<string, string> = {}) =>
+      new Request("http://127.0.0.1:3000/api/internal/ai/draft", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "origin": origin,
+          "sec-fetch-site": "same-origin",
+          ...extraHeaders,
+        },
+        body: JSON.stringify(entry),
+      });
+    let calls = 0;
+    const valid = await handleStaffAiHttpPost(
+      makeProxy("https://servicedesk-review.example.test"),
+      async () => { calls++; return { ok: true, value: turn }; },
+    );
+    expect(valid.status).toBe(200);
+    expect(calls).toBe(1);
+    for (const [origin,headers] of [
+      ["https://evil.example.test", {}],
+      ["https://servicedesk-review.example.test.evil.test", {}],
+      ["https://evil.example.test", { "x-forwarded-host": "servicedesk-review.example.test" }],
+      ["https://servicedesk-review.example.test", { "sec-fetch-site": "cross-site" }],
+    ] as const) {
+      const result=await handleStaffAiHttpPost(makeProxy(origin,headers),
+        async () => {calls++; return {ok:true,value:turn};});
+      expect(result.status).toBe(403);
+    }
+    expect(calls).toBe(1);
+  });
+
+  it("rejects invalid public-origin configurations without relying on forwarded request headers", async () => {
+    for (const bad of [
+      "http://servicedesk-review.example.test",
+      "https://servicedesk-review.example.test:8443",
+      "https://someone@servicedesk-review.example.test",
+      "https://servicedesk-review.example.test/studio",
+      "https://servicedesk-review.example.test?x=1",
+    ]) {
+      vi.stubEnv("SERVICEDESK_AI_ALLOWED_ORIGIN", bad);
+      const response=await handleStaffAiHttpPost(
+        new Request("http://internal:3000/api/internal/ai/draft", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "origin": "https://servicedesk-review.example.test",
+            "x-forwarded-host": "servicedesk-review.example.test",
+          },
+          body: JSON.stringify(entry),
+        }),
+        async () => {throw Error("Unauthorized provider call");},
+      );
+      expect(response.status).toBe(403);
+    }
   });
 
   it("rejects cross-origin browser requests before invoking the staff actor resolver", async () => {
