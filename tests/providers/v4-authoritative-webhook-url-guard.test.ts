@@ -82,7 +82,14 @@ describe("signed, server-resolved webhook destination", () => {
     { "X-Workflow-Token": "bad\u0000value" },
     { "X-Workflow-Token": "x".repeat(2049) },
   ])("rejects dangerous headers without exposing their values: %j", headers => {
-    const r = buildSignedWebhookIntent({ ...destination, headers }, job);
+    // Vitest infers a union with optional undefined keys from it.each.
+    // Materialize supplied string headers without dropping an injection value
+    // or weakening the runtime header validation contract.
+    const sentHeaders: Record<string, string> = {};
+    for (const [name, value] of Object.entries(headers)) {
+      if (typeof value === "string") sentHeaders[name] = value;
+    }
+    const r = buildSignedWebhookIntent({ ...destination, headers: sentHeaders }, job);
     expect(r).toMatchObject({ ok: false, code: "WEBHOOK_INVALID_HEADERS" });
     expect(JSON.stringify(r)).not.toContain("injected");
     expect(JSON.stringify(r)).not.toContain("synthetic-secret-never-send");
