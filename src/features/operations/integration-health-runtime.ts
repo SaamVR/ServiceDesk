@@ -200,7 +200,7 @@ function configuredAiHealth(env: RuntimeEnvironment): OperationalIntegrationHeal
     canRunControlledProof: config.ok,
     source: "SERVER_CONFIGURATION_PRESENCE",
     message: config.ok
-      ? "AI inference is enabled and its server-only model configuration is valid. An explicit owner model test and real provider receipt are still required; no message, booking or payment is verified."
+      ? "AI inference is enabled and its server-only model configuration is valid. An explicit owner model test is still required. Controlled provider proof is still required; no message, booking or payment is verified."
       : hasSomeInputs
         ? "AI is not runnable yet. Check the explicit enablement, model, credentials, approved provider origin and bounded timeout. A configured key or health flag is not a successful model response."
         : "AI inference is disabled; no server-only model configuration is present. No model call or provider delivery is verified.",
