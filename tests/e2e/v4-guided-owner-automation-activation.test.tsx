@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { OperationalStaffSnapshot } from "../../src/features/operations/operational-product-runtime";
 import { summarizeAutomationActivation } from "../../src/features/operations/owner-automation-activation";
 
 const read=(path:string)=>readFileSync(join(process.cwd(),path),"utf8");
