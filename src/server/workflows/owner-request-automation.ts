@@ -2,6 +2,7 @@ import type { Result, WorkflowRuleVersionDTO } from "../../contracts";
 import { resolveStaffActor } from "@/features/operations/operational-product-runtime";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { PostgresWorkflowExecutionPort } from "./postgres";
+import { MAX_ACTIVE_WORKFLOW_RULES_PER_BRANCH, WORKFLOW_RULE_OVERFLOW_FETCH_LIMIT } from "./automation-limits";
 
 type Resolver = typeof resolveStaffActor;
 
@@ -105,11 +106,11 @@ export async function runOwnerSavedRequestAutomation(
   const ruleRead = await service.from("workflow_rules")
     .select("id,published_version_number")
     .eq("workspace_id", workspace.id).eq("branch_id", branchId)
-    .eq("status", "ACTIVE").limit(21);
+    .eq("status", "ACTIVE").limit(WORKFLOW_RULE_OVERFLOW_FETCH_LIMIT);
   if (ruleRead.error || !ruleRead.data) {
     return fail("REQUEST_WORKFLOW_RULES_UNAVAILABLE", "Published rules could not be loaded.");
   }
-  if (ruleRead.data.length > 20) {
+  if (ruleRead.data.length > MAX_ACTIVE_WORKFLOW_RULES_PER_BRANCH) {
     return fail("REQUEST_WORKFLOW_RULE_LIMIT", "Too many active rules for one controlled execution.");
   }
   const port = deps.portFactory?.(rpc) ?? new PostgresWorkflowExecutionPort(rpc);
