@@ -30,10 +30,13 @@ function harness(options:{
   deadLetter?:boolean;
   throwBridge?:boolean;
   claimError?:boolean;
+  leaseReadError?:boolean;
+  leaseAfterClaim?:Partial<typeof claimed>;
 }={}){
   const rows={
     quotes:[{id:quote,workspace_id:workspace,request_id:request,status:options.quoteStatus??"ACCEPTED"}],
     requests:[{id:request,workspace_id:options.foreignRequest?"other-tenant":workspace,customer_id:customer}],
+    workflow_source_events:[{...claimed,...options.leaseAfterClaim}],
   };
   const service={from(table:string){
     const filters:Record<string,unknown>={};
@@ -43,7 +46,11 @@ function harness(options:{
       async maybeSingle(){
         const data=(rows[table as keyof typeof rows]??[]).find(row=>
           Object.entries(filters).every(([k,v])=>(row as Record<string,unknown>)[k]===v));
-        return {data:data??null,error:null};
+        return {
+          data:data??null,
+          error: table==="workflow_source_events" && options.leaseReadError
+            ? {code:"DB_UNAVAILABLE"} : null,
+        };
       },
     };
     return q;
@@ -96,6 +103,26 @@ describe("V4 trusted internal quote source recovery worker",()=>{
       args:{p_worker:workerId,p_limit:4}});
     expect(h.events[1]).toEqual({fn:"servicedesk_complete_quote_source_event",
       args:{p_id:id,p_worker:workerId,p_outcome:"SUCCEEDED",p_error_code:null}});
+  });
+  it("revalidates the current lease after slow data reads before internal side effects",async()=>{
+    const cases=[
+      {leaseAfterClaim:{locked_until:"2020-01-01T00:00:00Z"}},
+      {leaseAfterClaim:{locked_by:"second_worker_2026"}},
+      {leaseAfterClaim:{state:"RETRY_PENDING"}},
+      {leaseAfterClaim:{attempts:2}},
+      {leaseAfterClaim:{quote_id:"aaaaaaaa-ffff-4fff-8fff-aaaaaaaaaaaa"}},
+      {leaseReadError:true},
+    ];
+    for(const options of cases){
+      const h=harness(options);
+      const result=await run(h);
+      expect(result).toMatchObject({claimed:1,completed:0});
+      expect(h.bridge).not.toHaveBeenCalled();
+      expect(h.events[1]).toMatchObject({
+        fn:"servicedesk_complete_quote_source_event",
+        args:{p_outcome:"FAILED",p_error_code:"QUOTE_SOURCE_LEASE_REVALIDATION_FAILED"},
+      });
+    }
   });
   it("marks a later owner opt-out SKIPPED, never auto-sends or retries",async()=>{
     const h=harness({optedOut:true});
