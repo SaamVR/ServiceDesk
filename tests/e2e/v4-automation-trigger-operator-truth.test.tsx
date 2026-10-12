@@ -30,7 +30,7 @@ describe("V4 operator truth on automatic customer quote-accepted rules", () => {
     const html = render();
     expect(html).toContain("Deployment switch enabled");
     expect(html).toContain("owner-published rules");
-    expect(html).toContain("saved execution receipts are still required");
+    expect(html).toContain("Saved execution receipts are still required");
     expect(html).toContain("External email and WhatsApp actions always require separate approval");
     expect(html).not.toContain("Successfully delivered");
   });
