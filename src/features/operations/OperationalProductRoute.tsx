@@ -59,6 +59,7 @@ import { AiOperationsStatus } from "./AiOperationsStatus";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import { automationPlaybooks, getAutomationPlaybook } from "./automation-playbooks";
+import { runOwnerSavedOperationalAutomation, type OwnerOperationalEventType } from "@/server/workflows/owner-operational-automation";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
@@ -2535,6 +2536,27 @@ function WorkflowBuilderPanel({
   const ownerCanEdit = data.actor.role === "OWNER" && editorBranches.length > 0 && workflowBackendWritable;
   const playbook = getAutomationPlaybook(automationTemplate);
 
+  async function runSavedOperationalEventAction(formData: FormData) {
+    "use server";
+    const selected = String(formData.get("savedEvent") ?? "");
+    const parts = selected.split("|");
+    if (parts.length !== 2 || !["QUOTE_ACCEPTED", "VISIT_COMPLETED", "INVOICE_PAID"].includes(parts[0])) {
+      actionRedirect(workspaceSlug, "automations", {ok:false,message:"Choose a saved, eligible milestone event."});
+    }
+    const outcome = await runOwnerSavedOperationalAutomation(
+      workspaceSlug, parts[0] as OwnerOperationalEventType, parts[1],
+    );
+    const result: OperationalActionResult = outcome.ok
+      ? {ok:true,message:`Persisted ${outcome.value.eventType} rule check: ${outcome.value.matchedExecutions} matched; ${outcome.value.completedAttentionActions} internal actions verified; ${outcome.value.reusedRuleExecutions} replayed. External delivery still requires separate owner approval.`}
+      : {ok:false,message:outcome.message};
+    actionRedirect(workspaceSlug,"automations",result);
+  }
+
+  const approvedQuoteEvents = data.quotes.filter(q => q.status === "ACCEPTED").slice(0,50);
+  const completedVisitEvents = data.visits.filter(v => v.status === "COMPLETED").slice(0,50);
+  const paidInvoiceEvents = data.invoices.filter(i => i.status === "PAID").slice(0,50);
+  const savedEligibleEventCount = approvedQuoteEvents.length + completedVisitEvents.length + paidInvoiceEvents.length;
+
   async function saveDraftAction(formData: FormData) {
     "use server";
     const rawEvent = String(formData.get("eventType") ?? "");
@@ -2667,6 +2689,43 @@ function WorkflowBuilderPanel({
           <StatusBadge tone="neutral">Max 5 actions · recursion depth 2</StatusBadge>
         </div>
       </header>
+
+      {data.actor.role === "OWNER" ? (
+        <section className={styles.workflowEditorCard} aria-label="Run saved milestone through published automations">
+          <h3>Process a saved business milestone</h3>
+          <p>Use a real accepted quote, completed visit, or paid invoice as a trusted, deduplicated workflow source.
+            Only internal attention actions execute here. Customer messages, charges and scheduling are not automatic.</p>
+          {!workflowBackendWritable ? (
+            <p role="status">Protected workflow execution is not configured in this QA-session environment.</p>
+          ) : savedEligibleEventCount === 0 ? (
+            <p role="status">No eligible persisted milestones yet. Save and complete a real fictional QA journey first.</p>
+          ) : (
+            <form action={runSavedOperationalEventAction}>
+              <label>
+                <span>Saved milestone</span>
+                <select className="app-input" name="savedEvent" required defaultValue="">
+                  <option value="" disabled>Choose a saved milestone</option>
+                  {approvedQuoteEvents.length > 0 ? <optgroup label="Accepted quotes">
+                    {approvedQuoteEvents.map(quote =>
+                      <option key={quote.id} value={"QUOTE_ACCEPTED|" + quote.id}>Accepted quote · {quote.id.slice(0,8)}</option>)}
+                  </optgroup> : null}
+                  {completedVisitEvents.length > 0 ? <optgroup label="Completed visits">
+                    {completedVisitEvents.map(visit =>
+                      <option key={visit.id} value={"VISIT_COMPLETED|" + visit.id}>Completed visit · {visit.id.slice(0,8)}</option>)}
+                  </optgroup> : null}
+                  {paidInvoiceEvents.length > 0 ? <optgroup label="Paid invoices">
+                    {paidInvoiceEvents.map(invoice =>
+                      <option key={invoice.id} value={"INVOICE_PAID|" + invoice.id}>Paid invoice · {invoice.id.slice(0,8)}</option>)}
+                  </optgroup> : null}
+                </select>
+              </label>
+              <StaffSubmitButton className="app-button-secondary" pendingLabel="Verifying persisted event…">
+                Evaluate published rules and verify internal actions
+              </StaffSubmitButton>
+            </form>
+          )}
+        </section>
+      ) : null}
 
       <nav className={styles.automationPlaybookGrid} aria-label="Cleaning automation starter playbooks">
         {automationPlaybooks.map(item => (
