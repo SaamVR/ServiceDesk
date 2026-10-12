@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { normalizeReturnPath } from "@/features/auth/return-path";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
+import { RegistrationSubmitButton } from "@/features/auth/RegistrationSubmitButton";
 import { ownerRegistrationAvailable, ownerRegistrationMode, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 import { marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 import { signInWithPassword } from "./actions";
@@ -38,7 +39,7 @@ export default async function SignInPage({
           <label htmlFor="sign-in-password">Password</label>
           <input id="sign-in-password" name="password" type="password" autoComplete="current-password" required />
         </div>
-        <button className={styles.submit} type="submit">Sign in <span aria-hidden="true">→</span></button>
+        <RegistrationSubmitButton className={styles.submit} label="Sign in" pendingLabel="Signing in…" />
       </form>
       <p className={styles.help}>Forgot your password? <Link href="/auth/forgot-password"><strong>Recover access</strong></Link></p>
       <p className={styles.help}>

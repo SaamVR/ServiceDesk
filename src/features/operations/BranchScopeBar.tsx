@@ -1,4 +1,5 @@
 import type { ActorContext } from "@/contracts";
+import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import type { OperationalBranchScope } from "./operational-product-runtime";
 
 export function BranchScopeBar({
@@ -40,7 +41,7 @@ export function BranchScopeBar({
             ))}
           </select>
         </label>
-        <button className="app-button-secondary" type="submit">Apply</button>
+        <StaffSubmitButton className="app-button-secondary" pendingLabel="Applying scope…">Apply scope</StaffSubmitButton>
       </form>
     </section>
   );

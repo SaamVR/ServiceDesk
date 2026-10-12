@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signUpWithPassword } from "./actions";
 import styles from "../sign-in/page.module.css";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
+import { RegistrationSubmitButton } from "@/features/auth/RegistrationSubmitButton";
 import { ownerRegistrationAvailable, ownerRegistrationMode } from "@/features/auth/owner-registration-readiness";
 
 export default async function SignUpPage({
@@ -44,7 +45,8 @@ export default async function SignUpPage({
           <input type="checkbox" name="terms" value="agreed" required disabled={!registrationEnabled} style={{marginTop:4}} />
           <span>I agree to the <Link href="/terms" style={{textDecoration:"underline"}}>Terms</Link> and <Link href="/privacy" style={{textDecoration:"underline"}}>Privacy Policy</Link>.</span>
         </label>
-        <button className={styles.submit} type="submit" disabled={!registrationEnabled}>Create account <span aria-hidden="true">→</span></button>
+        <RegistrationSubmitButton className={styles.submit} label="Create account" pendingLabel="Creating account…"
+          disabled={!registrationEnabled} />
       </form>
       <p className={styles.help}>We’ll send an email confirmation. No payment information is needed to start.</p>
       <p className={styles.help}>Already registered? <Link href="/auth/sign-in"><strong>Sign in</strong></Link></p>

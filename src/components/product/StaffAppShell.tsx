@@ -198,8 +198,12 @@ export function StaffAppShell({
       desktop.removeEventListener("change", handleDesktop);
     };
   }, [mobileNavOpen]);
-  const currentSegment = pathname.split("/").filter(Boolean).at(-1);
-  const currentModule = currentSegment && currentSegment in staffModuleConfig ? currentSegment as StaffModule : "overview";
+  // Preserve the parent module on nested record/detail routes, including
+  // encoded workspace slugs, instead of reading the final URL segment.
+  const currentModule = (Object.keys(staffModuleConfig) as StaffModule[]).find(module => {
+    const href = buildStaffModuleHref(workspace, module);
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }) ?? "overview";
   const pageLabel = staffModuleConfig[currentModule].label;
   const workspaceName = workspaceDisplayName(workspace);
 
