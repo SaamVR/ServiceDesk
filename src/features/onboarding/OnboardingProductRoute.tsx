@@ -77,7 +77,10 @@ export async function OnboardingProductRoute({
   const businessReady = Boolean(workspace.name && workspace.timezone);
   const servicesReady = enabledServices.length > 0;
   const teamReady = activeMembers.length > 0;
-  const billingReady = Boolean(platformBilling?.subscription.status);
+  // A recorded subscription is not necessarily usable: past-due and
+  // cancelled records must never count as completed owner setup.
+  const billingReady = platformBilling?.subscription.status === "ACTIVE" ||
+    platformBilling?.subscription.status === "TRIALING";
   const pricingVerified = commercial.state === "VERIFIED";
   const readyCount = [businessReady, servicesReady, pricingVerified, teamReady, billingReady].filter(Boolean).length;
   const workspaceBase =
