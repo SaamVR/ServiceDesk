@@ -19,7 +19,9 @@ export interface OwnerRequestAutomationReceipt {
   completedAttentionActions: number;
   externalApprovalRequired: number;
   providerMessagesSent: 0;
-  replayedSourceEvent: false;
+  replayedSourceEvent: boolean;
+  newlyRecordedRuleExecutions: number;
+  reusedRuleExecutions: number;
 }
 
 function fail(code: string, message: string): Result<never> {
@@ -112,6 +114,8 @@ export async function runOwnerSavedRequestAutomation(
   }
   const port = deps.portFactory?.(rpc) ?? new PostgresWorkflowExecutionPort(rpc);
   let matchedExecutions = 0;
+  let newlyRecordedRuleExecutions = 0;
+  let reusedRuleExecutions = 0;
   let completedAttentionActions = 0;
   let externalApprovalRequired = 0;
 
@@ -178,6 +182,11 @@ export async function runOwnerSavedRequestAutomation(
         return fail("REQUEST_WORKFLOW_EVENT_DRIFT", "The request facts changed after this event was recorded. Review the original execution before retrying.");
       }
     }
+    if (recorded.value.duplicate) {
+      reusedRuleExecutions++;
+    } else {
+      newlyRecordedRuleExecutions++;
+    }
     if (!recorded.value.plan.matched) continue;
     matchedExecutions++;
     externalApprovalRequired += recorded.value.plan.actionPlans
@@ -213,6 +222,8 @@ export async function runOwnerSavedRequestAutomation(
     completedAttentionActions,
     externalApprovalRequired,
     providerMessagesSent: 0,
-    replayedSourceEvent: false,
+    replayedSourceEvent: reusedRuleExecutions > 0,
+    newlyRecordedRuleExecutions,
+    reusedRuleExecutions,
   } };
 }
