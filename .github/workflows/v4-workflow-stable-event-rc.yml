@@ -1,0 +1,36 @@
+name: ServiceDesk V4 immutable workflow event idempotency RC
+on:
+  push:
+    branches: [fix/v4-workflow-event-stable-idempotency-20261012]
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - "src/server/workflows/engine.ts"
+      - "src/server/workflows/postgres.ts"
+      - "src/server/workflows/owner-request-automation.ts"
+      - "tests/domain/v2-workflow-engine.test.ts"
+      - "tests/db/v2-workflow-execution-postgres.test.ts"
+      - "tests/db/v4-owner-request-automation.test.ts"
+      - ".github/workflows/v4-workflow-stable-event-rc.yml"
+permissions:
+  contents: read
+concurrency:
+  group: v4-workflow-stable-source-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-head-rc:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Immutable source idempotency and duplicated execution acceptance
+        run: pnpm exec vitest run tests/domain/v2-workflow-engine.test.ts tests/db/v2-workflow-execution-postgres.test.ts tests/db/v4-owner-request-automation.test.ts
+      - name: Complete release tests, TypeScript, lint and build
+        run: pnpm check:rc
