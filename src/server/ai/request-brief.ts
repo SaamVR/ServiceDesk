@@ -76,17 +76,20 @@ export async function generateAuthorizedRequestBrief(
   const config = (deps.readConfig ?? readConfiguredAiRuntimeConfig)();
   if (!config.ok) return config;
 
-  let request: Awaited<ReturnType<ReturnType<typeof service.from>["maybeSingle"]>>;
-  try {
-    request = await service.from("requests")
-      .select("id,workspace_id,branch_id,service_id,bedrooms,bathrooms,status")
-      .eq("id", input.requestId)
-      .eq("workspace_id", workspace.id)
-      .maybeSingle();
-  } catch {
+  const request = await (async () => {
+    try {
+      return await service.from("requests")
+        .select("id,workspace_id,branch_id,service_id,bedrooms,bathrooms,status")
+        .eq("id", input.requestId)
+        .eq("workspace_id", workspace.id)
+        .maybeSingle();
+    } catch {
+      return null;
+    }
+  })();
+  if (!request || request.error) {
     return fail("AI_BRIEF_READ_FAILED", "The saved request could not be verified.");
   }
-  if (request.error) return fail("AI_BRIEF_READ_FAILED", "The saved request could not be verified.");
   if (!request.data || request.data.id !== input.requestId ||
       request.data.workspace_id !== workspace.id) {
     return fail("AI_BRIEF_NOT_FOUND", "This request is not available.");
@@ -110,17 +113,20 @@ export async function generateAuthorizedRequestBrief(
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.service_id)) {
       return fail("AI_BRIEF_SERVICE_INVALID", "Saved request service is invalid.");
     }
-    let catalog: { data: { code: string | null } | null; error: unknown };
-    try {
-      catalog = await service.from("service_catalog")
-        .select("code")
-        .eq("id", row.service_id)
-        .eq("workspace_id", workspace.id)
-        .maybeSingle();
-    } catch {
+    const catalog = await (async () => {
+      try {
+        return await service.from("service_catalog")
+          .select("code")
+          .eq("id", row.service_id)
+          .eq("workspace_id", workspace.id)
+          .maybeSingle();
+      } catch {
+        return null;
+      }
+    })();
+    if (!catalog || catalog.error) {
       return fail("AI_BRIEF_SERVICE_READ_FAILED", "Service details could not be verified.");
     }
-    if (catalog.error) return fail("AI_BRIEF_SERVICE_READ_FAILED", "Service details could not be verified.");
     if (!catalog.data) return fail("AI_BRIEF_SERVICE_NOT_FOUND", "Saved request service is unavailable.");
     serviceCode = codeValue(catalog.data.code);
   }
