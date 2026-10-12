@@ -123,6 +123,15 @@ async function main() {
       body: attempt.body, signal: AbortSignal.timeout(16000),
     });
     const data = await reply.json().catch(() => null);
+    // Only stable HTTP status and public machine code; never print response
+    // bodies, cookies, request bodies, model output, tokens or customer data.
+    if (reply.status !== attempt.status || data?.code !== attempt.code) {
+      console.error("GUEST_AI_DENIAL_DIAGNOSTIC", JSON.stringify({
+        case: attempt.name, expectedStatus: attempt.status,
+        actualStatus: reply.status, expectedCode: attempt.code,
+        actualCode: typeof data?.code === "string" ? data.code.slice(0, 80) : "NON_JSON",
+      }));
+    }
     check(reply.status === attempt.status &&
       data?.code === attempt.code, "anonymous-staff-ai-" + attempt.name);
     check((reply.headers.get("cache-control") ?? "").includes("no-store"),
