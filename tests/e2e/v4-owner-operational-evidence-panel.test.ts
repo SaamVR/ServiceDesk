@@ -193,6 +193,53 @@ describe("V4 owner live operational evidence, never synthetic proof", () => {
     expect(result.completedInternalAttention).toBe(0);
   });
 
+  it("requires quote currency to match its saved authorized branch, never guesses conversion", () => {
+    const report = summarizeOwnerOperationalEvidence(values({
+      branchScope: { mode: "ALL", branches: [
+        { id: "north", code: "US-N", name: "North", currency: "USD",
+          timezone: "America/New_York", isDefault: true },
+        { id: "london", code: "GB-L", name: "London", currency: "GBP",
+          timezone: "Europe/London", isDefault: false },
+      ] },
+      requests: [
+        {id:"north-request",branchId:"north",status:"NEW"},
+        {id:"london-request",branchId:"london",status:"NEW"},
+      ],
+      quotes: [
+        quote("north-ok","north-request","ACCEPTED","USD"),
+        quote("north-wrong","north-request","ACCEPTED","GBP"),
+        quote("london-ok","london-request","SENT","GBP"),
+        quote("london-wrong","london-request","ACCEPTED","USD"),
+      ],
+      visits: [
+        {id:"v-good",quoteId:"north-ok",requestId:"north-request",branchId:"north"},
+        {id:"v-wrong",quoteId:"north-wrong",requestId:"north-request",branchId:"north"},
+      ],
+      invoices: [
+        {id:"i-good",quoteId:"north-ok",visitId:"v-good"},
+        {id:"i-wrong",quoteId:"north-wrong",visitId:"v-wrong"},
+      ],
+    } as unknown as Partial<Snapshot>));
+    expect(report).toMatchObject({savedRequests:2,sentQuotes:2,acceptedQuotes:1,
+      recordedVisits:1,savedInvoices:1});
+  });
+
+  it("keeps old unscoped legacy records visible but never treats unassigned branch quotes as ready in selected scope", () => {
+    const northRequest = {id:"unassigned",status:"NEW"};
+    const q = quote("quote-a","unassigned","ACCEPTED","USD");
+    expect(summarizeOwnerOperationalEvidence(values({
+      requests:[northRequest],quotes:[q],
+    } as unknown as Partial<Snapshot>)).acceptedQuotes).toBe(1);
+    const blocked=summarizeOwnerOperationalEvidence(values({
+      branchScope:{mode:"BRANCH",selectedBranchId:"north",branches:[
+        {id:"north",code:"US-N",name:"North",currency:"USD",
+          timezone:"America/New_York",isDefault:true}]},
+      requests:[northRequest],quotes:[q],
+    } as unknown as Partial<Snapshot>));
+    expect(blocked.acceptedQuotes).toBe(0);
+    expect(blocked.savedRequests).toBe(0);
+  });
+
   it("UI is read-only and links owners to real modules, with no fabricated provider receipts", () => {
     const ui = readFileSync(join(process.cwd(),
       "src/features/onboarding/OnboardingOperationalEvidencePanel.tsx"), "utf8");
