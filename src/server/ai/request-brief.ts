@@ -73,7 +73,7 @@ export async function generateAuthorizedRequestBrief(
   if (!config.ok) return config;
 
   const request = await service.from("requests")
-    .select("id,workspace_id,branch_id,service_code,bedrooms,bathrooms,status")
+    .select("id,workspace_id,branch_id,service_id,bedrooms,bathrooms,status")
     .eq("id", input.requestId)
     .eq("workspace_id", workspace.id)
     .maybeSingle();
@@ -89,8 +89,26 @@ export async function generateAuthorizedRequestBrief(
     return fail("AI_BRIEF_FORBIDDEN", "Select an assigned branch before using AI.");
   }
 
+  // requests stores service_id (FK), NOT service_code. Resolve the code
+  // through the authorized workspace's catalog; never send customer notes,
+  // arbitrary service names or a cross-tenant catalog row to the model.
+  let serviceCode = "not recorded";
+  if (row.service_id != null) {
+    if (typeof row.service_id !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.service_id)) {
+      return fail("AI_BRIEF_SERVICE_INVALID", "Saved request service is invalid.");
+    }
+    const catalog = await service.from("service_catalog")
+      .select("code")
+      .eq("id", row.service_id)
+      .eq("workspace_id", workspace.id)
+      .maybeSingle();
+    if (catalog.error) return fail("AI_BRIEF_SERVICE_READ_FAILED", "Service details could not be verified.");
+    if (!catalog.data) return fail("AI_BRIEF_SERVICE_NOT_FOUND", "Saved request service is unavailable.");
+    serviceCode = codeValue(catalog.data.code);
+  }
   const groundedFacts = {
-    serviceCode: codeValue(row.service_code),
+    serviceCode,
     bedrooms: boundedCount(row.bedrooms),
     bathrooms: boundedCount(row.bathrooms),
     status: codeValue(row.status),

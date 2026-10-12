@@ -10,6 +10,7 @@ const workspaceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const branchId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const otherBranchId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const requestId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const serviceId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const input = { workspaceSlug: "fictional-cleaning", requestId };
 
 function harness(options: {
@@ -19,22 +20,45 @@ function harness(options: {
   absent?: boolean;
   modelTools?: boolean;
   modelDraft?: string;
+  noService?: boolean;
+  missingCatalog?: boolean;
+  catalogError?: boolean;
+  invalidServiceId?: boolean;
 } = {}) {
   const filters: Array<[string, unknown]> = [];
+  const selects: Array<[string, string]> = [];
   const service = {
     from(table: string) {
-      expect(table).toBe("requests");
+      expect(["requests", "service_catalog"]).toContain(table);
       const query = {
-        select() { return query; },
+        select(columns: string) {
+          selects.push([table, columns]);
+          if (table === "requests") {
+            expect(columns).toContain("service_id");
+            expect(columns).not.toContain("service_code");
+          }
+          return query;
+        },
         eq(key: string, value: unknown) { filters.push([key, value]); return query; },
         async maybeSingle() {
+          if (table === "service_catalog") {
+            return {
+              error: options.catalogError ? { code: "DB_UNAVAILABLE", message: "private" } : null,
+              data: options.missingCatalog ? null : {
+                id: serviceId,
+                workspace_id: workspaceId,
+                code: "MOVE_OUT",
+                name: "Never share freeform customer text",
+              },
+            };
+          }
           return {
             error: null,
             data: options.absent ? null : {
               id: requestId,
               workspace_id: workspaceId,
               branch_id: options.branch ?? branchId,
-              service_code: "MOVE_OUT",
+              service_id: options.noService ? null : options.invalidServiceId ? "bad-service-id" : serviceId,
               bedrooms: 3,
               bathrooms: 2,
               status: "NEW",
@@ -51,7 +75,10 @@ function harness(options: {
     expect(prompt.workspaceId).toBe(workspaceId);
     expect(prompt.userText).not.toContain("private@example.com");
     expect(prompt.userText).not.toContain("never send to model");
-    expect(prompt.userText).toContain('"serviceCode":"MOVE_OUT"');
+    expect(prompt.userText).toContain(options.noService
+      ? '"serviceCode":"not recorded"'
+      : '"serviceCode":"MOVE_OUT"');
+    expect(prompt.userText).not.toContain("Never share freeform customer text");
     return { ok: true as const, value: {
       output: {},
       replyDraft: options.modelDraft ?? "Saved move-out enquiry: three bedrooms, two bathrooms. Confirm the cleaning scope and preferred timing with staff.",
@@ -74,7 +101,7 @@ function harness(options: {
     readConfig: config,
     callModel: model,
   } as unknown as RequestBriefDependencies;
-  return { deps, model, resolve, config, filters };
+  return { deps, model, resolve, config, filters, selects };
 }
 
 describe("V4 model-backed cleaning request copilot", () => {
@@ -90,6 +117,37 @@ describe("V4 model-backed cleaning request copilot", () => {
     expect(t.filters).toContainEqual(["id", requestId]);
     expect(t.filters).toContainEqual(["workspace_id", workspaceId]);
     expect(t.model).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves the persisted service foreign key from the same workspace-scoped catalog", async () => {
+    const t = harness();
+    expect(await generateAuthorizedRequestBrief(input, t.deps))
+      .toMatchObject({ ok: true, value: { state: "AI_DRAFT_REQUIRES_REVIEW" } });
+    expect(t.selects).toContainEqual(["service_catalog", "code"]);
+    expect(t.filters).toContainEqual(["id", serviceId]);
+    expect(t.filters).toContainEqual(["workspace_id", workspaceId]);
+    expect(t.model).toHaveBeenCalledOnce();
+  });
+
+  it("allows a valid request without an assigned service, but never invents a service", async () => {
+    const t = harness({ noService: true });
+    expect(await generateAuthorizedRequestBrief(input, t.deps))
+      .toMatchObject({ ok: true });
+    expect(t.selects.some(([table]) => table === "service_catalog")).toBe(false);
+    expect(t.model).toHaveBeenCalledOnce();
+  });
+
+  it("fails before the provider when the stored service reference is malformed or cannot be verified", async () => {
+    for (const options of [
+      { invalidServiceId: true },
+      { missingCatalog: true },
+      { catalogError: true },
+    ]) {
+      const t = harness(options);
+      const outcome = await generateAuthorizedRequestBrief(input, t.deps);
+      expect(outcome.ok).toBe(false);
+      expect(t.model).not.toHaveBeenCalled();
+    }
   });
 
   it("does not query the database or call the model if AI is disabled", async () => {
