@@ -115,6 +115,14 @@ describe("Stripe-style checkout transport", () => {
     expect(JSON.stringify(result)).not.toContain("sk_test_secret_value");
   });
 
+  test("sandbox cannot return a real-money checkout session even from Stripe's host", async () => {
+    const result = await createStripeCheckoutSession(input(), config, async () => ({
+      status: 200,
+      body: JSON.stringify({ id: "cs_live_123", url: "https://checkout.stripe.com/c/pay/123" }),
+    }));
+    expect(result).toMatchObject({ ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID" });
+  });
+
   test("normalizes provider auth, rate-limit, invalid request, timeout, and malformed success response", async () => {
     await expect(createStripeCheckoutSession(input(), config, async () => ({ status: 401, body: "{}" }))).resolves.toMatchObject({ ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED" });
     await expect(createStripeCheckoutSession(input(), config, async () => ({ status: 429, body: "{}" }))).resolves.toMatchObject({ ok: false, code: "PAYMENT_RATE_LIMITED" });
