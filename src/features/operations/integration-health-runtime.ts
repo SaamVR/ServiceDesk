@@ -58,7 +58,7 @@ function safeHttpsEndpoint(value: string | undefined): URL | null {
         hostname === "localhost" || hostname.endsWith(".localhost") ||
         hostname.endsWith(".local") || hostname.endsWith(".internal") ||
         hostname.endsWith(".test") || hostname.endsWith(".example") ||
-        /^\\d+\\.\\d+\\.\\d+\\.\\d+$/.test(hostname) ||
+        /^\d+\.\d+\.\d+\.\d+$/.test(hostname) ||
         hostname.startsWith("127.") || hostname === "169.254.169.254") {
       return null;
     }
@@ -74,7 +74,7 @@ function configuredHttpsEndpoint(env: RuntimeEnvironment, ...keys: string[]): bo
 
 function exactAllowedHostEndpoint(env: RuntimeEnvironment): boolean {
   const allowedHost = (env.N8N_ALLOWED_HOST ?? env.WEBHOOK_ALLOWED_HOST ?? "").trim().toLowerCase();
-  if (!allowedHost || !/^[a-z0-9-]+(?:\\.[a-z0-9-]+)+$/.test(allowedHost)) return false;
+  if (!allowedHost || !/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(allowedHost)) return false;
   const endpoint = safeHttpsEndpoint(env.N8N_WEBHOOK_URL ?? env.WEBHOOK_ENDPOINT_URL);
   return endpoint?.hostname.toLowerCase() === allowedHost;
 }
