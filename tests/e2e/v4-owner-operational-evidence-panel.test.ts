@@ -306,6 +306,20 @@ describe("V4 owner live operational evidence, never synthetic proof", () => {
     });
   });
 
+  it("excludes voided and cross-currency invoices from the linked business journey", () => {
+    const evidence = summarizeOwnerOperationalEvidence(values({
+      requests: [request("req-1")],
+      quotes: [quote("quote-us", "req-1", "ACCEPTED", "USD")],
+      visits: [{id:"visit-1",requestId:"req-1",quoteId:"quote-us"}],
+      invoices: [
+        {id:"void",quoteId:"quote-us",visitId:"visit-1",status:"VOID",currency:"USD"},
+        {id:"wrong-currency",quoteId:"quote-us",visitId:"visit-1",
+          status:"ISSUED",currency:"GBP"},
+      ],
+    } as unknown as Partial<Snapshot>));
+    expect(evidence).toMatchObject({savedInvoices:2,linkedJourneys:0});
+  });
+
   it("never certifies a full linked journey from unrelated or foreign branch invoices", () => {
     const north={mode:"BRANCH" as const,selectedBranchId:"north",branches:[
       {id:"north",code:"N",name:"North",currency:"USD",
