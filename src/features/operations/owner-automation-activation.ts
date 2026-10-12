@@ -95,16 +95,38 @@ export function summarizeAutomationActivation(
       .filter(execution => {
         const version = eligibleQuoteVersions.get(execution.ruleVersionId);
         return execution.mode === "LIVE" && execution.matched === true &&
-          execution.state === "COMPLETED" && execution.eventType === "QUOTE_ACCEPTED" &&
+          (execution.state === "COMPLETED" || execution.state === "ACTIONS_PENDING") &&
+          execution.eventType === "QUOTE_ACCEPTED" &&
           version?.ruleId === execution.ruleId && version?.branchId === execution.branchId;
       })
-      .map(execution => [execution.id, execution.branchId]),
+      .flatMap(execution => {
+        const version = eligibleQuoteVersions.get(execution.ruleVersionId);
+        if (!version) return [];
+        const requiredIndexes = version.actions.flatMap((action, index) =>
+          action.type === "CREATE_ATTENTION" ? [index] : []);
+        return [[execution.id, { branchId: execution.branchId, requiredIndexes }] as const];
+      }),
   );
-  const internalExecutionSucceeded = (data.workflowActionExecutions ?? [])
-    .some(action => action.actionType === "CREATE_ATTENTION" &&
-      action.state === "SUCCEEDED" &&
-      acceptedQuoteBranchIds.has(action.branchId) &&
-      verifiedLiveExecutions.get(action.executionId) === action.branchId);
+  // Partial parent state is valid if an external email awaits owner approval
+  // after all required internal attention effects are saved. One succeeded
+  // action is NOT enough when a rule planned several internal actions.
+  const succeededIndexes = new Map<string, Set<number>>();
+  for (const action of data.workflowActionExecutions ?? []) {
+    const verified = verifiedLiveExecutions.get(action.executionId);
+    if (!verified || action.actionType !== "CREATE_ATTENTION" ||
+        action.state !== "SUCCEEDED" ||
+        !acceptedQuoteBranchIds.has(action.branchId) ||
+        verified.branchId !== action.branchId ||
+        !Number.isSafeInteger(action.actionIndex) ||
+        !verified.requiredIndexes.includes(action.actionIndex)) continue;
+    const indexes = succeededIndexes.get(action.executionId) ?? new Set<number>();
+    indexes.add(action.actionIndex);
+    succeededIndexes.set(action.executionId, indexes);
+  }
+  const internalExecutionSucceeded = [...verifiedLiveExecutions.entries()]
+    .some(([executionId, verified]) => acceptedQuoteBranchIds.has(verified.branchId) &&
+      verified.requiredIndexes.length > 0 &&
+      verified.requiredIndexes.every(index => succeededIndexes.get(executionId)?.has(index)));
 
   const steps: ActivationStep[] = [
     {
