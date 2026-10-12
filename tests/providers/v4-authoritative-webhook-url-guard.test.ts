@@ -78,8 +78,8 @@ describe("signed, server-resolved webhook destination", () => {
     { "x-forwarded-host": "attacker.example" },
     { "x-servicedesk-signature": "fake-override" },
     { "bad header": "value" },
-    { "X-Workflow-Token": "safe\\r\\ninjected" },
-    { "X-Workflow-Token": "bad\\u0000value" },
+    { "X-Workflow-Token": "safe\r\ninjected" },
+    { "X-Workflow-Token": "bad\u0000value" },
     { "X-Workflow-Token": "x".repeat(2049) },
   ])("rejects dangerous headers without exposing their values: %j", headers => {
     const r = buildSignedWebhookIntent({ ...destination, headers }, job);
