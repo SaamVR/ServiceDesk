@@ -27,7 +27,7 @@ function isHttpsAllowed(urlValue: string, allowedHost: string): boolean {
   if (urlValue !== urlValue.trim() || urlValue.length > 2048 ||
       allowedHost !== allowedHost.trim()) return false;
   const host = allowedHost.toLowerCase();
-  if (!/^[a-z0-9-]+(?:\\.[a-z0-9-]+)+$/.test(host) ||
+  if (!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(host) ||
       host.endsWith(".local") || host.endsWith(".internal") ||
       host.endsWith(".localhost") || host.endsWith(".test") ||
       host.endsWith(".example")) return false;
@@ -35,7 +35,7 @@ function isHttpsAllowed(urlValue: string, allowedHost: string): boolean {
     const url = new URL(urlValue);
     return url.protocol === "https:" && url.hostname === host &&
       !url.username && !url.password && !url.port && !url.hash &&
-      !/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(url.hostname);
+      !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(url.hostname);
   } catch {
     return false;
   }
