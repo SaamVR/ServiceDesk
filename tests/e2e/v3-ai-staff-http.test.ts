@@ -180,3 +180,70 @@ describe("integrated AI draft route handoff", () => {
     expect(source).toContain('export const runtime = "nodejs"');
   });
 });
+
+describe("real built-Next loopback origin normalization without proxy trust", () => {
+  const browserOrigin = "http://127.0.0.1:3000";
+  const normalizedRoute = "http://localhost:3000/api/internal/ai/draft";
+  const loopbackRequest = (body: string, extraHeaders: Record<string,string> = {}) =>
+    new Request(normalizedRoute, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "origin": browserOrigin,
+        "host": "127.0.0.1:3000",
+        "sec-fetch-site": "same-origin",
+        ...extraHeaders,
+      },
+      body,
+    });
+
+  it("validates forged role fields after exact browser Host/Origin match", async () => {
+    let invoked = 0;
+    const response = await handleStaffAiHttpPost(
+      loopbackRequest(JSON.stringify({...entry, role:"OWNER"})),
+      async () => { invoked++; return {ok:true,value:turn}; },
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({code:"REQUEST_SCHEMA_INVALID"});
+    expect(invoked).toBe(0);
+  });
+
+  it("reaches server-side session authorization for a valid loopback staff request", async () => {
+    let invoked = 0;
+    const response = await handleStaffAiHttpPost(
+      loopbackRequest(JSON.stringify(entry)),
+      async () => {
+        invoked++;
+        return {ok:false,code:"AI_STAFF_UNAUTHORIZED",message:"Login required"};
+      },
+    );
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({code:"AI_STAFF_UNAUTHORIZED"});
+    expect(invoked).toBe(1);
+  });
+
+  it("rejects forged Host/forwarded headers, wrong protocol and cross-site fetches", async () => {
+    let invoked = 0;
+    const deny = async (request: Request) => {
+      const result = await handleStaffAiHttpPost(request, async () => {
+        invoked++;
+        return {ok:true,value:turn};
+      });
+      expect(result.status).toBe(403);
+      expect(await result.json()).toEqual({code:"SAME_ORIGIN_REQUIRED"});
+    };
+    await deny(loopbackRequest(JSON.stringify(entry), {"host":"malicious.example"}));
+    await deny(loopbackRequest(JSON.stringify(entry), {"sec-fetch-site":"cross-site"}));
+    await deny(loopbackRequest(JSON.stringify(entry), {
+      "host":"malicious.example", "x-forwarded-host":"127.0.0.1:3000",
+    }));
+    await deny(loopbackRequest(JSON.stringify(entry), {"origin":"http://127.0.0.1:3000/forged-path"}));
+    await deny(new Request("https://desk.example.test/api/internal/ai/draft", {
+      method:"POST",headers:{
+        "content-type":"application/json", "origin":browserOrigin,
+        "host":"127.0.0.1:3000", "sec-fetch-site":"same-origin",
+      }, body:JSON.stringify(entry),
+    }));
+    expect(invoked).toBe(0);
+  });
+});
