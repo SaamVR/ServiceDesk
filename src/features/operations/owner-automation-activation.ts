@@ -81,6 +81,13 @@ export function summarizeAutomationActivation(
       quote.currency === "USD" && quote.currency === branchCurrency;
   });
   const acceptedQuoteVerified = acceptedSavedQuotes.length > 0;
+  // Independently ready milestones may come from different branches in an
+  // ALL-branches view. Full quote-to-attention evidence must be branch
+  // coherent; otherwise Branch B's accepted quote could certify Branch A's
+  // unrelated workflow execution.
+  const acceptedQuoteBranchIds = new Set(acceptedSavedQuotes
+    .map(quote => requestsById.get(quote.requestId)?.branchId)
+    .filter((id): id is string => typeof id === "string"));
   const executionsLoaded = Array.isArray(data.workflowExecutions) &&
     Array.isArray(data.workflowActionExecutions) && versionsLoaded;
   const verifiedLiveExecutions = new Map(
@@ -96,6 +103,7 @@ export function summarizeAutomationActivation(
   const internalExecutionSucceeded = (data.workflowActionExecutions ?? [])
     .some(action => action.actionType === "CREATE_ATTENTION" &&
       action.state === "SUCCEEDED" &&
+      acceptedQuoteBranchIds.has(action.branchId) &&
       verifiedLiveExecutions.get(action.executionId) === action.branchId);
 
   const steps: ActivationStep[] = [
@@ -156,8 +164,8 @@ export function summarizeAutomationActivation(
         pricing?.state !== "VERIFIED"
         ? "Authorized branch, pricing or execution history is unavailable; do not claim a live result."
         : internalExecutionSucceeded
-          ? "A LIVE quote rule and succeeded internal attention receipt match this authorized priced branch."
-          : "Verify a succeeded LIVE internal action in the same authorized, priced branch.",
+          ? "A LIVE quote rule, accepted customer quote and succeeded internal attention match the same authorized priced branch. Session-level acceptance remains separate."
+          : "Verify a succeeded LIVE internal action in the same priced branch as a saved customer-accepted quote.",
       module: "automations",
     },
   ];

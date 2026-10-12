@@ -151,8 +151,8 @@ describe("owner automation activation evidence", () => {
     expect(summary.steps[3]).toMatchObject({
       id: "accepted-quote", status: "ACTION_REQUIRED", module: "requests",
     });
-    expect(summary.steps[4].status).toBe("READY");
-    expect(summary.readyCount).toBe(4);
+    expect(summary.steps[4].status).toBe("ACTION_REQUIRED");
+    expect(summary.readyCount).toBe(3);
     expect(summary.allEvidenceReady).toBe(false);
     expect(summarizeAutomationActivation({
       ...data, requests: [acceptedRequest], quotes: [{ ...acceptedQuote, status: "SENT" }],
@@ -207,6 +207,34 @@ describe("owner automation activation evidence", () => {
     expect(summarizeAutomationActivation({
       ...data, requests: [acceptedRequest], quotes: undefined,
     }).steps[3].status).toBe("UNVERIFIED");
+  });
+
+  it("cannot combine accepted quotes in Branch B with an internal action in Branch A", () => {
+    const south = { id: "branch-2", code: "US-S", name: "South",
+      currency: "USD", timezone: "America/Chicago", isDefault: false };
+    const base: Input = {
+      ...empty,
+      branchScope: { mode: "ALL", branches: [...empty.branchScope!.branches, south] },
+      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1", "branch-2"] },
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      workflowExecutions: [live], workflowActionExecutions: [completedAttention],
+      requests: [{ ...acceptedRequest, branchId: "branch-2" }],
+      quotes: [acceptedQuote],
+    };
+    const crossBranch = summarizeAutomationActivation(base);
+    expect(crossBranch.steps[1].status).toBe("READY");
+    expect(crossBranch.steps[2].status).toBe("READY");
+    expect(crossBranch.steps[3].status).toBe("READY");
+    expect(crossBranch.steps[4].status).toBe("ACTION_REQUIRED");
+    expect(crossBranch.allEvidenceReady).toBe(false);
+
+    const coherent = summarizeAutomationActivation({
+      ...base, requests: [acceptedRequest],
+    });
+    expect(coherent.steps[4].status).toBe("READY");
+    expect(coherent.readyCount).toBe(5);
+    expect(coherent.allEvidenceReady).toBe(true);
   });
 
   it("fails closed when selected branch is not the priced branch, even when some branch is ready", () => {
