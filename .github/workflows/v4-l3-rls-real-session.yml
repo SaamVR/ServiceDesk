@@ -23,7 +23,9 @@ jobs:
         with: { node-version: 22.23.2, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Parse private RLS proof program without connecting
-        run: node --check scripts/release/v4-private-rls-proof.mjs
+        run: |
+          node --check scripts/release/v4-private-rls-proof.mjs
+          node --check scripts/release/v4-operational-rls-positive-negative.mjs
       - name: Auth, owner bootstrap, verified identity and QA seed regression
         run: pnpm exec vitest run tests/e2e/v3-qa-registration-allowlist.test.ts tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-anonymous-definer-closure.test.ts tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts
       - run: pnpm typecheck
@@ -61,4 +63,5 @@ jobs:
           V4_QA_OWNER_B_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_B_EMAIL }}
           V4_QA_OWNER_B_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_B_PASSWORD }}
           V4_QA_OWNER_B_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_B_WORKSPACE }}
+          V4_QA_REQUIRE_OPERATIONAL_EVIDENCE: "1"
         run: node scripts/release/v4-private-rls-proof.mjs
