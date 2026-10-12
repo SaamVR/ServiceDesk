@@ -21,8 +21,9 @@ describe("signed, server-resolved webhook destination", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.url).toBe(destination.url);
-    expect(result.value.headers["x-servicedesk-idempotency-key"]).toBe(job.idempotencyKey);
-    expect(result.value.headers["x-servicedesk-signature"]).toBe(
+    const signedHeaders = result.value.headers ?? {};
+    expect(signedHeaders["x-servicedesk-idempotency-key"]).toBe(job.idempotencyKey);
+    expect(signedHeaders["x-servicedesk-signature"]).toBe(
       "sha256=" + createHmac("sha256", destination.signingSecret)
         .update(JSON.stringify(destination.body)).digest("hex"),
     );
