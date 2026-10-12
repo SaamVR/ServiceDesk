@@ -27,13 +27,13 @@ const passwordKeys=required.filter(name=>name.endsWith("_PASSWORD"));
 const badEmail=emailKeys.filter(name=>{
   const value=process.env[name]??"";
   return value.length>254 || value!==value.trim() ||
-    !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$/i.test(value) ||
+    !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(value) ||
     value.includes("..");
 });
 const badPassword=passwordKeys.filter(name=>{
   const value=process.env[name]??"";
   return value.length<8 || value.length>512 ||
-    /[\\r\\n\\u0000]/.test(value);
+    /[\r\n\u0000]/.test(value);
 });
 const badSlug=slugKeys.filter(name=>process.env[name]&&
     (process.env[name].length>40 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(process.env[name])));
