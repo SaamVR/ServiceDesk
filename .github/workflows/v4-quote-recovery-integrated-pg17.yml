@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/v4-quote-worker-integrated-gate-20261013
+      - feat/v4-quote-recovery-rebased-source-20261013
   workflow_dispatch:
 permissions:
   contents: read
