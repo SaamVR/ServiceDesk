@@ -37,3 +37,21 @@ export async function verifyTwoTenantOperationalRls(actor, foreign, fail) {
     }
   }
 }
+
+/**
+ * QA must prove two *authenticated user identities*, not merely two
+ * workspace slugs or rows. A single owner may legitimately belong to
+ * multiple workspaces; that must never count as two-person tenancy UAT.
+ * Only internal IDs are compared; callers must not log them.
+ */
+export function requireDistinctConfirmedOwnerSessions(a, b, fail) {
+  if (typeof a?.userId !== "string" || !a.userId ||
+      typeof b?.userId !== "string" || !b.userId ||
+      a.userId === b.userId) {
+    fail("DISTINCT_CONFIRMED_OWNER_USERS_REQUIRED");
+  }
+  if (typeof a?.id !== "string" || !a.id ||
+      typeof b?.id !== "string" || !b.id || a.id === b.id) {
+    fail("DISTINCT_WORKSPACE_IDS_REQUIRED");
+  }
+}
