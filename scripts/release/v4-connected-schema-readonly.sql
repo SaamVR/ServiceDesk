@@ -40,7 +40,19 @@ WITH bindings AS (
     AND p.proname = 'servicedesk_setup_owner_cleaning_pricing'
     AND p.oid = to_regprocedure('public.servicedesk_setup_owner_cleaning_pricing(jsonb)')
 ), source AS (
-  SELECT c.relrowsecurity AS rls_enabled
+  SELECT
+    c.relrowsecurity AS rls_enabled,
+    -- A missing role or an inherited client privilege MUST fail closed.
+    NOT (
+      COALESCE(has_table_privilege(to_regrole('anon')::oid, c.oid,
+        'SELECT,INSERT,UPDATE,DELETE'), true)
+      OR COALESCE(has_table_privilege(to_regrole('authenticated')::oid, c.oid,
+        'SELECT,INSERT,UPDATE,DELETE'), true)
+    ) AS client_table_access_denied,
+    NOT EXISTS (
+      SELECT 1 FROM pg_policies
+      WHERE schemaname = 'public' AND tablename = 'workflow_source_events'
+    ) AS client_policy_absent
   FROM pg_class c
   WHERE c.oid = to_regclass('public.workflow_source_events')
 ), proof AS (
@@ -60,7 +72,31 @@ WITH bindings AS (
     to_regprocedure('public.servicedesk_claim_quote_source_events(text,integer)')
       IS NOT NULL AS replay_claim_rpc_installed,
     to_regprocedure('public.servicedesk_complete_quote_source_event(uuid,text,text,text)')
-      IS NOT NULL AS replay_complete_rpc_installed
+      IS NOT NULL AS replay_complete_rpc_installed,
+    (SELECT COALESCE(bool_and(client_table_access_denied AND client_policy_absent),
+      false) FROM source) AS journal_client_access_denied,
+    (
+      COALESCE(NOT has_function_privilege(to_regrole('anon')::oid,
+        to_regprocedure('public.servicedesk_claim_quote_source_events(text,integer)')::oid,
+        'EXECUTE'), false)
+      AND COALESCE(NOT has_function_privilege(to_regrole('authenticated')::oid,
+        to_regprocedure('public.servicedesk_claim_quote_source_events(text,integer)')::oid,
+        'EXECUTE'), false)
+      AND COALESCE(NOT has_function_privilege(to_regrole('anon')::oid,
+        to_regprocedure('public.servicedesk_complete_quote_source_event(uuid,text,text,text)')::oid,
+        'EXECUTE'), false)
+      AND COALESCE(NOT has_function_privilege(to_regrole('authenticated')::oid,
+        to_regprocedure('public.servicedesk_complete_quote_source_event(uuid,text,text,text)')::oid,
+        'EXECUTE'), false)
+    ) AS replay_client_execute_denied,
+    (
+      COALESCE(has_function_privilege(to_regrole('service_role')::oid,
+        to_regprocedure('public.servicedesk_claim_quote_source_events(text,integer)')::oid,
+        'EXECUTE'), false)
+      AND COALESCE(has_function_privilege(to_regrole('service_role')::oid,
+        to_regprocedure('public.servicedesk_complete_quote_source_event(uuid,text,text,text)')::oid,
+        'EXECUTE'), false)
+    ) AS replay_service_execute_allowed
 )
 SELECT jsonb_pretty(jsonb_build_object(
   'schema', 'servicedesk-v4-operator-schema-proof-v1',
@@ -70,15 +106,20 @@ SELECT jsonb_pretty(jsonb_build_object(
   'ownerPricingRpcInstalled', owner_pricing_rpc_installed,
   'quoteSourceJournalInstalled', internal_journal_installed,
   'quoteJournalRlsEnabled', journal_rls_enabled,
+  'quoteJournalClientAccessDenied', journal_client_access_denied,
   'replayClaimRpcInstalled', replay_claim_rpc_installed,
   'replayCompleteRpcInstalled', replay_complete_rpc_installed,
+  'replayRpcClientExecuteDenied', replay_client_execute_denied,
+  'replayRpcServiceExecuteAllowed', replay_service_execute_allowed,
   'coreSchemaState', CASE
     WHEN branch_guard_applied AND owner_pricing_rpc_installed
       THEN 'CORE_SCHEMA_VERIFIED'
     ELSE 'CORE_SCHEMA_BLOCKED' END,
   'quoteRecoverySchemaState', CASE
     WHEN internal_journal_installed AND journal_rls_enabled
+      AND journal_client_access_denied
       AND replay_claim_rpc_installed AND replay_complete_rpc_installed
+      AND replay_client_execute_denied AND replay_service_execute_allowed
       THEN 'RECOVERY_SCHEMA_INSTALLED'
     ELSE 'RECOVERY_MIGRATION_NOT_VERIFIED' END,
   'customerWorkflowAcceptance', 'NOT_TESTED_BY_THIS_QUERY',

@@ -35,6 +35,22 @@ describe("V4 real connected database operator schema evidence", () => {
     expect(sql).toContain("RECOVERY_MIGRATION_NOT_VERIFIED");
     expect(sql).toContain("NOT_TESTED_BY_THIS_QUERY");
   });
+  it("fails recovery readiness closed on client table/RPC access and missing service grants", () => {
+    expect(sql).toContain("quoteJournalClientAccessDenied");
+    expect(sql).toContain("replayRpcClientExecuteDenied");
+    expect(sql).toContain("replayRpcServiceExecuteAllowed");
+    expect(sql).toContain("client_policy_absent");
+    expect(sql).toContain("has_table_privilege(to_regrole('anon')");
+    expect(sql).toContain("has_table_privilege(to_regrole('authenticated')");
+    expect(sql).toContain("has_function_privilege(to_regrole('service_role')");
+    expect(sql).toContain("has_function_privilege(to_regrole('anon')");
+    expect(sql).toContain("has_function_privilege(to_regrole('authenticated')");
+    expect(sql).toContain("COALESCE(");
+    expect(sql).toContain("AND journal_client_access_denied");
+    expect(sql).toContain("AND replay_client_execute_denied AND replay_service_execute_allowed");
+    expect(sql).not.toContain("GRANT EXECUTE");
+  });
+
   it("executes the operator report in real disposable PG17 CI", () => {
     expect(workflow).toContain("postgres:17");
     expect(workflow).toContain("v4-connected-schema-readonly.sql");
