@@ -1,15 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { parseSavedAiRequestBrief, type SavedAiRequestBrief } from "./ai-request-brief-contract";
 import styles from "./AiRequestBrief.module.css";
 
-type Brief = {
-  state: "AI_DRAFT_REQUIRES_REVIEW";
-  requestId: string;
-  model: string;
-  briefing: string;
-  source: "AUTHORIZED_SAVED_REQUEST";
-};
+type Brief = SavedAiRequestBrief;
 
 export function AiRequestBrief({
   workspaceSlug, requestId, configured,
@@ -21,6 +16,11 @@ export function AiRequestBrief({
   // React can reuse this panel as the operator switches requests or tenants.
   // Previous asynchronous results must never appear under a different scope.
   const scopeKey = workspaceSlug + "\\0" + requestId;
+  const controller = useRef<AbortController | null>(null);
+  // Abort the previous browser request on tenant/request change or unmount.
+  // The server may have completed the model call; the client never uses
+  // results from an abandoned or switched context.
+  useEffect(() => () => controller.current?.abort(), [scopeKey]);
   const [status, setStatus] = useState<{
     scopeKey: string; busy: boolean; brief?: Brief; error?: string;
   }>();
@@ -31,6 +31,14 @@ export function AiRequestBrief({
 
   async function generate() {
     if (!configured || busy) return;
+    controller.current?.abort();
+    const pending = new AbortController();
+    controller.current = pending;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      pending.abort();
+    }, 20_000);
     const submittedScope = scopeKey;
     setStatus({ scopeKey: submittedScope, busy: true });
     let verifiedBrief: Brief | undefined;
@@ -40,29 +48,37 @@ export function AiRequestBrief({
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", accept: "application/json" },
         body: JSON.stringify({ workspaceSlug, requestId }),
+        signal: pending.signal,
       });
-      const result: unknown = await response.json();
-      if (!response.ok || !result || typeof result !== "object" ||
-          (result as Brief).state !== "AI_DRAFT_REQUIRES_REVIEW" ||
-          (result as Brief).source !== "AUTHORIZED_SAVED_REQUEST" ||
-          (result as Brief).requestId !== requestId ||
-          typeof (result as Brief).model !== "string" ||
-          !(result as Brief).model.trim() ||
-          typeof (result as Brief).briefing !== "string" ||
-          !(result as Brief).briefing.trim() ||
-          (result as Brief).briefing.length > 900) {
+      if (!response.ok ||
+          !response.headers.get("content-type")?.toLowerCase().includes("application/json")) {
         message = "AI couldn't prepare a verified request brief. Use the saved request details instead.";
       } else {
-        verifiedBrief = result as Brief;
+        const result: unknown = await response.json();
+        const parsed = parseSavedAiRequestBrief(result, requestId);
+        if (!parsed) {
+          message = "AI couldn't prepare a verified request brief. Use the saved request details instead.";
+        } else {
+          verifiedBrief = parsed;
+        }
       }
     } catch {
-      message = "The AI connection couldn't be reached. No request or customer record was changed.";
+      if (timedOut) {
+        message = "The AI request timed out. You can retry; no request or customer record was changed.";
+      } else if (!pending.signal.aborted) {
+        message = "The AI connection couldn't be reached. No request or customer record was changed.";
+      }
     } finally {
-      setStatus(previous => previous?.scopeKey === submittedScope
-        ? { scopeKey: submittedScope, busy: false, brief: verifiedBrief, error: message }
-        : previous);
+      clearTimeout(timeout);
+      if (controller.current === pending) controller.current = null;
+      // An intentional abort due to navigation must not render old content.
+      if (!pending.signal.aborted || timedOut) {
+        setStatus(previous => previous?.scopeKey === submittedScope
+          ? { scopeKey: submittedScope, busy: false, brief: verifiedBrief, error: message }
+          : previous);
+      }
     }
   }
 
