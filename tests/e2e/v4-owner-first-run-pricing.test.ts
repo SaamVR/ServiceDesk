@@ -161,6 +161,12 @@ describe("V4 first-run owner cleaning price configuration",()=>{
     expect(sql).toContain("from public.branch_price_books");
     expect(sql).toContain("pg_advisory_xact_lock");
     expect(sql).toContain("on conflict (workspace_id,code) do update");
+    expect(sql).toContain("sc.active is distinct from true");
+    expect(sql).toContain("v_existing.deposit_percent = (p_input->>'depositPercent')::integer");
+    expect(sql).toContain("v_existing.valid_hours = (p_input->>'validHours')::integer");
+    expect(sql).toContain("v_existing.buffer_minutes = (p_input->>'bufferMinutes')::integer");
+    expect(sql.indexOf("sc.active is distinct from true"))
+      .toBeLessThan(sql.indexOf("insert into public.service_catalog"));
     expect(sql).toContain("sc.name=trim(v_names->>'STANDARD')");
     expect(sql).toContain("from public,anon,authenticated");
     expect(sql).toContain("to service_role");
