@@ -1,3 +1,4 @@
+import { verifiedPricedOwnerBranchIds } from "./verified-owner-price-evidence";
 import { createHash, randomBytes } from "node:crypto";
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -770,21 +771,31 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   if (!resolved.ok) return resolved;
   const { workspace, actor, service, rpc, branchScope } = resolved.value;
 
-  // Pricing readiness must come from persisted branch price books, not the
-  // number of catalog services. Query only for a verified owner session.
-  const ownerPriceBookRead = actor.role === "OWNER"
-    ? await service.from("branch_price_books")
-      .select("branch_id,active").eq("workspace_id", workspace.id)
-      .eq("active", true).limit(201)
-    : null;
+  // A bare active book cannot prove the business has an effective price.
+  const ownerPriceReads = actor.role === "OWNER" ? await Promise.all([
+    service.from("branch_price_books")
+      .select("branch_id,rate_card_id,active,starts_at,ends_at")
+      .eq("workspace_id", workspace.id).eq("active", true).limit(201),
+    service.from("rate_cards").select("id,currency,active,rules")
+      .eq("workspace_id", workspace.id).eq("active", true).limit(201),
+    service.from("service_catalog").select("id,code,active")
+      .eq("workspace_id", workspace.id).eq("active", true).limit(201),
+  ]) : null;
+  const priceSourcesValid = ownerPriceReads !== null &&
+    ownerPriceReads.every(read => !read.error &&
+      Array.isArray(read.data) && read.data.length < 201);
   const ownerPricingBookProof = actor.role !== "OWNER" ? undefined
-    : ownerPriceBookRead?.error || !Array.isArray(ownerPriceBookRead?.data)
-      || ownerPriceBookRead.data.length >= 201
+    : !priceSourcesValid || !ownerPriceReads ||
+      !Array.isArray(ownerPriceReads[0].data) ||
+      !Array.isArray(ownerPriceReads[1].data) ||
+      !Array.isArray(ownerPriceReads[2].data)
       ? { state: "UNAVAILABLE" as const, activeBranchIds: [] }
       : { state: "VERIFIED" as const,
-          activeBranchIds: ownerPriceBookRead.data
-            .filter((row) => row.active === true && typeof row.branch_id === "string")
-            .map((row) => row.branch_id as string) };
+          activeBranchIds: verifiedPricedOwnerBranchIds({
+            books: ownerPriceReads[0].data,
+            cards: ownerPriceReads[1].data,
+            services: ownerPriceReads[2].data,
+          }) };
 
   const tableReads = await Promise.all([
     service
