@@ -74,9 +74,13 @@ export async function verifyOwnerQuoteAutomationPrerequisites(
       service.from("workflow_rules").select("id,branch_id,published_version_number,status")
         .eq("workspace_id", trustedWorkspaceId).eq("status", "ACTIVE").limit(201),
     ]);
-    const lists = [catalog, branches, books, rateCards, rules];
-    if (lists.some(result => result.error || !Array.isArray(result.data) ||
-        result.data.length >= 201)) return unverified();
+    if (catalog.error || branches.error || books.error ||
+        rateCards.error || rules.error ||
+        !Array.isArray(catalog.data) || catalog.data.length >= 201 ||
+        !Array.isArray(branches.data) || branches.data.length >= 201 ||
+        !Array.isArray(books.data) || books.data.length >= 201 ||
+        !Array.isArray(rateCards.data) || rateCards.data.length >= 201 ||
+        !Array.isArray(rules.data) || rules.data.length >= 201) return unverified();
 
     const supportedServices = new Set(catalog.data
       .filter(row => uuid(row.id) && row.active === true &&
