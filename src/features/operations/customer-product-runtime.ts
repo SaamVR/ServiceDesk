@@ -9,6 +9,7 @@ import { createCustomerBookingFactory } from "@/features/schedule/customer-booki
 import { FixtureStripePaymentAdapter, signStripeFixturePayload } from "@/server/integrations/payments/adapter";
 import { createPaymentWebhookApplicationStore } from "@/server/integrations/payments/core-application-bridge";
 import { handleStripePaymentWebhook } from "@/server/api-handlers/provider-stripe";
+import { runTrustedAcceptedQuoteInternalAutomation } from "@/server/workflows/customer-quote-accepted-bridge";
 
 type Row = Record<string, unknown>;
 
@@ -527,9 +528,30 @@ export async function acceptCustomerPortalQuote(quoteId: string): Promise<Custom
     expectedVersion: quote.version,
   });
 
-  return result.ok
-    ? { ok: true, message: "Quote accepted. The next step is scheduling." }
-    : { ok: false, message: result.message };
+  if (!result.ok) return { ok: false, message: result.message };
+
+  // Owner-published, internal attention automation is an explicit server
+  // configuration opt-in. A customer must never be empowered to choose a
+  // rule, workspace or external send. Post-accept failure cannot invalidate
+  // the already persisted quote; owners can replay via Studio.
+  if (process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED === "true") {
+    try {
+      const followUp = await runTrustedAcceptedQuoteInternalAutomation({
+        workspaceId: resolved.value.workspace.id,
+        customerId: resolved.value.customer.id,
+        quoteId: result.value.id,
+        service: resolved.value.service,
+        rpc: resolved.value.rpc,
+      });
+      if (!followUp.ok) {
+        // Error codes only: no customer/request details in operational logs.
+        console.error("SERVICEDESK_QUOTE_FOLLOWUP_NOT_VERIFIED", followUp.code);
+      }
+    } catch {
+      console.error("SERVICEDESK_QUOTE_FOLLOWUP_UNAVAILABLE");
+    }
+  }
+  return { ok: true, message: "Quote accepted. The next step is scheduling." };
 }
 
 export async function holdCustomerPortalSlot(quoteId: string, slotId: string): Promise<CustomerPortalActionResult> {
