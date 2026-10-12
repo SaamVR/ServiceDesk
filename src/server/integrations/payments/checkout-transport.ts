@@ -51,6 +51,31 @@ function validateHttpsUrl(value: string): boolean {
   }
 }
 
+/** Stripe must return its own hosted checkout, not an arbitrary HTTPS redirect. */
+function validatedStripeCheckoutUrl(value: string): boolean {
+  if (!value || value.trim() !== value || value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "checkout.stripe.com" &&
+      !url.port && !url.username && !url.password && !url.hash &&
+      url.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
+
+function authorizedStripeApiBase(value: string): boolean {
+  if (!value || value.trim() !== value) return false;
+  try {
+    const url = new URL(value);
+    return url.origin === "https://api.stripe.com" &&
+      (url.pathname === "/" || url.pathname === "") &&
+      !url.username && !url.password && !url.port && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
+}
+
 function baseUrl(config: StripeCheckoutTransportConfig): string {
   return config.apiBaseUrl.replace(/\/+$/, "");
 }
@@ -101,7 +126,7 @@ function normalizedFailure(status: number): Result<never> {
   return { ok: false, code: "PAYMENT_PROVIDER_REJECTED", message: "Payment provider rejected the checkout request." };
 }
 
-function parseCheckoutResponse(body: string): Result<{ id: string; url: string }> {
+function parseCheckoutResponse(body: string, mode: ProviderMode): Result<{ id: string; url: string }> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(body);
@@ -111,7 +136,9 @@ function parseCheckoutResponse(body: string): Result<{ id: string; url: string }
 
   const id = (parsed as { id?: unknown }).id;
   const url = (parsed as { url?: unknown }).url;
-  if (typeof id !== "string" || !id.trim() || typeof url !== "string" || !validateHttpsUrl(url)) {
+  if (typeof id !== "string" || !/^cs_(?:test|live)_[A-Za-z0-9_]+$/.test(id) ||
+      (mode === "LIVE" ? !id.startsWith("cs_live_") : !id.startsWith("cs_test_")) ||
+      typeof url !== "string" || !validatedStripeCheckoutUrl(url)) {
     return { ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID", message: "Payment provider checkout response is missing a valid session ID or URL." };
   }
 
@@ -161,8 +188,11 @@ export async function createStripeCheckoutSession(
   config: StripeCheckoutTransportConfig,
   http: StripeCheckoutHttpTransport,
 ): Promise<Result<CheckoutSession>> {
-  if (!config.apiBaseUrl || !config.secretKey) {
-    return { ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED", message: "Payment checkout configuration is incomplete." };
+  if (!config.apiBaseUrl || !config.secretKey ||
+      !authorizedStripeApiBase(config.apiBaseUrl) ||
+      (config.mode === "SANDBOX" && !/^(?:sk|rk)_test_/.test(config.secretKey)) ||
+      (config.mode === "LIVE" && !/^(?:sk|rk)_live_/.test(config.secretKey))) {
+    return { ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED", message: "Payment checkout configuration is incomplete or not valid for the selected provider mode." };
   }
 
   if (input.purpose === "DEPOSIT") {
@@ -207,7 +237,7 @@ export async function createStripeCheckoutSession(
     });
 
     if (response.status < 200 || response.status >= 300) return normalizedFailure(response.status);
-    const parsed = parseCheckoutResponse(response.body);
+    const parsed = parseCheckoutResponse(response.body, config.mode);
     if (!parsed.ok) return parsed;
 
     return {

@@ -46,7 +46,7 @@ describe("Stripe-style checkout transport", () => {
       captured = request;
       return {
         status: 200,
-        body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.test/session/cs_test_123" }),
+        body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.com/session/cs_test_123" }),
       };
     });
 
@@ -70,7 +70,7 @@ describe("Stripe-style checkout transport", () => {
       expect(result.value).toMatchObject({
         provider: "STRIPE",
         providerSessionId: "cs_test_123",
-        checkoutUrl: "https://checkout.stripe.test/session/cs_test_123",
+        checkoutUrl: "https://checkout.stripe.com/session/cs_test_123",
         amountMinor: 8500,
         currency: "USD",
         mode: "SANDBOX",
@@ -98,6 +98,48 @@ describe("Stripe-style checkout transport", () => {
     expect(badUrl).toMatchObject({ ok: false, code: "CHECKOUT_REDIRECT_URL_INVALID" });
     expect(calls).toHaveLength(0);
   });
+
+  test.each([
+    { id: "cs_test_123", url: "https://attacker.example/checkout" },
+    { id: "cs_test_123", url: "https://checkout.stripe.com.attacker.org/session/123" },
+    { id: "cs_test_123", url: "https://someone:secret@checkout.stripe.com/session/123" },
+    { id: "cs_test_123", url: "https://checkout.stripe.com:8443/session/123" },
+    { id: "cs_test_123", url: "https://checkout.stripe.com/session/123#fragment" },
+    { id: "cs_test_123", url: "http://checkout.stripe.com/session/123" },
+    { id: "fake_123", url: "https://checkout.stripe.com/session/123" },
+  ])("rejects unverified hosted-checkout destination: %j", async ({ id, url }) => {
+    const result = await createStripeCheckoutSession(input(), config, async () => ({
+      status: 200, body: JSON.stringify({ id, url }),
+    }));
+    expect(result).toMatchObject({ ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID" });
+    expect(JSON.stringify(result)).not.toContain("sk_test_secret_value");
+  });
+
+  test("sandbox cannot return a real-money checkout session even from Stripe's host", async () => {
+    const result = await createStripeCheckoutSession(input(), config, async () => ({
+      status: 200,
+      body: JSON.stringify({ id: "cs_live_123", url: "https://checkout.stripe.com/c/pay/123" }),
+    }));
+    expect(result).toMatchObject({ ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID" });
+  });
+
+  test.each([
+    { apiBaseUrl: "https://attacker.example", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "https://api.stripe.com.attacker.org", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "https://someone:secret@api.stripe.com", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "https://api.stripe.com:8443", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "http://api.stripe.com", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "https://api.stripe.com", secretKey: "sk_live_unsafe_real_key" },
+  ])("never sends Stripe authorization to wrong origin or with live key in sandbox: %j",
+    async ({ apiBaseUrl, secretKey }) => {
+      let called = 0;
+      const result = await createStripeCheckoutSession(input(), { ...config, apiBaseUrl, secretKey },
+        async () => { called++; return { status: 200, body: "{}" }; });
+      expect(result).toMatchObject({ ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED" });
+      expect(called).toBe(0);
+      expect(JSON.stringify(result)).not.toContain(secretKey);
+    },
+  );
 
   test("normalizes provider auth, rate-limit, invalid request, timeout, and malformed success response", async () => {
     await expect(createStripeCheckoutSession(input(), config, async () => ({ status: 401, body: "{}" }))).resolves.toMatchObject({ ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED" });
