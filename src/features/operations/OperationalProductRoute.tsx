@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
+import { setupAuthorizedCleaningPricing } from "@/server/core/owner-cleaning-pricing-setup";
+import { OwnerCleaningPricingSetupForm } from "./OwnerCleaningPricingSetupForm";
 import { queueApprovedInboxReply } from "@/server/core/reviewed-inbox-reply";
 import { runOwnerSavedRequestAutomation } from "@/server/workflows/owner-request-automation";
 import {
@@ -3424,6 +3426,15 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     return <EmptyState title="Settings unavailable" detail="Workspace settings are temporarily unavailable." />;
   }
 
+  async function firstRunCleaningPricingAction(formData: FormData) {
+    "use server";
+    const setup = await setupAuthorizedCleaningPricing(workspaceSlug, formData);
+    const result: OperationalActionResult = setup.ok
+      ? { ok: true, message: "Real cleaning services, owner-entered rates and branch pricing are saved and verified. No customer messages were sent." }
+      : { ok: false, message: setup.message };
+    actionRedirect(workspaceSlug, "settings", result, "section=services&");
+  }
+
   async function serviceCatalogAction(formData: FormData) {
     "use server";
     const result = await updateOperationalServiceCatalogItem(workspaceSlug, {
@@ -3628,6 +3639,12 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
               </div>
               <StatusBadge tone="neutral">{activeServices} active</StatusBadge>
             </div>
+
+            {data.actor.role === "OWNER" &&
+              data.serviceCatalog.filter(service => service.active &&
+                ["STANDARD", "DEEP", "MOVE_OUT"].includes(service.code)).length < 3 ? (
+              <OwnerCleaningPricingSetupForm scope={data.branchScope} action={firstRunCleaningPricingAction} />
+            ) : null}
 
             {data.serviceCatalog.length === 0 ? (
               <div className={styles.settingsEmpty}>
