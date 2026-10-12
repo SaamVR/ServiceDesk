@@ -3,7 +3,7 @@ name: ServiceDesk V4 QA session RLS proof
 # require two distinct existing, email-confirmed fictional owner accounts.
 on:
   push:
-    branches: [feat/servicedesk-v4-l3-auth-rc-20261012, feat/servicedesk-v4-real-rls-uat-20261012, feat/servicedesk-v4-protected-qa-preflight-20261012]
+    branches: [feat/servicedesk-v4-l3-auth-rc-20261012, feat/servicedesk-v4-real-rls-uat-20261012, feat/servicedesk-v4-protected-qa-preflight-20261012, feat/v4-two-tenant-real-operations-rls-proof-20261012]
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +26,7 @@ jobs:
         run: |
           node --check scripts/release/v4-private-rls-proof.mjs
           node --check scripts/release/v4-operational-rls-positive-negative.mjs
+          node --test scripts/release/v4-operational-rls-positive-negative.test.mjs
       - name: Auth, owner bootstrap, verified identity and QA seed regression
         run: pnpm exec vitest run tests/e2e/v3-qa-registration-allowlist.test.ts tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-anonymous-definer-closure.test.ts tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts
       - run: pnpm typecheck
