@@ -109,11 +109,11 @@ async function main() {
         "sec-fetch-site": "cross-site" },
       body: fictionalAiRequest, status: 403, code: "SAME_ORIGIN_REQUIRED" },
     { name: "invalid-role-injection",
-      headers: { "content-type": "application/json", origin },
+      headers: { "content-type": "application/json", origin, "sec-fetch-site": "same-origin" },
       body: JSON.stringify({ ...JSON.parse(fictionalAiRequest), role: "OWNER" }),
       status: 400, code: "REQUEST_SCHEMA_INVALID" },
     { name: "no-staff-session",
-      headers: { "content-type": "application/json", origin },
+      headers: { "content-type": "application/json", origin, "sec-fetch-site": "same-origin" },
       body: fictionalAiRequest, status: 401, code: "AI_STAFF_UNAUTHORIZED" },
   ];
   for (const attempt of staffAiCases) {
