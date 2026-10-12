@@ -38,7 +38,7 @@ function handler(recorded: StripeCheckoutHttpRequest[] = []) {
             config: { apiBaseUrl: "https://api.stripe.test", secretKey: "sk_test_server_only", mode: "SANDBOX", now: () => now },
             http: async (request: StripeCheckoutHttpRequest) => {
               recorded.push(request);
-              return { status: 200, body: JSON.stringify({ id: "cs_test_hold_1_deposit", url: "https://checkout.stripe.test/cs_test_hold_1_deposit" }) };
+              return { status: 200, body: JSON.stringify({ id: "cs_test_hold_1_deposit", url: "https://checkout.stripe.com/cs_test_hold_1_deposit" }) };
             },
           },
         };
