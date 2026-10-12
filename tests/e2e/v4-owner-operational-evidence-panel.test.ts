@@ -115,6 +115,84 @@ describe("V4 owner live operational evidence, never synthetic proof", () => {
     })).completedInternalAttention).toBeNull();
   });
 
+  it("does not include foreign branch records when owner explicitly selected one branch", () => {
+    const onlyNorth = {
+      mode: "BRANCH", selectedBranchId: "north",
+      branches: [{ id: "north", code: "US-N", name: "North",
+        timezone: "America/New_York", currency: "USD" }],
+    };
+    const results = summarizeOwnerOperationalEvidence(values({
+      branchScope: onlyNorth,
+      requests: [
+        { id: "north-req", branchId: "north" },
+        { id: "south-req", branchId: "south" },
+      ],
+      quotes: [
+        quote("north-quote", "north-req", "ACCEPTED"),
+        quote("south-quote", "south-req", "ACCEPTED"),
+      ],
+      visits: [
+        { id: "good", requestId: "north-req", quoteId: "north-quote", branchId: "north" },
+        { id: "foreign", requestId: "south-req", quoteId: "south-quote", branchId: "south" },
+        { id: "mismatch", requestId: "north-req", quoteId: "north-quote", branchId: "south" },
+      ],
+      invoices: [
+        { id: "i1", quoteId: "north-quote", visitId: "good" },
+        { id: "i2", quoteId: "north-quote", visitId: "mismatch" },
+        { id: "i3", quoteId: "south-quote", visitId: "foreign" },
+      ],
+      workflowAvailable: true,
+      workflowExecutions: [
+        { id: "north-execution", mode: "LIVE", eventType: "QUOTE_ACCEPTED",
+          matched: true, state: "COMPLETED", branchId: "north" },
+        { id: "south-execution", mode: "LIVE", eventType: "QUOTE_ACCEPTED",
+          matched: true, state: "COMPLETED", branchId: "south" },
+      ],
+      workflowActionExecutions: [
+        { executionId: "north-execution", branchId: "north",
+          actionType: "CREATE_ATTENTION", state: "SUCCEEDED" },
+        { executionId: "south-execution", branchId: "south",
+          actionType: "CREATE_ATTENTION", state: "SUCCEEDED" },
+      ],
+    } as unknown as Partial<Snapshot>));
+    expect(results).toEqual({
+      savedRequests: 1, sentQuotes: 1, acceptedQuotes: 1,
+      recordedVisits: 1, savedInvoices: 1, completedInternalAttention: 1,
+    });
+  });
+
+  it("does not credit a same-workspace invoice linked to another visit or accepted quote", () => {
+    const results = summarizeOwnerOperationalEvidence(values({
+      requests: [request("req-a")],
+      quotes: [quote("accepted", "req-a", "ACCEPTED")],
+      visits: [{ id: "visit-good", requestId: "req-a", quoteId: "accepted" }],
+      invoices: [
+        { id: "good", quoteId: "accepted", visitId: "visit-good" },
+        { id: "unlinked", quoteId: "accepted", visitId: "visit-other" },
+        { id: "legacy", quoteId: "accepted" },
+      ],
+    } as unknown as Partial<Snapshot>));
+    expect(results.savedInvoices).toBe(2);
+  });
+
+  it("never upgrades an undefined or unauthorized selected branch into visible success", () => {
+    const result = summarizeOwnerOperationalEvidence(values({
+      branchScope: { mode: "BRANCH", selectedBranchId: "north",
+        branches: [{id:"north",code:"US-N",name:"North",
+          timezone:"America/New_York",currency:"USD"}]},
+      requests: [{id:"unknown", status:"NEW"},{id:"foreign",status:"NEW",branchId:"south"}],
+      quotes: [quote("q", "foreign", "ACCEPTED")],
+      workflowAvailable: true,
+      workflowExecutions: [{ id:"x", branchId:"south", mode:"LIVE",
+        eventType:"QUOTE_ACCEPTED",matched:true,state:"COMPLETED" }],
+      workflowActionExecutions: [{ executionId:"x",branchId:"south",
+        actionType:"CREATE_ATTENTION",state:"SUCCEEDED" }],
+    } as unknown as Partial<Snapshot>));
+    expect(result.savedRequests).toBe(0);
+    expect(result.acceptedQuotes).toBe(0);
+    expect(result.completedInternalAttention).toBe(0);
+  });
+
   it("UI is read-only and links owners to real modules, with no fabricated provider receipts", () => {
     const ui = readFileSync(join(process.cwd(),
       "src/features/onboarding/OnboardingOperationalEvidencePanel.tsx"), "utf8");
