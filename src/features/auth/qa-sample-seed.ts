@@ -42,6 +42,20 @@ export async function seedQaWorkspaceData(
   const branchId = branch.data?.id;
   if (branch.error || !isUuid(branchId)) return { ok: false, stage: "branch" };
 
+  // The QA customer may be seeded before the owner configures pricing. An
+  // active MOVE_OUT service is optional, but when it exists the saved request
+  // must point to its actual tenant-bound FK so it can reach real quoting.
+  const catalog = await auth.from("service_catalog")
+    .select("id,code,active")
+    .eq("workspace_id", workspace.id)
+    .eq("code", "MOVE_OUT")
+    .maybeSingle();
+  if (catalog.error) return { ok: false, stage: "request" };
+  const configuredServiceId = catalog.data?.active === true ? catalog.data.id : null;
+  if (configuredServiceId !== null && !isUuid(configuredServiceId)) {
+    return { ok: false, stage: "request" };
+  }
+
   let reused = true;
   const existingCustomers = await auth.from("customers")
     .select("id")
@@ -99,7 +113,7 @@ export async function seedQaWorkspaceData(
   if (!isUuid(propertyId)) return { ok: false, stage: "property" };
 
   const existingRequests = await auth.from("requests")
-    .select("id")
+    .select("id,service_id")
     .eq("workspace_id", workspace.id)
     .eq("customer_id", customerId)
     .eq("property_id", propertyId)
@@ -109,6 +123,27 @@ export async function seedQaWorkspaceData(
     return { ok: false, stage: "request" };
   }
   let requestId = existingRequests.data?.[0]?.id;
+  if (requestId && configuredServiceId && existingRequests.data?.[0]?.service_id !== configuredServiceId) {
+    if (existingRequests.data?.[0]?.service_id != null) {
+      // A previous service reference may have been intentionally assigned.
+      // Do not overwrite it with a different service when a QA seed is retried.
+      return { ok: false, stage: "request" };
+    }
+    const amended = await auth.from("requests")
+      .update({ service_id: configuredServiceId })
+      .eq("id", requestId)
+      .eq("workspace_id", workspace.id)
+      .eq("customer_id", customerId)
+      .eq("property_id", propertyId)
+      .is("service_id", null)
+      .select("id,service_id")
+      .maybeSingle();
+    if (amended.error || amended.data?.id !== requestId ||
+        amended.data?.service_id !== configuredServiceId) {
+      return { ok: false, stage: "request" };
+    }
+    reused = false;
+  }
   if (!requestId) {
     const created = await auth.from("requests")
       .insert({
@@ -118,6 +153,7 @@ export async function seedQaWorkspaceData(
         property_id: propertyId,
         bedrooms: 3,
         bathrooms: 2,
+        ...(configuredServiceId ? { service_id: configuredServiceId } : {}),
         status: "NEW",
         structured_fields: QA_SEED_FIELDS,
       })
@@ -139,7 +175,7 @@ export async function seedQaWorkspaceData(
     auth.from("properties").select("id")
       .eq("id", propertyId).eq("workspace_id", workspace.id)
       .eq("customer_id", customerId).eq("branch_id", branchId).maybeSingle(),
-    auth.from("requests").select("id")
+    auth.from("requests").select("id,service_id")
       .eq("id", requestId).eq("workspace_id", workspace.id)
       .eq("customer_id", customerId).eq("property_id", propertyId)
       .eq("branch_id", branchId)
@@ -152,7 +188,8 @@ export async function seedQaWorkspaceData(
   if (propertyProof.error || propertyProof.data?.id !== propertyId) {
     return { ok: false, stage: "property" };
   }
-  if (requestProof.error || requestProof.data?.id !== requestId) {
+  if (requestProof.error || requestProof.data?.id !== requestId ||
+      (configuredServiceId && requestProof.data.service_id !== configuredServiceId)) {
     return { ok: false, stage: "request" };
   }
 

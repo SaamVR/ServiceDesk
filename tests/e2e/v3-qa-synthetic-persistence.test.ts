@@ -7,6 +7,7 @@ import { QA_SEED_FIELDS, QA_SEED_SOURCE, seedQaWorkspaceData } from "@/features/
 type Row = Record<string, unknown>;
 const workspaceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const branchId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const serviceId = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 const fakeIds = [
   "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
   "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
@@ -17,6 +18,7 @@ const workspace = { id: workspaceId, slug: "qa-brightroom" };
 function database(options: { noBranch?: boolean; deny?: string; denyAfterSeedRead?: string } = {}) {
   const data: Record<string, Row[]> = {
     workspace_branches: options.noBranch ? [] : [{ id: branchId, workspace_id: workspaceId, code: "MAIN" }],
+    service_catalog: [],
     customers: [], properties: [], requests: [],
   };
   const writes: Array<{ table: string; row: Row }> = [];
@@ -26,6 +28,7 @@ function database(options: { noBranch?: boolean; deny?: string; denyAfterSeedRea
       if (!(table in data)) throw new Error("Unexpected table: " + table);
       const predicates: Array<(row: Row) => boolean> = [];
       let adding: Row | undefined;
+      let updating: Row | undefined;
       const result = (single = false) => {
         if (options.deny === table || (options.denyAfterSeedRead === table && writes.length === 3 && !adding)) {
           return { data: null, error: { code: "42501" } };
@@ -37,6 +40,12 @@ function database(options: { noBranch?: boolean; deny?: string; denyAfterSeedRea
           return { data: row, error: null };
         }
         const found = data[table].filter(row => predicates.every(testRow => testRow(row)));
+        if (updating) {
+          if (!found[0]) return { data: null, error: null };
+          Object.assign(found[0], updating);
+          writes.push({ table, row: { ...updating } });
+          return { data: found[0], error: null };
+        }
         if (single) return { data: found[0] ?? null, error: null };
         return { data: found, error: null };
       };
@@ -52,6 +61,11 @@ function database(options: { noBranch?: boolean; deny?: string; denyAfterSeedRea
           return q;
         },
         insert(input: Row) { adding = input; return q; },
+        update(input: Row) { updating = input; return q; },
+        is(key: string, value: unknown) {
+          predicates.push(row => row[key] == value);
+          return q;
+        },
         limit() { return Promise.resolve(result()); },
         single() { return Promise.resolve(result(true)); },
         maybeSingle() { return Promise.resolve(result(true)); },
@@ -86,6 +100,42 @@ describe("QA-only authenticated RLS synthetic business seed", () => {
     expect(second).toMatchObject({ ok: true, reused: true });
     expect(db.writes).toHaveLength(3);
     expect(second.ok && first.ok && second.customerId).toBe(first.ok && first.customerId);
+  });
+
+  it("uses only an active, same-workspace MOVE_OUT service for a new synthetic request", async () => {
+    const db = database();
+    db.data.service_catalog.push({
+      id: serviceId, workspace_id: workspaceId, code: "MOVE_OUT", active: true,
+    });
+    const seeded = await seedQaWorkspaceData(db.client, workspace);
+    expect(seeded).toMatchObject({ ok: true, reused: false });
+    expect(db.data.requests[0]).toMatchObject({ service_id: serviceId, branch_id: branchId });
+    expect(db.writes).toHaveLength(3);
+  });
+
+  it("upgrades a previously unpriced saved QA request after the owner activates a real catalog", async () => {
+    const db = database();
+    expect(await seedQaWorkspaceData(db.client, workspace)).toMatchObject({ ok: true });
+    expect(db.data.requests[0].service_id).toBeUndefined();
+    db.data.service_catalog.push({ id: serviceId, workspace_id: workspaceId, code: "MOVE_OUT", active: true });
+    const second = await seedQaWorkspaceData(db.client, workspace);
+    expect(second).toMatchObject({ ok: true, reused: false });
+    expect(db.data.requests[0].service_id).toBe(serviceId);
+    expect(db.writes.map(x => x.table)).toEqual(["customers","properties","requests","requests"]);
+    expect(await seedQaWorkspaceData(db.client, workspace)).toMatchObject({ ok: true, reused: true });
+    expect(db.writes).toHaveLength(4);
+  });
+
+  it("never adopts inactive or foreign-workspace catalog IDs in QA requests", async () => {
+    const inactive = database();
+    inactive.data.service_catalog.push({ id: serviceId, workspace_id: workspaceId, code: "MOVE_OUT", active: false });
+    expect(await seedQaWorkspaceData(inactive.client, workspace)).toMatchObject({ ok: true });
+    expect(inactive.data.requests[0].service_id).toBeUndefined();
+
+    const foreign = database();
+    foreign.data.service_catalog.push({ id: serviceId, workspace_id: "other-workspace", code: "MOVE_OUT", active: true });
+    expect(await seedQaWorkspaceData(foreign.client, workspace)).toMatchObject({ ok: true });
+    expect(foreign.data.requests[0].service_id).toBeUndefined();
   });
 
   it("fails closed without the owner's MAIN branch or valid workspace ID", async () => {
