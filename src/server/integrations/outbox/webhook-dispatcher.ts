@@ -35,12 +35,33 @@ export interface WebhookDispatchResponse {
 export type WebhookDispatchTransport = (request: WebhookDispatchRequest) => Promise<WebhookDispatchResponse>;
 
 function validUrl(value: string): boolean {
+  if (!value || value.length > 2048 || value.trim() !== value) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "https:";
+    const host = url.hostname.toLowerCase();
+    // Defense at the final dispatch port, not just at the resolver. Webhook
+    // secrets, client data and request metadata must not reach loopback,
+    // metadata IPs, credentialed or non-HTTPS destinations.
+    return url.protocol === "https:" && !url.username && !url.password &&
+      !url.port && !url.hash &&
+      /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(host) &&
+      !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host) &&
+      ![".local", ".localhost", ".internal"].some(suffix => host.endsWith(suffix));
   } catch {
     return false;
   }
+}
+
+function headersAreSafe(headers: Record<string, string>): boolean {
+  const prohibited = new Set([
+    "host", "connection", "proxy-authorization", "proxy-connection",
+    "transfer-encoding", "content-length", "te", "trailer", "upgrade",
+  ]);
+  return Object.entries(headers).every(([name, value]) =>
+    /^[a-z0-9!#$%&'*+.^_`|~-]+$/i.test(name) &&
+    !prohibited.has(name.toLowerCase()) &&
+    typeof value === "string" && value.length <= 4096 &&
+    !/[\r\n\u0000]/.test(value));
 }
 
 function fallbackEvidence(job: OutboxJob, endpointId: string, capturedAt: string): RedactedProviderEvidence {
@@ -73,10 +94,15 @@ export class WebhookCommittedOutboxDispatcher implements CommittedOutboxDispatch
     if (input.job.channel !== "WEBHOOK" || input.expectedChannel !== "WEBHOOK") {
       return { ok: true, value: classifyProviderFailure({ job: input.job, code: "CHANNEL_MISMATCH", message: "Webhook dispatcher received a non-webhook outbox job." }) };
     }
+    if (input.expectedWorkspaceId && input.expectedWorkspaceId !== input.job.workspaceId) {
+      return { ok: true, value: classifyProviderFailure({ job: input.job,
+        code: "WORKSPACE_MISMATCH", message: "Webhook outbox job is not owned by the expected workspace." }) };
+    }
 
     const resolved = await this.resolver.resolve(input.job);
     if (!resolved.ok) return { ok: true, value: classifyProviderFailure({ job: input.job, code: resolved.code, message: resolved.message }) };
-    if (!validUrl(resolved.value.url)) {
+    if (!validUrl(resolved.value.url) ||
+        !headersAreSafe(resolved.value.headers ?? {})) {
       return { ok: true, value: classifyProviderFailure({ job: input.job, code: "WEBHOOK_CONFIG_INVALID", message: "Server-resolved webhook endpoint URL is invalid." }) };
     }
 
