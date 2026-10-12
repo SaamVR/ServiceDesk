@@ -163,6 +163,19 @@ begin
     end if;
   end loop;
 
+  -- Preflight the entire affected catalog BEFORE the first write. Returning
+  -- a failure code after partially inserting services does NOT roll back a
+  -- normal PL/pgSQL function invocation; exception subtransactions alone are
+  -- not a substitute for this explicit all-or-nothing logical gate.
+  if exists (
+    select 1 from public.service_catalog sc
+    where sc.workspace_id = v_workspace
+      and sc.code in ('STANDARD','DEEP','MOVE_OUT')
+      and sc.active is distinct from true
+  ) then
+    return jsonb_build_object('ok',false,'code','PRICING_SETUP_INACTIVE_SERVICE');
+  end if;
+
   -- Never revive/deactivate existing services behind the owner's back.
   -- A partial existing catalog is repaired only by adding absent codes;
   -- if an existing supported service was intentionally disabled, fail.
