@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: sd-v4-pricing-${{ github.event.pull_request.number || github.ref }}
+  group: sd-v4-sql-pricing-guard-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
   exact-head-rc:
