@@ -168,7 +168,7 @@ export function StaffOverviewDashboard({
     | "attentionItems"
     | "qualityCases"
     | "crews"
-  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions" | "serviceCatalog" | "branchScope" | "ownerPricingBookProof">>;
+  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions" | "serviceCatalog" | "branchScope" | "ownerPricingBookProof">>;
   errorMessage?: string;
 }) {
   if (!snapshot) {
@@ -285,6 +285,8 @@ export function StaffOverviewDashboard({
       <AiOperationsStatus
         workspaceSlug={workspace}
         publishedRuleCount={(snapshot.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
+        executions={snapshot.workflowExecutions}
+        actions={snapshot.workflowActionExecutions}
         compact
       />
 
