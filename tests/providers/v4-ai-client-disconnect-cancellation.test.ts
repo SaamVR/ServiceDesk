@@ -59,13 +59,13 @@ describe("V4 staff cancellation stops obsolete model inference", () => {
 
   it("discards a late success from any provider adapter that ignores cancellation", async () => {
     const ctl = new AbortController();
-    let done: ((value: AiModelHttpResponse)=>void) | undefined;
+    const deferred: { resolve?: (value: AiModelHttpResponse) => void } = {};
     const http = (_request: AiModelHttpRequest) =>
-      new Promise<AiModelHttpResponse>(resolve => {done=resolve;});
+      new Promise<AiModelHttpResponse>(resolve => {deferred.resolve=resolve;});
     const pending=callAiModel(config,{...input,signal:ctl.signal},http);
-    expect(done).toBeTypeOf("function");
+    expect(deferred.resolve).toBeTypeOf("function");
     ctl.abort();
-    done?.({status:200,body:'{"output":{}}'});
+    deferred.resolve?.({status:200,body:'{"output":{}}'});
     expect(await pending).toMatchObject({ok:false,code:"AI_MODEL_CANCELLED"});
   });
 
