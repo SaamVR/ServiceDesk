@@ -35,6 +35,8 @@ export interface TrustedQuoteFollowUpReceipt {
 export interface TrustedQuoteFollowUpDeps {
   portFactory?: (rpc: SupabaseRpcClient) =>
     Pick<PostgresWorkflowExecutionPort, "evaluateAndRecord" | "executeAttentionAction">;
+  /** Injectable for tests only; production always reads the server kill switch. */
+  deploymentEnabled?: () => boolean;
 }
 
 /**
@@ -59,6 +61,13 @@ export async function runTrustedAcceptedQuoteInternalAutomation(
   const { workspaceId, customerId, quoteId, service, rpc } = input;
   if (!isUuid(workspaceId) || !isUuid(customerId) || !isUuid(quoteId)) {
     return fail("QUOTE_AUTOMATION_SOURCE_INVALID");
+  }
+  // Independent defense in depth: even if the caller forgets its rollout guard,
+  // a real saved quote may never create internal actions while deployment is OFF.
+  // The tenant opt-in check below remains separately mandatory.
+  if (!(deps.deploymentEnabled ?? (() =>
+    process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED === "true"))()) {
+    return fail("QUOTE_AUTOMATION_DEPLOYMENT_DISABLED");
   }
   // Server-wide kill switch is necessary but not sufficient for a shared SaaS:
   // the authenticated owner's persisted tenant flag must also explicitly opt in.

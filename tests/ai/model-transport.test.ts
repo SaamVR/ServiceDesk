@@ -3,6 +3,7 @@ import { callAiModel, redactedAiModelRequestSummary, type AiModelHttpTransport }
 
 const config = {
   apiBaseUrl: "https://models.example.test/v1",
+  approvedGatewayOrigin: "https://models.example.test",
   apiKey: "sk-ai-secret",
   model: "gpt-service-desk",
   timeoutMs: 1000,

@@ -35,7 +35,7 @@ function form() {
   for (const [name,value] of Object.entries(values)) data.set(name,value);
   return data;
 }
-function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS"; missingProof?: boolean; disabledBranch?: boolean }={}) {
+function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS"; missingProof?: boolean; disabledBranch?: boolean; readbackThrows?: boolean; rpcThrows?: boolean }={}) {
   const parsed = parseOwnerCleaningPricingSetup(form());
   if (!parsed.ok) throw new Error(parsed.message);
   const savedRules = parsed.value.rules;
@@ -65,6 +65,9 @@ function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS
         eq(key:string,value:unknown) { filters.push([key,value]); return query; },
         in(_key:string,items:string[]) { codes=items;return query; },
         async maybeSingle() {
+          if (options.readbackThrows && table === "rate_cards") {
+            throw new Error("transient-readback-connection");
+          }
           const data=(rows[table]??[]).filter(r=> filters.every(([k,v])=>r[k]===v))[0]??null;
           return {data,error:null};
         },
@@ -81,6 +84,7 @@ function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS
     expect(payload.p_input.workspaceId).toBe(workspaceId);
     expect(payload.p_input.actorUserId).toBe("owner-qa");
     expect(payload.p_input.setupId).toBe(setupId);
+    if (options.rpcThrows) throw new Error("unknown-committed-rpc-result");
     return {data:{
       ok:true,duplicate:false,rateCardId,priceBookId,branchId,
       rateVersion:"owner-cleaning-"+setupId,
@@ -150,6 +154,26 @@ describe("V4 first-run owner cleaning price configuration",()=>{
     const h=harness({missingProof:true});
     expect(await setupAuthorizedCleaningPricing("fictional-qa",form(),h.deps))
       .toMatchObject({ok:false,code:"PRICING_SETUP_READBACK_UNVERIFIED"});
+  });
+
+  it("does not throw or claim a failed write after a committed RPC when readback loses connectivity",async()=>{
+    const h=harness({readbackThrows:true});
+    const result=await setupAuthorizedCleaningPricing("fictional-qa",form(),h.deps);
+    expect(h.rpc.rpc).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ok:false,code:"PRICING_SETUP_READBACK_UNVERIFIED"});
+    if (result.ok) throw new Error("Readback exception must not be verified");
+    expect(result.message).toContain("Reload Settings");
+    expect(result.message).not.toContain("No prices have been saved");
+  });
+
+  it("does not assume rollback when a priced RPC response is lost after the server may commit",async()=>{
+    const h=harness({rpcThrows:true});
+    const result=await setupAuthorizedCleaningPricing("fictional-qa",form(),h.deps);
+    expect(h.rpc.rpc).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ok:false,code:"PRICING_SETUP_RPC_UNAVAILABLE"});
+    if (result.ok) throw new Error("Unknown RPC outcome is not a confirmed success");
+    expect(result.message).toContain("Reload Settings");
+    expect(h.seen).toHaveLength(0);
   });
 
   it("keeps the migration service-role-only, invoker-secured and owner-scoped",()=>{
