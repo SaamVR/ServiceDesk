@@ -4,6 +4,15 @@ on:
     branches: [feat/v4-automation-rule-capacity-20261012]
   pull_request:
     branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - ".github/workflows/v4-automation-rule-capacity-rc.yml"
+      - "src/server/workflows/**"
+      - "src/server/jobs/outbox-worker.ts"
+      - "src/contracts/workflow*.ts"
+      - "supabase/migrations/*workflow*.sql"
+      - "src/features/operations/owner-automation-*.ts"
+      - "tests/db/v4-*automation*.test.ts"
+      - "tests/e2e/v4-cleaning-automation-playbooks.test.ts"
 permissions:
   contents: read
 concurrency:
