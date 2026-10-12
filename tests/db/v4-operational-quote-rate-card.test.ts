@@ -1,0 +1,86 @@
+import { describe, expect, it, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { defaultRateCard } from "../../src/domain/quote";
+import { createPostgresRequestQuoteCapacityFacadeMethods } from "../../src/server/core/request-quote-capacity-postgres";
+import { loadOperationalQuoteRateCard, parsePersistedQuoteRateCard } from "../../src/server/core/operational-quote-rate-card";
+import type { SupabaseRpcClient } from "../../src/server/core/payment-application-postgres";
+
+const workspace = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const branch = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const request = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const service = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const card = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const rate = {
+  version: "owner-clean-2026-v1",
+  currency: "USD", deposit_percent: 25, valid_hours: 48,
+  buffer_minutes: 30, active: true,
+  rules: {
+    autoApprovalMaxTotalMinor: 50_000,
+    moveOut: defaultRateCard.moveOut,
+    standard: defaultRateCard.standard,
+    deep: defaultRateCard.deep,
+  },
+};
+
+function fakeDb(options: { noBook?: boolean; badRates?: boolean; inactiveService?: boolean; otherTenant?: boolean } = {}) {
+  const calls: Array<{ table: string; filters: [string, unknown][] }> = [];
+  const tables: Record<string, Record<string, unknown>[]> = {
+    requests: [{ id: request, workspace_id: workspace, branch_id: branch, service_id: service }],
+    service_catalog: [{ id: service, workspace_id: options.otherTenant ? "foreign-ws" : workspace, active: !options.inactiveService, code: "MOVE_OUT" }],
+    branch_price_books: options.noBook ? [] : [{ workspace_id: workspace, branch_id: branch, rate_card_id: card, active: true, starts_at: null, ends_at: null }],
+    rate_cards: [{ id: card, workspace_id: workspace, ...rate,
+      rules: options.badRates ? { ...rate.rules, standard: { baseMinor: -90 } } : rate.rules }],
+  };
+  const db = {
+    from(table: string) {
+      const filters: [string, unknown][] = [];
+      calls.push({ table, filters });
+      const rows = () => (tables[table] || []).filter(row => filters.every(([key, value]) => row[key] === value));
+      const chain = {
+        select() { return chain; },
+        eq(key: string, value: unknown) { filters.push([key, value]); return chain; },
+        maybeSingle: async () => ({ data: rows()[0] ?? null, error: null }),
+        limit: async (n: number) => ({ data: rows().slice(0, n), error: null }),
+      };
+      return chain;
+    },
+  };
+  return { db: db as unknown as SupabaseClient, calls };
+}
+
+describe("V4 real tenant quote pricing", () => {
+  it("loads a real branch-bound rate card and never chooses synthetic pricing", async () => {
+    const t = fakeDb();
+    const result = await loadOperationalQuoteRateCard(t.db, workspace, request);
+    expect(result).toMatchObject({ ok: true, value: { version: "owner-clean-2026-v1", currency: "USD" } });
+    expect(t.calls.map(call => call.table)).toEqual(["requests", "service_catalog", "branch_price_books", "rate_cards"]);
+    for (const call of t.calls) expect(call.filters).toContainEqual(["workspace_id", workspace]);
+    expect(t.calls.find(c => c.table === "branch_price_books")?.filters).toContainEqual(["branch_id", branch]);
+  });
+
+  it("fails closed without a current branch price book, an active service or valid rates", async () => {
+    for (const options of [{ noBook: true }, { inactiveService: true }, { badRates: true }, { otherTenant: true }]) {
+      const t = fakeDb(options);
+      const result = await loadOperationalQuoteRateCard(t.db, workspace, request);
+      expect(result.ok).toBe(false);
+    }
+  });
+
+  it("rejects misleading synthetic rate versions, malformed prices and non-USD-tied currencies", () => {
+    expect(parsePersistedQuoteRateCard({ ...rate, version: "synthetic-cleaning-v1" }))
+      .toMatchObject({ ok: false, code: "QUOTE_RATE_CARD_INVALID" });
+    expect(parsePersistedQuoteRateCard({ ...rate, rules: { ...rate.rules, deep: { baseMinor: -100 } } }))
+      .toMatchObject({ ok: false });
+    expect(parsePersistedQuoteRateCard({ ...rate, currency: "USD; DROP" }))
+      .toMatchObject({ ok: false });
+  });
+
+  it("refuses to generate a real quote without a rate card before any persistence RPC", async () => {
+    const rpc = vi.fn();
+    const facade = createPostgresRequestQuoteCapacityFacadeMethods({ rpc } as unknown as SupabaseRpcClient);
+    const ctx = { workspaceId: workspace, userId: "owner-id", role: "OWNER" as const };
+    expect(await facade.calculateQuote(ctx, request))
+      .toMatchObject({ ok: false, code: "QUOTE_RATE_CARD_REQUIRED" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+});
