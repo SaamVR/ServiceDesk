@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import styles from "./AiOwnerModelProbe.module.css";
 
 interface ProbeResult {
   state: "PROVIDER_RESPONDED_TO_CONTROLLED_PROBE";
@@ -53,36 +54,44 @@ export function AiOwnerModelProbe({
   }
 
   return (
-    <section aria-label="Owner AI model connection test" style={{
-      display: "grid", gap: 10, border: "1px solid #d1e8df", borderRadius: 12,
-      background: "#fff", padding: 16,
-    }}>
-      <strong style={{ color: "#244b41", fontSize: ".87rem" }}>Model connection diagnostic</strong>
-      <p style={{ color: "#57756b", fontSize: ".79rem", margin: 0, lineHeight: 1.6 }}>
-        Send one synthetic, non-customer probe to the configured AI model. No messages are sent,
-        no business records change, and this does not verify email, WhatsApp or automation delivery.
+    <section aria-label="Owner AI model connection test" className={styles.panel}>
+      <div className={styles.header}>
+        <div className={styles.heading}>
+          <p className={styles.eyebrow}>Configuration diagnostic</p>
+          <h3 className={styles.title}>AI model connection</h3>
+        </div>
+        <span className={`${styles.state} ${configured ? styles.available : styles.disabled}`}>
+          {configured ? "Configured · unverified" : "Setup required"}
+        </span>
+      </div>
+      <p className={styles.description}>
+        Run one synthetic, non-customer check of the configured AI model. No customer messages are sent,
+        no business records change, and this does not verify WhatsApp, email or automation delivery.
       </p>
-      <button type="button" disabled={!configured || busy} onClick={check}
-        aria-busy={busy}
-        style={{
-          background: configured ? "#166b5e" : "#e3ebe7",
-          color: configured ? "#fff" : "#52645b",
-          border: 0, borderRadius: 9, padding: "11px 14px", minHeight: 42,
-          justifySelf: "start", cursor: configured ? "pointer" : "not-allowed",
-          fontSize: ".82rem", fontWeight: 750,
-        }}>
+      <button type="button" className={styles.action} disabled={!configured || busy}
+        onClick={check} aria-busy={busy}>
         {busy ? "Testing model…" : "Test AI model connection"}
       </button>
-      {!configured ? <p role="status" style={{ margin: 0, color: "#80632c", fontSize: ".78rem" }}>
-        Not available: enable AI with server-only model credentials in the protected environment.
-      </p> : null}
-      {error ? <p role="alert" style={{ color: "#9a3b47", margin: 0, fontSize: ".8rem" }}>
-        No verified model response. Check server-only model setup, provider authorization and logs.
-      </p> : null}
-      {result ? <p role="status" style={{ color: "#145f4f", margin: 0, fontSize: ".8rem" }}>
-        Model response confirmed in this session: {result.model} · {result.checkedAt}.
-        This is an ephemeral connection test, not a durable provider or workflow receipt.
-      </p> : null}
+      {!configured ? (
+        <p role="status" className={`${styles.message} ${styles.note}`}>
+          AI is not enabled for this workspace environment. Configure the server-only model and
+          API key before attempting an owner-initiated test.
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className={`${styles.message} ${styles.error}`}>
+          The model did not return a verified response. Check protected server configuration
+          and provider authorization; no request or customer record was changed.
+        </p>
+      ) : null}
+      {result ? (
+        <p role="status" className={`${styles.message} ${styles.success}`}>
+          Model response confirmed for this session: <strong>{result.model}</strong> ·{" "}
+          <time dateTime={result.checkedAt}>{result.checkedAt}</time>.
+          <span className={styles.secondary}>This is an ephemeral connection test, not a durable
+            provider delivery or workflow-execution receipt.</span>
+        </p>
+      ) : null}
     </section>
   );
 }
