@@ -72,14 +72,6 @@ function officialResponsesEndpoint(config: AiModelTransportConfig): boolean {
   }
 }
 
-function hasOfficialOpenAiHost(config: AiModelTransportConfig): boolean {
-  try {
-    return new URL(config.apiBaseUrl).hostname === "api.openai.com";
-  } catch {
-    return false;
-  }
-}
-
 function modelMessages(input: AiModelCallInput) {
   const reference = (input.approvedKnowledgeSnippets ?? []).slice(0, 3).map(chunk => ({
     documentId: chunk.documentId.slice(0, 128),
@@ -246,8 +238,12 @@ export async function callAiModel(
   if (!config.apiBaseUrl || !config.apiKey || !config.model) {
     return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED", message: "AI model provider configuration is incomplete." };
   }
-  if (hasOfficialOpenAiHost(config) && !officialResponsesEndpoint(config)) {
-    return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED", message: "Official OpenAI Responses transport requires an exact HTTPS /v1 base URL." };
+  // Enforce this *before* invoking any injected/alternate transport. The
+  // protected runtime currently authorizes only OpenAI Responses; an external
+  // adapter must never inherit a bearer key through a spoofed HTTPS base URL.
+  if (!officialResponsesEndpoint(config)) {
+    return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED",
+      message: "Operational model transport requires the exact authorized HTTPS /v1 endpoint." };
   }
 
   const controller = new AbortController();
