@@ -95,9 +95,14 @@ export function summarizeOwnerOperationalEvidence(input: Pick<
   // uniquely identified quote only when a saved invoice references a visit
   // in the same authorized request -> accepted quote -> visit chain.
   const linkedJourneys = new Set(invoices.flatMap(invoice => {
-    if (!invoice.quoteId || !invoice.visitId) return [];
+    if (!invoice.quoteId || !invoice.visitId || invoice.status === "VOID") return [];
     const visit = acceptedVisitById.get(invoice.visitId);
-    return visit?.quoteId === invoice.quoteId ? [invoice.quoteId] : [];
+    const quote = acceptedById.get(invoice.quoteId);
+    // A void invoice or an invoice in a different currency cannot count
+    // toward a coherent branch-scoped cleaning journey.
+    return visit?.quoteId === invoice.quoteId &&
+      quote && (!invoice.currency || invoice.currency === quote.currency)
+      ? [invoice.quoteId] : [];
   })).size;
 
   let completedInternalAttention: number | null = null;
