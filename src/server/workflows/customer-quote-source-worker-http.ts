@@ -56,15 +56,22 @@ const json = (payload: Record<string, unknown>, status: number) =>
  * action, quote ID, provider target, or limit from the HTTP caller.
  *
  * The entire recovery stack is opt-in and fail-closed. This is not yet
- * scheduled anywhere and SQL 0062 must be approved/applied separately.
+ * scheduled anywhere and SQL 0063 must be approved/applied separately.
  */
 export async function handleInternalQuoteSourceWorkerPost(
   request: Request,
   deps: QuoteSourceWorkerHttpDependencies = {},
 ): Promise<Response> {
   if (request.method !== "POST") return json({ ok: false, code: "METHOD_NOT_ALLOWED" }, 405);
-  const settings = (deps.settings ?? realSettings)();
-  if (!settings.workerEnabled || !settings.automationEnabled || !settings.secret ||
+  let settings: RuntimeSettings;
+  try {
+    settings = (deps.settings ?? realSettings)();
+  } catch {
+    // Configuration readers may throw on absent or malformed secrets.
+    // Never allow an uncaught failure to disclose private backend details.
+    return json({ ok: false, code: "BACKEND_UNAVAILABLE" }, 503);
+  }
+  if (!settings || !settings.workerEnabled || !settings.automationEnabled || !settings.secret ||
       settings.databaseMode !== "SERVICE_ROLE") {
     return json({ ok: false, code: "NOT_CONFIGURED" }, 404);
   }
@@ -90,11 +97,20 @@ export async function handleInternalQuoteSourceWorkerPost(
     if (result.state === "CLAIM_UNVERIFIED") {
       return json({ ok: false, code: "RECOVERY_UNVERIFIED" }, 503);
     }
+    // A successful batch dispatch is not proof every event succeeded.
+    // Retried, skipped, dead-letter and unverified results remain visible to
+    // the private operator without disclosing tenant or customer identities.
+    const allEventsCompleted = result.claimed > 0 &&
+      result.completed === result.claimed &&
+      result.retryPending === 0 && result.deadLetter === 0 &&
+      result.skipped === 0 && result.completionNotVerified === 0;
     return json({
-      ok: true, state: result.state, claimed: result.claimed,
+      ok: result.completionNotVerified === 0,
+      state: result.state, claimed: result.claimed,
       completed: result.completed, retried: result.retryPending,
       deadLetter: result.deadLetter, skipped: result.skipped,
       completionNotVerified: result.completionNotVerified,
+      allEventsCompleted,
       providerMessagesSent: 0,
     }, result.completionNotVerified ? 503 : 200);
   } catch {
