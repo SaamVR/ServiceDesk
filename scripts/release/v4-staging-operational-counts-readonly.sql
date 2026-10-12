@@ -38,8 +38,8 @@ WITH inventory AS (
 SELECT jsonb_pretty(jsonb_build_object(
   'schema', 'servicedesk-v4-aggregate-operator-preflight-v1',
   'verificationMode', 'READ_ONLY_AGGREGATE_NOT_AUTHENTICATED_UAT',
-  'activeWorkspaces', workspaces,
-  'activeMembers', memberships,
+  'workspaceRecords', workspaces,
+  'membershipRecords', memberships,
   'activeBranches', active_branches,
   'activeCatalogServices', active_services,
   'activeBranchPriceBooks', active_price_books,
