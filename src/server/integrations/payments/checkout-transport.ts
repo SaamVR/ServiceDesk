@@ -114,7 +114,7 @@ function normalizedFailure(status: number): Result<never> {
   return { ok: false, code: "PAYMENT_PROVIDER_REJECTED", message: "Payment provider rejected the checkout request." };
 }
 
-function parseCheckoutResponse(body: string): Result<{ id: string; url: string }> {
+function parseCheckoutResponse(body: string, mode: ProviderMode): Result<{ id: string; url: string }> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(body);
@@ -124,7 +124,9 @@ function parseCheckoutResponse(body: string): Result<{ id: string; url: string }
 
   const id = (parsed as { id?: unknown }).id;
   const url = (parsed as { url?: unknown }).url;
-  if (typeof id !== "string" || !/^cs_(?:test|live)_[A-Za-z0-9_]+$/.test(id) || typeof url !== "string" || !validatedStripeCheckoutUrl(url)) {
+  if (typeof id !== "string" || !/^cs_(?:test|live)_[A-Za-z0-9_]+$/.test(id) ||
+      (mode === "LIVE" ? !id.startsWith("cs_live_") : !id.startsWith("cs_test_")) ||
+      typeof url !== "string" || !validatedStripeCheckoutUrl(url)) {
     return { ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID", message: "Payment provider checkout response is missing a valid session ID or URL." };
   }
 
@@ -220,7 +222,7 @@ export async function createStripeCheckoutSession(
     });
 
     if (response.status < 200 || response.status >= 300) return normalizedFailure(response.status);
-    const parsed = parseCheckoutResponse(response.body);
+    const parsed = parseCheckoutResponse(response.body, config.mode);
     if (!parsed.ok) return parsed;
 
     return {
