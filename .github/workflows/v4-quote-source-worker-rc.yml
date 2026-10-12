@@ -1,0 +1,39 @@
+name: ServiceDesk V4 protected quote-source worker entrypoint RC
+on:
+  push:
+    branches: [feat/v4-protected-quote-source-0063-20261012]
+  pull_request:
+    branches: [feat/v4-quote-source-0063-reconciled-20261012]
+permissions:
+  contents: read
+concurrency:
+  group: sd-v4-quote-worker-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  protected-worker-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify precise worker source commit
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Private worker auth, tenant isolation, safe batch test
+        run: pnpm exec vitest run tests/e2e/v4-quote-source-protected-worker-http.test.ts tests/db/v4-quote-accepted-source-recovery.test.ts
+      - name: Full source RC on owned feature branch
+        if: github.event_name == 'push'
+        run: pnpm check:rc
