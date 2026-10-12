@@ -15,9 +15,14 @@ describe("V4 CI focused specialty with one complete PR release gate", () => {
     "v4-attention-exception-automation-rc.yml",
   ];
 
-  it("keeps each focused domain test active for controller PRs", () => {
-    for (const name of specialized) {
+  it("keeps each focused domain test and required job identity active for controller PRs", () => {
+    const requiredJobs = [
+      "exact-head-rc", "exact-head-rc", "quote-currency-rc", "exact-head-rc",
+      "full-rc", "exact-head-rc", "exact-head",
+    ];
+    for (const [index, name] of specialized.entries()) {
       const yaml = read(name);
+      expect(yaml).toContain(`  ${requiredJobs[index]}:`);
       expect(yaml).toContain("pull_request:");
       expect(yaml).toContain("feat/servicedesk-v4-reconciled-qa-shell-20261012");
       expect(yaml).toContain("pnpm exec vitest run");
