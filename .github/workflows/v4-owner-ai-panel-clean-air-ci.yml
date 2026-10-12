@@ -1,0 +1,22 @@
+name: ServiceDesk V4 Clean Air owner AI panel release UI
+on:
+  push:
+    branches: [feat/servicedesk-v4-owner-ai-ui-polish-20261012]
+permissions:
+  contents: read
+jobs:
+  owner-ai-panel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: pnpm/action-setup@v4
+        with: {version: 10.17.1, run_install: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2, cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - name: Accessibility, contrast and real model control contract
+        run: pnpm exec vitest run tests/e2e/v4-owner-ai-clean-air-ui.test.ts tests/e2e/v4-owner-ai-connection-test.test.ts
+      - name: Full product RC tests, lint, typecheck and build
+        run: pnpm check:rc
