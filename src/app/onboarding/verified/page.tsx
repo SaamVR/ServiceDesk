@@ -8,6 +8,7 @@ import { loadVerifiedOwnerWorkspace } from "@/features/auth/verified-owner-works
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
 import { seedVerifiedQaWorkspace } from "./qa-seed-actions";
+import { RegistrationSubmitButton } from "@/features/auth/RegistrationSubmitButton";
 
 export const dynamic = "force-dynamic";
 
