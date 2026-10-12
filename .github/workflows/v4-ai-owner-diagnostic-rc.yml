@@ -33,5 +33,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Focused owner authorization and synthetic provider probe contracts
         run: pnpm exec vitest run tests/e2e/v4-owner-ai-connection-test.test.ts tests/e2e/v4-ai-request-copilot.test.ts
-      - name: TypeScript, all tests, lint and production build
+      - name: Full source validation on specialist push (canonical PR full RC covers every PR)
+        if: github.event_name == 'push'
         run: pnpm check:rc

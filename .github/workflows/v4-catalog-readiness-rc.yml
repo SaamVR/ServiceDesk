@@ -29,4 +29,6 @@ jobs:
         with: { node-version: 22.23.2, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vitest run tests/e2e/v4-catalog-quote-readiness.test.tsx
-      - run: pnpm check:rc
+      - name: Full source validation on specialist push (canonical PR full RC covers every PR)
+        if: github.event_name == 'push'
+        run: pnpm check:rc
