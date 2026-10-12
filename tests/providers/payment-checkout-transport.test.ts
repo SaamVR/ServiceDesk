@@ -123,6 +123,24 @@ describe("Stripe-style checkout transport", () => {
     expect(result).toMatchObject({ ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID" });
   });
 
+  test.each([
+    { apiBaseUrl: "https://attacker.example", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "https://api.stripe.com.attacker.org", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "https://someone:secret@api.stripe.com", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "https://api.stripe.com:8443", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "http://api.stripe.com", secretKey: "sk_test_not_real" },
+    { apiBaseUrl: "https://api.stripe.com", secretKey: "sk_live_unsafe_real_key" },
+  ])("never sends Stripe authorization to wrong origin or with live key in sandbox: %j",
+    async ({ apiBaseUrl, secretKey }) => {
+      let called = 0;
+      const result = await createStripeCheckoutSession(input(), { ...config, apiBaseUrl, secretKey },
+        async () => { called++; return { status: 200, body: "{}" }; });
+      expect(result).toMatchObject({ ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED" });
+      expect(called).toBe(0);
+      expect(JSON.stringify(result)).not.toContain(secretKey);
+    },
+  );
+
   test("normalizes provider auth, rate-limit, invalid request, timeout, and malformed success response", async () => {
     await expect(createStripeCheckoutSession(input(), config, async () => ({ status: 401, body: "{}" }))).resolves.toMatchObject({ ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED" });
     await expect(createStripeCheckoutSession(input(), config, async () => ({ status: 429, body: "{}" }))).resolves.toMatchObject({ ok: false, code: "PAYMENT_RATE_LIMITED" });
