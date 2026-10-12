@@ -1004,7 +1004,8 @@ function RequestsView({
   if (data.requests.length === 0) {
     return (
       <>
-        <CatalogReadinessBanner workspaceSlug={workspaceSlug} serviceCatalog={data.serviceCatalog} />
+        <CatalogReadinessBanner workspaceSlug={workspaceSlug} serviceCatalog={data.serviceCatalog}
+        branchScope={data.branchScope} ownerPricingBookProof={data.ownerPricingBookProof} />
         <EmptyState title="No requests in the queue" detail="New enquiries will appear here as persisted requests." action={{ label: "Review conversations", href: buildStaffModuleHref(workspaceSlug, "inbox") }} />
       </>
     );
@@ -1053,7 +1054,8 @@ function RequestsView({
 
   return (
     <section className={styles.salesWorkspace} aria-label="Request intake workspace">
-      <CatalogReadinessBanner workspaceSlug={workspaceSlug} serviceCatalog={data.serviceCatalog} />
+      <CatalogReadinessBanner workspaceSlug={workspaceSlug} serviceCatalog={data.serviceCatalog}
+        branchScope={data.branchScope} ownerPricingBookProof={data.ownerPricingBookProof} />
       <header className={styles.salesToolbar}>
         <div>
           <p className={styles.salesEyebrow}>Intake queue</p>
