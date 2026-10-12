@@ -2540,7 +2540,7 @@ function WorkflowBuilderPanel({
     "use server";
     const selected = String(formData.get("savedEvent") ?? "");
     const parts = selected.split("|");
-    if (parts.length !== 2 || !["QUOTE_ACCEPTED", "VISIT_COMPLETED", "INVOICE_PAID"].includes(parts[0])) {
+    if (parts.length !== 2 || !["QUOTE_ACCEPTED", "VISIT_COMPLETED", "INVOICE_PAID", "ATTENTION_OPENED"].includes(parts[0])) {
       actionRedirect(workspaceSlug, "automations", {ok:false,message:"Choose a saved, eligible milestone event."});
     }
     const outcome = await runOwnerSavedOperationalAutomation(
@@ -2555,7 +2555,10 @@ function WorkflowBuilderPanel({
   const approvedQuoteEvents = data.quotes.filter(q => q.status === "ACCEPTED").slice(0,50);
   const completedVisitEvents = data.visits.filter(v => v.status === "COMPLETED").slice(0,50);
   const paidInvoiceEvents = data.invoices.filter(i => i.status === "PAID").slice(0,50);
-  const savedEligibleEventCount = approvedQuoteEvents.length + completedVisitEvents.length + paidInvoiceEvents.length;
+  const requestExceptionEvents = data.attentionItems
+    .filter(item => item.status === "OPEN" && item.resourceType.toLowerCase() === "request").slice(0,50);
+  const savedEligibleEventCount = approvedQuoteEvents.length + completedVisitEvents.length +
+    paidInvoiceEvents.length + requestExceptionEvents.length;
 
 
   async function saveDraftAction(formData: FormData) {
@@ -2694,7 +2697,7 @@ function WorkflowBuilderPanel({
       {data.actor.role === "OWNER" ? (
         <section className={styles.workflowEditorCard} aria-label="Run saved milestone through published automations">
           <h3>Process a saved business milestone</h3>
-          <p>Use a real accepted quote, completed visit, or paid invoice as a trusted, deduplicated workflow source.
+          <p>Use a real accepted quote, completed visit, paid invoice, or open request-linked exception as a trusted, deduplicated workflow source.
             Only internal attention actions execute here. Customer messages, charges and scheduling are not automatic.</p>
           {!workflowBackendWritable ? (
             <p role="status">Protected workflow execution is not configured in this QA-session environment.</p>
@@ -2717,6 +2720,10 @@ function WorkflowBuilderPanel({
                   {paidInvoiceEvents.length > 0 ? <optgroup label="Paid invoices">
                     {paidInvoiceEvents.map(invoice =>
                       <option key={invoice.id} value={"INVOICE_PAID|" + invoice.id}>Paid invoice · {invoice.id.slice(0,8)}</option>)}
+                  </optgroup> : null}
+                  {requestExceptionEvents.length > 0 ? <optgroup label="Open request exceptions">
+                    {requestExceptionEvents.map(item =>
+                      <option key={item.id} value={"ATTENTION_OPENED|" + item.id}>Open exception · {item.type} · {item.id.slice(0,8)}</option>)}
                   </optgroup> : null}
                 </select>
               </label>

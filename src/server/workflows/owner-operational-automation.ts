@@ -6,7 +6,7 @@ import { MAX_ACTIVE_WORKFLOW_RULES_PER_BRANCH, WORKFLOW_RULE_OVERFLOW_FETCH_LIMI
 import type { WorkflowEventEnvelope } from "./engine";
 
 export type OwnerOperationalEventType = Extract<WorkflowEventType,
-  "QUOTE_ACCEPTED" | "VISIT_COMPLETED" | "INVOICE_PAID">;
+  "QUOTE_ACCEPTED" | "VISIT_COMPLETED" | "INVOICE_PAID" | "ATTENTION_OPENED">;
 type Resolver = typeof resolveStaffActor;
 
 export interface OwnerOperationalAutomationDependencies {
@@ -50,7 +50,7 @@ export async function runOwnerSavedOperationalAutomation(
 ): Promise<Result<OwnerOperationalAutomationReceipt>> {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(workspaceSlug) ||
       workspaceSlug.length > 40 || workspaceSlug.length < 3 ||
-      !uuid(sourceId) || !["QUOTE_ACCEPTED","VISIT_COMPLETED","INVOICE_PAID"].includes(eventType)) {
+      !uuid(sourceId) || !["QUOTE_ACCEPTED","VISIT_COMPLETED","INVOICE_PAID","ATTENTION_OPENED"].includes(eventType)) {
     return fail("OPERATIONAL_AUTOMATION_INPUT_INVALID", "Select a valid saved operational event.");
   }
   if ((deps.mode ?? operationalDatabaseMode)() !== "SERVICE_ROLE") {
@@ -71,6 +71,8 @@ export async function runOwnerSavedOperationalAutomation(
   let branchId: string | null = null;
   let sourceServiceCode = "";
   let currency = "";
+  let attentionType = "";
+  let attentionSeverity = "";
   if (eventType === "QUOTE_ACCEPTED") {
     const row = await service.from("quotes")
       .select("id,request_id,status,currency,service_code")
@@ -94,7 +96,7 @@ export async function runOwnerSavedOperationalAutomation(
     }
     requestId = row.data.request_id;
     branchId = row.data.branch_id;
-  } else {
+  } else if (eventType === "INVOICE_PAID") {
     const row = await service.from("invoices")
       .select("id,quote_id,status,currency")
       .eq("id",sourceId).eq("workspace_id",workspace.id).maybeSingle();
@@ -112,6 +114,30 @@ export async function runOwnerSavedOperationalAutomation(
     }
     requestId = quote.data.request_id;
     sourceServiceCode = code(quote.data.service_code);
+  } else {
+    // A generic attention item does not have a branch_id. Only source-linked
+    // request exceptions have a provable branch. Exclude workflow-generated
+    // attention items and all other unsupported resource mappings to prevent
+    // recursion and arbitrary cross-branch escalation.
+    const row = await service.from("attention_items")
+      .select("id,status,type,severity,resource_type,resource_id")
+      .eq("id",sourceId).eq("workspace_id",workspace.id).maybeSingle();
+    if (row.error) return fail("OPERATIONAL_AUTOMATION_SOURCE_UNAVAILABLE","Saved attention item could not be read.");
+    if (!row.data) return fail("OPERATIONAL_AUTOMATION_NOT_FOUND","Attention item is not in this workspace.");
+    if (row.data.status !== "OPEN" ||
+        typeof row.data.resource_type !== "string" ||
+        row.data.resource_type.toLowerCase() !== "request" ||
+        !uuid(row.data.resource_id)) {
+      return fail("OPERATIONAL_AUTOMATION_SOURCE_NOT_READY",
+        "Only open request-linked attention items can be processed; workflow-generated items cannot recurse.");
+    }
+    if (!["INFO","WARNING","CRITICAL"].includes(String(row.data.severity))) {
+      return fail("OPERATIONAL_AUTOMATION_SOURCE_INVALID","Attention severity was not verified.");
+    }
+    requestId = row.data.resource_id;
+    attentionType = code(row.data.type);
+    attentionSeverity = String(row.data.severity);
+    if (!attentionType) return fail("OPERATIONAL_AUTOMATION_SOURCE_INVALID","Attention type was not verified.");
   }
 
   // Always verify the actual persisted request to derive tenant/branch
@@ -154,8 +180,11 @@ export async function runOwnerSavedOperationalAutomation(
     // signal would require an explicit durable quality finding; omit the
     // field entirely rather than inventing a false "no incident" flag.
     snapshot = { "visit.branchCode": branchCode, "request.serviceCode": serviceCode };
-  } else {
+  } else if (eventType === "INVOICE_PAID") {
     snapshot = { "invoice.currency": currency, "invoice.branchCode": branchCode, "request.serviceCode": serviceCode };
+  } else {
+    snapshot = { "attention.type": attentionType, "attention.severity": attentionSeverity,
+      "attention.branchCode": branchCode };
   }
 
   const rules = await service.from("workflow_rules")
