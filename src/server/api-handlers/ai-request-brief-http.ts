@@ -45,7 +45,27 @@ export async function handleRequestBriefPost(
           !parsed.port) trustedPublicOrigin = parsed.origin;
     } catch { /* Invalid configuration must fail closed. */ }
   }
-  if (!origin || (origin !== ownOrigin && origin !== trustedPublicOrigin) ||
+  // Next may normalize localhost vs 127.0.0.1 in its internal Request.url
+  // while retaining the real browser Host. Match that exact browser authority
+  // ONLY for two loopback HTTP endpoints; never trust X-Forwarded-Host,
+  // off-port aliases, external hosts or malformed Origins.
+  let sameLoopbackHostOrigin = false;
+  if (origin) {
+    try {
+      const requested = new URL(request.url);
+      const browser = new URL(origin);
+      const loopback = (host: string) => host === "127.0.0.1" || host === "localhost";
+      sameLoopbackHostOrigin = requested.protocol === "http:" &&
+        browser.protocol === "http:" &&
+        loopback(requested.hostname) && loopback(browser.hostname) &&
+        requested.port === browser.port &&
+        requested.port === "3000" &&
+        browser.origin === origin &&
+        request.headers.get("host") === browser.host;
+    } catch { /* Unparseable Origins are always denied. */ }
+  }
+  if (!origin || (origin !== ownOrigin && origin !== trustedPublicOrigin &&
+      !sameLoopbackHostOrigin) ||
       (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
     return json(403, { code: "SAME_ORIGIN_REQUIRED" });
   }
