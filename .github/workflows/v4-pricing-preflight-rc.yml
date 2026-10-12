@@ -22,4 +22,6 @@ jobs:
         with: { node-version: 22.23.2, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vitest run tests/e2e/v4-owner-first-run-pricing.test.ts
-      - run: pnpm check:rc
+      - name: Full source check on owned feature branch (PRs use central exact-head RC)
+        if: github.event_name == 'push'
+        run: pnpm check:rc
