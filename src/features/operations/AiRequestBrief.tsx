@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { parseSavedAiRequestBrief, type SavedAiRequestBrief } from "./ai-request-brief-contract";
+import { describeAiRequestBriefFailure } from "./ai-request-brief-failure";
 import styles from "./AiRequestBrief.module.css";
 
 type Brief = SavedAiRequestBrief;
@@ -57,14 +58,29 @@ export function AiRequestBrief({
         body: JSON.stringify({ workspaceSlug, requestId }),
         signal: request.signal,
       });
-      if (!response.ok ||
-          !response.headers.get("content-type")?.toLowerCase().includes("application/json")) {
-        message = "AI couldn't prepare a verified request brief. Use the saved request details instead.";
+      const isJson = response.headers.get("content-type")?.toLowerCase().includes("application/json");
+      if (!response.ok) {
+        // The protected endpoint returns only stable machine codes. Translate
+        // known codes into useful operator guidance; never render a provider's
+        // arbitrary error string, prompt or customer metadata.
+        let failureCode: unknown;
+        if (isJson) {
+          try {
+            const failure: unknown = await response.json();
+            if (failure && typeof failure === "object" && !Array.isArray(failure) &&
+                Object.keys(failure).length <= 3) {
+              failureCode = (failure as { code?: unknown }).code;
+            }
+          } catch { /* Non-JSON/malformed response uses safe HTTP fallback. */ }
+        }
+        message = describeAiRequestBriefFailure(failureCode, response.status);
+      } else if (!isJson) {
+        message = describeAiRequestBriefFailure(undefined);
       } else {
         const result: unknown = await response.json();
         const parsed = parseSavedAiRequestBrief(result, requestId);
         if (!parsed) {
-          message = "AI couldn't prepare a verified request brief. Use the saved request details instead.";
+          message = describeAiRequestBriefFailure("AI_MODEL_INVALID_RESPONSE");
         } else {
           verifiedBrief = parsed;
         }
