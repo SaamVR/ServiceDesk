@@ -18,24 +18,33 @@ vi.mock("@/features/auth/session-proxy", () => ({
 }));
 
 describe("V4 Studio requested-route retention with authorized boundaries", () => {
-  it("retains all thirteen first-party Studio modules and the same-workspace detail route", () => {
+  it("retains all thirteen first-party modules and implemented query-filter routes", () => {
     const modules = Object.keys(staffModuleConfig) as Array<keyof typeof staffModuleConfig>;
     expect(modules).toHaveLength(13);
     for (const staffModule of modules) {
       const target = buildStaffModuleHref("acme-west", staffModule);
       expect(verifiedStudioReturnPath("acme-west", target)).toBe(target);
     }
-    const requested = "/app/acme-west/requests/req-123?request=req-123&queue=needs-review";
+    const requested = "/app/acme-west/requests?request=req-123&queue=needs-review";
     expect(verifiedStudioReturnPath("acme-west", requested)).toBe(requested);
   });
 
   it("preserves encoded workspace slugs but rejects a different workspace", () => {
-    const target = "/app/east%2Fwest/jobs/visit-42";
+    const target = "/app/east%2Fwest/jobs?job=visit-42";
     expect(verifiedStudioReturnPath("east/west", target)).toBe(target);
     expect(verifiedStudioReturnPath("east/west", "/app/other/jobs/visit-42"))
       .toBe("/app/east%2Fwest/overview");
     expect(verifiedStudioReturnPath("acme", "/app/acme-fake/inbox"))
       .toBe("/app/acme/overview");
+  });
+
+  it("falls back to implemented modules for unsupported nested record URLs", () => {
+    expect(verifiedStudioReturnPath("acme", "/app/acme/jobs/visit-42"))
+      .toBe("/app/acme/jobs");
+    expect(verifiedStudioReturnPath("acme", "/app/acme/requests/req-42?request=req-42"))
+      .toBe("/app/acme/requests");
+    expect(verifiedStudioReturnPath("acme", "/app/acme/jobs?job=visit-42"))
+      .toBe("/app/acme/jobs?job=visit-42");
   });
 
   it("fails closed for unrecognized routes, traversal, auth loops, open redirects and control characters", () => {
