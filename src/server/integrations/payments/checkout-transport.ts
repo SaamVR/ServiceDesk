@@ -64,6 +64,18 @@ function validatedStripeCheckoutUrl(value: string): boolean {
   }
 }
 
+function authorizedStripeApiBase(value: string): boolean {
+  if (!value || value.trim() !== value) return false;
+  try {
+    const url = new URL(value);
+    return url.origin === "https://api.stripe.com" &&
+      (url.pathname === "/" || url.pathname === "") &&
+      !url.username && !url.password && !url.port && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
+}
+
 function baseUrl(config: StripeCheckoutTransportConfig): string {
   return config.apiBaseUrl.replace(/\/+$/, "");
 }
@@ -176,8 +188,11 @@ export async function createStripeCheckoutSession(
   config: StripeCheckoutTransportConfig,
   http: StripeCheckoutHttpTransport,
 ): Promise<Result<CheckoutSession>> {
-  if (!config.apiBaseUrl || !config.secretKey) {
-    return { ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED", message: "Payment checkout configuration is incomplete." };
+  if (!config.apiBaseUrl || !config.secretKey ||
+      !authorizedStripeApiBase(config.apiBaseUrl) ||
+      (config.mode === "SANDBOX" && !/^(?:sk|rk)_test_/.test(config.secretKey)) ||
+      (config.mode === "LIVE" && !/^(?:sk|rk)_live_/.test(config.secretKey))) {
+    return { ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED", message: "Payment checkout configuration is incomplete or not valid for the selected provider mode." };
   }
 
   if (input.purpose === "DEPOSIT") {
