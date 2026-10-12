@@ -11,6 +11,7 @@ import {
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { loadOnboardingProduct } from "./onboarding-product-runtime";
 import { summarizeOwnerCommercialSetup } from "./onboarding-commercial-readiness";
+import { OnboardingOperationalEvidencePanel } from "./OnboardingOperationalEvidencePanel";
 
 function setupState(done: boolean) {
   return done ? (
@@ -240,6 +241,11 @@ export async function OnboardingProductRoute({
           </div>
         </Panel>
       </div>
+
+      <OnboardingOperationalEvidencePanel
+        workspaceSlug={workspace.slug}
+        snapshot={result.value}
+      />
     </StaffAppShell>
   );
 }
