@@ -58,7 +58,7 @@ import { AiRequestBrief } from "./AiRequestBrief";
 import { AiOperationsStatus } from "./AiOperationsStatus";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
-import { automationPlaybooks, getAutomationPlaybook } from "./automation-playbooks";
+import { automationPlaybooks, automationPlaybookCategories, getAutomationPlaybook } from "./automation-playbooks";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { inboxThreadPosition } from "./inbox-thread-navigation";
@@ -2668,18 +2668,26 @@ function WorkflowBuilderPanel({
         </div>
       </header>
 
-      <nav className={styles.automationPlaybookGrid} aria-label="Cleaning automation starter playbooks">
-        {automationPlaybooks.map(item => (
-          <a key={item.id}
-             className={item.id === playbook?.id ? styles.automationPlaybookSelected : styles.automationPlaybookCard}
-             href={"?template=" + encodeURIComponent(item.id)}
-             aria-current={item.id === playbook?.id ? "true" : undefined}>
-            <strong>{item.name}</strong>
-            <span>{item.description}</span>
-            <small>{item.id === playbook?.id ? "Loaded into draft form" : "Load draft starter"} ↗</small>
-          </a>
+      <section aria-label="Cleaning automation starter playbooks">
+        <p>27 owner-reviewed internal task recipes across intake, quoting, field work, payments and exceptions. Choose a starter, customize its condition, preview it, then publish intentionally.</p>
+        {automationPlaybookCategories.map(category => (
+          <details key={category} open={category === (playbook?.category ?? "Intake")}>
+            <summary><strong>{category}</strong> · {automationPlaybooks.filter(item => item.category === category).length} recipes</summary>
+            <nav className={styles.automationPlaybookGrid} aria-label={category + " automation recipes"}>
+              {automationPlaybooks.filter(item => item.category === category).map(item => (
+                <a key={item.id}
+                   className={item.id === playbook?.id ? styles.automationPlaybookSelected : styles.automationPlaybookCard}
+                   href={"?template=" + encodeURIComponent(item.id)}
+                   aria-current={item.id === playbook?.id ? "true" : undefined}>
+                  <strong>{item.name}</strong>
+                  <span>{item.description}</span>
+                  <small>{item.id === playbook?.id ? "Loaded into draft form" : "Load draft starter"} ↗</small>
+                </a>
+              ))}
+            </nav>
+          </details>
         ))}
-      </nav>
+      </section>
       <p className={styles.automationPlaybookDisclaimer}>
         These starters only prefill a draft. Saving, synthetic preview and owner publication remain separate required steps.
         Only internal attention actions are included; no provider delivery occurs by selecting a starter.
@@ -2742,7 +2750,7 @@ function WorkflowBuilderPanel({
                     <h4>Conditions <small>All conditions must match</small></h4>
                     {[1, 2, 3].map((index) => (
                       <div className={styles.workflowConditionRow} key={index}>
-                        <select className="app-input" name={`condition${index}Field`} defaultValue="">
+                        <select className="app-input" name={`condition${index}Field`} defaultValue={index === 1 ? playbook?.condition?.field ?? "" : ""}>
                           <option value="">No condition</option>
                           <optgroup label="Request created">
                             <option value="request.serviceCode">request.serviceCode</option>
@@ -2767,12 +2775,12 @@ function WorkflowBuilderPanel({
                             <option value="attention.branchCode">attention.branchCode</option>
                           </optgroup>
                         </select>
-                        <select className="app-input" name={`condition${index}Operator`} defaultValue="EQ">
+                        <select className="app-input" name={`condition${index}Operator`} defaultValue={index === 1 ? playbook?.condition?.operator ?? "EQ" : "EQ"}>
                           <option value="EQ">equals</option>
                           <option value="NEQ">does not equal</option>
                           <option value="IN">is one of</option>
                         </select>
-                        <input className="app-input" name={`condition${index}Value`} maxLength={160} placeholder="Value; comma-separate IN values" />
+                        <input className="app-input" name={`condition${index}Value`} maxLength={160} placeholder="Value; comma-separate IN values" defaultValue={index === 1 && playbook?.condition ? String(playbook.condition.value) : undefined} />
                       </div>
                     ))}
                   </section>
@@ -2787,7 +2795,7 @@ function WorkflowBuilderPanel({
                           <option value="SEND_EMAIL_TEMPLATE">Send approved Email template</option>
                           <option value="SEND_WHATSAPP_TEMPLATE">Send approved WhatsApp template</option>
                         </select>
-                        <select className="app-input" name={`action${index}Severity`} defaultValue="WARNING">
+                        <select className="app-input" name={`action${index}Severity`} defaultValue={index === 1 ? playbook?.severity ?? "WARNING" : "WARNING"}>
                           <option value="INFO">Info</option>
                           <option value="WARNING">Warning</option>
                           <option value="CRITICAL">Critical</option>
