@@ -28,12 +28,12 @@ describe("V2 operational integration health", () => {
       WHATSAPP_APP_SECRET: "secret-value",
       WHATSAPP_ACCESS_TOKEN: "token-value",
       WHATSAPP_CONTROLLED_RECIPIENT: "recipient",
-      WHATSAPP_CALLBACK_URL: "https://example.test/whatsapp",
+      WHATSAPP_CALLBACK_URL: "https://control.example.com/whatsapp",
       WHATSAPP_VERIFY_TOKEN: "verify-value",
 
       GOOGLE_CALENDAR_CLIENT_ID: "client",
       GOOGLE_CALENDAR_CLIENT_SECRET: "client-secret",
-      GOOGLE_CALENDAR_REDIRECT_URI: "https://example.test/oauth",
+      GOOGLE_CALENDAR_REDIRECT_URI: "https://control.example.com/oauth",
       GOOGLE_CALENDAR_REFRESH_TOKEN: "refresh-value",
       GOOGLE_CALENDAR_ID: "calendar",
       GOOGLE_CALENDAR_SCOPES: "freebusy events",
@@ -51,11 +51,11 @@ describe("V2 operational integration health", () => {
       SERVICEDESK_VOICE_WEBHOOK_SECRET: "voice-inbound-secret-value",
       SERVICEDESK_VOICE_ACCOUNT_WORKSPACE_MAP: "{\"voice-1\":\"workspace-1\"}",
 
-      N8N_WEBHOOK_URL: "https://n8n.example.test/hook",
+      N8N_WEBHOOK_URL: "https://n8n.example.com/hook",
       N8N_SIGNING_SECRET: "n8n-secret-value",
-      N8N_ALLOWED_HOST: "n8n.example.test",
+      N8N_ALLOWED_HOST: "n8n.example.com",
       N8N_WORKFLOW_ID: "workflow",
-      N8N_COMPLETION_CALLBACK_URL: "https://example.test/n8n/callback",
+      N8N_COMPLETION_CALLBACK_URL: "https://control.example.com/n8n/callback",
 
       SERVICEDESK_AI_ENABLED: "true",
       OPENAI_API_KEY: "model-secret-value",
@@ -147,6 +147,58 @@ describe("V2 operational integration health", () => {
     expect(whatsapp?.configurationState).toBe("PARTIAL");
     expect(whatsapp?.missingConfiguration.length).toBeGreaterThan(0);
     expect(JSON.stringify(whatsapp)).not.toContain("phone-secret-reference");
+  });
+
+  it("rejects insecure WhatsApp/Calendar callbacks and mismatched n8n allowlist hosts", () => {
+    const config = {
+      WHATSAPP_META_APP_ID: "app", WHATSAPP_BUSINESS_ACCOUNT_ID: "business",
+      WHATSAPP_PHONE_NUMBER_ID: "phone", WHATSAPP_APP_SECRET: "redacted-meta-secret",
+      WHATSAPP_ACCESS_TOKEN: "redacted-meta-token",
+      WHATSAPP_CONTROLLED_RECIPIENT: "redacted-recipient",
+      WHATSAPP_VERIFY_TOKEN: "redacted-verify",
+      WHATSAPP_CALLBACK_URL: "http://127.0.0.1:8080/callback",
+      GOOGLE_CALENDAR_CLIENT_ID: "client",
+      GOOGLE_CALENDAR_CLIENT_SECRET: "redacted-oauth-secret",
+      GOOGLE_CALENDAR_REDIRECT_URI: "http://localhost:3000/oauth",
+      GOOGLE_CALENDAR_REFRESH_TOKEN: "redacted-refresh",
+      GOOGLE_CALENDAR_ID: "calendar",
+      GOOGLE_CALENDAR_SCOPES: "freebusy events",
+      GOOGLE_CALENDAR_SYNC_READY: "true",
+      N8N_WEBHOOK_URL: "https://unexpected.example.com/dispatch",
+      N8N_ALLOWED_HOST: "allowed.example.com",
+      N8N_SIGNING_SECRET: "redacted-n8n-secret",
+      N8N_WORKFLOW_ID: "workflow",
+      N8N_COMPLETION_CALLBACK_URL: "http://169.254.169.254/latest/meta-data",
+    };
+    const health = buildOperationalIntegrationHealth(config);
+    for (const [provider, requirements] of [
+      ["WHATSAPP", ["CALLBACK_URL"]],
+      ["GOOGLE_CALENDAR", ["REDIRECT_URI"]],
+      ["WEBHOOK_N8N", ["AUTHORITATIVE_ENDPOINT", "ALLOWED_HOST", "COMPLETION_CALLBACK_MAPPING"]],
+    ] as const) {
+      const item = health.find(x => x.provider === provider);
+      for (const requirement of requirements) expect(item?.missingConfiguration).toContain(requirement);
+      expect(item?.configurationState).toBe("PARTIAL");
+      expect(item?.canRunControlledProof).toBe(false);
+    }
+    expect(JSON.stringify(health)).not.toContain("redacted-");
+  });
+
+  it("does not treat an allowed host as a suffix wildcard or accept userinfo", () => {
+    const common = {
+      N8N_WEBHOOK_URL: "https://allowed.example.com.attacker.org/task",
+      N8N_ALLOWED_HOST: "allowed.example.com",
+      N8N_SIGNING_SECRET: "safe-redacted",
+      N8N_WORKFLOW_ID: "workflow",
+      N8N_COMPLETION_CALLBACK_URL: "https://control.example.com/completed",
+    };
+    let webhook = buildOperationalIntegrationHealth(common).find(x => x.provider === "WEBHOOK_N8N");
+    expect(webhook?.missingConfiguration).toContain("AUTHORITATIVE_ENDPOINT");
+    webhook = buildOperationalIntegrationHealth({
+      ...common, N8N_WEBHOOK_URL: "https://alice:password@allowed.example.com/task",
+    }).find(x => x.provider === "WEBHOOK_N8N");
+    expect(webhook?.missingConfiguration).toContain("AUTHORITATIVE_ENDPOINT");
+    expect(JSON.stringify(webhook)).not.toContain("password");
   });
 
   it("reports inbound Email and Voice configuration independently from outbound providers", () => {
