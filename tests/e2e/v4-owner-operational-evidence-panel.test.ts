@@ -240,6 +240,50 @@ describe("V4 owner live operational evidence, never synthetic proof", () => {
     expect(blocked.savedRequests).toBe(0);
   });
 
+  it("does not inflate saved workflow progress from repeated record IDs in a joined snapshot", () => {
+    const report = summarizeOwnerOperationalEvidence(values({
+      requests: [{id:"r1",branchId:"north",status:"NEW"}],
+      quotes: [
+        quote("q1","r1","ACCEPTED"),
+        quote("q1","r1","ACCEPTED"),
+      ],
+      visits: [
+        {id:"v1",quoteId:"q1",requestId:"r1",branchId:"north"},
+        {id:"v1",quoteId:"q1",requestId:"r1",branchId:"north"},
+      ],
+      invoices: [
+        {id:"i1",quoteId:"q1",visitId:"v1"},
+        {id:"i1",quoteId:"q1",visitId:"v1"},
+      ],
+      workflowAvailable:true,workflowExecutions:[],workflowActionExecutions:[],
+    } as unknown as Partial<Snapshot>));
+    expect(report).toMatchObject({savedRequests:1,sentQuotes:1,acceptedQuotes:1,
+      recordedVisits:1,savedInvoices:1,completedInternalAttention:0});
+  });
+
+  it("does not use duplicated or missing record IDs to manufacture an accepted quote chain", () => {
+    const report = summarizeOwnerOperationalEvidence(values({
+      requests:[{id:"r1",status:"NEW"}],
+      quotes:[
+        quote("","r1","ACCEPTED"),
+        quote("q1","r1","SENT"),
+        quote("q1","r1","ACCEPTED"),
+      ],
+      visits:[
+        {id:"",quoteId:"q1",requestId:"r1"},
+        {id:"v1",quoteId:"q1",requestId:"r1"},
+      ],
+      invoices:[
+        {id:"",quoteId:"q1",visitId:"v1"},
+        {id:"i1",quoteId:"q1",visitId:"v1"},
+      ],
+    } as unknown as Partial<Snapshot>));
+    // An ambiguous second copy of q1 cannot upgrade the first persisted
+    // SENT record to ACCEPTED or certify an invoice.
+    expect(report).toMatchObject({sentQuotes:1,acceptedQuotes:0,
+      recordedVisits:0,savedInvoices:0});
+  });
+
   it("UI is read-only and links owners to real modules, with no fabricated provider receipts", () => {
     const ui = readFileSync(join(process.cwd(),
       "src/features/onboarding/OnboardingOperationalEvidencePanel.tsx"), "utf8");
