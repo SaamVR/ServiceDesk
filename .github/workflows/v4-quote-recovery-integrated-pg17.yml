@@ -4,6 +4,20 @@ on:
     branches:
       - feat/v4-quote-worker-integrated-gate-20261013
       - feat/v4-quote-recovery-rebased-source-20261013
+  # Validate the actual reconciled PR, not just the historical recovery branch.
+  # Runs against GitHub's PR merge commit, proving canonical compatibility.
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+    paths:
+      - ".github/workflows/v4-quote-recovery-integrated-pg17.yml"
+      - "supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql"
+      - "scripts/release/v4-quote-source-pg17-concurrency.sh"
+      - "tests/sql/v4-quote-source-pg17-*.sql"
+      - "src/server/workflows/customer-quote-source-*.ts"
+      - "src/app/api/internal/workflows/quote-source/**"
+      - "tests/db/v4-quote-accepted-source-recovery.test.ts"
+      - "tests/e2e/v4-quote-source-protected-worker-http.test.ts"
   workflow_dispatch:
 permissions:
   contents: read
