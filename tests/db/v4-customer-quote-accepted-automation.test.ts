@@ -88,7 +88,7 @@ function fixture(options: {
   });
   const executeAttentionAction=vi.fn(async()=>{
     pending=false;
-    return {ok:true as const,value:{attentionItemId,actionExecutionId:actionId}};
+    return {ok:true as const,value:{attentionItemId:attentionId,actionExecutionId:actionId}};
   });
   const rpc={rpc:vi.fn()};
   return {service,rpc,seen,evaluateAndRecord,executeAttentionAction,
