@@ -31,7 +31,7 @@ export async function OwnerQuoteAcceptedAutomationControl({
       </section>
     );
   }
-  const { enabled, version, deploymentEnabled } = flag.value;
+  const { enabled, version, deploymentEnabled, journalReady } = flag.value;
 
   async function change(formData: FormData) {
     "use server";
@@ -64,6 +64,7 @@ export async function OwnerQuoteAcceptedAutomationControl({
         <p style={{ margin: 0, lineHeight: 1.6 }}>
           Workspace choice: <strong>{enabled ? "Opted in" : "Off"}</strong>.
           Deployment switch: <strong>{deploymentEnabled ? "Enabled" : "Disabled"}</strong>.
+          Journal 0063: <strong>{journalReady ? "Available" : "Unavailable"}</strong>.
           {" "}A trigger runs only when both switches are enabled and a real customer accepts
           a saved quote with an eligible owner-published rule.
         </p>
@@ -74,6 +75,14 @@ export async function OwnerQuoteAcceptedAutomationControl({
           transactional outbox and replay worker are verified.
         </p>
       </div>
+      {!enabled && !journalReady ? (
+        <p role="status" style={{ marginTop: 14, lineHeight: 1.6, color: "#8c5d28" }}>
+          Accepted-quote recovery journal is unavailable. Automatic follow-up
+          cannot be enabled until migration 0063 is installed and verified.
+          Manual quote review remains available, and existing automation can
+          always be disabled.
+        </p>
+      ) : null}
       {!enabled && missingSetup.length > 0 ? (
         <div role="status" aria-label="Before enabling automatic follow-up"
           style={{ marginTop: 14, border: "1px solid #e6d5ba",
@@ -101,13 +110,14 @@ export async function OwnerQuoteAcceptedAutomationControl({
         alignItems: "center", marginTop: 14 }}>
         <input type="hidden" name="expectedVersion" value={String(version)} />
         <input type="hidden" name="nextEnabled" value={enabled ? "false" : "true"} />
-        {enabled || missingSetup.length === 0 ? (
+        {enabled || (journalReady && missingSetup.length === 0) ? (
           <StaffSubmitButton className="app-button-secondary" pendingLabel="Saving workspace choice…">
             {enabled ? "Disable automatic internal follow-up" : "Opt in to automatic internal follow-up"}
           </StaffSubmitButton>
         ) : (
           <span role="note" style={{ color: "#8c5d28", fontWeight: 700, fontSize: ".85rem" }}>
-            Opt-in unavailable until prerequisites are complete
+            {journalReady ? "Opt-in unavailable until prerequisites are complete" :
+              "Opt-in unavailable until journal 0063 is installed"}
           </span>
         )}
         <span style={{ fontSize: ".78rem", color: "#59756c" }}>
