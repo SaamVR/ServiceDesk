@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // No GET handler and no cron schedule: activation requires a separate,
-// explicit operator-reviewed scheduler and SQL 0062 migration.
+// explicit operator-reviewed scheduler and SQL 0063 migration.
 export async function POST(request: Request): Promise<Response> {
   return handleInternalQuoteSourceWorkerPost(request);
 }
