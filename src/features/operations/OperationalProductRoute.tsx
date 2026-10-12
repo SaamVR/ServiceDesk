@@ -1243,7 +1243,7 @@ function RequestsView({
                         Complete human-confirmed cleaning details
                       </h4>
                       <p style={{ fontSize: ".82rem", lineHeight: 1.5, margin: "0 0 12px" }}>
-                        Select a real active service and enter the customer's confirmed room counts.
+                        Select a real active service and enter the customer-confirmed room counts.
                         This updates the saved request only; it does not create or send a quote,
                         infer details with AI, or contact a customer.
                       </p>
