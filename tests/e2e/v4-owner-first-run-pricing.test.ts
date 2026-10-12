@@ -154,7 +154,7 @@ describe("V4 first-run owner cleaning price configuration",()=>{
     expect(sql).toContain("to service_role");
     expect(sql).not.toContain("security definer");
     const ui=read("src/features/operations/OwnerCleaningPricingSetupForm.tsx");
-    expect(ui).toContain("No monetary preset".toLowerCase().includes("x")?"never":"No monetary preset");
+    expect(ui).toContain("No monetary preset");
     expect(ui).toContain('name="branchId"');
     expect(read("src/features/operations/OperationalProductRoute.tsx"))
       .toContain("setupAuthorizedCleaningPricing(workspaceSlug, formData)");
