@@ -21,6 +21,9 @@ export interface OwnerQuoteAutomationDependencies {
   verifyPrerequisites?: (
     service: Pick<SupabaseClient, "from">, workspaceId: string,
   ) => Promise<QuoteAutomationActivationProof>;
+  verifyJournalReady?: (
+    service: Pick<SupabaseClient, "from">, workspaceId: string,
+  ) => Promise<boolean>;
 }
 const uuid = (value: unknown): value is string => typeof value === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -50,6 +53,22 @@ async function verifiedOwner(workspaceSlug: string, deps: OwnerQuoteAutomationDe
 
 function deploymentEnabled() {
   return process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED === "true";
+}
+
+/** A tenant may only opt in once the authoritative 0063 capture table is
+ * actually readable. A missing journal means accepted quote events are lost.
+ * Service-role scoped HEAD does not return quote/customer records or PII. */
+export async function verifiedQuoteCaptureJournalReady(
+  service: Pick<SupabaseClient, "from">, workspaceId: string,
+): Promise<boolean> {
+  if (!uuid(workspaceId)) return false;
+  try {
+    const proof = await service.from("workflow_source_events")
+      .select("id", { head: true }).eq("workspace_id", workspaceId).limit(1);
+    return !proof.error;
+  } catch {
+    return false;
+  }
 }
 
 /** Read the existing scoped flag. Missing means OFF, not implicitly enabled. */
@@ -126,6 +145,12 @@ export async function setOwnerQuoteAutomationSetting(
         AUTO_QUOTE_PREREQUISITES_UNVERIFIED: "Saved service, pricing and rule readiness could not be verified. No automation setting was changed.",
       };
       return fail(check.code, messages[check.code]);
+    }
+    if (!await (deps.verifyJournalReady ?? verifiedQuoteCaptureJournalReady)(
+      service, workspace.id,
+    )) {
+      return fail("AUTO_QUOTE_JOURNAL_UNAVAILABLE",
+        "Accepted-quote journal migration 0063 is not verified. Automatic follow-up remains off until capture is installed.");
     }
   }
   const payload = { enabled, updated_by: actor.userId, version: expectedVersion + 1 };

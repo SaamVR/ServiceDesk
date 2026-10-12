@@ -76,11 +76,13 @@ function harness(options: {
     ok: true as const, branchId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
     ruleId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
   }));
+  const verifyJournalReady = vi.fn(async()=>true);
   const deps = {
     mode: () => options.mode ?? "SERVICE_ROLE",
-    resolveActor, verifyPrerequisites,
+    resolveActor, verifyPrerequisites, verifyJournalReady,
   } as unknown as OwnerQuoteAutomationDependencies;
-  return {service,resolveActor,verifyPrerequisites,deps,operations,get row(){return row;}};
+  return {service,resolveActor,verifyPrerequisites,verifyJournalReady,
+    deps,operations,get row(){return row;}};
 }
 
 describe("V4 owner-only per-tenant automated quote follow-up", () => {
@@ -142,6 +144,32 @@ describe("V4 owner-only per-tenant automated quote follow-up", () => {
     }
   });
 
+  it("prevents an owner from opting in until the real 0063 journal is installed",async()=>{
+    const h=harness({absent:true});
+    h.verifyJournalReady.mockResolvedValueOnce(false);
+    const result=await setOwnerQuoteAutomationSetting("qa-workspace",true,0,h.deps);
+    expect(result).toMatchObject({ok:false,code:"AUTO_QUOTE_JOURNAL_UNAVAILABLE"});
+    expect(h.verifyJournalReady).toHaveBeenCalledTimes(1);
+    expect(h.operations.filter(x=>x.kind!=="read")).toHaveLength(0);
+    expect(h.row).toBeUndefined();
+  });
+  it("only queries journal readiness after actual catalog, rate and rule proof",async()=>{
+    const h=harness({absent:true});
+    h.verifyPrerequisites.mockResolvedValueOnce({
+      ok:false,code:"AUTO_QUOTE_PRICING_MISSING",
+    } as never);
+    expect(await setOwnerQuoteAutomationSetting("qa-workspace",true,0,h.deps))
+      .toMatchObject({ok:false,code:"AUTO_QUOTE_PRICING_MISSING"});
+    expect(h.verifyJournalReady).not.toHaveBeenCalled();
+  });
+  it("does not block emergency disable because journal 0063 is missing",async()=>{
+    const h=harness({enabled:true,version:3});
+    h.verifyJournalReady.mockResolvedValue(false);
+    expect(await setOwnerQuoteAutomationSetting("qa-workspace",false,3,h.deps))
+      .toMatchObject({ok:true,value:{enabled:false,version:4}});
+    expect(h.verifyJournalReady).not.toHaveBeenCalled();
+    expect(h.verifyPrerequisites).not.toHaveBeenCalled();
+  });
   it("keeps emergency disable available even if pricing and rule checks are unavailable",async()=>{
     const h=harness({enabled:true,version:3});
     h.verifyPrerequisites.mockRejectedValue(new Error("database unavailable"));
