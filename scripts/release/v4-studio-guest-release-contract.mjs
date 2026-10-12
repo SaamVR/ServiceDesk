@@ -142,11 +142,71 @@ async function main() {
     check((reply.headers.get("cache-control") ?? "").includes("no-store"),
       "anonymous-staff-ai-cache-" + attempt.name);
   }
+  // Two additional real browser-only AI routes must enforce origin + strict
+  // command schema before any session lookup or provider authorization. Use
+  // fictional request IDs only; never call a model, send to a customer or
+  // read a real workspace. These cases detect localhost/127 Next rewrites.
+  const auxiliaryAiCases = [
+    {
+      route: "/api/internal/ai/request-brief",
+      body: { workspaceSlug: workspace,
+        requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
+    },
+    {
+      route: "/api/internal/ai/connection-test",
+      body: { workspaceSlug: workspace },
+    },
+  ];
+  let auxiliaryGuestChecks = 0;
+  for (const endpoint of auxiliaryAiCases) {
+    const attempts = [
+      { name: "missing-origin", headers: {}, body: endpoint.body,
+        status: 403, code: "SAME_ORIGIN_REQUIRED" },
+      { name: "foreign-origin",
+        headers: { origin: "https://malicious.example" }, body: endpoint.body,
+        status: 403, code: "SAME_ORIGIN_REQUIRED" },
+      { name: "role-injection",
+        headers: { origin }, body: { ...endpoint.body, role: "OWNER" },
+        status: 400, code: "REQUEST_SCHEMA_INVALID" },
+      { name: "cross-site",
+        headers: { origin, "sec-fetch-site": "cross-site" },
+        body: endpoint.body, status: 403, code: "SAME_ORIGIN_REQUIRED" },
+    ];
+    for (const attempt of attempts) {
+      const reply = await fetch(origin + endpoint.route, {
+        method: "POST", redirect: "manual", cache: "no-store",
+        headers: {
+          "User-Agent": "ServiceDesk-V4-anonymous-release-contract",
+          "content-type": "application/json", ...attempt.headers,
+        },
+        body: JSON.stringify(attempt.body), signal: AbortSignal.timeout(16000),
+      });
+      const data = await reply.json().catch(() => null);
+      if (reply.status !== attempt.status || data?.code !== attempt.code) {
+        // Only bounded status and whitelisted error codes; never log request
+        // bodies, identities, headers, model outputs or customer metadata.
+        const actualCode = typeof data?.code === "string" &&
+          /^[A-Z][A-Z0-9_]{2,79}$/.test(data.code)
+          ? data.code : "UNRECOGNIZED_OR_MISSING_CODE";
+        console.error("V4_AUX_AI_GUEST_DIAGNOSTIC", JSON.stringify({
+          route: endpoint.route, case: attempt.name,
+          expectedStatus: attempt.status, observedStatus: reply.status,
+          expectedCode: attempt.code, observedCode: actualCode,
+        }));
+      }
+      check(reply.status === attempt.status && data?.code === attempt.code,
+        "auxiliary-ai-" + endpoint.route + "-" + attempt.name);
+      check((reply.headers.get("cache-control") ?? "").includes("no-store"),
+        "auxiliary-ai-cache-" + endpoint.route + "-" + attempt.name);
+      auxiliaryGuestChecks++;
+    }
+  }
   console.log("V4_GUEST_RELEASE_PASS", JSON.stringify({
     publicRoutes: publicResults.length, guestDeniedModules: protectedResults.length,
     filteredDestinations: extraPaths.length, spoofedHeadersRejected: 1,
     undefinedNestedRoutesFailClosed: 1,
     anonymousStaffAiDenialCases: staffAiCases.length,
+    auxiliaryAiDeniedCases: auxiliaryGuestChecks,
     authenticatedOwnerAcceptance: false, tenantRlsAcceptance: false,
     providerDeliveryAcceptance: false,
   }));
