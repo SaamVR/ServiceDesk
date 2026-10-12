@@ -2,6 +2,10 @@ import type { Result } from "@/contracts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveStaffActor } from "@/features/operations/operational-product-runtime";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
+import {
+  verifyOwnerQuoteAutomationPrerequisites,
+  type QuoteAutomationActivationProof,
+} from "./owner-quote-automation-prerequisites";
 
 export const QUOTE_ACCEPTED_INTERNAL_FEATURE_KEY = "AUTO_INTERNAL_QUOTE_ACCEPTED";
 type Resolver = typeof resolveStaffActor;
@@ -14,6 +18,9 @@ export interface WorkspaceQuoteAutomationSetting {
 export interface OwnerQuoteAutomationDependencies {
   resolveActor?: Resolver;
   mode?: typeof operationalDatabaseMode;
+  verifyPrerequisites?: (
+    service: Pick<SupabaseClient, "from">, workspaceId: string,
+  ) => Promise<QuoteAutomationActivationProof>;
 }
 const uuid = (value: unknown): value is string => typeof value === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -103,6 +110,23 @@ export async function setOwnerQuoteAutomationSetting(
   }
   if ((savedVersion ?? 0) !== expectedVersion) {
     return fail("AUTO_QUOTE_VERSION_CONFLICT", "The settings changed in another session. Reload before retrying.");
+  }
+  // A tenant with no real cleaning catalog/rates/published internal rule
+  // cannot arm a no-op automatic trigger. Disabling ALWAYS stays available,
+  // even if providers, pricing or rule reads fail.
+  if (enabled && previous.data?.enabled !== true) {
+    const check = await (deps.verifyPrerequisites ?? verifyOwnerQuoteAutomationPrerequisites)(
+      service, workspace.id,
+    );
+    if (!check.ok) {
+      const messages: Record<typeof check.code, string> = {
+        AUTO_QUOTE_SERVICE_MISSING: "Configure an active cleaning service in Settings before opting in.",
+        AUTO_QUOTE_PRICING_MISSING: "Add an actual active USD branch price book before opting in.",
+        AUTO_QUOTE_INTERNAL_RULE_MISSING: "Publish a QUOTE_ACCEPTED internal attention rule for a priced branch first.",
+        AUTO_QUOTE_PREREQUISITES_UNVERIFIED: "Saved service, pricing and rule readiness could not be verified. No automation setting was changed.",
+      };
+      return fail(check.code, messages[check.code]);
+    }
   }
   const payload = { enabled, updated_by: actor.userId, version: expectedVersion + 1 };
   const write = !previous.data
