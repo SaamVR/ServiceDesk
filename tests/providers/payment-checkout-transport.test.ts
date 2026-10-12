@@ -46,7 +46,7 @@ describe("Stripe-style checkout transport", () => {
       captured = request;
       return {
         status: 200,
-        body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.test/session/cs_test_123" }),
+        body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.com/session/cs_test_123" }),
       };
     });
 
@@ -70,7 +70,7 @@ describe("Stripe-style checkout transport", () => {
       expect(result.value).toMatchObject({
         provider: "STRIPE",
         providerSessionId: "cs_test_123",
-        checkoutUrl: "https://checkout.stripe.test/session/cs_test_123",
+        checkoutUrl: "https://checkout.stripe.com/session/cs_test_123",
         amountMinor: 8500,
         currency: "USD",
         mode: "SANDBOX",
@@ -97,6 +97,22 @@ describe("Stripe-style checkout transport", () => {
     expect(mismatch).toMatchObject({ ok: false, code: "CHECKOUT_SCOPE_MISMATCH" });
     expect(badUrl).toMatchObject({ ok: false, code: "CHECKOUT_REDIRECT_URL_INVALID" });
     expect(calls).toHaveLength(0);
+  });
+
+  test.each([
+    { id: "cs_test_123", url: "https://attacker.example/checkout" },
+    { id: "cs_test_123", url: "https://checkout.stripe.com.attacker.org/session/123" },
+    { id: "cs_test_123", url: "https://someone:secret@checkout.stripe.com/session/123" },
+    { id: "cs_test_123", url: "https://checkout.stripe.com:8443/session/123" },
+    { id: "cs_test_123", url: "https://checkout.stripe.com/session/123#fragment" },
+    { id: "cs_test_123", url: "http://checkout.stripe.com/session/123" },
+    { id: "fake_123", url: "https://checkout.stripe.com/session/123" },
+  ])("rejects unverified hosted-checkout destination: %j", async ({ id, url }) => {
+    const result = await createStripeCheckoutSession(input(), config, async () => ({
+      status: 200, body: JSON.stringify({ id, url }),
+    }));
+    expect(result).toMatchObject({ ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID" });
+    expect(JSON.stringify(result)).not.toContain("sk_test_secret_value");
   });
 
   test("normalizes provider auth, rate-limit, invalid request, timeout, and malformed success response", async () => {
