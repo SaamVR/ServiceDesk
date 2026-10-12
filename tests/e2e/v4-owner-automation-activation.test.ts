@@ -151,8 +151,8 @@ describe("owner automation activation evidence", () => {
     expect(summary.steps[3]).toMatchObject({
       id: "accepted-quote", status: "ACTION_REQUIRED", module: "requests",
     });
-    expect(summary.steps[4].status).toBe("READY");
-    expect(summary.readyCount).toBe(4);
+    expect(summary.steps[4].status).toBe("ACTION_REQUIRED");
+    expect(summary.readyCount).toBe(3);
     expect(summary.allEvidenceReady).toBe(false);
     expect(summarizeAutomationActivation({
       ...data, requests: [acceptedRequest], quotes: [{ ...acceptedQuote, status: "SENT" }],
