@@ -36,15 +36,49 @@ export async function handleStaffAiHttpPost(
     return response(415, { code: "CONTENT_TYPE_REQUIRED" });
   }
 
-  // Cookie-backed server actions must reject cross-origin POSTs before
-  // resolving Auth or issuing a billable model call.
+  // Render may pass an internal proxy URL to Next while the browser uses
+  // our actual public HTTPS origin. Accept ONLY the explicitly configured
+  // public origin, never X-Forwarded-Host from an untrusted request. The same
+  // strict policy is shared by request-brief and owner model diagnostics.
   const origin = request.headers.get("origin");
   let requestOrigin: string;
   try { requestOrigin = new URL(request.url).origin; }
   catch { return response(400, { code: "REQUEST_URL_INVALID" }); }
-  if (!origin || origin !== requestOrigin ||
-      (request.headers.get("sec-fetch-site") &&
-        !["same-origin", "none"].includes(request.headers.get("sec-fetch-site")!))) {
+  const configuredOrigin = process.env.SERVICEDESK_AI_ALLOWED_ORIGIN;
+  let trustedPublicOrigin: string | undefined;
+  if (configuredOrigin) {
+    try {
+      const candidate = new URL(configuredOrigin);
+      if (candidate.protocol === "https:" && candidate.pathname === "/" &&
+          !candidate.username && !candidate.password &&
+          !candidate.search && !candidate.hash && !candidate.port) {
+        trustedPublicOrigin = candidate.origin;
+      }
+    } catch { /* Invalid origin configuration fails closed. */ }
+  }
+  const fetchSite = request.headers.get("sec-fetch-site");
+  // Next's production proxy may normalize a loopback URL as localhost while
+  // retaining the actual browser Host as 127.0.0.1 (or vice versa).
+  // In this narrow local-only case, compare the exact Origin to the incoming
+  // Host authority. Never trust X-Forwarded-Host, and NEVER use this exception
+  // for an external domain: Render continues to require the exact configured
+  // HTTPS public origin above.
+  let sameLoopbackHostOrigin = false;
+  if (origin) {
+    try {
+      const requested = new URL(request.url);
+      const browser = new URL(origin);
+      const loopback = (host: string) => host === "127.0.0.1" || host === "localhost";
+      sameLoopbackHostOrigin = requested.protocol === "http:" &&
+        browser.protocol === "http:" &&
+        loopback(requested.hostname) && loopback(browser.hostname) &&
+        browser.origin === origin &&
+        request.headers.get("host") === browser.host;
+    } catch { /* Malformed origins are rejected. */ }
+  }
+  if (!origin || (origin !== requestOrigin && origin !== trustedPublicOrigin &&
+      !sameLoopbackHostOrigin) ||
+      (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
     return response(403, { code: "SAME_ORIGIN_REQUIRED" });
   }
 

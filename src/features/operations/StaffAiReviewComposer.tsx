@@ -8,6 +8,7 @@ import {
   type ApprovedReplyReceipt,
 } from "./staff-ai-review-contract";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
+import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
 import styles from "./StaffAiReviewComposer.module.css";
 
 /**
@@ -15,17 +16,29 @@ import styles from "./StaffAiReviewComposer.module.css";
  * execute tools, or send it. Approval is a separate staff-confirmed server
  * transaction with source-message/version/idempotency/consent checks.
  */
-export function StaffAiReviewComposer({
-  workspaceSlug,
-  conversationId,
-  sourceMessageId,
-  expectedVersion,
-}: {
+type StaffAiReviewProps = {
   workspaceSlug: string;
   conversationId: string;
   sourceMessageId: string;
   expectedVersion: number;
-}) {
+};
+
+/** A key on the *internal* component is necessary even if a parent forgets
+ * its own key: a changed tenant/thread/message/version can never inherit
+ * another customer's text, approval or retry idempotency key. */
+export function StaffAiReviewComposer(props: StaffAiReviewProps) {
+  return <ScopedStaffAiReviewComposer
+    key={staffAiReviewScopeKey(props)}
+    {...props}
+  />;
+}
+
+function ScopedStaffAiReviewComposer({
+  workspaceSlug,
+  conversationId,
+  sourceMessageId,
+  expectedVersion,
+}: StaffAiReviewProps) {
   const [draft, setDraft] = useState<ReviewedAiDraft>();
   const [body, setBody] = useState("");
   const [confirmed, setConfirmed] = useState(false);

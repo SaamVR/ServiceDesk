@@ -24,6 +24,12 @@ function harness(options: {
   missingCatalog?: boolean;
   catalogError?: boolean;
   invalidServiceId?: boolean;
+  dispatcherUnscoped?: boolean;
+  wrongWorkspace?: boolean;
+  wrongRequestId?: boolean;
+  requestReadThrows?: boolean;
+  catalogReadThrows?: boolean;
+  modelThrows?: boolean;
 } = {}) {
   const filters: Array<[string, unknown]> = [];
   const selects: Array<[string, string]> = [];
@@ -41,6 +47,8 @@ function harness(options: {
         },
         eq(key: string, value: unknown) { filters.push([key, value]); return query; },
         async maybeSingle() {
+          if (options.requestReadThrows && table === "requests") throw Error("private database detail");
+          if (options.catalogReadThrows && table === "service_catalog") throw Error("private catalog detail");
           if (table === "service_catalog") {
             return {
               error: options.catalogError ? { code: "DB_UNAVAILABLE", message: "private" } : null,
@@ -55,8 +63,8 @@ function harness(options: {
           return {
             error: null,
             data: options.absent ? null : {
-              id: requestId,
-              workspace_id: workspaceId,
+              id: options.wrongRequestId ? "ffffffff-ffff-4fff-8fff-ffffffffffff" : requestId,
+              workspace_id: options.wrongWorkspace ? otherBranchId : workspaceId,
               branch_id: options.branch ?? branchId,
               service_id: options.noService ? null : options.invalidServiceId ? "bad-service-id" : serviceId,
               bedrooms: 3,
@@ -72,6 +80,7 @@ function harness(options: {
     },
   };
   const model = vi.fn(async (_config: unknown, prompt: { userText: string; workspaceId: string }) => {
+    if (options.modelThrows) throw Error("private model secret and request body");
     expect(prompt.workspaceId).toBe(workspaceId);
     expect(prompt.userText).not.toContain("private@example.com");
     expect(prompt.userText).not.toContain("never send to model");
@@ -90,7 +99,9 @@ function harness(options: {
       workspace: { id: workspaceId, slug: input.workspaceSlug, timezone: "UTC", currency: "USD", name: "QA" },
       actor: { workspaceId, userId: "user_qa", role: options.role ?? "OWNER" },
       service,
-      branchScope: { mode: "BRANCH", selectedBranchId: branchId, branches: [] },
+      branchScope: options.dispatcherUnscoped
+        ? { mode: "ALL", branches: [] }
+        : { mode: "BRANCH", selectedBranchId: branchId, branches: [] },
     },
   }));
   const config = vi.fn(() => options.disabled
@@ -163,6 +174,36 @@ describe("V4 model-backed cleaning request copilot", () => {
     expect(await generateAuthorizedRequestBrief(input, t.deps))
       .toMatchObject({ ok: false, code: "AI_BRIEF_NOT_FOUND" });
     expect(t.model).not.toHaveBeenCalled();
+  });
+
+  it("fails closed for dispatcher legacy or ALL scope before database/model access", async () => {
+    const t = harness({role:"DISPATCHER",dispatcherUnscoped:true});
+    expect(await generateAuthorizedRequestBrief(input,t.deps))
+      .toMatchObject({ok:false,code:"AI_BRIEF_FORBIDDEN"});
+    expect(t.filters).toHaveLength(0);
+    expect(t.model).not.toHaveBeenCalled();
+  });
+
+  it("rejects mismatched persisted request identifiers and tenant IDs even if database query misbehaves", async () => {
+    for (const kind of [{wrongRequestId:true},{wrongWorkspace:true}]) {
+      const t=harness(kind);
+      expect(await generateAuthorizedRequestBrief(input,t.deps))
+        .toMatchObject({ok:false,code:"AI_BRIEF_NOT_FOUND"});
+      expect(t.model).not.toHaveBeenCalled();
+    }
+  });
+
+  it("normalizes thrown database and provider exceptions without leaking private details", async () => {
+    for (const [opts,code] of [
+      [{requestReadThrows:true},"AI_BRIEF_READ_FAILED"],
+      [{catalogReadThrows:true},"AI_BRIEF_SERVICE_READ_FAILED"],
+      [{modelThrows:true},"AI_BRIEF_PROVIDER_UNAVAILABLE"],
+    ] as const) {
+      const t=harness(opts);
+      const result=await generateAuthorizedRequestBrief(input,t.deps);
+      expect(result).toMatchObject({ok:false,code});
+      expect(JSON.stringify(result)).not.toMatch(/private database detail|private catalog detail|private model secret/);
+    }
   });
 
   it("never generates from a nonexistent request or from a model tool command", async () => {

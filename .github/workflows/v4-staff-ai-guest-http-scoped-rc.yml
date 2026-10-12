@@ -1,0 +1,57 @@
+name: ServiceDesk V4 scoped real staff AI HTTP gate
+on:
+  push:
+    branches: [fix/v4-staff-ai-next-proxy-origin-reconciled-20261013]
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - src/server/api-handlers/ai-staff-http.ts
+      - src/app/api/internal/ai/draft/route.ts
+      - src/proxy.ts
+      - scripts/release/v4-studio-guest-release-contract.mjs
+      - .github/workflows/v4-staff-ai-guest-http-scoped-rc.yml
+permissions:
+  contents: read
+concurrency:
+  group: sd-v4-real-staff-ai-http-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-built-next-staff-ai-guest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify exact source commit
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Focused staff AI and guest HTTP source regression
+        run: pnpm exec vitest run tests/e2e/v3-ai-staff-http.test.ts tests/e2e/v4-guest-staff-ai-http-release.test.ts
+      - name: Build executable Next app
+        run: pnpm build
+      - name: Start built server on approved loopback
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/v4-staff-ai-http.log" 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Built app did not start" >&2
+          exit 1
+      - name: Real anonymous HTTP guest, invalid role and missing-session denials
+        env:
+          V4_GUEST_ROUTE_ORIGIN: http://127.0.0.1:3000
+        run: node scripts/release/v4-studio-guest-release-contract.mjs

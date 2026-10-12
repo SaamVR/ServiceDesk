@@ -55,6 +55,16 @@ export async function executeAuthorizedStaffAiTurn(
     return fail("AI_STAFF_WORKSPACE_MISMATCH", "Staff session does not authorize this workspace.");
   }
 
+  // A dispatcher must have an explicit, verified branch assignment. The
+  // request-brief boundary already denies legacy/ALL scopes; AI conversation
+  // drafts must not be the exception. Fail before reading messages or calling
+  // any model, even if an injected/stale resolver supplies an ALL scope.
+  if (actor.role === "DISPATCHER" &&
+      (branchScope.mode !== "BRANCH" || !branchScope.selectedBranchId)) {
+    return fail("AI_BRANCH_SCOPE_REQUIRED",
+      "Select an assigned branch before analyzing customer conversations.");
+  }
+
   // No database or model work is allowed while operational AI is disabled.
   const enabled = readConfiguredAiRuntimeConfig(deps.env);
   if (!enabled.ok) return enabled;

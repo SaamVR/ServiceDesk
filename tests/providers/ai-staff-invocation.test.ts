@@ -22,7 +22,7 @@ const reply = JSON.stringify({ object: "response", status: "completed",
   }) }] }] });
 
 function fixture(config: {
-  who?: ActorContext; branch?: string; handover?: boolean;
+  who?: ActorContext; branch?: string; legacy?: boolean; handover?: boolean;
   conversation?: Record<string, unknown> | null;
   message?: Record<string, unknown> | null;
   request?: Record<string, unknown> | null;
@@ -52,7 +52,7 @@ function fixture(config: {
     service: { from: read },
     rpc: {},
     branchScope: config.branch ? { mode: "BRANCH", selectedBranchId: config.branch, branches: [] }
-      : { mode: "ALL", branches: [] },
+      : { mode: config.legacy ? "LEGACY" : "ALL", branches: [] },
   } as unknown as ResolvedStaffActor;
   const opts = {
     resolveActor: async (slug: string) => (config.authFailed || slug !== "service-desk")
@@ -99,6 +99,15 @@ describe("staff authenticated operational AI invocation", () => {
       expect(await executeAuthorizedStaffAiTurn(input, data.opts))
         .toMatchObject({ ok: false, code: "AI_BRANCH_SCOPE_REQUIRED" });
       expect(data.calls().network).toBe(0);
+    }
+    for (const scope of [
+      fixture({ who: dispatcher }),
+      fixture({ who: dispatcher, legacy: true }),
+    ]) {
+      expect(await executeAuthorizedStaffAiTurn(input, scope.opts))
+        .toMatchObject({ ok: false, code: "AI_BRANCH_SCOPE_REQUIRED" });
+      expect(scope.calls().network).toBe(0);
+      expect(scope.calls().lookups).toEqual([]);
     }
     const allowed = fixture({ who: dispatcher, branch: "branch-1" });
     expect((await executeAuthorizedStaffAiTurn(input, allowed.opts)).ok).toBe(true);

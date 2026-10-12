@@ -90,10 +90,63 @@ async function main() {
   // truthful than claiming they are authenticated record-detail routes.
   const missing = await get("/app/" + workspace + "/jobs/visit-42");
   check(missing.status === 404, "unimplemented-nested-path-must-not-pass");
+  // The real model-backed staff conversation endpoint is cookie-authenticated.
+  // These are *negative* tests only: no staff session, model key, customer
+  // message, billing action or provider call is involved.
+  const staffAiEndpoint = origin + "/api/internal/ai/draft";
+  const fictionalAiRequest = JSON.stringify({
+    workspaceSlug: workspace, conversationId: "fictional-conversation",
+    messageId: "fictional-message",
+  });
+  const staffAiCases = [
+    { name: "missing-origin", headers: { "content-type": "application/json" },
+      body: fictionalAiRequest, status: 403, code: "SAME_ORIGIN_REQUIRED" },
+    { name: "foreign-origin",
+      headers: { "content-type": "application/json", origin: "https://malicious.example" },
+      body: fictionalAiRequest, status: 403, code: "SAME_ORIGIN_REQUIRED" },
+    { name: "cross-site",
+      headers: { "content-type": "application/json", origin,
+        "sec-fetch-site": "cross-site" },
+      body: fictionalAiRequest, status: 403, code: "SAME_ORIGIN_REQUIRED" },
+    { name: "invalid-role-injection",
+      headers: { "content-type": "application/json", origin, "sec-fetch-site": "same-origin" },
+      body: JSON.stringify({ ...JSON.parse(fictionalAiRequest), role: "OWNER" }),
+      status: 400, code: "REQUEST_SCHEMA_INVALID" },
+    { name: "no-staff-session",
+      headers: { "content-type": "application/json", origin, "sec-fetch-site": "same-origin" },
+      body: fictionalAiRequest, status: 401, code: "AI_STAFF_UNAUTHORIZED" },
+  ];
+  for (const attempt of staffAiCases) {
+    const reply = await fetch(staffAiEndpoint, {
+      method: "POST", cache: "no-store", redirect: "manual",
+      headers: { "User-Agent": "ServiceDesk-V4-anonymous-release-contract", ...attempt.headers },
+      body: attempt.body, signal: AbortSignal.timeout(16000),
+    });
+    const data = await reply.json().catch(() => null);
+    if (reply.status !== attempt.status || data?.code !== attempt.code) {
+      // Emit only numeric HTTP status + constrained error category; never log
+      // request body, cookies, customer data, model output or auth headers.
+      const observedCode = typeof data?.code === "string" &&
+        /^[A-Z][A-Z0-9_]{2,79}$/.test(data.code)
+          ? data.code : "UNRECOGNIZED_OR_MISSING_CODE";
+      console.error("V4_GUEST_DENIAL_DIAGNOSTIC", JSON.stringify({
+        case: attempt.name,
+        expectedStatus: attempt.status,
+        observedStatus: reply.status,
+        expectedCode: attempt.code,
+        observedCode,
+      }));
+    }
+    check(reply.status === attempt.status &&
+      data?.code === attempt.code, "anonymous-staff-ai-" + attempt.name);
+    check((reply.headers.get("cache-control") ?? "").includes("no-store"),
+      "anonymous-staff-ai-cache-" + attempt.name);
+  }
   console.log("V4_GUEST_RELEASE_PASS", JSON.stringify({
     publicRoutes: publicResults.length, guestDeniedModules: protectedResults.length,
     filteredDestinations: extraPaths.length, spoofedHeadersRejected: 1,
     undefinedNestedRoutesFailClosed: 1,
+    anonymousStaffAiDenialCases: staffAiCases.length,
     authenticatedOwnerAcceptance: false, tenantRlsAcceptance: false,
     providerDeliveryAcceptance: false,
   }));
