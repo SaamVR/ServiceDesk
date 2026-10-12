@@ -13,7 +13,10 @@ describe("V2 onboarding product", () => {
     expect(page).toContain("OnboardingProductRoute");
     expect(page).not.toContain("OperationalFixtureRoute");
     expect(runtime).toContain("auth.auth.getUser()");
-    expect(runtime).toContain('.eq("role", "OWNER")');
+    const ownerChoice = source("src/features/onboarding/owner-onboarding-workspace-choice.ts");
+    expect(runtime).toContain("resolveOwnerOnboardingWorkspaceChoice(auth, data.user.id)");
+    expect(ownerChoice).toContain('.eq("role", "OWNER")');
+    expect(ownerChoice).toContain('.eq("status", "ACTIVE")');
     expect(runtime).toContain("loadOperationalStaffSnapshot");
   });
 
