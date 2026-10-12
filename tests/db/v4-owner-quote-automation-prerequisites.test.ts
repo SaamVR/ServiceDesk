@@ -7,14 +7,19 @@ const other = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const branch = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const rule = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const serviceId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const rateId = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 
 type RecordRow = Record<string, unknown>;
 function fixture(overrides: Partial<Record<string, RecordRow[]>> = {}, failureTable?:string) {
   const queried: {table:string;filter:Record<string,unknown>}[] = [];
   const tables: Record<string,RecordRow[]> = {
-    service_catalog: [{id:serviceId,workspace_id:ws,active:true}],
+    service_catalog: [{id:serviceId,code:"STANDARD",workspace_id:ws,active:true}],
     workspace_branches: [{id:branch,workspace_id:ws,active:true,currency:"USD"}],
-    branch_price_books: [{branch_id:branch,workspace_id:ws,active:true}],
+    branch_price_books: [{branch_id:branch,rate_card_id:rateId,
+      starts_at:null,ends_at:null,workspace_id:ws,active:true}],
+    rate_cards: [{id:rateId,workspace_id:ws,active:true,currency:"USD",rules:{
+      standard:{baseMinor:20000,baseMinutes:120},
+    }}],
     workflow_rules: [{id:rule,workspace_id:ws,branch_id:branch,status:"ACTIVE",published_version_number:2}],
     workflow_rule_versions: [{
       workspace_id:ws,rule_id:rule,branch_id:branch,version_number:2,
@@ -57,7 +62,7 @@ describe("real persisted prerequisites for owner quote automation opt-in", () =>
     const f=fixture();
     expect(await verifyOwnerQuoteAutomationPrerequisites(f.service,ws))
       .toEqual({ok:true,branchId:branch,ruleId:rule});
-    expect(f.queried).toHaveLength(5);
+    expect(f.queried).toHaveLength(6);
     for(const call of f.queried) expect(call.filter.workspace_id).toBe(ws);
   });
 
@@ -72,12 +77,47 @@ describe("real persisted prerequisites for owner quote automation opt-in", () =>
     for(const changes of [
       {branch_price_books:[]},
       {workspace_branches:[{id:branch,workspace_id:ws,active:true,currency:"GBP"}]},
-      {branch_price_books:[{workspace_id:other,branch_id:branch,active:true}]},
+      {branch_price_books:[{workspace_id:other,branch_id:branch,rate_card_id:rateId,active:true}]},
     ]) {
       const f=fixture(changes);
       expect(await verifyOwnerQuoteAutomationPrerequisites(f.service,ws))
         .toMatchObject({ok:false,code:"AUTO_QUOTE_PRICING_MISSING"});
     }
+  });
+
+  it("does not treat a dangling, inactive, empty or foreign rate card as usable price proof",async()=>{
+    for(const changes of [
+      {branch_price_books:[{workspace_id:ws,branch_id:branch,rate_card_id:other,active:true}]},
+      {rate_cards:[]},
+      {rate_cards:[{id:rateId,workspace_id:ws,active:false,currency:"USD",rules:{
+        standard:{baseMinor:20000,baseMinutes:120}}}]},
+      {rate_cards:[{id:rateId,workspace_id:ws,active:true,currency:"USD",rules:{}}]},
+      {rate_cards:[{id:rateId,workspace_id:ws,active:true,currency:"USD",rules:{
+        standard:{baseMinor:0,baseMinutes:120}}}]},
+      {rate_cards:[{id:rateId,workspace_id:ws,active:true,currency:"GBP",rules:{
+        standard:{baseMinor:20000,baseMinutes:120}}}]},
+      {rate_cards:[{id:rateId,workspace_id:other,active:true,currency:"USD",rules:{
+        standard:{baseMinor:20000,baseMinutes:120}}}]},
+      {service_catalog:[{id:serviceId,code:"OTHER",workspace_id:ws,active:true}]},
+      {branch_price_books:[{workspace_id:ws,branch_id:branch,rate_card_id:rateId,
+        starts_at:"2099-01-01T00:00:00Z",ends_at:null,active:true}]},
+      {branch_price_books:[{workspace_id:ws,branch_id:branch,rate_card_id:rateId,
+        starts_at:null,ends_at:"2020-01-01T00:00:00Z",active:true}]},
+    ]) {
+      const f=fixture(changes);
+      const result=await verifyOwnerQuoteAutomationPrerequisites(f.service,ws);
+      expect(result.ok).toBe(false);
+      if(changes.service_catalog) expect(result).toMatchObject({code:"AUTO_QUOTE_SERVICE_MISSING"});
+      else expect(result).toMatchObject({code:"AUTO_QUOTE_PRICING_MISSING"});
+      expect(f.queried.every(c=>c.filter.workspace_id===ws)).toBe(true);
+    }
+  });
+
+  it("requires a positive numeric duration as well as a real base price",async()=>{
+    const f=fixture({rate_cards:[{id:rateId,workspace_id:ws,active:true,currency:"USD",
+      rules:{standard:{baseMinor:20000,baseMinutes:0}}}]});
+    expect(await verifyOwnerQuoteAutomationPrerequisites(f.service,ws))
+      .toMatchObject({ok:false,code:"AUTO_QUOTE_PRICING_MISSING"});
   });
 
   it("requires published QUOTE_ACCEPTED CREATE_ATTENTION in same eligible branch",async()=>{
@@ -101,7 +141,7 @@ describe("real persisted prerequisites for owner quote automation opt-in", () =>
   });
 
   it("fails closed on unknown database snapshots and malformed workspace IDs",async()=>{
-    for(const name of ["service_catalog","workspace_branches","branch_price_books","workflow_rules","workflow_rule_versions"]) {
+    for(const name of ["service_catalog","workspace_branches","branch_price_books","rate_cards","workflow_rules","workflow_rule_versions"]) {
       const f=fixture({},name);
       expect(await verifyOwnerQuoteAutomationPrerequisites(f.service,ws))
         .toMatchObject({ok:false,code:"AUTO_QUOTE_PREREQUISITES_UNVERIFIED"});
