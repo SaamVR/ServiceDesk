@@ -90,12 +90,12 @@ export async function setupAuthorizedCleaningPricing(
     });
   } catch {
     return fail("PRICING_SETUP_RPC_UNAVAILABLE",
-      "Pricing setup database migration or trusted service is not ready.");
+      "The pricing save could not be confirmed. Reload Settings to check for a saved price book before retrying.");
   }
   if (response.error || !response.data ||
       typeof response.data !== "object" || Array.isArray(response.data)) {
     return fail("PRICING_SETUP_RPC_UNAVAILABLE",
-      "Pricing setup database migration or trusted service is not ready.");
+      "The pricing save was not confirmed. Reload Settings to check for a saved price book before retrying.");
   }
   const saved = response.data as Record<string, unknown>;
   if (saved.ok !== true || !uuid(saved.rateCardId) || !uuid(saved.priceBookId) ||
@@ -115,6 +115,7 @@ export async function setupAuthorizedCleaningPricing(
 
   // Proof is RLS-scope-bound by the same authorized SSR/privileged server
   // context. The SQL response alone must never become a success banner.
+  try {
   const [catalog, rate, book] = await Promise.all([
     service.from("service_catalog").select("code,active,name")
       .eq("workspace_id", workspace.id).in("code", ["STANDARD","DEEP","MOVE_OUT"]),
@@ -142,7 +143,7 @@ export async function setupAuthorizedCleaningPricing(
       book.data?.rate_card_id !== saved.rateCardId ||
       book.data?.branch_id !== branch.id || book.data?.active !== true) {
     return fail("PRICING_SETUP_READBACK_UNVERIFIED",
-      "The persisted price configuration could not be read back. Review setup before quoting.");
+      "The pricing save may have committed, but exact persisted values were not confirmed. Reload Settings and verify the saved branch book before retrying.");
   }
 
   return { ok: true, value: {
@@ -154,4 +155,11 @@ export async function setupAuthorizedCleaningPricing(
     state: "PERSISTED_OWNER_PRICING_VERIFIED",
     externalCustomerMessagesSent: 0,
   } };
+  } catch {
+    // An RPC can commit even if the subsequent read fails due to a transient
+    // network/client error. Never throw a 500, declare that no write occurred
+    // or encourage a new non-idempotent first-run setup request.
+    return fail("PRICING_SETUP_READBACK_UNVERIFIED",
+      "Pricing may already be saved, but the readback connection failed. Reload Settings and confirm the branch price book before trying again.");
+  }
 }
