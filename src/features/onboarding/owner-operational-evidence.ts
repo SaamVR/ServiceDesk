@@ -20,6 +20,7 @@ export interface OwnerOperationalEvidence {
   acceptedQuotes: number;
   recordedVisits: number;
   savedInvoices: number;
+  linkedJourneys: number;
   completedInternalAttention: number | null;
 }
 
@@ -89,6 +90,21 @@ export function summarizeOwnerOperationalEvidence(input: Pick<
     return acceptedVisitById.get(invoice.visitId)?.quoteId === invoice.quoteId;
   });
 
+  // Snapshot-linked operational chain, not a user-session UAT receipt.
+  // An accepted quote can have multiple invoices or visits; count the
+  // uniquely identified quote only when a saved invoice references a visit
+  // in the same authorized request -> accepted quote -> visit chain.
+  const linkedJourneys = new Set(invoices.flatMap(invoice => {
+    if (!invoice.quoteId || !invoice.visitId || invoice.status === "VOID") return [];
+    const visit = acceptedVisitById.get(invoice.visitId);
+    const quote = acceptedById.get(invoice.quoteId);
+    // A void invoice or an invoice in a different currency cannot count
+    // toward a coherent branch-scoped cleaning journey.
+    return visit?.quoteId === invoice.quoteId &&
+      quote && (!invoice.currency || invoice.currency === quote.currency)
+      ? [invoice.quoteId] : [];
+  })).size;
+
   let completedInternalAttention: number | null = null;
   if (input.workflowAvailable === true &&
       Array.isArray(input.workflowExecutions) &&
@@ -118,6 +134,7 @@ export function summarizeOwnerOperationalEvidence(input: Pick<
     acceptedQuotes: accepted.length,
     recordedVisits: visits.length,
     savedInvoices: invoices.length,
+    linkedJourneys,
     completedInternalAttention,
   };
 }

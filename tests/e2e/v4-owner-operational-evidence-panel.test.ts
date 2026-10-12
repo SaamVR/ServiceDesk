@@ -24,7 +24,7 @@ describe("V4 owner live operational evidence, never synthetic proof", () => {
   it("shows missing data accurately, not as a complete journey", () => {
     expect(summarizeOwnerOperationalEvidence(values())).toEqual({
       savedRequests: 0, sentQuotes: 0, acceptedQuotes: 0,
-      recordedVisits: 0, savedInvoices: 0, completedInternalAttention: null,
+      recordedVisits: 0, savedInvoices: 0, linkedJourneys: 0, completedInternalAttention: null,
     });
   });
 
@@ -157,7 +157,7 @@ describe("V4 owner live operational evidence, never synthetic proof", () => {
     } as unknown as Partial<Snapshot>));
     expect(results).toEqual({
       savedRequests: 1, sentQuotes: 1, acceptedQuotes: 1,
-      recordedVisits: 1, savedInvoices: 1, completedInternalAttention: 1,
+      recordedVisits: 1, savedInvoices: 1, linkedJourneys: 1, completedInternalAttention: 1,
     });
   });
 
@@ -282,6 +282,74 @@ describe("V4 owner live operational evidence, never synthetic proof", () => {
     // SENT record to ACCEPTED or certify an invoice.
     expect(report).toMatchObject({sentQuotes:1,acceptedQuotes:0,
       recordedVisits:0,savedInvoices:0});
+  });
+
+  it("counts a linked request → accepted quote → visit → invoice only once per quote", () => {
+    const report = summarizeOwnerOperationalEvidence(values({
+      requests: [request("r1"), request("r2")],
+      quotes: [quote("q1","r1","ACCEPTED"), quote("q2","r2","SENT")],
+      visits: [
+        {id:"v1",requestId:"r1",quoteId:"q1"},
+        {id:"v2",requestId:"r1",quoteId:"q1"},
+        {id:"v3",requestId:"r2",quoteId:"q2"},
+      ],
+      invoices: [
+        {id:"i1",quoteId:"q1",visitId:"v1"},
+        {id:"i2",quoteId:"q1",visitId:"v2"},
+        {id:"i3",quoteId:"q1"},
+        {id:"i4",quoteId:"q2",visitId:"v3"},
+      ],
+    } as unknown as Partial<Snapshot>));
+    expect(report).toMatchObject({
+      savedRequests:2,acceptedQuotes:1,recordedVisits:2,savedInvoices:3,
+      linkedJourneys:1,
+    });
+  });
+
+  it("excludes voided and cross-currency invoices from the linked business journey", () => {
+    const evidence = summarizeOwnerOperationalEvidence(values({
+      requests: [request("req-1")],
+      quotes: [quote("quote-us", "req-1", "ACCEPTED", "USD")],
+      visits: [{id:"visit-1",requestId:"req-1",quoteId:"quote-us"}],
+      invoices: [
+        {id:"void",quoteId:"quote-us",visitId:"visit-1",status:"VOID",currency:"USD"},
+        {id:"wrong-currency",quoteId:"quote-us",visitId:"visit-1",
+          status:"ISSUED",currency:"GBP"},
+      ],
+    } as unknown as Partial<Snapshot>));
+    expect(evidence).toMatchObject({savedInvoices:2,linkedJourneys:0});
+  });
+
+  it("never certifies a full linked journey from unrelated or foreign branch invoices", () => {
+    const north={mode:"BRANCH" as const,selectedBranchId:"north",branches:[
+      {id:"north",code:"N",name:"North",currency:"USD",
+        timezone:"America/New_York",isDefault:true},
+    ]};
+    const report=summarizeOwnerOperationalEvidence(values({
+      branchScope:north,
+      requests:[{id:"r1",status:"NEW",branchId:"north"}],
+      quotes:[quote("q1","r1","ACCEPTED")],
+      visits:[
+        {id:"v1",requestId:"r1",quoteId:"q1",branchId:"north"},
+        {id:"v2",requestId:"r1",quoteId:"q1",branchId:"south"},
+      ],
+      invoices:[
+        {id:"i1",quoteId:"q1"},
+        {id:"i2",quoteId:"q1",visitId:"v2"},
+        {id:"i3",quoteId:"q1",visitId:"unknown"},
+      ],
+    } as unknown as Partial<Snapshot>));
+    expect(report).toMatchObject({acceptedQuotes:1,recordedVisits:1,
+      savedInvoices:1,linkedJourneys:0});
+  });
+
+  it("does not claim a complete customer journey merely because one linked chain exists", () => {
+    const ui=readFileSync(join(process.cwd(),
+      "src/features/onboarding/OnboardingOperationalEvidencePanel.tsx"),"utf8");
+    expect(ui).toContain("Linked cleaning journeys");
+    expect(ui).toContain("evidence.linkedJourneys");
+    expect(ui).toContain("Not proof of authenticated end-to-end acceptance");
+    expect(ui).toContain("Even a linked record chain is not confirmation");
   });
 
   it("UI is read-only and links owners to real modules, with no fabricated provider receipts", () => {

@@ -30,6 +30,8 @@ export function OnboardingOperationalEvidencePanel({
       detail: "Visits linked to a saved accepted quote and request" },
     { name: "Recorded invoices", value: evidence.savedInvoices, module: "invoices" as const,
       detail: "Invoices linked to an accepted quote—not a payment receipt" },
+    { name: "Linked cleaning journeys", value: evidence.linkedJourneys, module: "jobs" as const,
+      detail: "Unique accepted quotes linked to a saved request, visit and invoice. Not proof of authenticated end-to-end acceptance or payment" },
     { name: "Live internal attention executions", value: evidence.completedInternalAttention,
       module: "automations" as const,
       detail: "Completed, saved LIVE QUOTE_ACCEPTED attention actions only; previews excluded" },
@@ -63,7 +65,7 @@ export function OnboardingOperationalEvidencePanel({
         ))}
       </div>
       <p style={{ fontSize: ".78rem", margin: "15px 0 0", lineHeight: 1.6 }}>
-        A record count is not confirmation that one customer journey succeeded.
+        Even a linked record chain is not confirmation that one real customer session completed the workflow.
         External WhatsApp, email, Stripe and AI-model delivery need their own
         approved provider receipts. Missing automation data is shown as unverified,
         never silently treated as a successful run.
