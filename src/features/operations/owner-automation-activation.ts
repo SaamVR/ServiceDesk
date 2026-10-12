@@ -95,11 +95,16 @@ export function summarizeAutomationActivation(
       .filter(execution => {
         const version = eligibleQuoteVersions.get(execution.ruleVersionId);
         return execution.mode === "LIVE" && execution.matched === true &&
-          execution.state === "COMPLETED" && execution.eventType === "QUOTE_ACCEPTED" &&
+          (execution.state === "COMPLETED" || execution.state === "ACTIONS_PENDING") &&
+          execution.eventType === "QUOTE_ACCEPTED" &&
           version?.ruleId === execution.ruleId && version?.branchId === execution.branchId;
       })
       .map(execution => [execution.id, execution.branchId]),
   );
+  // A workflow may legitimately remain ACTIONS_PENDING when an external
+  // template requires human approval AFTER its internal attention succeeded.
+  // Count the persisted internal success only, not delivery or whole-rule
+  // completion; PREVIEW and PARTIAL_FAILED remain excluded.
   const internalExecutionSucceeded = (data.workflowActionExecutions ?? [])
     .some(action => action.actionType === "CREATE_ATTENTION" &&
       action.state === "SUCCEEDED" &&
