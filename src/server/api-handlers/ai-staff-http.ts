@@ -59,6 +59,21 @@ export async function handleStaffAiHttpPost(
   const fetchSite = request.headers.get("sec-fetch-site");
   if (!origin || (origin !== requestOrigin && origin !== trustedPublicOrigin) ||
       (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
+    // CI-only sanitized classification; no values, cookies, request payloads,
+    // hostnames, credentials or customer data. Off in all deployed services.
+    if (process.env.SERVICEDESK_AI_HTTP_DIAGNOSTICS === "true") {
+      let originMatchesHost = false;
+      try {
+        originMatchesHost = Boolean(origin && new URL(origin).host === request.headers.get("host"));
+      } catch { /* Invalid Origin is rejected below. */ }
+      console.warn("AI_HTTP_CSRF_DIAGNOSTIC", JSON.stringify({
+        originPresent: Boolean(origin),
+        matchesRequestUrl: origin === requestOrigin,
+        matchesTrustedPublic: Boolean(trustedPublicOrigin && origin === trustedPublicOrigin),
+        matchesHost: originMatchesHost,
+        fetchSiteAllowed: !fetchSite || ["same-origin", "none"].includes(fetchSite),
+      }));
+    }
     return response(403, { code: "SAME_ORIGIN_REQUIRED" });
   }
 
