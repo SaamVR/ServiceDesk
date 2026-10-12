@@ -53,6 +53,7 @@ import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { AiRequestBrief } from "./AiRequestBrief";
 import { AiOperationsStatus } from "./AiOperationsStatus";
+import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import { automationPlaybooks, getAutomationPlaybook } from "./automation-playbooks";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
@@ -2967,7 +2968,8 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
           allowOwnerModelTest={data.actor.role === "OWNER"}
         />
-        <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
+        <WorkflowEvidenceStrip executions={data.workflowExecutions ?? []} actions={data.workflowActionExecutions ?? []} />
+      <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
         <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
         <header className={styles.recoveryHeader}>
           <div><p className={styles.recoveryEyebrow}>Human recovery</p><h2>Recovery queue</h2><p>Operational exceptions that need a person before workflow can safely continue.</p></div>
@@ -2999,6 +3001,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
           allowOwnerModelTest={data.actor.role === "OWNER"}
         />
+      <WorkflowEvidenceStrip executions={data.workflowExecutions ?? []} actions={data.workflowActionExecutions ?? []} />
       <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
       <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
       <header className={styles.recoveryHeader}>
