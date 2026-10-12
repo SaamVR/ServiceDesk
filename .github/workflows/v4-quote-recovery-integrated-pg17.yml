@@ -18,17 +18,17 @@ jobs:
         image: postgres:17
         env:
           POSTGRES_PASSWORD: disposable-only-quote-qa
-          POSTGRES_DB: sd_quote_claim_concurrency
+          POSTGRES_DB: servicedesk_migration_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d sd_quote_claim_concurrency"
+          --health-cmd "pg_isready -U postgres -d servicedesk_migration_test"
           --health-interval 5s --health-timeout 5s --health-retries 15
     env:
       PGPASSWORD: disposable-only-quote-qa
       PGHOST: 127.0.0.1
       PGUSER: postgres
-      PGDATABASE: sd_quote_claim_concurrency
+      PGDATABASE: servicedesk_migration_test
       SERVICEDESK_PG17_DISPOSABLE_ONLY: "1"
     steps:
       - uses: actions/checkout@v4
