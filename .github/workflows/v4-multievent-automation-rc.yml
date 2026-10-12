@@ -1,0 +1,25 @@
+name: ServiceDesk V4 persisted multi-event automation RC
+on:
+  push:
+    branches: [feat/v4-multievent-owner-automation-20261012]
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+permissions:
+  contents: read
+concurrency:
+  group: v4-multievent-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-head-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run tests/db/v4-multievent-owner-automation.test.ts
+      - run: pnpm check:rc
