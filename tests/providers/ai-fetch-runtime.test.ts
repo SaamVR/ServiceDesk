@@ -58,6 +58,27 @@ describe("server-only AI model fetch", () => {
     expect(calls).toBe(0);
   });
 
+  it.each([
+    "http://api.openai.com/v1",
+    "https://user:pass@api.openai.com/v1",
+    "https://api.openai.com:8443/v1",
+    "https://api.openai.com/v1?token=not-real",
+    "https://api.openai.com/v1/other",
+    "https://api.openai.com.attacker.org/v1",
+    "https://other-model.example.com/v1",
+    "https://169.254.169.254/v1",
+  ])("blocks invalid model origins before the HTTP adapter sees credentials: %s", async apiBaseUrl => {
+    let called=0;
+    const transport=async (_request: AiModelHttpRequest) => {
+      called++;
+      return {status:200,body:sampleOutput};
+    };
+    const result=await callAiModel({...server,apiBaseUrl},input,transport);
+    expect(result).toMatchObject({ok:false,code:"AI_MODEL_CONFIGURATION_BLOCKED"});
+    expect(called).toBe(0);
+    expect(JSON.stringify(result)).not.toContain("synthetic-not-production");
+  });
+
   it("ignores provider error payload content and honors normalized status only", async () => {
     const transport = createFetchAiModelTransport(async () =>
       new Response("Bearer provider-secret private@example.test", { status: 429 }));
