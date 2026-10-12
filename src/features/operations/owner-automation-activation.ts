@@ -25,12 +25,23 @@ export interface AutomationActivationSummary {
  */
 export function summarizeAutomationActivation(
   data: Pick<OperationalStaffSnapshot,
-    "serviceCatalog" | "ownerPricingBookProof" | "workflowAvailable" |
+    "serviceCatalog" | "ownerPricingBookProof" | "branchScope" | "workflowAvailable" |
     "workflowRules" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions">,
 ): AutomationActivationSummary {
   const catalogReady = data.serviceCatalog.some(item => item.active);
   const pricing = data.ownerPricingBookProof;
-  const pricingVerified = pricing?.state === "VERIFIED" && pricing.activeBranchIds.length > 0;
+  // In a multi-branch business, a price book or rule from another branch
+  // cannot certify the currently selected USD cleaning operation.
+  const scopeKnown = Boolean(data.branchScope?.branches.length);
+  const eligibleBranchIds = new Set((data.branchScope?.branches ?? [])
+    .filter(branch => branch.currency === "USD" &&
+      (data.branchScope?.mode !== "BRANCH" ||
+        branch.id === data.branchScope.selectedBranchId))
+    .map(branch => branch.id));
+  const pricedBranchIds = new Set(pricing?.state === "VERIFIED"
+    ? pricing.activeBranchIds.filter(id => eligibleBranchIds.has(id)) : []);
+  const pricingVerified = pricedBranchIds.size > 0;
+  const pricingScopeKnown = scopeKnown && eligibleBranchIds.size > 0;
   const versionsLoaded = data.workflowAvailable !== false &&
     Array.isArray(data.workflowRules) && Array.isArray(data.workflowRuleVersions);
   const activeRules = new Map(
@@ -42,7 +53,8 @@ export function summarizeAutomationActivation(
     (data.workflowRuleVersions ?? [])
       .filter(version => {
         const rule = activeRules.get(version.ruleId);
-        return version.state === "PUBLISHED" && version.eventType === "QUOTE_ACCEPTED" &&
+        return pricedBranchIds.has(version.branchId) &&
+          version.state === "PUBLISHED" && version.eventType === "QUOTE_ACCEPTED" &&
           version.actions.some(action => action.type === "CREATE_ATTENTION") &&
           rule?.branchId === version.branchId &&
           rule?.publishedVersionNumber === version.versionNumber;
@@ -51,7 +63,7 @@ export function summarizeAutomationActivation(
   );
   const executionsLoaded = Array.isArray(data.workflowExecutions) &&
     Array.isArray(data.workflowActionExecutions) && versionsLoaded;
-  const verifiedLiveExecutions = new Set(
+  const verifiedLiveExecutions = new Map(
     (data.workflowExecutions ?? [])
       .filter(execution => {
         const version = eligibleQuoteVersions.get(execution.ruleVersionId);
@@ -59,11 +71,12 @@ export function summarizeAutomationActivation(
           execution.state === "COMPLETED" && execution.eventType === "QUOTE_ACCEPTED" &&
           version?.ruleId === execution.ruleId && version?.branchId === execution.branchId;
       })
-      .map(execution => execution.id),
+      .map(execution => [execution.id, execution.branchId]),
   );
   const internalExecutionSucceeded = (data.workflowActionExecutions ?? [])
     .some(action => action.actionType === "CREATE_ATTENTION" &&
-      action.state === "SUCCEEDED" && verifiedLiveExecutions.has(action.executionId));
+      action.state === "SUCCEEDED" &&
+      verifiedLiveExecutions.get(action.executionId) === action.branchId);
 
   const steps: ActivationStep[] = [
     {
@@ -78,37 +91,41 @@ export function summarizeAutomationActivation(
     {
       id: "pricing",
       title: "Verify branch pricing",
-      status: pricing === undefined || pricing.state === "UNAVAILABLE"
+      status: pricing === undefined || pricing.state === "UNAVAILABLE" || !pricingScopeKnown
         ? "UNVERIFIED" : pricingVerified ? "READY" : "ACTION_REQUIRED",
-      detail: pricing === undefined || pricing.state === "UNAVAILABLE"
-        ? "Price-book evidence could not be verified; do not assume rates exist."
+      detail: pricing === undefined || pricing.state === "UNAVAILABLE" || !pricingScopeKnown
+        ? "Authorized USD branch or price-book evidence could not be verified; do not assume rates exist."
         : pricingVerified
-          ? "An active branch price book was verified."
-          : "Complete the owner pricing setup before issuing customer quotes.",
+          ? "An active price book is verified for an authorized USD branch in the current scope."
+          : "Complete the price book for the selected authorized USD branch before quoting.",
       module: "settings",
     },
     {
       id: "quote-rule",
       title: "Publish an internal quote-accepted rule",
-      status: !versionsLoaded ? "UNVERIFIED"
+      status: !versionsLoaded || !pricingScopeKnown ||
+        pricing?.state !== "VERIFIED" ? "UNVERIFIED"
         : eligibleQuoteVersions.size > 0 ? "READY" : "ACTION_REQUIRED",
-      detail: !versionsLoaded
-        ? "Published rule evidence is currently unavailable."
+      detail: !versionsLoaded || !pricingScopeKnown ||
+        pricing?.state !== "VERIFIED"
+        ? "Branch-scoped published rule or price-book evidence is unavailable."
         : eligibleQuoteVersions.size
-          ? "An owner-published quote rule contains an internal attention action."
-          : "Draft, preview and publish a QUOTE_ACCEPTED rule with CREATE_ATTENTION.",
+          ? "A published quote rule creates internal attention in a priced, authorized USD branch."
+          : "Publish a QUOTE_ACCEPTED rule with CREATE_ATTENTION in a branch with verified pricing.",
       module: "automations",
     },
     {
       id: "execution-proof",
       title: "Verify a saved internal execution",
-      status: !executionsLoaded ? "UNVERIFIED"
+      status: !executionsLoaded || !pricingScopeKnown ||
+        pricing?.state !== "VERIFIED" ? "UNVERIFIED"
         : internalExecutionSucceeded ? "READY" : "ACTION_REQUIRED",
-      detail: !executionsLoaded
-        ? "Execution history is unavailable; a blank list is not evidence of zero activity."
+      detail: !executionsLoaded || !pricingScopeKnown ||
+        pricing?.state !== "VERIFIED"
+        ? "Authorized branch, pricing or execution history is unavailable; do not claim a live result."
         : internalExecutionSucceeded
-          ? "A matching LIVE quote-rule execution has a succeeded internal attention receipt."
-          : "A published rule alone is not execution proof. Verify a LIVE receipt.",
+          ? "A LIVE quote rule and succeeded internal attention receipt match this authorized priced branch."
+          : "Verify a succeeded LIVE internal action in the same authorized, priced branch.",
       module: "automations",
     },
   ];

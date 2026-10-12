@@ -38,12 +38,23 @@ export function summarizeOwnerOperationalEvidence(input: Pick<
     .filter(request => inScope(request.branchId))
     .map(request => [request.id, request]));
   const requestIds = new Set(requests.keys());
-  const quoteRows = input.quotes.filter(quote =>
-    requestIds.has(quote.requestId) &&
-    Number.isSafeInteger(quote.totalMinor) &&
-    quote.totalMinor >= 0 &&
-    typeof quote.currency === "string" &&
-    /^[A-Z]{3}$/.test(quote.currency));
+  const quoteRows = input.quotes.filter(quote => {
+    const request = requests.get(quote.requestId);
+    // A valid ISO-like currency code alone is not a valid priced quote:
+    // the saved quote must use the currency of the request's authorized
+    // business branch. Currency conversion is never inferred here.
+    const branchCurrency = branches && branches.mode !== "LEGACY"
+      ? branches.branches.find(branch => branch.id === request?.branchId)?.currency
+      : undefined;
+    return Boolean(request) &&
+      Number.isSafeInteger(quote.totalMinor) &&
+      quote.totalMinor >= 0 &&
+      typeof quote.currency === "string" &&
+      /^[A-Z]{3}$/.test(quote.currency) &&
+      (!branches || branches.mode === "LEGACY" ||
+        (typeof branchCurrency === "string" &&
+          quote.currency === branchCurrency));
+  });
   const sentQuotes = quoteRows.filter(quote =>
     quote.status === "SENT" || quote.status === "ACCEPTED");
   const accepted = sentQuotes.filter(quote => quote.status === "ACCEPTED");
