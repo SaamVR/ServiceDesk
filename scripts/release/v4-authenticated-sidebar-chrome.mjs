@@ -41,6 +41,10 @@ if (output === cwd || output.startsWith(cwd + "/") || existsSync(output)) {
 mkdirSync(output, { recursive: true, mode: 0o700 });
 const profile = mkdtempSync(join(tmpdir(), "sd-v4-auth-profile-"));
 const widths = [320, 390, 834, 901, 1024, 1280, 1440];
+const staffModules = [
+  "overview", "inbox", "customers", "requests", "quotes", "schedule",
+  "jobs", "invoices", "quality", "automations", "reports", "settings", "billing",
+];
 let child, channel;
 const report = [];
 
@@ -111,7 +115,11 @@ async function visit(path) {
 async function waitForWorkspace(path) {
   for (let i = 0; i < 140; i++) {
     const state = await evaluate('({path:location.pathname, ready:document.readyState==="complete", rail:!!document.querySelector(".app-sidebar"), main:!!document.querySelector("#app-main-content")})');
-    if (state?.ready && state?.path === path && state.rail && state.main) return;
+    // The unsigned shell also renders .app-sidebar. Require account UI
+    // that is rendered only when the real server-side auth.getUser succeeds.
+    const authenticated = await evaluate('({account:!!document.querySelector("a.app-account-link"),signout:!!document.querySelector("form.app-signout-form"),signin:!!document.querySelector("a.app-auth-entry-link")})');
+    if (state?.ready && state?.path === path && state.rail && state.main &&
+        authenticated?.account && authenticated.signout && !authenticated.signin) return;
     if (state?.path?.startsWith("/auth/sign-in") && i > 45) break;
     await sleep(200);
   }
@@ -165,7 +173,7 @@ try {
         result.height > height + 1 || contrast(result.link, "#ffffff") < 4.5 ||
         contrast(result.icon, "#ffffff") < 4.5) throw new Error("Authenticated desktop rail visibility failed");
       const expanded = await evaluate('(() => {const d=document.querySelector(".app-sidebar details.app-more-tools");d.querySelector("summary").click();return {open:d.open,count:d.querySelectorAll("a.app-nav-link").length};})()');
-      if (!expanded.open || expanded.count !== 5) throw new Error("Authenticated More tools disclosure failed");
+      if (!expanded.open || expanded.count !== 4) throw new Error("Authenticated More tools disclosure failed");
     } else {
       if (result.rail || !result.menu) throw new Error("Authenticated mobile workspace nav missing");
       const menu = await evaluate('(() => {const d=document.querySelector(".app-mobile-nav");d.querySelector("summary").click();const panel=d.querySelector(".app-mobile-nav-panel"),r=panel.getBoundingClientRect();return {open:d.open,links:panel.querySelectorAll("a.app-nav-link").length,left:r.left,right:r.right,dialog:panel.getAttribute("aria-modal")};})()');
@@ -180,14 +188,48 @@ try {
       throw new Error("Authenticated screenshot failed validation");
     }
     writeFileSync(join(output, "authenticated-studio-" + width + ".png"), png, { mode:0o600 });
-    report.push({ width, realAuthenticatedSession: true, staffShell: "visible", screenshot: true });
+    report.push({ width, module: "overview", realAuthenticatedSession: true, staffShell: "visible", screenshot: true });
+    // Visit EVERY protected Studio module with the same real authenticated
+    // owner, not a standalone synthetic shell. No business actions or writes.
+    for (const staffModule of staffModules.filter(item => item !== "overview")) {
+      const target = "/app/" + encodeURIComponent(slug) + "/" + staffModule;
+      await visit(target);
+      await waitForWorkspace(target);
+      const audit = await evaluate('(() => {' +
+        'const rail=document.querySelector(".app-sidebar"),main=document.querySelector("#app-main-content");' +
+        'const links=[...document.querySelectorAll(".app-sidebar a.app-nav-link")];' +
+        'const selected=links.filter(x=>x.getAttribute("aria-current")==="page");' +
+        'const active=selected[0];const m=document.querySelector("details.app-more-tools");' +
+        'const text=[...main.querySelectorAll("h1,h2")].map(x=>x.textContent?.trim()).filter(Boolean);' +
+        'return {route:location.pathname,width:innerWidth,documentWidth:document.documentElement.scrollWidth,' +
+        'signedIn:!!document.querySelector("form.app-signout-form")&&!document.querySelector("a.app-auth-entry-link"),' +
+        'navCount:links.length,activeCount:selected.length,activeText:active?.textContent?.trim()||"",moreOpen:m?.open,' +
+        'mainVisible:main.getBoundingClientRect().width>0,headerCount:text.length,' +
+        'errorOverlay:!!document.querySelector("nextjs-portal [data-nextjs-dialog-overlay]")};})()');
+      if (audit.route !== target || audit.width !== width || audit.documentWidth > width + 2 ||
+          !audit.signedIn || audit.navCount !== 13 || audit.activeCount !== 1 ||
+          !audit.mainVisible || !audit.headerCount || audit.errorOverlay)
+        throw new Error("AUTHENTICATED_STUDIO_ROUTE_AUDIT_FAILED:" + staffModule + ":" + width);
+      if (["quality","reports","settings","billing"].includes(staffModule) && !audit.moreOpen)
+        throw new Error("AUTHENTICATED_DEEP_LINK_SECONDARY_NAV_HIDDEN:" + staffModule);
+      // Limit the private screenshot count while auditing 91 real route-width
+      // combinations; no customer data is written to Git or public logs.
+      if (width === 320 || width === 1440) {
+        const capture = await channel.send("Page.captureScreenshot", {format:"png",fromSurface:true,captureBeyondViewport:false});
+        const png = Buffer.from(capture.data || "", "base64");
+        if (png.subarray(0,8).toString("hex") !== "89504e470d0a1a0a" ||
+            png.readUInt32BE(16) !== width) throw new Error("AUTHENTICATED_STUDIO_SCREENSHOT_INVALID");
+        writeFileSync(join(output, "private-" + staffModule + "-" + width + ".png"), png, {mode:0o600});
+      }
+      report.push({width,module:staffModule,realAuthenticatedSession:true,activeNav:true,overflow:false});
+    }
   }
   writeFileSync(join(output,"manifest.json"), JSON.stringify({
     status:"REAL_AUTHENTICATED_STAGING_STUDIO_UX_VERIFIED_ONLY",
     providerVerified:false, productionReady:false,
     checks:report,
   },null,2),{mode:0o600});
-  console.log("REAL_AUTHENTICATED_STAGING_STUDIO_UX_VERIFIED_ONLY: seven widths passed");
+  console.log("REAL_AUTHENTICATED_STAGING_STUDIO_UX_VERIFIED_ONLY: thirteen routes at seven widths passed; protected private owner session, no provider proof");
 } finally {
   channel?.close();
   child?.kill();
