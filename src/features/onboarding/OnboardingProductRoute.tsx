@@ -13,6 +13,8 @@ import { loadOnboardingProduct } from "./onboarding-product-runtime";
 import { summarizeOwnerCommercialSetup } from "./onboarding-commercial-readiness";
 import { OnboardingOperationalEvidencePanel } from "./OnboardingOperationalEvidencePanel";
 import { availableFirstRunUsdBranches } from "@/features/operations/owner-pricing-readiness";
+import { summarizeAutomationActivation } from "@/features/operations/owner-automation-activation";
+import { buildStaffModuleHref } from "@/features/operations/staff-modules";
 
 function setupState(done: boolean) {
   return done ? (
@@ -129,6 +131,7 @@ export async function OnboardingProductRoute({
   const realPricingHref = settingsHref +
     (canEnterFirstRunRates ? "#owner-first-run-pricing" : "");
   const needsPricing = !servicesReady || !pricingVerified;
+  const automationActivation = summarizeAutomationActivation(result.value);
 
   return (
     <StaffAppShell workspace={workspace.slug}>
@@ -287,6 +290,40 @@ export async function OnboardingProductRoute({
           </div>
         </Panel>
       </div>
+
+      <Panel>
+        <SectionHeader
+          title="Turn on a real internal cleaning automation"
+          description="A saved service, authorized branch rate card, and published internal QUOTE_ACCEPTED rule are needed before the owner can opt in. A completed internal attention receipt is separate evidence after a real event."
+        />
+        <div className="app-row-list">
+          {automationActivation.steps.map(step => (
+            <article className="app-row" key={step.id}>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.detail}</p>
+                <Link href={buildStaffModuleHref(workspace.slug, step.module)}>
+                  {step.module === "settings" ? "Review Settings" : "Open Automation Studio"} →
+                </Link>
+              </div>
+              <div className="app-row-meta">
+                {step.status === "READY" ? (
+                  <StatusBadge tone="success">Saved evidence</StatusBadge>
+                ) : step.status === "UNVERIFIED" ? (
+                  <StatusBadge tone="warning">Unverified</StatusBadge>
+                ) : (
+                  <StatusBadge tone="warning">Action needed</StatusBadge>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+        <p style={{ fontSize: ".78rem", margin: "15px 0 0", lineHeight: 1.6 }}>
+          {automationActivation.readyCount} of {automationActivation.total} saved activation signals verified.
+          A configured trigger or draft rule never proves an AI model call, an external message, or a complete customer workflow.
+          Only workspace owners can enable the protected internal follow-up after prerequisites pass.
+        </p>
+      </Panel>
 
       <OnboardingOperationalEvidencePanel
         workspaceSlug={workspace.slug}
