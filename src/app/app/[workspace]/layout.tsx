@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { STAFF_REQUEST_TARGET_HEADER, verifiedStudioReturnPath } from "@/features/auth/studio-return-path";
 import { StaffAppShell } from "@/components/product/StaffAppShell";
 import { hasAuthenticatedSession } from "@/features/auth/server-session";
 import { BranchScopeBar } from "@/features/operations/BranchScopeBar";
@@ -18,8 +20,9 @@ export default async function StaffWorkspaceLayout({
   // superficially authenticated. Always gate the Studio at the server
   // boundary, before fetching workspace or branch information.
   if (!signedIn) {
+    const requested = (await headers()).get(STAFF_REQUEST_TARGET_HEADER);
     redirect("/auth/sign-in?next=" +
-      encodeURIComponent("/app/" + encodeURIComponent(workspace) + "/overview"));
+      encodeURIComponent(verifiedStudioReturnPath(workspace, requested)));
   }
   const branchContext = await loadOperationalBranchScope(workspace);
 
