@@ -1,4 +1,8 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import type { OperationalStaffSnapshot } from "./operational-product-runtime";
+import { summarizeAutomationActivation } from "./owner-automation-activation";
+import { buildStaffModuleHref } from "./staff-modules";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import {
   readOwnerQuoteAutomationSetting,
@@ -11,8 +15,13 @@ import {
  * as browser inputs. Dispatcher/customer views cannot render the toggle.
  */
 export async function OwnerQuoteAcceptedAutomationControl({
-  workspaceSlug,
-}: { workspaceSlug: string }) {
+  workspaceSlug, snapshot,
+}: { workspaceSlug: string; snapshot: OperationalStaffSnapshot }) {
+  const activation = summarizeAutomationActivation(snapshot);
+  // The fourth checklist item is actual execution evidence. It must NOT be
+  // required before first opt-in, otherwise the owner can never start.
+  const missingSetup = activation.steps
+    .filter(step => step.id !== "execution-proof" && step.status !== "READY");
   const flag = await readOwnerQuoteAutomationSetting(workspaceSlug);
   if (!flag.ok) {
     return (
@@ -65,13 +74,42 @@ export async function OwnerQuoteAcceptedAutomationControl({
           transactional outbox and replay worker are verified.
         </p>
       </div>
+      {!enabled && missingSetup.length > 0 ? (
+        <div role="status" aria-label="Before enabling automatic follow-up"
+          style={{ marginTop: 14, border: "1px solid #e6d5ba",
+            borderRadius: 12, background: "#fffaf2", padding: 14 }}>
+          <strong>Complete these saved workspace requirements before opting in</strong>
+          <ul style={{ paddingLeft: 20, marginBlock: 10, display: "grid", gap: 9 }}>
+            {missingSetup.map(step => (
+              <li key={step.id}>
+                <strong>{step.title}</strong>
+                {" — "}{step.detail}{" "}
+                <Link href={buildStaffModuleHref(workspaceSlug, step.module)}>
+                  {step.module === "settings" ? "Open Settings" : "Open Automation Studio"} →
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p style={{ margin: 0, fontSize: ".8rem" }}>
+            The activation control stays locked until authorized catalog, USD branch pricing,
+            and a matching published internal rule are all verifiable. A deployment switch
+            or model key is not sufficient.
+          </p>
+        </div>
+      ) : null}
       <form action={change} style={{ display: "flex", gap: 10, flexWrap: "wrap",
         alignItems: "center", marginTop: 14 }}>
         <input type="hidden" name="expectedVersion" value={String(version)} />
         <input type="hidden" name="nextEnabled" value={enabled ? "false" : "true"} />
-        <StaffSubmitButton className="app-button-secondary" pendingLabel="Saving workspace choice…">
-          {enabled ? "Disable automatic internal follow-up" : "Opt in to automatic internal follow-up"}
-        </StaffSubmitButton>
+        {enabled || missingSetup.length === 0 ? (
+          <StaffSubmitButton className="app-button-secondary" pendingLabel="Saving workspace choice…">
+            {enabled ? "Disable automatic internal follow-up" : "Opt in to automatic internal follow-up"}
+          </StaffSubmitButton>
+        ) : (
+          <span role="note" style={{ color: "#8c5d28", fontWeight: 700, fontSize: ".85rem" }}>
+            Opt-in unavailable until prerequisites are complete
+          </span>
+        )}
         <span style={{ fontSize: ".78rem", color: "#59756c" }}>
           Owner-only · saved version {version}
         </span>

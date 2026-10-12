@@ -185,6 +185,14 @@ export async function runTrustedAcceptedQuoteInternalAutomation(
       completedAttentionActions++;
     }
   }
+  // No eligible PUBLISHED QUOTE_ACCEPTED rule means nothing was evaluated.
+  // Do not call this a completed durable source: the future lease worker
+  // must retain a retry/dead-letter receipt until an owner publishes a rule.
+  // A real evaluated rule whose conditions do not match IS still a valid
+  // persisted decision and is intentionally counted above.
+  if (newlyRecordedRuleExecutions + reusedRuleExecutions === 0) {
+    return fail("QUOTE_AUTOMATION_NO_ELIGIBLE_PUBLISHED_RULE");
+  }
   return {ok:true,value:{
     state:"PERSISTED_INTERNAL_QUOTE_ACCEPTED_AUTOMATION",
     newlyRecordedRuleExecutions,reusedRuleExecutions,

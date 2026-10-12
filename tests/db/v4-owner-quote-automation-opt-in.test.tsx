@@ -72,11 +72,15 @@ function harness(options: {
     workspace:{slug:"qa-workspace",id:ws},
     service,
   }}));
+  const verifyPrerequisites = vi.fn(async () => ({
+    ok: true as const, branchId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    ruleId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  }));
   const deps = {
     mode: () => options.mode ?? "SERVICE_ROLE",
-    resolveActor,
+    resolveActor, verifyPrerequisites,
   } as unknown as OwnerQuoteAutomationDependencies;
-  return {service,resolveActor,deps,operations,get row(){return row;}};
+  return {service,resolveActor,verifyPrerequisites,deps,operations,get row(){return row;}};
 }
 
 describe("V4 owner-only per-tenant automated quote follow-up", () => {
@@ -120,6 +124,30 @@ describe("V4 owner-only per-tenant automated quote follow-up", () => {
       .toMatchObject({ok:false,code:"AUTO_QUOTE_INVALID_INPUT"});
     expect(h.row?.enabled).toBe(false);
     expect(h.operations.filter(v=>v.kind==="update")).toHaveLength(0);
+  });
+
+  it("blocks owner opt-in when real service, price or published internal rule proof is absent",async()=>{
+    for(const code of [
+      "AUTO_QUOTE_SERVICE_MISSING",
+      "AUTO_QUOTE_PRICING_MISSING",
+      "AUTO_QUOTE_INTERNAL_RULE_MISSING",
+      "AUTO_QUOTE_PREREQUISITES_UNVERIFIED",
+    ] as const) {
+      const h=harness({absent:true});
+      h.verifyPrerequisites.mockResolvedValueOnce({ok:false,code} as never);
+      const res=await setOwnerQuoteAutomationSetting("qa-workspace",true,0,h.deps);
+      expect(res).toMatchObject({ok:false,code});
+      expect(h.operations.filter(v=>v.kind!=="read")).toHaveLength(0);
+      expect(h.row).toBeUndefined();
+    }
+  });
+
+  it("keeps emergency disable available even if pricing and rule checks are unavailable",async()=>{
+    const h=harness({enabled:true,version:3});
+    h.verifyPrerequisites.mockRejectedValue(new Error("database unavailable"));
+    expect(await setOwnerQuoteAutomationSetting("qa-workspace",false,3,h.deps))
+      .toMatchObject({ok:true,value:{enabled:false,version:4}});
+    expect(h.verifyPrerequisites).not.toHaveBeenCalled();
   });
 
   it("lets only that owner disable its own persisted switch with version CAS",async()=>{
