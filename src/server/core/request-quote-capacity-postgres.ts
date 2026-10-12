@@ -1,5 +1,5 @@
 import type { ActorContext, CommandMeta, QuoteDTO, RequestDTO, Result, SlotDTO } from "../../contracts";
-import { createQuoteSnapshot, defaultRateCard, type QuoteServiceCode } from "../../domain/quote";
+import { createQuoteSnapshot, type QuoteServiceCode, type RateCard } from "../../domain/quote";
 import type { ServiceDeskFacade, CreateRequestInput, FindSlotsInput } from "./facade";
 import type { SupabaseRpcClient } from "./payment-application-postgres";
 
@@ -117,7 +117,7 @@ export interface CustomerBootstrapInput { displayName: string; authUserId?: stri
 export interface PropertyBootstrapInput { customerId: string; label?: string; addressLine1: string; addressLine2?: string; city: string; region?: string; postalCode: string; countryCode?: string; serviceNotes?: string; accessNotes?: string; }
 export interface CapacitySlotSeedInput { slotId?: string; crewId: string; startsAt: string; endsAt: string; capacityMinutes: number; timezone?: string; }
 
-export function createPostgresRequestQuoteCapacityFacadeMethods(client: SupabaseRpcClient): Pick<ServiceDeskFacade, "createRequest" | "updateRequest" | "calculateQuote" | "sendQuote" | "acceptQuote" | "findSlots" | "holdSlot"> {
+export function createPostgresRequestQuoteCapacityFacadeMethods(client: SupabaseRpcClient, persistedRateCard?: RateCard): Pick<ServiceDeskFacade, "createRequest" | "updateRequest" | "calculateQuote" | "sendQuote" | "acceptQuote" | "findSlots" | "holdSlot"> {
   return {
     async createRequest(ctx: ActorContext, input: CreateRequestInput, meta: CommandMeta): Promise<Result<RequestDTO>> {
       const { data, error } = await client.rpc<RpcRow>("servicedesk_create_request", {
@@ -134,6 +134,9 @@ export function createPostgresRequestQuoteCapacityFacadeMethods(client: Supabase
     },
 
     async calculateQuote(ctx: ActorContext, requestId: string): Promise<Result<QuoteDTO>> {
+      // There is no acceptable default for real customer pricing. The caller
+      // must first resolve its active, tenant-scoped branch price book.
+      if (!persistedRateCard) return fail("QUOTE_RATE_CARD_REQUIRED", "Configure an approved branch rate card before quoting.");
       const request = await readRequest(client, ctx, requestId);
       if (request.ok === false) return request;
       if (!supportedService(request.value.serviceCode)) return fail("REQUEST_SERVICE_REQUIRED", "Request needs a supported service before quoting.");
@@ -148,7 +151,7 @@ export function createPostgresRequestQuoteCapacityFacadeMethods(client: Supabase
         bathrooms: request.value.bathrooms,
         oven: request.value.serviceCode === "MOVE_OUT",
         now: new Date().toISOString(),
-      }, defaultRateCard);
+      }, persistedRateCard);
 
       const { data, error } = await client.rpc<RpcRow>("servicedesk_persist_quote_snapshot", {
         p_input: { ...actor(ctx), requestId, quoteId: snapshot.id, snapshot },
