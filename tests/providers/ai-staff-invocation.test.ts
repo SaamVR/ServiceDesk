@@ -100,6 +100,15 @@ describe("staff authenticated operational AI invocation", () => {
         .toMatchObject({ ok: false, code: "AI_BRANCH_SCOPE_REQUIRED" });
       expect(data.calls().network).toBe(0);
     }
+    for (const scope of [
+      fixture({ who: dispatcher }),
+      fixture({ who: dispatcher, branch: "" }),
+    ]) {
+      expect(await executeAuthorizedStaffAiTurn(input, scope.opts))
+        .toMatchObject({ ok: false, code: "AI_BRANCH_SCOPE_REQUIRED" });
+      expect(scope.calls().network).toBe(0);
+      expect(scope.calls().lookups).toEqual([]);
+    }
     const allowed = fixture({ who: dispatcher, branch: "branch-1" });
     expect((await executeAuthorizedStaffAiTurn(input, allowed.opts)).ok).toBe(true);
     expect(allowed.calls().network).toBe(1);
