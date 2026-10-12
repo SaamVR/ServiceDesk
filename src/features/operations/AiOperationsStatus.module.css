@@ -16,3 +16,36 @@
 .grid a:focus-visible { outline: 3px solid #148577; outline-offset: 3px; }
 .note { color: #52736a; margin: 0; font-size: .76rem; line-height: 1.5; }
 @media(max-width: 840px) { .grid { grid-template-columns: 1fr; } }
+
+
+/* Read-only persisted operations snapshot. Never imply that an action row is
+   a WhatsApp/email/provider delivery acknowledgement. */
+.proof {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 15px;
+  border-top: 1px solid #cce6dc;
+}
+.proof > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+  border: 1px solid #dceee7;
+  border-radius: 10px;
+  background: #fff;
+}
+.proof strong { color: #174b40; font-size: 1.2rem; line-height: 1.15; font-weight: 820; }
+.proof span { color: #4d6d62; font-size: .75rem; line-height: 1.4; font-weight: 670; }
+.proof p {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: .76rem;
+  line-height: 1.6;
+  color: #4f7065;
+}
+.proof a { color: #126b61; font-weight: 780; }
+.proof a:focus-visible { outline: 3px solid #148577; outline-offset: 3px; }
+@media (max-width: 880px) { .proof { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 390px) { .proof { grid-template-columns: 1fr; } }
