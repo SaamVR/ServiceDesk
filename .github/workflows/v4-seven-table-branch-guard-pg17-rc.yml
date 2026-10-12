@@ -1,0 +1,64 @@
+name: ServiceDesk V4 seven-table branch guard PG17 proof
+on:
+  push:
+    branches: [test/v4-seven-table-branch-trigger-pg17-20261012]
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+permissions:
+  contents: read
+concurrency:
+  group: sd-v4-branch-guard-pg17-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-postgres-rowtype-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: only-disposable-rowtype-ci
+          POSTGRES_DB: servicedesk_branch_guard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d servicedesk_branch_guard_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Confirm exact source SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Run real historical reproduction and fixed seven-table PG17 trigger proof
+        env:
+          PGPASSWORD: only-disposable-rowtype-ci
+        run: |
+          command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+          export PGHOST=127.0.0.1 PGPORT=5432 PGUSER=postgres PGDATABASE=servicedesk_branch_guard_test
+          psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-fixture.sql
+          awk '/^create or replace function public.servicedesk_apply_branch_defaults_and_consistency\(\)/ { p=1 } p { print } p && /^\$\$;/ { exit }' supabase/migrations/0053_v2_multibranch_core.sql > /tmp/v4-old-branch-guard.sql
+          test -s /tmp/v4-old-branch-guard.sql
+          psql -v ON_ERROR_STOP=1 -f /tmp/v4-old-branch-guard.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-bindings.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-baseline-repro.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0062_v4_branch_trigger_rowtype_guard.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-acceptance.sql
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Focused rowtype regression
+        run: pnpm exec vitest run tests/db/v4-branch-trigger-rowtype-migration.test.ts
+      - name: Full release source check on owned branch push only
+        if: github.event_name == 'push'
+        run: pnpm check:rc
