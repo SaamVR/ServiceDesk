@@ -52,6 +52,7 @@ export class PostgresWorkflowExecutionPort {
       mode: input.mode,
       ruleVersionId: input.version.id,
       eventFingerprint: evaluated.value.eventFingerprint,
+      sourceEvent: input.event,
       previewNonce: input.previewNonce,
     });
 

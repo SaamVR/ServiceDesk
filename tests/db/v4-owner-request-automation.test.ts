@@ -10,7 +10,7 @@ const requestId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const actionId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const attentionId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 
-function fixture(options: { role?: string; mode?: "SERVICE_ROLE" | "QA_SESSION_RLS"; missing?: boolean; pending?: boolean } = {}) {
+function fixture(options: { role?: string; mode?: "SERVICE_ROLE" | "QA_SESSION_RLS"; missing?: boolean; pending?: boolean; duplicate?: boolean; drift?: boolean } = {}) {
   const visited: string[] = [];
   let pending = options.pending ?? true;
   const tables: Record<string, Record<string, unknown>[]> = {
@@ -23,6 +23,8 @@ function fixture(options: { role?: string; mode?: "SERVICE_ROLE" | "QA_SESSION_R
       max_actions_per_event: 3, created_at: "2026-10-12T00:00:00.000Z" }],
     workflow_action_executions: [{ id: actionId, workspace_id: workspaceId, branch_id: branchId, execution_id: "execution-1", action_type: "CREATE_ATTENTION", state: "PENDING" }],
     attention_items: [{ id: attentionId, workspace_id: workspaceId }],
+    workflow_executions: [{ id: "execution-1", workspace_id: workspaceId, branch_id: branchId,
+      rule_version_id: "version-1", event_fingerprint: options.drift ? "stale-original-fingerprint" : "original-event-fingerprint", matched: true }],
   };
   const service = {
     from(table: string) {
@@ -42,9 +44,10 @@ function fixture(options: { role?: string; mode?: "SERVICE_ROLE" | "QA_SESSION_R
   const evaluateAndRecord = vi.fn(async (payload: { mode: string; event: { sourceEventId?: string } }) => {
     expect(payload.mode).toBe("LIVE");
     expect(payload.event.sourceEventId).toBe(requestId);
-    return { ok: true as const, value: { executionId: "execution-1", duplicate: false,
+    return { ok: true as const, value: { executionId: "execution-1", duplicate: options.duplicate ?? false,
       state: "ACTIONS_PENDING", actionCount: 2, plan: {
-        matched: true, actionPlans: [{ requiresOwnerApproval: false }, { requiresOwnerApproval: true }],
+        matched: true, eventFingerprint: "original-event-fingerprint",
+        actionPlans: [{ requiresOwnerApproval: false }, { requiresOwnerApproval: true }],
       } } };
   });
   const executeAttentionAction = vi.fn(async () => {
@@ -75,6 +78,21 @@ describe("V4 owner-controlled persisted request automations", () => {
     expect(t.evaluateAndRecord).toHaveBeenCalledOnce();
     expect(t.executeAttentionAction).toHaveBeenCalledWith(workspaceId, actionId);
     expect(t.visited).toContain("attention_items");
+  });
+
+  it("resumes an identical recorded event without creating a duplicate execution", async () => {
+    const t = fixture({ duplicate: true });
+    const outcome = await runOwnerSavedRequestAutomation("fictional-qa", requestId, t.deps);
+    expect(outcome).toMatchObject({ ok: true, value: { completedAttentionActions: 1, providerMessagesSent: 0 } });
+    expect(t.visited).toContain("workflow_executions");
+    expect(t.executeAttentionAction).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a replay whose source facts diverge from persisted event evidence", async () => {
+    const t = fixture({ duplicate: true, drift: true });
+    const outcome = await runOwnerSavedRequestAutomation("fictional-qa", requestId, t.deps);
+    expect(outcome).toMatchObject({ ok: false, code: "REQUEST_WORKFLOW_EVENT_DRIFT" });
+    expect(t.executeAttentionAction).not.toHaveBeenCalled();
   });
 
   it("rejects QA session fallback without accessing privileged workflow RPCs", async () => {

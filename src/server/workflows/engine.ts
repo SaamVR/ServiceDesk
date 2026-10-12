@@ -202,11 +202,35 @@ export function workflowExecutionKey(input: {
   mode: "PREVIEW" | "LIVE";
   ruleVersionId: string;
   eventFingerprint: string;
+  sourceEvent?: Pick<
+    WorkflowEventEnvelope,
+    "workspaceId" | "branchId" | "eventType" | "sourceEventId" | "recursionDepth" | "parentExecutionId"
+  >;
   previewNonce?: string;
 }): string {
   if (input.mode === "PREVIEW") {
     const nonce = input.previewNonce?.trim();
     return `preview:${input.ruleVersionId}:${input.eventFingerprint}:${nonce || "default"}`;
   }
-  return `live:${input.ruleVersionId}:${input.eventFingerprint}`;
+
+  // A LIVE execution is identified by the persisted source event, not by
+  // mutable request/service/catalog fields. Otherwise editing a request
+  // between retries can generate a second execution (including a second
+  // external-approval task) for the very same business event.
+  const event = input.sourceEvent;
+  if (!event?.workspaceId || !event.branchId || !event.sourceEventId ||
+      !/^[A-Za-z0-9:_-]{3,128}$/.test(event.sourceEventId) ||
+      !Number.isInteger(event.recursionDepth) ||
+      event.recursionDepth < 0 || event.recursionDepth > 2) {
+    throw new Error("WORKFLOW_LIVE_SOURCE_IDENTITY_REQUIRED");
+  }
+  const stableSourceKey = createHash("sha256").update([
+    event.workspaceId,
+    event.branchId,
+    event.eventType,
+    event.sourceEventId,
+    String(event.recursionDepth),
+    event.parentExecutionId ?? "",
+  ].join("|")).digest("hex");
+  return `live:${input.ruleVersionId}:${stableSourceKey}`;
 }

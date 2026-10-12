@@ -68,9 +68,26 @@ describe("workflow evaluator", () => {
     if (!first.ok || !sameEventRetry.ok || !anotherEnquiry.ok) throw Error("expected successful evaluations");
     expect(first.value.eventFingerprint).toBe(sameEventRetry.value.eventFingerprint);
     expect(first.value.eventFingerprint).not.toBe(anotherEnquiry.value.eventFingerprint);
-    const a = workflowExecutionKey({ mode: "LIVE", ruleVersionId: published.id, eventFingerprint: first.value.eventFingerprint });
-    const b = workflowExecutionKey({ mode: "LIVE", ruleVersionId: published.id, eventFingerprint: anotherEnquiry.value.eventFingerprint });
+    const a = workflowExecutionKey({ mode: "LIVE", ruleVersionId: published.id, eventFingerprint: first.value.eventFingerprint, sourceEvent: event });
+    const b = workflowExecutionKey({ mode: "LIVE", ruleVersionId: published.id, eventFingerprint: anotherEnquiry.value.eventFingerprint, sourceEvent: { ...event, sourceEventId: "request-00002" } });
     expect(a).not.toBe(b);
+  });
+
+  it("dedupes a persisted LIVE source even if the request is later edited, while retaining per-snapshot audit fingerprints", () => {
+    const published = { ...version, state: "PUBLISHED" as const };
+    const original = evaluateWorkflowRule(published, event, "LIVE");
+    const edited = evaluateWorkflowRule(published, {
+      ...event,
+      snapshot: { ...event.snapshot, "request.serviceCode": "STANDARD", "request.leadSource": "MANUAL" },
+    }, "LIVE");
+    if (!original.ok || !edited.ok) throw new Error("expected evaluated events");
+    expect(original.value.eventFingerprint).not.toBe(edited.value.eventFingerprint);
+    const input = { mode: "LIVE" as const, ruleVersionId: published.id, sourceEvent: event };
+    expect(workflowExecutionKey({ ...input, eventFingerprint: original.value.eventFingerprint }))
+      .toBe(workflowExecutionKey({ ...input, eventFingerprint: edited.value.eventFingerprint }));
+    expect(() => workflowExecutionKey({
+      mode: "LIVE", ruleVersionId: published.id, eventFingerprint: original.value.eventFingerprint,
+    })).toThrow("WORKFLOW_LIVE_SOURCE_IDENTITY_REQUIRED");
   });
 
   it("refuses source-less live execution rather than silently deduping unrelated records", () => {
@@ -102,8 +119,8 @@ describe("workflow evaluator", () => {
     const evaluated = evaluateWorkflowRule(version, event, "PREVIEW");
     if (!evaluated.ok) throw new Error("expected preview");
     const fingerprint = evaluated.value.eventFingerprint;
-    expect(workflowExecutionKey({ mode: "LIVE", ruleVersionId: version.id, eventFingerprint: fingerprint }))
-      .toBe(workflowExecutionKey({ mode: "LIVE", ruleVersionId: version.id, eventFingerprint: fingerprint }));
+    expect(workflowExecutionKey({ mode: "LIVE", ruleVersionId: version.id, eventFingerprint: fingerprint, sourceEvent: event }))
+      .toBe(workflowExecutionKey({ mode: "LIVE", ruleVersionId: version.id, eventFingerprint: fingerprint, sourceEvent: event }));
     expect(workflowExecutionKey({ mode: "PREVIEW", ruleVersionId: version.id, eventFingerprint: fingerprint, previewNonce: "a" }))
       .not.toBe(workflowExecutionKey({ mode: "PREVIEW", ruleVersionId: version.id, eventFingerprint: fingerprint, previewNonce: "b" }));
   });
