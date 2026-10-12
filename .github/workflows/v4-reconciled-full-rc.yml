@@ -3,7 +3,9 @@ name: ServiceDesk V4 reconciled exact-HEAD full RC
 # signed-in tenant acceptance or customer data is assumed.
 on:
   push:
-    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+      - deploy/servicedesk-v3-public-review-20261011
   workflow_dispatch:
 permissions:
   contents: read
