@@ -84,8 +84,9 @@ describe("private authenticated QA preflight (synthetic/local, no provider)", ()
     assert.match(result.output, /QA_PREFLIGHT_CONFIG_READY:two-owner-rls/);
   });
 
-  it("rejects carriage return and null byte in owner password without echoing values", () => {
-    for (const secret of ["safe-prefix\runsafe-value", "safe-prefix\u0000unsafe-value"]) {
+  it("rejects carriage return and newline in owner password without echoing values", () => {
+    // OS process environment variables cannot contain NUL, so test CR/LF here.
+    for (const secret of ["safe-prefix\runsafe-value", "safe-prefix\nunsafe-value"]) {
       const result = run("two-owner-rls", {
         ...ownerA, ...ownerB, SERVICEDESK_QA_OWNER_A_PASSWORD: secret,
       });
