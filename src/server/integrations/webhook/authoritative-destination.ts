@@ -53,7 +53,7 @@ function safeOutboundHeaders(headers: Record<string, string> | undefined): boole
   ]);
   return entries.every(([name, value]) => {
     const lower = name.toLowerCase();
-    return /^[a-z0-9-]+$/.test(name) &&
+    return /^[A-Za-z0-9-]+$/.test(name) &&
       !forbidden.has(lower) && !lower.startsWith("x-forwarded-") &&
       !lower.startsWith("x-servicedesk-") &&
       typeof value === "string" && value.length <= 2048 &&
