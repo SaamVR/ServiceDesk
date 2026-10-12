@@ -42,6 +42,10 @@ jobs:
           done
           echo "Reconciled Next server did not become ready" >&2
           exit 1
+      - name: Real HTTP guest-route release contract (all 13 modules)
+        env:
+          V4_GUEST_ROUTE_ORIGIN: http://127.0.0.1:3000
+        run: node scripts/release/v4-studio-guest-release-contract.mjs
       - name: Real Chrome public responsive proof
         env:
           V3_PUBLIC_CHROME: ${{ steps.chrome.outputs.chrome-path }}
