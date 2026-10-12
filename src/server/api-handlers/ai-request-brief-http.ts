@@ -21,7 +21,7 @@ function json(status: number, body: unknown): Response {
 /** Browser-initiated and session-authenticated; never a public AI webhook. */
 export async function handleRequestBriefPost(
   request: Request,
-  run: Run = generateAuthorizedRequestBrief,
+  run?: Run,
 ): Promise<Response> {
   if (request.method !== "POST") return json(405, { code: "METHOD_NOT_ALLOWED" });
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type") ?? "")) {
@@ -45,7 +45,27 @@ export async function handleRequestBriefPost(
           !parsed.port) trustedPublicOrigin = parsed.origin;
     } catch { /* Invalid configuration must fail closed. */ }
   }
-  if (!origin || (origin !== ownOrigin && origin !== trustedPublicOrigin) ||
+  // Next may normalize localhost vs 127.0.0.1 in its internal Request.url
+  // while retaining the real browser Host. Match that exact browser authority
+  // ONLY for two loopback HTTP endpoints; never trust X-Forwarded-Host,
+  // off-port aliases, external hosts or malformed Origins.
+  let sameLoopbackHostOrigin = false;
+  if (origin) {
+    try {
+      const requested = new URL(request.url);
+      const browser = new URL(origin);
+      const loopback = (host: string) => host === "127.0.0.1" || host === "localhost";
+      sameLoopbackHostOrigin = requested.protocol === "http:" &&
+        browser.protocol === "http:" &&
+        loopback(requested.hostname) && loopback(browser.hostname) &&
+        requested.port === browser.port &&
+        requested.port === "3000" &&
+        browser.origin === origin &&
+        request.headers.get("host") === browser.host;
+    } catch { /* Unparseable Origins are always denied. */ }
+  }
+  if (!origin || (origin !== ownOrigin && origin !== trustedPublicOrigin &&
+      !sameLoopbackHostOrigin) ||
       (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
     return json(403, { code: "SAME_ORIGIN_REQUIRED" });
   }
@@ -68,7 +88,13 @@ export async function handleRequestBriefPost(
     return json(400, { code: "REQUEST_SCHEMA_INVALID" });
   }
   let result: Result<RequestBrief>;
-  try { result = await run({ workspaceSlug: p.workspaceSlug, requestId: p.requestId }); }
+  try {
+    // Only the real server runner receives the abort signal; injected test
+    // ports preserve the exact validated payload and never inherit authority.
+    const invoke: Run = run ?? (input =>
+      generateAuthorizedRequestBrief(input, { signal: request.signal }));
+    result = await invoke({ workspaceSlug: p.workspaceSlug, requestId: p.requestId });
+  }
   catch { return json(503, { code: "AI_BRIEF_UNAVAILABLE" }); }
   if (!result.ok) {
     const status = result.code === "AI_BRIEF_AUTH_REQUIRED" || result.code === "AI_BRIEF_AUTH_UNAVAILABLE" ? 401

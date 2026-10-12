@@ -1,14 +1,14 @@
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 
 export type ActivationStatus = "READY" | "ACTION_REQUIRED" | "UNVERIFIED";
-export type ActivationStepId = "service-catalog" | "pricing" | "quote-rule" | "execution-proof";
+export type ActivationStepId = "service-catalog" | "pricing" | "quote-rule" | "accepted-quote" | "execution-proof";
 
 export interface ActivationStep {
   id: ActivationStepId;
   title: string;
   status: ActivationStatus;
   detail: string;
-  module: "settings" | "automations";
+  module: "settings" | "automations" | "requests";
 }
 
 export interface AutomationActivationSummary {
@@ -26,7 +26,8 @@ export interface AutomationActivationSummary {
 export function summarizeAutomationActivation(
   data: Pick<OperationalStaffSnapshot,
     "serviceCatalog" | "ownerPricingBookProof" | "branchScope" | "workflowAvailable" |
-    "workflowRules" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions">,
+    "workflowRules" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions"> &
+    Partial<Pick<OperationalStaffSnapshot, "requests" | "quotes">>,
 ): AutomationActivationSummary {
   const catalogReady = data.serviceCatalog.some(item => item.active);
   const pricing = data.ownerPricingBookProof;
@@ -61,6 +62,25 @@ export function summarizeAutomationActivation(
       })
       .map(version => [version.id, version]),
   );
+  // A published QUOTE_ACCEPTED rule is not an actual customer milestone.
+  // A verified persisted quote must belong to an in-scope priced USD branch
+  // and a saved request in that SAME branch. Never inherit another branch's
+  // accepted quote when the owner changes the selected branch.
+  const quoteRowsLoaded = Array.isArray(data.requests) && Array.isArray(data.quotes);
+  const requestsById = new Map((data.requests ?? [])
+    .filter(request => typeof request.id === "string" &&
+      typeof request.branchId === "string" &&
+      pricedBranchIds.has(request.branchId))
+    .map(request => [request.id, request]));
+  const acceptedSavedQuotes = (data.quotes ?? []).filter(quote => {
+    const request = requestsById.get(quote.requestId);
+    const branchCurrency = data.branchScope?.branches.find(
+      branch => branch.id === request?.branchId)?.currency;
+    return Boolean(request) && quote.status === "ACCEPTED" &&
+      Number.isSafeInteger(quote.totalMinor) && quote.totalMinor >= 0 &&
+      quote.currency === "USD" && quote.currency === branchCurrency;
+  });
+  const acceptedQuoteVerified = acceptedSavedQuotes.length > 0;
   const executionsLoaded = Array.isArray(data.workflowExecutions) &&
     Array.isArray(data.workflowActionExecutions) && versionsLoaded;
   const verifiedLiveExecutions = new Map(
@@ -113,6 +133,18 @@ export function summarizeAutomationActivation(
           ? "A published quote rule creates internal attention in a priced, authorized USD branch."
           : "Publish a QUOTE_ACCEPTED rule with CREATE_ATTENTION in a branch with verified pricing.",
       module: "automations",
+    },
+    {
+      id: "accepted-quote",
+      title: "Verify a real accepted cleaning quote",
+      status: !quoteRowsLoaded || !pricingScopeKnown || pricing?.state !== "VERIFIED"
+        ? "UNVERIFIED" : acceptedQuoteVerified ? "READY" : "ACTION_REQUIRED",
+      detail: !quoteRowsLoaded || !pricingScopeKnown || pricing?.state !== "VERIFIED"
+        ? "Saved request/quote records or authorized branch pricing are unavailable; do not infer customer acceptance."
+        : acceptedQuoteVerified
+          ? "A saved accepted quote matches a saved request and priced, authorized USD cleaning branch. Customer-session UAT still requires independent proof."
+          : "Complete a real saved request, send its quote and have the customer accept it. A published rule or simulated event is not acceptance.",
+      module: "requests",
     },
     {
       id: "execution-proof",

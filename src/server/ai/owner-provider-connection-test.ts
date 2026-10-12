@@ -51,7 +51,12 @@ export async function testAuthorizedAiModelConnection(
     return fail("AI_DIAGNOSTIC_OWNER_REQUIRED", "Only an authorized workspace owner can test AI.");
   }
 
-  const config = (deps.readConfig ?? readConfiguredAiRuntimeConfig)();
+  let config: ReturnType<ConfigReader>;
+  try { config = (deps.readConfig ?? readConfiguredAiRuntimeConfig)(); }
+  catch {
+    return fail("AI_DIAGNOSTIC_CONFIGURATION_UNAVAILABLE",
+      "Model configuration is unavailable.");
+  }
   if (!config.ok) return fail(config.code, "Model configuration is unavailable.");
 
   const prompt = [
@@ -61,18 +66,32 @@ export async function testAuthorizedAiModelConnection(
     "replyDraft as 'ServiceDesk model probe acknowledged',",
     "requestedToolCalls as an empty array, and citations as an empty array.",
   ].join(" ");
-  const response = await (deps.callModel ?? callAiModel)(config.value, {
-    promptVersion: "servicedesk-v4-synthetic-ai-owner-connection-probe",
-    conversationId: "synthetic-connection-probe",
-    workspaceId: workspace.id,
-    userText: prompt,
-    approvedKnowledgeRefs: [],
-  }, createFetchAiModelTransport());
+  let response: Awaited<ReturnType<ModelCaller>>;
+  try {
+    response = await (deps.callModel ?? callAiModel)(config.value, {
+      promptVersion: "servicedesk-v4-synthetic-ai-owner-connection-probe",
+      conversationId: "synthetic-connection-probe",
+      workspaceId: workspace.id,
+      userText: prompt,
+      approvedKnowledgeRefs: [],
+    }, createFetchAiModelTransport());
+  } catch {
+    // A provider adapter or injected transport can throw after authorization;
+    // never leak exception text, tokens, or provider payloads into staff UI.
+    return fail("AI_DIAGNOSTIC_PROVIDER_FAILED",
+      "Model did not return a valid response.");
+  }
 
   if (!response.ok) {
     return fail("AI_DIAGNOSTIC_PROVIDER_FAILED", "Model did not return a valid response.");
   }
-  if (response.value.requestedToolCalls?.length || response.value.citations?.length ||
+  if (!response.value.output || typeof response.value.output !== "object" ||
+      Array.isArray(response.value.output) ||
+      Object.keys(response.value.output).length !== 0 ||
+      !Array.isArray(response.value.requestedToolCalls) ||
+      response.value.requestedToolCalls.length !== 0 ||
+      !Array.isArray(response.value.citations) ||
+      response.value.citations.length !== 0 ||
       response.value.replyDraft !== "ServiceDesk model probe acknowledged") {
     return fail("AI_DIAGNOSTIC_RESPONSE_UNVERIFIED", "Model returned an unexpected probe result.");
   }

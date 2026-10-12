@@ -56,8 +56,9 @@ export function OwnerAutomationActivationChecklist({
               ? settingsHref +
                 (canOpenPricingForm && step.status !== "READY"
                   ? "#owner-first-run-pricing" : "")
-              : buildStaffModuleHref(workspaceSlug, "automations")}>
-              {step.module !== "settings" ? "Open Automation Studio"
+              : buildStaffModuleHref(workspaceSlug, step.module)}>
+              {step.module === "requests" ? "Review customer requests"
+                : step.module === "automations" ? "Open Automation Studio"
                 : canOpenPricingForm && step.status !== "READY"
                   ? "Enter actual cleaning rates" : "Open Settings"}
               <span aria-hidden="true"> ↗</span>
@@ -67,7 +68,7 @@ export function OwnerAutomationActivationChecklist({
       </div>
       <p className={styles.disclosure} role="note">
         {summary.allEvidenceReady
-          ? "The four workspace prerequisites are evidenced. Real session acceptance, deployment opt-in and provider delivery still require independent checks."
+          ? "The five workspace prerequisites are evidenced. Real session acceptance, deployment opt-in and provider delivery still require independent checks."
           : "These checks are based on saved workspace records—not a demo, a model configuration flag, or provider-delivery proof."}
         {" "}Email, WhatsApp, scheduling and payments are never activated by this checklist.
       </p>

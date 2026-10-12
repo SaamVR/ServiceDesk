@@ -42,12 +42,18 @@ function amountFor(input: CheckoutInput): number {
   return input.quote.totalMinor;
 }
 
-function validateHttpsUrl(value: string): boolean {
+function validatedCheckoutReturnUrl(value: string): URL | null {
+  if (!value || value.trim() !== value || value.length > 2048) return null;
   try {
     const url = new URL(value);
-    return url.protocol === "https:";
+    if (url.protocol !== "https:" || !url.hostname.includes(".") ||
+        url.username || url.password || url.hash || url.port ||
+        url.hostname === "localhost" || url.hostname.endsWith(".localhost") ||
+        url.hostname.endsWith(".local") || url.hostname.endsWith(".internal") ||
+        /^\d{1,3}(?:\.\d{1,3}){3}$/.test(url.hostname)) return null;
+    return url;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -207,8 +213,12 @@ export async function createStripeCheckoutSession(
     return { ok: false, code: "PAYMENT_INVOICE_BALANCE_INVALID", message: "Balance checkout requires invoiceId and the current authoritative invoice balance." };
   }
 
-  if (!validateHttpsUrl(input.successUrl) || !validateHttpsUrl(input.cancelUrl)) {
-    return { ok: false, code: "CHECKOUT_REDIRECT_URL_INVALID", message: "Checkout success and cancel URLs must be HTTPS URLs." };
+  const successReturn = validatedCheckoutReturnUrl(input.successUrl);
+  const cancelReturn = validatedCheckoutReturnUrl(input.cancelUrl);
+  if (!successReturn || !cancelReturn ||
+      successReturn.origin !== cancelReturn.origin) {
+    return { ok: false, code: "CHECKOUT_REDIRECT_URL_INVALID",
+      message: "Checkout success and cancel URLs must be safe HTTPS URLs on one approved application origin." };
   }
 
   const amountMinor = amountFor(input);

@@ -31,11 +31,13 @@ function fixture(options: {
   noRules?: boolean;
   wrongEvent?: boolean;
   pending?: boolean;
+  failedAttention?: boolean;
+  missingAttention?: boolean;
   externalOnly?: boolean;
   workspaceOptedOut?: boolean;
   deploymentOff?: boolean;
 }={}) {
-  let pending = options.pending ?? true;
+  const pending = options.pending ?? true;
   const rows: Record<string,Record<string,unknown>[]> = {
     workspace_feature_flags: options.workspaceOptedOut ? [] : [{
       workspace_id: workspace, feature_key: "AUTO_INTERNAL_QUOTE_ACCEPTED", enabled: true,
@@ -59,16 +61,17 @@ function fixture(options: {
     workflow_executions:[{id:executionId,rule_version_id:versionId,
       workspace_id:workspace,branch_id:branch,matched:true,
       event_fingerprint:options.drift?"different-snapshot":"current-fingerprint"}],
-    workflow_action_executions:[{id:actionId,workspace_id:workspace,
-      branch_id:branch,execution_id:executionId,action_type:"CREATE_ATTENTION",state:"PENDING"}],
+    workflow_action_executions: options.missingAttention ? [] : [{id:actionId,
+      workspace_id:workspace,branch_id:branch,execution_id:executionId,
+      action_type:"CREATE_ATTENTION",action_index:0,
+      state: options.failedAttention ? "FAILED" : pending ? "PENDING" : "SUCCEEDED"}],
     attention_items:[{id:attentionId,workspace_id:workspace}],
   };
   const seen: Array<{table:string; filters:[string,unknown][]}> = [];
   const service = {from(table:string) {
     const filters:Array<[string,unknown]> = [];
     seen.push({table,filters});
-    const match=()=> (rows[table]??[]).filter(row=>filters.every(([k,v])=>row[k]===v))
-      .filter(()=>table!=="workflow_action_executions"||pending);
+    const match=()=> (rows[table]??[]).filter(row=>filters.every(([k,v])=>row[k]===v));
     const q={
       select(){return q;},
       eq(k:string,v:unknown){filters.push([k,v]);return q;},
@@ -93,7 +96,8 @@ function fixture(options: {
         actionPlans:[{requiresOwnerApproval:false},{requiresOwnerApproval:true}]}}};
   });
   const executeAttentionAction=vi.fn(async()=>{
-    pending=false;
+    const saved = rows.workflow_action_executions.find(row=>row.id===actionId);
+    if (saved) saved.state = "SUCCEEDED";
     return {ok:true as const,value:{attentionItemId:attentionId,actionExecutionId:actionId}};
   });
   const rpc={rpc:vi.fn()};
@@ -176,6 +180,28 @@ describe("V4 trusted post-accept automation bridge",()=>{
         reusedRuleExecutions:1,completedAttentionActions:0,providerMessagesSent:0}});
     expect(t.executeAttentionAction).not.toHaveBeenCalled();
   });
+  it("refuses to ACK a duplicate with FAILED internal attention instead of a completed receipt",async()=>{
+    const t=fixture({duplicate:true,pending:false,failedAttention:true});
+    expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))
+      .toMatchObject({ok:false,code:"QUOTE_AUTOMATION_ATTENTION_NOT_COMPLETED"});
+    expect(t.executeAttentionAction).not.toHaveBeenCalled();
+    expect(t.seen.filter(entry=>entry.table==="workflow_action_executions")).toHaveLength(2);
+  });
+
+  it("refuses to ACK a matched owner rule with no saved internal attention action",async()=>{
+    const t=fixture({duplicate:true,pending:false,missingAttention:true});
+    expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))
+      .toMatchObject({ok:false,code:"QUOTE_AUTOMATION_ATTENTION_NOT_COMPLETED"});
+    expect(t.executeAttentionAction).not.toHaveBeenCalled();
+  });
+
+  it("replays an already completed internal attention action without duplicating it",async()=>{
+    const t=fixture({duplicate:true,pending:false});
+    expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))
+      .toMatchObject({ok:true,value:{completedAttentionActions:0,reusedRuleExecutions:1}});
+    expect(t.executeAttentionAction).not.toHaveBeenCalled();
+  });
+
   it("rejects replay after event snapshot drift before applying any internal actions",async()=>{
     const t=fixture({duplicate:true,drift:true});
     expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))

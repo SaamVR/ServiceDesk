@@ -100,6 +100,40 @@ describe("Stripe-style checkout transport", () => {
   });
 
   test.each([
+    { successUrl: "https://other.example/success" },
+    { cancelUrl: "https://other.example/cancel" },
+    { successUrl: "https://alice:password@app.servicedesk.test/success" },
+    { successUrl: "https://app.servicedesk.test:8443/success" },
+    { successUrl: "https://app.servicedesk.test/success#secret" },
+    { cancelUrl: "https://127.0.0.1/cancel" },
+    { successUrl: "https://localhost/success" },
+    { cancelUrl: " https://app.servicedesk.test/cancel" },
+  ])("fails before contacting Stripe for unsafe or cross-origin return URLs: %j", async url => {
+    let calls = 0;
+    const result = await createStripeCheckoutSession(input(url), config,
+      async () => { calls++; return { status: 200, body: "{}" }; });
+    expect(result).toMatchObject({ ok: false, code: "CHECKOUT_REDIRECT_URL_INVALID" });
+    expect(calls).toBe(0);
+  });
+
+  test("permits distinct HTTPS paths and query parameters on one application origin", async () => {
+    let body = "";
+    const result = await createStripeCheckoutSession(input({
+      successUrl: "https://app.servicedesk.test/payment/success?session={CHECKOUT_SESSION_ID}",
+      cancelUrl: "https://app.servicedesk.test/payment/cancel?retry=1",
+    }), config, async request => {
+      body = request.body;
+      return { status: 200, body: JSON.stringify({
+        id: "cs_test_123", url: "https://checkout.stripe.com/c/pay/123",
+      }) };
+    });
+    expect(result.ok).toBe(true);
+    const posted = new URLSearchParams(body);
+    expect(posted.get("success_url")).toContain("payment/success");
+    expect(posted.get("cancel_url")).toContain("payment/cancel");
+  });
+
+  test.each([
     { id: "cs_test_123", url: "https://attacker.example/checkout" },
     { id: "cs_test_123", url: "https://checkout.stripe.com.attacker.org/session/123" },
     { id: "cs_test_123", url: "https://someone:secret@checkout.stripe.com/session/123" },
