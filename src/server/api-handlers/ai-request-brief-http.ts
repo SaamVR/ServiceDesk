@@ -21,7 +21,7 @@ function json(status: number, body: unknown): Response {
 /** Browser-initiated and session-authenticated; never a public AI webhook. */
 export async function handleRequestBriefPost(
   request: Request,
-  run: Run = generateAuthorizedRequestBrief,
+  run?: Run,
 ): Promise<Response> {
   if (request.method !== "POST") return json(405, { code: "METHOD_NOT_ALLOWED" });
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type") ?? "")) {
@@ -68,7 +68,13 @@ export async function handleRequestBriefPost(
     return json(400, { code: "REQUEST_SCHEMA_INVALID" });
   }
   let result: Result<RequestBrief>;
-  try { result = await run({ workspaceSlug: p.workspaceSlug, requestId: p.requestId }); }
+  try {
+    // Only the real server runner receives the abort signal; injected test
+    // ports preserve the exact validated payload and never inherit authority.
+    const invoke: Run = run ?? (input =>
+      generateAuthorizedRequestBrief(input, { signal: request.signal }));
+    result = await invoke({ workspaceSlug: p.workspaceSlug, requestId: p.requestId });
+  }
   catch { return json(503, { code: "AI_BRIEF_UNAVAILABLE" }); }
   if (!result.ok) {
     const status = result.code === "AI_BRIEF_AUTH_REQUIRED" || result.code === "AI_BRIEF_AUTH_UNAVAILABLE" ? 401

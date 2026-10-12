@@ -19,6 +19,8 @@ export interface AiModelCallInput {
   userText: string;
   approvedKnowledgeRefs?: string[];
   approvedKnowledgeSnippets?: Array<{ documentId: string; chunkId: string; snippet: string }>;
+  /** Server-owned cancellation signal: never serialized into model payloads. */
+  signal?: AbortSignal;
 }
 
 export interface AiModelHttpRequest {
@@ -272,7 +274,17 @@ export async function callAiModel(
       message: "Operational model transport requires the exact authorized HTTPS /v1 endpoint." };
   }
 
+  // Stop obsolete model calls when an authenticated HTTP client navigates
+  // away or disconnects. The existing bounded provider timeout remains the
+  // independent upper limit. Cancellation is not provider delivery proof.
+  if (input.signal?.aborted) {
+    return { ok: false, code: "AI_MODEL_CANCELLED",
+      message: "The requesting staff session cancelled the model request." };
+  }
   const controller = new AbortController();
+  const cancelFromCaller = () => controller.abort();
+  input.signal?.addEventListener("abort", cancelFromCaller, { once: true });
+  if (input.signal?.aborted) controller.abort();
   const requestedTimeout = config.timeoutMs ?? 10_000;
   const timeoutMs = Number.isFinite(requestedTimeout)
     ? Math.max(250, Math.min(requestedTimeout, 30_000))
@@ -291,9 +303,17 @@ export async function callAiModel(
       signal: controller.signal,
     });
 
+    if (input.signal?.aborted) {
+      return { ok: false, code: "AI_MODEL_CANCELLED",
+        message: "The requesting staff session cancelled the model request." };
+    }
     if (response.status < 200 || response.status >= 300) return normalizedFailure(response.status);
     return parseModelOutput(response.body);
   } catch (error) {
+    if (input.signal?.aborted) {
+      return { ok: false, code: "AI_MODEL_CANCELLED",
+        message: "The requesting staff session cancelled the model request." };
+    }
     if (error instanceof Error && error.name === "AiModelResponseTooLargeError") {
       return { ok: false, code: "AI_MODEL_INVALID_RESPONSE",
         message: "AI model provider returned an oversized response." };
@@ -304,5 +324,6 @@ export async function callAiModel(
     return { ok: false, code: "AI_MODEL_NETWORK_FAILURE", message: "AI model provider request failed before a valid response was received." };
   } finally {
     clearTimeout(timeout);
+    input.signal?.removeEventListener("abort", cancelFromCaller);
   }
 }

@@ -26,6 +26,8 @@ export interface RequestBriefDependencies {
   resolveActor?: ActorResolver;
   readConfig?: ConfigReader;
   callModel?: ModelCaller;
+  /** Current authenticated request lifecycle, not supplied by the browser JSON. */
+  signal?: AbortSignal;
 }
 
 function fail(code: string, message: string): Result<never> {
@@ -55,6 +57,9 @@ export async function generateAuthorizedRequestBrief(
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.requestId)) {
     return fail("AI_BRIEF_INPUT_INVALID", "Choose a valid saved request.");
   }
+  if (deps.signal?.aborted) {
+    return fail("AI_BRIEF_CANCELLED", "Staff cancelled the AI briefing request.");
+  }
 
   let resolved: Awaited<ReturnType<ActorResolver>>;
   try { resolved = await (deps.resolveActor ?? resolveStaffActor)(input.workspaceSlug); }
@@ -75,6 +80,9 @@ export async function generateAuthorizedRequestBrief(
   // No model call occurs if disabled, missing or misconfigured.
   const config = (deps.readConfig ?? readConfiguredAiRuntimeConfig)();
   if (!config.ok) return config;
+  if (deps.signal?.aborted) {
+    return fail("AI_BRIEF_CANCELLED", "Staff cancelled the AI briefing request.");
+  }
 
   const request = await (async () => {
     try {
@@ -156,11 +164,15 @@ export async function generateAuthorizedRequestBrief(
         workspaceId: workspace.id,
         userText: prompt,
         approvedKnowledgeRefs: [],
+        ...(deps.signal ? { signal: deps.signal } : {}),
       },
       createFetchAiModelTransport(),
     );
   } catch {
     return fail("AI_BRIEF_PROVIDER_UNAVAILABLE", "AI briefing is temporarily unavailable.");
+  }
+  if (deps.signal?.aborted) {
+    return fail("AI_BRIEF_CANCELLED", "Staff cancelled the AI briefing request.");
   }
   if (!response.ok) return fail("AI_BRIEF_PROVIDER_UNAVAILABLE", "AI briefing is temporarily unavailable.");
   if (response.value.requestedToolCalls?.length || response.value.citations?.length) {
