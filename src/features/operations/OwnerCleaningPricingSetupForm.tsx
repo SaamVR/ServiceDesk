@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import type { OperationalBranchScope } from "./operational-product-runtime";
 import { availableFirstRunUsdBranches, type OwnerPricingBookProof } from "./owner-pricing-readiness";
 
@@ -115,9 +116,10 @@ export function OwnerCleaningPricingSetupForm({
             <MoneyField label="Max quote eligible for automatic approval" name="autoApprovalMax" />
           </div>
         </fieldset>
-        <button type="submit" className="app-button-primary" style={{ justifySelf: "start" }}>
+        <StaffSubmitButton className="app-button-primary" style={{ justifySelf: "start" }}
+          pendingLabel="Saving pricing…">
           Save verified first-run pricing
-        </button>
+        </StaffSubmitButton>
         <p style={{ fontSize: ".78rem", margin: 0 }}>
           Pricing activation is transactional and requires a verified owner session, protected backend
           and deployed database migration. On failure, no successful setup is claimed.
