@@ -4,28 +4,43 @@ import { summarizeAutomationActivation } from "@/features/operations/owner-autom
 
 type Input = Pick<OperationalStaffSnapshot,
   "serviceCatalog" | "ownerPricingBookProof" | "workflowAvailable" |
-  "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions">;
+  "workflowRules" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions">;
 
 const empty: Input = {
   serviceCatalog: [],
   workflowAvailable: true,
+  workflowRules: [],
   workflowRuleVersions: [],
   workflowExecutions: [],
   workflowActionExecutions: [],
 };
 
-const published = {
-  id: "rule-v1", state: "PUBLISHED", eventType: "QUOTE_ACCEPTED",
-  actions: [{ type: "CREATE_ATTENTION" }],
-} as NonNullable<Input["workflowRuleVersions"]>[number];
+const activeRule: NonNullable<Input["workflowRules"]>[number] = {
+  id: "rule-1", branchId: "branch-1", code: "INTERNAL_QUOTE_REVIEW",
+  name: "Internal quote review", status: "ACTIVE",
+  publishedVersionNumber: 2, version: 2, updatedAt: "2026-10-12T12:00:00Z",
+};
 
-const live = {
-  id: "execution-1", mode: "LIVE", ruleVersionId: "rule-v1", state: "COMPLETED",
-} as NonNullable<Input["workflowExecutions"]>[number];
+const published: NonNullable<Input["workflowRuleVersions"]>[number] = {
+  id: "rule-v1", ruleId: "rule-1", versionNumber: 2, branchId: "branch-1",
+  state: "PUBLISHED", eventType: "QUOTE_ACCEPTED", conditions: [],
+  actions: [{ type: "CREATE_ATTENTION" }], maxActionsPerEvent: 1,
+  createdAt: "2026-10-12T12:00:00Z",
+};
 
-const completedAttention = {
-  id: "action-1", executionId: "execution-1", actionType: "CREATE_ATTENTION", state: "SUCCEEDED",
-} as NonNullable<Input["workflowActionExecutions"]>[number];
+const live: NonNullable<Input["workflowExecutions"]>[number] = {
+  id: "execution-1", mode: "LIVE", ruleVersionId: "rule-v1",
+  ruleId: "rule-1", branchId: "branch-1", matched: true,
+  eventType: "QUOTE_ACCEPTED", state: "COMPLETED", recursionDepth: 0,
+  createdAt: "2026-10-12T12:00:00Z",
+};
+
+const completedAttention: NonNullable<Input["workflowActionExecutions"]>[number] = {
+  id: "action-1", executionId: "execution-1", branchId: "branch-1",
+  actionIndex: 0, attemptNumber: 1,
+  actionType: "CREATE_ATTENTION", state: "SUCCEEDED",
+  createdAt: "2026-10-12T12:00:00Z",
+};
 
 describe("owner automation activation evidence", () => {
   it("never calls empty workspace or unavailable pricing an operational success", () => {
@@ -58,14 +73,26 @@ describe("owner automation activation evidence", () => {
       { ...published, id: "v3", actions: [{ type: "SEND_EMAIL_TEMPLATE" }] },
     ];
     const summary = summarizeAutomationActivation({
-      ...empty, workflowRuleVersions: versions,
+      ...empty, workflowRules: [activeRule], workflowRuleVersions: versions,
     });
     expect(summary.steps[2].status).toBe("ACTION_REQUIRED");
+  });
+
+  it("does not credit archived rules or old published versions", () => {
+    expect(summarizeAutomationActivation({
+      ...empty, workflowRules: [{ ...activeRule, status: "ARCHIVED" }],
+      workflowRuleVersions: [published],
+    }).steps[2].status).toBe("ACTION_REQUIRED");
+    expect(summarizeAutomationActivation({
+      ...empty, workflowRules: [{ ...activeRule, publishedVersionNumber: 3 }],
+      workflowRuleVersions: [published],
+    }).steps[2].status).toBe("ACTION_REQUIRED");
   });
 
   it("does not credit previews, other rule executions or unsucceeded actions", () => {
     const summary = summarizeAutomationActivation({
       ...empty,
+      workflowRules: [activeRule],
       workflowRuleVersions: [published],
       workflowExecutions: [{ ...live, mode: "PREVIEW" }, { ...live, id: "execution-2", ruleVersionId: "other" }],
       workflowActionExecutions: [completedAttention],
@@ -73,7 +100,7 @@ describe("owner automation activation evidence", () => {
     expect(summary.steps[2].status).toBe("READY");
     expect(summary.steps[3].status).toBe("ACTION_REQUIRED");
     expect(summarizeAutomationActivation({
-      ...empty, workflowRuleVersions: [published],
+      ...empty, workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live],
       workflowActionExecutions: [{ ...completedAttention, state: "APPROVAL_REQUIRED" }],
     }).steps[3].status).toBe("ACTION_REQUIRED");
@@ -84,6 +111,7 @@ describe("owner automation activation evidence", () => {
       ...empty,
       serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
       ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      workflowRules: [activeRule],
       workflowRuleVersions: [published],
       workflowExecutions: [live],
       workflowActionExecutions: [completedAttention],
@@ -95,7 +123,7 @@ describe("owner automation activation evidence", () => {
   it("treats missing workflow snapshots as unverified, not a proven zero", () => {
     const summary = summarizeAutomationActivation({
       ...empty, workflowAvailable: false,
-      workflowRuleVersions: undefined, workflowExecutions: undefined,
+      workflowRules: undefined, workflowRuleVersions: undefined, workflowExecutions: undefined,
       workflowActionExecutions: undefined,
     });
     expect(summary.steps[2].status).toBe("UNVERIFIED");

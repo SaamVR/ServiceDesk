@@ -26,25 +26,39 @@ export interface AutomationActivationSummary {
 export function summarizeAutomationActivation(
   data: Pick<OperationalStaffSnapshot,
     "serviceCatalog" | "ownerPricingBookProof" | "workflowAvailable" |
-    "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions">,
+    "workflowRules" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions">,
 ): AutomationActivationSummary {
   const catalogReady = data.serviceCatalog.some(item => item.active);
   const pricing = data.ownerPricingBookProof;
   const pricingVerified = pricing?.state === "VERIFIED" && pricing.activeBranchIds.length > 0;
-  const versionsLoaded = data.workflowAvailable !== false && Array.isArray(data.workflowRuleVersions);
-  const eligibleQuoteVersions = new Set(
+  const versionsLoaded = data.workflowAvailable !== false &&
+    Array.isArray(data.workflowRules) && Array.isArray(data.workflowRuleVersions);
+  const activeRules = new Map(
+    (data.workflowRules ?? [])
+      .filter(rule => rule.status === "ACTIVE" && rule.publishedVersionNumber !== undefined)
+      .map(rule => [rule.id, rule]),
+  );
+  const eligibleQuoteVersions = new Map(
     (data.workflowRuleVersions ?? [])
-      .filter(version => version.state === "PUBLISHED" &&
-        version.eventType === "QUOTE_ACCEPTED" &&
-        version.actions.some(action => action.type === "CREATE_ATTENTION"))
-      .map(version => version.id),
+      .filter(version => {
+        const rule = activeRules.get(version.ruleId);
+        return version.state === "PUBLISHED" && version.eventType === "QUOTE_ACCEPTED" &&
+          version.actions.some(action => action.type === "CREATE_ATTENTION") &&
+          rule?.branchId === version.branchId &&
+          rule?.publishedVersionNumber === version.versionNumber;
+      })
+      .map(version => [version.id, version]),
   );
   const executionsLoaded = Array.isArray(data.workflowExecutions) &&
     Array.isArray(data.workflowActionExecutions) && versionsLoaded;
   const verifiedLiveExecutions = new Set(
     (data.workflowExecutions ?? [])
-      .filter(execution => execution.mode === "LIVE" &&
-        eligibleQuoteVersions.has(execution.ruleVersionId))
+      .filter(execution => {
+        const version = eligibleQuoteVersions.get(execution.ruleVersionId);
+        return execution.mode === "LIVE" && execution.matched === true &&
+          execution.state === "COMPLETED" && execution.eventType === "QUOTE_ACCEPTED" &&
+          version?.ruleId === execution.ruleId && version?.branchId === execution.branchId;
+      })
       .map(execution => execution.id),
   );
   const internalExecutionSucceeded = (data.workflowActionExecutions ?? [])
