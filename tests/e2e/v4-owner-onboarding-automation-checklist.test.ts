@@ -48,7 +48,7 @@ describe("V4 first-run real automation checklist in owner onboarding",()=>{
   it("does not promise model calls, payment or external message delivery",()=>{
     expect(route).toContain("A configured trigger or draft rule never proves an AI model call");
     expect(route).toContain("a complete customer workflow");
-    expect(route).toContain("after a real event");
+    expect(route).toContain("A completed internal attention receipt is separate evidence.");
     expect(route).not.toContain("Email delivered successfully");
     expect(route).not.toContain("Automations ready to send");
   });
