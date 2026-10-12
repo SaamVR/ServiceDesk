@@ -56,6 +56,30 @@ describe("workflow execution Postgres boundary", () => {
     });
   });
 
+  it("passes a stable LIVE execution key to SQL after a saved invoice snapshot changes", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { ok: true, duplicate: false, executionId: "execution-1", state: "ACTIONS_PENDING", actionCount: 1 },
+      error: null,
+    });
+    const port = new PostgresWorkflowExecutionPort({ rpc } as SupabaseRpcClient, () => "2026-10-12T00:00:00Z");
+    const base = {
+      workspaceId: "workspace-1",
+      branchId: "branch-1",
+      eventType: "INVOICE_PAID" as const,
+      sourceEventId: "invoice-paid-event-0001",
+      snapshot: { "invoice.currency": "USD" },
+      recursionDepth: 0,
+    };
+    expect((await port.evaluateAndRecord({ version, mode: "LIVE", event: base })).ok).toBe(true);
+    expect((await port.evaluateAndRecord({ version, mode: "LIVE", event: {
+      ...base, snapshot: { "invoice.currency": "GBP" },
+    } })).ok).toBe(true);
+    const first = rpc.mock.calls[0][1] as { p_input: Record<string, unknown> };
+    const second = rpc.mock.calls[1][1] as { p_input: Record<string, unknown> };
+    expect(first.p_input.executionKey).toBe(second.p_input.executionKey);
+    expect(first.p_input.eventFingerprint).not.toBe(second.p_input.eventFingerprint);
+  });
+
   it("rejects a source-less LIVE event before recording anything to PostgreSQL", async () => {
     const rpc = vi.fn();
     const port = new PostgresWorkflowExecutionPort({ rpc } as SupabaseRpcClient);
