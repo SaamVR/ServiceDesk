@@ -21,8 +21,8 @@ describe("V4 Studio requested-route retention with authorized boundaries", () =>
   it("retains all thirteen first-party Studio modules and the same-workspace detail route", () => {
     const modules = Object.keys(staffModuleConfig) as Array<keyof typeof staffModuleConfig>;
     expect(modules).toHaveLength(13);
-    for (const module of modules) {
-      const target = buildStaffModuleHref("acme-west", module);
+    for (const staffModule of modules) {
+      const target = buildStaffModuleHref("acme-west", staffModule);
       expect(verifiedStudioReturnPath("acme-west", target)).toBe(target);
     }
     const requested = "/app/acme-west/requests/req-123?request=req-123&queue=needs-review";
