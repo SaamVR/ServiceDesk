@@ -966,7 +966,7 @@ function RequestsView({
     const requestId = String(formData.get("requestId") ?? "");
     const outcome = await runOwnerSavedRequestAutomation(workspaceSlug, requestId);
     const result: OperationalActionResult = outcome.ok
-      ? { ok: true, message: `Checked published request rules: ${outcome.value.matchedExecutions} matched; ${outcome.value.completedAttentionActions} internal attention actions verified. External sends remain approval-required.` }
+      ? { ok: true, message: `Checked published request rules: ${outcome.value.matchedExecutions} matched; ${outcome.value.completedAttentionActions} internal attention actions verified; ${outcome.value.newlyRecordedRuleExecutions} new and ${outcome.value.reusedRuleExecutions} reused durable rule executions. ${outcome.value.replayedSourceEvent ? "Existing request event reused safely." : "Request event evaluated."} External sends remain approval-required.` }
       : { ok: false, message: outcome.message };
     actionRedirect(
       workspaceSlug,

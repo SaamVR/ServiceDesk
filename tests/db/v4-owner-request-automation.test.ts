@@ -73,7 +73,7 @@ describe("V4 owner-controlled persisted request automations", () => {
     expect(outcome).toMatchObject({ ok: true, value: {
       state: "PERSISTED_INTERNAL_WORKFLOW_PROCESSING",
       matchedExecutions: 1, completedAttentionActions: 1, externalApprovalRequired: 1,
-      providerMessagesSent: 0, replayedSourceEvent: false,
+      providerMessagesSent: 0, replayedSourceEvent: false, newlyRecordedRuleExecutions: 1, reusedRuleExecutions: 0,
     } });
     expect(t.evaluateAndRecord).toHaveBeenCalledOnce();
     expect(t.executeAttentionAction).toHaveBeenCalledWith(workspaceId, actionId);
@@ -83,9 +83,20 @@ describe("V4 owner-controlled persisted request automations", () => {
   it("resumes an identical recorded event without creating a duplicate execution", async () => {
     const t = fixture({ duplicate: true });
     const outcome = await runOwnerSavedRequestAutomation("fictional-qa", requestId, t.deps);
-    expect(outcome).toMatchObject({ ok: true, value: { completedAttentionActions: 1, providerMessagesSent: 0 } });
+    expect(outcome).toMatchObject({ ok: true, value: { completedAttentionActions: 1, providerMessagesSent: 0, replayedSourceEvent: true, newlyRecordedRuleExecutions: 0, reusedRuleExecutions: 1 } });
     expect(t.visited).toContain("workflow_executions");
     expect(t.executeAttentionAction).toHaveBeenCalledOnce();
+  });
+
+  it("distinguishes completed attention replays from a fresh processed event without another action", async () => {
+    const t = fixture({ duplicate: true, pending: false });
+    const outcome = await runOwnerSavedRequestAutomation("fictional-qa", requestId, t.deps);
+    expect(outcome).toMatchObject({ok:true,value:{
+      matchedExecutions:1, completedAttentionActions:0,
+      replayedSourceEvent:true, newlyRecordedRuleExecutions:0,reusedRuleExecutions:1,
+      providerMessagesSent:0
+    }});
+    expect(t.executeAttentionAction).not.toHaveBeenCalled();
   });
 
   it("rejects a replay whose source facts diverge from persisted event evidence", async () => {
