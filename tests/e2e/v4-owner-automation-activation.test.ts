@@ -172,6 +172,37 @@ describe("owner automation activation evidence", () => {
     }).steps[4].status).toBe("ACTION_REQUIRED");
   });
 
+  it("requires every planned internal attention action, not one action from a partially executed rule", () => {
+    const internalSecond = { ...completedAttention, id: "action-second",
+      actionIndex: 2, state: "PENDING" as const };
+    const data: Input = {
+      ...empty,
+      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      workflowRules: [activeRule],
+      workflowRuleVersions: [{ ...published, maxActionsPerEvent: 3, actions: [
+        { type: "CREATE_ATTENTION" },
+        { type: "SEND_EMAIL_TEMPLATE" },
+        { type: "CREATE_ATTENTION" },
+      ] }],
+      workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
+      workflowActionExecutions: [completedAttention, internalSecond],
+      requests: [acceptedRequest], quotes: [acceptedQuote],
+    };
+    expect(summarizeAutomationActivation(data).steps[4].status).toBe("ACTION_REQUIRED");
+    const completed = summarizeAutomationActivation({
+      ...data,
+      workflowActionExecutions: [completedAttention, { ...internalSecond, state: "SUCCEEDED" }],
+    });
+    expect(completed.steps[4].status).toBe("READY");
+    expect(completed.allEvidenceReady).toBe(true);
+    expect(summarizeAutomationActivation({
+      ...data,
+      workflowActionExecutions: [completedAttention,
+        { ...internalSecond, state: "SUCCEEDED", actionIndex: 3 }],
+    }).steps[4].status).toBe("ACTION_REQUIRED");
+  });
+
   it("requires an accepted saved quote, not merely a published rule and internal action", () => {
     const data: Input = {
       ...empty, requests: [], quotes: [],
