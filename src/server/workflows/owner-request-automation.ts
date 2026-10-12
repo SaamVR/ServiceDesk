@@ -159,6 +159,25 @@ export async function runOwnerSavedRequestAutomation(
       },
     });
     if (!recorded.ok) return fail("REQUEST_WORKFLOW_EXECUTION_FAILED", "Workflow execution was not verified.");
+    if (recorded.value.duplicate) {
+      // A retry must not re-evaluate a mutable customer request as if it
+      // were a new REQUEST_CREATED event. The DB's immutable first event
+      // snapshot is authoritative; refuse drift before acting on its queue.
+      const existing = await service.from("workflow_executions")
+        .select("event_fingerprint,matched,rule_version_id")
+        .eq("id", recorded.value.executionId)
+        .eq("workspace_id", workspace.id)
+        .eq("branch_id", branchId)
+        .maybeSingle();
+      if (existing.error || !existing.data) {
+        return fail("REQUEST_WORKFLOW_PREVIOUS_EXECUTION_MISSING", "Previously recorded event could not be verified.");
+      }
+      if (existing.data.rule_version_id !== version.id ||
+          existing.data.event_fingerprint !== recorded.value.plan.eventFingerprint ||
+          existing.data.matched !== recorded.value.plan.matched) {
+        return fail("REQUEST_WORKFLOW_EVENT_DRIFT", "The request facts changed after this event was recorded. Review the original execution before retrying.");
+      }
+    }
     if (!recorded.value.plan.matched) continue;
     matchedExecutions++;
     externalApprovalRequired += recorded.value.plan.actionPlans
