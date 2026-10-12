@@ -9,23 +9,36 @@ import {
 } from "./staff-ai-review-contract";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import styles from "./StaffAiReviewComposer.module.css";
+import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
 
 /**
  * Optional, explicit human workflow. AI may propose text but never approve,
  * execute tools, or send it. Approval is a separate staff-confirmed server
  * transaction with source-message/version/idempotency/consent checks.
  */
-export function StaffAiReviewComposer({
-  workspaceSlug,
-  conversationId,
-  sourceMessageId,
-  expectedVersion,
-}: {
+type StaffAiReviewProps = {
   workspaceSlug: string;
   conversationId: string;
   sourceMessageId: string;
   expectedVersion: number;
-}) {
+};
+
+/**
+ * A route may reuse this panel while a dispatcher switches conversations,
+ * branches or tenants. A new server-selected scope remounts the entire
+ * approval session: no previous draft, confirmation or idempotency key leaks
+ * into the new conversation. The old in-flight fetch is aborted on unmount.
+ */
+export function StaffAiReviewComposer(props: StaffAiReviewProps) {
+  return <StaffAiReviewSession key={staffAiReviewScopeKey(props)} {...props} />;
+}
+
+function StaffAiReviewSession({
+  workspaceSlug,
+  conversationId,
+  sourceMessageId,
+  expectedVersion,
+}: StaffAiReviewProps) {
   const [draft, setDraft] = useState<ReviewedAiDraft>();
   const [body, setBody] = useState("");
   const [confirmed, setConfirmed] = useState(false);
