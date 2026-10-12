@@ -28,6 +28,6 @@ describe("V4 Studio server-side anonymous access guard",()=>{
     expect(layout).toContain("await setOperationalBranchScope(workspace");
     expect(layout).toContain("<StaffAppShell workspace={workspace} signedIn={signedIn}>");
     expect(content("src/features/operations/OperationalProductRoute.tsx")).toContain("loadOperationalStaffSnapshot(workspaceSlug)");
-    expect(content("src/features/operations/StaffOverviewDashboard.tsx")).toContain("Workspace activity could not be loaded");
+    expect(content("src/features/operations/StaffOverviewDashboard.tsx")).toContain("Current workspace activity could not be loaded");
   });
 });
