@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { setupAuthorizedCleaningPricing } from "@/server/core/owner-cleaning-pricing-setup";
 import { OwnerCleaningPricingSetupForm } from "./OwnerCleaningPricingSetupForm";
+import { completeOperationalRequestQuoteInputs } from "./request-quote-input-action";
 import { OwnerAutomationActivationChecklist } from "./OwnerAutomationActivationChecklist";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import { queueApprovedInboxReply } from "@/server/core/reviewed-inbox-reply";
@@ -956,6 +957,14 @@ function RequestsView({
     );
   }
 
+  async function completeRequestQuoteInputs(formData: FormData) {
+    "use server";
+    const requestId = String(formData.get("requestId") ?? "");
+    const result = await completeOperationalRequestQuoteInputs(workspaceSlug, formData);
+    actionRedirect(workspaceSlug, "requests", result,
+      "request=" + encodeURIComponent(requestId) + "&");
+  }
+
   async function calculateQuote(formData: FormData) {
     "use server";
     const requestId = String(formData.get("requestId") ?? "");
@@ -1042,12 +1051,20 @@ function RequestsView({
     .sort((left, right) => Date.parse(right.generatedAt) - Date.parse(left.generatedAt));
   const pendingPhotoSuggestions = selectedPhotoSuggestions.filter((suggestion) => suggestion.state === "PENDING_REVIEW");
   const snapshotNow = Date.parse(data.loadedAt);
-  const selectedRequestCanCalculate = Boolean(selectedRequest.serviceCode)
+  const supportedActiveServices = data.serviceCatalog.filter(service =>
+    service.active === true && ["STANDARD","DEEP","MOVE_OUT"].includes(service.code));
+  const chosenServiceActive = supportedActiveServices.some(service =>
+    service.code === selectedRequest.serviceCode);
+  const requestCanBeCompleted = ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"]
+    .includes(selectedRequest.status) &&
+    (data.actor.role === "OWNER" || data.actor.role === "DISPATCHER") &&
+    !selectedRequestQuote;
+  const selectedRequestCanCalculate = chosenServiceActive
     && selectedRequest.bedrooms !== undefined
     && selectedRequest.bathrooms !== undefined
     && !["BOOKED", "LOST", "CLOSED"].includes(selectedRequest.status);
   const selectedMissing = [
-    !selectedRequest.serviceCode ? "Service" : undefined,
+    !chosenServiceActive ? "Service" : undefined,
     selectedRequest.bedrooms === undefined ? "Bedrooms" : undefined,
     selectedRequest.bathrooms === undefined ? "Bathrooms" : undefined,
   ].filter((item): item is string => Boolean(item));
@@ -1214,10 +1231,65 @@ function RequestsView({
               ) : (
                 <>
                   <ul className={styles.readinessList}>
-                    <li className={selectedRequest.serviceCode ? styles.ready : styles.notReady}><span>{selectedRequest.serviceCode ? "✓" : "!"}</span><strong>Service</strong><small>{selectedRequest.serviceCode ?? "Missing"}</small></li>
+                    <li className={chosenServiceActive ? styles.ready : styles.notReady}><span>{chosenServiceActive ? "✓" : "!"}</span><strong>Service</strong><small>{chosenServiceActive ? selectedRequest.serviceCode : "Not assigned or inactive"}</small></li>
                     <li className={selectedRequest.bedrooms !== undefined ? styles.ready : styles.notReady}><span>{selectedRequest.bedrooms !== undefined ? "✓" : "!"}</span><strong>Bedrooms</strong><small>{selectedRequest.bedrooms ?? "Missing"}</small></li>
                     <li className={selectedRequest.bathrooms !== undefined ? styles.ready : styles.notReady}><span>{selectedRequest.bathrooms !== undefined ? "✓" : "!"}</span><strong>Bathrooms</strong><small>{selectedRequest.bathrooms ?? "Missing"}</small></li>
                   </ul>
+                  {requestCanBeCompleted ? (
+                    <section aria-label="Complete this request for real pricing"
+                      style={{ border: "1px solid #d0e7de", background: "#fbfefd",
+                        borderRadius: 12, padding: 14, marginBlock: 12 }}>
+                      <h4 style={{ margin: "0 0 8px", color: "#21564a" }}>
+                        Complete human-confirmed cleaning details
+                      </h4>
+                      <p style={{ fontSize: ".82rem", lineHeight: 1.5, margin: "0 0 12px" }}>
+                        Select a real active service and enter the customer's confirmed room counts.
+                        This updates the saved request only; it does not create or send a quote,
+                        infer details with AI, or contact a customer.
+                      </p>
+                      {supportedActiveServices.length ? (
+                        <form action={completeRequestQuoteInputs}
+                          style={{ display: "grid", gap: 12 }}>
+                          <input type="hidden" name="requestId" value={selectedRequest.id} />
+                          <input type="hidden" name="expectedVersion" value={selectedRequest.version} />
+                          <label style={{ display: "grid", gap: 5, fontSize: ".83rem" }}>
+                            Confirmed cleaning service
+                            <select name="serviceCode" className="app-input"
+                              defaultValue={chosenServiceActive ? selectedRequest.serviceCode : ""} required>
+                              <option value="" disabled>Select a saved active service</option>
+                              {supportedActiveServices.map(service => (
+                                <option key={service.id} value={service.code}>{service.name}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <div style={{ display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+                            <label style={{ display: "grid", gap: 5, fontSize: ".83rem" }}>
+                              Confirmed bedrooms
+                              <input className="app-input" name="bedrooms" type="number"
+                                min={0} max={10} step={1}
+                                defaultValue={selectedRequest.bedrooms ?? ""} required />
+                            </label>
+                            <label style={{ display: "grid", gap: 5, fontSize: ".83rem" }}>
+                              Confirmed bathrooms
+                              <input className="app-input" name="bathrooms" type="number"
+                                min={0} max={10} step={1}
+                                defaultValue={selectedRequest.bathrooms ?? ""} required />
+                            </label>
+                          </div>
+                          <StaffSubmitButton className="app-button-secondary"
+                            pendingLabel="Saving request facts…">
+                            Save request details
+                          </StaffSubmitButton>
+                        </form>
+                      ) : (
+                        <p role="status" style={{ margin: 0, fontSize: ".83rem" }}>
+                          No active cleaning services are saved. An owner must configure
+                          the real service catalog and branch pricing in Settings first.
+                        </p>
+                      )}
+                    </section>
+                  ) : null}
                   <form action={calculateQuote} className={styles.salesPrimaryAction}>
                     <input type="hidden" name="requestId" value={selectedRequest.id} />
                     <StaffSubmitButton className="app-button-primary" disabled={!selectedRequestCanCalculate} pendingLabel="Calculating quote…">Calculate quote</StaffSubmitButton>
