@@ -9,13 +9,16 @@ on:
       - feat/servicedesk-v4-reconciled-qa-shell-20261012
     paths:
       - "src/server/ai/request-brief.ts"
+      - "src/server/ai/staff-invocation.ts"
       - "src/server/api-handlers/ai-request-brief-http.ts"
+      - "src/server/api-handlers/ai-staff-http.ts"
       - "src/app/api/internal/ai/request-brief/**"
       - "src/features/operations/AiRequestBrief*"
       - "src/features/operations/AiOperationsStatus*"
       - "src/features/operations/OperationalProductRoute.tsx"
       - "src/features/operations/StaffOverviewDashboard.tsx"
       - "tests/e2e/v4-ai-request-copilot.test.ts"
+      - "tests/providers/ai-staff-invocation.test.ts"
       - ".github/workflows/v4-ai-request-copilot-rc.yml"
 
 permissions:
@@ -41,7 +44,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Focused real-model boundary and Studio visibility tests
-        run: pnpm exec vitest run tests/e2e/v4-ai-request-copilot.test.ts tests/e2e/v4-cleaning-automation-playbooks.test.ts tests/e2e/v3-ai-staff-http.test.ts tests/providers/ai-model-transport-hardening.test.ts
+        run: pnpm exec vitest run tests/e2e/v4-ai-request-copilot.test.ts tests/e2e/v4-cleaning-automation-playbooks.test.ts tests/e2e/v3-ai-staff-http.test.ts tests/providers/ai-staff-invocation.test.ts tests/providers/ai-model-transport-hardening.test.ts
       - name: Full source validation on specialist push (canonical PR full RC covers every PR)
         if: github.event_name == 'push'
         run: pnpm check:rc
