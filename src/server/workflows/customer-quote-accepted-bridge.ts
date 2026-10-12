@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Result, WorkflowRuleVersionDTO } from "../../contracts";
 import type { SupabaseRpcClient } from "@/server/core/payment-application-postgres";
 import { PostgresWorkflowExecutionPort } from "./postgres";
+import { workspaceQuoteAutomationEnabled } from "./owner-quote-automation-setting";
 import {
   MAX_ACTIVE_WORKFLOW_RULES_PER_BRANCH,
   WORKFLOW_RULE_OVERFLOW_FETCH_LIMIT,
@@ -58,6 +59,11 @@ export async function runTrustedAcceptedQuoteInternalAutomation(
   const { workspaceId, customerId, quoteId, service, rpc } = input;
   if (!isUuid(workspaceId) || !isUuid(customerId) || !isUuid(quoteId)) {
     return fail("QUOTE_AUTOMATION_SOURCE_INVALID");
+  }
+  // Server-wide kill switch is necessary but not sufficient for a shared SaaS:
+  // the authenticated owner's persisted tenant flag must also explicitly opt in.
+  if (!await workspaceQuoteAutomationEnabled(service, workspaceId)) {
+    return fail("QUOTE_AUTOMATION_WORKSPACE_NOT_OPTED_IN");
   }
 
   const quote = await service.from("quotes")
