@@ -13,6 +13,10 @@ describe("V4 connected operator aggregate readiness preflight", () => {
     expect(body).not.toMatch(/\b(?:INSERT|UPDATE|DELETE|TRUNCATE|ALTER|DROP|GRANT|REVOKE|CREATE)\s+(?:INTO|FROM|TABLE|ON|FUNCTION|POLICY|ROLE|SCHEMA|VIEW|TRIGGER)\b/i);
     expect(body).not.toMatch(/\b(?:auth\.users|customer_email|phone_number|customer_name|address_line)\b/i);
     expect(sql).toContain("READ_ONLY_AGGREGATE_NOT_AUTHENTICATED_UAT");
+    expect(sql).toContain("'workspaceRecords', workspaces");
+    expect(sql).toContain("'membershipRecords', memberships");
+    expect(sql).not.toContain("'activeMembers', memberships");
+    expect(sql).not.toContain("'activeWorkspaces', workspaces");
   });
   it("reports the actual first-run pricing, customer-flow and automation blockers", () => {
     for (const field of [
