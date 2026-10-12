@@ -11,6 +11,7 @@ import {
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { loadOnboardingProduct } from "./onboarding-product-runtime";
 import { summarizeOwnerCommercialSetup } from "./onboarding-commercial-readiness";
+import { OnboardingOperationalEvidencePanel } from "./OnboardingOperationalEvidencePanel";
 
 function setupState(done: boolean) {
   return done ? (
@@ -26,6 +27,42 @@ export async function OnboardingProductRoute({
   workspaceSlug?: string;
 }) {
   const result = await loadOnboardingProduct(workspaceSlug);
+
+  if (!result.ok && result.kind === "selection") {
+    return (
+      <main className="site-shell">
+        <PageHeader
+          eyebrow="Choose your cleaning business"
+          title="Which workspace are you setting up?"
+          description="You have more than one active owner workspace. Choose the business you want to configure. Your role and saved data are checked again before any changes."
+        />
+        <Panel>
+          <nav aria-label="Your authorized owner workspaces" className="app-row-list">
+            {result.workspaces.map(ownerWorkspace => (
+              <Link
+                key={ownerWorkspace.id}
+                href={"/onboarding?workspace=" + encodeURIComponent(ownerWorkspace.slug)}
+                className="app-row"
+                style={{ textDecoration: "none" }}
+              >
+                <span>
+                  <strong>{ownerWorkspace.name}</strong>
+                  <span style={{ display: "block", fontSize: ".85rem" }}>
+                    {ownerWorkspace.slug} · Owner access
+                  </span>
+                </span>
+                <strong aria-hidden="true">↗</strong>
+              </Link>
+            ))}
+          </nav>
+        </Panel>
+        <p style={{ fontSize: ".85rem" }}>
+          Only businesses returned by your authenticated owner membership are listed.
+          No workspace was selected on your behalf.
+        </p>
+      </main>
+    );
+  }
 
   if (!result.ok) {
     return (
@@ -240,6 +277,11 @@ export async function OnboardingProductRoute({
           </div>
         </Panel>
       </div>
+
+      <OnboardingOperationalEvidencePanel
+        workspaceSlug={workspace.slug}
+        snapshot={result.value}
+      />
     </StaffAppShell>
   );
 }

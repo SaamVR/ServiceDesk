@@ -1,0 +1,40 @@
+.panel {
+  padding: clamp(1rem, 2vw, 1.5rem);
+  margin-block: 1rem 1.25rem;
+  border: 1px solid #d6e9e4;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #ffffff 20%, #f4faf8 100%);
+  color: #173e39;
+}
+.header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.eyebrow { margin: 0 0 .35rem; color: #397b71; font-size: .72rem; font-weight: 800; letter-spacing: .075em; text-transform: uppercase; }
+.header h2 { margin: 0; font-size: clamp(1.1rem, 2vw, 1.45rem); letter-spacing: -.025em; }
+.header p:not(.eyebrow) { color: #536d68; max-width: 50rem; line-height: 1.55; margin: .4rem 0 0; font-size: .9rem; }
+.progress { flex-shrink: 0; min-width: 6rem; background: #e8f4f0; border-radius: 13px; padding: .65rem .95rem; text-align: right; }
+.progress strong { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.progress strong span { color: #78948c; font-size: .85rem; }
+.progress small { display: block; color: #4f766b; font-size: .72rem; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.step { min-width: 0; padding: 1rem; border: 1px solid #dfebe7; background: #fff; border-radius: 14px; display: flex; flex-direction: column; align-items: flex-start; }
+.top { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: .5rem; }
+.index { font-size: .72rem; color: #689087; font-weight: 800; letter-spacing: .08em; }
+.ready, .unverified, .action { border-radius: 99px; padding: .22rem .56rem; font-size: .69rem; font-weight: 750; white-space: nowrap; }
+.ready { color: #236557; background: #e1f3eb; }
+.unverified { color: #6b6a56; background: #f4f0df; }
+.action { color: #8a633b; background: #fff0e0; }
+.step h3 { margin: .9rem 0 .3rem; font-size: .98rem; }
+.step p { margin: 0 0 .85rem; color: #576c67; font-size: .85rem; line-height: 1.5; flex: 1; }
+.step a { font-weight: 750; font-size: .82rem; color: #207a6b; text-decoration: underline; text-underline-offset: 3px; }
+.step a:focus-visible { outline: 3px solid #53b8a2; outline-offset: 4px; border-radius: 3px; }
+.disclosure { color: #5b736c; font-size: .78rem; line-height: 1.55; margin: 1rem 0 0; }
+@media (max-width: 600px) {
+  .header { flex-direction: column; }
+  .progress { text-align: left; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
