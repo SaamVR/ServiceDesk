@@ -18,15 +18,22 @@ export function AiOwnerModelProbe({
   workspaceSlug: string;
   configured: boolean;
 }) {
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<ProbeResult>();
-  const [error, setError] = useState(false);
+  // A model probe proves only a single owner-controlled request.
+  // Never display another workspace's response after client-side navigation.
+  const [status, setStatus] = useState<{
+    workspace: string; busy: boolean; result?: ProbeResult; error?: boolean;
+  }>();
+  const scoped = status?.workspace === workspaceSlug ? status : undefined;
+  const busy = scoped?.busy ?? false;
+  const result = scoped?.result;
+  const error = scoped?.error ?? false;
 
   async function check() {
     if (!configured || busy) return;
-    setBusy(true);
-    setResult(undefined);
-    setError(false);
+    const submittedWorkspace = workspaceSlug;
+    setStatus({ workspace: submittedWorkspace, busy: true });
+    let verified: ProbeResult | undefined;
+    let failed = false;
     try {
       const response = await fetch("/api/internal/ai/connection-test", {
         method: "POST",
@@ -41,15 +48,18 @@ export function AiOwnerModelProbe({
       if (candidate.state !== "PROVIDER_RESPONDED_TO_CONTROLLED_PROBE" ||
           candidate.source !== "REAL_MODEL_RESPONSE_NOT_A_PROVIDER_DELIVERY" ||
           candidate.durableReceipt !== false ||
-          typeof candidate.model !== "string" || !candidate.model ||
-          typeof candidate.checkedAt !== "string") {
+          typeof candidate.model !== "string" || !candidate.model.trim() ||
+          typeof candidate.checkedAt !== "string" ||
+          !Number.isFinite(Date.parse(candidate.checkedAt))) {
         throw Error("INVALID_PROBE");
       }
-      setResult(candidate);
+      verified = candidate;
     } catch {
-      setError(true);
+      failed = true;
     } finally {
-      setBusy(false);
+      setStatus(previous => previous?.workspace === submittedWorkspace
+        ? { workspace: submittedWorkspace, busy: false, result: verified, error: failed }
+        : previous);
     }
   }
 
