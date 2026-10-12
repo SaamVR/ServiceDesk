@@ -19,7 +19,8 @@ describe("V4 Studio server-side anonymous access guard",()=>{
     expect(layout).not.toContain("signedIn ? await loadOperationalBranchScope");
   });
   it("encodes the target workspace slug and cannot redirect a login to an external domain",()=>{
-    expect(layout).toContain('encodeURIComponent("/app/" + encodeURIComponent(workspace) + "/overview")');
+    expect(layout).toContain("verifiedStudioSignInTarget(workspace, requestHeaders.get(STUDIO_RETURN_HEADER))");
+    expect(layout).toContain("encodeURIComponent(target)");
     expect(normalizeReturnPath("/app/qa-cleaning/overview")).toBe("/app/qa-cleaning/overview");
     expect(normalizeReturnPath("https://evil.example/steal")).not.toContain("evil.example");
     expect(normalizeReturnPath("//evil.example")).not.toContain("evil.example");
