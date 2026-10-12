@@ -8,6 +8,7 @@
  * Run only in a protected private Actions job with the QA-only secrets set.
  */
 import { createClient } from "@supabase/supabase-js";
+import { verifyTwoTenantOperationalRls } from "./v4-operational-rls-positive-negative.mjs";
 
 const projectHost = "cpmmgivhlkfbiwzhlcey.supabase.co";
 const env = process.env;
@@ -71,7 +72,14 @@ async function main() {
     if (a.id === b.id) fail("DISTINCT_WORKSPACE_IDS_REQUIRED");
     await verifyIsolation(a,b);
     await verifyIsolation(b,a);
-    console.log("REAL_AUTHENTICATED_STAGING_RLS_POSITIVE_AND_NEGATIVE_PASS: two fictional owners, eight foreign table checks each");
+    if (env.V4_QA_REQUIRE_OPERATIONAL_EVIDENCE === "1") {
+      await verifyTwoTenantOperationalRls(a,b,fail);
+      await verifyTwoTenantOperationalRls(b,a,fail);
+      console.log("REAL_AUTHENTICATED_STAGING_OPERATIONS_RLS_POSITIVE_NEGATIVE_PASS: two distinct owner-visible operational row sets, five scoped tables each; no provider or complete customer journey proven");
+    } else {
+      // Negative reads against empty tables are not business-data RLS proof.
+      console.log("REAL_AUTHENTICATED_STAGING_CORE_RLS_PRECHECK_PASS: owner sessions and foreign workspace restrictions only; operational row evidence NOT VERIFIED");
+    }
   } finally {
     await Promise.allSettled(dbs.map(db => db.auth.signOut()));
   }
