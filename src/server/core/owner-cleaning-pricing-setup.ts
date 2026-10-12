@@ -115,6 +115,11 @@ export async function setupAuthorizedCleaningPricing(
 
   // Proof is RLS-scope-bound by the same authorized SSR/privileged server
   // context. The SQL response alone must never become a success banner.
+  try {
+    // The protected SQL command has already run. A dropped connection during
+    // independent readback must never turn into an uncaught Server Action 500
+    // or imply that the transaction was rolled back. The owner must refresh
+    // existing persisted pricing before attempting any new first-run setup.
   const [catalog, rate, book] = await Promise.all([
     service.from("service_catalog").select("code,active,name")
       .eq("workspace_id", workspace.id).in("code", ["STANDARD","DEEP","MOVE_OUT"]),
@@ -142,7 +147,14 @@ export async function setupAuthorizedCleaningPricing(
       book.data?.rate_card_id !== saved.rateCardId ||
       book.data?.branch_id !== branch.id || book.data?.active !== true) {
     return fail("PRICING_SETUP_READBACK_UNVERIFIED",
-      "The persisted price configuration could not be read back. Review setup before quoting.");
+      "Price setup may have saved, but its persisted details could not be verified. Refresh Settings and review the branch price book before retrying or quoting.");
+  }
+  } catch {
+    // The same message is used for failures and thrown client exceptions:
+    // only verified readback can issue the success proof, and no retry is
+    // attempted after a potentially committed write.
+    return fail("PRICING_SETUP_READBACK_UNVERIFIED",
+      "Price setup may have saved, but its persisted details could not be verified. Refresh Settings and review the branch price book before retrying or quoting.");
   }
 
   return { ok: true, value: {
