@@ -41,6 +41,26 @@ function isHttpsAllowed(urlValue: string, allowedHost: string): boolean {
   }
 }
 
+/** Reject hop-by-hop and ambiguous outbound headers before signing or dispatch. */
+function safeOutboundHeaders(headers: Record<string, string> | undefined): boolean {
+  if (!headers) return true;
+  const entries = Object.entries(headers);
+  if (entries.length > 30) return false;
+  const forbidden = new Set([
+    "host", "content-length", "transfer-encoding", "connection",
+    "proxy-connection", "upgrade", "te", "trailer", "keep-alive",
+    "proxy-authorization", "cookie", "set-cookie",
+  ]);
+  return entries.every(([name, value]) => {
+    const lower = name.toLowerCase();
+    return /^[A-Za-z0-9-]+$/.test(name) &&
+      !forbidden.has(lower) && !lower.startsWith("x-forwarded-") &&
+      !lower.startsWith("x-servicedesk-") &&
+      typeof value === "string" && value.length <= 2048 &&
+      !/[\x00-\x1f\x7f]/.test(value);
+  });
+}
+
 function canonicalBody(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
@@ -52,8 +72,22 @@ export function buildSignedWebhookIntent(destination: AuthoritativeWebhookDestin
   if (!isHttpsAllowed(destination.url, destination.allowedHost)) {
     return { ok: false, code: "WEBHOOK_INVALID_DESTINATION", message: "Webhook destination must be HTTPS and match the server-side allowlist." };
   }
+  if (!safeOutboundHeaders(destination.headers)) {
+    return { ok: false, code: "WEBHOOK_INVALID_HEADERS",
+      message: "Webhook headers contain an unsupported or unsafe field." };
+  }
 
-  const body = canonicalBody(destination.body);
+  let body: string;
+  try {
+    body = canonicalBody(destination.body);
+  } catch {
+    return { ok: false, code: "WEBHOOK_INVALID_BODY",
+      message: "Webhook payload cannot be serialized safely." };
+  }
+  if (typeof body !== "string" || Buffer.byteLength(body, "utf8") > 131_072) {
+    return { ok: false, code: "WEBHOOK_INVALID_BODY",
+      message: "Webhook payload is missing or exceeds the accepted size." };
+  }
   const signature = createHmac("sha256", destination.signingSecret).update(body).digest("hex");
   const capturedAt = new Date().toISOString();
 
