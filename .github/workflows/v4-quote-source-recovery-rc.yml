@@ -1,7 +1,7 @@
 name: ServiceDesk V4 trusted quote-source recovery RC
 on:
   push:
-    branches: [feat/v4-quote-accepted-durable-source-recovery-20261012]
+    branches: [feat/v4-quote-source-recovery-current-20261012]
   pull_request:
     branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
 permissions:
@@ -36,11 +36,16 @@ jobs:
       - name: Isolated PostgreSQL 17 migration and concurrency acceptance
         env:
           PGPASSWORD: only-disposable-ci
+          PGHOST: 127.0.0.1
+          PGUSER: postgres
+          PGDATABASE: servicedesk_migration_test
+          SERVICEDESK_PG17_DISPOSABLE_ONLY: "1"
         run: |
           command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
           psql -h 127.0.0.1 -U postgres -d servicedesk_migration_test -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-fixture.sql
           psql -h 127.0.0.1 -U postgres -d servicedesk_migration_test -v ON_ERROR_STOP=1 -f supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql
           psql -h 127.0.0.1 -U postgres -d servicedesk_migration_test -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-acceptance.sql
+          bash scripts/release/v4-quote-source-pg17-concurrency.sh
 
       - uses: pnpm/action-setup@v4
         with:
