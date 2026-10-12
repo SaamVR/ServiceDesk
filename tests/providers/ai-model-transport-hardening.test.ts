@@ -7,6 +7,7 @@ import {
 
 const config = {
   apiBaseUrl: "https://model-provider.example.test/v1",
+  approvedGatewayOrigin: "https://model-provider.example.test",
   apiKey: "synthetic-ai-transport-key",
   model: "controlled-model",
   now: () => "2026-10-11T02:00:00Z",
