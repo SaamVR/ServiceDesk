@@ -21,9 +21,21 @@ export interface AuthoritativeWebhookDestinationResolver {
 }
 
 function isHttpsAllowed(urlValue: string, allowedHost: string): boolean {
+  // The destination must be server-resolved, but a compromised or mistaken
+  // configuration must not promote userinfo, private IPs or a nonstandard
+  // port into a signed HTTP request. DNS/pinning is still the dispatcher's job.
+  if (urlValue !== urlValue.trim() || urlValue.length > 2048 ||
+      allowedHost !== allowedHost.trim()) return false;
+  const host = allowedHost.toLowerCase();
+  if (!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(host) ||
+      host.endsWith(".local") || host.endsWith(".internal") ||
+      host.endsWith(".localhost") || host.endsWith(".test") ||
+      host.endsWith(".example")) return false;
   try {
     const url = new URL(urlValue);
-    return url.protocol === "https:" && url.hostname === allowedHost;
+    return url.protocol === "https:" && url.hostname === host &&
+      !url.username && !url.password && !url.port && !url.hash &&
+      !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(url.hostname);
   } catch {
     return false;
   }
