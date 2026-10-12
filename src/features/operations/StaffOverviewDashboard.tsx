@@ -168,7 +168,7 @@ export function StaffOverviewDashboard({
     | "attentionItems"
     | "qualityCases"
     | "crews"
-  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions" | "serviceCatalog">>;
+  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions" | "serviceCatalog" | "branchScope" | "ownerPricingBookProof">>;
   errorMessage?: string;
 }) {
   if (!snapshot) {
@@ -279,7 +279,8 @@ export function StaffOverviewDashboard({
         </Link>
       </section>
 
-      <CatalogReadinessBanner workspaceSlug={workspace} serviceCatalog={snapshot.serviceCatalog} />
+      <CatalogReadinessBanner workspaceSlug={workspace} serviceCatalog={snapshot.serviceCatalog}
+        branchScope={snapshot.branchScope} ownerPricingBookProof={snapshot.ownerPricingBookProof} />
 
       <AiOperationsStatus
         workspaceSlug={workspace}
