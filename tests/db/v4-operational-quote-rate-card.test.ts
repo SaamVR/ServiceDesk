@@ -22,13 +22,19 @@ const rate = {
   },
 };
 
-function fakeDb(options: { noBook?: boolean; badRates?: boolean; inactiveService?: boolean; otherTenant?: boolean } = {}) {
+function fakeDb(options: { noBook?: boolean; badRates?: boolean; inactiveService?: boolean; otherTenant?: boolean;
+  branchCurrency?: string; cardCurrency?: string; inactiveBranch?: boolean; missingBranch?: boolean; foreignBranch?: boolean } = {}) {
   const calls: Array<{ table: string; filters: [string, unknown][] }> = [];
   const tables: Record<string, Record<string, unknown>[]> = {
     requests: [{ id: request, workspace_id: workspace, branch_id: branch, service_id: service }],
+    workspace_branches: options.missingBranch ? [] : [{
+      id: branch, workspace_id: options.foreignBranch ? "foreign-workspace" : workspace,
+      currency: options.branchCurrency ?? "USD", active: !options.inactiveBranch,
+    }],
     service_catalog: [{ id: service, workspace_id: options.otherTenant ? "foreign-ws" : workspace, active: !options.inactiveService, code: "MOVE_OUT" }],
     branch_price_books: options.noBook ? [] : [{ workspace_id: workspace, branch_id: branch, rate_card_id: card, active: true, starts_at: null, ends_at: null }],
     rate_cards: [{ id: card, workspace_id: workspace, ...rate,
+      currency: options.cardCurrency ?? rate.currency,
       rules: options.badRates ? { ...rate.rules, standard: { baseMinor: -90 } } : rate.rules }],
   };
   const db = {
@@ -53,7 +59,7 @@ describe("V4 real tenant quote pricing", () => {
     const t = fakeDb();
     const result = await loadOperationalQuoteRateCard(t.db, workspace, request);
     expect(result).toMatchObject({ ok: true, value: { version: "owner-clean-2026-v1", currency: "USD" } });
-    expect(t.calls.map(call => call.table)).toEqual(["requests", "service_catalog", "branch_price_books", "rate_cards"]);
+    expect(t.calls.map(call => call.table)).toEqual(["requests", "workspace_branches", "service_catalog", "branch_price_books", "rate_cards"]);
     for (const call of t.calls) expect(call.filters).toContainEqual(["workspace_id", workspace]);
     expect(t.calls.find(c => c.table === "branch_price_books")?.filters).toContainEqual(["branch_id", branch]);
   });
@@ -64,6 +70,30 @@ describe("V4 real tenant quote pricing", () => {
       const result = await loadOperationalQuoteRateCard(t.db, workspace, request);
       expect(result.ok).toBe(false);
     }
+  });
+
+  it("rejects a mismatched branch/card currency, disabled branch, and foreign branch without quoting", async () => {
+    const scenarios = [
+      [{ cardCurrency: "GBP" }, "QUOTE_RATE_BRANCH_CURRENCY_MISMATCH"],
+      [{ branchCurrency: "GBP" }, "QUOTE_RATE_BRANCH_CURRENCY_MISMATCH"],
+      [{ branchCurrency: "usd" }, "QUOTE_RATE_BRANCH_CURRENCY_INVALID"],
+      [{ inactiveBranch: true }, "QUOTE_RATE_BRANCH_INACTIVE"],
+      [{ missingBranch: true }, "QUOTE_RATE_BRANCH_INACTIVE"],
+      [{ foreignBranch: true }, "QUOTE_RATE_BRANCH_INACTIVE"],
+    ] as const;
+    for (const [options, code] of scenarios) {
+      const t = fakeDb(options);
+      const result = await loadOperationalQuoteRateCard(t.db, workspace, request);
+      expect(result).toMatchObject({ ok: false, code });
+      expect(t.calls.find(x => x.table === "workspace_branches")?.filters)
+        .toEqual([["workspace_id", workspace], ["id", branch]]);
+    }
+  });
+
+  it("accepts a matching active GBP branch and explicitly GBP-denominated card without converting or inventing FX", async () => {
+    const t = fakeDb({ branchCurrency: "GBP", cardCurrency: "GBP" });
+    expect(await loadOperationalQuoteRateCard(t.db, workspace, request))
+      .toMatchObject({ ok: true, value: { currency: "GBP" } });
   });
 
   it("rejects misleading synthetic rate versions, malformed prices and non-USD-tied currencies", () => {
