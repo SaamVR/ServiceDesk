@@ -1,0 +1,169 @@
+name: ServiceDesk V4 postdeploy real source automation and AI readiness guest UAT
+on:
+  push:
+    branches: [qa/servicedesk-v4-postdeploy-automation-truth-20261012]
+    paths: [.github/workflows/v4-postdeploy-automation-truth-20261012.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-postdeploy-automation-truth-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  live-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Verify actual published Render health identifies approved release SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: 15a36dfcc6383c25e1f14c67add17dae9db6519c
+        run: |
+          for i in $(seq 1 85); do
+            candidate="$(curl -fsS --max-time 13 https://servicedesk-v3-frontend-review.onrender.com/health 2>/dev/null | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>{try {const j=JSON.parse(s);process.stdout.write(j.ok===true&&j.sourceProvider==="render"&&/^[a-f0-9]{40}$/.test(j.sourceSha)?j.sourceSha:"")}catch{}})' || true)"
+            if [[ "$candidate" == "$EXPECTED_SHA" ]]; then echo "Verified LIVE Render source SHA: $candidate"; exit 0; fi
+            sleep 8
+          done
+          echo "Live review not serving approved exact commit"; exit 1
+  eleven-public:
+    needs: live-identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2 }
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Read-only real Chrome all eleven public routes and tabs at seven widths
+        env:
+          V4_LIVE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_LIVE_OUTPUT: ${{ runner.temp }}/real-render-public
+          V4_LIVE_CHECKOUT_SHA: ${{ github.sha }}
+        run: node scripts/release/v4-live-deep-browser-audit.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-render-public-${{ github.sha }}
+          path: ${{ runner.temp }}/real-render-public/
+          retention-days: 7
+          if-no-files-found: warn
+  five-guest:
+    needs: live-identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2 }
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Actual Render guest signup, recovery, email guidance and presentation on seven widths
+        env:
+          V4_GUEST_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_GUEST_OUTPUT: ${{ runner.temp }}/real-render-guest
+        run: node scripts/release/v4-live-guest-auth-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-render-guest-${{ github.sha }}
+          path: ${{ runner.temp }}/real-render-guest/
+          retention-days: 7
+          if-no-files-found: warn
+  synthetic-sandbox:
+    needs: live-identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2 }
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Real Chrome nine-stage fictional customer lifecycle, payment and delivery retry
+        env:
+          V4_LIVE_SANDBOX_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_LIVE_SANDBOX_OUTPUT: ${{ runner.temp }}/real-render-sandbox
+        run: node scripts/release/v4-live-sandbox-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-render-sandbox-${{ github.sha }}
+          path: ${{ runner.temp }}/real-render-sandbox/
+          retention-days: 7
+          if-no-files-found: warn
+
+  anonymous-studio-denial:
+    needs: live-identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2}
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: All thirteen real protected Studio routes reject guests at seven breakpoints
+        env:
+          V4_ANON_ROUTE_ONLY: "true"
+          V4_ANON_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_ANON_OUTPUT: ${{ runner.temp }}/real-render-protected-denials
+        run: node scripts/release/v4-anonymous-studio-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-render-protected-guest-denials-${{ github.sha }}
+          path: ${{ runner.temp }}/real-render-protected-denials/
+          retention-days: 4
+          if-no-files-found: warn
+
+  extended-portal-crew-guest:
+    needs: live-identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2}
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Read-only live guest browser check for 18 additional portal crew business and auth routes
+        env:
+          V4_GUEST_EXTENDED_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_GUEST_EXTENDED_OUTPUT: ${{ runner.temp }}/v4-more-guest-pages
+        run: node scripts/release/v4-portal-crew-guest-chrome.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-render-more-guest-pages-${{ github.sha }}
+          path: ${{ runner.temp }}/v4-more-guest-pages/
+          retention-days: 4
+          if-no-files-found: warn
+  thirteen-server-auth-redirects:
+    needs: live-identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2}
+      - name: Verify all live staff destinations redirect guests before rendering Studio
+        run: |
+          node --input-type=module <<'NODE'
+          const origin="https://servicedesk-v3-frontend-review.onrender.com";
+          const modules=["overview","inbox","customers","requests","quotes","schedule",
+            "jobs","invoices","quality","automations","reports","settings","billing"];
+          for(const segment of modules){
+            const res=await fetch(origin+"/app/nonexistent-guest-workspace/"+segment,
+              {redirect:"manual",signal:AbortSignal.timeout(25000)});
+            const target=res.headers.get("location")||"";
+            if(![302,303,307,308].includes(res.status)||!target.includes("/auth/sign-in?next=")||
+                !target.includes("%2Fapp%2Fnonexistent-guest-workspace%2Foverview"))
+              throw Error("REAL_RENDER_ANONYMOUS_STAFF_NOT_REDIRECTED:"+segment+":"+res.status);
+          }
+          console.log("REAL_RENDER_SERVER_STUDIO_GUEST_REDIRECT_PASS: 13 routes");
+          NODE
