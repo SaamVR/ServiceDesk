@@ -1,0 +1,27 @@
+name: ServiceDesk V4 trusted quote-accepted internal automation RC
+on:
+  push:
+    branches: [feat/v4-verified-quote-accepted-internal-automation-20261012]
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+permissions:
+  contents: read
+concurrency:
+  group: sd-v4-customer-quote-event-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-head-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Accepted quote event tenant checks, approval gating, idempotency and no customer sends
+        run: pnpm exec vitest run tests/db/v4-customer-quote-accepted-automation.test.ts tests/db/v4-multievent-owner-automation.test.ts
+      - name: Full exact-head type, tests, lint and production build
+        run: pnpm check:rc
