@@ -68,7 +68,7 @@ describe("final committed webhook dispatch admission",()=>{
     {"content-length":"12345"},
     {"x-injected":"legit\r\nHost: internal"},
   ])("blocks hop-by-hop and injected headers: %j",async headers=>{
-    const h=fixture({headers:headers as Record<string,string>});
+    const h=fixture({headers:headers as unknown as Record<string,string>});
     expect(await h.dispatch()).toMatchObject({
       ok:true,value:{outcome:"TERMINAL_FAILURE",code:"WEBHOOK_CONFIG_INVALID"},
     });
