@@ -1,0 +1,22 @@
+name: ServiceDesk V4 server-enforced signed-in Studio entry
+on:
+  push:
+    branches: [feat/servicedesk-v4-studio-server-auth-redirect-20261012]
+permissions:
+  contents: read
+jobs:
+  studio-auth-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: pnpm/action-setup@v4
+        with: {version: 10.17.1,run_install: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2, cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - name: Test signed-out protected Studio redirects and return path validation
+        run: pnpm exec vitest run tests/e2e/v4-studio-server-auth-entry.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v4-studio-sidebar-visibility.test.ts
+      - name: Full production build, lint, typecheck, all regression tests
+        run: pnpm check:rc
