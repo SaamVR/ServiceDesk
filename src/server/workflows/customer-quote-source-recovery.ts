@@ -21,6 +21,7 @@ export interface InternalSourceRecoverySummary {
   claimed: number;
   completed: number;
   retryPending: number;
+  deadLetter: number;
   skipped: number;
   completionNotVerified: number;
   providerMessagesSent: 0;
@@ -52,7 +53,7 @@ export async function runInternalQuoteSourceRecoveryBatch(
 ): Promise<InternalSourceRecoverySummary> {
   const summary: InternalSourceRecoverySummary = {
     state: "CLAIM_UNVERIFIED", claimed: 0, completed: 0, retryPending: 0,
-    skipped: 0, completionNotVerified: 0, providerMessagesSent: 0,
+    deadLetter: 0, skipped: 0, completionNotVerified: 0, providerMessagesSent: 0,
   };
   const enabled = deps.enabled ?? (() =>
     process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED === "true");
@@ -135,12 +136,17 @@ export async function runInternalQuoteSourceRecoveryBatch(
         p_error_code:outcome==="FAILED"?errorCode:null,
       });
       const confirmed = completion.data;
-      if (completion.error || !confirmed || typeof confirmed !== "object" ||
-          Array.isArray(confirmed) ||
-          (confirmed as Record<string,unknown>).ok !== true) {
+      const record = confirmed && typeof confirmed === "object" && !Array.isArray(confirmed)
+        ? confirmed as Record<string,unknown> : undefined;
+      const state = record?.state;
+      const validState = outcome === "SUCCEEDED" ? state === "SUCCEEDED"
+        : outcome === "SKIPPED" ? state === "SKIPPED"
+        : state === "RETRY_PENDING" || state === "DEAD_LETTER";
+      if (completion.error || record?.ok !== true || !validState) {
         summary.completionNotVerified++;
-      } else if (outcome === "SUCCEEDED") summary.completed++;
-      else if (outcome === "SKIPPED") summary.skipped++;
+      } else if (state === "SUCCEEDED") summary.completed++;
+      else if (state === "SKIPPED") summary.skipped++;
+      else if (state === "DEAD_LETTER") summary.deadLetter++;
       else summary.retryPending++;
     } catch {
       summary.completionNotVerified++;
