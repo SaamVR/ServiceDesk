@@ -1,0 +1,38 @@
+name: ServiceDesk V4 live staging pricing anon denial
+# Only the publishable anon key is available to this job.
+# Empty RPC input can never create prices or mutate a business.
+on:
+  push:
+    branches: [feat/v4-staging-pricing-anon-denial-gate-20261012]
+    paths:
+      - scripts/release/v4-staging-pricing-anon-denial.mjs
+      - .github/workflows/v4-staging-pricing-anon-denial.yml
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - scripts/release/v4-staging-pricing-anon-denial.mjs
+      - .github/workflows/v4-staging-pricing-anon-denial.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: sd-v4-pricing-anon-denial-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  staging-anon-denial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Validate probe syntax
+        run: node --check scripts/release/v4-staging-pricing-anon-denial.mjs
+      - name: Real Supabase REST anonymous authorization-denial proof
+        env:
+          SERVICEDESK_QA_SUPABASE_PROJECT_REF: cpmmgivhlkfbiwzhlcey
+          SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+        run: node scripts/release/v4-staging-pricing-anon-denial.mjs
