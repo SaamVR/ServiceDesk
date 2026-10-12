@@ -18,10 +18,13 @@ export async function OwnerQuoteAcceptedAutomationControl({
   workspaceSlug, snapshot,
 }: { workspaceSlug: string; snapshot: OperationalStaffSnapshot }) {
   const activation = summarizeAutomationActivation(snapshot);
-  // The fourth checklist item is actual execution evidence. It must NOT be
-  // required before first opt-in, otherwise the owner can never start.
+  // A real accepted customer quote and its internal action are *outcomes*
+  // after arming an eligible published rule. Requiring either before first
+  // opt-in would deadlock activation for a new cleaning business.
+  // Only catalog, authorized USD branch pricing and published rule are gates.
   const missingSetup = activation.steps
-    .filter(step => step.id !== "execution-proof" && step.status !== "READY");
+    .filter(step => step.id !== "execution-proof" &&
+      step.id !== "accepted-quote" && step.status !== "READY");
   const flag = await readOwnerQuoteAutomationSetting(workspaceSlug);
   if (!flag.ok) {
     return (

@@ -294,7 +294,7 @@ export async function OnboardingProductRoute({
       <Panel>
         <SectionHeader
           title="Turn on a real internal cleaning automation"
-          description="A saved service, authorized branch rate card, and published internal QUOTE_ACCEPTED rule are needed before the owner can opt in. A completed internal attention receipt is separate evidence after a real event."
+          description="A saved service, authorized branch rate card, published QUOTE_ACCEPTED rule and real accepted customer quote are required for a meaningful end-to-end review. A completed internal attention receipt is separate evidence."
         />
         <div className="app-row-list">
           {automationActivation.steps.map(step => (
@@ -303,7 +303,9 @@ export async function OnboardingProductRoute({
                 <h3>{step.title}</h3>
                 <p>{step.detail}</p>
                 <Link href={buildStaffModuleHref(workspace.slug, step.module)}>
-                  {step.module === "settings" ? "Review Settings" : "Open Automation Studio"} →
+                  {step.module === "settings" ? "Review Settings"
+                    : step.module === "requests" ? "Review customer requests"
+                    : "Open Automation Studio"} →
                 </Link>
               </div>
               <div className="app-row-meta">

@@ -1,16 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { OperationalStaffSnapshot } from "@/features/operations/operational-product-runtime";
 import { summarizeAutomationActivation } from "@/features/operations/owner-automation-activation";
 
-type Input = Pick<OperationalStaffSnapshot,
-  "serviceCatalog" | "ownerPricingBookProof" | "branchScope" | "workflowAvailable" |
-  "workflowRules" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions">;
+type Input = Parameters<typeof summarizeAutomationActivation>[0];
 
 const empty: Input = {
   branchScope: { mode: "BRANCH", selectedBranchId: "branch-1", branches: [{
     id: "branch-1", code: "US-N", name: "North", currency: "USD", timezone: "America/New_York", isDefault: true,
   }] },
   serviceCatalog: [],
+  requests: [],
+  quotes: [],
   workflowAvailable: true,
   workflowRules: [],
   workflowRuleVersions: [],
@@ -45,6 +44,17 @@ const completedAttention: NonNullable<Input["workflowActionExecutions"]>[number]
   createdAt: "2026-10-12T12:00:00Z",
 };
 
+const acceptedRequest: NonNullable<Input["requests"]>[number] = {
+  id: "request-accepted", branchId: "branch-1",
+  status: "READY", serviceLabel: "Standard cleaning", version: 2,
+};
+const acceptedQuote: NonNullable<Input["quotes"]>[number] = {
+  id: "quote-accepted", requestId: acceptedRequest.id, version: 2,
+  status: "ACCEPTED", currency: "USD", totalMinor: 20000,
+  depositMinor: 5000, balanceMinor: 15000, durationMinutes: 120,
+  bufferMinutes: 15,
+};
+
 const priced: Input = {
   ...empty,
   ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
@@ -54,10 +64,10 @@ describe("owner automation activation evidence", () => {
   it("never calls empty workspace or unavailable pricing an operational success", () => {
     const summary = summarizeAutomationActivation(empty);
     expect(summary.readyCount).toBe(0);
-    expect(summary.total).toBe(4);
+    expect(summary.total).toBe(5);
     expect(summary.allEvidenceReady).toBe(false);
     expect(summary.steps.map(s => s.status))
-      .toEqual(["ACTION_REQUIRED", "UNVERIFIED", "UNVERIFIED", "UNVERIFIED"]);
+      .toEqual(["ACTION_REQUIRED", "UNVERIFIED", "UNVERIFIED", "UNVERIFIED", "UNVERIFIED"]);
   });
 
   it("requires active catalog and verified price-book evidence independently", () => {
@@ -106,12 +116,12 @@ describe("owner automation activation evidence", () => {
       workflowActionExecutions: [completedAttention],
     });
     expect(summary.steps[2].status).toBe("READY");
-    expect(summary.steps[3].status).toBe("ACTION_REQUIRED");
+    expect(summary.steps[4].status).toBe("ACTION_REQUIRED");
     expect(summarizeAutomationActivation({
       ...priced, workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live],
       workflowActionExecutions: [{ ...completedAttention, state: "APPROVAL_REQUIRED" }],
-    }).steps[3].status).toBe("ACTION_REQUIRED");
+    }).steps[4].status).toBe("ACTION_REQUIRED");
   });
 
   it("credits only matching persisted LIVE internal attention success", () => {
@@ -123,9 +133,80 @@ describe("owner automation activation evidence", () => {
       workflowRuleVersions: [published],
       workflowExecutions: [live],
       workflowActionExecutions: [completedAttention],
+      requests: [acceptedRequest], quotes: [acceptedQuote],
     });
-    expect(summary.readyCount).toBe(4);
+    expect(summary.readyCount).toBe(5);
     expect(summary.allEvidenceReady).toBe(true);
+  });
+
+  it("requires an accepted saved quote, not merely a published rule and internal action", () => {
+    const data: Input = {
+      ...empty, requests: [], quotes: [],
+      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      workflowExecutions: [live], workflowActionExecutions: [completedAttention],
+    };
+    const summary = summarizeAutomationActivation(data);
+    expect(summary.steps[3]).toMatchObject({
+      id: "accepted-quote", status: "ACTION_REQUIRED", module: "requests",
+    });
+    expect(summary.steps[4].status).toBe("READY");
+    expect(summary.readyCount).toBe(4);
+    expect(summary.allEvidenceReady).toBe(false);
+    expect(summarizeAutomationActivation({
+      ...data, requests: [acceptedRequest], quotes: [{ ...acceptedQuote, status: "SENT" }],
+    }).steps[3].status).toBe("ACTION_REQUIRED");
+  });
+
+  it("rejects accepted quotes without matching authorized branch, saved request or correct USD currency", () => {
+    const data: Input = {
+      ...priced, requests: [acceptedRequest], quotes: [acceptedQuote],
+    };
+    expect(summarizeAutomationActivation(data).steps[3].status).toBe("READY");
+    for (const quotes of [
+      [{ ...acceptedQuote, currency: "GBP" }],
+      [{ ...acceptedQuote, totalMinor: -10 }],
+      [{ ...acceptedQuote, requestId: "missing-request" }],
+    ]) {
+      expect(summarizeAutomationActivation({ ...data, quotes }).steps[3].status)
+        .toBe("ACTION_REQUIRED");
+    }
+    expect(summarizeAutomationActivation({
+      ...data, requests: [{ ...acceptedRequest, branchId: "foreign-branch" }],
+    }).steps[3].status).toBe("ACTION_REQUIRED");
+  });
+
+  it("does not borrow accepted quotes from another owner's selected or unpriced branch", () => {
+    const data: Input = {
+      ...priced,
+      requests: [{ ...acceptedRequest, branchId: "branch-2" }],
+      quotes: [acceptedQuote],
+    };
+    expect(summarizeAutomationActivation(data).steps[3].status).toBe("ACTION_REQUIRED");
+    const twoBranches: Input = {
+      ...data,
+      branchScope: {mode: "ALL", branches: [
+        ...empty.branchScope!.branches,
+        {id:"branch-2",code:"US-S",name:"South",currency:"USD",
+          timezone:"America/Chicago",isDefault:false},
+      ]},
+      ownerPricingBookProof: {state:"VERIFIED",activeBranchIds:["branch-1"]},
+    };
+    expect(summarizeAutomationActivation(twoBranches).steps[3].status).toBe("ACTION_REQUIRED");
+    expect(summarizeAutomationActivation({
+      ...twoBranches, ownerPricingBookProof: {state:"VERIFIED",activeBranchIds:["branch-2"]},
+    }).steps[3].status).toBe("READY");
+  });
+
+  it("does not infer real customer acceptance when quote data could not be read", () => {
+    const data: Input = {
+      ...priced, requests: undefined, quotes: undefined,
+    };
+    expect(summarizeAutomationActivation(data).steps[3].status).toBe("UNVERIFIED");
+    expect(summarizeAutomationActivation({
+      ...data, requests: [acceptedRequest], quotes: undefined,
+    }).steps[3].status).toBe("UNVERIFIED");
   });
 
   it("fails closed when selected branch is not the priced branch, even when some branch is ready", () => {
@@ -139,7 +220,7 @@ describe("owner automation activation evidence", () => {
     const result = summarizeAutomationActivation(readyElsewhere);
     expect(result.steps[1].status).toBe("ACTION_REQUIRED");
     expect(result.steps[2].status).toBe("ACTION_REQUIRED");
-    expect(result.steps[3].status).toBe("ACTION_REQUIRED");
+    expect(result.steps[4].status).toBe("ACTION_REQUIRED");
     expect(result.allEvidenceReady).toBe(false);
   });
 
@@ -157,7 +238,7 @@ describe("owner automation activation evidence", () => {
     const result = summarizeAutomationActivation(mixed);
     expect(result.steps[1].status).toBe("READY");
     expect(result.steps[2].status).toBe("ACTION_REQUIRED");
-    expect(result.steps[3].status).toBe("ACTION_REQUIRED");
+    expect(result.steps[4].status).toBe("ACTION_REQUIRED");
     expect(result.allEvidenceReady).toBe(false);
   });
 
@@ -170,7 +251,7 @@ describe("owner automation activation evidence", () => {
       workflowActionExecutions: [{ ...completedAttention, branchId: "branch-2" }],
     });
     expect(result.steps[2].status).toBe("READY");
-    expect(result.steps[3].status).toBe("ACTION_REQUIRED");
+    expect(result.steps[4].status).toBe("ACTION_REQUIRED");
   });
 
   it("does not credit another currency or unavailable branch scope as real USD readiness", () => {
@@ -182,7 +263,7 @@ describe("owner automation activation evidence", () => {
     };
     const withoutScope = summarizeAutomationActivation({ ...data, branchScope: undefined });
     expect(withoutScope.steps.slice(1).map(s => s.status))
-      .toEqual(["UNVERIFIED", "UNVERIFIED", "UNVERIFIED"]);
+      .toEqual(["UNVERIFIED", "UNVERIFIED", "UNVERIFIED", "UNVERIFIED"]);
     const wrongCurrency = summarizeAutomationActivation({ ...data,
       branchScope: { ...empty.branchScope!, branches: [
         { ...empty.branchScope!.branches[0], currency: "GBP" },
@@ -198,6 +279,6 @@ describe("owner automation activation evidence", () => {
       workflowActionExecutions: undefined,
     });
     expect(summary.steps[2].status).toBe("UNVERIFIED");
-    expect(summary.steps[3].status).toBe("UNVERIFIED");
+    expect(summary.steps[4].status).toBe("UNVERIFIED");
   });
 });

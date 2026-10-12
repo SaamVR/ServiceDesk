@@ -8,7 +8,7 @@ const route=readFileSync(join(process.cwd(),
   "src/features/onboarding/OnboardingProductRoute.tsx"),"utf8");
 
 describe("V4 first-run real automation checklist in owner onboarding",()=>{
-  it("shows four real saved-data checks rather than a fabricated provider delivery",()=>{
+  it("shows five real saved-data checks including customer acceptance",()=>{
     const snapshot={
       serviceCatalog:[],
       branchScope:{mode:"BRANCH" as const,selectedBranchId:"branch-a",branches:[{
@@ -21,11 +21,11 @@ describe("V4 first-run real automation checklist in owner onboarding",()=>{
       workflowExecutions:[],workflowActionExecutions:[],
     };
     const summary=summarizeAutomationActivation(snapshot);
-    expect(summary.total).toBe(4);
+    expect(summary.total).toBe(5);
     expect(summary.readyCount).toBe(0);
     expect(summary.allEvidenceReady).toBe(false);
     expect(summary.steps.map(x=>x.id)).toEqual([
-      "service-catalog","pricing","quote-rule","execution-proof",
+      "service-catalog","pricing","quote-rule","accepted-quote","execution-proof",
     ]);
     expect(summary.steps.every(step=>step.status!=="READY")).toBe(true);
     expect(route).toContain("summarizeAutomationActivation(result.value)");
@@ -40,6 +40,7 @@ describe("V4 first-run real automation checklist in owner onboarding",()=>{
     expect(route).toContain("Turn on a real internal cleaning automation");
     expect(route).toContain("Review Settings");
     expect(route).toContain("Open Automation Studio");
+    expect(route).toContain("Review customer requests");
     expect(route).toContain("Only workspace owners can enable");
     expect(route).toContain('step.status === "UNVERIFIED"');
   });
@@ -47,7 +48,7 @@ describe("V4 first-run real automation checklist in owner onboarding",()=>{
   it("does not promise model calls, payment or external message delivery",()=>{
     expect(route).toContain("A configured trigger or draft rule never proves an AI model call");
     expect(route).toContain("a complete customer workflow");
-    expect(route).toContain("after a real event");
+    expect(route).toContain("A completed internal attention receipt is separate evidence.");
     expect(route).not.toContain("Email delivered successfully");
     expect(route).not.toContain("Automations ready to send");
   });
