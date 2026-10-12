@@ -86,6 +86,19 @@ export function AiRequestBrief({
     }
   }
 
+  function cancelBrief() {
+    const pending = pendingRequest.current;
+    if (!pending || !busy) return;
+    // Abort the real HTTP request, not just the visual spinner. The server
+    // propagates the request abort to its bounded model transport.
+    pending.abort();
+    pendingRequest.current = null;
+    setStatus(previous => previous?.scopeKey === scopeKey
+      ? { scopeKey, busy: false,
+          error: "AI briefing cancelled. Saved requests, quotes and customer records are unchanged." }
+      : previous);
+  }
+
   return (
     <section className={styles.panel} aria-label="AI request copilot">
       <div className={styles.top}>
@@ -100,9 +113,17 @@ export function AiRequestBrief({
       </div>
       {configured ? (
         <>
-          <button className={styles.action} type="button" onClick={generate} disabled={busy} aria-busy={busy}>
-            {busy ? "Preparing AI briefing…" : "Generate AI intake brief"}
-          </button>
+          <div className={styles.actionRow}>
+            <button className={styles.action} type="button" onClick={generate} disabled={busy} aria-busy={busy}>
+              {busy ? "Preparing AI briefing…" : "Generate AI intake brief"}
+            </button>
+            {busy ? (
+              <button className={styles.cancelAction} type="button" onClick={cancelBrief}
+                aria-label="Cancel AI request briefing">
+                Cancel AI briefing
+              </button>
+            ) : null}
+          </div>
           {error ? <p role="alert" className={styles.error}>{error}</p> : null}
           {brief ? (
             <div className={styles.result} role="status" aria-live="polite">
