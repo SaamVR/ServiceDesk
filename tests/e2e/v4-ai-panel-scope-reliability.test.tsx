@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { AiRequestBrief } from "../../src/features/operations/AiRequestBrief";
+import { parseSavedAiRequestBrief } from "../../src/features/operations/ai-request-brief-contract";
 import { AiOwnerModelProbe } from "../../src/features/operations/AiOwnerModelProbe";
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -17,19 +18,30 @@ describe("V4 AI panels never reuse cross-workspace or cross-request receipts", (
     expect(src).toContain("setStatus({ scopeKey: submittedScope, busy: true })");
     expect(src).toContain("previous?.scopeKey === submittedScope");
     expect(src).toContain("body: JSON.stringify({ workspaceSlug, requestId })");
-    expect(src).toContain("(result as Brief).requestId !== requestId");
+    expect(src).toContain("parseSavedAiRequestBrief(result, requestId)");
+    expect(src).toContain("pendingRequest.current?.abort()");
+    const source = {
+      state:"AI_DRAFT_REQUIRES_REVIEW",source:"AUTHORIZED_SAVED_REQUEST",
+      requestId:"request-one", model:"gpt-4.1-mini", briefing:"Review bathrooms",
+    };
+    expect(parseSavedAiRequestBrief(source,"request-two")).toBeNull();
   });
 
   it("rejects model-less and empty brief results without showing false AI success", () => {
     const src = read("src/features/operations/AiRequestBrief.tsx");
-    for (const expected of [
-      '(result as Brief).state !== "AI_DRAFT_REQUIRES_REVIEW"',
-      '(result as Brief).source !== "AUTHORIZED_SAVED_REQUEST"',
-      'typeof (result as Brief).model !== "string"',
-      '!(result as Brief).model.trim()',
-      '!(result as Brief).briefing.trim()',
-      "(result as Brief).briefing.length > 900",
-    ]) expect(src).toContain(expected);
+    const valid={
+      state:"AI_DRAFT_REQUIRES_REVIEW",source:"AUTHORIZED_SAVED_REQUEST",
+      requestId:"request-one",model:"gpt-4.1-mini",briefing:"Review bathrooms",
+    };
+    expect(parseSavedAiRequestBrief(valid,"request-one")).toEqual(valid);
+    for (const bad of [
+      {...valid,state:"AUTO_APPROVED"},
+      {...valid,source:"UNTRUSTED_FIXTURE"},
+      {...valid,model:""},
+      {...valid,model:" ".repeat(5)},
+      {...valid,briefing:" "},
+      {...valid,briefing:"x".repeat(901)},
+    ]) expect(parseSavedAiRequestBrief(bad,"request-one")).toBeNull();
     expect(src).toContain("Staff must verify facts");
   });
 
