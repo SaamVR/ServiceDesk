@@ -52,8 +52,9 @@ export function OwnerCleaningPricingSetupForm({
   );
   const setupId = randomUUID();
   return (
-    <section aria-label="First-run owner cleaning pricing" style={{
-      border: "1px solid #d1e8df", borderRadius: 14, padding: 20, background: "#fff",
+    <section id="owner-first-run-pricing" aria-label="First-run owner cleaning pricing" style={{
+      border: "1px solid #d1e8df", borderRadius: 14, scrollMarginTop: 112,
+      padding: 20, background: "#fff",
       display: "grid", gap: 16, marginTop: 16,
     }}>
       <header>
