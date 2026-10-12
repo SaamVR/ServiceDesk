@@ -40,15 +40,20 @@ function harness(options: {
         async maybeSingle() {
           operations.push({kind,table,filters:{...filters}});
           if (options.readError && kind==="read") return {data:null,error:{code:"NETWORK"}};
-          if (table!=="workspace_feature_flags" ||
-              filters.workspace_id !== ws || filters.feature_key !== key) {
+          if (table!=="workspace_feature_flags") {
             return {data:null,error:null};
           }
           if (kind==="insert") {
+            if (payload.workspace_id !== ws || payload.feature_key !== key) {
+              return {data:null,error:{code:"SCOPE_INVALID"}};
+            }
             if (row) return {data:null,error:{code:"23505"}};
             row={enabled:payload.enabled as boolean,version:payload.version as number,
               updated_by:payload.updated_by as string};
             return {data:{...row},error:null};
+          }
+          if (filters.workspace_id !== ws || filters.feature_key !== key) {
+            return {data:null,error:null};
           }
           if (kind==="update") {
             if (!row || filters.version !== row.version) return {data:null,error:null};
