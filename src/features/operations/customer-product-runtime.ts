@@ -543,7 +543,8 @@ export async function acceptCustomerPortalQuote(quoteId: string): Promise<Custom
         service: resolved.value.service,
         rpc: resolved.value.rpc,
       });
-      if (!followUp.ok) {
+      // Disabled tenant opt-in is an ordinary no-op, not an operational failure.
+      if (!followUp.ok && followUp.code !== "QUOTE_AUTOMATION_WORKSPACE_NOT_OPTED_IN") {
         console.error("SERVICEDESK_QUOTE_FOLLOWUP_NOT_VERIFIED", followUp.code);
       }
     } catch {

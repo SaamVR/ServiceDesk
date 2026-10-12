@@ -31,9 +31,13 @@ function fixture(options: {
   noRules?: boolean;
   pending?: boolean;
   externalOnly?: boolean;
+  workspaceOptedOut?: boolean;
 }={}) {
   let pending = options.pending ?? true;
   const rows: Record<string,Record<string,unknown>[]> = {
+    workspace_feature_flags: options.workspaceOptedOut ? [] : [{
+      workspace_id: workspace, feature_key: "AUTO_INTERNAL_QUOTE_ACCEPTED", enabled: true,
+    }],
     quotes:[{id:quote,workspace_id:options.foreignWorkspace?"other-tenant":workspace,
       request_id:request,status:options.sourceStatus??"ACCEPTED",currency:"USD",service_code:"MOVE_OUT"}],
     requests:[{id:request,workspace_id:workspace,branch_id:branch,
@@ -120,6 +124,14 @@ describe("V4 trusted post-accept automation bridge",()=>{
       expect(t.evaluateAndRecord).not.toHaveBeenCalled();
       expect(t.executeAttentionAction).not.toHaveBeenCalled();
     }
+  });
+  it("never evaluates any rule for a tenant lacking its own persisted opt-in",async()=>{
+    const t=fixture({workspaceOptedOut:true});
+    const result=await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps);
+    expect(result).toMatchObject({ok:false,code:"QUOTE_AUTOMATION_WORKSPACE_NOT_OPTED_IN"});
+    expect(t.evaluateAndRecord).not.toHaveBeenCalled();
+    expect(t.executeAttentionAction).not.toHaveBeenCalled();
+    expect(t.seen.some(row=>row.table==="quotes")).toBe(false);
   });
   it("has no new execution when the verified branch has no owner-published rules",async()=>{
     const t=fixture({noRules:true});
