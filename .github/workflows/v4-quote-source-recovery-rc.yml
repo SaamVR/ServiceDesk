@@ -1,0 +1,59 @@
+name: ServiceDesk V4 trusted quote-source recovery RC
+on:
+  push:
+    branches: [feat/v4-quote-accepted-durable-source-recovery-20261012]
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+permissions:
+  contents: read
+concurrency:
+  group: sd-v4-quote-source-recovery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-head-source-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: only-disposable-ci
+          POSTGRES_DB: servicedesk_migration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d servicedesk_migration_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify exact HEAD
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Isolated PostgreSQL 17 migration and concurrency acceptance
+        env:
+          PGPASSWORD: only-disposable-ci
+        run: |
+          command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+          psql -h 127.0.0.1 -U postgres -d servicedesk_migration_test -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-fixture.sql
+          psql -h 127.0.0.1 -U postgres -d servicedesk_migration_test -v ON_ERROR_STOP=1 -f supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql
+          psql -h 127.0.0.1 -U postgres -d servicedesk_migration_test -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-acceptance.sql
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Internal quote source lease, scope, crash and SQL guard tests
+        run: pnpm exec vitest run tests/db/v4-quote-accepted-source-recovery.test.ts tests/db/v4-customer-quote-accepted-automation.test.ts
+      - name: Full source RC on owned branch pushes
+        if: github.event_name == 'push'
+        run: pnpm check:rc
