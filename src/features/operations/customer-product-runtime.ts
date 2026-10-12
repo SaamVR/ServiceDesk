@@ -9,6 +9,7 @@ import { createCustomerBookingFactory } from "@/features/schedule/customer-booki
 import { FixtureStripePaymentAdapter, signStripeFixturePayload } from "@/server/integrations/payments/adapter";
 import { createPaymentWebhookApplicationStore } from "@/server/integrations/payments/core-application-bridge";
 import { handleStripePaymentWebhook } from "@/server/api-handlers/provider-stripe";
+import { runTrustedAcceptedQuoteInternalAutomation } from "@/server/workflows/customer-quote-accepted-bridge";
 
 type Row = Record<string, unknown>;
 
@@ -527,9 +528,30 @@ export async function acceptCustomerPortalQuote(quoteId: string): Promise<Custom
     expectedVersion: quote.version,
   });
 
-  return result.ok
-    ? { ok: true, message: "Quote accepted. The next step is scheduling." }
-    : { ok: false, message: result.message };
+  if (!result.ok) return { ok: false, message: result.message };
+
+  // Disabled by default. The actor, accepted quote, customer and workspace
+  // are all server-resolved. No customer-selected workflow, branch or send.
+  // The quote acceptance is already durable: a best-effort internal follow-up
+  // cannot reverse acceptance or claim that a provider message was delivered.
+  if (process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED === "true") {
+    try {
+      const followUp = await runTrustedAcceptedQuoteInternalAutomation({
+        workspaceId: resolved.value.workspace.id,
+        customerId: resolved.value.customer.id,
+        quoteId: result.value.id,
+        service: resolved.value.service,
+        rpc: resolved.value.rpc,
+      });
+      // Disabled tenant opt-in is an ordinary no-op, not an operational failure.
+      if (!followUp.ok && followUp.code !== "QUOTE_AUTOMATION_WORKSPACE_NOT_OPTED_IN") {
+        console.error("SERVICEDESK_QUOTE_FOLLOWUP_NOT_VERIFIED", followUp.code);
+      }
+    } catch {
+      console.error("SERVICEDESK_QUOTE_FOLLOWUP_UNAVAILABLE");
+    }
+  }
+  return { ok: true, message: "Quote accepted. The next step is scheduling." };
 }
 
 export async function holdCustomerPortalSlot(quoteId: string, slotId: string): Promise<CustomerPortalActionResult> {

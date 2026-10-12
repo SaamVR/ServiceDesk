@@ -56,6 +56,7 @@ import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { AiRequestBrief } from "./AiRequestBrief";
 import { AiOperationsStatus } from "./AiOperationsStatus";
+import { OwnerQuoteAcceptedAutomationControl } from "./OwnerQuoteAcceptedAutomationControl";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import { automationPlaybooks, automationPlaybookCategories, getAutomationPlaybook } from "./automation-playbooks";
@@ -3048,6 +3049,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
           allowOwnerModelTest={data.actor.role === "OWNER"}
         />
+        {data.actor.role === "OWNER" ? <OwnerQuoteAcceptedAutomationControl workspaceSlug={workspaceSlug} /> : null}
         <WorkflowEvidenceStrip executions={data.workflowExecutions ?? []} actions={data.workflowActionExecutions ?? []} />
       <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
         <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
@@ -3081,6 +3083,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
           publishedRuleCount={(data.workflowRuleVersions ?? []).filter(version => version.state === "PUBLISHED").length}
           allowOwnerModelTest={data.actor.role === "OWNER"}
         />
+      {data.actor.role === "OWNER" ? <OwnerQuoteAcceptedAutomationControl workspaceSlug={workspaceSlug} /> : null}
       <WorkflowEvidenceStrip executions={data.workflowExecutions ?? []} actions={data.workflowActionExecutions ?? []} />
       <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
       <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
