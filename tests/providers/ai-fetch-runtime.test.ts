@@ -79,6 +79,31 @@ describe("server-only AI model fetch", () => {
     expect(JSON.stringify(result)).not.toContain("synthetic-not-production");
   });
 
+  it("accepts only an explicitly server-approved alternate gateway origin",async()=>{
+    const approved={
+      ...server,apiBaseUrl:"https://models.example.test/v1",
+      approvedGatewayOrigin:"https://models.example.test",
+    };
+    let calls=0;
+    expect(await callAiModel(approved,input,async()=>{
+      calls++;return {status:200,body:sampleOutput};
+    })).toMatchObject({ok:true,value:{output:{serviceCode:"DEEP"}}});
+    expect(calls).toBe(1);
+    for(const overrides of [
+      {approvedGatewayOrigin:undefined},
+      {approvedGatewayOrigin:"https://other.example.test"},
+      {apiBaseUrl:"https://models.example.test.attacker.org/v1"},
+      {apiBaseUrl:"https://models.example.test:8443/v1"},
+      {apiBaseUrl:"https://user:secret@models.example.test/v1"},
+    ]){
+      const result=await callAiModel({...approved,...overrides},input,async()=>{
+        calls++;return {status:200,body:sampleOutput};
+      });
+      expect(result).toMatchObject({ok:false,code:"AI_MODEL_CONFIGURATION_BLOCKED"});
+    }
+    expect(calls).toBe(1);
+  });
+
   it("ignores provider error payload content and honors normalized status only", async () => {
     const transport = createFetchAiModelTransport(async () =>
       new Response("Bearer provider-secret private@example.test", { status: 429 }));
