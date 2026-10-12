@@ -57,7 +57,27 @@ export async function handleStaffAiHttpPost(
     } catch { /* Invalid origin configuration fails closed. */ }
   }
   const fetchSite = request.headers.get("sec-fetch-site");
-  if (!origin || (origin !== requestOrigin && origin !== trustedPublicOrigin) ||
+  // Next's production proxy may normalize a loopback URL as localhost while
+  // retaining the actual browser Host as 127.0.0.1 (or vice versa).
+  // In this narrow local-only case, compare the exact Origin to the incoming
+  // Host authority. Never trust X-Forwarded-Host, and NEVER use this exception
+  // for an external domain: Render continues to require the exact configured
+  // HTTPS public origin above.
+  let sameLoopbackHostOrigin = false;
+  if (origin) {
+    try {
+      const requested = new URL(request.url);
+      const browser = new URL(origin);
+      const loopback = (host: string) => host === "127.0.0.1" || host === "localhost";
+      sameLoopbackHostOrigin = requested.protocol === "http:" &&
+        browser.protocol === "http:" &&
+        loopback(requested.hostname) && loopback(browser.hostname) &&
+        browser.origin === origin &&
+        request.headers.get("host") === browser.host;
+    } catch { /* Malformed origins are rejected. */ }
+  }
+  if (!origin || (origin !== requestOrigin && origin !== trustedPublicOrigin &&
+      !sameLoopbackHostOrigin) ||
       (fetchSite && !["same-origin", "none"].includes(fetchSite))) {
     return response(403, { code: "SAME_ORIGIN_REQUIRED" });
   }
