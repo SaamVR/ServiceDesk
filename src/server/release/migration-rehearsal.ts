@@ -65,7 +65,7 @@ export function buildMigrationRehearsalPlan(input: {
   // 0062_feature_b.sql: distinct paths, but the SAME migration version.
   // Reject version collisions before publishing a release ledger. Suffixes
   // such as 0007 and 0007a are deliberately separate historical versions.
-  const migrationVersions = files.map((file) => file.match(/^(\\d{4}[a-z]?)_/i)![1].toLowerCase());
+  const migrationVersions = files.map((file) => file.match(/^([0-9]{4}[a-z]?)_/i)![1].toLowerCase());
   if (new Set(migrationVersions).size !== migrationVersions.length) {
     throw new Error("Migration rehearsal inventory contains duplicate migration versions.");
   }
