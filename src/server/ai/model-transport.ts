@@ -3,6 +3,9 @@ import type { CleaningRequestExtraction } from "./types";
 
 export interface AiModelTransportConfig {
   apiBaseUrl: string;
+  /** Explicitly allow an alternate provider gateway origin in trusted server
+   * configuration; omitted in live ServiceDesk's OpenAI-only runtime. */
+  approvedGatewayOrigin?: string;
   apiKey: string;
   model: string;
   timeoutMs?: number;
@@ -67,6 +70,29 @@ function officialResponsesEndpoint(config: AiModelTransportConfig): boolean {
     return base.protocol === "https:" && base.hostname === "api.openai.com" &&
       base.pathname.replace(/\/+$/, "") === "/v1" &&
       !base.username && !base.password && !base.port && !base.search && !base.hash;
+  } catch {
+    return false;
+  }
+}
+
+function explicitlyApprovedGateway(config: AiModelTransportConfig): boolean {
+  if (!config.approvedGatewayOrigin) return false;
+  try {
+    const endpoint = new URL(config.apiBaseUrl);
+    const trusted = new URL(config.approvedGatewayOrigin);
+    // Never let a gateway exception weaken exact OpenAI routing.
+    if (endpoint.hostname === "api.openai.com") return false;
+    const host = endpoint.hostname.toLowerCase();
+    return endpoint.protocol === "https:" && trusted.protocol === "https:" &&
+      endpoint.origin === trusted.origin &&
+      endpoint.pathname.replace(/\/+$/, "") === "/v1" &&
+      (trusted.pathname === "/" || trusted.pathname === "") &&
+      !endpoint.username && !endpoint.password && !endpoint.port &&
+      !endpoint.search && !endpoint.hash &&
+      !trusted.username && !trusted.password && !trusted.port &&
+      !trusted.search && !trusted.hash &&
+      /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(host) &&
+      !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);
   } catch {
     return false;
   }
@@ -241,7 +267,7 @@ export async function callAiModel(
   // Enforce this *before* invoking any injected/alternate transport. The
   // protected runtime currently authorizes only OpenAI Responses; an external
   // adapter must never inherit a bearer key through a spoofed HTTPS base URL.
-  if (!officialResponsesEndpoint(config)) {
+  if (!officialResponsesEndpoint(config) && !explicitlyApprovedGateway(config)) {
     return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED",
       message: "Operational model transport requires the exact authorized HTTPS /v1 endpoint." };
   }
