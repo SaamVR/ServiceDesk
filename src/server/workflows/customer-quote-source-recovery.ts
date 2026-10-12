@@ -112,19 +112,39 @@ export async function runInternalQuoteSourceRecoveryBatch(
             request.data.id !== quote.data.request_id) {
           errorCode = "QUOTE_SOURCE_CUSTOMER_UNVERIFIED";
         } else {
-          const result = await (deps.bridge ?? runTrustedAcceptedQuoteInternalAutomation)({
-            workspaceId, customerId: request.data.customer_id,
-            quoteId, service: ports.service, rpc: ports.rpc,
-          });
-          if (result.ok && result.value.providerMessagesSent === 0) {
-            outcome = "SUCCEEDED";
-          } else if (!result.ok && result.code === "QUOTE_AUTOMATION_WORKSPACE_NOT_OPTED_IN") {
-            // An owner disabled the tenant after the event was recorded.
-            outcome = "SKIPPED";
+          // The initial claim is a snapshot: slow quote/customer reads can
+          // consume its TTL. Re-read the *current* service-only lease before
+          // any internal attention write, rejecting reassignment and expiry.
+          // This reduces stale-worker races; DB-side idempotency remains the
+          // final guard if the lease expires after this read.
+          const liveLease = await ports.service.from("workflow_source_events")
+            .select("id,workspace_id,quote_id,state,locked_by,locked_until,attempts")
+            .eq("workspace_id",workspaceId).eq("id",id).maybeSingle();
+          const live = liveLease.data;
+          const currentUntil = typeof live?.locked_until === "string"
+            ? Date.parse(live.locked_until) : NaN;
+          if (liveLease.error || !live ||
+              live.id !== id || live.workspace_id !== workspaceId ||
+              live.quote_id !== quoteId || live.state !== "PROCESSING" ||
+              live.locked_by !== ports.workerId ||
+              live.attempts !== row.attempts ||
+              !Number.isFinite(currentUntil) || currentUntil <= Date.now()) {
+            errorCode = "QUOTE_SOURCE_LEASE_REVALIDATION_FAILED";
           } else {
-            errorCode = result.ok
-              ? "QUOTE_SOURCE_PROVIDER_RESULT_INVALID"
-              : safeError(result.code);
+            const result = await (deps.bridge ?? runTrustedAcceptedQuoteInternalAutomation)({
+              workspaceId, customerId: request.data.customer_id,
+              quoteId, service: ports.service, rpc: ports.rpc,
+            });
+            if (result.ok && result.value.providerMessagesSent === 0) {
+              outcome = "SUCCEEDED";
+            } else if (!result.ok && result.code === "QUOTE_AUTOMATION_WORKSPACE_NOT_OPTED_IN") {
+              // An owner disabled the tenant after the event was recorded.
+              outcome = "SKIPPED";
+            } else {
+              errorCode = result.ok
+                ? "QUOTE_SOURCE_PROVIDER_RESULT_INVALID"
+                : safeError(result.code);
+            }
           }
         }
       }
