@@ -14,6 +14,7 @@ export interface WorkspaceQuoteAutomationSetting {
   enabled: boolean;
   version: number;
   deploymentEnabled: boolean;
+  journalReady: boolean;
 }
 export interface OwnerQuoteAutomationDependencies {
   resolveActor?: Resolver;
@@ -85,14 +86,17 @@ export async function readOwnerQuoteAutomationSetting(
     .eq("workspace_id", workspace.id)
     .eq("feature_key", QUOTE_ACCEPTED_INTERNAL_FEATURE_KEY).maybeSingle();
   if (read.error) return fail("AUTO_QUOTE_FLAG_READ_UNAVAILABLE", "The saved workspace switch could not be verified.");
-  if (!read.data) return { ok: true, value: { enabled: false, version: 0, deploymentEnabled: deploymentEnabled() } };
+  const journalReady = await verifiedQuoteCaptureJournalReady(service, workspace.id);
+  if (!read.data) return { ok: true, value: {
+    enabled: false, version: 0, deploymentEnabled: deploymentEnabled(), journalReady,
+  } };
   if (typeof read.data.enabled !== "boolean" ||
       !Number.isSafeInteger(read.data.version) || read.data.version < 1) {
     return fail("AUTO_QUOTE_FLAG_INVALID", "The saved workspace switch is invalid.");
   }
   return { ok: true, value: {
     enabled: read.data.enabled, version: read.data.version,
-    deploymentEnabled: deploymentEnabled(),
+    deploymentEnabled: deploymentEnabled(), journalReady,
   }};
   } catch {
     return fail("AUTO_QUOTE_FLAG_READ_UNAVAILABLE", "The workspace switch could not be verified.");
@@ -177,7 +181,11 @@ export async function setOwnerQuoteAutomationSetting(
     return fail("AUTO_QUOTE_READBACK_UNVERIFIED", "The workspace switch could not be read back.");
   }
   return { ok: true, value: {
-    enabled, version: expectedVersion + 1, deploymentEnabled: deploymentEnabled(),
+    enabled, version: expectedVersion + 1,
+    deploymentEnabled: deploymentEnabled(),
+    journalReady: enabled
+      ? true
+      : await verifiedQuoteCaptureJournalReady(service, workspace.id),
   }};
   } catch {
     return fail("AUTO_QUOTE_WRITE_NOT_VERIFIED", "The settings connection could not be verified.");
