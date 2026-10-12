@@ -1,5 +1,11 @@
 name: V4 real guest AI HTTP isolated acceptance
 on:
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - .github/workflows/v4-real-guest-ai-http-repro.yml
+      - scripts/release/v4-studio-guest-release-contract.mjs
+      - src/server/api-handlers/ai-staff-http.ts
   push:
     branches: [ci/v4-real-guest-ai-join-smoke-20261013]
   workflow_dispatch:
