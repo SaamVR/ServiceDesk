@@ -19,7 +19,12 @@ describe("V4 Studio server-side anonymous access guard",()=>{
     expect(layout).not.toContain("signedIn ? await loadOperationalBranchScope");
   });
   it("encodes the target workspace slug and cannot redirect a login to an external domain",()=>{
-    expect(layout).toContain('encodeURIComponent("/app/" + encodeURIComponent(workspace) + "/overview")');
+    expect(layout).toContain("verifiedStudioReturnPath(workspace, requested)");
+    expect(layout).toContain('(await headers()).get(STAFF_REQUEST_TARGET_HEADER)');
+    const proxy = content("src/proxy.ts");
+    expect(proxy).toContain("request.headers.delete(STAFF_REQUEST_TARGET_HEADER)");
+    expect(proxy).toContain("request.headers.set(STAFF_REQUEST_TARGET_HEADER, target)");
+    expect(proxy).toContain("return refreshAuthSession(request)");
     expect(normalizeReturnPath("/app/qa-cleaning/overview")).toBe("/app/qa-cleaning/overview");
     expect(normalizeReturnPath("https://evil.example/steal")).not.toContain("evil.example");
     expect(normalizeReturnPath("//evil.example")).not.toContain("evil.example");
