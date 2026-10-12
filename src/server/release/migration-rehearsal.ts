@@ -61,6 +61,14 @@ export function buildMigrationRehearsalPlan(input: {
   if (new Set(files).size !== files.length) {
     throw new Error("Migration rehearsal inventory contains duplicate filenames.");
   }
+  // Two independent development lanes can generate 0062_feature_a.sql and
+  // 0062_feature_b.sql: distinct paths, but the SAME migration version.
+  // Reject version collisions before publishing a release ledger. Suffixes
+  // such as 0007 and 0007a are deliberately separate historical versions.
+  const migrationVersions = files.map((file) => file.match(/^([0-9]{4}[a-z]?)_/i)![1].toLowerCase());
+  if (new Set(migrationVersions).size !== migrationVersions.length) {
+    throw new Error("Migration rehearsal inventory contains duplicate migration versions.");
+  }
   const migrationHead = files.at(-1)!;
   const planFingerprint = createHash("sha256")
     .update(JSON.stringify({ buildSha: input.buildSha, migrationFiles: files }))

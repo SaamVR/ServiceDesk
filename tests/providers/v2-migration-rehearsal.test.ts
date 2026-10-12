@@ -33,6 +33,36 @@ describe("V2 migration rehearsal readiness", () => {
     expect(() => buildMigrationRehearsalPlan({ buildSha, migrationFiles: ["README.md"] })).toThrow();
   });
 
+  it("rejects two different filenames claiming the same migration version", () => {
+    // Reproduces the real 0062 collision between the branch-trigger repair
+    // and the independently created accepted-quote journal.
+    expect(() => buildMigrationRehearsalPlan({
+      buildSha,
+      migrationFiles: [
+        "0062_v4_branch_trigger_rowtype_guard.sql",
+        "0062_v4_quote_accept_internal_source_journal.sql",
+      ],
+    })).toThrow(/duplicate migration versions/i);
+    expect(() => buildMigrationRehearsalPlan({
+      buildSha,
+      migrationFiles: ["0062_v4_first.sql", "0062_V4_SECOND.sql"],
+    })).toThrow(/duplicate migration versions/i);
+  });
+
+  it("accepts historical letter-suffixed versions and distinct next numbers", () => {
+    const plan = buildMigrationRehearsalPlan({
+      buildSha,
+      migrationFiles: [
+        "0007_outbox_completion_rpc.sql",
+        "0007a_supabase_security_hardening.sql",
+        "0062_v4_branch_trigger_rowtype_guard.sql",
+        "0063_v4_quote_accept_internal_source_journal.sql",
+      ],
+    });
+    expect(plan.migrationFiles).toHaveLength(4);
+    expect(plan.migrationHead).toBe("0063_v4_quote_accept_internal_source_journal.sql");
+  });
+
   it("accepts only synthetic disposable upgrade/rollback/cleanup PASS bound to exact build and fingerprint", () => {
     const plan = buildMigrationRehearsalPlan({ buildSha, migrationFiles });
     const receipt: V2MigrationRehearsalReceipt = {
