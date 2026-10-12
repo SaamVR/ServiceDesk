@@ -77,6 +77,20 @@ export function buildOperationalReleaseReadiness(
     currentBuildSha: buildSha,
   });
 
+  // CI and disposable PG17 rehearsal cannot stand in for real deployed
+  // schema or signed-in business events. Receipts must be scope-specific,
+  // non-reused and bound to this exact application build.
+  const liveProof = (key: string, shaKey: string, prefix: string) =>
+    (env[key]?.trim() ?? "").startsWith(prefix) && exactBuildReceipt({
+      env, receiptKey: key, buildKey: shaKey, currentBuildSha: buildSha,
+    });
+  const schema = liveProof("SERVICEDESK_SCHEMA_APPLIED_RECEIPT",
+    "SERVICEDESK_SCHEMA_APPLIED_BUILD_SHA", "schema-applied:redacted:");
+  const owner = liveProof("SERVICEDESK_OWNER_JOURNEY_RECEIPT",
+    "SERVICEDESK_OWNER_JOURNEY_BUILD_SHA", "owner-journey:redacted:");
+  const attention = liveProof("SERVICEDESK_QUOTE_ATTENTION_RECEIPT",
+    "SERVICEDESK_QUOTE_ATTENTION_BUILD_SHA", "quote-attention:redacted:");
+
   const gates: OperationalReleaseGateView[] = [
     {
       id: "CANONICAL_EXECUTABLE",
@@ -113,6 +127,33 @@ export function buildOperationalReleaseReadiness(
       note: migrationRehearsed
         ? "A disposable non-production rehearsal receipt is bound to this build."
         : "A synthetic disposable upgrade/rollback/cleanup rehearsal is still required.",
+    },
+    {
+      id: "STAGING_SCHEMA_APPLIED",
+      label: "Applied operational database migrations",
+      state: schema ? "OPERATIONS_VERIFIED" : "CONFIGURATION_BLOCKED",
+      blocking: true,
+      note: schema
+        ? "An independently reviewed connected-database schema receipt is bound to this build."
+        : "Source migration rehearsal does not establish that the branch-trigger repair or pricing RPC is installed in connected staging.",
+    },
+    {
+      id: "OWNER_FIRST_RUN_JOURNEY",
+      label: "Real authenticated cleaning workflow",
+      state: owner ? "OPERATIONS_VERIFIED" : "CONFIGURATION_BLOCKED",
+      blocking: true,
+      note: owner
+        ? "An authenticated owner request-to-quote workflow receipt is bound to this build."
+        : "Owner-entered services, actual branch rates, customer request and quote readback are not yet accepted by real staged sessions.",
+    },
+    {
+      id: "QUOTE_ACCEPTED_INTERNAL_ATTENTION",
+      label: "Saved accepted-quote internal automation",
+      state: attention ? "OPERATIONS_VERIFIED" : "CONFIGURATION_BLOCKED",
+      blocking: true,
+      note: attention
+        ? "A persisted internal event and attention receipt is bound to this build."
+        : "Configured AI, published rules, synthetic previews or a server opt-in cannot substitute for persisted event/attention and tenant-isolation evidence.",
     },
   ];
 
