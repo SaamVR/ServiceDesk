@@ -1,0 +1,35 @@
+name: V4 quote journal two-tenant PG17
+on:
+  push:
+    branches: [test/v4-quote-source-two-tenant-pg17-20261012]
+  pull_request:
+    branches: [feat/v4-quote-source-recovery-current-20261012]
+permissions:
+  contents: read
+jobs:
+  postgres-resilience:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-ci
+          POSTGRES_DB: sd_two_tenant
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres -d sd_two_tenant" --health-interval 5s --health-retries 10
+    env:
+      PGPASSWORD: disposable-ci
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      PGDATABASE: sd_two_tenant
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: PostgreSQL 17 two-tenant lease regression
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-acceptance.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-two-tenant-resilience.sql
