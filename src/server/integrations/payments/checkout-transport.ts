@@ -50,7 +50,7 @@ function validatedCheckoutReturnUrl(value: string): URL | null {
         url.username || url.password || url.hash || url.port ||
         url.hostname === "localhost" || url.hostname.endsWith(".localhost") ||
         url.hostname.endsWith(".local") || url.hostname.endsWith(".internal") ||
-        /^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(url.hostname)) return null;
+        /^\d{1,3}(?:\.\d{1,3}){3}$/.test(url.hostname)) return null;
     return url;
   } catch {
     return null;
