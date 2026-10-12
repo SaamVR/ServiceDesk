@@ -57,6 +57,9 @@ export async function generateAuthorizedRequestBrief(
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.requestId)) {
     return fail("AI_BRIEF_INPUT_INVALID", "Choose a valid saved request.");
   }
+  if (deps.signal?.aborted) {
+    return fail("AI_BRIEF_CANCELLED", "Staff cancelled the AI briefing request.");
+  }
 
   let resolved: Awaited<ReturnType<ActorResolver>>;
   try { resolved = await (deps.resolveActor ?? resolveStaffActor)(input.workspaceSlug); }
