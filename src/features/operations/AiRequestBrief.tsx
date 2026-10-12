@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./AiRequestBrief.module.css";
 
 type Brief = {
@@ -26,11 +26,23 @@ export function AiRequestBrief({
   }>();
   const scoped = status?.scopeKey === scopeKey ? status : undefined;
   const busy = scoped?.busy ?? false;
+  const pendingRequest = useRef<AbortController | null>(null);
+  // A completed model request for a previous tenant or customer request
+  // must never hydrate the current panel. Abort expensive obsolete requests
+  // on scope change/unmount in addition to the existing state scope guard.
+  useEffect(() => {
+    pendingRequest.current?.abort();
+    pendingRequest.current = null;
+    return () => pendingRequest.current?.abort();
+  }, [scopeKey]);
   const brief = scoped?.brief;
   const error = scoped?.error;
 
   async function generate() {
     if (!configured || busy) return;
+    pendingRequest.current?.abort();
+    const request = new AbortController();
+    pendingRequest.current = request;
     const submittedScope = scopeKey;
     setStatus({ scopeKey: submittedScope, busy: true });
     let verifiedBrief: Brief | undefined;
@@ -42,6 +54,7 @@ export function AiRequestBrief({
         cache: "no-store",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ workspaceSlug, requestId }),
+        signal: request.signal,
       });
       const result: unknown = await response.json();
       if (!response.ok || !result || typeof result !== "object" ||
@@ -58,11 +71,16 @@ export function AiRequestBrief({
         verifiedBrief = result as Brief;
       }
     } catch {
-      message = "The AI connection couldn't be reached. No request or customer record was changed.";
+      if (!request.signal.aborted) {
+        message = "The AI connection couldn't be reached. No request or customer record was changed.";
+      }
     } finally {
-      setStatus(previous => previous?.scopeKey === submittedScope
-        ? { scopeKey: submittedScope, busy: false, brief: verifiedBrief, error: message }
-        : previous);
+      if (pendingRequest.current === request) pendingRequest.current = null;
+      if (!request.signal.aborted) {
+        setStatus(previous => previous?.scopeKey === submittedScope
+          ? { scopeKey: submittedScope, busy: false, brief: verifiedBrief, error: message }
+          : previous);
+      }
     }
   }
 
