@@ -85,7 +85,7 @@ describe("private authenticated QA preflight (synthetic/local, no provider)", ()
   });
 
   it("rejects carriage return and null byte in owner password without echoing values", () => {
-    for (const secret of ["safe-prefix\\runsafe-value", "safe-prefix\\u0000unsafe-value"]) {
+    for (const secret of ["safe-prefix\runsafe-value", "safe-prefix\u0000unsafe-value"]) {
       const result = run("two-owner-rls", {
         ...ownerA, ...ownerB, SERVICEDESK_QA_OWNER_A_PASSWORD: secret,
       });
