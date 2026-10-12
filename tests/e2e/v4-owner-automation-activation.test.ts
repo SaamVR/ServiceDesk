@@ -3,10 +3,13 @@ import type { OperationalStaffSnapshot } from "@/features/operations/operational
 import { summarizeAutomationActivation } from "@/features/operations/owner-automation-activation";
 
 type Input = Pick<OperationalStaffSnapshot,
-  "serviceCatalog" | "ownerPricingBookProof" | "workflowAvailable" |
+  "serviceCatalog" | "ownerPricingBookProof" | "branchScope" | "workflowAvailable" |
   "workflowRules" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions">;
 
 const empty: Input = {
+  branchScope: { mode: "BRANCH", selectedBranchId: "branch-1", branches: [{
+    id: "branch-1", code: "US-N", name: "North", currency: "USD", timezone: "America/New_York",
+  }] },
   serviceCatalog: [],
   workflowAvailable: true,
   workflowRules: [],
@@ -118,6 +121,69 @@ describe("owner automation activation evidence", () => {
     });
     expect(summary.readyCount).toBe(4);
     expect(summary.allEvidenceReady).toBe(true);
+  });
+
+  it("fails closed when selected branch is not the priced branch, even when some branch is ready", () => {
+    const readyElsewhere: Input = {
+      ...empty,
+      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-2"] },
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      workflowExecutions: [live], workflowActionExecutions: [completedAttention],
+    };
+    const result = summarizeAutomationActivation(readyElsewhere);
+    expect(result.steps[1].status).toBe("ACTION_REQUIRED");
+    expect(result.steps[2].status).toBe("ACTION_REQUIRED");
+    expect(result.steps[3].status).toBe("ACTION_REQUIRED");
+    expect(result.allEvidenceReady).toBe(false);
+  });
+
+  it("does not mix pricing in branch A with published rules or successful attention in branch B", () => {
+    const branchTwo = { id: "branch-2", code: "US-S", name: "South",
+      currency: "USD", timezone: "America/Chicago" };
+    const mixed: Input = {
+      ...empty,
+      branchScope: { mode: "ALL", branches: [...empty.branchScope!.branches, branchTwo] },
+      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-2"] },
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      workflowExecutions: [live], workflowActionExecutions: [completedAttention],
+    };
+    const result = summarizeAutomationActivation(mixed);
+    expect(result.steps[1].status).toBe("READY");
+    expect(result.steps[2].status).toBe("ACTION_REQUIRED");
+    expect(result.steps[3].status).toBe("ACTION_REQUIRED");
+    expect(result.allEvidenceReady).toBe(false);
+  });
+
+  it("does not credit an attention action from a foreign branch even if execution ID matches", () => {
+    const result = summarizeAutomationActivation({
+      ...empty, serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      workflowExecutions: [live],
+      workflowActionExecutions: [{ ...completedAttention, branchId: "branch-2" }],
+    });
+    expect(result.steps[2].status).toBe("READY");
+    expect(result.steps[3].status).toBe("ACTION_REQUIRED");
+  });
+
+  it("does not credit another currency or unavailable branch scope as real USD readiness", () => {
+    const data: Input = {
+      ...empty, serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      workflowExecutions: [live], workflowActionExecutions: [completedAttention],
+    };
+    const withoutScope = summarizeAutomationActivation({ ...data, branchScope: undefined });
+    expect(withoutScope.steps.slice(1).map(s => s.status))
+      .toEqual(["UNVERIFIED", "UNVERIFIED", "UNVERIFIED"]);
+    const wrongCurrency = summarizeAutomationActivation({ ...data,
+      branchScope: { ...empty.branchScope!, branches: [
+        { ...empty.branchScope!.branches[0], currency: "GBP" },
+      ] },
+    });
+    expect(wrongCurrency.steps.slice(1).every(step => step.status === "UNVERIFIED")).toBe(true);
   });
 
   it("treats missing workflow snapshots as unverified, not a proven zero", () => {
