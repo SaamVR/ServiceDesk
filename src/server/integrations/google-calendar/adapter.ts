@@ -40,6 +40,23 @@ function unavailableReason(policy: GoogleCalendarConnectionPolicy): CalendarFres
   return null;
 }
 
+/** Untrusted provider busy results cannot make a booking instantly
+ * confirmable. Explicit time zone is required to avoid DST ambiguity.
+ */
+function verifiedBusyInterval(value: CalendarBusyRange): boolean {
+  if (!value || typeof value !== "object" ||
+      !["FRESH", "STALE"].includes(value.freshness) ||
+      !["APP_MANAGED", "EXTERNAL_BUSY"].includes(value.source) ||
+      typeof value.calendarId !== "string" || !value.calendarId.trim() ||
+      value.calendarId.length > 512 ||
+      typeof value.startAt !== "string" || typeof value.endAt !== "string" ||
+      !/(?:Z|[+-]\d{2}:\d{2})$/i.test(value.startAt) ||
+      !/(?:Z|[+-]\d{2}:\d{2})$/i.test(value.endAt)) return false;
+  const start = Date.parse(value.startAt);
+  const end = Date.parse(value.endAt);
+  return Number.isFinite(start) && Number.isFinite(end) && end > start;
+}
+
 export async function listCalendarBusyWithFreshness(
   adapter: CalendarAdapter,
   policy: GoogleCalendarConnectionPolicy,
@@ -59,7 +76,16 @@ export async function listCalendarBusyWithFreshness(
     };
   }
 
-  const busy = await adapter.listBusy(range, crewId);
+  // A thrown provider adapter exception is not proof of an empty calendar.
+  // Fail closed just like an explicit provider error.
+  let busy: Awaited<ReturnType<CalendarAdapter["listBusy"]>>;
+  try { busy = await adapter.listBusy(range, crewId); }
+  catch {
+    return { ok: true, value: {
+      busy: [], availabilityFresh: false, instantConfirmationAllowed: false,
+      reason: "CALENDAR_BUSY_LOOKUP_FAILED",
+    } };
+  }
   if (!busy.ok) {
     return {
       ok: true,
@@ -70,6 +96,14 @@ export async function listCalendarBusyWithFreshness(
         reason: "CALENDAR_BUSY_LOOKUP_FAILED",
       },
     };
+  }
+
+  if (!Array.isArray(busy.value) || busy.value.length > 5000 ||
+      !busy.value.every(verifiedBusyInterval)) {
+    return { ok: true, value: {
+      busy: [], availabilityFresh: false, instantConfirmationAllowed: false,
+      reason: "CALENDAR_BUSY_LOOKUP_FAILED",
+    } };
   }
 
   const hasStaleBlock = busy.value.some((block) => block.freshness === "STALE");
