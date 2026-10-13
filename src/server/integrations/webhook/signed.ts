@@ -121,7 +121,7 @@ export function verifyOutboundWebhookSignature(input: {
   const tolerance = input.toleranceSeconds ?? 300;
   const signedAt = Date.parse(timestamp);
   const checkedAt = Date.parse(input.now);
-  if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$/.test(timestamp) ||
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(timestamp) ||
       !Number.isFinite(signedAt) || !Number.isFinite(checkedAt) ||
       !Number.isFinite(tolerance) || tolerance < 0 || tolerance > 3600) {
     return {ok:false,code:"WEBHOOK_SIGNATURE_STALE",
