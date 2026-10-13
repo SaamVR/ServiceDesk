@@ -42,6 +42,27 @@ describe("Calendar availability boundary checks", () => {
     expect(calendarSlotOverlapsBusy(slot, busy("2026-10-05T10:15:00.000Z", "2026-10-05T10:45:00.000Z"))).toBe(true);
   });
 
+  test("never treats stale or invalid external busy evidence as a free booking slot", () => {
+    const slots = [{ id: "candidate", startAt: "2026-10-14T09:00:00.000Z", endAt: "2026-10-14T10:00:00.000Z" }];
+    const overlapping = busy("2026-10-14T09:30:00.000Z", "2026-10-14T09:45:00.000Z");
+    expect(filterAvailableCalendarSlots(slots, [{ ...overlapping, freshness: "STALE" }], { beforeMinutes: 0, afterMinutes: 0 })).toEqual([]);
+    expect(filterAvailableCalendarSlots(slots, [{ ...overlapping, startAt: "invalid" }], { beforeMinutes: 0, afterMinutes: 0 })).toEqual([]);
+    expect(filterAvailableCalendarSlots(slots, [{ ...overlapping, freshness: "UNVERIFIED" } as unknown as CalendarBusyRange], { beforeMinutes: 0, afterMinutes: 0 })).toEqual([]);
+  });
+
+  test("blocks forged free slots through invalid times or negative, NaN, fractional buffers", () => {
+    const slots = [{ id: "candidate", startAt: "2026-10-14T09:00:00.000Z", endAt: "2026-10-14T10:00:00.000Z" }];
+    for (const buffer of [
+      {beforeMinutes: -30, afterMinutes: 0},
+      {beforeMinutes: 0, afterMinutes: Number.NaN},
+      {beforeMinutes: 0.5, afterMinutes: 0},
+      {beforeMinutes: 0, afterMinutes: 2000},
+    ]) expect(filterAvailableCalendarSlots(slots, [], buffer)).toEqual([]);
+    expect(filterAvailableCalendarSlots([{...slots[0], startAt:"not-an-instant"}],[],{beforeMinutes:0,afterMinutes:0})).toEqual([]);
+    expect(filterAvailableCalendarSlots([{...slots[0], endAt:slots[0].startAt}],[],{beforeMinutes:0,afterMinutes:0})).toEqual([]);
+    expect(filterAvailableCalendarSlots(slots,[],{beforeMinutes:0,afterMinutes:0})).toEqual(slots);
+  });
+
   test("filters available slots against fresh external busy ranges only", () => {
     const slots = [
       { id: "slot-open", startAt: "2026-10-05T08:00:00.000Z", endAt: "2026-10-05T09:00:00.000Z" },
