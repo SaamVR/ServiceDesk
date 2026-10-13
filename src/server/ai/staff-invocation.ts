@@ -66,6 +66,7 @@ export async function executeAuthorizedStaffAiTurn(
       "Select an assigned branch before analyzing customer conversations.");
   }
 
+  if (input.signal?.aborted) return fail("AI_STAFF_CANCELLED", "Staff request cancelled.");
   // No database or model work is allowed while operational AI is disabled.
   const enabled = readConfiguredAiRuntimeConfig(deps.env);
   if (!enabled.ok) return enabled;
@@ -125,6 +126,7 @@ export async function executeAuthorizedStaffAiTurn(
       ? { ok: true as const, value: deps.knowledge }
       : await loadApprovedCatalogKnowledge(service, workspace.id);
     if (!knowledge.ok) return knowledge;
+    if (input.signal?.aborted) return fail("AI_STAFF_CANCELLED", "Staff request cancelled.");
     const runtime = createOperationalAiRuntime({
       messages: service as unknown as AiPersistedMessageLookup,
       knowledge: knowledge.value,
@@ -141,6 +143,7 @@ export async function executeAuthorizedStaffAiTurn(
       requestId: typeof c.request_id === "string" ? c.request_id : undefined,
       customerId: typeof c.customer_id === "string" ? c.customer_id : undefined,
       handoverActive: Boolean(c.handover_active),
+      signal: input.signal,
     });
   } catch {
     return fail("AI_STAFF_READ_UNAVAILABLE", "Workspace conversation read is temporarily unavailable.");
