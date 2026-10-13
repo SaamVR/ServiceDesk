@@ -447,6 +447,7 @@ export async function loadCustomerPortalSnapshot(): Promise<CustomerPortalResult
           taxMinor: quote.taxMinor,
           lineItems: readVerifiedCustomerQuoteLineItems(
             row.snapshot, quote.subtotalMinor, quote.durationMinutes,
+            quote.taxMinor, quote.totalMinor,
           ),
           totalMinor: quote.totalMinor,
           depositMinor: quote.depositMinor,
