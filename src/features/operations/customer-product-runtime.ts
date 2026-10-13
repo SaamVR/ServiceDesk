@@ -126,6 +126,8 @@ export type CustomerPortalActionResult =
   | { ok: false; message: string };
 
 export interface CustomerSandboxCheckoutSession {
+  /** From the actual customer-owned saved quote, never from session metadata. */
+  quoteStatus?: string;
   id: string;
   purpose: "DEPOSIT" | "BALANCE";
   invoiceId?: string;
@@ -963,6 +965,7 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
 
   let currentAmountMinor: number;
   let resourceStatus: string;
+  let quoteStatus: string | undefined;
 
   if (purpose === "DEPOSIT") {
     const quoteContext = await loadCustomerOwnedQuoteContext(resolved.value, quoteId);
@@ -982,12 +985,14 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
 
     currentAmountMinor = quoteContext.quote.depositMinor;
     resourceStatus = String(holdResult.data.status);
+    quoteStatus = quoteContext.quote.status;
   } else {
     if (!invoiceId) return { ok: false, message: "This balance checkout is missing its invoice reference." };
     const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
     if (!context.ok) return context;
     currentAmountMinor = context.invoice.balanceMinor;
     resourceStatus = context.invoice.status;
+    quoteStatus = context.quote.status;
   }
 
   return {
@@ -1004,6 +1009,7 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
       expiresAt,
       currentAmountMinor,
       resourceStatus,
+      quoteStatus,
       workspaceName: resolved.value.workspace.name,
       customerName: resolved.value.customer.displayName,
       workspaceTimezone: resolved.value.workspace.timezone,
