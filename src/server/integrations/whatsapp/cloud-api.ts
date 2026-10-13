@@ -61,6 +61,16 @@ function safeRecipient(value: string): boolean {
   return /^\+?[1-9]\d{6,14}$/.test(value);
 }
 
+
+/** Provider credentials may only be sent to the official Graph HTTPS API. */
+function authorizedCloudConfig(config: WhatsAppCloudApiConfig): boolean {
+  return (config.graphBaseUrl === "https://graph.facebook.com" ||
+          config.graphBaseUrl === "https://graph.facebook.com/") &&
+    /^v[0-9]{1,3}\.[0-9]{1,2}$/.test(config.apiVersion) &&
+    /^[0-9]{5,20}$/.test(config.phoneNumberId) &&
+    Boolean(config.accessToken && config.accessToken.trim() === config.accessToken);
+}
+
 function messagesUrl(config: WhatsAppCloudApiConfig): string {
   const base = config.graphBaseUrl.replace(/\/+$/, "");
   const version = config.apiVersion.replace(/^\/+|\/+$/g, "");
@@ -172,7 +182,7 @@ export async function sendWhatsAppCloudMessage(
   message: WhatsAppCloudMessage,
   http: WhatsAppCloudHttpTransport,
 ): Promise<Result<WhatsAppCloudAcceptance>> {
-  if (!config.graphBaseUrl || !config.apiVersion || !config.phoneNumberId || !config.accessToken) {
+  if (!authorizedCloudConfig(config)) {
     return { ok: false, code: "WHATSAPP_CONFIGURATION_BLOCKED", message: "WhatsApp Cloud API configuration is incomplete." };
   }
 
@@ -204,8 +214,22 @@ export async function sendWhatsAppCloudMessage(
       return { ok: false, code: "WHATSAPP_INVALID_RESPONSE", message: "WhatsApp provider returned malformed JSON." };
     }
 
-    const providerMessageId = (parsed as { messages?: Array<{ id?: unknown }> }).messages?.[0]?.id;
-    if (typeof providerMessageId !== "string" || !providerMessageId.trim()) {
+    // A 200 response is not delivery confirmation; it is accepted only
+    // if a single bounded provider message ID exists in the expected shape.
+    // Null, arrays and forged multi-message responses fail closed.
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false, code: "WHATSAPP_INVALID_RESPONSE", message: "WhatsApp returned an invalid acceptance envelope." };
+    }
+    const envelope = parsed as { messages?: unknown; messaging_product?: unknown };
+    if ((envelope.messaging_product !== undefined && envelope.messaging_product !== "whatsapp") ||
+        !Array.isArray(envelope.messages) || envelope.messages.length !== 1 ||
+        !envelope.messages[0] || typeof envelope.messages[0] !== "object" ||
+        Array.isArray(envelope.messages[0])) {
+      return { ok: false, code: "WHATSAPP_INVALID_RESPONSE", message: "WhatsApp returned an invalid acceptance envelope." };
+    }
+    const providerMessageId = (envelope.messages[0] as {id?: unknown}).id;
+    if (typeof providerMessageId !== "string" || providerMessageId.length > 512 ||
+        !/^[A-Za-z0-9_.:-]+$/.test(providerMessageId)) {
       return { ok: false, code: "WHATSAPP_INVALID_RESPONSE", message: "WhatsApp provider acceptance response is missing a message ID." };
     }
 
