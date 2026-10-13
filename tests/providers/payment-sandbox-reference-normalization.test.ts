@@ -67,9 +67,9 @@ describe("Stripe sandbox payment reference normalization", () => {
   test("carries balance invoice metadata through Stripe-style checkout request", async () => {
     let body = "";
     const result = await createStripeCheckoutSession(
-      { apiBaseUrl: "https://api.stripe.test/v1", secretKey: "sk_test_x", providerAccountId, mode: "SANDBOX", now: () => now },
+      { apiBaseUrl: "https://api.stripe.com/v1", secretKey: "sk_test_x", providerAccountId, mode: "SANDBOX", now: () => now },
       { quote, purpose: "BALANCE", invoiceId: "invoice-456", balanceMinor: 9200, successUrl: "https://example.com/s", cancelUrl: "https://example.com/c" },
-      async (request) => { body = request.body; return { status: 200, body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.test/cs_test_123" }) }; },
+      async (request) => { body = request.body; return { status: 200, body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.com/cs_test_123" }) }; },
     );
     expect(result.ok).toBe(true);
     expect(body).toContain("metadata%5BinvoiceId%5D=invoice-456");

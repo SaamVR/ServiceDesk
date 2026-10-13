@@ -95,6 +95,9 @@ function header(headers: Record<string, string | undefined>, name: string): stri
 }
 
 function safeEqualHex(left: string, right: string): boolean {
+  if (!/^[a-f0-9]{64}$/i.test(left) || !/^[a-f0-9]{64}$/i.test(right)) {
+    return false;
+  }
   const leftBuffer = Buffer.from(left, "hex");
   const rightBuffer = Buffer.from(right, "hex");
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
@@ -113,8 +116,19 @@ export function verifyOutboundWebhookSignature(input: {
     return { ok: false, code: "WEBHOOK_SIGNATURE_MISSING", message: "Missing ServiceDesk webhook signature headers." };
   }
 
-  const ageSeconds = Math.abs(new Date(input.now).getTime() - new Date(timestamp).getTime()) / 1000;
-  if (ageSeconds > (input.toleranceSeconds ?? 300)) {
+  // NaN never compares greater than any tolerance. Reject invalid clock data
+  // before authenticating an otherwise correctly signed replay.
+  const tolerance = input.toleranceSeconds ?? 300;
+  const signedAt = Date.parse(timestamp);
+  const checkedAt = Date.parse(input.now);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(timestamp) ||
+      !Number.isFinite(signedAt) || !Number.isFinite(checkedAt) ||
+      !Number.isFinite(tolerance) || tolerance < 0 || tolerance > 3600) {
+    return {ok:false,code:"WEBHOOK_SIGNATURE_STALE",
+      message:"ServiceDesk webhook timestamp or allowed tolerance is invalid."};
+  }
+  const ageSeconds = Math.abs(checkedAt - signedAt) / 1000;
+  if (ageSeconds > tolerance) {
     return { ok: false, code: "WEBHOOK_SIGNATURE_STALE", message: "ServiceDesk webhook signature timestamp is outside tolerance." };
   }
 

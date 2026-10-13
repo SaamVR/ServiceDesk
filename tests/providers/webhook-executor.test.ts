@@ -52,6 +52,61 @@ describe("signed outbound webhook executor", () => {
     expect(calls).toBe(0);
   });
 
+  test("never posts without an explicit trusted HTTPS host allowlist", async () => {
+    let calls=0;
+    const http: WebhookExecutorTransport=async()=> {
+      calls++;
+      return {statusCode:202,body:"ok"};
+    };
+    for(const override of [
+      {allowedHosts:undefined},{allowedHosts:[]},
+      {endpointUrl:"https://127.0.0.1/webhook",allowedHosts:["127.0.0.1"]},
+      {endpointUrl:"https://localhost/webhook",allowedHosts:["localhost"]},
+      {endpointUrl:"https://internal.local/hook",allowedHosts:["internal.local"]},
+      {endpointUrl:"https://u:p@automation.example.test/webhook"},
+      {endpointUrl:"https://automation.example.test:8443/webhook"},
+      {endpointUrl:"https://automation.example.test/webhook#secret"},
+    ]) {
+      const result=await executeSignedWebhookDelivery(
+        {...config,...override},{envelope,attempt:1},http);
+      expect(result).toMatchObject({outcome:"FAILED_FINAL",retryable:false});
+    }
+    expect(calls).toBe(0);
+  });
+
+  test("rejects impossible retry counters and invalid signing clocks", async () => {
+    let calls=0;
+    const http: WebhookExecutorTransport=async()=> {
+      calls++;
+      return {statusCode:202};
+    };
+    for(const opt of [
+      {attempt:0,maxAttempts:3},{attempt:4,maxAttempts:3},
+      {attempt:1,maxAttempts:Infinity},
+    ]) {
+      const result=await executeSignedWebhookDelivery(
+        {...config,maxAttempts:opt.maxAttempts},
+        {envelope,attempt:opt.attempt},http);
+      expect(result).toMatchObject({outcome:"FAILED_FINAL",retryable:false});
+    }
+    expect(await executeSignedWebhookDelivery({...config,now:()=> "not-a-clock"},
+      {envelope,attempt:1},http)).toMatchObject({
+        outcome:"FAILED_FINAL",retryable:false,
+      });
+    expect(calls).toBe(0);
+  });
+
+  test("never exposes provider failure bodies in redacted operator evidence", async () => {
+    const result=await executeSignedWebhookDelivery(config,
+      {envelope,attempt:1},async()=>({
+        statusCode:400,
+        body:"secret=sk_live_sensitive, phone=+15551234567, customer=private",
+      }));
+    expect(result.redactedResponseExcerpt).toBe("[provider-response-redacted]");
+    expect(JSON.stringify(result)).not.toContain("sk_live_sensitive");
+    expect(JSON.stringify(result)).not.toContain("+15551234567");
+  });
+
   test("classifies timeout as retry with next attempt receipt", async () => {
     const result = await executeSignedWebhookDelivery(config, { envelope, attempt: 1 }, async () => {
       const error = new Error("timeout");
