@@ -25,7 +25,7 @@ describe("request quote capacity composition", () => {
     const created = await facade.createRequest(owner, { serviceCode: "MOVE_OUT" }, { idempotencyKey: "create", now });
     if (!created.ok) throw new Error("create failed");
     await facade.updateRequest(owner, created.value.id, { bedrooms: 3, bathrooms: 2 }, { idempotencyKey: "update", now, expectedVersion: 1 });
-    await expect(facade.calculateQuote(owner, created.value.id)).resolves.toMatchObject({ ok: true, value: { totalMinor: 34000, status: "APPROVED" } });
+    await expect(facade.calculateQuote(owner, created.value.id)).resolves.toMatchObject({ ok: true, value: { totalMinor: 31000, status: "APPROVED" } });
     await expect(facade.findSlots(owner, { requestId: created.value.id, from: "2026-10-05T00:00:00.000Z", to: "2026-10-06T00:00:00.000Z" })).resolves.toHaveLength(1);
   });
 });

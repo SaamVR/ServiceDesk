@@ -149,7 +149,9 @@ export function createPostgresRequestQuoteCapacityFacadeMethods(client: Supabase
         serviceCode: request.value.serviceCode,
         bedrooms: request.value.bedrooms,
         bathrooms: request.value.bathrooms,
-        oven: request.value.serviceCode === "MOVE_OUT",
+        // Neither the saved request nor the quote command carries an approved
+        // optional oven choice. Never bill that add-on automatically.
+        oven: false,
         now: new Date().toISOString(),
       }, persistedRateCard);
 
