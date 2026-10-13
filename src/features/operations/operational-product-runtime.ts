@@ -158,9 +158,9 @@ export interface OperationalPhotoSuggestion {
 
 export interface OperationalQuote {
   /** null means saved charge details are unavailable or do not reconcile. */
-  lineItems: CustomerQuoteLineItem[] | null;
-  subtotalMinor: number;
-  taxMinor: number;
+  lineItems?: CustomerQuoteLineItem[] | null;
+  subtotalMinor?: number;
+  taxMinor?: number;
   id: string;
   requestId: string;
   version: number;
