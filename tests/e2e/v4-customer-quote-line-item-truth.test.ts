@@ -31,7 +31,7 @@ describe("customer quote saved itemization", () => {
       lineItems: [{ ...base[0], amountMinor: -1 }],
     }, 18000, 120)).toBeNull();
     expect(readVerifiedCustomerQuoteLineItems({
-      lineItems: [{ ...base[0], description: "Bad\\nitem" }],
+      lineItems: [{ ...base[0], description: "Bad" + String.fromCharCode(10) + "item" }],
     }, 18000, 120)).toBeNull();
     expect(readVerifiedCustomerQuoteLineItems({ lineItems: Array.from({ length: 26 }, () => base[0]) }, 468000, 3120))
       .toBeNull();
