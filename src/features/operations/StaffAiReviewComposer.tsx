@@ -43,7 +43,7 @@ function ScopedStaffAiReviewComposer({
   const [body, setBody] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState<"idle" | "drafting" | "approving">("idle");
-  const [error, setError] = useState<"draft" | "approval" | "stale">();
+  const [error, setError] = useState<"draft" | "approval" | "stale" | "cancelled">();
   const [receipt, setReceipt] = useState<ApprovedReplyReceipt>();
   const controller = useRef<AbortController | null>(null);
   const idempotencyKey = useRef<string | null>(null);
@@ -70,11 +70,13 @@ function ScopedStaffAiReviewComposer({
         body: JSON.stringify({ workspaceSlug, conversationId, messageId: sourceMessageId }),
         signal: pending.signal,
       });
+      if (pending.signal.aborted) return;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
         setError("draft");
         return;
       }
       const parsed = parseReviewedAiDraft(await response.json() as unknown, conversationId, sourceMessageId);
+      if (pending.signal.aborted) return;
       if (!parsed) {
         setError("draft");
         return;
@@ -86,6 +88,18 @@ function ScopedStaffAiReviewComposer({
     } finally {
       if (!pending.signal.aborted) setBusy("idle");
     }
+  }
+
+  function cancelSuggestion() {
+    if (busy !== "drafting") return;
+    controller.current?.abort();
+    controller.current = null;
+    setBusy("idle");
+    setDraft(undefined);
+    setBody("");
+    setConfirmed(false);
+    setError("cancelled");
+    // Cancelling the browser request does not certify that provider billing stopped.
   }
 
   async function approve() {
@@ -157,7 +171,15 @@ function ScopedStaffAiReviewComposer({
         ) : null}
       </header>
 
+      {busy === "drafting" ? (
+        <button className={styles.secondary} type="button" onClick={cancelSuggestion}>
+          Cancel suggestion
+        </button>
+      ) : null}
       <div className={styles.feedback} aria-live="polite" aria-atomic="true">
+        {error === "cancelled" ? (
+          <p>Suggestion request cancelled in this browser. No reply was approved or queued.</p>
+        ) : null}
         {error === "draft" ? (
           <p>AI drafting is unavailable for this workspace. Continue with the standard staff reply form.</p>
         ) : error === "stale" ? (
