@@ -30,6 +30,7 @@ describe("First-run quote readiness", () => {
     const ops = read("src/features/operations/OperationalProductRoute.tsx");
     expect(today).toContain("serviceCatalog={snapshot.serviceCatalog}");
     expect(ops).toContain("serviceCatalog={data.serviceCatalog}");
-    expect(ops).toContain("calculateOperationalQuote(workspaceSlug, requestId)");
+    expect(ops).toContain("calculateOperationalQuote(workspaceSlug, requestId,");
+    expect(ops).toContain('formData.get("ovenConfirmedByStaff") === "yes"');
   });
 });
