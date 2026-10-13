@@ -204,11 +204,28 @@ export async function freeBusyGoogleCalendar(
   }
 
   const busy: CalendarBusyRange[] = [];
-  for (const [calendarId, calendar] of Object.entries(calendars)) {
-    const blocks = Array.isArray(calendar.busy) ? calendar.busy : [];
-    for (const block of blocks) {
-      if (typeof block.start !== "string" || typeof block.end !== "string") continue;
-      busy.push({ calendarId, startAt: block.start, endAt: block.end, source: "EXTERNAL_BUSY", freshness: "FRESH" });
+  // Google returns one entry per requested calendar. A missing calendar or
+  // an error-bearing entry is NOT a free schedule: fail closed to avoid
+  // overbooking when the provider has only returned partial availability.
+  for (const calendarId of input.calendarIds) {
+    const calendar = Object.prototype.hasOwnProperty.call(calendars, calendarId)
+      ? calendars[calendarId] : undefined;
+    if (!calendar || !Array.isArray(calendar.busy) ||
+        (calendar as {errors?:unknown}).errors !== undefined) {
+      return {ok:false,code:"GOOGLE_CALENDAR_BUSY_UNVERIFIED",
+        message:"Google Calendar did not verify all requested crew availability."};
+    }
+    for (const block of calendar.busy) {
+      if (!block || typeof block.start !== "string" ||
+          typeof block.end !== "string" ||
+          !Number.isFinite(Date.parse(block.start)) ||
+          !Number.isFinite(Date.parse(block.end)) ||
+          Date.parse(block.start) >= Date.parse(block.end)) {
+        return {ok:false,code:"GOOGLE_CALENDAR_BUSY_UNVERIFIED",
+          message:"Google Calendar returned an invalid busy interval."};
+      }
+      busy.push({calendarId,startAt:block.start,endAt:block.end,
+        source:"EXTERNAL_BUSY",freshness:"FRESH"});
     }
   }
   return { ok: true, value: busy };
