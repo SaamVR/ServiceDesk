@@ -1509,7 +1509,10 @@ function QuotesView({
   const selectedQuote = visibleQuotes.find((quote) => quote.id === selectedQuoteId) ?? visibleQuotes[0];
   const currentQuote = currentQuoteByRequest.get(selectedQuote.requestId);
   const selectedQuoteIsCurrent = currentQuote?.id === selectedQuote.id;
-  const selectedQuoteCanSend = isCurrentApprovedQuote(selectedQuote, currentQuoteByRequest);
+  const selectedQuoteCanSend = isCurrentApprovedQuote(selectedQuote, currentQuoteByRequest)
+    && Boolean(selectedQuote.lineItems?.length)
+    && Number.isFinite(Date.parse(selectedQuote.validUntil ?? ""))
+    && Date.parse(selectedQuote.validUntil ?? "") > Date.parse(data.loadedAt);
   const selectedQuoteRequest = requestById.get(selectedQuote.requestId);
   const selectedQuoteCustomer = customerById.get(selectedQuoteRequest?.customerId ?? "");
   const selectedQuoteProperty = data.properties.find((property) => property.id === selectedQuoteRequest?.propertyId);
@@ -1572,6 +1575,31 @@ function QuotesView({
             <div><span>Balance</span><strong>{formatMinorMoney(selectedQuote.balanceMinor, selectedQuote.currency)}</strong></div>
           </section>
 
+          {selectedQuote.lineItems && selectedQuote.lineItems.length > 0 ? (
+            <section className={styles.salesSection} aria-label="Verified saved quote charges">
+              <div className={styles.salesSectionHeader}>
+                <div><p className={styles.salesSectionEyebrow}>Persisted quote</p>
+                  <h3>Verified service breakdown</h3></div>
+              </div>
+              <dl className={styles.salesSummary}>
+                {selectedQuote.lineItems.map((item,index) => (
+                  <div key={item.code + ":" + index}>
+                    <dt>{item.description} · {item.durationMinutes} min</dt>
+                    <dd>{formatMinorMoney(item.amountMinor, selectedQuote.currency)}</dd>
+                  </div>
+                ))}
+                <div><dt>Service subtotal</dt>
+                  <dd>{formatMinorMoney(selectedQuote.subtotalMinor, selectedQuote.currency)}</dd></div>
+                {selectedQuote.taxMinor > 0 ? (
+                  <div><dt>Tax</dt><dd>{formatMinorMoney(selectedQuote.taxMinor, selectedQuote.currency)}</dd></div>
+                ) : null}
+              </dl>
+            </section>
+          ) : (
+            <p role="alert">The saved quote breakdown cannot be reconciled.
+              Do not send this quote; recalculate it using verified owner rates.</p>
+          )}
+
           <div className={styles.salesDetailGrid}>
             <section className={styles.salesSection}>
               <div className={styles.salesSectionHeader}>
@@ -1588,7 +1616,7 @@ function QuotesView({
 
             <section className={styles.salesSection}>
               <div className={styles.salesSectionHeader}>
-                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{!selectedQuoteIsCurrent ? "Historical quote" : selectedQuote.status === "APPROVED" ? "Ready to send" : selectedQuote.status === "SENT" ? "Waiting for customer" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
+                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{!selectedQuoteIsCurrent ? "Historical quote" : selectedQuote.status === "APPROVED" ? selectedQuoteCanSend ? "Ready to send" : "Review required" : selectedQuote.status === "SENT" ? "Waiting for customer" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
               </div>
               <div className={styles.quoteNextStep}>
                 {!selectedQuoteIsCurrent ? (
@@ -1606,6 +1634,11 @@ function QuotesView({
                       <StaffSubmitButton className="app-button-primary" pendingLabel="Sending quote…">Send quote</StaffSubmitButton>
                     </form>
                   </>
+                ) : selectedQuote.status === "APPROVED" ? (
+                  <><p>The saved quote is expired or its itemized charges cannot be verified.
+                    Review and recalculate the request before sending.</p>
+                    <a className="app-button-secondary"
+                      href={buildStaffModuleHref(workspaceSlug, "requests")}>Review requests</a></>
                 ) : selectedQuote.status === "SENT" ? (
                   <><p>The quote is with the customer. No additional staff action is needed until they respond.</p><StatusBadge tone="info">Awaiting reply</StatusBadge></>
                 ) : selectedQuote.status === "ACCEPTED" ? (
