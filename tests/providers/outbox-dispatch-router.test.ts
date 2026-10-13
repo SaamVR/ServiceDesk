@@ -87,6 +87,44 @@ describe("committed outbox dispatch router", () => {
     }
   });
 
+  test("rejects forged, unbounded or cross-channel successful provider receipts", async () => {
+    const claimed = job();
+    const base = {
+      ...dispatchOutcomeBase(claimed),
+      outcome: "ACCEPTED" as const,
+      providerMessageId: "wamid.1234",
+      acceptedAt: "2026-10-13T04:20:00.000Z",
+      providerMode: "SANDBOX" as const,
+      evidence: { provider: "WHATSAPP" as const, mode: "SANDBOX" as const,
+        verification: "PROVIDER_VERIFIED" as const,
+        capturedAt: "2026-10-13T04:20:00.000Z", notes: [] },
+    };
+    for (const patch of [
+      { providerMessageId: "x".repeat(513) },
+      { providerMessageId: "forged\nreceipt" },
+      { acceptedAt: "not-a-date" },
+      { acceptedAt: "2026-13-01T00:00:00Z" },
+      { providerMode: "OTHER" },
+      { evidence: { ...base.evidence, provider: "EMAIL" } },
+      { evidence: { ...base.evidence, mode: "LIVE" } },
+      { evidence: { ...base.evidence, verification: "CONFIGURATION_BLOCKED" } },
+      { evidence: { ...base.evidence, capturedAt: "unknown" } },
+      { evidence: null },
+    ]) {
+      const result = await dispatchCommittedOutboxJob({
+        job: claimed, committedAt: base.acceptedAt, attempt: 1,
+        expectedWorkspaceId: claimed.workspaceId,
+        dispatchers: { WHATSAPP: {
+          async dispatch() { return { ok: true as const, value: { ...base, ...patch } }; },
+        } },
+      });
+      expect(result).toMatchObject({
+        ok: true, value: { outcome: "TERMINAL_FAILURE", code: "DISPATCH_OUTCOME_IDENTITY_MISMATCH" },
+      });
+      expect(JSON.stringify(result)).not.toContain("forged\\nreceipt");
+    }
+  });
+
   test("does not expose thrown provider exception messages in persistent dispatch outcome", async () => {
     const sensitive = "Bearer super-secret-key customer@example.test token=do-not-log";
     const response = await dispatchCommittedOutboxJob({
