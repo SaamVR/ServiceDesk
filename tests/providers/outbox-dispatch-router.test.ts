@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { dispatchCommittedOutboxJob } from "../../src/server/integrations/outbox/dispatch-router";
-import { dispatchOutcomeBase, type CommittedOutboxDispatcher } from "../../src/server/integrations/outbox/dispatch-port";
+import { dispatchOutcomeBase, type CommittedOutboxDispatcher, type CommittedOutboxDispatchOutcome } from "../../src/server/integrations/outbox/dispatch-port";
 import type { OutboxJob } from "../../src/server/integrations/types";
 
 function job(overrides: Partial<OutboxJob> = {}): OutboxJob {
@@ -115,7 +115,7 @@ describe("committed outbox dispatch router", () => {
         job: claimed, committedAt: base.acceptedAt, attempt: 1,
         expectedWorkspaceId: claimed.workspaceId,
         dispatchers: { WHATSAPP: {
-          async dispatch() { return { ok: true as const, value: { ...base, ...patch } }; },
+          async dispatch() { return { ok: true as const, value: { ...base, ...patch } as unknown as CommittedOutboxDispatchOutcome }; },
         } },
       });
       expect(result).toMatchObject({
