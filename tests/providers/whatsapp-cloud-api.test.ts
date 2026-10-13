@@ -104,4 +104,37 @@ describe("WhatsApp Cloud API transport", () => {
     expect(JSON.stringify(summary)).not.toContain("private customer message");
     expect(JSON.stringify(summary)).not.toContain("123456789");
   });
+  test("refuses alternate Graph origins and malformed versions before credential-bearing HTTP", async () => {
+    let calls = 0;
+    const http: WhatsAppCloudHttpTransport = async () => {
+      calls++;
+      return { status: 200, body: JSON.stringify({ messages: [{ id: "wamid.ok" }] }) };
+    };
+    for (const override of [
+      { graphBaseUrl: "http://graph.facebook.com" },
+      { graphBaseUrl: "https://graph.facebook.com.evil.example" },
+      { graphBaseUrl: "https://graph.facebook.com/v23.0" },
+      { graphBaseUrl: "https://graph.facebook.com?redirect=1" },
+      { apiVersion: "v23.0/../../other" },
+      { phoneNumberId: "123/../other" },
+    ]) {
+      const result = await sendWhatsAppCloudMessage({ ...config, ...override },
+        { to: "15551234567", kind: "text", text: "Manual test" }, http);
+      expect(result).toMatchObject({ ok: false, code: "WHATSAPP_CONFIGURATION_BLOCKED" });
+    }
+    expect(calls).toBe(0);
+  });
+
+  test("never counts a malformed 200 provider envelope as accepted delivery", async () => {
+    for (const body of [null, [], true, {}, { messages: [] },
+      { messages: [{ id: "wamid.one" }, { id: "wamid.two" }] },
+      { messaging_product: "not_whatsapp", messages: [{ id: "wamid.one" }] },
+      { messages: [{ id: { value: "forged" } }] },
+      { messages: [{ id: "bad\\nnewline" }] },
+    ]) {
+      const result = await sendWhatsAppCloudMessage(config,
+        { to: "15551234567", kind: "text", text: "Controlled" }, transport(200, body));
+      expect(result).toMatchObject({ ok: false, code: "WHATSAPP_INVALID_RESPONSE" });
+    }
+  });
 });

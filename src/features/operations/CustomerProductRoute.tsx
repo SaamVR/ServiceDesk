@@ -316,6 +316,53 @@ function QuoteView({
         <CustomerSummaryItem label="Valid until" value={formatWhen(quote.validUntil, data.workspace.timezone)} />
       </CustomerSummaryList>
 
+      {quote.lineItems === null ? (
+        <CustomerNotice
+          title="Saved quote breakdown could not be verified"
+          description="The stored itemized charges do not reconcile to this quote. Ask the cleaning business to review the quote before accepting it."
+          tone="warning"
+        />
+      ) : quote.lineItems && quote.lineItems.length > 0 ? (
+        <section aria-label="Verified saved quote line items" style={{
+          marginBlock: 18, background: "#f6fbf9", border: "1px solid #d9eae4",
+          borderRadius: 14, padding: 18,
+        }}>
+          <h3 style={{ margin: "0 0 12px", color: "#194e43", fontSize: "1rem" }}>
+            What your quote includes
+          </h3>
+          <ul style={{ listStyle: "none", display: "grid", gap: 10, padding: 0, margin: 0 }}>
+            {quote.lineItems.map((line, index) => (
+              <li key={line.code + ":" + index} style={{
+                display: "flex", gap: 12, alignItems: "baseline",
+                justifyContent: "space-between", flexWrap: "wrap",
+              }}>
+                <span>
+                  <strong>{line.description}</strong>
+                  <span style={{ display: "block", color: "#537469", fontSize: ".82rem" }}>
+                    {line.durationMinutes} min
+                  </span>
+                </span>
+                <strong>{formatMinorMoney(line.amountMinor, quote.currency)}</strong>
+              </li>
+            ))}
+          </ul>
+          <p style={{ margin: "14px 0 0", borderTop: "1px solid #d4e7df",
+            paddingTop: 12, display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <strong>Saved service subtotal</strong>
+            <strong>{formatMinorMoney(quote.subtotalMinor ?? 0, quote.currency)}</strong>
+          </p>
+          {typeof quote.taxMinor === "number" && quote.taxMinor > 0 ? (
+            <p style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+              <span>Tax</span>
+              <strong>{formatMinorMoney(quote.taxMinor, quote.currency)}</strong>
+            </p>
+          ) : null}
+          <p style={{ margin: "8px 0 0", fontSize: ".76rem", color: "#527469" }}>
+            These charges are read from your saved quote snapshot, not from a new estimate.
+          </p>
+        </section>
+      ) : null}
+
       {quote.status === "SENT" ? (
         <form className={styles.detailActions} action={acceptQuote}>
           <button className={styles.primaryButton} type="submit">Accept quote</button>

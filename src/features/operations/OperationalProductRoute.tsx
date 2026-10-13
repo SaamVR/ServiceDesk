@@ -969,7 +969,11 @@ function RequestsView({
   async function calculateQuote(formData: FormData) {
     "use server";
     const requestId = String(formData.get("requestId") ?? "");
-    const result = await calculateOperationalQuote(workspaceSlug, requestId);
+    // Only an explicit affirmative checkbox records staff confirmation.
+    // The authenticated quote command re-reads the actual saved service.
+    const ovenConfirmedByStaff = formData.get("ovenConfirmedByStaff") === "yes";
+    const result = await calculateOperationalQuote(workspaceSlug, requestId,
+      { oven: ovenConfirmedByStaff });
     actionRedirect(
       workspaceSlug,
       "requests",
@@ -1313,7 +1317,27 @@ function RequestsView({
                       : data.actor.role === "OWNER" && pricingReadiness.state !== "VERIFIED"
                         ? pricingReadiness.message
                         : "Complete the missing intake details before pricing."}</span>
+                    {selectedRequest.serviceCode === "MOVE_OUT" ? (
+                      <label style={{ display: "flex", alignItems: "flex-start",
+                        gap: 10, fontSize: ".84rem", lineHeight: 1.5 }}>
+                        <input type="checkbox" name="ovenConfirmedByStaff"
+                          value="yes" defaultChecked={false}
+                          style={{ marginTop: 4 }} />
+                        <span>I personally confirmed that this customer requested
+                          optional oven cleaning. Include its <strong>owner-set</strong>
+                          add-on charge and service time in this quote.</span>
+                      </label>
+                    ) : null}
                   </form>
+                  {selectedRequest.serviceCode === "MOVE_OUT" ? (
+                    <p role="note" style={{ margin: "8px 0 0", fontSize: ".82rem",
+                      lineHeight: 1.6, color: "#416d63" }}>
+                      <strong>Move-out add-on policy:</strong> The optional oven clean is
+                      excluded by default. Only a staff-confirmed checkbox above
+                      includes the saved owner-rate add-on; review the actual
+                      persisted line items with the customer before sending.
+                    </p>
+                  ) : null}
                 </>
               )}
             </section>
