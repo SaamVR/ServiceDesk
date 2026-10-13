@@ -59,6 +59,7 @@ import { InboxThreadNavigator } from "./InboxThreadNavigator";
 import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { AiRequestBrief } from "./AiRequestBrief";
+import { CleaningRequestNextSteps } from "./CleaningRequestNextSteps";
 import { AiQuoteReview } from "./AiQuoteReview";
 import { StaffQuoteChecklist } from "./StaffQuoteChecklist";
 import { AiOperationsStatus } from "./AiOperationsStatus";
@@ -87,6 +88,7 @@ import { filterQualityQueue, isOverdueQualityCase, normalizeQualityQueue, normal
 import { QualityQueueFilters } from "./QualityQueueFilters";
 import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue, orderCustomerCollectionInvoices, parseManualPaymentAmountMinor } from "./invoice-collection-queue";
 import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
+import { StaffInvoiceManualReminder } from "./StaffInvoiceManualReminder";
 import { isVerifiedStaffCollectibleInvoice } from "./staff-invoice-collection-readiness";
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { deriveDispatchBacklog } from "./dispatch-backlog";
@@ -1197,6 +1199,17 @@ function RequestsView({
                 <div className={styles.salesNote}><span>Service notes</span><p>{selectedRequestProperty.serviceNotes}</p></div>
               ) : null}
             </section>
+
+            <CleaningRequestNextSteps input={{
+              serviceActive: chosenServiceActive,
+              bedrooms: selectedRequest.bedrooms,
+              bathrooms: selectedRequest.bathrooms,
+              pricingState: pricingReadiness.state === "VERIFIED"
+                ? "VERIFIED" : pricingReadiness.state === "OWNER_SETUP_REQUIRED"
+                  ? "MISSING" : "UNVERIFIED",
+              currentQuote: selectedRequestQuote,
+              requestedStartAt: selectedRequest.requestedStartAt,
+            }} />
 
             <AiRequestBrief
               key={selectedRequest.id}
@@ -2415,6 +2428,19 @@ function InvoicesView({
               )}
             </section>
           </div>
+          {selectedInvoiceCanRecordPayment && selectedInvoiceQuote ? (
+            <StaffInvoiceManualReminder invoice={{
+              id: selectedInvoice.id,
+              status: selectedInvoice.status,
+              currency: selectedInvoice.currency,
+              totalMinor: selectedInvoice.totalMinor,
+              allocatedMinor: selectedInvoice.allocatedMinor,
+              refundedMinor: selectedInvoice.refundedMinor,
+              balanceMinor: selectedInvoice.balanceMinor,
+              quoteStatus: selectedInvoiceQuote.status,
+              quoteCurrency: selectedInvoiceQuote.currency,
+            }} />
+          ) : null}
         </article>
       </div>
     </section>

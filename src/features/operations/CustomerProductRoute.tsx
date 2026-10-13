@@ -15,6 +15,8 @@ import {
 } from "@/components/product/CustomerFacingShell";
 import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
 import { readCustomerInvoiceLedgerSummary } from "./customer-invoice-ledger-summary";
+import { customerBookingPaymentSummary } from "./customer-booking-payment-truth";
+import { latestCustomerConsentByPurpose } from "./customer-consent-display";
 import {
   acceptCustomerPortalQuote,
   holdCustomerPortalSlot,
@@ -464,6 +466,7 @@ function BookingView({
 
   const request = data.requests.find((item) => item.id === visit.requestId);
   const invoice = data.invoices.find((item) => item.visitId === visit.id);
+  const payment = invoice ? customerBookingPaymentSummary(invoice) : null;
 
   return (
     <div className={styles.stack}>
@@ -484,13 +487,9 @@ function BookingView({
         {invoice ? (
           <>
             <CustomerNotice
-              title={invoice.balanceMinor > 0 ? "Invoice available" : "Payment up to date"}
-              description={
-                invoice.balanceMinor > 0
-                  ? "Your invoice has an outstanding balance. Open it to review the current amount and payment status."
-                  : "There is no outstanding balance on this invoice."
-              }
-              tone={invoice.balanceMinor > 0 ? "warning" : "success"}
+              title={payment?.title ?? "Invoice available"}
+              description={payment?.detail ?? "Open your invoice to review its current status."}
+              tone={payment?.tone ?? "info"}
             />
             <div className={styles.detailActions}>
               <a className={styles.primaryButton} href={"/portal/invoices/" + encodeURIComponent(invoice.id)}>
@@ -600,12 +599,7 @@ function InvoiceView({
 }
 
 function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
-  const seen = new Set<string>();
-  const preferences = data.consents.filter((consent) => {
-    if (seen.has(consent.channel)) return false;
-    seen.add(consent.channel);
-    return true;
-  });
+  const preferences = latestCustomerConsentByPurpose(data.consents);
 
   async function changePreference(formData: FormData) {
     "use server";
@@ -694,7 +688,7 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
       <CustomerCard title="How changes work">
         <CustomerNotice
           title="Your latest choice is used"
-          description="Each channel uses your latest recorded choice. If Email, WhatsApp or SMS is not permitted by that latest choice, ServiceDesk blocks that outbound message."
+          description="You can review separate saved choices for each communication channel and purpose. These are stored consent records, not proof that a message was sent or that a provider accepted it."
           tone="info"
         />
       </CustomerCard>

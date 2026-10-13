@@ -17,7 +17,7 @@ function validUtcTime(value: unknown): boolean {
 /** Provider 2xx is not delivery, but even its acceptance receipt must be
  * coherent before the durable outbox transitions to ACCEPTED.
  */
-function validAcceptedReceipt(value: Record<string, unknown>): boolean {
+function validAcceptedReceipt(value: Record<string, unknown>, committedAt: string): boolean {
   const id = value.providerMessageId;
   const mode = value.providerMode;
   const evidence = value.evidence;
@@ -26,9 +26,14 @@ function validAcceptedReceipt(value: Record<string, unknown>): boolean {
       !["FIXTURE", "SANDBOX", "LIVE"].includes(String(mode)) ||
       !evidence || typeof evidence !== "object" || Array.isArray(evidence)) return false;
   const details = evidence as Record<string, unknown>;
+  // The adapter response cannot move payment-independent delivery history
+  // backwards before the durable outbox claim or before provider acceptance.
+  // We compare parsed instants only after strict UTC calendar validation.
   return details.mode === mode && details.provider === value.channel &&
     ["CONTRACT_TESTED", "PROVIDER_VERIFIED"].includes(String(details.verification)) &&
-    validUtcTime(details.capturedAt);
+    validUtcTime(details.capturedAt) && validUtcTime(committedAt) &&
+    Date.parse(value.acceptedAt as string) >= Date.parse(committedAt) &&
+    Date.parse(details.capturedAt as string) >= Date.parse(value.acceptedAt as string);
 }
 
 export type DispatchRouterTable = Partial<Record<DeliveryChannel, CommittedOutboxDispatcher>>;
@@ -94,7 +99,7 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
         outcome.idempotencyKey !== input.job.idempotencyKey ||
         !["ACCEPTED", "RETRYABLE_FAILURE", "TERMINAL_FAILURE", "SUPPRESSED"].includes(outcome.outcome) ||
         (outcome.outcome === "ACCEPTED" &&
-          !validAcceptedReceipt(outcome as unknown as Record<string, unknown>))) {
+          !validAcceptedReceipt(outcome as unknown as Record<string, unknown>, input.committedAt))) {
       return failure(input, "DISPATCH_OUTCOME_IDENTITY_MISMATCH",
         "Provider adapter returned an invalid receipt for the claimed outbox job; manual review required.");
     }
