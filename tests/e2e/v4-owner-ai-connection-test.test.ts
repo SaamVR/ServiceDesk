@@ -69,6 +69,27 @@ describe("V4 owner-only actual model connection probe", () => {
     expect(t.callModel.mock.calls[0]?.[0]).toMatchObject({maxOutputTokens:1024});
   });
 
+  it("denies an already-aborted owner probe without resolving identity or invoking the model", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const t = setup();
+    expect(await testAuthorizedAiModelConnection("fictional-qa", {
+      ...t.deps, signal: controller.signal,
+    })).toMatchObject({ok:false,code:"AI_DIAGNOSTIC_CANCELLED"});
+    expect(t.resolveActor).not.toHaveBeenCalled();
+    expect(t.callModel).not.toHaveBeenCalled();
+  });
+
+  it("forwards the caller cancellation signal to the official bounded model call", async () => {
+    const controller = new AbortController();
+    const t = setup();
+    const result = await testAuthorizedAiModelConnection("fictional-qa",{
+      ...t.deps, signal:controller.signal,
+    });
+    expect(result.ok).toBe(true);
+    expect(t.callModel.mock.calls[0]?.[1]).toMatchObject({signal:controller.signal});
+  });
+
   it("rejects dispatchers before configuration lookup or model invocation", async () => {
     const t = setup("DISPATCHER");
     expect(await testAuthorizedAiModelConnection("fictional-qa", t.deps))
@@ -114,6 +135,7 @@ describe("V4 owner-only actual model connection probe", () => {
     expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toContain("no-store");
     expect(run).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledWith("fictional-qa",expect.any(AbortSignal));
   });
 
   it("allows only a configured trusted public HTTPS Origin behind Render's internal proxy", async () => {
@@ -151,6 +173,7 @@ describe("V4 owner-only actual model connection probe", () => {
     expect(status).toContain("allowOwnerModelTest && !compact");
     expect(ops).toContain('allowOwnerModelTest={data.actor.role === "OWNER"}');
     expect(read("src/features/operations/AiOwnerModelProbe.tsx")).toContain("ephemeral connection test");
+    expect(read("src/features/operations/AiOwnerModelProbe.tsx")).toContain("signal: controller.signal");
     expect(read("src/app/api/internal/ai/connection-test/route.ts")).toContain("handleAiOwnerProbePost");
   });
 });
