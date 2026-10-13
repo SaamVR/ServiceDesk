@@ -12,6 +12,7 @@ export interface AiConnectionTestDependencies {
   resolveActor?: Resolver;
   readConfig?: ConfigReader;
   callModel?: ModelCaller;
+  signal?: AbortSignal;
 }
 
 export interface AiConnectionProof {
@@ -41,6 +42,8 @@ export async function testAuthorizedAiModelConnection(
     return fail("AI_DIAGNOSTIC_INPUT_INVALID", "Choose a valid workspace.");
   }
 
+  if (deps.signal?.aborted) return fail("AI_DIAGNOSTIC_CANCELLED", "Owner ended the model probe.");
+
   let result: Awaited<ReturnType<Resolver>>;
   try { result = await (deps.resolveActor ?? resolveStaffActor)(workspaceSlug); }
   catch { return fail("AI_DIAGNOSTIC_AUTH_UNAVAILABLE", "Workspace authorization unavailable."); }
@@ -58,6 +61,7 @@ export async function testAuthorizedAiModelConnection(
       "Model configuration is unavailable.");
   }
   if (!config.ok) return fail(config.code, "Model configuration is unavailable.");
+  if (deps.signal?.aborted) return fail("AI_DIAGNOSTIC_CANCELLED", "Owner ended the model probe.");
 
   const prompt = [
     "This is a synthetic ServiceDesk AI connection probe.",
@@ -68,12 +72,20 @@ export async function testAuthorizedAiModelConnection(
   ].join(" ");
   let response: Awaited<ReturnType<ModelCaller>>;
   try {
-    response = await (deps.callModel ?? callAiModel)(config.value, {
+    // Diagnostic checks do not need the full business-inference token budget.
+    // Honor a stricter owner-configured cap, never raise it. This does not
+    // establish a daily spending limit or a durable provider receipt.
+    const probeConfig = {
+      ...config.value,
+      maxOutputTokens: Math.min(1536, config.value.maxOutputTokens ?? 4096),
+    };
+    response = await (deps.callModel ?? callAiModel)(probeConfig, {
       promptVersion: "servicedesk-v4-synthetic-ai-owner-connection-probe",
       conversationId: "synthetic-connection-probe",
       workspaceId: workspace.id,
       userText: prompt,
       approvedKnowledgeRefs: [],
+      ...(deps.signal ? {signal: deps.signal} : {}),
     }, createFetchAiModelTransport());
   } catch {
     // A provider adapter or injected transport can throw after authorization;
@@ -82,6 +94,7 @@ export async function testAuthorizedAiModelConnection(
       "Model did not return a valid response.");
   }
 
+  if (deps.signal?.aborted) return fail("AI_DIAGNOSTIC_CANCELLED", "Owner ended the model probe.");
   if (!response.ok) {
     return fail("AI_DIAGNOSTIC_PROVIDER_FAILED", "Model did not return a valid response.");
   }

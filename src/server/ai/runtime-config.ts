@@ -30,6 +30,15 @@ export function readConfiguredAiRuntimeConfig(
     return { ok: false, code: "AI_RUNTIME_ORIGIN_INVALID",
       message: "Operational AI requires the exact authorized HTTPS endpoint." };
   }
+  // Responses output tokens include both visible text and reasoning.
+  // A missing budget gets a finite, useful default; invalid budgets fail closed.
+  const outputRaw = env.SERVICEDESK_AI_MAX_OUTPUT_TOKENS;
+  const maxOutputTokens = outputRaw === undefined ? 4096 : Number(outputRaw);
+  if (!Number.isSafeInteger(maxOutputTokens) ||
+      maxOutputTokens < 512 || maxOutputTokens > 8192) {
+    return { ok: false, code: "AI_RUNTIME_OUTPUT_BUDGET_INVALID",
+      message: "Operational AI output token ceiling is outside the approved range." };
+  }
   const timeoutRaw = env.SERVICEDESK_AI_TIMEOUT_MS;
   const parsed = timeoutRaw === undefined ? 10_000 : Number(timeoutRaw);
   if (!Number.isFinite(parsed) || parsed < 250 || parsed > 30_000) {
@@ -41,6 +50,7 @@ export function readConfiguredAiRuntimeConfig(
     apiKey,
     model,
     timeoutMs: parsed,
+    maxOutputTokens,
     now: () => new Date().toISOString(),
   } };
 }

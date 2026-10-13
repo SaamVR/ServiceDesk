@@ -4,6 +4,18 @@ on:
     branches: [fix/v4-quote-branch-currency-alignment-20261012]
   pull_request:
     branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    # Universal exact PR-head source RC remains unfiltered; this expensive
+    # specialist gate runs only for code it actually owns.
+    paths:
+      - "src/server/core/operational-quote-rate-card.ts"
+      - "src/server/core/quote-*.ts"
+      - "src/server/core/request-quote-*.ts"
+      - "src/domain/quote.ts"
+      - "src/features/operations/owner-pricing-readiness.ts"
+      - "supabase/migrations/0061*"
+      - "supabase/migrations/0062*"
+      - "tests/db/v4-operational-quote-rate-card.test.ts"
+      - ".github/workflows/v4-quote-branch-currency-rc.yml"
 permissions:
   contents: read
 concurrency:

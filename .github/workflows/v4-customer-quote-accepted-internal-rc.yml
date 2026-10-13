@@ -4,6 +4,20 @@ on:
     branches: [feat/v4-quote-accepted-internal-automation-reconciled-20261012]
   pull_request:
     branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    # Universal exact PR-head source RC remains unfiltered; this expensive
+    # specialist gate runs only for code it actually owns.
+    paths:
+      - "src/server/workflows/customer-quote-accepted-bridge.ts"
+      - "src/server/workflows/owner-operational-automation.ts"
+      - "src/server/workflows/owner-request-automation.ts"
+      - "src/server/workflows/postgres.ts"
+      - "src/server/core/quotes.ts"
+      - "src/server/core/quote-facade.ts"
+      - "src/server/workflows/engine.ts"
+      - "supabase/migrations/0063*"
+      - "tests/db/v4-customer-quote-accepted-automation.test.ts"
+      - "tests/db/v4-multievent-owner-automation.test.ts"
+      - ".github/workflows/v4-customer-quote-accepted-internal-rc.yml"
 permissions:
   contents: read
 concurrency:

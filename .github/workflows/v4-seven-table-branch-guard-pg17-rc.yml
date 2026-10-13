@@ -4,6 +4,15 @@ on:
     branches: [test/v4-seven-table-branch-trigger-pg17-20261012]
   pull_request:
     branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - ".github/workflows/v4-seven-table-branch-guard-pg17-rc.yml"
+      - "supabase/migrations/0053_v2_multibranch_core.sql"
+      - "supabase/migrations/0062_v4_branch_trigger_rowtype_guard.sql"
+      - "scripts/release/v4-connected-schema-readonly.sql"
+      - "tests/sql/v4-branch-trigger-pg17-*.sql"
+      - "tests/db/v4-branch-trigger-rowtype-migration.test.ts"
+      - "src/server/core/*branch*"
+      - "src/features/operations/operational-product-runtime.ts"
 permissions:
   contents: read
 concurrency:

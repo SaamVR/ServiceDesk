@@ -1,0 +1,41 @@
+name: ServiceDesk V4 distinct signed-in owner proof RC
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+    paths:
+      - .github/workflows/v4-distinct-owner-real-session-rc.yml
+      - scripts/release/v4-private-rls-proof.mjs
+      - scripts/release/v4-operational-rls-positive-negative.mjs
+      - scripts/release/v4-operational-rls-positive-negative.test.mjs
+      - scripts/release/v4-automation-rls-positive-negative.mjs
+      - scripts/release/v4-automation-rls-positive-negative.test.mjs
+permissions:
+  contents: read
+concurrency:
+  group: sd-v4-distinct-qa-owners-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  distinct-verified-owners-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify exact source commit
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Parse protected auth proof without connecting to staging
+        run: |
+          node --check scripts/release/v4-private-rls-proof.mjs
+          node --check scripts/release/v4-operational-rls-positive-negative.mjs
+          node --check scripts/release/v4-automation-rls-positive-negative.mjs
+      - name: Validate distinct owner identities, workspace scope, and fail-closed preflight
+        run: |
+          node --test scripts/release/v4-operational-rls-positive-negative.test.mjs scripts/release/v4-automation-rls-positive-negative.test.mjs scripts/release/v4-protected-qa-preflight.test.mjs

@@ -30,6 +30,7 @@ function harness(options: {
   requestReadThrows?: boolean;
   catalogReadThrows?: boolean;
   modelThrows?: boolean;
+  modelFailureCode?: string;
 } = {}) {
   const filters: Array<[string, unknown]> = [];
   const selects: Array<[string, string]> = [];
@@ -81,6 +82,11 @@ function harness(options: {
   };
   const model = vi.fn(async (_config: unknown, prompt: { userText: string; workspaceId: string }) => {
     if (options.modelThrows) throw Error("private model secret and request body");
+    if (options.modelFailureCode) return {
+      ok: false as const,
+      code: options.modelFailureCode,
+      message: "secret provider payload: customer@example.invalid, sk-private-token",
+    };
     expect(prompt.workspaceId).toBe(workspaceId);
     expect(prompt.userText).not.toContain("private@example.com");
     expect(prompt.userText).not.toContain("never send to model");
@@ -204,6 +210,26 @@ describe("V4 model-backed cleaning request copilot", () => {
       expect(result).toMatchObject({ok:false,code});
       expect(JSON.stringify(result)).not.toMatch(/private database detail|private catalog detail|private model secret/);
     }
+  });
+
+  it("preserves only approved normalized model failure codes without exposing provider details", async () => {
+    for (const code of [
+      "AI_MODEL_RATE_LIMITED", "AI_MODEL_TIMEOUT",
+      "AI_MODEL_TRANSIENT_FAILURE", "AI_MODEL_NETWORK_FAILURE",
+      "AI_MODEL_CONFIGURATION_BLOCKED", "AI_MODEL_INVALID_RESPONSE",
+    ]) {
+      const t = harness({ modelFailureCode: code });
+      const result = await generateAuthorizedRequestBrief(input, t.deps);
+      expect(result).toMatchObject({ ok: false, code });
+      expect(JSON.stringify(result)).not.toContain("customer@example.invalid");
+      expect(JSON.stringify(result)).not.toContain("sk-private-token");
+      expect(t.model).toHaveBeenCalledOnce();
+    }
+    const unknown = harness({ modelFailureCode: "PRIVATE_UPSTREAM_ERROR_secret_value" });
+    const hidden = await generateAuthorizedRequestBrief(input, unknown.deps);
+    expect(hidden).toMatchObject({ ok: false, code: "AI_BRIEF_PROVIDER_UNAVAILABLE" });
+    expect(JSON.stringify(hidden)).not.toContain("PRIVATE_UPSTREAM_ERROR_secret_value");
+    expect(JSON.stringify(hidden)).not.toContain("sk-private-token");
   });
 
   it("never generates from a nonexistent request or from a model tool command", async () => {

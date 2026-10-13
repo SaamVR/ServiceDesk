@@ -9,6 +9,8 @@ export interface AiModelTransportConfig {
   apiKey: string;
   model: string;
   timeoutMs?: number;
+  /** Server-owned Responses output ceiling: visible plus reasoning tokens. */
+  maxOutputTokens?: number;
   now: () => string;
 }
 
@@ -127,6 +129,7 @@ function buildModelBody(config: AiModelTransportConfig, input: AiModelCallInput)
     return JSON.stringify({
       model: config.model,
       store: false,
+      max_output_tokens: config.maxOutputTokens ?? 4096,
       text: { format: { type: "json_object" } },
       metadata: {
         prompt_version: input.promptVersion.slice(0, 512),
@@ -179,6 +182,20 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
     };
     if (response.status !== "completed") {
       return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model response was incomplete or refused." };
+    }
+    // A valid text draft must never mask an unsolicited provider tool call,
+    // refusal, unsupported output type or incomplete message in the same
+    // official Responses envelope. We do not authorize model-side tools.
+    if (!Array.isArray(response.output) || response.output.some(item => {
+      if (!item || typeof item !== "object") return true;
+      if (item.type === "reasoning") return false;
+      if (item.type !== "message" || !Array.isArray(item.content)) return true;
+      if (item.status !== undefined && item.status !== "completed") return true;
+      return item.content.some((part: { type?: unknown; text?: unknown } | null) => !part || typeof part !== "object" ||
+        part.type !== "output_text" || typeof part.text !== "string");
+    })) {
+      return { ok: false, code: "AI_MODEL_INVALID_RESPONSE",
+        message: "AI response contained an unapproved provider action or output." };
     }
     let text: string | undefined = typeof response.output_text === "string"
       ? response.output_text : undefined;
@@ -258,6 +275,8 @@ export function redactedAiModelRequestSummary(request: AiModelHttpRequest): Reda
   };
 }
 
+export const MAX_AI_USER_TEXT_CHARS = 16_000;
+
 export async function callAiModel(
   config: AiModelTransportConfig,
   input: AiModelCallInput,
@@ -265,6 +284,20 @@ export async function callAiModel(
 ): Promise<Result<AiModelOutput>> {
   if (!config.apiBaseUrl || !config.apiKey || !config.model) {
     return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED", message: "AI model provider configuration is incomplete." };
+  }
+  // Protect the real paid provider boundary from accidental unbounded intake,
+  // before allocating a request body or sending a bearer-authorized request.
+  // Return only a redacted code; never echo submitted customer content.
+  if (typeof input.userText !== "string" || !input.userText.trim() ||
+      input.userText.length > MAX_AI_USER_TEXT_CHARS) {
+    return { ok: false, code: "AI_MODEL_INPUT_TOO_LARGE",
+      message: "AI input must be nonempty and within the approved size limit." };
+  }
+  // Directly injected configs must never bypass the server runtime budget.
+  const outputCap = config.maxOutputTokens ?? 4096;
+  if (!Number.isSafeInteger(outputCap) || outputCap < 512 || outputCap > 8192) {
+    return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED",
+      message: "AI output token ceiling is outside the approved range." };
   }
   // Enforce this *before* invoking any injected/alternate transport. The
   // protected runtime currently authorizes only OpenAI Responses; an external
