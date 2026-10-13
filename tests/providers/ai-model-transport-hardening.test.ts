@@ -179,4 +179,43 @@ describe("bounded configured AI model transport", () => {
     expect(attempts).toBe(0);
   });
 
+  it("bounds paid model input before making any provider request", async () => {
+    const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
+    let calls = 0;
+    const transport = async () => {
+      calls++;
+      return { status: 200, body: JSON.stringify({ output: {} }) };
+    };
+    for (const userText of ["", "  ", "private " + "x".repeat(16_000)]) {
+      const result = await callAiModel(official, { ...input, userText }, transport);
+      expect(result).toMatchObject({ ok: false, code: "AI_MODEL_INPUT_TOO_LARGE" });
+      expect(JSON.stringify(result)).not.toContain(userText.slice(0, 16));
+    }
+    expect(calls).toBe(0);
+    expect((await callAiModel(official, { ...input, userText: "x".repeat(16_000) }, transport)).ok).toBe(true);
+    expect(calls).toBe(1);
+  });
+
+  it("rejects mixed official Responses with text plus tool calls or refusals", async () => {
+    const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
+    const text = JSON.stringify({ output: {}, replyDraft: "Staff review required" });
+    for (const injected of [
+      { type: "function_call", name: "send_message", arguments: "{}" },
+      { type: "custom_tool_call", name: "external_action" },
+      { type: "message", content: [{ type: "refusal", refusal: "no" }] },
+      { type: "message", status: "incomplete", content: [{ type: "output_text", text }] },
+      { type: "unsupported_item", content: [] },
+    ]) {
+      const response = { object: "response", status: "completed", output: [
+        { type: "message", status: "completed", content: [{ type: "output_text", text }] },
+        injected,
+      ] };
+      const result = await callAiModel(official, input, async () => ({
+        status: 200, body: JSON.stringify(response),
+      }));
+      expect(result).toMatchObject({ ok: false, code: "AI_MODEL_INVALID_RESPONSE" });
+      expect(JSON.stringify(result)).not.toContain("send_message");
+    }
+  });
+
 });
