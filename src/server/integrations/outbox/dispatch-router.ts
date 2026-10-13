@@ -3,6 +3,29 @@ import { hasRecipientSuppression, type DeliveryChannel } from "../types";
 import { classifyProviderFailure } from "./failure-policy";
 import { dispatchOutcomeBase, type CommittedOutboxDispatcher, type CommittedOutboxDispatchInput, type CommittedOutboxDispatchOutcome } from "./dispatch-port";
 
+function validUtcTime(value: unknown): boolean {
+  return typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) &&
+    Number.isFinite(Date.parse(value));
+}
+
+/** Provider 2xx is not delivery, but even its acceptance receipt must be
+ * coherent before the durable outbox transitions to ACCEPTED.
+ */
+function validAcceptedReceipt(value: Record<string, unknown>): boolean {
+  const id = value.providerMessageId;
+  const mode = value.providerMode;
+  const evidence = value.evidence;
+  if (typeof id !== "string" || !/^[\x21-\x7e]{1,512}$/.test(id) ||
+      !validUtcTime(value.acceptedAt) ||
+      !["FIXTURE", "SANDBOX", "LIVE"].includes(String(mode)) ||
+      !evidence || typeof evidence !== "object" || Array.isArray(evidence)) return false;
+  const details = evidence as Record<string, unknown>;
+  return details.mode === mode && details.provider === value.channel &&
+    ["CONTRACT_TESTED", "PROVIDER_VERIFIED"].includes(String(details.verification)) &&
+    validUtcTime(details.capturedAt);
+}
+
 export type DispatchRouterTable = Partial<Record<DeliveryChannel, CommittedOutboxDispatcher>>;
 
 export interface DispatchCommittedOutboxJobInput extends Omit<CommittedOutboxDispatchInput, "expectedChannel"> {
@@ -49,7 +72,7 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
         outcome.idempotencyKey !== input.job.idempotencyKey ||
         !["ACCEPTED", "RETRYABLE_FAILURE", "TERMINAL_FAILURE", "SUPPRESSED"].includes(outcome.outcome) ||
         (outcome.outcome === "ACCEPTED" &&
-          (typeof outcome.providerMessageId !== "string" || !outcome.providerMessageId.trim()))) {
+          !validAcceptedReceipt(outcome as unknown as Record<string, unknown>))) {
       return failure(input, "DISPATCH_OUTCOME_IDENTITY_MISMATCH",
         "Provider adapter returned an invalid receipt for the claimed outbox job; manual review required.");
     }
