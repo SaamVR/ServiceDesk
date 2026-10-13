@@ -70,13 +70,20 @@ export async function generateAuthorizedQuoteReview(
   let result: { data: Record<string, unknown> | null; error: unknown } | null = null;
   try {
     result = await service.from("quotes")
-      .select("id,workspace_id,status,valid_until,subtotal_minor,tax_minor,total_minor,deposit_minor,balance_minor,duration_minutes,snapshot")
+      .select("id,workspace_id,version,status,valid_until,subtotal_minor,tax_minor,total_minor,deposit_minor,balance_minor,duration_minutes,snapshot")
       .eq("workspace_id", workspace.id).eq("id", input.quoteId).maybeSingle();
   } catch { return fail("AI_QUOTE_READ_UNAVAILABLE"); }
   const row = result?.data;
   if (result?.error || !row || row.id !== input.quoteId ||
       row.workspace_id !== workspace.id ||
       !["APPROVED", "SENT"].includes(String(row.status))) return fail("AI_QUOTE_NOT_READY");
+  // Financial snapshot version is the concurrency boundary. A model response
+  // about an earlier quote version cannot be shown as the current review.
+  if (typeof row.version !== "number" || !Number.isSafeInteger(row.version) ||
+      row.version < 1) return fail("AI_QUOTE_VERSION_UNVERIFIED");
+  const authorizedVersion = row.version;
+  const authorizedStatus = row.status;
+  const authorizedExpiry = row.valid_until;
   const numbers = [row.subtotal_minor,row.tax_minor,row.total_minor,
     row.deposit_minor,row.balance_minor,row.duration_minutes];
   if (numbers.some(n => typeof n !== "number" || !Number.isSafeInteger(n) || n < 0) ||
@@ -120,6 +127,24 @@ export async function generateAuthorizedQuoteReview(
     );
     if (deps.signal?.aborted) return fail("AI_QUOTE_CANCELLED");
     if (!response.ok) return fail("AI_QUOTE_MODEL_UNAVAILABLE");
+    // Re-read after the potentially expensive model request. Quotes can be
+    // edited, expired, accepted or superseded while the browser awaits AI.
+    let current: { data: Record<string, unknown> | null; error: unknown } | null = null;
+    try {
+      current = await service.from("quotes")
+        .select("id,workspace_id,version,status,valid_until")
+        .eq("workspace_id", workspace.id).eq("id", input.quoteId).maybeSingle();
+    } catch { return fail("AI_QUOTE_RECHECK_UNAVAILABLE"); }
+    if (deps.signal?.aborted) return fail("AI_QUOTE_CANCELLED");
+    const saved = current?.data;
+    if (current?.error || !saved) return fail("AI_QUOTE_RECHECK_UNAVAILABLE");
+    if (saved.id !== input.quoteId || saved.workspace_id !== workspace.id ||
+        saved.version !== authorizedVersion || saved.status !== authorizedStatus ||
+        typeof saved.valid_until !== "string" ||
+        saved.valid_until !== authorizedExpiry ||
+        Date.parse(saved.valid_until) <= Date.now()) {
+      return fail("AI_QUOTE_STALE");
+    }
     if (response.value.requestedToolCalls?.length || response.value.citations?.length) {
       return fail("AI_QUOTE_OUTPUT_UNSAFE");
     }
