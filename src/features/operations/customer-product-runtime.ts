@@ -10,6 +10,10 @@ import { FixtureStripePaymentAdapter, signStripeFixturePayload } from "@/server/
 import { createPaymentWebhookApplicationStore } from "@/server/integrations/payments/core-application-bridge";
 import { handleStripePaymentWebhook } from "@/server/api-handlers/provider-stripe";
 import { runTrustedAcceptedQuoteInternalAutomation } from "@/server/workflows/customer-quote-accepted-bridge";
+import {
+  readVerifiedCustomerQuoteLineItems,
+  type CustomerQuoteLineItem,
+} from "./customer-quote-line-items";
 
 type Row = Record<string, unknown>;
 
@@ -30,6 +34,10 @@ export interface CustomerPortalRequest {
 }
 
 export interface CustomerPortalQuote {
+  /** null = saved line-item evidence was missing or inconsistent. */
+  lineItems?: CustomerQuoteLineItem[] | null;
+  subtotalMinor?: number;
+  taxMinor?: number;
   id: string;
   requestId: string;
   version: number;
@@ -435,6 +443,12 @@ export async function loadCustomerPortalSnapshot(): Promise<CustomerPortalResult
           version: quote.version,
           status: quote.status,
           currency: quote.currency,
+          subtotalMinor: quote.subtotalMinor,
+          taxMinor: quote.taxMinor,
+          lineItems: readVerifiedCustomerQuoteLineItems(
+            row.snapshot, quote.subtotalMinor, quote.durationMinutes,
+            quote.taxMinor, quote.totalMinor,
+          ),
           totalMinor: quote.totalMinor,
           depositMinor: quote.depositMinor,
           balanceMinor: quote.balanceMinor,
