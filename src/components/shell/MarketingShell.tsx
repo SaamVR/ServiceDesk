@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import styles from "./MarketingNavV3.module.css";
 import heroStyles from "./MarketingHeroV3.module.css";
+import brightStyles from "@/features/product/BrightHomeExperience.module.css";
 import { OperationalFlowHero } from "./OperationalFlowHero";
 import { ProductStoryHero, type ProductStoryHeroKind } from "./ProductStoryHero";
 import { MarketingNavLinks } from "./MarketingNavLinks";
@@ -18,6 +19,7 @@ interface MarketingShellProps {
   secondaryHref?: string;
   secondaryLabel?: string;
   heroStory?: ProductStoryHeroKind;
+  homeEdition?: boolean;
 }
 
 export function MarketingShell({
@@ -30,14 +32,15 @@ export function MarketingShell({
   secondaryHref = "/contact",
   secondaryLabel = "Plan a walkthrough",
   heroStory,
+  homeEdition = false,
 }: MarketingShellProps) {
   const registrationEnabled = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
   const registration = marketingRegistrationEntry(registrationEnabled);
   const heroAction = marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
   return (
-    <main className="site-shell">
+    <main className={homeEdition ? `site-shell ${brightStyles.shell}` : "site-shell"}>
       <a className={styles.skipLink} href="#public-main-content">Skip to content</a>
-      <header className={"site-header " + styles.header} aria-label="Product navigation">
+      <header className={"site-header " + styles.header + (homeEdition ? " " + styles.brightHeader : "")} aria-label="Product navigation">
         <Link className={styles.brand} href="/" aria-label="ServiceDesk AI home">
           <span className={styles.brandIcon} aria-hidden="true">
             <svg width="38" height="38" viewBox="0 0 38 38" fill="none" focusable="false">
@@ -80,7 +83,7 @@ export function MarketingShell({
         </div>
       </header>
 
-      <section id="public-main-content" tabIndex={-1} className={`hero-grid section-card marketing-hero ${heroStyles.heroSection}`}>
+      {!homeEdition && <section id="public-main-content" tabIndex={-1} className={`hero-grid section-card marketing-hero ${heroStyles.heroSection}`}>
         <div className={`stack-lg marketing-hero-copy ${heroStyles.heroCopy}`}>
           <p className="eyebrow">{eyebrow}</p>
           <h1>{title}</h1>
@@ -97,7 +100,7 @@ export function MarketingShell({
           </div>
         </div>
         {heroStory ? <ProductStoryHero kind={heroStory} /> : <OperationalFlowHero />}
-      </section>
+      </section>}
 
       {children}
 

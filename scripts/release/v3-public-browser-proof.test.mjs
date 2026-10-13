@@ -27,7 +27,7 @@ test("real Chrome expected headings agree with route-authored product text", () 
   const staticPage = file("src/features/product/StaticProductPage.tsx");
   const signIn = file("src/app/auth/sign-in/page.tsx");
   const expected = [
-    "Run cleaning operations from enquiry to paid job.",
+    "A cleaner way to run your cleaning business.",
     "Everything a cleaning operations team needs to move work forward.",
     "Service quote pricing stays transparent and controlled.",
     "Connect the systems your operation already uses.",
@@ -46,14 +46,14 @@ test("public Chrome requires different authored storyboards instead of a repeate
   const component = file("src/components/shell/ProductStoryHero.tsx");
   const shell = file("src/components/shell/MarketingShell.tsx");
   for (const name of [
-    "Four stages of the cleaning operations workflow",
+    "Illustrative AI-assisted service request",
     "Feature workflow from intake through quality",
     "Illustrative service quote breakdown, not subscription prices",
     "Integration readiness categories, not live provider status",
     "ServiceDesk walkthrough preparation agenda",
   ]) {
     assert.ok(script.includes('heroLabel: "' + name + '"'), name);
-    assert.ok(component.includes(name) || file("src/components/shell/OperationalFlowHero.tsx").includes(name));
+    assert.ok(component.includes(name) || file("src/features/product/BrightHomeExperience.tsx").includes(name));
   }
   assert.ok(script.includes("state.heroLabel !== page.heroLabel"));
   assert.ok(shell.includes('heroStory ? <ProductStoryHero kind={heroStory} /> : <OperationalFlowHero />'));
@@ -94,4 +94,26 @@ test("real Chrome checks truthful page titles and blocks unapproved preview inde
   assert.ok(script.includes("Unapproved public preview unexpectedly permits search engine indexing"));
   assert.ok(root.includes('index: publicIndexingEnabled'));
   assert.ok(root.includes('follow: publicIndexingEnabled'));
+});
+
+test("new Clean Air homepage retains semantic photo-led layouts and a real controllable AI explainer", () => {
+  const proof = file("scripts/release/v3-public-browser-proof.mjs");
+  const home = file("src/features/product/BrightHomeExperience.tsx");
+  const ai = file("src/features/product/BrightHomeInteractions.tsx");
+  const css = file("src/features/product/BrightHomeExperience.module.css");
+  const page = file("src/app/page.tsx");
+  assert.ok(page.includes("homeEdition"));
+  assert.ok(page.includes("BrightHomeExperience"));
+  assert.ok(home.includes("Illustrative AI-assisted service request"));
+  assert.ok(home.includes("THE WAY WORK SHOULD FLOW"));
+  assert.ok(home.includes("data-home-cta"));
+  assert.ok(home.includes("data-home-link"));
+  assert.ok(proof.includes('page.slug === "home" && (width === 390 || width === 1280)'));
+  assert.ok(proof.includes("V4 public AI workflow interaction failed"));
+  assert.ok(proof.includes("ai-scheduling-selected"));
+  assert.ok(ai.includes('aria-pressed={selected === story.id}'));
+  assert.ok(ai.includes("No AI request, booking, message or payment is sent."));
+  assert.ok(css.includes("@media (prefers-reduced-motion: reduce)"));
+  assert.ok(css.includes('images.unsplash.com'));
+  assert.ok(css.includes('color: #fff'));
 });

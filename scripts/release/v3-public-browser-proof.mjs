@@ -10,7 +10,7 @@ import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const pages = [
-  { slug: "home", path: "/", title: "Run cleaning operations from enquiry to paid job.", heroLabel: "Four stages of the cleaning operations workflow" },
+  { slug: "home", path: "/", title: "A cleaner way to run your cleaning business.", heroLabel: "Illustrative AI-assisted service request" },
   { slug: "features", path: "/features", title: "Everything a cleaning operations team needs to move work forward.", heroLabel: "Feature workflow from intake through quality" },
   { slug: "pricing", path: "/pricing", title: "Service quote pricing stays transparent and controlled.", heroLabel: "Illustrative service quote breakdown, not subscription prices" },
   { slug: "integrations", path: "/integrations", title: "Connect the systems your operation already uses.", heroLabel: "Integration readiness categories, not live provider status" },
@@ -140,8 +140,8 @@ async function layoutCheck(page, width) {
     'title:document.title,metaDescription:document.querySelector("meta[name=description]")?.content||"",' +
     'robots:document.querySelector("meta[name=robots]")?.content||"",' +
     'passwords:document.querySelectorAll("input[type=password]").length,' +
-    'heroLabel:document.querySelector(".marketing-hero aside[aria-label]")?.getAttribute("aria-label")||"",' +
-    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header > div > a[href],.marketing-hero .button-primary,.marketing-hero .button-secondary")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height),tag:el.tagName,href:el.getAttribute("href")||""}))}))()'
+    'heroLabel:(document.querySelector("[data-ai-example]")||document.querySelector(".marketing-hero aside[aria-label]"))?.getAttribute("aria-label")||"",' +
+    'touchTargets:[...document.querySelectorAll(".site-header details summary,.site-header > div > a[href],.marketing-hero .button-primary,.marketing-hero .button-secondary,a[data-home-cta],a[data-home-link]")].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0}).map(el=>({w:Math.round(el.getBoundingClientRect().width),h:Math.round(el.getBoundingClientRect().height),tag:el.tagName,href:el.getAttribute("href")||""}))}))()'
   );
   if (state.width !== width || state.height !== height(width) || !state.reduced) {
     throw new Error("Chrome viewport/reduced-motion mismatch: " + page.slug + " " + width);
@@ -158,7 +158,7 @@ async function layoutCheck(page, width) {
   if (!state.title.includes("ServiceDesk AI") ||
       !state.metaDescription || state.metaDescription.length < 20 ||
       (page.heroLabel && page.slug !== "home" && !state.title.includes(page.title))) {
-    throw new Error("Public page title/description metadata did not match the actual page: " + page.slug);
+    throw new Error("Public page title/description metadata did not match the actual page: " + page.slug + " " + JSON.stringify({ title: state.title, descriptionLength: state.metaDescription.length, expectedTitle: page.title, heroLabel: state.heroLabel }));
   }
   if (process.env.SERVICEDESK_PUBLIC_INDEXING_ENABLED !== "true" &&
       !state.robots.toLowerCase().includes("noindex")) {
@@ -204,6 +204,23 @@ try {
       await sleep(120);
       layout.push(await layoutCheck(page, width));
       captures.push(await snapshot(page, width, "first-fold"));
+      // Exercise the actual client-side explainer in the browser. The example
+      // must update in place and never imply a real AI/provider action.
+      if (page.slug === "home" && (width === 390 || width === 1280)) {
+        const proof = await inspect(
+          '(async () => { const button=[...document.querySelectorAll("button[aria-pressed]")].find(el=>el.textContent?.includes("Scheduling"));' +
+          'if(!button) return {ok:false};button.click();await new Promise(r=>setTimeout(r,180));const region=document.querySelector("[aria-live=polite]");' +
+          'return {ok:button.getAttribute("aria-pressed")==="true",' +
+          'text:region?.textContent||"",selected:[...document.querySelectorAll("button[aria-pressed=true]")].length};})()'
+        );
+        if (!proof?.ok || proof.selected !== 1 ||
+            !proof.text.includes("Capacity checks") ||
+            !proof.text.includes("Dispatcher confirms an eligible slot") ||
+            !proof.text.includes("Illustrative interaction")) {
+          throw new Error("V4 public AI workflow interaction failed: " + width);
+        }
+        captures.push(await snapshot(page, width, "ai-scheduling-selected"));
+      }
       // Open the actual native mobile disclosure; closed-menu screenshots
       // alone cannot prove destinations are accessible to mobile visitors.
       if (page.slug === "home" && width <= 834) {
