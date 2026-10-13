@@ -60,7 +60,7 @@ function classifyDeliveryState(input: N8nExecutionReceiptInput): N8nDeliveryStat
   if (input.status === "success") {
     const ref = input.redactedOutputRef;
     return typeof ref === "string" && ref.trim() === ref &&
-      ref.length > 0 && ref.length <= 512 && !/[\\x00-\\x1f\\x7f]/.test(ref)
+      ref.length > 0 && ref.length <= 512 && !/[\x00-\x1f\x7f]/.test(ref)
       ? "DELIVERED_TO_AUTOMATION" : "CONFIGURATION_BLOCKED";
   }
   if (input.status === "failed" && input.errorCode && transientErrorCodes.has(input.errorCode)) return "RETRYABLE_FAILURE";
@@ -80,7 +80,7 @@ function blockersFor(input: N8nExecutionReceiptInput): string[] {
        input.redactedOutputRef.length === 0 ||
        input.redactedOutputRef.length > 512 ||
        input.redactedOutputRef.trim() !== input.redactedOutputRef ||
-       /[\\x00-\\x1f\\x7f]/.test(input.redactedOutputRef))) {
+       /[\x00-\x1f\x7f]/.test(input.redactedOutputRef))) {
     blockers.push("redacted_output_receipt_missing");
   }
   return blockers;
