@@ -67,6 +67,41 @@ describe("bounded configured AI model transport", () => {
       .toMatchObject({ ok: true });
   });
 
+  it("rejects oversized or malformed approved knowledge and metadata before paid HTTP", async () => {
+    let calls=0;
+    const http = async () => {
+      calls++;
+      return {status:200,body:JSON.stringify({output:{}})};
+    };
+    const inputs = [
+      {...input, approvedKnowledgeRefs:Array.from({length:21},(_,i)=>"doc-"+i)},
+      {...input, approvedKnowledgeRefs:["x".repeat(129)]},
+      {...input, approvedKnowledgeRefs:123 as unknown as string[]},
+      {...input, approvedKnowledgeSnippets:Array.from({length:4},(_,i)=>({
+        documentId:"doc",chunkId:"chunk-"+i,snippet:"verified data",
+      }))},
+      {...input, approvedKnowledgeSnippets:[{
+        documentId:"doc",chunkId:"chunk",snippet:"private".repeat(50),
+      }]},
+      {...input,promptVersion:"x".repeat(513)},
+      {...input,workspaceId:"x".repeat(513)},
+    ];
+    for(const oversized of inputs) {
+      expect(await callAiModel(config,oversized,http)).toMatchObject({
+        ok:false,code:"AI_MODEL_CONTEXT_INVALID",
+      });
+    }
+    expect(calls).toBe(0);
+    const allowed=await callAiModel(config,{
+      ...input,approvedKnowledgeRefs:["doc-1"],
+      approvedKnowledgeSnippets:[{
+        documentId:"doc-1",chunkId:"chunk-1",snippet:"a".repeat(240),
+      }],
+    },http);
+    expect(allowed.ok).toBe(true);
+    expect(calls).toBe(1);
+  });
+
   it("normalizes configuration and failure classifications without leaking credentials", async () => {
     const authFailure = await callAiModel(config, input, async () => ({ status: 401, body: "unauthorized" }));
     expect(authFailure).toMatchObject({ ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED" });
