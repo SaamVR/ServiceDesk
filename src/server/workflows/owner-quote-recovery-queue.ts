@@ -12,7 +12,7 @@ const states: readonly QuoteQueueState[] = [
 ];
 
 export type OwnerQuoteRecoverySummary =
-  | { state: "AVAILABLE"; counts: Record<QuoteQueueState, number> }
+  | { state: "AVAILABLE"; counts: Record<QuoteQueueState, number>; health: { dueNow: number; expiredLeases: number } }
   | { state: "UNAVAILABLE" }
   | { state: "OWNER_REQUIRED" };
 
@@ -22,6 +22,8 @@ export interface OwnerQuoteRecoverySummaryDependencies {
   resolveActor?: Resolver;
   mode?: typeof operationalDatabaseMode;
   count?: (service: Service, workspaceId: string, state: QuoteQueueState) => Promise<number | null>;
+  health?: (service: Service, workspaceId: string, now: string) => Promise<{ dueNow:number; expiredLeases:number } | null>;
+  now?: () => string;
 }
 const uuid = (s: unknown): s is string => typeof s === "string" &&
   /^[a-f\d]{8}-[a-f\d]{4}-[1-8][a-f\d]{3}-[89ab][a-f\d]{3}-[a-f\d]{12}$/i.test(s);
@@ -37,6 +39,23 @@ async function persistedCount(
   if (response.error || !Number.isSafeInteger(response.count) ||
       response.count === null || response.count < 0) return null;
   return response.count;
+}
+
+/** Read-only, tenant-scoped count queries. No event or customer rows escape. */
+async function persistedHealth(service: Service, workspaceId: string, now: string) {
+  const due = await service.from("workflow_source_events")
+    .select("id", {count:"exact",head:true})
+    .eq("workspace_id",workspaceId)
+    .in("state",["PENDING","RETRY_PENDING"])
+    .lte("next_attempt_at",now);
+  if (due.error || !Number.isSafeInteger(due.count) || due.count < 0) return null;
+  const expired = await service.from("workflow_source_events")
+    .select("id", {count:"exact",head:true})
+    .eq("workspace_id",workspaceId)
+    .eq("state","PROCESSING")
+    .lt("locked_until",now);
+  if (expired.error || !Number.isSafeInteger(expired.count) || expired.count < 0) return null;
+  return {dueNow:due.count as number,expiredLeases:expired.count as number};
 }
 
 /**
@@ -70,8 +89,15 @@ export async function readOwnerQuoteRecoverySummary(
     if (rest.some(n => n === null || !Number.isSafeInteger(n) || n < 0)) {
       return { state: "UNAVAILABLE" };
     }
+    const now = (deps.now ?? (()=>new Date().toISOString()))();
+    if (!Number.isFinite(Date.parse(now))) return {state:"UNAVAILABLE"};
+    const health = await (deps.health ?? persistedHealth)(service,workspace.id,now);
+    if (!health || !Number.isSafeInteger(health.dueNow) ||
+        !Number.isSafeInteger(health.expiredLeases) ||
+        health.dueNow < 0 || health.expiredLeases < 0) return {state:"UNAVAILABLE"};
     return {
       state: "AVAILABLE",
+      health,
       counts: Object.fromEntries(
         states.map((state, index) => [state, index === 0 ? first : rest[index - 1]]),
       ) as Record<QuoteQueueState, number>,
