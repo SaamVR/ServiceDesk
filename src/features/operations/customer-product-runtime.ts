@@ -16,6 +16,8 @@ import {
 } from "./customer-quote-line-items";
 import { verifyCustomerQuoteForAcceptance } from "./customer-quote-acceptance";
 import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
+import { verifiedSandboxSessionShape } from "./sandbox-session-integrity";
+import { verifiedSandboxPaymentLedgerMatch } from "./sandbox-payment-ledger-proof";
 
 type Row = Record<string, unknown>;
 
@@ -931,6 +933,24 @@ export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): P
   return { ok: true, checkoutPath: `/portal/sandbox-checkout/${encodeURIComponent(sessionId)}` };
 }
 
+/** The checkout session table is nonauthoritative by design; an APPLIED
+ * flag must be reconciled against committed, tenant-scoped Core payment truth.
+ */
+async function hasCommittedSandboxPayment(service: SupabaseClient, session: Row): Promise<boolean> {
+  if (typeof session.id !== "string" || typeof session.workspace_id !== "string") return false;
+  const eventId = "evt_sd_demo_" + session.id.replaceAll("-", "");
+  try {
+    const application = await service.from("verified_payment_applications")
+      .select("workspace_id,provider,provider_account_id,provider_event_id,provider_transaction_id,purpose,quote_id,hold_id,invoice_id,amount_minor,currency,state")
+      .eq("workspace_id", session.workspace_id)
+      .eq("provider_account_id", "acct_servicedesk_internal_sandbox")
+      .eq("provider_event_id", eventId)
+      .maybeSingle();
+    if (application.error || !application.data) return false;
+    return verifiedSandboxPaymentLedgerMatch(session, application.data as Row);
+  } catch { return false; }
+}
+
 export async function loadCustomerSandboxCheckout(sessionId: string): Promise<CustomerSandboxCheckoutResult> {
   const resolved = await resolveCustomer();
   if (!resolved.ok) return { ok: false, message: resolved.message };
@@ -947,6 +967,13 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
   }
 
   const row = sessionResult.data as Row;
+  if (!verifiedSandboxSessionShape(row)) {
+    return { ok: false, message: "The stored checkout details could not be verified. Start again from the invoice or quote." };
+  }
+  if ((row.status === "APPLIED" || row.status === "DUPLICATE") &&
+      !await hasCommittedSandboxPayment(resolved.value.service, row)) {
+    return { ok: false, message: "Stored payment completion could not be confirmed against the verified payment ledger. Ask staff to review the invoice." };
+  }
   const purpose = String(row.purpose) === "DEPOSIT" ? "DEPOSIT" : "BALANCE";
   const quoteId = String(row.quote_id);
   const invoiceId = textValue(row, "invoice_id");
@@ -1035,6 +1062,13 @@ export async function completeCustomerSandboxCheckout(
   }
 
   const session = sessionResult.data as Row;
+  if (!verifiedSandboxSessionShape(session)) {
+    return { ok: false, message: "The stored checkout details could not be verified. No sandbox payment was applied." };
+  }
+  if ((session.status === "APPLIED" || session.status === "DUPLICATE") &&
+      !await hasCommittedSandboxPayment(resolved.value.service, session)) {
+    return { ok: false, message: "Stored sandbox payment receipt is not verified in the payment ledger. Contact staff; do not retry the charge." };
+  }
   const purpose = String(session.purpose) === "DEPOSIT" ? "DEPOSIT" : "BALANCE";
   const quoteId = String(session.quote_id);
   const invoiceId = textValue(session, "invoice_id");

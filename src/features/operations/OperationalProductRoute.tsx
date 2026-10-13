@@ -59,6 +59,7 @@ import { InboxThreadNavigator } from "./InboxThreadNavigator";
 import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { AiRequestBrief } from "./AiRequestBrief";
+import { AiQuoteReview } from "./AiQuoteReview";
 import { AiOperationsStatus } from "./AiOperationsStatus";
 import { OwnerQuoteAcceptedAutomationControl } from "./OwnerQuoteAcceptedAutomationControl";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
@@ -1601,6 +1602,11 @@ function QuotesView({
               Do not send this quote; recalculate it using verified owner rates.</p>
           )}
 
+          {selectedQuote.lineItems?.length && ["APPROVED", "SENT"].includes(selectedQuote.status) ? (
+            <AiQuoteReview key={selectedQuote.id} workspaceSlug={workspaceSlug}
+              quoteId={selectedQuote.id} configured={readConfiguredAiRuntimeConfig().ok} />
+          ) : null}
+
           <div className={styles.salesDetailGrid}>
             <section className={styles.salesSection}>
               <div className={styles.salesSectionHeader}>
@@ -1645,7 +1651,20 @@ function QuotesView({
                     <p>The quote status was recorded as sent. Provider acceptance,
                       delivery and customer receipt are separate verifiable events.</p>
                     <StatusBadge tone="warning">Delivery not proven here</StatusBadge>
-                    <QuoteCustomerHandoff quoteId={selectedQuote.id} />
+                    <QuoteCustomerHandoff quoteId={selectedQuote.id}
+                      facts={selectedQuote.lineItems?.length ? {
+                        quoteId: selectedQuote.id,
+                        status: selectedQuote.status,
+                        currency: selectedQuote.currency,
+                        validUntil: selectedQuote.validUntil,
+                        subtotalMinor: selectedQuote.subtotalMinor,
+                        taxMinor: selectedQuote.taxMinor,
+                        totalMinor: selectedQuote.totalMinor,
+                        depositMinor: selectedQuote.depositMinor,
+                        balanceMinor: selectedQuote.balanceMinor,
+                        durationMinutes: selectedQuote.durationMinutes,
+                        lineItems: selectedQuote.lineItems,
+                      } : undefined} />
                   </>
                 ) : selectedQuote.status === "ACCEPTED" ? (
                   <><p>The customer accepted this quote. Continue to scheduling and capacity selection.</p><a className="app-button-primary" href={buildStaffModuleHref(workspaceSlug, "schedule")}>Open schedule</a></>
