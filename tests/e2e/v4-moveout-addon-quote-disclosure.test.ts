@@ -8,7 +8,11 @@ describe("V4 real cleaning quote optional add-on UX", () => {
       "src/features/operations/OperationalProductRoute.tsx"), "utf8");
     expect(source).toContain('selectedRequest.serviceCode === "MOVE_OUT"');
     expect(source).toContain("The optional oven clean is");
-    expect(source).toContain("customer-approved add-on");
+    expect(source).toContain('name="ovenConfirmedByStaff"');
+    expect(source).toContain('value="yes" defaultChecked={false}');
+    expect(source).toContain("customer requested");
+    expect(source).toContain("excluded by default");
+    expect(source).toContain('formData.get("ovenConfirmedByStaff") === "yes"');
     const form = source.indexOf('<form action={calculateQuote}');
     const disclosure = source.indexOf("Move-out add-on policy:", form);
     expect(form).toBeGreaterThan(-1);
