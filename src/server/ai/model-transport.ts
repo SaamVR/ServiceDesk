@@ -9,6 +9,8 @@ export interface AiModelTransportConfig {
   apiKey: string;
   model: string;
   timeoutMs?: number;
+  /** Server-owned Responses output ceiling: visible plus reasoning tokens. */
+  maxOutputTokens?: number;
   now: () => string;
 }
 
@@ -127,6 +129,7 @@ function buildModelBody(config: AiModelTransportConfig, input: AiModelCallInput)
     return JSON.stringify({
       model: config.model,
       store: false,
+      max_output_tokens: config.maxOutputTokens ?? 4096,
       text: { format: { type: "json_object" } },
       metadata: {
         prompt_version: input.promptVersion.slice(0, 512),
@@ -265,6 +268,12 @@ export async function callAiModel(
 ): Promise<Result<AiModelOutput>> {
   if (!config.apiBaseUrl || !config.apiKey || !config.model) {
     return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED", message: "AI model provider configuration is incomplete." };
+  }
+  // Directly injected configs must never bypass the server runtime budget.
+  const outputCap = config.maxOutputTokens ?? 4096;
+  if (!Number.isSafeInteger(outputCap) || outputCap < 512 || outputCap > 8192) {
+    return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED",
+      message: "AI output token ceiling is outside the approved range." };
   }
   // Enforce this *before* invoking any injected/alternate transport. The
   // protected runtime currently authorizes only OpenAI Responses; an external
