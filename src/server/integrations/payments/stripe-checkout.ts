@@ -269,7 +269,7 @@ export async function createStripeCheckoutSession(
     if (typeof providerSessionId !== "string" ||
         !providerSessionId.startsWith(expectedPrefix) ||
         !/^cs_(?:live|test)_[A-Za-z0-9_]+$/.test(providerSessionId) ||
-        !hostedStripeCheckout(checkoutUrl)) {
+        typeof checkoutUrl !== "string" || !hostedStripeCheckout(checkoutUrl)) {
       return { ok: false, code: "PAYMENT_PROVIDER_INVALID_RESPONSE",
         message: "Provider checkout session ID or hosted URL was not verified." };
     }
