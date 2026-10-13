@@ -125,6 +125,25 @@ describe("WhatsApp Cloud API transport", () => {
     expect(calls).toBe(0);
   });
 
+  test("refuses oversized HTTP success envelopes before parsing any provider response", async () => {
+    let calls = 0;
+    const massive = JSON.stringify({ messaging_product: "whatsapp",
+      messages: [{ id: "wamid.real.1" }], ignored: "z".repeat(17_000) });
+    const result = await sendWhatsAppCloudMessage(config,
+      { to: "15551234567", kind: "text", text: "Controlled" },
+      async () => { calls++; return { status: 200, body: massive }; });
+    expect(calls).toBe(1);
+    expect(result).toMatchObject({ ok: false, code: "WHATSAPP_INVALID_RESPONSE" });
+    expect(JSON.stringify(result)).not.toContain("z".repeat(100));
+  });
+
+  test("accepts a minimal, valid official message acknowledgement within bounds", async () => {
+    const result = await sendWhatsAppCloudMessage(config,
+      { to: "15551234567", kind: "text", text: "Controlled" },
+      transport(200, { messaging_product: "whatsapp", messages: [{ id: "wamid.sent.accepted" }] }));
+    expect(result).toMatchObject({ ok: true, value: { providerMessageId: "wamid.sent.accepted" } });
+  });
+
   test("never counts a malformed 200 provider envelope as accepted delivery", async () => {
     for (const body of [null, [], true, {}, { messages: [] },
       { messages: [{ id: "wamid.one" }, { id: "wamid.two" }] },
