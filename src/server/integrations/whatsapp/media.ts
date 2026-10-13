@@ -125,7 +125,7 @@ function trustedMediaDownloadUrl(value: string): boolean {
 function trustedMediaConfig(config: WhatsAppMediaFetchConfig): boolean {
   return (config.graphBaseUrl === "https://graph.facebook.com" ||
           config.graphBaseUrl === "https://graph.facebook.com/") &&
-    /^v[0-9]{1,3}\\.[0-9]{1,2}$/.test(config.apiVersion) &&
+    /^v[0-9]{1,3}\.[0-9]{1,2}$/.test(config.apiVersion) &&
     Boolean(config.accessToken && config.accessToken.trim() === config.accessToken) &&
     Number.isSafeInteger(config.maxBytes) &&
     config.maxBytes > 0 && config.maxBytes <= 20 * 1024 * 1024 &&
