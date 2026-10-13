@@ -130,6 +130,44 @@ describe("committed outbox dispatch router", () => {
     }
   });
 
+  test("never persists untrusted adapter failure bodies or malformed retry evidence", async () => {
+    const secret = "Bearer never-log-me customer@example.com body=private-provider-payload";
+    const claimed = job();
+    for (const unsafe of [
+      { outcome: "RETRYABLE_FAILURE", code: "HTTP_429", message: secret,
+        retryAfterSeconds: 10_000_000, evidence: { notes: [secret] } },
+      { outcome: "TERMINAL_FAILURE", code: "TOO LONG " + secret,
+        message: secret, evidence: { notes: [secret] } },
+      { outcome: "SUPPRESSED", code: "QUIET_HOURS", message: secret },
+    ] as const) {
+      const result = await dispatchCommittedOutboxJob({
+        job: claimed, committedAt: claimed.createdAt, attempt: 1,
+        dispatchers: { WHATSAPP: {
+          async dispatch() { return { ok: true as const, value: {
+            ...dispatchOutcomeBase(claimed), ...unsafe,
+          } as unknown as CommittedOutboxDispatchOutcome }; },
+        } },
+      });
+      expect(result).toMatchObject({ ok: true, value: { outcome: unsafe.outcome, jobId: claimed.id } });
+      expect(JSON.stringify(result)).not.toContain("never-log-me");
+      expect(JSON.stringify(result)).not.toContain("customer@example.com");
+      expect(JSON.stringify(result)).not.toContain("private-provider-payload");
+      expect(JSON.stringify(result)).not.toContain("10000000");
+    }
+  });
+  test("redacts raw Result failures emitted by the transport port", async () => {
+    const secret="Bearer private-token customer@example.com";
+    const result=await dispatchCommittedOutboxJob({
+      job:job(),committedAt:"2026-10-04T12:01:00.000Z",attempt:1,
+      dispatchers:{WHATSAPP:{
+        async dispatch(){return {ok:false as const,code:"UNSAFE",message:secret};},
+      }},
+    });
+    expect(result).toMatchObject({ok:true,value:{outcome:"TERMINAL_FAILURE",code:"PROVIDER_ADAPTER_REJECTED"}});
+    expect(JSON.stringify(result)).not.toContain(secret);
+    expect(JSON.stringify(result)).not.toContain("private-token");
+  });
+
   test("does not expose thrown provider exception messages in persistent dispatch outcome", async () => {
     const sensitive = "Bearer super-secret-key customer@example.test token=do-not-log";
     const response = await dispatchCommittedOutboxJob({
