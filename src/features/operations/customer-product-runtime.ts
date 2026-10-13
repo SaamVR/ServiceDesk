@@ -16,6 +16,7 @@ import {
 } from "./customer-quote-line-items";
 import { verifyCustomerQuoteForAcceptance } from "./customer-quote-acceptance";
 import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
+import { verifiedSandboxSessionShape } from "./sandbox-session-integrity";
 
 type Row = Record<string, unknown>;
 
@@ -929,24 +930,6 @@ export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): P
   }
 
   return { ok: true, checkoutPath: `/portal/sandbox-checkout/${encodeURIComponent(sessionId)}` };
-}
-
-/** Never treat an unknown saved sandbox row as a payment authorization.
- * Includes already-applied sessions: malformed replay receipts are not success.
- */
-function verifiedSandboxSessionShape(row: Row): boolean {
-  const uuid = (value: unknown): value is string =>
-    typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-  if (!uuid(row.id) || !uuid(row.workspace_id) || !uuid(row.customer_id) ||
-      !uuid(row.quote_id) || !["BALANCE", "DEPOSIT"].includes(String(row.purpose)) ||
-      !["OPEN", "APPLIED", "DUPLICATE", "PAYMENT_REVIEW", "EXPIRED", "CANCELLED"].includes(String(row.status)) ||
-      typeof row.expires_at !== "string" || !Number.isFinite(Date.parse(row.expires_at)) ||
-      typeof row.amount_minor !== "number" || !Number.isSafeInteger(row.amount_minor) ||
-      row.amount_minor <= 0 ||
-      typeof row.currency !== "string" || !/^[A-Z]{3}$/.test(row.currency)) return false;
-  if (row.purpose === "DEPOSIT") return uuid(row.hold_id);
-  return uuid(row.invoice_id);
 }
 
 export async function loadCustomerSandboxCheckout(sessionId: string): Promise<CustomerSandboxCheckoutResult> {
