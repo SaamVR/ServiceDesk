@@ -87,6 +87,7 @@ import { filterQualityQueue, isOverdueQualityCase, normalizeQualityQueue, normal
 import { QualityQueueFilters } from "./QualityQueueFilters";
 import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue, orderCustomerCollectionInvoices, parseManualPaymentAmountMinor } from "./invoice-collection-queue";
 import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
+import { StaffInvoiceManualReminder } from "./StaffInvoiceManualReminder";
 import { isVerifiedStaffCollectibleInvoice } from "./staff-invoice-collection-readiness";
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { deriveDispatchBacklog } from "./dispatch-backlog";
@@ -2415,6 +2416,19 @@ function InvoicesView({
               )}
             </section>
           </div>
+          {selectedInvoiceCanRecordPayment && selectedInvoiceQuote ? (
+            <StaffInvoiceManualReminder invoice={{
+              id: selectedInvoice.id,
+              status: selectedInvoice.status,
+              currency: selectedInvoice.currency,
+              totalMinor: selectedInvoice.totalMinor,
+              allocatedMinor: selectedInvoice.allocatedMinor,
+              refundedMinor: selectedInvoice.refundedMinor,
+              balanceMinor: selectedInvoice.balanceMinor,
+              quoteStatus: selectedInvoiceQuote.status,
+              quoteCurrency: selectedInvoiceQuote.currency,
+            }} />
+          ) : null}
         </article>
       </div>
     </section>
