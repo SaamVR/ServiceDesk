@@ -54,6 +54,7 @@ import { JobQueueFilters } from "./JobQueueFilters";
 import { countStaffBy, indexCurrentQuoteByRequest, indexStaffById } from "./staff-snapshot-index";
 import { buildQuotePipeline, isCurrentApprovedQuote } from "./quote-pipeline";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
+import { QuoteCustomerHandoff } from "./QuoteCustomerHandoff";
 import { InboxThreadNavigator } from "./InboxThreadNavigator";
 import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
@@ -1523,7 +1524,7 @@ function QuotesView({
         <div>
           <p className={styles.salesEyebrow}>Quote workspace</p>
           <h2>Quote pipeline</h2>
-          <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} awaiting customer</p>
+          <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} marked sent (delivery unverified)</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "requests")}>Open requests</a>
       </header>
@@ -1616,7 +1617,7 @@ function QuotesView({
 
             <section className={styles.salesSection}>
               <div className={styles.salesSectionHeader}>
-                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{!selectedQuoteIsCurrent ? "Historical quote" : selectedQuote.status === "APPROVED" ? selectedQuoteCanSend ? "Ready to send" : "Review required" : selectedQuote.status === "SENT" ? "Waiting for customer" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
+                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{!selectedQuoteIsCurrent ? "Historical quote" : selectedQuote.status === "APPROVED" ? selectedQuoteCanSend ? "Ready to send" : "Review required" : selectedQuote.status === "SENT" ? "Delivery verification" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
               </div>
               <div className={styles.quoteNextStep}>
                 {!selectedQuoteIsCurrent ? (
@@ -1640,7 +1641,12 @@ function QuotesView({
                     <a className="app-button-secondary"
                       href={buildStaffModuleHref(workspaceSlug, "requests")}>Review requests</a></>
                 ) : selectedQuote.status === "SENT" ? (
-                  <><p>The quote is with the customer. No additional staff action is needed until they respond.</p><StatusBadge tone="info">Awaiting reply</StatusBadge></>
+                  <>
+                    <p>The quote status was recorded as sent. Provider acceptance,
+                      delivery and customer receipt are separate verifiable events.</p>
+                    <StatusBadge tone="warning">Delivery not proven here</StatusBadge>
+                    <QuoteCustomerHandoff quoteId={selectedQuote.id} />
+                  </>
                 ) : selectedQuote.status === "ACCEPTED" ? (
                   <><p>The customer accepted this quote. Continue to scheduling and capacity selection.</p><a className="app-button-primary" href={buildStaffModuleHref(workspaceSlug, "schedule")}>Open schedule</a></>
                 ) : (
