@@ -55,7 +55,14 @@ const transientErrorCodes = new Set(["ECONNRESET", "ETIMEDOUT", "EAI_AGAIN", "EN
 function classifyDeliveryState(input: N8nExecutionReceiptInput): N8nDeliveryState {
   if (!input.controlledReceiver) return "CONFIGURATION_BLOCKED";
   if (input.status === "running") return "PENDING_AUTOMATION_COMPLETION";
-  if (input.status === "success") return "DELIVERED_TO_AUTOMATION";
+  // A provider 'success' flag alone is not a complete controlled receipt.
+  // Without a bounded redacted output reference, do not claim delivery.
+  if (input.status === "success") {
+    const ref = input.redactedOutputRef;
+    return typeof ref === "string" && ref.trim() === ref &&
+      ref.length > 0 && ref.length <= 512 && !/[\\x00-\\x1f\\x7f]/.test(ref)
+      ? "DELIVERED_TO_AUTOMATION" : "CONFIGURATION_BLOCKED";
+  }
   if (input.status === "failed" && input.errorCode && transientErrorCodes.has(input.errorCode)) return "RETRYABLE_FAILURE";
   return "FINAL_FAILURE";
 }
@@ -68,7 +75,14 @@ function verificationFor(input: N8nExecutionReceiptInput, state: N8nDeliveryStat
 function blockersFor(input: N8nExecutionReceiptInput): string[] {
   const blockers: string[] = [];
   if (!input.controlledReceiver) blockers.push("controlled_receiver_missing");
-  if (input.status === "success" && !input.redactedOutputRef) blockers.push("redacted_output_receipt_missing");
+  if (input.status === "success" &&
+      (typeof input.redactedOutputRef !== "string" ||
+       input.redactedOutputRef.length === 0 ||
+       input.redactedOutputRef.length > 512 ||
+       input.redactedOutputRef.trim() !== input.redactedOutputRef ||
+       /[\\x00-\\x1f\\x7f]/.test(input.redactedOutputRef))) {
+    blockers.push("redacted_output_receipt_missing");
+  }
   return blockers;
 }
 
