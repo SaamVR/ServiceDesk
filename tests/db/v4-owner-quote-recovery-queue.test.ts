@@ -24,10 +24,12 @@ function ownerHarness(options: { role?:string; slug?:string; actorWorkspace?:str
     calls.push({workspaceId:id,state});
     return options.count===undefined ? 0 : options.count;
   });
+  const health=vi.fn(async()=>({dueNow:0,expiredLeases:0}));
   const deps={
-    mode:()=>options.backend??"SERVICE_ROLE", resolveActor, count,
+    mode:()=>options.backend??"SERVICE_ROLE", resolveActor, count,health,
+    now:()=> "2026-10-13T00:00:00.000Z",
   } as unknown as OwnerQuoteRecoverySummaryDependencies;
-  return {deps,service,resolveActor,count,calls};
+  return {deps,service,resolveActor,count,health,calls};
 }
 
 describe("V4 private owner source recovery queue counts",()=>{
@@ -35,11 +37,13 @@ describe("V4 private owner source recovery queue counts",()=>{
     const h=ownerHarness();
     expect(await readOwnerQuoteRecoverySummary("qa-workspace",h.deps)).toEqual({
       state:"AVAILABLE",
+      health:{dueNow:0,expiredLeases:0},
       counts:{ PENDING:0,PROCESSING:0,RETRY_PENDING:0,
         SUCCEEDED:0,SKIPPED:0,DEAD_LETTER:0 },
     });
     expect(h.calls.map(c=>c.state)).toEqual(all);
     expect(h.calls.every(c=>c.workspaceId===workspaceId)).toBe(true);
+    expect(h.health).toHaveBeenCalledWith(h.service,workspaceId,"2026-10-13T00:00:00.000Z");
   });
   it("denies staff, cross-workspace claims and mismatched workspace slugs",async()=>{
     for(const opt of [
@@ -71,6 +75,19 @@ describe("V4 private owner source recovery queue counts",()=>{
       .toEqual({state:"UNAVAILABLE"});
     expect(h.count).toHaveBeenCalledTimes(6);
   });
+  it("does not manufacture due or expired health when protected reads fail",async()=>{
+    const h=ownerHarness();
+    h.health.mockResolvedValueOnce(null as never);
+    expect(await readOwnerQuoteRecoverySummary("qa-workspace",h.deps)).toEqual({state:"UNAVAILABLE"});
+    h.health.mockResolvedValueOnce({dueNow:3,expiredLeases:-1});
+    expect(await readOwnerQuoteRecoverySummary("qa-workspace",h.deps)).toEqual({state:"UNAVAILABLE"});
+  });
+  it("reports persisted due and expired totals as counts only",async()=>{
+    const h=ownerHarness();
+    h.health.mockResolvedValueOnce({dueNow:4,expiredLeases:2});
+    expect(await readOwnerQuoteRecoverySummary("qa-workspace",h.deps))
+      .toMatchObject({state:"AVAILABLE",health:{dueNow:4,expiredLeases:2}});
+  });
   it("keeps data private with a scoped and count-only Supabase query",async()=>{
     const calls:Array<{table:string;select:string;head?:boolean;count?:string;
       filters:Record<string,unknown>}>=[];
@@ -85,6 +102,9 @@ describe("V4 private owner source recovery queue counts",()=>{
             call.count=options.count??"";return q;
           },
           eq(k:string,v:unknown){call.filters[k]=v;return q;},
+          in(k:string,v:unknown){call.filters[k]=v;return q;},
+          lte(k:string,v:unknown){call.filters[k]=v;return q;},
+          lt(k:string,v:unknown){call.filters[k]=v;return q;},
           then(resolve:(o:{count:number;error:null})=>unknown){
             resolve({count:3,error:null});
           },
@@ -101,14 +121,18 @@ describe("V4 private owner source recovery queue counts",()=>{
     } as unknown as OwnerQuoteRecoverySummaryDependencies;
     const result=await readOwnerQuoteRecoverySummary("qa-workspace",deps);
     expect(result).toMatchObject({state:"AVAILABLE",counts:{DEAD_LETTER:3}});
-    expect(calls).toHaveLength(6);
+    expect(calls).toHaveLength(8);
     for(const call of calls){
       expect(call.table).toBe("workflow_source_events");
       expect(call.select).toBe("id");
       expect(call.count).toBe("exact");
       expect(call.head).toBe(true);
       expect(call.filters.workspace_id).toBe(workspaceId);
-      expect(all).toContain(call.filters.state);
+      if(typeof call.filters.state==="string") expect(all).toContain(call.filters.state);
     }
+    expect(calls[6].filters.state).toEqual(["PENDING","RETRY_PENDING"]);
+    expect(calls[6].filters.next_attempt_at).toEqual(expect.any(String));
+    expect(calls[7].filters.state).toBe("PROCESSING");
+    expect(calls[7].filters.locked_until).toEqual(expect.any(String));
   });
 });
