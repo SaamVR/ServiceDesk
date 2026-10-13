@@ -174,7 +174,22 @@ export async function generateAuthorizedRequestBrief(
   if (deps.signal?.aborted) {
     return fail("AI_BRIEF_CANCELLED", "Staff cancelled the AI briefing request.");
   }
-  if (!response.ok) return fail("AI_BRIEF_PROVIDER_UNAVAILABLE", "AI briefing is temporarily unavailable.");
+  if (!response.ok) {
+    // The model transport already emits normalized, redacted machine codes.
+    // Preserve only this explicitly approved subset so the UI can distinguish
+    // a real rate limit, bounded timeout or owner configuration problem.
+    // NEVER propagate provider text, prompts, payloads or arbitrary codes.
+    const safeCodes = new Set([
+      "AI_MODEL_RATE_LIMITED",
+      "AI_MODEL_TIMEOUT",
+      "AI_MODEL_TRANSIENT_FAILURE",
+      "AI_MODEL_NETWORK_FAILURE",
+      "AI_MODEL_CONFIGURATION_BLOCKED",
+      "AI_MODEL_INVALID_RESPONSE",
+    ]);
+    const code = safeCodes.has(response.code) ? response.code : "AI_BRIEF_PROVIDER_UNAVAILABLE";
+    return fail(code, "The AI provider did not return a verified request brief.");
+  }
   if (response.value.requestedToolCalls?.length || response.value.citations?.length) {
     return fail("AI_BRIEF_OUTPUT_UNSAFE", "AI returned a workflow proposal instead of a review brief.");
   }

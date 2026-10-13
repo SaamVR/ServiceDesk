@@ -2,8 +2,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
+import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import { buildStaffModuleHref } from "./staff-modules";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
+import { OwnerQuoteRecoveryQueue } from "./OwnerQuoteRecoveryQueue";
 import {
   readOwnerQuoteAutomationSetting,
   setOwnerQuoteAutomationSetting,
@@ -18,6 +20,9 @@ export async function OwnerQuoteAcceptedAutomationControl({
   workspaceSlug, snapshot,
 }: { workspaceSlug: string; snapshot: OperationalStaffSnapshot }) {
   const activation = summarizeAutomationActivation(snapshot);
+  const canOpenFirstRunPricing = availableFirstRunUsdBranches(
+    snapshot.branchScope, snapshot.ownerPricingBookProof,
+  ).length > 0;
   // A real accepted customer quote and its internal action are *outcomes*
   // after arming an eligible published rule. Requiring either before first
   // opt-in would deadlock activation for a new cleaning business.
@@ -96,8 +101,12 @@ export async function OwnerQuoteAcceptedAutomationControl({
               <li key={step.id}>
                 <strong>{step.title}</strong>
                 {" — "}{step.detail}{" "}
-                <Link href={buildStaffModuleHref(workspaceSlug, step.module)}>
-                  {step.module === "settings" ? "Open Settings" : "Open Automation Studio"} →
+                <Link href={buildStaffModuleHref(workspaceSlug, step.module) +
+                  (step.module === "settings" && canOpenFirstRunPricing
+                    ? "#owner-first-run-pricing" : "")}>
+                  {step.module === "settings" && canOpenFirstRunPricing
+                    ? "Enter actual cleaning rates" :
+                    step.module === "settings" ? "Open Settings" : "Open Automation Studio"} →
                 </Link>
               </li>
             ))}
@@ -127,6 +136,7 @@ export async function OwnerQuoteAcceptedAutomationControl({
           Owner-only · saved version {version}
         </span>
       </form>
+      <OwnerQuoteRecoveryQueue workspaceSlug={workspaceSlug} />
     </section>
   );
 }

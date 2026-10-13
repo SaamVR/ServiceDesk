@@ -8,7 +8,8 @@
  * Run only in a protected private Actions job with the QA-only secrets set.
  */
 import { createClient } from "@supabase/supabase-js";
-import { verifyTwoTenantOperationalRls } from "./v4-operational-rls-positive-negative.mjs";
+import { requireDistinctConfirmedOwnerSessions, verifyTwoTenantOperationalRls } from "./v4-operational-rls-positive-negative.mjs";
+import { verifyTwoTenantAutomationRls } from "./v4-automation-rls-positive-negative.mjs";
 
 const projectHost = "cpmmgivhlkfbiwzhlcey.supabase.co";
 const env = process.env;
@@ -43,7 +44,7 @@ async function getOwnWorkspace(db, account) {
   const membership = await db.from("memberships").select("workspace_id,role,status")
     .eq("workspace_id", own.data.id).eq("user_id", verified.user.id).eq("role","OWNER").eq("status","ACTIVE").maybeSingle();
   if (membership.error || !membership.data || membership.data.workspace_id !== own.data.id) fail("OWNER_MEMBERSHIP");
-  return { client: db, id: own.data.id, slug: own.data.slug };
+  return { client: db, id: own.data.id, slug: own.data.slug, userId: verified.user.id };
 }
 async function verifyIsolation(actor, foreign) {
   const checks = [
@@ -69,7 +70,7 @@ async function main() {
   try {
     const a = await getOwnWorkspace(dbs[0], accounts[0]);
     const b = await getOwnWorkspace(dbs[1], accounts[1]);
-    if (a.id === b.id) fail("DISTINCT_WORKSPACE_IDS_REQUIRED");
+    requireDistinctConfirmedOwnerSessions(a, b, fail);
     await verifyIsolation(a,b);
     await verifyIsolation(b,a);
     if (env.V4_QA_REQUIRE_OPERATIONAL_EVIDENCE === "1") {
@@ -79,6 +80,11 @@ async function main() {
     } else {
       // Negative reads against empty tables are not business-data RLS proof.
       console.log("REAL_AUTHENTICATED_STAGING_CORE_RLS_PRECHECK_PASS: owner sessions and foreign workspace restrictions only; operational row evidence NOT VERIFIED");
+    }
+    if (env.V4_QA_REQUIRE_AUTOMATION_EVIDENCE === "1") {
+      await verifyTwoTenantAutomationRls(a,b,fail);
+      await verifyTwoTenantAutomationRls(b,a,fail);
+      console.log("REAL_AUTHENTICATED_STAGING_AUTOMATION_RLS_POSITIVE_NEGATIVE_PASS: own persisted execution/action/attention and foreign tenant denial for distinct owners; provider delivery not tested");
     }
   } finally {
     await Promise.allSettled(dbs.map(db => db.auth.signOut()));

@@ -107,6 +107,7 @@ describe("bounded configured AI model transport", () => {
     expect(body.model).toBe(config.model);
     expect(body.text.format).toEqual({ type: "json_object" });
     expect(body.store).toBe(false);
+    expect(body.max_output_tokens).toBe(4096);
     expect(body).not.toHaveProperty("response_format");
     expect(body.metadata).toEqual({
       prompt_version: input.promptVersion,
@@ -117,6 +118,26 @@ describe("bounded configured AI model transport", () => {
     expect(Object.values(body.metadata).every(value => typeof value === "string")).toBe(true);
     expect(result.ok).toBe(true);
     expect(JSON.stringify(result)).not.toContain(config.apiKey);
+  });
+
+  it("enforces custom official output ceilings and denies invalid limits before HTTP", async () => {
+    const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
+    let calls = 0;
+    const accepted = await callAiModel({ ...official, maxOutputTokens: 1536 }, input, async request => {
+      calls++;
+      expect(JSON.parse(request.body).max_output_tokens).toBe(1536);
+      return { status: 200, body: JSON.stringify({ output: {} }) };
+    });
+    expect(accepted.ok).toBe(true);
+    expect(calls).toBe(1);
+    for (const limit of [0, 511, 8193, -1, 1536.5, NaN, Infinity]) {
+      const denied = await callAiModel({ ...official, maxOutputTokens: limit }, input, async () => {
+        calls++;
+        return { status: 200, body: JSON.stringify({ output: {} }) };
+      });
+      expect(denied).toMatchObject({ ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED" });
+    }
+    expect(calls).toBe(1);
   });
 
   it("refuses incomplete, malformed and explicit refusal Responses envelopes", async () => {
@@ -156,6 +177,45 @@ describe("bounded configured AI model transport", () => {
       expect(result).toMatchObject({ ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED" });
     }
     expect(attempts).toBe(0);
+  });
+
+  it("bounds paid model input before making any provider request", async () => {
+    const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
+    let calls = 0;
+    const transport = async () => {
+      calls++;
+      return { status: 200, body: JSON.stringify({ output: {} }) };
+    };
+    for (const userText of ["", "  ", "private " + "x".repeat(16_000)]) {
+      const result = await callAiModel(official, { ...input, userText }, transport);
+      expect(result).toMatchObject({ ok: false, code: "AI_MODEL_INPUT_TOO_LARGE" });
+      if (userText.trim()) expect(JSON.stringify(result)).not.toContain(userText.slice(0, 16));
+    }
+    expect(calls).toBe(0);
+    expect((await callAiModel(official, { ...input, userText: "x".repeat(16_000) }, transport)).ok).toBe(true);
+    expect(calls).toBe(1);
+  });
+
+  it("rejects mixed official Responses with text plus tool calls or refusals", async () => {
+    const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
+    const text = JSON.stringify({ output: {}, replyDraft: "Staff review required" });
+    for (const injected of [
+      { type: "function_call", name: "send_message", arguments: "{}" },
+      { type: "custom_tool_call", name: "external_action" },
+      { type: "message", content: [{ type: "refusal", refusal: "no" }] },
+      { type: "message", status: "incomplete", content: [{ type: "output_text", text }] },
+      { type: "unsupported_item", content: [] },
+    ]) {
+      const response = { object: "response", status: "completed", output: [
+        { type: "message", status: "completed", content: [{ type: "output_text", text }] },
+        injected,
+      ] };
+      const result = await callAiModel(official, input, async () => ({
+        status: 200, body: JSON.stringify(response),
+      }));
+      expect(result).toMatchObject({ ok: false, code: "AI_MODEL_INVALID_RESPONSE" });
+      expect(JSON.stringify(result)).not.toContain("send_message");
+    }
   });
 
 });

@@ -114,7 +114,10 @@ export function summarizeOwnerOperationalEvidence(input: Pick<
       execution.mode === "LIVE" &&
       execution.eventType === "QUOTE_ACCEPTED" &&
       execution.matched === true &&
-      execution.state === "COMPLETED")
+      // An approved outbound template may still be awaiting owner review
+      // after the internal attention was saved. Do not conflate that
+      // independent external-action lifecycle with internal success.
+      (execution.state === "COMPLETED" || execution.state === "ACTIONS_PENDING"))
       .map(execution => [execution.id, execution]));
     const successes = new Set(input.workflowActionExecutions
       .filter(action => {

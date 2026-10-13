@@ -81,6 +81,13 @@ export function summarizeAutomationActivation(
       quote.currency === "USD" && quote.currency === branchCurrency;
   });
   const acceptedQuoteVerified = acceptedSavedQuotes.length > 0;
+  // Independently ready milestones may come from different branches in an
+  // ALL-branches view. Full quote-to-attention evidence must be branch
+  // coherent; otherwise Branch B's accepted quote could certify Branch A's
+  // unrelated workflow execution.
+  const acceptedQuoteBranchIds = new Set(acceptedSavedQuotes
+    .map(quote => requestsById.get(quote.requestId)?.branchId)
+    .filter((id): id is string => typeof id === "string"));
   const executionsLoaded = Array.isArray(data.workflowExecutions) &&
     Array.isArray(data.workflowActionExecutions) && versionsLoaded;
   const verifiedLiveExecutions = new Map(
@@ -88,15 +95,38 @@ export function summarizeAutomationActivation(
       .filter(execution => {
         const version = eligibleQuoteVersions.get(execution.ruleVersionId);
         return execution.mode === "LIVE" && execution.matched === true &&
-          execution.state === "COMPLETED" && execution.eventType === "QUOTE_ACCEPTED" &&
+          (execution.state === "COMPLETED" || execution.state === "ACTIONS_PENDING") &&
+          execution.eventType === "QUOTE_ACCEPTED" &&
           version?.ruleId === execution.ruleId && version?.branchId === execution.branchId;
       })
-      .map(execution => [execution.id, execution.branchId]),
+      .flatMap(execution => {
+        const version = eligibleQuoteVersions.get(execution.ruleVersionId);
+        if (!version) return [];
+        const requiredIndexes = version.actions.flatMap((action, index) =>
+          action.type === "CREATE_ATTENTION" ? [index] : []);
+        return [[execution.id, { branchId: execution.branchId, requiredIndexes }] as const];
+      }),
   );
-  const internalExecutionSucceeded = (data.workflowActionExecutions ?? [])
-    .some(action => action.actionType === "CREATE_ATTENTION" &&
-      action.state === "SUCCEEDED" &&
-      verifiedLiveExecutions.get(action.executionId) === action.branchId);
+  // Partial parent state is valid if an external email awaits owner approval
+  // after all required internal attention effects are saved. One succeeded
+  // action is NOT enough when a rule planned several internal actions.
+  const succeededIndexes = new Map<string, Set<number>>();
+  for (const action of data.workflowActionExecutions ?? []) {
+    const verified = verifiedLiveExecutions.get(action.executionId);
+    if (!verified || action.actionType !== "CREATE_ATTENTION" ||
+        action.state !== "SUCCEEDED" ||
+        !acceptedQuoteBranchIds.has(action.branchId) ||
+        verified.branchId !== action.branchId ||
+        !Number.isSafeInteger(action.actionIndex) ||
+        !verified.requiredIndexes.includes(action.actionIndex)) continue;
+    const indexes = succeededIndexes.get(action.executionId) ?? new Set<number>();
+    indexes.add(action.actionIndex);
+    succeededIndexes.set(action.executionId, indexes);
+  }
+  const internalExecutionSucceeded = [...verifiedLiveExecutions.entries()]
+    .some(([executionId, verified]) => acceptedQuoteBranchIds.has(verified.branchId) &&
+      verified.requiredIndexes.length > 0 &&
+      verified.requiredIndexes.every(index => succeededIndexes.get(executionId)?.has(index)));
 
   const steps: ActivationStep[] = [
     {
@@ -156,8 +186,8 @@ export function summarizeAutomationActivation(
         pricing?.state !== "VERIFIED"
         ? "Authorized branch, pricing or execution history is unavailable; do not claim a live result."
         : internalExecutionSucceeded
-          ? "A LIVE quote rule and succeeded internal attention receipt match this authorized priced branch."
-          : "Verify a succeeded LIVE internal action in the same authorized, priced branch.",
+          ? "A LIVE quote rule, accepted customer quote and succeeded internal attention match the same authorized priced branch. Session-level acceptance remains separate."
+          : "Verify a succeeded LIVE internal action in the same priced branch as a saved customer-accepted quote.",
       module: "automations",
     },
   ];
