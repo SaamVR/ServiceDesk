@@ -99,4 +99,36 @@ describe("provider-neutral transactional email transport", () => {
     expect(JSON.stringify(summary)).not.toContain("email_secret_key");
     expect(JSON.stringify(summary)).not.toContain("customer@example.test");
   });
+  test("rejects untrusted email endpoints before attaching provider bearer credentials", async () => {
+    let calls = 0;
+    for (const endpointUrl of [
+      "http://email-provider.test/v1/send",
+      "https://user:pass@email-provider.test/v1/send",
+      "https://email-provider.test:8443/v1/send",
+      "https://127.0.0.1/v1/send",
+      "https://localhost/v1/send",
+      "https://metadata.internal/v1/send",
+      "https://email-provider.test/v1/send#fragment",
+      "https://email-provider.test/v1/send?token=x",
+    ]) {
+      const adapter = createConfiguredEmailTransport({ ...config, endpointUrl }, async () => {
+        calls++;
+        return { status: 202, body: JSON.stringify({ id: "msg" }) };
+      });
+      expect(await adapter.send(job())).toMatchObject({ ok: false, code: "EMAIL_CONFIGURATION_BLOCKED" });
+    }
+    expect(calls).toBe(0);
+  });
+
+  test("refuses oversized customer email HTML before any send", async () => {
+    let calls = 0;
+    const adapter = createConfiguredEmailTransport(config, async () => {
+      calls++;
+      return { status: 202, body: JSON.stringify({ id: "msg" }) };
+    });
+    const result = await adapter.send(job({ html: "<p>" + "x".repeat(262_144) + "</p>" }));
+    expect(result).toMatchObject({ ok: false, code: "EMAIL_PAYLOAD_TOO_LARGE" });
+    expect(calls).toBe(0);
+    expect(JSON.stringify(result)).not.toContain("x".repeat(50));
+  });
 });

@@ -65,6 +65,21 @@ function evidence(config: EmailTransportConfig, providerMessageId: string, job: 
   };
 }
 
+
+/** Generic email integrations may be configured, but never as internal HTTP,
+ * credentialed URLs or proxy-redirect destinations with a bearer token. */
+function safeEmailHttpsEndpoint(value: string): boolean {
+  if (!value || value !== value.trim() || value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password &&
+      !url.port && !url.hash && !url.search && url.pathname.length > 1 &&
+      /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(url.hostname) &&
+      !/^\d{1,3}(?:\.\d{1,3}){3}$/.test(url.hostname) &&
+      !url.hostname.endsWith(".local") && !url.hostname.endsWith(".internal");
+  } catch { return false; }
+}
+
 function isResendEndpoint(config: EmailTransportConfig): boolean {
   try {
     return new URL(config.endpointUrl).hostname.toLowerCase() === "api.resend.com";
@@ -150,7 +165,7 @@ export function redactedEmailRequestSummary(request: EmailHttpRequest): Redacted
 export function createConfiguredEmailTransport(config: EmailTransportConfig, http: EmailHttpTransport): TransactionalEmailAdapter {
   return {
     async send(job: TransactionalEmailJob): Promise<Result<TransactionalEmailSendResult>> {
-      if (!config.endpointUrl || !config.apiKey || !config.senderAddress) {
+      if (!safeEmailHttpsEndpoint(config.endpointUrl) || !config.apiKey || !config.senderAddress) {
         return { ok: false, code: "EMAIL_CONFIGURATION_BLOCKED", message: "Transactional email configuration is incomplete." };
       }
 
@@ -176,6 +191,14 @@ export function createConfiguredEmailTransport(config: EmailTransportConfig, htt
         return { ok: false, code: "EMAIL_BODY_INVALID", message: "Transactional email must include text or HTML content." };
       }
 
+      // Bound real provider bytes before building an outbound request.
+      // Customer-supplied templates must not exhaust runtime memory/network.
+      const providerBody = bodyFor(config, job);
+      if (new TextEncoder().encode(providerBody).byteLength > 262_144) {
+        return { ok: false, code: "EMAIL_PAYLOAD_TOO_LARGE",
+          message: "Transactional email payload exceeds the approved size limit." };
+      }
+
       const controller = new AbortController();
       const timeoutMs = Math.max(250, Math.min(config.timeoutMs ?? 10_000, 30_000));
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -188,7 +211,7 @@ export function createConfiguredEmailTransport(config: EmailTransportConfig, htt
             "content-type": "application/json",
             "idempotency-key": job.idempotencyKey,
           },
-          body: bodyFor(config, job),
+          body: providerBody,
           signal: controller.signal,
         });
 
