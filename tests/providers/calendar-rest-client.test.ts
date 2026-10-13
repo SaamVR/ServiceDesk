@@ -23,6 +23,27 @@ function transport(status: number, body: unknown, capture?: (input: Parameters<G
 }
 
 describe("Google Calendar REST client", () => {
+  test("rejects untrusted Calendar origins without using HTTP transport", async () => {
+    const calls: string[] = [];
+    const http: GoogleCalendarHttpTransport = async req => {
+      calls.push(req.url);
+      return { status: 200, body: "{}" };
+    };
+    for (const value of [
+      "http://www.googleapis.com/calendar/v3",
+      "https://localhost/calendar/v3",
+      "https://www.googleapis.com:8443/calendar/v3",
+      "https://www.googleapis.com/calendar/v3/other",
+    ]) {
+      const response = await getGoogleCalendarEvent(
+        {...config, calendarApiBaseUrl:value}, "primary", "event-1", http);
+      expect(response).toMatchObject({
+        ok:false, code:"GOOGLE_CALENDAR_CONFIGURATION_BLOCKED",
+      });
+    }
+    expect(calls).toHaveLength(0);
+  });
+
   test("queries FreeBusy with encoded calendar IDs and redacted authorization", async () => {
     let request: Parameters<GoogleCalendarHttpTransport>[0] | undefined;
     const result = await freeBusyGoogleCalendar(
@@ -61,6 +82,33 @@ describe("Google Calendar REST client", () => {
       ]);
     }
     expect(JSON.stringify(redactedGoogleCalendarRequestSummary(request!))).not.toContain("secret-google-access-token");
+  });
+
+  test("never interprets missing or errored crew Calendar responses as free time", async () => {
+    const input = {calendarIds:["crew-a","crew-b"],
+      timeMin:"2026-10-04T09:00:00.000Z",timeMax:"2026-10-04T12:00:00.000Z"};
+    const missing = await freeBusyGoogleCalendar(config,input,
+      transport(200,{calendars:{"crew-a":{busy:[]}}}));
+    expect(missing).toMatchObject({ok:false,code:"GOOGLE_CALENDAR_BUSY_UNVERIFIED"});
+    const errored = await freeBusyGoogleCalendar(config,input,
+      transport(200,{calendars:{"crew-a":{busy:[]},
+        "crew-b":{busy:[],errors:[{reason:"notFound"}]}}}));
+    expect(errored).toMatchObject({ok:false,code:"GOOGLE_CALENDAR_BUSY_UNVERIFIED"});
+    const malformed = await freeBusyGoogleCalendar(config,input,
+      transport(200,{calendars:{"crew-a":{busy:[]},
+        "crew-b":{busy:[{start:"2026-10-04T12:00:00Z",
+          end:"2026-10-04T11:00:00Z"}]}}}));
+    expect(malformed).toMatchObject({ok:false,code:"GOOGLE_CALENDAR_BUSY_UNVERIFIED"});
+  });
+
+  test("ignores unrequested Google Calendar busy blocks", async () => {
+    const result = await freeBusyGoogleCalendar(config,
+      {calendarIds:["crew-a"],timeMin:"2026-10-04T09:00:00Z",
+        timeMax:"2026-10-04T12:00:00Z"},
+      transport(200,{calendars:{"crew-a":{busy:[]},
+        "another-crew":{busy:[{start:"2026-10-04T09:00:00Z",
+          end:"2026-10-04T12:00:00Z"}]}}}));
+    expect(result).toEqual({ok:true,value:[]});
   });
 
   test("inserts, patches, gets, and deletes events through encoded event paths", async () => {
