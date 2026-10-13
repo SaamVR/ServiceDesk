@@ -4,9 +4,14 @@ import { classifyProviderFailure } from "./failure-policy";
 import { dispatchOutcomeBase, type CommittedOutboxDispatcher, type CommittedOutboxDispatchInput, type CommittedOutboxDispatchOutcome } from "./dispatch-port";
 
 function validUtcTime(value: unknown): boolean {
-  return typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) &&
-    Number.isFinite(Date.parse(value));
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?Z$/.exec(value);
+  if (!match) return false;
+  const parsed = new Date(value);
+  // JavaScript can normalize impossible dates such as February 30 to March 2.
+  // Compare the canonical UTC instant to the original calendar components.
+  const canonical = match[1] + "." + (match[2] ?? "").padEnd(3, "0") + "Z";
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === canonical;
 }
 
 /** Provider 2xx is not delivery, but even its acceptance receipt must be
@@ -59,7 +64,13 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
       expectedWorkspaceId: input.expectedWorkspaceId,
       expectedChannel: input.job.channel,
     });
-    if (!result.ok) return result;
+    if (!result.ok) {
+      // Provider adapters may include raw HTTP bodies, bearer tokens or
+      // recipient data in error Result.message. Never forward them to the
+      // persisted outbox or operator diagnostics.
+      return failure(input, "PROVIDER_ADAPTER_REJECTED",
+        "The provider adapter rejected this attempt; manual review required.");
+    }
 
     // A success receipt must not be applied to a different committed job.
     // Connector implementations and provider payloads cannot authorize a
@@ -76,7 +87,46 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
       return failure(input, "DISPATCH_OUTCOME_IDENTITY_MISMATCH",
         "Provider adapter returned an invalid receipt for the claimed outbox job; manual review required.");
     }
-    return result;
+    if (outcome.outcome !== "ACCEPTED") {
+      // Failure strings/evidence are untrusted adapter data. Preserve the
+      // classified state and a bounded machine code, not raw provider text.
+      const code = typeof outcome.code === "string" &&
+        /^[A-Z][A-Z0-9_]{0,79}$/.test(outcome.code)
+          ? outcome.code : "PROVIDER_FAILURE_UNVERIFIED";
+      const retry = outcome.outcome === "RETRYABLE_FAILURE" &&
+        Number.isSafeInteger(outcome.retryAfterSeconds) &&
+        (outcome.retryAfterSeconds ?? 0) > 0 &&
+        (outcome.retryAfterSeconds ?? 0) <= 86_400
+          ? { retryAfterSeconds: outcome.retryAfterSeconds } : {};
+      return { ok: true, value: {
+        ...dispatchOutcomeBase(input.job), outcome: outcome.outcome,
+        code, message: "Provider outcome recorded without raw response data.",
+        ...retry,
+      } };
+    }
+    // Successful provider acknowledgement is not permission to persist the
+    // adapter's arbitrary evidence notes or receipts. Keep only the verified
+    // channel/mode/time and a bounded opaque diagnostic id.
+    const rawEvidence = outcome.evidence;
+    const controlledId =
+      typeof rawEvidence.controlledId === "string" &&
+      /^[A-Za-z0-9_.:-]{1,128}$/.test(rawEvidence.controlledId)
+        ? { controlledId: rawEvidence.controlledId } : {};
+    return { ok: true, value: {
+      ...dispatchOutcomeBase(input.job),
+      outcome: "ACCEPTED",
+      providerMessageId: outcome.providerMessageId,
+      acceptedAt: outcome.acceptedAt,
+      providerMode: outcome.providerMode,
+      evidence: {
+        provider: input.job.channel,
+        mode: outcome.providerMode,
+        verification: rawEvidence.verification,
+        capturedAt: rawEvidence.capturedAt,
+        notes: [],
+        ...controlledId,
+      },
+    } };
   } catch {
     // Never persist raw exceptions from provider transports: they can contain
     // URLs, customer identifiers, credentials or response bodies.

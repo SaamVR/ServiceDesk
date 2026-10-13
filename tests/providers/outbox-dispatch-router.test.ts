@@ -48,6 +48,32 @@ describe("committed outbox dispatch router", () => {
     expect(unsupported.ok && unsupported.value).toMatchObject({ outcome: "TERMINAL_FAILURE", code: "UNSUPPORTED_DISPATCH_CHANNEL" });
   });
 
+  test("acceptance proof excludes raw notes, receipts and unsafe controlled references", async () => {
+    const claimed=job();
+    const sensitive="Bearer secret-key customer@example.com";
+    const output=await dispatchCommittedOutboxJob({
+      job:claimed,committedAt:"2026-10-11T00:00:00.000Z",attempt:1,
+      dispatchers:{WHATSAPP:{
+        async dispatch(){return {ok:true as const,value:{
+          ...dispatchOutcomeBase(claimed),outcome:"ACCEPTED" as const,
+          providerMessageId:"wamid.verified", acceptedAt:"2026-10-11T00:00:00.000Z",
+          providerMode:"SANDBOX" as const,
+          evidence:{provider:"WHATSAPP" as const,mode:"SANDBOX" as const,
+            verification:"PROVIDER_VERIFIED" as const,
+            capturedAt:"2026-10-11T00:00:00.000Z",
+            notes:[sensitive],redactedReceipt:"raw secret-provider-body="+sensitive,
+            controlledId:"unsafe id "+sensitive},
+        }};},
+      }},
+    });
+    expect(output).toMatchObject({ok:true,value:{outcome:"ACCEPTED",providerMessageId:"wamid.verified",
+      evidence:{provider:"WHATSAPP",mode:"SANDBOX",verification:"PROVIDER_VERIFIED",notes:[]}}});
+    expect(JSON.stringify(output)).not.toContain("secret-key");
+    expect(JSON.stringify(output)).not.toContain("secret-provider-body");
+    expect(JSON.stringify(output)).not.toContain("customer@example.com");
+    expect(JSON.stringify(output)).not.toContain("unsafe id");
+  });
+
   test("rejects mismatched adapter receipts before downstream outbox accounting", async () => {
     const claimed = job();
     const base = {
@@ -104,6 +130,11 @@ describe("committed outbox dispatch router", () => {
       { providerMessageId: "forged\nreceipt" },
       { acceptedAt: "not-a-date" },
       { acceptedAt: "2026-13-01T00:00:00Z" },
+      { acceptedAt: "2026-02-30T04:20:00Z" },
+      { acceptedAt: "2026-04-31T04:20:00Z" },
+      { acceptedAt: "2026-10-13T25:20:00Z" },
+      { acceptedAt: "2026-10-13T04:20:60Z" },
+      { evidence: { ...base.evidence, capturedAt: "2026-02-30T04:20:00Z" } },
       { providerMode: "OTHER" },
       { evidence: { ...base.evidence, provider: "EMAIL" } },
       { evidence: { ...base.evidence, mode: "LIVE" } },
@@ -123,6 +154,44 @@ describe("committed outbox dispatch router", () => {
       });
       expect(JSON.stringify(result)).not.toContain("forged\\nreceipt");
     }
+  });
+
+  test("never persists untrusted adapter failure bodies or malformed retry evidence", async () => {
+    const secret = "Bearer never-log-me customer@example.com body=private-provider-payload";
+    const claimed = job();
+    for (const unsafe of [
+      { outcome: "RETRYABLE_FAILURE", code: "HTTP_429", message: secret,
+        retryAfterSeconds: 10_000_000, evidence: { notes: [secret] } },
+      { outcome: "TERMINAL_FAILURE", code: "TOO LONG " + secret,
+        message: secret, evidence: { notes: [secret] } },
+      { outcome: "SUPPRESSED", code: "QUIET_HOURS", message: secret },
+    ] as const) {
+      const result = await dispatchCommittedOutboxJob({
+        job: claimed, committedAt: claimed.createdAt, attempt: 1,
+        dispatchers: { WHATSAPP: {
+          async dispatch() { return { ok: true as const, value: {
+            ...dispatchOutcomeBase(claimed), ...unsafe,
+          } as unknown as CommittedOutboxDispatchOutcome }; },
+        } },
+      });
+      expect(result).toMatchObject({ ok: true, value: { outcome: unsafe.outcome, jobId: claimed.id } });
+      expect(JSON.stringify(result)).not.toContain("never-log-me");
+      expect(JSON.stringify(result)).not.toContain("customer@example.com");
+      expect(JSON.stringify(result)).not.toContain("private-provider-payload");
+      expect(JSON.stringify(result)).not.toContain("10000000");
+    }
+  });
+  test("redacts raw Result failures emitted by the transport port", async () => {
+    const secret="Bearer private-token customer@example.com";
+    const result=await dispatchCommittedOutboxJob({
+      job:job(),committedAt:"2026-10-04T12:01:00.000Z",attempt:1,
+      dispatchers:{WHATSAPP:{
+        async dispatch(){return {ok:false as const,code:"UNSAFE",message:secret};},
+      }},
+    });
+    expect(result).toMatchObject({ok:true,value:{outcome:"TERMINAL_FAILURE",code:"PROVIDER_ADAPTER_REJECTED"}});
+    expect(JSON.stringify(result)).not.toContain(secret);
+    expect(JSON.stringify(result)).not.toContain("private-token");
   });
 
   test("does not expose thrown provider exception messages in persistent dispatch outcome", async () => {

@@ -24,6 +24,7 @@ import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/r
 import { loadOperationalQuoteRateCard } from "@/server/core/operational-quote-rate-card";
 import { readVerifiedCustomerQuoteLineItems, type CustomerQuoteLineItem } from "./customer-quote-line-items";
 import { isVerifiedStaffCollectibleInvoice } from "./staff-invoice-collection-readiness";
+import { normalizeStaffPaymentReference } from "./manual-payment-reference";
 import { assessOperationalQuoteSend } from "./quote-send-readiness";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
 import { createPostgresVoiceMissedCallCommandPort } from "@/server/core/voice-missed-call-postgres";
@@ -1856,7 +1857,13 @@ export async function applyOperationalManualPayment(
   if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
     return { ok: false, message: "Enter a valid payment amount." };
   }
-  if (!reference.trim()) return { ok: false, message: "A payment reference is required." };
+  const verifiedReference = normalizeStaffPaymentReference(reference);
+  if (!verifiedReference) {
+    return { ok: false, message: "Enter a payment reference of up to 160 printable characters without control codes." };
+  }
+  if (!["CASH","BANK_TRANSFER","OTHER"].includes(method)) {
+    return { ok: false, message: "Select a supported offline payment method." };
+  }
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
   const branchAccess = await requireOperationalBranchResource(resolved.value, "invoice", invoiceId);
@@ -1887,7 +1894,7 @@ export async function applyOperationalManualPayment(
       amountMinor,
       currency: String(invoice.data.currency),
       method,
-      reference: reference.trim(),
+      reference: verifiedReference,
       occurredAt: new Date().toISOString(),
     },
     { idempotencyKey: "manual-payment-" + crypto.randomUUID(), now: new Date().toISOString() },

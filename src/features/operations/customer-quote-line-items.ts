@@ -37,6 +37,11 @@ export function readVerifiedCustomerQuoteLineItems(
         typeof row.description !== "string" || row.description.trim() !== row.description ||
         row.description.length < 1 || row.description.length > 140 ||
         /[\x00-\x1f\x7f]/.test(row.description) ||
+        // Untrusted snapshot descriptions are displayed and copied into
+        // customer-visible monetary summaries. Reject bidi override and
+        // invisible formatting characters that can spoof prices, direction
+        // or prepend misleading text without changing persisted totals.
+        /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(row.description) ||
         typeof row.amountMinor !== "number" || !Number.isSafeInteger(row.amountMinor) ||
         row.amountMinor < 0 || row.amountMinor > 1_000_000_000 ||
         typeof row.durationMinutes !== "number" || !Number.isSafeInteger(row.durationMinutes) ||
