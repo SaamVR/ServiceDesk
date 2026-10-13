@@ -5,6 +5,12 @@ on:
   push:
     branches: [feat/servicedesk-v4-l3-auth-rc-20261012, feat/servicedesk-v4-real-rls-uat-20261012, feat/servicedesk-v4-protected-qa-preflight-20261012, feat/v4-two-tenant-real-operations-rls-proof-20261012]
   workflow_dispatch:
+    inputs:
+      require_automation_evidence:
+        description: "Demand real persisted workflow, action and internal attention rows for BOTH distinct owners (read-only)"
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 concurrency:
@@ -27,6 +33,8 @@ jobs:
           node --check scripts/release/v4-private-rls-proof.mjs
           node --check scripts/release/v4-operational-rls-positive-negative.mjs
           node --test scripts/release/v4-operational-rls-positive-negative.test.mjs
+          node --check scripts/release/v4-automation-rls-positive-negative.mjs
+          node --test scripts/release/v4-automation-rls-positive-negative.test.mjs
       - name: Auth, owner bootstrap, verified identity and QA seed regression
         run: pnpm exec vitest run tests/e2e/v3-qa-registration-allowlist.test.ts tests/e2e/v3-owner-first-login.test.ts tests/e2e/v3-authorized-workspace-access.test.ts tests/e2e/v3-anonymous-definer-closure.test.ts tests/e2e/v3-qa-synthetic-persistence.test.ts tests/e2e/v3-qa-operations-rls-fallback.test.ts
       - run: pnpm typecheck
@@ -67,4 +75,5 @@ jobs:
           V4_QA_OWNER_B_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_B_PASSWORD }}
           V4_QA_OWNER_B_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_B_WORKSPACE }}
           V4_QA_REQUIRE_OPERATIONAL_EVIDENCE: "1"
+          V4_QA_REQUIRE_AUTOMATION_EVIDENCE: ${{ inputs.require_automation_evidence && '1' || '0' }}
         run: node scripts/release/v4-private-rls-proof.mjs
