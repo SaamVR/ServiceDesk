@@ -16,6 +16,7 @@ import {
 import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
 import { readCustomerInvoiceLedgerSummary } from "./customer-invoice-ledger-summary";
 import { customerBookingPaymentSummary } from "./customer-booking-payment-truth";
+import { latestCustomerConsentByPurpose } from "./customer-consent-display";
 import {
   acceptCustomerPortalQuote,
   holdCustomerPortalSlot,
@@ -598,12 +599,7 @@ function InvoiceView({
 }
 
 function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
-  const seen = new Set<string>();
-  const preferences = data.consents.filter((consent) => {
-    if (seen.has(consent.channel)) return false;
-    seen.add(consent.channel);
-    return true;
-  });
+  const preferences = latestCustomerConsentByPurpose(data.consents);
 
   async function changePreference(formData: FormData) {
     "use server";
@@ -692,7 +688,7 @@ function PreferencesView({ data }: { data: CustomerPortalSnapshot }) {
       <CustomerCard title="How changes work">
         <CustomerNotice
           title="Your latest choice is used"
-          description="Each channel uses your latest recorded choice. If Email, WhatsApp or SMS is not permitted by that latest choice, ServiceDesk blocks that outbound message."
+          description="You can review separate saved choices for each communication channel and purpose. These are stored consent records, not proof that a message was sent or that a provider accepted it."
           tone="info"
         />
       </CustomerCard>
