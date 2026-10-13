@@ -68,7 +68,14 @@ export async function testAuthorizedAiModelConnection(
   ].join(" ");
   let response: Awaited<ReturnType<ModelCaller>>;
   try {
-    response = await (deps.callModel ?? callAiModel)(config.value, {
+    // Diagnostic checks do not need the full business-inference token budget.
+    // Honor a stricter owner-configured cap, never raise it. This does not
+    // establish a daily spending limit or a durable provider receipt.
+    const probeConfig = {
+      ...config.value,
+      maxOutputTokens: Math.min(1536, config.value.maxOutputTokens ?? 4096),
+    };
+    response = await (deps.callModel ?? callAiModel)(probeConfig, {
       promptVersion: "servicedesk-v4-synthetic-ai-owner-connection-probe",
       conversationId: "synthetic-connection-probe",
       workspaceId: workspace.id,
