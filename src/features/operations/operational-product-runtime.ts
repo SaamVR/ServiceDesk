@@ -1907,9 +1907,11 @@ export async function applyOperationalQualityAction(
 }
 
 
+
 export async function calculateOperationalQuote(
   workspaceSlug: string,
   requestId: string,
+  humanConfirmedAddons?: { oven?: boolean },
 ): Promise<OperationalActionResult> {
   const resolved = await resolveStaffActor(workspaceSlug);
   if (!resolved.ok) return { ok: false, message: resolved.message };
@@ -1922,10 +1924,18 @@ export async function calculateOperationalQuote(
     ok: false,
     message: pricing.message + " No synthetic prices were used.",
   };
-  const facade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc, pricing.value);
+  // Only the signed-in staff server action supplies this separate affirmative
+  // choice; request service, branch and owner prices are re-read authoritatively.
+  const facade = createPostgresRequestQuoteCapacityFacadeMethods(
+    resolved.value.rpc, pricing.value, {
+      oven: humanConfirmedAddons?.oven === true,
+    },
+  );
   const result = await facade.calculateQuote(resolved.value.actor, requestId);
   return result.ok
-    ? { ok: true, message: "Quote calculated and saved." }
+    ? { ok: true, message: humanConfirmedAddons?.oven === true
+      ? "Quote calculated and saved. Review the persisted line items before sending; an oven charge requires confirmed customer agreement."
+      : "Quote calculated and saved. No optional oven charge was included." }
     : safeCoreFailure(result, "Could not calculate the quote. Check the request details and try again.");
 }
 
