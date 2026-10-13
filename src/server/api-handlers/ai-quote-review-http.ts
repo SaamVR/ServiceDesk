@@ -3,7 +3,7 @@ import { readBoundedWebhookBody } from "./inbound-http-policy";
 import {
   generateAuthorizedQuoteReview,
   type StaffQuoteReview, type QuoteReviewInput,
-} from "../ai/request-brief";
+} from "../ai/quote-review";
 
 type Run = (input: QuoteReviewInput) => Promise<Result<StaffQuoteReview>>;
 
