@@ -15,10 +15,11 @@ export type CustomerInvoiceCheckoutFacts = {
 export function customerInvoiceSandboxReadiness(f: CustomerInvoiceCheckoutFacts):
   | { ok: true; amountMinor: number; currency: string }
   | { ok: false; reason: "NOT_ISSUED" | "NO_BALANCE" | "AMOUNTS_MISMATCH" | "CURRENCY_MISMATCH" | "QUOTE_NOT_ACCEPTED" } {
-  if (f.status === "PAID" || f.balanceMinor === 0) return { ok: false, reason: "NO_BALANCE" };
+  if (f.status === "PAID") return { ok: false, reason: "NO_BALANCE" };
   if (f.status !== "ISSUED" && f.status !== "PARTIALLY_PAID") {
     return { ok: false, reason: "NOT_ISSUED" };
   }
+  if (f.balanceMinor === 0) return { ok: false, reason: "NO_BALANCE" };
   const values = [f.totalMinor, f.allocatedMinor, f.refundedMinor, f.balanceMinor];
   if (values.some(n => !Number.isSafeInteger(n) || n < 0) ||
       f.totalMinor <= 0 || f.balanceMinor <= 0 ||

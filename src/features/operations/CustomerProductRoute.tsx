@@ -568,7 +568,7 @@ function InvoiceView({
           </div>
         ) : (
           <CustomerNotice
-            title={invoiceReadiness.reason === "NO_BALANCE" ? "Payment complete" : "Invoice payment needs review"}
+            title={invoiceReadiness.reason === "NO_BALANCE" ? "No balance due" : "Invoice payment needs review"}
             description={invoiceReadiness.reason === "NO_BALANCE"
               ? "This invoice has no outstanding balance."
               : invoiceReadiness.reason === "NOT_ISSUED"
