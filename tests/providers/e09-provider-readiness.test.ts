@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildV1ProviderReadinessSystem, evaluateEvidencePromotion, PROVIDER_REQUIREMENTS, validateControlledProofManifest } from "../../src/server/integrations/readiness/provider-readiness";
+import { buildProviderReadinessReport, buildV1ProviderReadinessSystem, evaluateEvidencePromotion, PROVIDER_REQUIREMENTS, validateControlledProofManifest } from "../../src/server/integrations/readiness/provider-readiness";
 
 const buildSha = "a8711c1bffda3cd52cf9938f87ce8546ba7bef1d";
 const now = "2026-10-05T00:00:00.000Z";
@@ -15,6 +15,51 @@ describe("E09 provider readiness and evidence closure", () => {
     expect(payment?.mode).toBe("SANDBOX");
     expect(payment?.verificationState).not.toBe("PROVIDER_VERIFIED");
     expect(system.closure.missingConfiguration.EMAIL).toContain("EMAIL_API_KEY_REFERENCE");
+  });
+
+  test("does not authorize provider checks when configuration is only claimed", () => {
+    const report=buildProviderReadinessReport({
+      provider:"WEBHOOK_N8N",
+      configurationState:"CONFIGURED",
+      configuredRequirements:["AUTHORITATIVE_ENDPOINT"],
+      implementationState:"PROVIDER_VERIFIED",
+    });
+    expect(report.configurationState).toBe("PARTIAL");
+    expect(report.canRunControlledProof).toBe(false);
+    expect(report.verificationState).not.toBe("PROVIDER_VERIFIED");
+    expect(report.missingConfiguration).toContain("ALLOWED_HOST");
+  });
+
+  test("requires a controlled evidence reference before a verified label", () => {
+    const missing=buildProviderReadinessReport({
+      provider:"WHATSAPP",
+      configuredRequirements:PROVIDER_REQUIREMENTS.WHATSAPP,
+      configurationState:"CONFIGURED",
+      implementationState:"PROVIDER_VERIFIED",
+    });
+    expect(missing.verificationState).toBe("CONTRACT_TESTED");
+    expect(missing.canRunControlledProof).toBe(true);
+    const observed=buildProviderReadinessReport({
+      provider:"WHATSAPP",
+      configuredRequirements:PROVIDER_REQUIREMENTS.WHATSAPP,
+      configurationState:"CONFIGURED",
+      implementationState:"PROVIDER_VERIFIED",
+      evidence:{
+        operation:"whatsapp.outbound",reference:"controlled-redacted-proof",
+        capturedAt:"2026-10-05T00:00:00.000Z",
+      },
+    });
+    expect(observed.verificationState).toBe("PROVIDER_VERIFIED");
+    const blocked=buildProviderReadinessReport({
+      provider:"WHATSAPP",
+      configuredRequirements:PROVIDER_REQUIREMENTS.WHATSAPP,
+      configurationState:"BLOCKED",
+      implementationState:"PROVIDER_VERIFIED",
+      evidence:{operation:"whatsapp.outbound",reference:"proof",
+        capturedAt:"2026-10-05T00:00:00.000Z"},
+    });
+    expect(blocked.verificationState).toBe("CONTRACT_TESTED");
+    expect(blocked.canRunControlledProof).toBe(false);
   });
 
   test("enforces promotion and controlled-proof manifest rules", () => {
