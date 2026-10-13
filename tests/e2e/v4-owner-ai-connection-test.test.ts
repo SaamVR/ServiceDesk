@@ -52,6 +52,21 @@ describe("V4 owner-only actual model connection probe", () => {
       durableReceipt: false,
     } });
     expect(t.callModel).toHaveBeenCalledOnce();
+    expect(t.callModel.mock.calls[0]?.[0]).toMatchObject({maxOutputTokens:1536});
+  });
+
+  it("never increases a stricter configured per-inference token ceiling", async () => {
+    const t = setup();
+    const readConfig = vi.fn(() => ({ ok:true as const, value:{
+      apiBaseUrl:"https://api.openai.com/v1", apiKey:"not-a-live-key",
+      model:"diagnostic-test", maxOutputTokens:1024,
+      now:()=> "2026-10-12T00:00:00.000Z",
+    }}));
+    const result = await testAuthorizedAiModelConnection("fictional-qa", {
+      ...t.deps, readConfig,
+    });
+    expect(result.ok).toBe(true);
+    expect(t.callModel.mock.calls[0]?.[0]).toMatchObject({maxOutputTokens:1024});
   });
 
   it("rejects dispatchers before configuration lookup or model invocation", async () => {
