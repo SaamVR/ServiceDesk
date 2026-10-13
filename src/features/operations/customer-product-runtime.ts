@@ -16,6 +16,7 @@ import {
 } from "./customer-quote-line-items";
 import { verifyCustomerQuoteForAcceptance } from "./customer-quote-acceptance";
 import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
+import { verifiedSandboxSessionShape } from "./sandbox-session-integrity";
 
 type Row = Record<string, unknown>;
 
@@ -947,6 +948,9 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
   }
 
   const row = sessionResult.data as Row;
+  if (!verifiedSandboxSessionShape(row)) {
+    return { ok: false, message: "The stored checkout details could not be verified. Start again from the invoice or quote." };
+  }
   const purpose = String(row.purpose) === "DEPOSIT" ? "DEPOSIT" : "BALANCE";
   const quoteId = String(row.quote_id);
   const invoiceId = textValue(row, "invoice_id");
@@ -1035,6 +1039,9 @@ export async function completeCustomerSandboxCheckout(
   }
 
   const session = sessionResult.data as Row;
+  if (!verifiedSandboxSessionShape(session)) {
+    return { ok: false, message: "The stored checkout details could not be verified. No sandbox payment was applied." };
+  }
   const purpose = String(session.purpose) === "DEPOSIT" ? "DEPOSIT" : "BALANCE";
   const quoteId = String(session.quote_id);
   const invoiceId = textValue(session, "invoice_id");
