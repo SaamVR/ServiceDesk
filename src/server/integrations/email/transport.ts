@@ -127,6 +127,12 @@ function bodyFor(config: EmailTransportConfig, job: TransactionalEmailJob): stri
 }
 
 function parseProviderMessageId(body: string, resend: boolean): Result<string> {
+  // Bound provider output even when the HTTP transport returns a complete
+  // string, before JSON decoding or treating a 2xx status as acceptance.
+  if (typeof body !== "string" || Buffer.byteLength(body, "utf8") > 16_384) {
+    return { ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE",
+      message: "Email provider acceptance response is invalid or oversized." };
+  }
   try {
     const parsed = JSON.parse(body) as { id?: unknown; messageId?: unknown } | null;
     // Resend documents an "id" field: a legacy generic transport's
@@ -134,7 +140,8 @@ function parseProviderMessageId(body: string, resend: boolean): Result<string> {
     const id = resend
       ? parsed?.id
       : (typeof parsed?.id === "string" ? parsed.id : parsed?.messageId);
-    if (typeof id !== "string" || !id.trim() ||
+    if (typeof id !== "string" ||
+        !/^[A-Za-z0-9_.:-]{1,256}$/.test(id) ||
         (resend && !/^[A-Za-z0-9_-]{1,128}$/.test(id))) {
       return { ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE", message: "Email provider response has no valid message id." };
     }
