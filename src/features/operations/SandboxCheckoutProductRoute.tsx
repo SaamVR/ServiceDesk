@@ -78,8 +78,9 @@ export async function SandboxCheckoutProductRoute({
   const isDeposit = session.purpose === "DEPOSIT";
   const amountChanged = session.currentAmountMinor !== session.amountMinor;
   const resourceClosed = isDeposit
-    ? session.resourceStatus !== "HELD"
-    : ["PAID", "VOID"].includes(session.resourceStatus);
+    ? session.resourceStatus !== "HELD" || session.quoteStatus !== "ACCEPTED"
+    : !["ISSUED", "PARTIALLY_PAID"].includes(session.resourceStatus)
+      || session.quoteStatus !== "ACCEPTED";
   const canComplete =
     session.status === "OPEN"
     && !amountChanged
@@ -140,6 +141,7 @@ export async function SandboxCheckoutProductRoute({
               value={formatMinorMoney(session.currentAmountMinor, session.currency)}
             />
             <CustomerSummaryItem label={isDeposit ? "Hold status" : "Invoice status"} value={session.resourceStatus.replaceAll("_", " ")} />
+            <CustomerSummaryItem label="Linked quote" value={(session.quoteStatus ?? "UNVERIFIED").replaceAll("_", " ")} />
             <CustomerSummaryItem label="Checkout mode" value="SANDBOX / DEMO" />
             <CustomerSummaryItem label="Session expires" value={formatWhen(session.expiresAt, session.workspaceTimezone)} />
           </CustomerSummaryList>
@@ -173,8 +175,8 @@ export async function SandboxCheckoutProductRoute({
           <CustomerNotice
             title={isDeposit ? "Service-time hold changed" : "Invoice is no longer payable"}
             description={isDeposit
-              ? "The service-time hold is no longer open for this deposit. Return to the quote and choose an available time again."
-              : "The invoice is paid or void, so this sandbox payment cannot be completed."}
+              ? "The service-time hold or linked accepted quote is no longer eligible. Return to the quote and choose an available time again."
+              : "The linked quote must be accepted and the invoice issued with a payable balance. Review the invoice before continuing."}
             tone="warning"
           />
         ) : null}
