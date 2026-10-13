@@ -15,6 +15,7 @@ import {
   type CustomerQuoteLineItem,
 } from "./customer-quote-line-items";
 import { verifyCustomerQuoteForAcceptance } from "./customer-quote-acceptance";
+import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
 
 type Row = Record<string, unknown>;
 
@@ -750,6 +751,9 @@ async function loadCustomerOwnedInvoiceContext(resolved: ResolvedCustomer, invoi
     invoice: {
       id: String(invoiceRow.id),
       status: String(invoiceRow.status),
+      totalMinor: numberValue(invoiceRow, "total_minor"),
+      allocatedMinor: numberValue(invoiceRow, "allocated_minor"),
+      refundedMinor: numberValue(invoiceRow, "refunded_minor"),
       balanceMinor: numberValue(invoiceRow, "balance_minor"),
       currency: String(invoiceRow.currency),
     },
@@ -851,12 +855,20 @@ export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): P
 
   const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
   if (!context.ok) return context;
-  if (context.invoice.status === "VOID") return { ok: false, message: "This invoice is void and cannot be paid." };
-  if (context.invoice.status === "PAID" || context.invoice.balanceMinor <= 0) {
-    return { ok: false, message: "This invoice has no outstanding balance." };
-  }
-  if (context.invoice.currency !== context.quote.currency) {
-    return { ok: false, message: "Invoice and quote currency do not match. Payment requires staff review." };
+  // No session for draft/void invoices, unaccepted quotes or inconsistent balances.
+  const readiness = customerInvoiceSandboxReadiness({
+    ...context.invoice,
+    quoteStatus: context.quote.status,
+    quoteCurrency: context.quote.currency,
+  });
+  if (!readiness.ok) {
+    return { ok: false, message: readiness.reason === "NO_BALANCE"
+      ? "This invoice has no outstanding balance."
+      : readiness.reason === "NOT_ISSUED"
+        ? "This invoice is not issued for payment."
+        : readiness.reason === "QUOTE_NOT_ACCEPTED"
+          ? "The linked quote must be accepted before invoice payment."
+          : "Invoice amounts or currency require staff review before checkout." };
   }
 
   const now = new Date();
