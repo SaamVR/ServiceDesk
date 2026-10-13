@@ -812,7 +812,12 @@ export async function launchCustomerDepositSandboxCheckout(
     .limit(1)
     .maybeSingle();
 
-  if (!existing.error && existing.data) {
+  // Without the existing session read, creating a second checkout can
+  // duplicate a still-open amount. Fail closed; never guess it is absent.
+  if (existing.error) {
+    return { ok: false, message: "Existing checkout state could not be verified. Please retry safely." };
+  }
+  if (existing.data) {
     const expiresAt = new Date(String(existing.data.expires_at)).getTime();
     if (
       Number(existing.data.amount_minor) === quote.depositMinor
@@ -883,7 +888,12 @@ export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): P
     .limit(1)
     .maybeSingle();
 
-  if (!existing.error && existing.data) {
+  // Without the existing session read, creating a second checkout can
+  // duplicate a still-open amount. Fail closed; never guess it is absent.
+  if (existing.error) {
+    return { ok: false, message: "Existing checkout state could not be verified. Please retry safely." };
+  }
+  if (existing.data) {
     const expiresAt = new Date(String(existing.data.expires_at)).getTime();
     if (
       Number(existing.data.amount_minor) === context.invoice.balanceMinor
