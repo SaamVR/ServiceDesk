@@ -14,9 +14,14 @@ export function readVerifiedCustomerQuoteLineItems(
   snapshot: unknown,
   savedSubtotalMinor: number,
   savedDurationMinutes: number,
+  savedTaxMinor: number,
+  savedTotalMinor: number,
 ): CustomerQuoteLineItem[] | null {
   if (!Number.isSafeInteger(savedSubtotalMinor) || savedSubtotalMinor < 0 ||
       !Number.isSafeInteger(savedDurationMinutes) || savedDurationMinutes < 0 ||
+      !Number.isSafeInteger(savedTaxMinor) || savedTaxMinor < 0 ||
+      !Number.isSafeInteger(savedTotalMinor) || savedTotalMinor < 0 ||
+      savedSubtotalMinor + savedTaxMinor !== savedTotalMinor ||
       !snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
 
   const candidate = (snapshot as Record<string, unknown>).lineItems;
