@@ -81,6 +81,9 @@ export async function generateAuthorizedQuoteReview(
   // about an earlier quote version cannot be shown as the current review.
   if (typeof row.version !== "number" || !Number.isSafeInteger(row.version) ||
       row.version < 1) return fail("AI_QUOTE_VERSION_UNVERIFIED");
+  const authorizedVersion = row.version;
+  const authorizedStatus = row.status;
+  const authorizedExpiry = row.valid_until;
   const numbers = [row.subtotal_minor,row.tax_minor,row.total_minor,
     row.deposit_minor,row.balance_minor,row.duration_minutes];
   if (numbers.some(n => typeof n !== "number" || !Number.isSafeInteger(n) || n < 0) ||
@@ -136,9 +139,9 @@ export async function generateAuthorizedQuoteReview(
     const saved = current?.data;
     if (current?.error || !saved) return fail("AI_QUOTE_RECHECK_UNAVAILABLE");
     if (saved.id !== input.quoteId || saved.workspace_id !== workspace.id ||
-        saved.version !== row.version || saved.status !== row.status ||
+        saved.version !== authorizedVersion || saved.status !== authorizedStatus ||
         typeof saved.valid_until !== "string" ||
-        saved.valid_until !== row.valid_until ||
+        saved.valid_until !== authorizedExpiry ||
         Date.parse(saved.valid_until) <= Date.now()) {
       return fail("AI_QUOTE_STALE");
     }
