@@ -117,7 +117,11 @@ export interface CustomerBootstrapInput { displayName: string; authUserId?: stri
 export interface PropertyBootstrapInput { customerId: string; label?: string; addressLine1: string; addressLine2?: string; city: string; region?: string; postalCode: string; countryCode?: string; serviceNotes?: string; accessNotes?: string; }
 export interface CapacitySlotSeedInput { slotId?: string; crewId: string; startsAt: string; endsAt: string; capacityMinutes: number; timezone?: string; }
 
-export function createPostgresRequestQuoteCapacityFacadeMethods(client: SupabaseRpcClient, persistedRateCard?: RateCard): Pick<ServiceDeskFacade, "createRequest" | "updateRequest" | "calculateQuote" | "sendQuote" | "acceptQuote" | "findSlots" | "holdSlot"> {
+export function createPostgresRequestQuoteCapacityFacadeMethods(
+  client: SupabaseRpcClient,
+  persistedRateCard?: RateCard,
+  humanConfirmedAddons?: { oven?: boolean },
+): Pick<ServiceDeskFacade, "createRequest" | "updateRequest" | "calculateQuote" | "sendQuote" | "acceptQuote" | "findSlots" | "holdSlot"> {
   return {
     async createRequest(ctx: ActorContext, input: CreateRequestInput, meta: CommandMeta): Promise<Result<RequestDTO>> {
       const { data, error } = await client.rpc<RpcRow>("servicedesk_create_request", {
@@ -149,9 +153,11 @@ export function createPostgresRequestQuoteCapacityFacadeMethods(client: Supabase
         serviceCode: request.value.serviceCode,
         bedrooms: request.value.bedrooms,
         bathrooms: request.value.bathrooms,
-        // Neither the saved request nor the quote command carries an approved
-        // optional oven choice. Never bill that add-on automatically.
-        oven: false,
+        // A move-out request is not add-on consent. Only a separate
+        // human-confirmed checkbox passed by the authorized server action
+        // can add an oven charge at the owner-configured rate.
+        oven: request.value.serviceCode === "MOVE_OUT" &&
+          humanConfirmedAddons?.oven === true,
         now: new Date().toISOString(),
       }, persistedRateCard);
 
