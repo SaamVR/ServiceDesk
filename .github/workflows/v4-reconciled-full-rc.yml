@@ -6,6 +6,9 @@ on:
     branches:
       - feat/servicedesk-v4-reconciled-qa-shell-20261012
       - deploy/servicedesk-v3-public-review-20261011
+  pull_request:
+    branches:
+      - deploy/servicedesk-v3-public-review-20261011
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,7 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Verify review candidate exact source commit
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - uses: pnpm/action-setup@v4
         with:
           version: 10.17.1
@@ -52,7 +60,7 @@ jobs:
         env:
           V3_PUBLIC_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           V3_PUBLIC_OUTPUT: ${{ runner.temp }}/sd-v4-reconcile-public
-          V3_PUBLIC_CHECKOUT_SHA: ${{ github.sha }}
+          V3_PUBLIC_CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/release/v3-public-browser-proof.mjs
       - name: Real Chrome synthetic operations journey
         env:
