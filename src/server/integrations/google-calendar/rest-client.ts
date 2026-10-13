@@ -98,6 +98,11 @@ async function callGoogleCalendar(
   request: Omit<GoogleCalendarHttpRequest, "headers" | "signal">,
   http: GoogleCalendarHttpTransport,
 ): Promise<Result<GoogleCalendarHttpResponse>> {
+  const trustedBase = "https://www.googleapis.com/calendar/v3";
+  if (!([trustedBase, trustedBase + "/"].includes(config.calendarApiBaseUrl))) {
+    return { ok:false, code:"GOOGLE_CALENDAR_CONFIGURATION_BLOCKED",
+      message:"Google Calendar requires the official HTTPS API endpoint." };
+  }
   if (!config.calendarApiBaseUrl || !config.accessToken) {
     return { ok: false, code: "GOOGLE_CALENDAR_CONFIGURATION_BLOCKED", message: "Google Calendar REST configuration is incomplete." };
   }
