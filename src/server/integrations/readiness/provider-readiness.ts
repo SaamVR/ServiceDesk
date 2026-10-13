@@ -44,11 +44,34 @@ export function buildProviderReadinessReport(input: ProviderReadinessInput): Pro
   const required = PROVIDER_REQUIREMENTS[input.provider];
   const configured = new Set(input.configuredRequirements ?? []);
   const missingConfiguration = required.filter((item) => !configured.has(item));
-  const configurationState = input.reauthRequired ? "REAUTH_REQUIRED" : input.configurationState ?? (missingConfiguration.length === required.length ? "NOT_CONFIGURED" : missingConfiguration.length > 0 ? "PARTIAL" : "CONFIGURED");
-  const blockers = uniq([...(input.blockers ?? []), ...missingConfiguration.map((item) => `MISSING_${item}`), ...(input.transientIssue ? [input.transientIssue] : [])]);
+  const claimedState = input.configurationState ??
+    (missingConfiguration.length === required.length ? "NOT_CONFIGURED" :
+      missingConfiguration.length > 0 ? "PARTIAL" : "CONFIGURED");
+  // An explicit CONFIGURED flag must never hide requirements we can prove
+  // absent, and missing values must not authorize an external probe.
+  const configurationState: ConfigurationState = input.reauthRequired
+    ? "REAUTH_REQUIRED" : claimedState === "CONFIGURED" &&
+      missingConfiguration.length > 0 ? "PARTIAL" : claimedState;
+  const blockers = uniq([...(input.blockers ?? []),
+    ...missingConfiguration.map((item) => `MISSING_${item}`),
+    ...(input.transientIssue ? [input.transientIssue] : [])]);
   const implementationState = input.implementationState ?? "IMPLEMENTED";
-  const verificationState = input.provider === "PAYMENT" && mode === "SANDBOX" && implementationState === "PROVIDER_VERIFIED" ? "CONTRACT_TESTED" : implementationState;
-  return { provider: input.provider, mode, implementationState, configurationState, verificationState, missingConfiguration, evidence: input.evidence, blockers, canRunControlledProof: configurationState === "CONFIGURED" && !blockers.some((item) => !item.startsWith("MISSING_")), sandboxOnly: input.provider === "PAYMENT" || mode === "SANDBOX", noClaimNotes: noClaimNotes(input.provider, mode) };
+  // A reported verification state alone cannot substitute for controlled
+  // provider evidence; payment remains sandbox-only by owner policy.
+  const hasReceipt = Boolean(input.evidence?.operation?.trim() &&
+    input.evidence.reference?.trim() && Number.isFinite(
+      Date.parse(input.evidence.capturedAt)));
+  const verificationState = implementationState === "PROVIDER_VERIFIED" &&
+    (input.provider === "PAYMENT" || !hasReceipt ||
+     missingConfiguration.length > 0 || configurationState !== "CONFIGURED")
+    ? "CONTRACT_TESTED" : implementationState;
+  const canRunControlledProof = configurationState === "CONFIGURED" &&
+    missingConfiguration.length === 0 && blockers.length === 0;
+  return { provider: input.provider, mode, implementationState,
+    configurationState, verificationState, missingConfiguration,
+    evidence: input.evidence, blockers, canRunControlledProof,
+    sandboxOnly: input.provider === "PAYMENT" || mode === "SANDBOX",
+    noClaimNotes: noClaimNotes(input.provider, mode) };
 }
 
 export function buildV1ProviderReadinessRegistry(inputs: ProviderReadinessInput[] = []): ProviderReadinessReport[] {
