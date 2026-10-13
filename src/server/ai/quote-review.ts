@@ -4,7 +4,7 @@ import { readVerifiedCustomerQuoteLineItems } from "@/features/operations/custom
 import { readConfiguredAiRuntimeConfig } from "./runtime-config";
 import { callAiModel } from "./model-transport";
 import { createFetchAiModelTransport } from "./fetch-transport";
-import { validateRequestBriefDraft } from "./request-brief-safety";
+import { validateStaffQuoteReviewDraft } from "./quote-review-safety";
 
 type Resolver = typeof resolveStaffActor;
 type QuoteAuthorization = typeof requireOperationalBranchResource;
@@ -123,7 +123,7 @@ export async function generateAuthorizedQuoteReview(
     if (response.value.requestedToolCalls?.length || response.value.citations?.length) {
       return fail("AI_QUOTE_OUTPUT_UNSAFE");
     }
-    const review = validateRequestBriefDraft(response.value.replyDraft);
+    const review = validateStaffQuoteReviewDraft(response.value.replyDraft);
     if (!review) return fail("AI_QUOTE_OUTPUT_UNSAFE");
     return { ok: true, value: {
       state: "AI_STAFF_REVIEW_ONLY", quoteId: input.quoteId, model: config.value.model,
