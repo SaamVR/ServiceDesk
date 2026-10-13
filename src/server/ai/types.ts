@@ -75,6 +75,8 @@ export interface AiMessageInput {
   customerId?: string;
   simulateProviderFailure?: boolean;
   handoverActive?: boolean;
+  /** Server-owned cancellation. Never serialize this into model content. */
+  signal?: AbortSignal;
 }
 
 export interface AiService {
