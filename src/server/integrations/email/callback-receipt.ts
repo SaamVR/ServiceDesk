@@ -26,10 +26,17 @@ function nonblank(value: string | undefined): value is string {
 }
 
 export function redactEmailRecipientRef(value: string): string {
+  // The callback is signed, but provider recipient references can still
+  // contain arbitrary supplied bytes. Keep diagnostics single-line,
+  // visibly redacted, and free from spoofed Unicode direction controls.
+  if (typeof value !== "string" || value.length > 512 ||
+      /[\x00-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/iu.test(value)) {
+    return "recipient:redacted";
+  }
   const trimmed = value.trim().toLowerCase();
-  const at = trimmed.indexOf("@");
-  if (at > 0) return `email:${trimmed.slice(0, 2)}…@${trimmed.slice(at + 1)}`;
-  if (trimmed.length <= 4) return "recipient:redacted";
+  const email = /^([a-z0-9._%+-]+)@([a-z0-9.-]+\.[a-z]{2,63})$/.exec(trimmed);
+  if (email) return `email:${email[1].slice(0, 2)}…@${email[2]}`;
+  if (!/^[a-z0-9:_-]{5,128}$/.test(trimmed)) return "recipient:redacted";
   return `recipient:${trimmed.slice(0, 2)}…${trimmed.slice(-2)}`;
 }
 
