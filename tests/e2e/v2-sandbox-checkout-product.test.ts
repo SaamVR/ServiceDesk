@@ -48,7 +48,8 @@ describe("V2 customer sandbox checkout product", () => {
   it("guards stale sessions against authoritative deposit, hold and invoice changes", () => {
     expect(runtime).toContain("quoteContext.quote.depositMinor !== sessionAmount");
     expect(runtime).toContain('String(holdResult.data.status) !== "HELD"');
-    expect(runtime).toContain("context.invoice.balanceMinor !== sessionAmount");
+    expect(runtime).toContain("customerInvoiceSandboxReadiness({");
+    expect(runtime).toContain("!readiness.ok || readiness.amountMinor !== sessionAmount");
     expect(runtime).toContain('status: "CANCELLED"');
     expect(checkout).toContain("Deposit amount changed");
     expect(checkout).toContain("Service-time hold changed");

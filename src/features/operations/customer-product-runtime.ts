@@ -1119,14 +1119,16 @@ export async function completeCustomerSandboxCheckout(
 
     const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
     if (!context.ok) return { ok: false, ...refs, message: context.message };
-    if (
-      context.invoice.status === "VOID"
-      || context.invoice.status === "PAID"
-      || context.invoice.balanceMinor <= 0
-    ) {
-      return { ok: false, ...refs, message: "The invoice is already closed. No sandbox payment was applied." };
-    }
-    if (context.invoice.balanceMinor !== sessionAmount || context.invoice.currency !== sessionCurrency) {
+    // Re-evaluate the current ledger when FINALIZING, not just when opening
+    // checkout. A draft/void invoice or an unaccepted quote must not turn an
+    // earlier session into a signed fixture payment.
+    const readiness = customerInvoiceSandboxReadiness({
+      ...context.invoice,
+      quoteStatus: context.quote.status,
+      quoteCurrency: context.quote.currency,
+    });
+    if (!readiness.ok || readiness.amountMinor !== sessionAmount ||
+        readiness.currency !== sessionCurrency) {
       await resolved.value.service
         .from("sandbox_checkout_sessions")
         .update({ status: "CANCELLED", updated_at: nowIso })
@@ -1136,7 +1138,7 @@ export async function completeCustomerSandboxCheckout(
       return {
         ok: false,
         ...refs,
-        message: "The invoice balance changed. Open a new sandbox payment session for the current balance.",
+        message: "The invoice or quote changed or payment is no longer authorized. Recheck the current invoice before opening a new sandbox session.",
       };
     }
 
