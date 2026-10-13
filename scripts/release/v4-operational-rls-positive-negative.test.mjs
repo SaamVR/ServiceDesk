@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  operationalProofTables, verifyTwoTenantOperationalRls,
+  operationalProofTables, requireDistinctConfirmedOwnerSessions, verifyTwoTenantOperationalRls,
 } from "./v4-operational-rls-positive-negative.mjs";
 
 const ownerA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -85,5 +85,41 @@ test("same-tenant or unverified actor cannot pass as two separate customers", as
   await assert.rejects(
     verifyTwoTenantOperationalRls(a,a,fail),
     /DISTINCT_ACTORS_REQUIRED/,
+  );
+});
+
+test("real-session UAT rejects one authenticated owner controlling two workspaces", () => {
+  assert.throws(
+    () => requireDistinctConfirmedOwnerSessions(
+      { id: ownerA, userId: "signed-in-user-a" },
+      { id: ownerB, userId: "signed-in-user-a" },
+      fail,
+    ),
+    /DISTINCT_CONFIRMED_OWNER_USERS_REQUIRED/,
+  );
+});
+test("real-session UAT rejects two identities mapped to one workspace", () => {
+  assert.throws(
+    () => requireDistinctConfirmedOwnerSessions(
+      { id: ownerA, userId: "signed-in-user-a" },
+      { id: ownerA, userId: "signed-in-user-b" },
+      fail,
+    ),
+    /DISTINCT_WORKSPACE_IDS_REQUIRED/,
+  );
+});
+test("real-session UAT accepts distinct verified users and workspace IDs only", () => {
+  assert.doesNotThrow(() => requireDistinctConfirmedOwnerSessions(
+    { id: ownerA, userId: "signed-in-user-a" },
+    { id: ownerB, userId: "signed-in-user-b" },
+    fail,
+  ));
+  assert.throws(
+    () => requireDistinctConfirmedOwnerSessions(
+      { id: ownerA, userId: "" },
+      { id: ownerB, userId: "signed-in-user-b" },
+      fail,
+    ),
+    /DISTINCT_CONFIRMED_OWNER_USERS_REQUIRED/,
   );
 });
