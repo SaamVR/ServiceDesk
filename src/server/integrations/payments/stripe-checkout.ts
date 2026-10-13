@@ -71,13 +71,39 @@ function amountForPurpose(input: CheckoutInput): Result<number> {
   return { ok: true, value: input.quote.totalMinor };
 }
 
-function checkoutUrlSafe(value: string): boolean {
+function checkoutReturnUrl(value: string): URL | null {
+  if (!value || value.trim() !== value || value.length > 2048) return null;
   try {
     const url = new URL(value);
-    return url.protocol === "https:";
-  } catch {
-    return false;
-  }
+    if (url.protocol !== "https:" || !url.hostname.includes(".") ||
+        url.username || url.password || url.port || url.hash ||
+        url.hostname === "localhost" || url.hostname.endsWith(".localhost") ||
+        url.hostname.endsWith(".local") || url.hostname.endsWith(".internal") ||
+        /^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(url.hostname)) return null;
+    return url;
+  } catch { return null; }
+}
+
+/** Stripe credentials and checkout redirects must remain on provider hosts. */
+function authorizedStripeConfig(config: StripeCheckoutConfig): boolean {
+  return ["https://api.stripe.com/v1", "https://api.stripe.com/v1/"].includes(config.apiBaseUrl) &&
+    (config.mode === "SANDBOX"
+      ? /^(?:sk|rk)_test_[A-Za-z0-9]+$/.test(config.secretKey)
+      : config.mode === "LIVE" &&
+        /^(?:sk|rk)_live_[A-Za-z0-9]+$/.test(config.secretKey)) &&
+    /^[A-Za-z0-9_:-]{3,120}$/.test(config.providerAccountId) &&
+    (!config.connectedAccountId || /^acct_[A-Za-z0-9_]{3,120}$/.test(config.connectedAccountId));
+}
+
+function hostedStripeCheckout(urlValue: unknown): boolean {
+  if (typeof urlValue !== "string" || urlValue.trim() !== urlValue ||
+      urlValue.length > 2048) return false;
+  try {
+    const url = new URL(urlValue);
+    return url.origin === "https://checkout.stripe.com" &&
+      url.pathname.length > 1 && !url.username && !url.password &&
+      !url.port && !url.hash;
+  } catch { return false; }
 }
 
 function checkoutMetadata(input: CheckoutInput): Record<string, string> {
@@ -119,8 +145,11 @@ function normalizeCheckoutInput(input: CheckoutInput, now: string): Result<{ amo
     return { ok: false, code: "INVALID_CHECKOUT_AMOUNT", message: "Checkout amount must be a positive integer minor-unit value." };
   }
 
-  if (!checkoutUrlSafe(input.successUrl) || !checkoutUrlSafe(input.cancelUrl)) {
-    return { ok: false, code: "PAYMENT_CHECKOUT_URL_INVALID", message: "Checkout success/cancel URLs must use HTTPS." };
+  const success = checkoutReturnUrl(input.successUrl);
+  const cancel = checkoutReturnUrl(input.cancelUrl);
+  if (!success || !cancel || success.origin !== cancel.origin) {
+    return { ok: false, code: "PAYMENT_CHECKOUT_URL_INVALID",
+      message: "Checkout success and cancellation require one valid HTTPS application origin." };
   }
 
   const currency = input.quote.currency.toLowerCase();
@@ -194,7 +223,7 @@ export async function createStripeCheckoutSession(
   input: CheckoutInput,
   http: StripeCheckoutHttpTransport,
 ): Promise<Result<CheckoutSession>> {
-  if (!config.apiBaseUrl || !config.secretKey || !config.providerAccountId) {
+  if (!authorizedStripeConfig(config)) {
     return { ok: false, code: "PAYMENT_CONFIGURATION_BLOCKED", message: "Stripe checkout configuration is incomplete." };
   }
 
@@ -230,10 +259,19 @@ export async function createStripeCheckoutSession(
       return { ok: false, code: "PAYMENT_PROVIDER_INVALID_RESPONSE", message: "Payment provider checkout response was malformed JSON." };
     }
 
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false, code: "PAYMENT_PROVIDER_INVALID_RESPONSE",
+        message: "Payment provider checkout response was not an object." };
+    }
     const providerSessionId = (parsed as { id?: unknown }).id;
     const checkoutUrl = (parsed as { url?: unknown }).url;
-    if (typeof providerSessionId !== "string" || !providerSessionId.trim() || typeof checkoutUrl !== "string" || !checkoutUrlSafe(checkoutUrl)) {
-      return { ok: false, code: "PAYMENT_PROVIDER_INVALID_RESPONSE", message: "Payment provider checkout response is missing a valid session ID or HTTPS URL." };
+    const expectedPrefix = config.mode === "LIVE" ? "cs_live_" : "cs_test_";
+    if (typeof providerSessionId !== "string" ||
+        !providerSessionId.startsWith(expectedPrefix) ||
+        !/^cs_(?:live|test)_[A-Za-z0-9_]+$/.test(providerSessionId) ||
+        !hostedStripeCheckout(checkoutUrl)) {
+      return { ok: false, code: "PAYMENT_PROVIDER_INVALID_RESPONSE",
+        message: "Provider checkout session ID or hosted URL was not verified." };
     }
 
     return {
