@@ -15,6 +15,7 @@ import {
 } from "@/components/product/CustomerFacingShell";
 import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
 import { readCustomerInvoiceLedgerSummary } from "./customer-invoice-ledger-summary";
+import { customerBookingPaymentSummary } from "./customer-booking-payment-truth";
 import {
   acceptCustomerPortalQuote,
   holdCustomerPortalSlot,
@@ -464,6 +465,7 @@ function BookingView({
 
   const request = data.requests.find((item) => item.id === visit.requestId);
   const invoice = data.invoices.find((item) => item.visitId === visit.id);
+  const payment = invoice ? customerBookingPaymentSummary(invoice) : null;
 
   return (
     <div className={styles.stack}>
@@ -484,13 +486,9 @@ function BookingView({
         {invoice ? (
           <>
             <CustomerNotice
-              title={invoice.balanceMinor > 0 ? "Invoice available" : "Payment up to date"}
-              description={
-                invoice.balanceMinor > 0
-                  ? "Your invoice has an outstanding balance. Open it to review the current amount and payment status."
-                  : "There is no outstanding balance on this invoice."
-              }
-              tone={invoice.balanceMinor > 0 ? "warning" : "success"}
+              title={payment?.title ?? "Invoice available"}
+              description={payment?.detail ?? "Open your invoice to review its current status."}
+              tone={payment?.tone ?? "info"}
             />
             <div className={styles.detailActions}>
               <a className={styles.primaryButton} href={"/portal/invoices/" + encodeURIComponent(invoice.id)}>
