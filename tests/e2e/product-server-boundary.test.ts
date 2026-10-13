@@ -60,7 +60,14 @@ describe("Product server boundary recovery", () => {
       expect(source(path), path).not.toContain("OperationalFixtureRoute");
     }
 
-    expect(source("src/app/tour/page.tsx")).toContain("OperationalFixtureRoute");
+    const publicTour = source("src/app/tour/page.tsx");
+    const sampleSandbox = source("src/app/sandbox/page.tsx");
+    expect(publicTour).toContain('href="/sandbox"');
+    expect(publicTour).toContain('tourScenarios.map');
+    expect(publicTour).toContain("no live provider evidence");
+    expect(publicTour).not.toContain("OperationalFixtureRoute");
+    expect(sampleSandbox).toContain("SandboxJourney");
+    expect(sampleSandbox).toContain("index: false");
   });
 
   it("keeps Product action factories away from Core repositories and provider adapters", () => {
