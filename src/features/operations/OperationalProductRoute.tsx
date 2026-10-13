@@ -60,6 +60,7 @@ import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { AiRequestBrief } from "./AiRequestBrief";
 import { AiQuoteReview } from "./AiQuoteReview";
+import { StaffQuoteChecklist } from "./StaffQuoteChecklist";
 import { AiOperationsStatus } from "./AiOperationsStatus";
 import { OwnerQuoteAcceptedAutomationControl } from "./OwnerQuoteAcceptedAutomationControl";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
@@ -1602,6 +1603,8 @@ function QuotesView({
             <p role="alert">The saved quote breakdown cannot be reconciled.
               Do not send this quote; recalculate it using verified owner rates.</p>
           )}
+
+          <StaffQuoteChecklist quote={selectedQuote} loadedAt={data.loadedAt} />
 
           {selectedQuote.lineItems?.length && ["APPROVED", "SENT"].includes(selectedQuote.status) ? (
             <AiQuoteReview key={selectedQuote.id} workspaceSlug={workspaceSlug}

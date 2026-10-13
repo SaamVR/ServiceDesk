@@ -14,6 +14,7 @@ import {
   type CustomerFacingTone,
 } from "@/components/product/CustomerFacingShell";
 import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
+import { readCustomerInvoiceLedgerSummary } from "./customer-invoice-ledger-summary";
 import {
   acceptCustomerPortalQuote,
   holdCustomerPortalSlot,
@@ -522,12 +523,14 @@ function InvoiceView({
   }
 
   const selectedInvoiceId = invoice.id;
+  const ledger = readCustomerInvoiceLedgerSummary(invoice);
   const linkedQuote = data.quotes.find(item => item.id === invoice.quoteId);
   const invoiceReadiness = customerInvoiceSandboxReadiness({
     ...invoice,
     quoteStatus: linkedQuote?.status ?? "",
     quoteCurrency: linkedQuote?.currency ?? "",
   });
+  const paymentReviewReason = invoiceReadiness.ok ? "AMOUNTS_MISMATCH" : invoiceReadiness.reason;
 
   async function openSandboxCheckout() {
     "use server";
@@ -541,19 +544,31 @@ function InvoiceView({
   return (
     <CustomerCard
       className={styles.detailCard}
-      title={formatMinorMoney(invoice.totalMinor, invoice.currency)}
+      title={ledger.ok ? formatMinorMoney(ledger.totalMinor, invoice.currency) : "Invoice needs review"}
       eyebrow="Invoice total"
       action={<Status value={invoice.status} />}
     >
-      <CustomerSummaryList>
-        <CustomerSummaryItem label="Total" value={formatMinorMoney(invoice.totalMinor, invoice.currency)} />
-        <CustomerSummaryItem label="Paid / allocated" value={formatMinorMoney(invoice.allocatedMinor, invoice.currency)} />
-        <CustomerSummaryItem label="Refunded" value={formatMinorMoney(invoice.refundedMinor, invoice.currency)} />
-        <CustomerSummaryItem label="Balance" value={formatMinorMoney(invoice.balanceMinor, invoice.currency)} />
-      </CustomerSummaryList>
+      {ledger.ok ? (
+        <>
+          <CustomerSummaryList>
+            <CustomerSummaryItem label="Total" value={formatMinorMoney(ledger.totalMinor, invoice.currency)} />
+            <CustomerSummaryItem label="Payments recorded (gross)" value={formatMinorMoney(ledger.grossAllocatedMinor, invoice.currency)} />
+            <CustomerSummaryItem label="Refunds recorded" value={formatMinorMoney(ledger.refundsMinor, invoice.currency)} />
+            <CustomerSummaryItem label="Net applied after refunds" value={formatMinorMoney(ledger.netAppliedMinor, invoice.currency)} />
+            <CustomerSummaryItem label="Outstanding balance" value={formatMinorMoney(ledger.balanceMinor, invoice.currency)} />
+          </CustomerSummaryList>
+          <CustomerNotice title="How these amounts are calculated"
+            description="Net applied is recorded payment allocations minus recorded refunds. These are saved invoice figures, not independent bank or provider receipts."
+            tone="info" />
+        </>
+      ) : (
+        <CustomerNotice title="Saved invoice amounts need verification"
+          description="The recorded allocations, refunds and outstanding balance do not reconcile. No payment can be started until the business reviews this invoice."
+          tone="warning" />
+      )}
 
       <div className={styles.detailActions}>
-        {invoiceReadiness.ok ? (
+        {invoiceReadiness.ok && ledger.ok ? (
           <div className={styles.stack}>
             <CustomerNotice
               title="Sandbox payment available"
@@ -568,15 +583,15 @@ function InvoiceView({
           </div>
         ) : (
           <CustomerNotice
-            title={invoiceReadiness.reason === "NO_BALANCE" ? "No balance due" : "Invoice payment needs review"}
-            description={invoiceReadiness.reason === "NO_BALANCE"
+            title={paymentReviewReason === "NO_BALANCE" ? "No balance due" : "Invoice payment needs review"}
+            description={paymentReviewReason === "NO_BALANCE"
               ? "This invoice has no outstanding balance."
-              : invoiceReadiness.reason === "NOT_ISSUED"
+              : paymentReviewReason === "NOT_ISSUED"
                 ? "This invoice has not been issued for payment."
-                : invoiceReadiness.reason === "QUOTE_NOT_ACCEPTED"
+                : paymentReviewReason === "QUOTE_NOT_ACCEPTED"
                   ? "Accept the related customer quote before making a payment."
                   : "The invoice balance or currency needs staff verification before checkout."}
-            tone={invoiceReadiness.reason === "NO_BALANCE" ? "success" : "warning"}
+            tone={paymentReviewReason === "NO_BALANCE" ? "success" : "warning"}
           />
         )}
       </div>
