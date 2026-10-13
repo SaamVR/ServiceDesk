@@ -101,7 +101,9 @@ export function createQuoteFacadeMethods(deps: QuoteFacadeDependencies): Pick<Se
         serviceCode: input.value.serviceCode,
         bedrooms: input.value.bedrooms,
         bathrooms: input.value.bathrooms,
-        oven: input.value.serviceCode === "MOVE_OUT",
+        // The saved request does not record an affirmative oven add-on choice.
+        // Move-out service alone never authorizes an extra oven charge.
+        oven: false,
         now: deps.now(),
       });
       if (quote.ok === false) return quote;
