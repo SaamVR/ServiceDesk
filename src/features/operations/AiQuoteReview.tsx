@@ -17,12 +17,9 @@ function ScopedQuoteReview({
   workspaceSlug, quoteId, configured,
 }: { workspaceSlug: string; quoteId: string; configured: boolean }) {
   const [state, setState] = useState<State>({ busy: false });
-  const [generation, setGeneration] = useState(0);
 
   async function generate() {
     if (!configured || state.busy) return;
-    const token = generation + 1;
-    setGeneration(token);
     setState({ busy: true });
     try {
       const result = await generateQuoteReviewAction(workspaceSlug, quoteId);
