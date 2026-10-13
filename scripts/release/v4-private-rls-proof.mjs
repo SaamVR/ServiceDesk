@@ -9,6 +9,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { requireDistinctConfirmedOwnerSessions, verifyTwoTenantOperationalRls } from "./v4-operational-rls-positive-negative.mjs";
+import { verifyTwoTenantAutomationRls } from "./v4-automation-rls-positive-negative.mjs";
 
 const projectHost = "cpmmgivhlkfbiwzhlcey.supabase.co";
 const env = process.env;
@@ -79,6 +80,11 @@ async function main() {
     } else {
       // Negative reads against empty tables are not business-data RLS proof.
       console.log("REAL_AUTHENTICATED_STAGING_CORE_RLS_PRECHECK_PASS: owner sessions and foreign workspace restrictions only; operational row evidence NOT VERIFIED");
+    }
+    if (env.V4_QA_REQUIRE_AUTOMATION_EVIDENCE === "1") {
+      await verifyTwoTenantAutomationRls(a,b,fail);
+      await verifyTwoTenantAutomationRls(b,a,fail);
+      console.log("REAL_AUTHENTICATED_STAGING_AUTOMATION_RLS_POSITIVE_NEGATIVE_PASS: own persisted execution/action/attention and foreign tenant denial for distinct owners; provider delivery not tested");
     }
   } finally {
     await Promise.allSettled(dbs.map(db => db.auth.signOut()));
