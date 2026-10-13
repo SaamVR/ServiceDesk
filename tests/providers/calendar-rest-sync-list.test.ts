@@ -69,6 +69,58 @@ describe("Google Calendar REST event list sync", () => {
     if (result.ok) expect(result.value.nextSyncToken).toBe("sync-new");
   });
 
+  test("rejects forged Google API host before sending bearer token", async () => {
+    let calls=0;
+    const http:GoogleCalendarHttpTransport=async()=>{
+      calls++;
+      return {status:200,body:JSON.stringify({items:[]})};
+    };
+    for(const calendarApiBaseUrl of [
+      "http://www.googleapis.com/calendar/v3",
+      "https://www.googleapis.com.evil.test/calendar/v3",
+      "https://www.googleapis.com:444/calendar/v3",
+      "https://www.googleapis.com/calendar/v3/freeBusy",
+      "https://u:p@www.googleapis.com/calendar/v3",
+    ]) {
+      expect(await listGoogleCalendarEventsPage(
+        {...config,calendarApiBaseUrl},{calendarId:"crew@example.test"},http))
+        .toMatchObject({ok:false,code:"GOOGLE_CALENDAR_CONFIGURATION_BLOCKED"});
+    }
+    expect(calls).toBe(0);
+  });
+
+  test("denies incompatible, invalid or oversized sync inputs", async () => {
+    let calls=0;
+    const http:GoogleCalendarHttpTransport=async()=> {
+      calls++;
+      return {status:200,body:JSON.stringify({items:[]})};
+    };
+    for(const request of [
+      {calendarId:"crew@example.test",syncToken:"cursor",timeMin:"2026-10-13T00:00:00Z"},
+      {calendarId:"crew@example.test",pageToken:"x".repeat(4097)},
+      {calendarId:"crew@example.test",timeMin:"not-a-clock"},
+      {calendarId:"crew@example.test",timeMin:"2026-10-20T00:00:00Z",timeMax:"2026-10-19T00:00:00Z"},
+      {calendarId:"crew@example.test" + String.fromCharCode(10)},
+    ]) {
+      expect((await listGoogleCalendarEventsPage(config,request,http)).ok).toBe(false);
+    }
+    expect(calls).toBe(0);
+  });
+
+  test("does not mark malformed provider pages as an empty verified calendar", async () => {
+    const badBodies=[
+      "null","[]","{}",JSON.stringify({items:[{id:"valid"},{oops:"missing-id"}]}),
+      JSON.stringify({items:[],nextPageToken:"x",nextSyncToken:"y"}),
+      JSON.stringify({items:[],nextPageToken:[]}),
+      "x".repeat(512*1024+1),
+    ];
+    for(const body of badBodies){
+      const result=await listGoogleCalendarEventsPage(config,
+        {calendarId:"crew@example.test"},async()=>({status:200,body}));
+      expect(result).toMatchObject({ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE"});
+    }
+  });
+
   test("normalizes expired sync token into full rebuild error", async () => {
     const result = await listGoogleCalendarEventsPage(
       config,

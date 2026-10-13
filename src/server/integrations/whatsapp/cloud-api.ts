@@ -207,6 +207,12 @@ export async function sendWhatsAppCloudMessage(
 
     if (response.status < 200 || response.status >= 300) return normalizedHttpFailure(response.status);
 
+    if (typeof response.body !== "string" ||
+        Buffer.byteLength(response.body, "utf8") > 16_384) {
+      return { ok: false, code: "WHATSAPP_INVALID_RESPONSE",
+        message: "WhatsApp provider acceptance response is malformed or too large." };
+    }
+
     let parsed: unknown;
     try {
       parsed = JSON.parse(response.body);

@@ -13,6 +13,7 @@ import {
   CustomerSummaryList,
   type CustomerFacingTone,
 } from "@/components/product/CustomerFacingShell";
+import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
 import {
   acceptCustomerPortalQuote,
   holdCustomerPortalSlot,
@@ -521,6 +522,12 @@ function InvoiceView({
   }
 
   const selectedInvoiceId = invoice.id;
+  const linkedQuote = data.quotes.find(item => item.id === invoice.quoteId);
+  const invoiceReadiness = customerInvoiceSandboxReadiness({
+    ...invoice,
+    quoteStatus: linkedQuote?.status ?? "",
+    quoteCurrency: linkedQuote?.currency ?? "",
+  });
 
   async function openSandboxCheckout() {
     "use server";
@@ -546,13 +553,7 @@ function InvoiceView({
       </CustomerSummaryList>
 
       <div className={styles.detailActions}>
-        {invoice.status === "PAID" || invoice.balanceMinor <= 0 ? (
-          <CustomerNotice
-            title="Payment complete"
-            description="This invoice has no outstanding balance."
-            tone="success"
-          />
-        ) : (
+        {invoiceReadiness.ok ? (
           <div className={styles.stack}>
             <CustomerNotice
               title="Sandbox payment available"
@@ -565,6 +566,18 @@ function InvoiceView({
               </button>
             </form>
           </div>
+        ) : (
+          <CustomerNotice
+            title={invoiceReadiness.reason === "NO_BALANCE" ? "No balance due" : "Invoice payment needs review"}
+            description={invoiceReadiness.reason === "NO_BALANCE"
+              ? "This invoice has no outstanding balance."
+              : invoiceReadiness.reason === "NOT_ISSUED"
+                ? "This invoice has not been issued for payment."
+                : invoiceReadiness.reason === "QUOTE_NOT_ACCEPTED"
+                  ? "Accept the related customer quote before making a payment."
+                  : "The invoice balance or currency needs staff verification before checkout."}
+            tone={invoiceReadiness.reason === "NO_BALANCE" ? "success" : "warning"}
+          />
         )}
       </div>
     </CustomerCard>

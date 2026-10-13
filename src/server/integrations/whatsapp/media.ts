@@ -110,6 +110,29 @@ export function authorizeWhatsAppInboundMediaFetch(
   };
 }
 
+/** Never forward the WhatsApp bearer token to URLs supplied in provider metadata. */
+function trustedMediaDownloadUrl(value: string): boolean {
+  if (!value || value.length > 4096 || value.trim() !== value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" &&
+      (url.hostname === "lookaside.fbsbx.com" ||
+       url.hostname === "graph.facebook.com") &&
+      !url.port && !url.username && !url.password && !url.hash;
+  } catch { return false; }
+}
+
+function trustedMediaConfig(config: WhatsAppMediaFetchConfig): boolean {
+  return (config.graphBaseUrl === "https://graph.facebook.com" ||
+          config.graphBaseUrl === "https://graph.facebook.com/") &&
+    /^v[0-9]{1,3}\.[0-9]{1,2}$/.test(config.apiVersion) &&
+    Boolean(config.accessToken && config.accessToken.trim() === config.accessToken) &&
+    Number.isSafeInteger(config.maxBytes) &&
+    config.maxBytes > 0 && config.maxBytes <= 20 * 1024 * 1024 &&
+    Array.isArray(config.allowedMimeTypes) &&
+    config.allowedMimeTypes.length > 0;
+}
+
 function mediaMetadataUrl(config: WhatsAppMediaFetchConfig, mediaId: string): string {
   const base = config.graphBaseUrl.replace(/\/+$/, "");
   const version = config.apiVersion.replace(/^\/+|\/+$/g, "");
@@ -159,7 +182,8 @@ export async function fetchWhatsAppInboundMedia(
   config: WhatsAppMediaFetchConfig,
   http: WhatsAppMediaHttpTransport,
 ): Promise<Result<RetrievedWhatsAppMedia>> {
-  if (!authorization.providerFetchAllowed || !config.graphBaseUrl || !config.apiVersion || !config.accessToken) {
+  if (!authorization.providerFetchAllowed || !trustedMediaConfig(config) ||
+      !/^[A-Za-z0-9_.:-]{1,512}$/.test(authorization.mediaId)) {
     return { ok: false, code: "WHATSAPP_MEDIA_CONFIGURATION_BLOCKED", message: "WhatsApp media retrieval configuration is incomplete." };
   }
 
@@ -173,6 +197,11 @@ export async function fetchWhatsAppInboundMedia(
   if (!metadataResponse.ok) return metadataResponse;
   if (metadataResponse.value.status < 200 || metadataResponse.value.status >= 300) return httpFailure(metadataResponse.value.status);
 
+  if (typeof metadataResponse.value.bodyText !== "string" ||
+      Buffer.byteLength(metadataResponse.value.bodyText,"utf8") > 16_384) {
+    return {ok:false,code:"WHATSAPP_MEDIA_INVALID_RESPONSE",
+      message:"WhatsApp media metadata is missing or exceeds the allowed size."};
+  }
   const metadata = parseJson(metadataResponse.value.bodyText);
   if (!metadata.ok) return metadata;
   const downloadUrl = typeof metadata.value.url === "string" ? metadata.value.url : undefined;
@@ -180,6 +209,14 @@ export async function fetchWhatsAppInboundMedia(
   const declaredSize = typeof metadata.value.file_size === "number" ? metadata.value.file_size : undefined;
   if (!downloadUrl || !mimeType || typeof declaredSize !== "number") {
     return { ok: false, code: "WHATSAPP_MEDIA_INVALID_RESPONSE", message: "WhatsApp media metadata is missing url, mime_type, or file_size." };
+  }
+  if (!trustedMediaDownloadUrl(downloadUrl)) {
+    return {ok:false,code:"WHATSAPP_MEDIA_DOWNLOAD_URL_BLOCKED",
+      message:"WhatsApp media download URL is outside authorized Meta HTTPS hosts."};
+  }
+  if (!Number.isSafeInteger(declaredSize) || declaredSize < 0) {
+    return {ok:false,code:"WHATSAPP_MEDIA_INVALID_RESPONSE",
+      message:"WhatsApp media metadata contains an invalid file size."};
   }
   if (!config.allowedMimeTypes.map((type) => type.toLowerCase()).includes(mimeType)) {
     return { ok: false, code: "WHATSAPP_MEDIA_MIME_BLOCKED", message: "WhatsApp media MIME type is not allowed for retrieval." };
@@ -197,6 +234,10 @@ export async function fetchWhatsAppInboundMedia(
   if (!downloadResponse.ok) return downloadResponse;
   if (downloadResponse.value.status < 200 || downloadResponse.value.status >= 300) return httpFailure(downloadResponse.value.status);
 
+  if (!(downloadResponse.value.bytes instanceof Uint8Array)) {
+    return {ok:false,code:"WHATSAPP_MEDIA_INVALID_RESPONSE",
+      message:"WhatsApp media download did not return binary content."};
+  }
   const downloadedBytes = downloadResponse.value.bytes ?? new Uint8Array();
   const contentLength = Number(downloadResponse.value.headers["content-length"] ?? downloadResponse.value.headers["Content-Length"] ?? downloadedBytes.byteLength);
   const observedSize = Number.isFinite(contentLength) ? Math.max(contentLength, downloadedBytes.byteLength) : downloadedBytes.byteLength;

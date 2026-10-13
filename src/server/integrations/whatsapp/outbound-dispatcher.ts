@@ -27,6 +27,9 @@ export interface WhatsAppOutboundDispatchStore {
   loadLatestOutboxJob(jobId: string): Promise<OutboxJob | null>;
   loadProviderAccount(workspaceId: string): Promise<WhatsAppProviderAccountRegistration | null>;
   loadTemplate(templateKey: string): Promise<WhatsAppTemplateRegistryEntry | null>;
+  /** Optional durable acceptance preflight: prevent duplicate sends on retries. */
+  loadRecordedProviderAcceptance?(workspaceId: string,
+    idempotencyKey: string): Promise<ProviderSendResult | null>;
   recordProviderAcceptance(input: RecordWhatsAppProviderAcceptanceInput): Promise<{
     status: WhatsAppAcceptanceRecordStatus;
     result: ProviderSendResult;
@@ -55,7 +58,10 @@ function missingRequiredTemplate(): Result<never> {
 function assertConversationVersionIsCurrent(queuedJob: OutboxJob, latestJob: OutboxJob): Result<true> {
   const queuedVersion = queuedJob.handoverGuard?.expectedConversationVersion;
   const latestVersion = latestJob.handoverGuard?.expectedConversationVersion;
-  if (queuedVersion !== undefined && latestVersion !== undefined && queuedVersion !== latestVersion) {
+  if ((queuedJob.handoverGuard?.conversationId &&
+        latestJob.handoverGuard?.conversationId !==
+          queuedJob.handoverGuard.conversationId) ||
+      (queuedVersion !== undefined && latestVersion !== queuedVersion)) {
     return {
       ok: false,
       code: "STALE_CONVERSATION_VERSION",
@@ -69,6 +75,21 @@ export async function dispatchWhatsAppOutboxJob(input: DispatchWhatsAppOutboxJob
   const latestJob = await input.store.loadLatestOutboxJob(input.queuedJob.id);
   if (!latestJob) {
     return { ok: false, code: "OUTBOX_JOB_NOT_FOUND", message: "WhatsApp outbox job no longer exists at dispatch time." };
+  }
+
+  // A queued dispatch cannot silently send a replacement recipient, template
+  // or idempotency identity loaded under the same outbox primary key.
+  if (latestJob.id !== input.queuedJob.id ||
+      latestJob.workspaceId !== input.queuedJob.workspaceId ||
+      latestJob.channel !== input.queuedJob.channel ||
+      latestJob.purpose !== input.queuedJob.purpose ||
+      latestJob.idempotencyKey !== input.queuedJob.idempotencyKey ||
+      latestJob.recipient.recipientRef !==
+        input.queuedJob.recipient.recipientRef ||
+      latestJob.freeformText !== input.queuedJob.freeformText ||
+      latestJob.templateKey !== input.queuedJob.templateKey) {
+    return {ok:false,code:"STALE_OUTBOX_JOB",
+      message:"WhatsApp queued job identity or customer-facing content changed before dispatch."};
   }
 
   const conversationVersion = assertConversationVersionIsCurrent(input.queuedJob, latestJob);
@@ -92,6 +113,24 @@ export async function dispatchWhatsAppOutboxJob(input: DispatchWhatsAppOutboxJob
       locale: input.config.templateLanguageCode ?? "en_US",
     });
     if (!templateReady.ok) return templateReady;
+  }
+
+  // A durable acceptance lookup lets the integrator short-circuit
+  // replays BEFORE hitting the provider. A post-send duplicate receipt alone
+  // cannot prevent customers receiving a second message.
+  if (input.store.loadRecordedProviderAcceptance) {
+    const recorded = await input.store.loadRecordedProviderAcceptance(
+      latestJob.workspaceId, prepared.value.dispatch.idempotencyKey);
+    if (recorded) {
+      if (recorded.jobId !== latestJob.id) {
+        return {ok:false,code:"WHATSAPP_ACCEPTANCE_SCOPE_MISMATCH",
+          message:"Previously recorded acceptance refers to another outbox job."};
+      }
+      return {ok:true,value:{...recorded,
+        deliverySemantics:"PROVIDER_ACCEPTANCE_ONLY",
+        acceptanceRecordStatus:"DUPLICATE",
+        providerAccountRef:providerAccount.providerAccountRef}};
+    }
   }
 
   const sent = await sendConfiguredWhatsAppCloudMessage(

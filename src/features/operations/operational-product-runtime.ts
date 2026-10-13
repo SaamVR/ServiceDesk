@@ -22,6 +22,7 @@ import { createPostgresReportingPlatformFacadeMethods } from "@/server/core/repo
 import { createPostgresRecurrenceFacadeMethods } from "@/server/core/recurrence-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
 import { loadOperationalQuoteRateCard } from "@/server/core/operational-quote-rate-card";
+import { readVerifiedCustomerQuoteLineItems, type CustomerQuoteLineItem } from "./customer-quote-line-items";
 import { assessOperationalQuoteSend } from "./quote-send-readiness";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
 import { createPostgresVoiceMissedCallCommandPort } from "@/server/core/voice-missed-call-postgres";
@@ -156,6 +157,10 @@ export interface OperationalPhotoSuggestion {
 }
 
 export interface OperationalQuote {
+  /** null means saved charge details are unavailable or do not reconcile. */
+  lineItems?: CustomerQuoteLineItem[] | null;
+  subtotalMinor?: number;
+  taxMinor?: number;
   id: string;
   requestId: string;
   version: number;
@@ -1289,6 +1294,12 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     version: numberValue(row, "version", 1),
     status: String(row.status),
     currency: String(row.currency ?? "USD"),
+    subtotalMinor: numberValue(row, "subtotal_minor"),
+    taxMinor: numberValue(row, "tax_minor"),
+    lineItems: readVerifiedCustomerQuoteLineItems(
+      row.snapshot, numberValue(row, "subtotal_minor"), numberValue(row, "duration_minutes"),
+      numberValue(row, "tax_minor"), numberValue(row, "total_minor"),
+    ),
     totalMinor: numberValue(row, "total_minor"),
     depositMinor: numberValue(row, "deposit_minor"),
     balanceMinor: numberValue(row, "balance_minor"),

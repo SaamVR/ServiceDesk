@@ -15,6 +15,7 @@ import {
   type CustomerQuoteLineItem,
 } from "./customer-quote-line-items";
 import { verifyCustomerQuoteForAcceptance } from "./customer-quote-acceptance";
+import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
 
 type Row = Record<string, unknown>;
 
@@ -125,6 +126,8 @@ export type CustomerPortalActionResult =
   | { ok: false; message: string };
 
 export interface CustomerSandboxCheckoutSession {
+  /** From the actual customer-owned saved quote, never from session metadata. */
+  quoteStatus?: string;
   id: string;
   purpose: "DEPOSIT" | "BALANCE";
   invoiceId?: string;
@@ -750,6 +753,9 @@ async function loadCustomerOwnedInvoiceContext(resolved: ResolvedCustomer, invoi
     invoice: {
       id: String(invoiceRow.id),
       status: String(invoiceRow.status),
+      totalMinor: numberValue(invoiceRow, "total_minor"),
+      allocatedMinor: numberValue(invoiceRow, "allocated_minor"),
+      refundedMinor: numberValue(invoiceRow, "refunded_minor"),
       balanceMinor: numberValue(invoiceRow, "balance_minor"),
       currency: String(invoiceRow.currency),
     },
@@ -808,7 +814,12 @@ export async function launchCustomerDepositSandboxCheckout(
     .limit(1)
     .maybeSingle();
 
-  if (!existing.error && existing.data) {
+  // Without the existing session read, creating a second checkout can
+  // duplicate a still-open amount. Fail closed; never guess it is absent.
+  if (existing.error) {
+    return { ok: false, message: "Existing checkout state could not be verified. Please retry safely." };
+  }
+  if (existing.data) {
     const expiresAt = new Date(String(existing.data.expires_at)).getTime();
     if (
       Number(existing.data.amount_minor) === quote.depositMinor
@@ -851,12 +862,20 @@ export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): P
 
   const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
   if (!context.ok) return context;
-  if (context.invoice.status === "VOID") return { ok: false, message: "This invoice is void and cannot be paid." };
-  if (context.invoice.status === "PAID" || context.invoice.balanceMinor <= 0) {
-    return { ok: false, message: "This invoice has no outstanding balance." };
-  }
-  if (context.invoice.currency !== context.quote.currency) {
-    return { ok: false, message: "Invoice and quote currency do not match. Payment requires staff review." };
+  // No session for draft/void invoices, unaccepted quotes or inconsistent balances.
+  const readiness = customerInvoiceSandboxReadiness({
+    ...context.invoice,
+    quoteStatus: context.quote.status,
+    quoteCurrency: context.quote.currency,
+  });
+  if (!readiness.ok) {
+    return { ok: false, message: readiness.reason === "NO_BALANCE"
+      ? "This invoice has no outstanding balance."
+      : readiness.reason === "NOT_ISSUED"
+        ? "This invoice is not issued for payment."
+        : readiness.reason === "QUOTE_NOT_ACCEPTED"
+          ? "The linked quote must be accepted before invoice payment."
+          : "Invoice amounts or currency require staff review before checkout." };
   }
 
   const now = new Date();
@@ -871,7 +890,12 @@ export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): P
     .limit(1)
     .maybeSingle();
 
-  if (!existing.error && existing.data) {
+  // Without the existing session read, creating a second checkout can
+  // duplicate a still-open amount. Fail closed; never guess it is absent.
+  if (existing.error) {
+    return { ok: false, message: "Existing checkout state could not be verified. Please retry safely." };
+  }
+  if (existing.data) {
     const expiresAt = new Date(String(existing.data.expires_at)).getTime();
     if (
       Number(existing.data.amount_minor) === context.invoice.balanceMinor
@@ -941,6 +965,7 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
 
   let currentAmountMinor: number;
   let resourceStatus: string;
+  let quoteStatus: string | undefined;
 
   if (purpose === "DEPOSIT") {
     const quoteContext = await loadCustomerOwnedQuoteContext(resolved.value, quoteId);
@@ -960,12 +985,14 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
 
     currentAmountMinor = quoteContext.quote.depositMinor;
     resourceStatus = String(holdResult.data.status);
+    quoteStatus = quoteContext.quote.status;
   } else {
     if (!invoiceId) return { ok: false, message: "This balance checkout is missing its invoice reference." };
     const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
     if (!context.ok) return context;
     currentAmountMinor = context.invoice.balanceMinor;
     resourceStatus = context.invoice.status;
+    quoteStatus = context.quote.status;
   }
 
   return {
@@ -982,6 +1009,7 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
       expiresAt,
       currentAmountMinor,
       resourceStatus,
+      quoteStatus,
       workspaceName: resolved.value.workspace.name,
       customerName: resolved.value.customer.displayName,
       workspaceTimezone: resolved.value.workspace.timezone,
@@ -1097,14 +1125,16 @@ export async function completeCustomerSandboxCheckout(
 
     const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
     if (!context.ok) return { ok: false, ...refs, message: context.message };
-    if (
-      context.invoice.status === "VOID"
-      || context.invoice.status === "PAID"
-      || context.invoice.balanceMinor <= 0
-    ) {
-      return { ok: false, ...refs, message: "The invoice is already closed. No sandbox payment was applied." };
-    }
-    if (context.invoice.balanceMinor !== sessionAmount || context.invoice.currency !== sessionCurrency) {
+    // Re-evaluate the current ledger when FINALIZING, not just when opening
+    // checkout. A draft/void invoice or an unaccepted quote must not turn an
+    // earlier session into a signed fixture payment.
+    const readiness = customerInvoiceSandboxReadiness({
+      ...context.invoice,
+      quoteStatus: context.quote.status,
+      quoteCurrency: context.quote.currency,
+    });
+    if (!readiness.ok || readiness.amountMinor !== sessionAmount ||
+        readiness.currency !== sessionCurrency) {
       await resolved.value.service
         .from("sandbox_checkout_sessions")
         .update({ status: "CANCELLED", updated_at: nowIso })
@@ -1114,7 +1144,7 @@ export async function completeCustomerSandboxCheckout(
       return {
         ok: false,
         ...refs,
-        message: "The invoice balance changed. Open a new sandbox payment session for the current balance.",
+        message: "The invoice or quote changed or payment is no longer authorized. Recheck the current invoice before opening a new sandbox session.",
       };
     }
 
