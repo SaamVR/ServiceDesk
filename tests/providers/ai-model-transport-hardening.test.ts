@@ -107,6 +107,7 @@ describe("bounded configured AI model transport", () => {
     expect(body.model).toBe(config.model);
     expect(body.text.format).toEqual({ type: "json_object" });
     expect(body.store).toBe(false);
+    expect(body.max_output_tokens).toBe(4096);
     expect(body).not.toHaveProperty("response_format");
     expect(body.metadata).toEqual({
       prompt_version: input.promptVersion,
@@ -117,6 +118,26 @@ describe("bounded configured AI model transport", () => {
     expect(Object.values(body.metadata).every(value => typeof value === "string")).toBe(true);
     expect(result.ok).toBe(true);
     expect(JSON.stringify(result)).not.toContain(config.apiKey);
+  });
+
+  it("enforces custom official output ceilings and denies invalid limits before HTTP", async () => {
+    const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
+    let calls = 0;
+    const accepted = await callAiModel({ ...official, maxOutputTokens: 1536 }, input, async request => {
+      calls++;
+      expect(JSON.parse(request.body).max_output_tokens).toBe(1536);
+      return { status: 200, body: JSON.stringify({ output: {} }) };
+    });
+    expect(accepted.ok).toBe(true);
+    expect(calls).toBe(1);
+    for (const limit of [0, 511, 8193, -1, 1536.5, NaN, Infinity]) {
+      const denied = await callAiModel({ ...official, maxOutputTokens: limit }, input, async () => {
+        calls++;
+        return { status: 200, body: JSON.stringify({ output: {} }) };
+      });
+      expect(denied).toMatchObject({ ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED" });
+    }
+    expect(calls).toBe(1);
   });
 
   it("refuses incomplete, malformed and explicit refusal Responses envelopes", async () => {
