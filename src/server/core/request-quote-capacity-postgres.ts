@@ -149,7 +149,7 @@ export function createPostgresRequestQuoteCapacityFacadeMethods(client: Supabase
         serviceCode: request.value.serviceCode,
         bedrooms: request.value.bedrooms,
         bathrooms: request.value.bathrooms,
-        oven: request.value.serviceCode === "MOVE_OUT",
+        oven: false,
         now: new Date().toISOString(),
       }, persistedRateCard);
 
