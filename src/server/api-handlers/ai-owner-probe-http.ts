@@ -5,7 +5,7 @@ import {
   type AiConnectionProof,
 } from "../ai/owner-provider-connection-test";
 
-type ProbePort = (workspaceSlug: string) => Promise<Result<AiConnectionProof>>;
+type ProbePort = (workspaceSlug: string, signal?: AbortSignal) => Promise<Result<AiConnectionProof>>;
 
 function response(status: number, data: unknown): Response {
   return Response.json(data, {
@@ -21,7 +21,7 @@ function response(status: number, data: unknown): Response {
 /** Protected staff-session POST, never usable as a public provider healthcheck. */
 export async function handleAiOwnerProbePost(
   request: Request,
-  run: ProbePort = testAuthorizedAiModelConnection,
+  run: ProbePort = (slug, signal) => testAuthorizedAiModelConnection(slug, {signal}),
 ): Promise<Response> {
   if (request.method !== "POST") return response(405, { code: "METHOD_NOT_ALLOWED" });
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type") ?? "")) {
@@ -90,7 +90,7 @@ export async function handleAiOwnerProbePost(
     return response(400, { code: "REQUEST_SCHEMA_INVALID" });
   }
   let result: Result<AiConnectionProof>;
-  try { result = await run(data.workspaceSlug); }
+  try { result = await run(data.workspaceSlug, request.signal); }
   catch { return response(503, { code: "AI_DIAGNOSTIC_UNAVAILABLE" }); }
   if (!result.ok) {
     const status = ["AI_DIAGNOSTIC_AUTH_REQUIRED", "AI_DIAGNOSTIC_AUTH_UNAVAILABLE"].includes(result.code) ? 401
