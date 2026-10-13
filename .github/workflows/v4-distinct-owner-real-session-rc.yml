@@ -8,6 +8,8 @@ on:
       - scripts/release/v4-private-rls-proof.mjs
       - scripts/release/v4-operational-rls-positive-negative.mjs
       - scripts/release/v4-operational-rls-positive-negative.test.mjs
+      - scripts/release/v4-automation-rls-positive-negative.mjs
+      - scripts/release/v4-automation-rls-positive-negative.test.mjs
 permissions:
   contents: read
 concurrency:
@@ -33,6 +35,7 @@ jobs:
         run: |
           node --check scripts/release/v4-private-rls-proof.mjs
           node --check scripts/release/v4-operational-rls-positive-negative.mjs
+          node --check scripts/release/v4-automation-rls-positive-negative.mjs
       - name: Validate distinct owner identities, workspace scope, and fail-closed preflight
         run: |
-          node --test scripts/release/v4-operational-rls-positive-negative.test.mjs scripts/release/v4-protected-qa-preflight.test.mjs
+          node --test scripts/release/v4-operational-rls-positive-negative.test.mjs scripts/release/v4-automation-rls-positive-negative.test.mjs scripts/release/v4-protected-qa-preflight.test.mjs
