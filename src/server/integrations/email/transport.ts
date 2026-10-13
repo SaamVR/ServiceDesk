@@ -75,7 +75,7 @@ function safeEmailHttpsEndpoint(value: string): boolean {
     return url.protocol === "https:" && !url.username && !url.password &&
       !url.port && !url.hash && !url.search && url.pathname.length > 1 &&
       /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(url.hostname) &&
-      !/^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(url.hostname) &&
+      !/^\d{1,3}(?:\.\d{1,3}){3}$/.test(url.hostname) &&
       !url.hostname.endsWith(".local") && !url.hostname.endsWith(".internal");
   } catch { return false; }
 }
