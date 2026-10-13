@@ -130,6 +130,8 @@ export type CustomerPortalActionResult =
 export interface CustomerSandboxCheckoutSession {
   /** From the actual customer-owned saved quote, never from session metadata. */
   quoteStatus?: string;
+  /** True only if current customer-owned resource/quote evidence still supports this sandbox amount. */
+  resourceReady?: boolean;
   id: string;
   purpose: "DEPOSIT" | "BALANCE";
   invoiceId?: string;
@@ -993,6 +995,7 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
   let currentAmountMinor: number;
   let resourceStatus: string;
   let quoteStatus: string | undefined;
+  let resourceReady = false;
 
   if (purpose === "DEPOSIT") {
     const quoteContext = await loadCustomerOwnedQuoteContext(resolved.value, quoteId);
@@ -1013,6 +1016,14 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
     currentAmountMinor = quoteContext.quote.depositMinor;
     resourceStatus = String(holdResult.data.status);
     quoteStatus = quoteContext.quote.status;
+    const holdExpiry = Date.parse(String(holdResult.data.expires_at));
+    resourceReady =
+      resourceStatus === "HELD" &&
+      quoteStatus === "ACCEPTED" &&
+      Number.isFinite(holdExpiry) && holdExpiry > Date.now() &&
+      currentAmountMinor > 0 &&
+      currentAmountMinor === numberValue(row, "amount_minor") &&
+      quoteContext.quote.currency === String(row.currency);
   } else {
     if (!invoiceId) return { ok: false, message: "This balance checkout is missing its invoice reference." };
     const context = await loadCustomerOwnedInvoiceContext(resolved.value, invoiceId);
@@ -1020,6 +1031,15 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
     currentAmountMinor = context.invoice.balanceMinor;
     resourceStatus = context.invoice.status;
     quoteStatus = context.quote.status;
+    const readiness = customerInvoiceSandboxReadiness({
+      ...context.invoice,
+      quoteStatus: context.quote.status,
+      quoteCurrency: context.quote.currency,
+    });
+    resourceReady = readiness.ok &&
+      readiness.amountMinor === numberValue(row, "amount_minor") &&
+      readiness.currency === String(row.currency) &&
+      context.quote.id === quoteId;
   }
 
   return {
@@ -1037,6 +1057,7 @@ export async function loadCustomerSandboxCheckout(sessionId: string): Promise<Cu
       currentAmountMinor,
       resourceStatus,
       quoteStatus,
+      resourceReady,
       workspaceName: resolved.value.workspace.name,
       customerName: resolved.value.customer.displayName,
       workspaceTimezone: resolved.value.workspace.timezone,

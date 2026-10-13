@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { generateQuoteReviewAction } from "./ai-quote-review-action";
 
 type State = { busy: boolean; review?: string; model?: string; error?: string };
@@ -17,17 +17,30 @@ function ScopedQuoteReview({
   workspaceSlug, quoteId, configured,
 }: { workspaceSlug: string; quoteId: string; configured: boolean }) {
   const [state, setState] = useState<State>({ busy: false });
+  const requestSequence = useRef(0);
+
+  useEffect(() => () => { requestSequence.current += 1; }, []);
 
   async function generate() {
     if (!configured || state.busy) return;
+    const id = ++requestSequence.current;
     setState({ busy: true });
     try {
       const result = await generateQuoteReviewAction(workspaceSlug, quoteId);
+      // Cancelled or superseded responses must not overwrite a new quote.
+      if (requestSequence.current !== id) return;
       setState(result.ok ? { busy: false, review: result.review, model: result.model }
         : { busy: false, error: result.message });
     } catch {
+      if (requestSequence.current !== id) return;
       setState({ busy: false, error: "AI review could not be completed. Use the verified saved quote instead." });
     }
+  }
+
+  function cancelReview() {
+    if (!state.busy) return;
+    requestSequence.current += 1;
+    setState({ busy: false, error: "The review display was cancelled. A paid provider request may still be processing; no quote or customer action was changed." });
   }
 
   return <section aria-label="Staff AI quote review"
@@ -45,6 +58,13 @@ function ScopedQuoteReview({
         cursor: configured && !state.busy ? "pointer" : "not-allowed" }}>
       {state.busy ? "Checking saved quote…" : "Generate AI review checks"}
     </button>
+    {state.busy ? (
+      <button type="button" onClick={cancelReview}
+        style={{ justifySelf: "start", border: "1px solid #b2cbc6", borderRadius: 8,
+          background: "white", color: "#194b43", padding: "9px 14px" }}>
+        Cancel pending review display
+      </button>
+    ) : null}
     {!configured ? <p role="status">AI requires explicit server enablement and a configured real model.</p> : null}
     {state.error ? <p role="alert">{state.error}</p> : null}
     {state.review ? <div role="status" aria-live="polite">

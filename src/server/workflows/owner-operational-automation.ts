@@ -3,6 +3,7 @@ import { resolveStaffActor } from "@/features/operations/operational-product-run
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { PostgresWorkflowExecutionPort } from "./postgres";
 import { MAX_ACTIVE_WORKFLOW_RULES_PER_BRANCH, WORKFLOW_RULE_OVERFLOW_FETCH_LIMIT } from "./automation-limits";
+import { isVerifiedPaidInvoiceMilestone } from "./paid-invoice-milestone";
 import type { WorkflowEventEnvelope } from "./engine";
 
 export type OwnerOperationalEventType = Extract<WorkflowEventType,
@@ -98,19 +99,22 @@ export async function runOwnerSavedOperationalAutomation(
     branchId = row.data.branch_id;
   } else if (eventType === "INVOICE_PAID") {
     const row = await service.from("invoices")
-      .select("id,quote_id,status,currency")
+      .select("id,quote_id,status,currency,total_minor,allocated_minor,refunded_minor,balance_minor")
       .eq("id",sourceId).eq("workspace_id",workspace.id).maybeSingle();
     if (row.error) return fail("OPERATIONAL_AUTOMATION_SOURCE_UNAVAILABLE","Saved invoice could not be read.");
     if (!row.data) return fail("OPERATIONAL_AUTOMATION_NOT_FOUND","Invoice is not in this workspace.");
-    if (row.data.status !== "PAID" || !uuid(row.data.quote_id)) {
-      return fail("OPERATIONAL_AUTOMATION_SOURCE_NOT_READY","Only fully paid persisted invoices can be processed.");
+    if (!uuid(row.data.quote_id) || !isVerifiedPaidInvoiceMilestone(row.data)) {
+      return fail("OPERATIONAL_AUTOMATION_SOURCE_NOT_READY",
+        "Only fully paid invoices with a verified, refund-adjusted ledger can trigger owner workflows.");
     }
     currency = code(String(row.data.currency ?? "").trim());
     const quote = await service.from("quotes")
-      .select("request_id,service_code").eq("id",row.data.quote_id)
+      .select("request_id,service_code,status,currency").eq("id",row.data.quote_id)
       .eq("workspace_id",workspace.id).maybeSingle();
-    if (quote.error || !quote.data || !uuid(quote.data.request_id)) {
-      return fail("OPERATIONAL_AUTOMATION_QUOTE_UNVERIFIED","The paid invoice quote source was not verified.");
+    if (quote.error || !quote.data || !uuid(quote.data.request_id) ||
+        quote.data.status !== "ACCEPTED" || quote.data.currency !== row.data.currency) {
+      return fail("OPERATIONAL_AUTOMATION_QUOTE_UNVERIFIED",
+        "The paid invoice quote, acceptance or currency could not be reconciled.");
     }
     requestId = quote.data.request_id;
     sourceServiceCode = code(quote.data.service_code);

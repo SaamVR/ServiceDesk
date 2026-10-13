@@ -85,6 +85,7 @@ export async function SandboxCheckoutProductRoute({
     session.status === "OPEN"
     && !amountChanged
     && !resourceClosed
+    && session.resourceReady === true
     && session.currentAmountMinor > 0;
   const backHref = isDeposit
     ? `/portal/quotes/${encodeURIComponent(session.quoteId)}`
@@ -160,6 +161,16 @@ export async function SandboxCheckoutProductRoute({
             )}
           </div>
         </CustomerCard>
+
+        {session.status === "OPEN" && !session.resourceReady ? (
+          <CustomerNotice
+            title="Payment conditions changed"
+            description={isDeposit
+              ? "The accepted quote, deposit amount, currency or service-time hold could not be verified as payable. Return to the quote to choose a current hold."
+              : "The accepted quote, issued invoice or refund-adjusted saved balance could not be verified. Return to the invoice and ask staff to review before completing payment."}
+            tone="warning"
+          />
+        ) : null}
 
         {amountChanged ? (
           <CustomerNotice
