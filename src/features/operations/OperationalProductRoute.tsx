@@ -1589,9 +1589,9 @@ function QuotesView({
                   </div>
                 ))}
                 <div><dt>Service subtotal</dt>
-                  <dd>{formatMinorMoney(selectedQuote.subtotalMinor, selectedQuote.currency)}</dd></div>
-                {selectedQuote.taxMinor > 0 ? (
-                  <div><dt>Tax</dt><dd>{formatMinorMoney(selectedQuote.taxMinor, selectedQuote.currency)}</dd></div>
+                  <dd>{formatMinorMoney(selectedQuote.subtotalMinor ?? 0, selectedQuote.currency)}</dd></div>
+                {(selectedQuote.taxMinor ?? 0) > 0 ? (
+                  <div><dt>Tax</dt><dd>{formatMinorMoney(selectedQuote.taxMinor ?? 0, selectedQuote.currency)}</dd></div>
                 ) : null}
               </dl>
             </section>
