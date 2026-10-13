@@ -22,6 +22,7 @@ import { createPostgresReportingPlatformFacadeMethods } from "@/server/core/repo
 import { createPostgresRecurrenceFacadeMethods } from "@/server/core/recurrence-postgres";
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
 import { loadOperationalQuoteRateCard } from "@/server/core/operational-quote-rate-card";
+import { assessOperationalQuoteSend } from "./quote-send-readiness";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
 import { createPostgresVoiceMissedCallCommandPort } from "@/server/core/voice-missed-call-postgres";
 import { buildOperationalIntegrationHealth, type OperationalIntegrationHealth } from "./integration-health-runtime";
@@ -1811,12 +1812,17 @@ export async function sendOperationalQuote(
   if (branchAccess) return branchAccess;
   const current = await resolved.value.service
     .from("quotes")
-    .select("id,status,version")
+    .select("id,status,version,valid_until,subtotal_minor,tax_minor,total_minor,deposit_minor,balance_minor,duration_minutes,snapshot")
     .eq("workspace_id", resolved.value.workspace.id)
     .eq("id", quoteId)
     .maybeSingle();
   if (current.error || !current.data) return { ok: false, message: "The quote is no longer available." };
-  if (current.data.status !== "APPROVED") return { ok: false, message: "Only an approved quote can be sent." };
+  const sendProof = assessOperationalQuoteSend(current.data, new Date().toISOString());
+  if (!sendProof.ok) return { ok: false, message: sendProof.reason === "NOT_APPROVED"
+    ? "Only an approved quote can be sent."
+    : sendProof.reason === "EXPIRED"
+      ? "The quote has expired. Recalculate it with the approved owner rates before sending."
+      : "The saved quote charges could not be reconciled. Review and regenerate the quote before sending." };
   const facade = createPostgresRequestQuoteCapacityFacadeMethods(resolved.value.rpc);
   const result = await facade.sendQuote(resolved.value.actor, quoteId, {
     idempotencyKey: "quote-send-" + crypto.randomUUID(),
