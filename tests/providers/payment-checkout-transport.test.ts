@@ -186,4 +186,31 @@ describe("Stripe-style checkout transport", () => {
       throw error;
     })).resolves.toMatchObject({ ok: false, code: "PAYMENT_PROVIDER_TIMEOUT" });
   });
+  test("rejects expired and malformed authoritative deposit holds without contacting Stripe", async () => {
+    let calls = 0;
+    const transport: StripeCheckoutHttpTransport = async () => {
+      calls++;
+      return { status: 200, body: "{}" };
+    };
+    for (const expiresAt of ["2026-10-04T12:00:00.000Z", "2026-10-03T12:00:00.000Z"]) {
+      const result = await createStripeCheckoutSession(input({
+        hold: { holdId: "hold-1", workspaceId: "ws-clearnest", quoteId: "quote-1", expiresAt },
+      }), config, transport);
+      expect(result).toMatchObject({ ok: false, code: "PAYMENT_HOLD_EXPIRED" });
+    }
+    const invalid = await createStripeCheckoutSession(input({
+      hold: { holdId: "hold-1", workspaceId: "ws-clearnest", quoteId: "quote-1", expiresAt: "invalid" },
+    }), config, transport);
+    expect(invalid).toMatchObject({ ok: false, code: "PAYMENT_HOLD_EXPIRY_INVALID" });
+    expect(calls).toBe(0);
+  });
+
+  test("treats null and array HTTP-200 checkout receipts as invalid contracts", async () => {
+    for (const body of ["null", "[]", "1", "true", "\"\""]) {
+      const result = await createStripeCheckoutSession(input(), config,
+        async () => ({ status: 200, body }));
+      expect(result).toMatchObject({ ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID" });
+    }
+  });
+
 });
