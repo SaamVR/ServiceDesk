@@ -37,7 +37,8 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
     requestController.current?.abort();
     const controller = new AbortController();
     requestController.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 15_000);
+    let timedOut = false;
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
     setState("loading");
     setSnapshot(undefined);
     try {
@@ -63,8 +64,7 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
       setSnapshot(result);
       setState("ready");
     } catch {
-      if (!controller.signal.aborted) setState("unavailable");
-      else if (requestController.current === controller) setState("unavailable");
+      if (!controller.signal.aborted || timedOut) setState("unavailable");
     } finally {
       clearTimeout(timeout);
       if (requestController.current === controller) requestController.current = null;
