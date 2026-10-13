@@ -23,6 +23,7 @@ import { createPostgresRecurrenceFacadeMethods } from "@/server/core/recurrence-
 import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/request-quote-capacity-postgres";
 import { loadOperationalQuoteRateCard } from "@/server/core/operational-quote-rate-card";
 import { readVerifiedCustomerQuoteLineItems, type CustomerQuoteLineItem } from "./customer-quote-line-items";
+import { isVerifiedStaffCollectibleInvoice } from "./staff-invoice-collection-readiness";
 import { assessOperationalQuoteSend } from "./quote-send-readiness";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
 import { createPostgresVoiceMissedCallCommandPort } from "@/server/core/voice-missed-call-postgres";
@@ -1852,7 +1853,7 @@ export async function applyOperationalManualPayment(
   method: "CASH" | "BANK_TRANSFER" | "OTHER",
   reference: string,
 ): Promise<OperationalActionResult> {
-  if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
     return { ok: false, message: "Enter a valid payment amount." };
   }
   if (!reference.trim()) return { ok: false, message: "A payment reference is required." };
@@ -1862,11 +1863,22 @@ export async function applyOperationalManualPayment(
   if (branchAccess) return branchAccess;
   const invoice = await resolved.value.service
     .from("invoices")
-    .select("id,currency,balance_minor,status")
+    .select("id,currency,balance_minor,status,total_minor,allocated_minor,refunded_minor")
     .eq("workspace_id", resolved.value.workspace.id)
     .eq("id", invoiceId)
     .maybeSingle();
   if (invoice.error || !invoice.data) return { ok: false, message: "The invoice is no longer available." };
+  if (!isVerifiedStaffCollectibleInvoice({
+    status: invoice.data.status,
+    currency: invoice.data.currency,
+    totalMinor: invoice.data.total_minor,
+    allocatedMinor: invoice.data.allocated_minor,
+    refundedMinor: invoice.data.refunded_minor,
+    balanceMinor: invoice.data.balance_minor,
+  })) return { ok: false, message: "The issued invoice ledger could not be reconciled. No payment was recorded; request staff finance review." };
+  if (amountMinor > invoice.data.balance_minor) {
+    return { ok: false, message: "The recorded amount exceeds the current verified invoice balance." };
+  }
   const facade = createPostgresManualPaymentQualityFacadeMethods(resolved.value.rpc);
   const result = await facade.applyManualPayment(
     resolved.value.actor,
