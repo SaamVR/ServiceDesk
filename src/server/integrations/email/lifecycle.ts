@@ -64,16 +64,30 @@ export function applyEmailCallbackLifecycle(
     return { result: "DUPLICATE", next: current, mutatesBusinessTruth: false };
   }
 
-  if (current && current.deliveryState === "DELIVERED" && timestamp(event.occurredAt) < timestamp(current.occurredAt)) {
-    return { result: "OUT_OF_ORDER_IGNORED", next: current, mutatesBusinessTruth: false };
-  }
-
-  if (current && current.deliveryState === "DELIVERED" && event.eventType === "COMPLAINT") {
-    return {
-      result: "SUPPRESSION_REVIEW",
-      next: { ...current, callbackKey: event.callbackKey, suppressionRequired: true },
-      mutatesBusinessTruth: false,
-    };
+  if (current) {
+    // The lifecycle is keyed to one outbound provider message. A callback
+    // for another provider message can never inherit this one's proof.
+    // Invalid and older event timestamps cannot replace a newer snapshot.
+    const incomingAt = timestamp(event.occurredAt);
+    const savedAt = timestamp(current.occurredAt);
+    if (event.providerMessageId !== current.providerMessageId ||
+        !Number.isFinite(incomingAt) || !Number.isFinite(savedAt) ||
+        incomingAt < savedAt) {
+      return { result: "OUT_OF_ORDER_IGNORED", next: current, mutatesBusinessTruth: false };
+    }
+    if (current.deliveryState === "DELIVERED") {
+      // A later complaint or hard bounce is a suppression risk requiring
+      // review, not permission to erase an independently verified delivery.
+      if (event.eventType === "COMPLAINT" ||
+          (event.eventType === "BOUNCE" && event.bounceType !== "soft")) {
+        return {
+          result: "SUPPRESSION_REVIEW",
+          next: { ...current, callbackKey: event.callbackKey, suppressionRequired: true },
+          mutatesBusinessTruth: false,
+        };
+      }
+      return { result: "OUT_OF_ORDER_IGNORED", next: current, mutatesBusinessTruth: false };
+    }
   }
 
   return {
