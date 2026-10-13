@@ -40,6 +40,29 @@ const config = {
 };
 
 describe("Stripe-style checkout transport", () => {
+  test("refuses oversized or invalid successful checkout response before accepting a session", async () => {
+    const oversized = JSON.stringify({
+      id: "cs_test_valid", url: "https://checkout.stripe.com/session/cs_test_valid",
+      ignored: "x".repeat(17000),
+    });
+    for (const response of [
+      oversized,
+      JSON.stringify({ id: "cs_test_" + "a".repeat(520),
+        url: "https://checkout.stripe.com/session/cs_test_valid" }),
+      "  ",
+      "null",
+    ]) {
+      let calls = 0;
+      const result = await createStripeCheckoutSession(input(), config, async () => {
+        calls++;
+        return { status: 200, body: response };
+      });
+      expect(calls).toBe(1);
+      expect(result).toMatchObject({ ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID" });
+      expect(JSON.stringify(result)).not.toContain("x".repeat(100));
+    }
+  });
+
   test("creates a hosted checkout session from server-derived deposit amount only", async () => {
     let captured: Parameters<StripeCheckoutHttpTransport>[0] | undefined;
     const result = await createStripeCheckoutSession(input(), config, async (request) => {
