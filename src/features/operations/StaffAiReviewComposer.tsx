@@ -70,11 +70,13 @@ function ScopedStaffAiReviewComposer({
         body: JSON.stringify({ workspaceSlug, conversationId, messageId: sourceMessageId }),
         signal: pending.signal,
       });
+      if (pending.signal.aborted) return;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
         setError("draft");
         return;
       }
       const parsed = parseReviewedAiDraft(await response.json() as unknown, conversationId, sourceMessageId);
+      if (pending.signal.aborted) return;
       if (!parsed) {
         setError("draft");
         return;
