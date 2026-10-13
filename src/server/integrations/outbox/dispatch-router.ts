@@ -104,7 +104,29 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
         ...retry,
       } };
     }
-    return result;
+    // Successful provider acknowledgement is not permission to persist the
+    // adapter's arbitrary evidence notes or receipts. Keep only the verified
+    // channel/mode/time and a bounded opaque diagnostic id.
+    const rawEvidence = outcome.evidence;
+    const controlledId =
+      typeof rawEvidence.controlledId === "string" &&
+      /^[A-Za-z0-9_.:-]{1,128}$/.test(rawEvidence.controlledId)
+        ? { controlledId: rawEvidence.controlledId } : {};
+    return { ok: true, value: {
+      ...dispatchOutcomeBase(input.job),
+      outcome: "ACCEPTED",
+      providerMessageId: outcome.providerMessageId,
+      acceptedAt: outcome.acceptedAt,
+      providerMode: outcome.providerMode,
+      evidence: {
+        provider: input.job.channel,
+        mode: outcome.providerMode,
+        verification: rawEvidence.verification,
+        capturedAt: rawEvidence.capturedAt,
+        notes: [],
+        ...controlledId,
+      },
+    } };
   } catch {
     // Never persist raw exceptions from provider transports: they can contain
     // URLs, customer identifiers, credentials or response bodies.

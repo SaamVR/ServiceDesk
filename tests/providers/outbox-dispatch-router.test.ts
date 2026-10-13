@@ -48,6 +48,32 @@ describe("committed outbox dispatch router", () => {
     expect(unsupported.ok && unsupported.value).toMatchObject({ outcome: "TERMINAL_FAILURE", code: "UNSUPPORTED_DISPATCH_CHANNEL" });
   });
 
+  test("acceptance proof excludes raw notes, receipts and unsafe controlled references", async () => {
+    const claimed=job();
+    const sensitive="Bearer secret-key customer@example.com";
+    const output=await dispatchCommittedOutboxJob({
+      job:claimed,committedAt:"2026-10-11T00:00:00.000Z",attempt:1,
+      dispatchers:{WHATSAPP:{
+        async dispatch(){return {ok:true as const,value:{
+          ...dispatchOutcomeBase(claimed),outcome:"ACCEPTED" as const,
+          providerMessageId:"wamid.verified", acceptedAt:"2026-10-11T00:00:00.000Z",
+          providerMode:"SANDBOX" as const,
+          evidence:{provider:"WHATSAPP" as const,mode:"SANDBOX" as const,
+            verification:"PROVIDER_VERIFIED" as const,
+            capturedAt:"2026-10-11T00:00:00.000Z",
+            notes:[sensitive],redactedReceipt:"raw secret-provider-body="+sensitive,
+            controlledId:"unsafe id "+sensitive},
+        }};},
+      }},
+    });
+    expect(output).toMatchObject({ok:true,value:{outcome:"ACCEPTED",providerMessageId:"wamid.verified",
+      evidence:{provider:"WHATSAPP",mode:"SANDBOX",verification:"PROVIDER_VERIFIED",notes:[]}}});
+    expect(JSON.stringify(output)).not.toContain("secret-key");
+    expect(JSON.stringify(output)).not.toContain("secret-provider-body");
+    expect(JSON.stringify(output)).not.toContain("customer@example.com");
+    expect(JSON.stringify(output)).not.toContain("unsafe id");
+  });
+
   test("rejects mismatched adapter receipts before downstream outbox accounting", async () => {
     const claimed = job();
     const base = {
