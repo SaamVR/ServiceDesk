@@ -226,3 +226,52 @@ describe("committed outbox dispatch router", () => {
   });
 
 });
+
+describe("committed outbox provider-invocation preflight", () => {
+  test("refuses invalid attempt, corrupt commit time and impossible chronology before contacting any provider", async () => {
+    let providerCalls = 0;
+    const dispatcher: CommittedOutboxDispatcher = {
+      async dispatch() {
+        providerCalls++;
+        return { ok: false, code: "UNEXPECTED_SEND", message: "This should never send" };
+      },
+    };
+    const valid = { job: job(), committedAt: "2026-10-04T12:01:00.000Z",
+      attempt: 1, expectedWorkspaceId: "ws-1",
+      dispatchers: { WHATSAPP: dispatcher } };
+    for (const change of [
+      { attempt: 0 }, { attempt: -1 }, { attempt: 1.1 },
+      { attempt: Number.NaN }, { attempt: 1_000_001 },
+      { committedAt: "not-a-date" },
+      { committedAt: "2026-10-04T11:59:59.000Z" },
+      { committedAt: "2026-13-01T00:00:00Z" },
+      { job: job({ createdAt: "not-a-date" }) },
+      { job: job({ createdAt: "2027-01-01T00:00:00Z" }) },
+    ]) {
+      const result = await dispatchCommittedOutboxJob({ ...valid, ...change });
+      expect(result).toMatchObject({ ok: true, value: {
+        outcome: "TERMINAL_FAILURE", code: "OUTBOX_COMMIT_CLAIM_INVALID",
+      } });
+    }
+    expect(providerCalls).toBe(0);
+  });
+  test("a valid chronological committed claim still reaches the delivery adapter", async () => {
+    let providerCalls = 0;
+    const result = await dispatchCommittedOutboxJob({
+      job: job(), committedAt: "2026-10-04T12:01:00.000Z",
+      attempt: 1, expectedWorkspaceId: "ws-1",
+      dispatchers: { WHATSAPP: { async dispatch(input) {
+        providerCalls++;
+        return { ok: true, value: {
+          ...dispatchOutcomeBase(input.job), outcome: "ACCEPTED",
+          providerMessageId: "wamid.claim-ok",
+          acceptedAt: input.committedAt, providerMode: "FIXTURE",
+          evidence: { provider: "WHATSAPP", mode: "FIXTURE",
+            verification: "CONTRACT_TESTED", capturedAt: input.committedAt, notes: [] },
+        } };
+      } } },
+    });
+    expect(providerCalls).toBe(1);
+    expect(result).toMatchObject({ ok: true, value: { outcome: "ACCEPTED" } });
+  });
+});
