@@ -4,6 +4,7 @@ import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
 import { buildStaffModuleHref } from "./staff-modules";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
+import { OwnerQuoteRecoveryQueue } from "./OwnerQuoteRecoveryQueue";
 import {
   readOwnerQuoteAutomationSetting,
   setOwnerQuoteAutomationSetting,
@@ -127,6 +128,7 @@ export async function OwnerQuoteAcceptedAutomationControl({
           Owner-only · saved version {version}
         </span>
       </form>
+      <OwnerQuoteRecoveryQueue workspaceSlug={workspaceSlug} />
     </section>
   );
 }
