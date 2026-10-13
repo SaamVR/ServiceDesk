@@ -4,9 +4,14 @@ import { classifyProviderFailure } from "./failure-policy";
 import { dispatchOutcomeBase, type CommittedOutboxDispatcher, type CommittedOutboxDispatchInput, type CommittedOutboxDispatchOutcome } from "./dispatch-port";
 
 function validUtcTime(value: unknown): boolean {
-  return typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) &&
-    Number.isFinite(Date.parse(value));
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?Z$/.exec(value);
+  if (!match) return false;
+  const parsed = new Date(value);
+  // JavaScript can normalize impossible dates such as February 30 to March 2.
+  // Compare the canonical UTC instant to the original calendar components.
+  const canonical = match[1] + "." + (match[2] ?? "").padEnd(3, "0") + "Z";
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === canonical;
 }
 
 /** Provider 2xx is not delivery, but even its acceptance receipt must be
