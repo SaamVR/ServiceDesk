@@ -127,11 +127,37 @@ export async function generateAuthorizedQuoteReview(
     );
     if (deps.signal?.aborted) return fail("AI_QUOTE_CANCELLED");
     if (!response.ok) return fail("AI_QUOTE_MODEL_UNAVAILABLE");
+    // A paid model call can outlive staff membership, branch selection or the
+    // authenticated browser session. Reauthorize against current membership
+    // before reading/surfacing the result, not just the quote version.
+    let currentStaff: Awaited<ReturnType<Resolver>>;
+    try {
+      currentStaff = await (deps.resolveActor ?? resolveStaffActor)(input.workspaceSlug);
+    } catch { return fail("AI_QUOTE_REAUTH_UNAVAILABLE"); }
+    if (!currentStaff.ok) return fail("AI_QUOTE_STAFF_ACCESS_REVOKED");
+    const active = currentStaff.value;
+    if (active.workspace.id !== workspace.id ||
+        active.workspace.slug !== workspace.slug ||
+        active.actor.workspaceId !== workspace.id ||
+        active.actor.userId !== actor.userId ||
+        active.actor.role !== actor.role ||
+        !["OWNER", "DISPATCHER"].includes(active.actor.role) ||
+        (active.actor.role === "DISPATCHER" &&
+          (active.branchScope.mode !== "BRANCH" || !active.branchScope.selectedBranchId))) {
+      return fail("AI_QUOTE_STAFF_ACCESS_REVOKED");
+    }
+    try {
+      const denied = await (deps.authorizeQuote ?? requireOperationalBranchResource)(
+        active, "quote", input.quoteId,
+      );
+      if (denied) return fail("AI_QUOTE_STAFF_ACCESS_REVOKED");
+    } catch { return fail("AI_QUOTE_REAUTH_UNAVAILABLE"); }
+    if (deps.signal?.aborted) return fail("AI_QUOTE_CANCELLED");
     // Re-read after the potentially expensive model request. Quotes can be
     // edited, expired, accepted or superseded while the browser awaits AI.
     let current: { data: Record<string, unknown> | null; error: unknown } | null = null;
     try {
-      current = await service.from("quotes")
+      current = await active.service.from("quotes")
         .select("id,workspace_id,version,status,valid_until")
         .eq("workspace_id", workspace.id).eq("id", input.quoteId).maybeSingle();
     } catch { return fail("AI_QUOTE_RECHECK_UNAVAILABLE"); }
