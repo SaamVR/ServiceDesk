@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { readVerifiedCustomerQuoteLineItems } from "../../src/features/operations/customer-quote-line-items";
+import { readVerifiedCustomerQuoteLineItems as verifyLines } from "../../src/features/operations/customer-quote-line-items";
+
+const readVerifiedCustomerQuoteLineItems = (
+  snapshot: unknown, subtotal: number, duration: number,
+  tax = 0, total = subtotal + tax,
+) => verifyLines(snapshot, subtotal, duration, tax, total);
 
 const base = [
   { code: "BASE", description: "Base service", amountMinor: 18000, durationMinutes: 120 },
@@ -16,6 +21,15 @@ describe("customer quote saved itemization", () => {
     expect(readVerifiedCustomerQuoteLineItems({ lineItems: [...base, oven] }, 34000, 240))
       .toEqual([...base, oven]);
     expect(readVerifiedCustomerQuoteLineItems({ lineItems: [...base, oven] }, 31000, 210))
+      .toBeNull();
+  });
+
+  test("rejects inconsistent saved tax or total rather than inventing a customer bill", () => {
+    expect(readVerifiedCustomerQuoteLineItems({ lineItems: base }, 31000, 210, 2000, 33000))
+      .toEqual(base);
+    expect(readVerifiedCustomerQuoteLineItems({ lineItems: base }, 31000, 210, 2000, 34000))
+      .toBeNull();
+    expect(readVerifiedCustomerQuoteLineItems({ lineItems: base }, 31000, 210, -100, 30900))
       .toBeNull();
   });
 
@@ -46,6 +60,7 @@ describe("customer quote saved itemization", () => {
     expect(runtime).toContain('.in("request_id", requestIds)');
     expect(runtime).toContain("readVerifiedCustomerQuoteLineItems(");
     expect(runtime).toContain("row.snapshot, quote.subtotalMinor, quote.durationMinutes");
+    expect(runtime).toContain("quote.taxMinor, quote.totalMinor");
     expect(ui).toContain("Verified saved quote line items");
     expect(ui).toContain("What your quote includes");
     expect(ui).toContain("Saved quote breakdown could not be verified");
