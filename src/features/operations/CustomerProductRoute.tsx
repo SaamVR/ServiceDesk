@@ -363,10 +363,19 @@ function QuoteView({
         </section>
       ) : null}
 
-      {quote.status === "SENT" ? (
+      {quote.status === "SENT" && quote.lineItems &&
+        quote.lineItems.length > 0 &&
+        Number.isFinite(Date.parse(quote.validUntil)) &&
+        Date.parse(quote.validUntil) > Date.parse(data.loadedAt) ? (
         <form className={styles.detailActions} action={acceptQuote}>
           <button className={styles.primaryButton} type="submit">Accept quote</button>
         </form>
+      ) : quote.status === "SENT" ? (
+        <CustomerNotice
+          title="Quote acceptance needs review"
+          description="The saved breakdown is unavailable, inconsistent or expired. Ask the cleaning business for a verified updated quote before accepting."
+          tone="warning"
+        />
       ) : quote.status === "ACCEPTED" ? (
         <div className={styles.bookingSection}>
           {existingVisit ? (
