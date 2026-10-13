@@ -1,5 +1,8 @@
 import "./v3-hosting-commit-identity.test";
 import "./v3-public-story-hero.test";
+import "./v4-clean-air-home.test";
+import "./v4-clean-public-pages.test";
+import "./v4-tour-sandbox-design.test";
 import "./v3-public-route-metadata.test";
 import "./v3-private-qa-paths.test";
 import { createElement } from "react";

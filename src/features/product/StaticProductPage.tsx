@@ -1,4 +1,5 @@
 import { MarketingShell } from "@/components/shell/MarketingShell";
+import { BrightProductExperience } from "./BrightProductExperience";
 import {
   CustomerJourneyPreview,
   PricingControlCard,
@@ -48,9 +49,13 @@ export type StaticProductPageKind = keyof typeof copy;
 
 export function StaticProductPage({ kind }: { kind: StaticProductPageKind }) {
   const page = copy[kind];
+  // Opt-out rollback exists for isolated staging review only; the default
+  // public experience follows the approved V4 bright/clean homepage direction.
+  const brightEdition = process.env.SERVICEDESK_V4_PUBLIC_PAGES_ENABLED !== "false";
 
   return (
     <MarketingShell
+      brightEdition={brightEdition}
       title={page.title}
       description={page.description}
       heroStory={kind === "features" || kind === "integrations" || kind === "pricing" || kind === "contact"
@@ -59,6 +64,9 @@ export function StaticProductPage({ kind }: { kind: StaticProductPageKind }) {
       secondaryHref={kind === "contact" ? "/tour" : "/contact"}
       secondaryLabel={kind === "contact" ? "Explore product tour" : "Plan a walkthrough"}
     >
+      {brightEdition ? (
+        <BrightProductExperience kind={kind} title={page.title} description={page.description} />
+      ) : <>
       {kind === "features" && <LifecycleProof />}
       {kind === "integrations" && <IntegrationStatusGrid />}
       {kind === "cleaning" && <CustomerJourneyPreview />}
@@ -101,6 +109,7 @@ export function StaticProductPage({ kind }: { kind: StaticProductPageKind }) {
           <p>ServiceDesk keeps customer, property, payment and provider records scoped to a workspace and makes operator-controlled actions explicit. Final legal notices should match the deploying business entity and jurisdiction before public launch.</p>
         </section>
       )}
+      </>}
     </MarketingShell>
   );
 }
