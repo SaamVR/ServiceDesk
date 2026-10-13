@@ -7,7 +7,7 @@ const workspaceId="11111111-1111-4111-8111-111111111111";
 const quoteId="22222222-2222-4222-8222-222222222222";
 const staffId="33333333-3333-4333-8333-333333333333";
 const quote = {
-  id: quoteId, workspace_id: workspaceId, status: "APPROVED",
+  id: quoteId, workspace_id: workspaceId, version: 1, status: "APPROVED",
   valid_until: "2099-01-01T00:00:00.000Z",
   subtotal_minor: 32000, tax_minor: 0, total_minor: 32000,
   deposit_minor: 8000, balance_minor: 24000, duration_minutes: 210,
@@ -84,6 +84,28 @@ describe("real staff-triggered AI quality review on persisted quote", () => {
       expect(called).toBe(false);
     }
   });
+  test("rejects stale model output when saved quote changes during a paid call", async () => {
+    for (const patch of [
+      { version: 2 }, { status: "ACCEPTED" },
+      { valid_until: "2010-01-01T00:00:00Z" },
+    ]) {
+      const saved = { ...quote };
+      let calls = 0;
+      const result = await generateAuthorizedQuoteReview({ workspaceSlug: "ctg", quoteId },
+        deps(saved, () => { calls++; Object.assign(saved, patch); }));
+      expect(calls).toBe(1);
+      expect(result).toMatchObject({ ok: false, code: "AI_QUOTE_STALE" });
+    }
+  });
+
+  test("will not call a paid model when saved quote version cannot be established", async () => {
+    let called = false;
+    const result = await generateAuthorizedQuoteReview({ workspaceSlug: "ctg", quoteId },
+      deps({ ...quote, version: undefined }, () => { called = true; }));
+    expect(result).toMatchObject({ ok: false, code: "AI_QUOTE_VERSION_UNVERIFIED" });
+    expect(called).toBe(false);
+  });
+
   test("wires an explicit staff-only button and avoids automatic delivery", () => {
     const ui=readFileSync(join(process.cwd(),"src/features/operations/AiQuoteReview.tsx"),"utf8");
     const page=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
