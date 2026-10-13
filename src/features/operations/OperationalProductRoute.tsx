@@ -86,6 +86,7 @@ import { filterQualityQueue, isOverdueQualityCase, normalizeQualityQueue, normal
 import { QualityQueueFilters } from "./QualityQueueFilters";
 import { filterInvoiceQueue, invoiceFeedbackPrefix, invoiceQueueCounts, invoiceQueueHref, isCollectibleInvoice, normalizeInvoiceQueue, orderCustomerCollectionInvoices, parseManualPaymentAmountMinor } from "./invoice-collection-queue";
 import { InvoiceCollectionFilters } from "./InvoiceCollectionFilters";
+import { isVerifiedStaffCollectibleInvoice } from "./staff-invoice-collection-readiness";
 import { buildScheduleWindow, filterScheduleWindow, scheduleWindowHref, scheduleWindowFeedbackPrefix } from "./staff-schedule-window";
 import { deriveDispatchBacklog } from "./dispatch-backlog";
 import { formatMinorMoney } from "./view-models";
@@ -2276,7 +2277,8 @@ function InvoicesView({
   const selectedInvoiceRequest = requestById.get(selectedInvoiceQuote?.requestId ?? "");
   const selectedInvoiceCustomer = customerById.get(selectedInvoiceRequest?.customerId ?? "");
   const selectedInvoiceProperty = data.properties.find((property) => property.id === selectedInvoiceRequest?.propertyId);
-  const selectedInvoiceCanRecordPayment = isCollectibleInvoice(selectedInvoice);
+  const selectedInvoiceCanRecordPayment = isCollectibleInvoice(selectedInvoice) &&
+    isVerifiedStaffCollectibleInvoice(selectedInvoice);
   const openInvoices = orderedInvoices.filter(isCollectibleInvoice);
   const paidInvoices = orderedInvoices.filter((invoice) => invoice.status === "PAID").length;
 
@@ -2398,11 +2400,13 @@ function InvoicesView({
                     <strong>{selectedInvoice.status === "VOID" ? "Invoice void"
                       : selectedInvoice.status === "DRAFT" ? "Draft awaiting issue"
                       : selectedInvoice.status === "PAID" ? "Paid in full"
-                      : "No collectible balance"}</strong>
+                      : isCollectibleInvoice(selectedInvoice) ? "Ledger review required" : "No collectible balance"}</strong>
                     <p>{selectedInvoice.status === "VOID" ? "Payments cannot be recorded on a void invoice."
                       : selectedInvoice.status === "DRAFT" ? "This draft is not yet due; issue the invoice through the authorized workflow before recording a collection."
                       : selectedInvoice.status === "PAID" ? "The authoritative invoice status is paid."
-                      : "This invoice is not currently eligible for payment recording. Review its status before taking action."}</p>
+                      : isCollectibleInvoice(selectedInvoice)
+                        ? "Saved invoice allocations, refunds and balance cannot be reconciled. No collection can be recorded until staff verify the ledger."
+                        : "This invoice is not currently eligible for payment recording. Review its status before taking action."}</p>
                   </div>
                 </div>
               )}
