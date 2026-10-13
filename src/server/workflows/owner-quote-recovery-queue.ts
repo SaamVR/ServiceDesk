@@ -48,13 +48,13 @@ async function persistedHealth(service: Service, workspaceId: string, now: strin
     .eq("workspace_id",workspaceId)
     .in("state",["PENDING","RETRY_PENDING"])
     .lte("next_attempt_at",now);
-  if (due.error || !Number.isSafeInteger(due.count) || due.count < 0) return null;
+  if (due.error || due.count === null || !Number.isSafeInteger(due.count) || due.count < 0) return null;
   const expired = await service.from("workflow_source_events")
     .select("id", {count:"exact",head:true})
     .eq("workspace_id",workspaceId)
     .eq("state","PROCESSING")
     .lt("locked_until",now);
-  if (expired.error || !Number.isSafeInteger(expired.count) || expired.count < 0) return null;
+  if (expired.error || expired.count === null || !Number.isSafeInteger(expired.count) || expired.count < 0) return null;
   return {dueNow:due.count as number,expiredLeases:expired.count as number};
 }
 
