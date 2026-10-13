@@ -59,6 +59,7 @@ import { InboxThreadNavigator } from "./InboxThreadNavigator";
 import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { AiRequestBrief } from "./AiRequestBrief";
+import { CleaningRequestNextSteps } from "./CleaningRequestNextSteps";
 import { AiQuoteReview } from "./AiQuoteReview";
 import { StaffQuoteChecklist } from "./StaffQuoteChecklist";
 import { AiOperationsStatus } from "./AiOperationsStatus";
@@ -1198,6 +1199,17 @@ function RequestsView({
                 <div className={styles.salesNote}><span>Service notes</span><p>{selectedRequestProperty.serviceNotes}</p></div>
               ) : null}
             </section>
+
+            <CleaningRequestNextSteps input={{
+              serviceActive: chosenServiceActive,
+              bedrooms: selectedRequest.bedrooms,
+              bathrooms: selectedRequest.bathrooms,
+              pricingState: pricingReadiness.state === "VERIFIED"
+                ? "VERIFIED" : pricingReadiness.state === "OWNER_SETUP_REQUIRED"
+                  ? "MISSING" : "UNVERIFIED",
+              currentQuote: selectedRequestQuote,
+              requestedStartAt: selectedRequest.requestedStartAt,
+            }} />
 
             <AiRequestBrief
               key={selectedRequest.id}
