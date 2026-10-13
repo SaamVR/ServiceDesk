@@ -11,6 +11,7 @@ export interface StaffAiInvocation {
   workspaceSlug: string;
   conversationId: string;
   messageId: string;
+  signal?: AbortSignal;
 }
 export interface StaffAiInvocationDependencies {
   resolveActor: (slug: string) => Promise<
