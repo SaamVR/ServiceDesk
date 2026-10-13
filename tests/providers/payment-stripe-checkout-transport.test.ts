@@ -45,7 +45,7 @@ describe("Stripe checkout transport", () => {
     let captured: Parameters<StripeCheckoutHttpTransport>[0] | undefined;
     const result = await createStripeCheckoutSession(config, checkoutInput(), async (request) => {
       captured = request;
-      return { status: 200, body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.test/cs_test_123" }) };
+      return { status: 200, body: JSON.stringify({ id: "cs_test_123", url: "https://checkout.stripe.com/cs_test_123" }) };
     });
 
     expect(result.ok).toBe(true);
@@ -74,7 +74,7 @@ describe("Stripe checkout transport", () => {
       checkoutInput({ hold: undefined, purpose: "BALANCE", invoiceId: "invoice-1", balanceMinor: 17300 }),
       async (request) => {
         captured = request;
-        return { status: 200, body: JSON.stringify({ id: "cs_test_balance", url: "https://checkout.stripe.test/cs_test_balance" }) };
+        return { status: 200, body: JSON.stringify({ id: "cs_test_balance", url: "https://checkout.stripe.com/cs_test_balance" }) };
       },
     );
 
@@ -111,6 +111,63 @@ describe("Stripe checkout transport", () => {
     expect(rate).toMatchObject({ ok: false, code: "PAYMENT_RATE_LIMITED" });
     expect(server).toMatchObject({ ok: false, code: "PAYMENT_TRANSIENT_FAILURE" });
     expect(JSON.stringify([auth, rate, server])).not.toContain("sk_test_secret");
+  });
+
+  test("refuses non-Stripe destinations and mismatched credential modes before transport", async () => {
+    const calls: string[] = [];
+    const http: StripeCheckoutHttpTransport = async request => {
+      calls.push(request.url);
+      return {status:200,body:"{}"};
+    };
+    for (const apiBaseUrl of [
+      "http://api.stripe.com/v1",
+      "https://localhost/v1",
+      "https://api.stripe.com:8443/v1",
+      "https://api.stripe.com.evil.example/v1",
+      "https://api.stripe.com/v1/else",
+    ]) {
+      expect(await createStripeCheckoutSession({...config,apiBaseUrl},
+        checkoutInput(),http)).toMatchObject({
+          ok:false,code:"PAYMENT_CONFIGURATION_BLOCKED",
+        });
+    }
+    expect(await createStripeCheckoutSession({...config,secretKey:"sk_live_secret"},
+      checkoutInput(),http)).toMatchObject({
+        ok:false,code:"PAYMENT_CONFIGURATION_BLOCKED",
+      });
+    expect(calls).toEqual([]);
+  });
+
+  test("rejects forged checkout provider JSON, foreign URLs and mismatched mode", async () => {
+    const responses: unknown[] = [
+      null, [], {id:"cs_test_valid",url:"https://checkout.evil.example/s"},
+      {id:"cs_live_wrong",url:"https://checkout.stripe.com/s"},
+      {id:"cs_test_valid",url:"https://checkout.stripe.com.evil.example/s"},
+      {id:"cs_test_valid",url:"https://checkout.stripe.com:444/s"},
+    ];
+    for (const payload of responses) {
+      const result = await createStripeCheckoutSession(config,checkoutInput(),
+        async()=>({status:200,body:JSON.stringify(payload)}));
+      expect(result).toMatchObject({ok:false,code:"PAYMENT_PROVIDER_INVALID_RESPONSE"});
+    }
+  });
+
+  test("rejects split-origin, credentialed and local checkout return URLs", async () => {
+    let calls=0;
+    const http: StripeCheckoutHttpTransport = async()=>{
+      calls++;
+      return {status:200,body:"{}"};
+    };
+    for(const overrides of [
+      {cancelUrl:"https://another.example/cancel"},
+      {successUrl:"https://u:p@servicedesk.test/return"},
+      {successUrl:"https://localhost/return"},
+      {successUrl:"https://servicedesk.test:8443/return"},
+    ]) {
+      expect(await createStripeCheckoutSession(config,checkoutInput(overrides),http))
+        .toMatchObject({ok:false,code:"PAYMENT_CHECKOUT_URL_INVALID"});
+    }
+    expect(calls).toBe(0);
   });
 
   test("redacts checkout request summaries for operator/debug evidence", () => {
