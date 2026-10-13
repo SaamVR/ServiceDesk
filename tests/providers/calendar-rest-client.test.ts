@@ -23,6 +23,27 @@ function transport(status: number, body: unknown, capture?: (input: Parameters<G
 }
 
 describe("Google Calendar REST client", () => {
+  test("rejects untrusted Calendar origins without using HTTP transport", async () => {
+    const calls: string[] = [];
+    const http: GoogleCalendarHttpTransport = async req => {
+      calls.push(req.url);
+      return { status: 200, body: "{}" };
+    };
+    for (const value of [
+      "http://www.googleapis.com/calendar/v3",
+      "https://localhost/calendar/v3",
+      "https://www.googleapis.com:8443/calendar/v3",
+      "https://www.googleapis.com/calendar/v3/other",
+    ]) {
+      const response = await getGoogleCalendarEvent(
+        {...config, calendarApiBaseUrl:value}, "primary", "event-1", http);
+      expect(response).toMatchObject({
+        ok:false, code:"GOOGLE_CALENDAR_CONFIGURATION_BLOCKED",
+      });
+    }
+    expect(calls).toHaveLength(0);
+  });
+
   test("queries FreeBusy with encoded calendar IDs and redacted authorization", async () => {
     let request: Parameters<GoogleCalendarHttpTransport>[0] | undefined;
     const result = await freeBusyGoogleCalendar(
