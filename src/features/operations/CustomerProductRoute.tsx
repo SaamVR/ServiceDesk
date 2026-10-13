@@ -530,6 +530,7 @@ function InvoiceView({
     quoteStatus: linkedQuote?.status ?? "",
     quoteCurrency: linkedQuote?.currency ?? "",
   });
+  const paymentReviewReason = invoiceReadiness.ok ? "AMOUNTS_MISMATCH" : invoiceReadiness.reason;
 
   async function openSandboxCheckout() {
     "use server";
@@ -582,15 +583,15 @@ function InvoiceView({
           </div>
         ) : (
           <CustomerNotice
-            title={invoiceReadiness.reason === "NO_BALANCE" ? "No balance due" : "Invoice payment needs review"}
-            description={invoiceReadiness.reason === "NO_BALANCE"
+            title={paymentReviewReason === "NO_BALANCE" ? "No balance due" : "Invoice payment needs review"}
+            description={paymentReviewReason === "NO_BALANCE"
               ? "This invoice has no outstanding balance."
-              : invoiceReadiness.reason === "NOT_ISSUED"
+              : paymentReviewReason === "NOT_ISSUED"
                 ? "This invoice has not been issued for payment."
-                : invoiceReadiness.reason === "QUOTE_NOT_ACCEPTED"
+                : paymentReviewReason === "QUOTE_NOT_ACCEPTED"
                   ? "Accept the related customer quote before making a payment."
                   : "The invoice balance or currency needs staff verification before checkout."}
-            tone={invoiceReadiness.reason === "NO_BALANCE" ? "success" : "warning"}
+            tone={paymentReviewReason === "NO_BALANCE" ? "success" : "warning"}
           />
         )}
       </div>
