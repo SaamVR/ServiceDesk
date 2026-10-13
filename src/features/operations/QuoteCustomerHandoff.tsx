@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { verifiedManualQuoteHandoffMessage, type ManualQuoteHandoffFacts } from "./quote-manual-handoff";
 
 /** Explicit human handoff; copying a link does not prove provider delivery. */
-export function QuoteCustomerHandoff({ quoteId }: { quoteId: string }) {
+export function QuoteCustomerHandoff({ quoteId, facts }: { quoteId: string; facts?: ManualQuoteHandoffFacts }) {
   const path = "/portal/quotes/" + encodeURIComponent(quoteId);
-  const [result, setResult] = useState<"idle" | "copied" | "manual">("idle");
+  const [result, setResult] = useState<"idle" | "copied" | "manual" | "summary-copied" | "summary-manual" | "stale">("idle");
+  const [manualSummary, setManualSummary] = useState("");
 
   async function copyCustomerQuoteLink() {
     setResult("idle");
@@ -22,6 +24,22 @@ export function QuoteCustomerHandoff({ quoteId }: { quoteId: string }) {
     } catch {
       setResult("manual");
     }
+  }
+
+  async function copyVerifiedQuoteSummary() {
+    setResult("idle");
+    const draft = facts && typeof window !== "undefined"
+      ? verifiedManualQuoteHandoffMessage(facts, window.location.origin) : null;
+    if (!draft) { setManualSummary(""); setResult("stale"); return; }
+    setManualSummary(draft);
+    try {
+      if (!window.isSecureContext || !window.navigator.clipboard?.writeText) {
+        setResult("summary-manual");
+        return;
+      }
+      await window.navigator.clipboard.writeText(draft);
+      setResult("summary-copied");
+    } catch { setResult("summary-manual"); }
   }
 
   return (
@@ -48,11 +66,37 @@ export function QuoteCustomerHandoff({ quoteId }: { quoteId: string }) {
           background: "#194f44", color: "white", border: 0, cursor: "pointer" }}>
         Copy authenticated quote link
       </button>
+      {facts ? (
+        <>
+          <button type="button" onClick={copyVerifiedQuoteSummary}
+            style={{ padding: "9px 12px", borderRadius: 8, fontWeight: 600,
+              color: "#174a43", background: "#e4f3ec",
+              border: "1px solid #b4d5cb", cursor: "pointer" }}>
+            Copy verified quote summary (manual sharing only)
+          </button>
+          {manualSummary ? (
+            <label style={{ display: "grid", gap: 5, fontSize: ".8rem" }}>
+              Human-reviewed quote message
+              <textarea readOnly value={manualSummary} rows={8}
+                aria-label="Verified manual quote summary"
+                onFocus={e => e.currentTarget.select()}
+                style={{ width: "100%", padding: 9, borderRadius: 6,
+                  border: "1px solid #b4d5cb", background: "#fff" }} />
+            </label>
+          ) : null}
+        </>
+      ) : null}
       {result !== "idle" ? (
         <p role="status" aria-live="polite" style={{ margin: 0, fontSize: ".8rem" }}>
           {result === "copied"
             ? "Link copied. This is not a delivery receipt."
-            : "Clipboard unavailable. Select and copy the path above; customers must sign in."}
+            : result === "summary-copied"
+              ? "Verified quote draft copied. Staff must check the recipient and send it manually; this is not delivery proof."
+              : result === "summary-manual"
+                ? "Clipboard unavailable. Review and manually copy the quote message. Nothing was sent."
+                : result === "stale"
+                  ? "This quote is expired or its saved monetary breakdown is not verifiable. Recalculate the quote before sharing."
+                  : "Clipboard unavailable. Select and copy the path above; customers must sign in."}
         </p>
       ) : null}
     </section>
