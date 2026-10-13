@@ -43,7 +43,7 @@ describe("n8n execution receipt boundary", () => {
   });
 
   test("does not claim successful controlled automation without a redacted output receipt", () => {
-    for (const redactedOutputRef of [undefined,"","  ","untrusted\\nvalue"]) {
+    for (const redactedOutputRef of [undefined,"","  ","untrusted" + String.fromCharCode(10) + "value"]) {
       const receipt = buildN8nExecutionReceipt({
         workspaceId:"ws-clearnest",workflowId:"wf-alert",
         workflowName:"Staff alert",executionId:"exec-missing-output",
