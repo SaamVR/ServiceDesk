@@ -30,6 +30,46 @@ describe("n8n execution receipt idempotency", () => {
     expect(done).toMatchObject({ result: "UPDATED", receipt: { final: true, businessMutationAllowed: false } });
   });
 
+  test("rejects foreign receipt identity on an existing live workflow", () => {
+    const current = mergeN8nExecutionReceipt(undefined,{
+      workspaceId:"ws-1",workflowId:"wf-1",executionId:"exec-1",
+      triggeredEventId:"evt-1",status:"running",
+      deliveryState:"PENDING_AUTOMATION_COMPLETION",
+      capturedAt:"2026-10-04T08:00:00.000Z",
+    }).receipt;
+    const different = [
+      {workspaceId:"ws-2"},{workflowId:"wf-2"},
+      {executionId:"exec-2"},{triggeredEventId:"evt-2"},
+    ];
+    for (const patch of different) {
+      const merged = mergeN8nExecutionReceipt(current,{
+        ...current,...patch,status:"success",
+        deliveryState:"DELIVERED_TO_AUTOMATION",
+        capturedAt:"2026-10-04T08:10:00.000Z",
+      });
+      expect(merged).toEqual({result:"IDENTITY_MISMATCH",receipt:current});
+    }
+  });
+
+  test("rejects stale or unparseable callback timestamps without rewinding execution", () => {
+    const current = mergeN8nExecutionReceipt(undefined,{
+      workspaceId:"ws-1",workflowId:"wf-1",executionId:"exec-1",
+      triggeredEventId:"evt-1",status:"running",
+      deliveryState:"PENDING_AUTOMATION_COMPLETION",
+      capturedAt:"2026-10-04T08:05:00.000Z",
+    }).receipt;
+    for(const capturedAt of [
+      "2026-10-04T08:04:00.000Z",
+      "2026-10-04T08:05:00.000Z","not-a-date",
+    ]) {
+      const merged=mergeN8nExecutionReceipt(current,{
+        ...current,status:"success",deliveryState:"DELIVERED_TO_AUTOMATION",
+        capturedAt,
+      });
+      expect(merged).toEqual({result:"STALE_UPDATE",receipt:current});
+    }
+  });
+
   test("duplicate final receipt preserves original completion evidence", () => {
     const current = mergeN8nExecutionReceipt(undefined, {
       workspaceId: "ws-1",
