@@ -79,6 +79,33 @@ describe("provider-neutral transactional email transport", () => {
     expect(JSON.stringify(result)).not.toContain("Your quote is ready");
   });
 
+  test("refuses oversized or forged provider 2xx acceptance before recording an email receipt", async () => {
+    for (const body of [
+      "x".repeat(16_385),
+      JSON.stringify({ id: "abc" + "x".repeat(300) }),
+      JSON.stringify({ id: "message\\nnewline" }),
+      JSON.stringify({ id: "message/redirected" }),
+      JSON.stringify({ messageId: "fake" + String.fromCharCode(10) + "receipt" }),
+      JSON.stringify({ id: [] }),
+    ]) {
+      const adapter = createConfiguredEmailTransport(config, async () => ({
+        status: 202, body,
+      }));
+      const receipt = await adapter.send(job());
+      expect(receipt).toMatchObject({ ok: false, code: "EMAIL_PROVIDER_INVALID_RESPONSE" });
+      expect(JSON.stringify(receipt)).not.toContain("email_secret_key");
+      expect(JSON.stringify(receipt)).not.toContain("customer@example.test");
+    }
+  });
+
+  test("retains valid provider-neutral receipt compatibility", async () => {
+    const adapter = createConfiguredEmailTransport(config, async () => ({
+      status: 200, body: JSON.stringify({ messageId: "email-receipt_123.4" }),
+    }));
+    const sent = await adapter.send(job());
+    expect(sent).toMatchObject({ ok: true, value: { providerMessageId: "email-receipt_123.4" } });
+  });
+
   test("redacts request summary fields for operations", () => {
     const summary = redactedEmailRequestSummary({
       url: "https://email-provider.test/v1/send",
