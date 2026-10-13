@@ -20,6 +20,10 @@ import styles from "./InboxDeliveryDiagnostics.module.css";
  * invocation, recipient identities, or message bodies are used here.
  */
 export function InboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: string }) {
+  return <ScopedInboxDeliveryDiagnostics key={workspaceSlug} workspaceSlug={workspaceSlug} />;
+}
+/** Keep responses, links and authorization scope isolated across workspace switches. */
+function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: string }) {
   const [snapshot, setSnapshot] = useState<InboxDeliveryDiagnosticsSnapshot>();
   const [state, setState] = useState<"idle" | "loading" | "ready" | "unavailable">("idle");
   const requestController = useRef<AbortController | null>(null);
@@ -33,6 +37,7 @@ export function InboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: str
     requestController.current?.abort();
     const controller = new AbortController();
     requestController.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 15_000);
     setState("loading");
     setSnapshot(undefined);
     try {
@@ -44,11 +49,13 @@ export function InboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: str
         headers: { Accept: "application/json" },
         signal: controller.signal,
       });
+      if (controller.signal.aborted) return;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
         setState("unavailable");
         return;
       }
       const result = parseInboxDeliveryDiagnostics(await response.json() as unknown);
+      if (controller.signal.aborted) return;
       if (!result) {
         setState("unavailable");
         return;
@@ -57,6 +64,10 @@ export function InboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: str
       setState("ready");
     } catch {
       if (!controller.signal.aborted) setState("unavailable");
+      else if (requestController.current === controller) setState("unavailable");
+    } finally {
+      clearTimeout(timeout);
+      if (requestController.current === controller) requestController.current = null;
     }
   }
 
