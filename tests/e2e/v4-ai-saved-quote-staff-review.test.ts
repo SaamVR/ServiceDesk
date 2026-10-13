@@ -88,7 +88,8 @@ describe("real staff-triggered AI quality review on persisted quote", () => {
     const ui=readFileSync(join(process.cwd(),"src/features/operations/AiQuoteReview.tsx"),"utf8");
     const page=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
     expect(ui).toContain("Generate AI review checks");
-    expect(ui).toContain("generateQuoteReviewAction(workspaceSlug, quoteId)");
+    expect(ui).toContain('fetch("/api/internal/ai/quote-review", {');
+    expect(ui).toContain("signal: controller.signal");
     expect(page).toContain("<AiQuoteReview key={selectedQuote.id}");
     expect(ui).toContain("It cannot approve, send or change this quote.");
   });
