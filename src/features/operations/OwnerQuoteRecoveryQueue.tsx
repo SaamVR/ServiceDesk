@@ -42,6 +42,26 @@ export async function OwnerQuoteRecoveryQueue({ workspaceSlug }: { workspaceSlug
               </div>
             ))}
           </dl>
+          <div aria-label="Internal recovery backlog" style={{
+            display: "grid", gap: 12, marginTop: 14,
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          }}>
+            <p role="status" style={{ margin: 0, padding: 12,
+              border: "1px solid #e2eeea", borderRadius: 12 }}>
+              <strong>{proof.health.dueNow}</strong> due now
+              <span style={{ display: "block", fontSize: ".78rem" }}>
+                Pending or retry-ready event count; a running worker is not verified.
+              </span>
+            </p>
+            <p role={proof.health.expiredLeases > 0 ? "alert" : "status"}
+              style={{ margin: 0, padding: 12, border: "1px solid #e2eeea",
+                borderRadius: 12 }}>
+              <strong>{proof.health.expiredLeases}</strong> expired leases
+              <span style={{ display: "block", fontSize: ".78rem" }}>
+                These claims may need reviewed retry or investigation.
+              </span>
+            </p>
+          </div>
           <p style={{ color: "#557369", fontSize: ".8rem", lineHeight: 1.6 }}>
             Counts come from saved, tenant-scoped internal source records only.
             Completed events do not prove a customer message, external provider
