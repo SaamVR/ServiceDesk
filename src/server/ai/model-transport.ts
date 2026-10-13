@@ -191,7 +191,7 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
       if (item.type === "reasoning") return false;
       if (item.type !== "message" || !Array.isArray(item.content)) return true;
       if (item.status !== undefined && item.status !== "completed") return true;
-      return item.content.some(part => !part || typeof part !== "object" ||
+      return item.content.some((part: unknown) => !part || typeof part !== "object" ||
         part.type !== "output_text" || typeof part.text !== "string");
     })) {
       return { ok: false, code: "AI_MODEL_INVALID_RESPONSE",
