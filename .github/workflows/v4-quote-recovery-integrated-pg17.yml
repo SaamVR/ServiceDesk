@@ -1,0 +1,123 @@
+name: V4 integrated internal quote source recovery PG17 and worker
+on:
+  push:
+    branches:
+      - feat/v4-quote-worker-integrated-gate-20261013
+      - feat/v4-quote-recovery-rebased-source-20261013
+  # Validate the actual reconciled PR, not just the historical recovery branch.
+  # Runs against GitHub's PR merge commit, proving canonical compatibility.
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+    paths:
+      - ".github/workflows/v4-quote-recovery-integrated-pg17.yml"
+      - "supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql"
+      - "scripts/release/v4-quote-source-pg17-concurrency.sh"
+      - "tests/sql/v4-quote-source-pg17-*.sql"
+      - "src/server/workflows/customer-quote-source-*.ts"
+      - "src/app/api/internal/workflows/quote-source/**"
+      - "tests/db/v4-quote-accepted-source-recovery.test.ts"
+      - "tests/e2e/v4-quote-source-protected-worker-http.test.ts"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v4-quote-recovery-integration-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pg17-journal-and-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-only-quote-qa
+          POSTGRES_DB: servicedesk_migration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d servicedesk_migration_test"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGPASSWORD: disposable-only-quote-qa
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      PGDATABASE: servicedesk_migration_test
+      SERVICEDESK_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact commit and unapplied migration artifact
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql
+      - name: Install isolated PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Transactional source capture and race-tested lease proof
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-acceptance.sql
+          bash scripts/release/v4-quote-source-pg17-concurrency.sh
+
+  pg17-two-tenant-crash-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-only-quote-qa
+          POSTGRES_DB: sd_quote_two_tenant
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_quote_two_tenant"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGPASSWORD: disposable-only-quote-qa
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      PGDATABASE: sd_quote_two_tenant
+      SERVICEDESK_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact commit source
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Install isolated PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Two fictional tenants, lease expiry and dead letter
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-acceptance.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-quote-source-pg17-two-tenant-resilience.sql
+
+  private-http-worker-and-source-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact HEAD commit
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Frozen package installation
+        run: pnpm install --frozen-lockfile
+      - name: Private worker authorization and internal replay regressions
+        run: |
+          pnpm exec vitest run tests/e2e/v4-quote-source-protected-worker-http.test.ts tests/db/v4-quote-accepted-source-recovery.test.ts tests/db/v4-customer-quote-accepted-automation.test.ts
+      - name: Full application TypeScript, tests, lint and production build
+        run: pnpm check:rc
