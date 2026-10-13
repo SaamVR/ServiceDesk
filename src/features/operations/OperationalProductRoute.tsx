@@ -1651,7 +1651,20 @@ function QuotesView({
                     <p>The quote status was recorded as sent. Provider acceptance,
                       delivery and customer receipt are separate verifiable events.</p>
                     <StatusBadge tone="warning">Delivery not proven here</StatusBadge>
-                    <QuoteCustomerHandoff quoteId={selectedQuote.id} />
+                    <QuoteCustomerHandoff quoteId={selectedQuote.id}
+                      facts={selectedQuote.lineItems?.length ? {
+                        quoteId: selectedQuote.id,
+                        status: selectedQuote.status,
+                        currency: selectedQuote.currency,
+                        validUntil: selectedQuote.validUntil,
+                        subtotalMinor: selectedQuote.subtotalMinor,
+                        taxMinor: selectedQuote.taxMinor,
+                        totalMinor: selectedQuote.totalMinor,
+                        depositMinor: selectedQuote.depositMinor,
+                        balanceMinor: selectedQuote.balanceMinor,
+                        durationMinutes: selectedQuote.durationMinutes,
+                        lineItems: selectedQuote.lineItems,
+                      } : undefined} />
                   </>
                 ) : selectedQuote.status === "ACCEPTED" ? (
                   <><p>The customer accepted this quote. Continue to scheduling and capacity selection.</p><a className="app-button-primary" href={buildStaffModuleHref(workspaceSlug, "schedule")}>Open schedule</a></>
