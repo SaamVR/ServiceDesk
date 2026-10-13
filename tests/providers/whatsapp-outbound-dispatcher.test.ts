@@ -111,6 +111,82 @@ describe("WhatsApp outbound dispatcher", () => {
     expect(calls).toHaveLength(0);
   });
 
+  test("never substitutes a queued recipient, content or send idempotency key", async () => {
+    const queued=queuedJob();
+    const candidates=[
+      queuedJob({recipient:{...queued.recipient,recipientRef:"15550001234"}}),
+      queuedJob({idempotencyKey:"another-customer-send"}),
+      queuedJob({freeformText:"Changed after review."}),
+      queuedJob({templateKey:"new-template"}),
+      queuedJob({workspaceId:"ws-other"}),
+    ];
+    let calls=0;
+    for(const latest of candidates) {
+      const result=await dispatchWhatsAppOutboxJob({
+        ctx,queuedJob:queued,meta,config,
+        http:async()=>{calls++;return {status:200,body:"{}"};},
+        store:store(latest),
+      });
+      expect(result).toMatchObject({ok:false,code:"STALE_OUTBOX_JOB"});
+    }
+    expect(calls).toBe(0);
+  });
+
+  test("rejects a removed or switched conversation guard", async () => {
+    const queued=queuedJob({handoverGuard:{
+      conversationId:"conversation-1",expectedConversationVersion:7,
+      handoverActive:false,
+    }});
+    let calls=0;
+    for(const latest of [
+      queuedJob({handoverGuard:undefined}),
+      queuedJob({handoverGuard:{conversationId:"conversation-2",
+        expectedConversationVersion:7,handoverActive:false}}),
+    ]) {
+      const result=await dispatchWhatsAppOutboxJob({
+        ctx,queuedJob:queued,meta,config,
+        http:async()=>{calls++;return {status:200,body:"{}"};},
+        store:store(latest),
+      });
+      expect(result).toMatchObject({ok:false,code:"STALE_CONVERSATION_VERSION"});
+    }
+    expect(calls).toBe(0);
+  });
+
+  test("reuses a previously persisted provider acceptance without another send", async () => {
+    const latest=queuedJob();
+    const accepted:ProviderSendResult={
+      jobId:latest.id,providerMessageId:"wamid.previously.recorded",
+      acceptedAt:"2026-10-04T11:59:00.000Z",mode:"SANDBOX",
+      evidence:{provider:"WHATSAPP",mode:"SANDBOX",
+        verification:"CONTRACT_TESTED",
+        capturedAt:"2026-10-04T11:59:00.000Z",
+        controlledId:"wamid.previously.recorded",notes:["Prior provider receipt"]},
+    };
+    let calls=0,recordCalls=0;
+    const result=await dispatchWhatsAppOutboxJob({
+      ctx,queuedJob:latest,meta,config,
+      http:async()=>{calls++;return {status:200,body:"{}"};},
+      store:store(latest,{
+        async loadRecordedProviderAcceptance(workspaceId,idempotencyKey){
+          expect(workspaceId).toBe(latest.workspaceId);
+          expect(idempotencyKey).toBe(latest.idempotencyKey);
+          return accepted;
+        },
+        async recordProviderAcceptance(){recordCalls++;return {
+          status:"RECORDED",result:accepted};
+        },
+      }),
+    });
+    expect(result).toMatchObject({ok:true,value:{
+      providerMessageId:"wamid.previously.recorded",
+      acceptanceRecordStatus:"DUPLICATE",
+      deliverySemantics:"PROVIDER_ACCEPTANCE_ONLY",
+    }});
+    expect(calls).toBe(0);
+    expect(recordCalls).toBe(0);
+  });
+
   test("blocks provider account scope mismatch before provider call", async () => {
     const latest = queuedJob();
     const calls: Array<Parameters<WhatsAppCloudHttpTransport>[0]> = [];
