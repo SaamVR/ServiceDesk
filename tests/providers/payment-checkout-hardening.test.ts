@@ -45,7 +45,7 @@ describe("payment checkout hardening", () => {
     let calls = 0;
     const http: StripeCheckoutHttpTransport = async () => {
       calls += 1;
-      return { status: 200, body: JSON.stringify({ id: "cs_test", url: "https://checkout.stripe.test/cs_test" }) };
+      return { status: 200, body: JSON.stringify({ id: "cs_test", url: "https://checkout.stripe.com/cs_test" }) };
     };
 
     const result = await createStripeCheckoutSession(
@@ -80,7 +80,7 @@ describe("payment checkout hardening", () => {
       checkoutInput({ purpose: "PLATFORM_SUBSCRIPTION" }),
       async (request) => {
         captured = request;
-        return { status: 200, body: JSON.stringify({ id: "cs_subscription", url: "https://checkout.stripe.test/cs_subscription" }) };
+        return { status: 200, body: JSON.stringify({ id: "cs_test_subscription", url: "https://checkout.stripe.com/cs_subscription" }) };
       },
     );
 

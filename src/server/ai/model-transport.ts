@@ -293,6 +293,26 @@ export async function callAiModel(
     return { ok: false, code: "AI_MODEL_INPUT_TOO_LARGE",
       message: "AI input must be nonempty and within the approved size limit." };
   }
+  // Limit non-customer prompt context before construction of the paid
+  // provider request. A trusted caller might still accidentally pass huge
+  // knowledge reference arrays or oversized gateway metadata.
+  const metadataFields = [input.promptVersion,input.conversationId,input.workspaceId];
+  const refs = input.approvedKnowledgeRefs ?? [];
+  const snippets = input.approvedKnowledgeSnippets ?? [];
+  const boundedString = (value: unknown, limit: number) =>
+    typeof value === "string" && value.length > 0 && value.length <= limit;
+  const refsValid = Array.isArray(refs) && refs.length <= 20 &&
+    refs.every(value => boundedString(value,128));
+  const snippetsValid = Array.isArray(snippets) && snippets.length <= 3 &&
+    snippets.every(value => value && typeof value === "object" &&
+      boundedString(value.documentId,128) &&
+      boundedString(value.chunkId,128) &&
+      typeof value.snippet === "string" && value.snippet.length <= 240);
+  if (!metadataFields.every(value => boundedString(value,512)) ||
+      !refsValid || !snippetsValid) {
+    return {ok:false,code:"AI_MODEL_CONTEXT_INVALID",
+      message:"AI request context exceeds the authorized reference or metadata limits."};
+  }
   // Directly injected configs must never bypass the server runtime budget.
   const outputCap = config.maxOutputTokens ?? 4096;
   if (!Number.isSafeInteger(outputCap) || outputCap < 512 || outputCap > 8192) {
