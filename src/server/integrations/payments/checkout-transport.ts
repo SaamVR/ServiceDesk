@@ -133,6 +133,12 @@ function normalizedFailure(status: number): Result<never> {
 }
 
 function parseCheckoutResponse(body: string, mode: ProviderMode): Result<{ id: string; url: string }> {
+  // HTTPS 2xx is not enough to establish a Stripe checkout. Bound the actual
+  // provider envelope before JSON parsing or retaining any returned fields.
+  if (typeof body !== "string" || Buffer.byteLength(body, "utf8") > 16_384 || !body.trim()) {
+    return { ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID",
+      message: "Payment provider checkout response is missing or exceeds the accepted envelope." };
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(body);
@@ -148,7 +154,7 @@ function parseCheckoutResponse(body: string, mode: ProviderMode): Result<{ id: s
   }
   const id = (parsed as { id?: unknown }).id;
   const url = (parsed as { url?: unknown }).url;
-  if (typeof id !== "string" || !/^cs_(?:test|live)_[A-Za-z0-9_]+$/.test(id) ||
+  if (typeof id !== "string" || id.length > 512 || !/^cs_(?:test|live)_[A-Za-z0-9_]+$/.test(id) ||
       (mode === "LIVE" ? !id.startsWith("cs_live_") : !id.startsWith("cs_test_")) ||
       typeof url !== "string" || !validatedStripeCheckoutUrl(url)) {
     return { ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID", message: "Payment provider checkout response is missing a valid session ID or URL." };
