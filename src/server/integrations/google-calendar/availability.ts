@@ -44,11 +44,24 @@ export function expandCalendarSlotWithBuffer(slot: CalendarInterval, buffer: Cal
   };
 }
 
+/** The availability list is not a source of instant confirmation when any
+ * external busy proof is stale, malformed or outside the supported buffer.
+ * A guessed free slot is worse than an unavailable booking option.
+ */
 export function filterAvailableCalendarSlots<TSlot extends CalendarSlotWithId>(slots: TSlot[], busy: CalendarBusyRange[], buffer: CalendarSlotBuffer): TSlot[] {
-  const freshBusy = busy.filter((block) => block.freshness === "FRESH");
+  if (!Array.isArray(slots) || !Array.isArray(busy) ||
+      !buffer || !Number.isSafeInteger(buffer.beforeMinutes) ||
+      !Number.isSafeInteger(buffer.afterMinutes) ||
+      buffer.beforeMinutes < 0 || buffer.afterMinutes < 0 ||
+      buffer.beforeMinutes > 1440 || buffer.afterMinutes > 1440 ||
+      busy.some(block => !block || block.freshness !== "FRESH" || !validInterval(block))) {
+    return [];
+  }
 
   return slots.filter((slot) => {
+    if (!slot || !validInterval(slot)) return false;
     const buffered = expandCalendarSlotWithBuffer(slot, buffer);
-    return !freshBusy.some((block) => calendarSlotOverlapsBusy(buffered, block));
+    return validInterval(buffered) !== null &&
+      !busy.some(block => calendarSlotOverlapsBusy(buffered, block));
   });
 }

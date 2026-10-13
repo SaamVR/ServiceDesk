@@ -15,6 +15,9 @@ describe("untrusted staff quote model claims",()=>{
       "We can refund the deposit", "The delivery is guaranteed", "We promise a price match",
       "This schedule is definitely available",
       "The customer has paid", "Contact jane@example.com",
+      "USD 200 is the likely charge", "200 dollars for the cleaning",
+      "The total will be 300", "The deposit should be 50",
+      "Tax estimated at 25", "The price around 200",
       "Your price is $200", "Appointment 2026-10-20",
     ]) expect(validateStaffQuoteReviewDraft(claim),claim).toBeUndefined();
   });
