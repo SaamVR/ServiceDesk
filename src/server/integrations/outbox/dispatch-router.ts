@@ -42,6 +42,17 @@ function failure(input: CommittedOutboxDispatchInput, code: string, message: str
 }
 
 export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJobInput): Promise<Result<CommittedOutboxDispatchOutcome>> {
+  // The outbox claim is the only authority for invoking an external provider.
+  // Refuse corrupt attempts and timestamps BEFORE opt-in or dispatcher selection.
+  // Otherwise malformed persisted jobs could still consume provider sends.
+  if (!input.job || !Number.isSafeInteger(input.attempt) ||
+      input.attempt < 1 || input.attempt > 1_000_000 ||
+      !validUtcTime(input.committedAt) ||
+      !validUtcTime(input.job.createdAt) ||
+      Date.parse(input.committedAt) < Date.parse(input.job.createdAt)) {
+    return failure(input, "OUTBOX_COMMIT_CLAIM_INVALID",
+      "Committed outbox attempt or chronological claim evidence is invalid.");
+  }
   if (input.expectedWorkspaceId && input.expectedWorkspaceId !== input.job.workspaceId) {
     return failure(input, "WORKSPACE_MISMATCH", "Committed outbox job workspace does not match the dispatch claim workspace.");
   }
