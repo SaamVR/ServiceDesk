@@ -23,6 +23,11 @@ on:
       - "src/components/product/StaffAppShell.tsx"
       - "src/components/product/StaffWorkspaceV3.module.css"
       - "src/features/operations/StaffOverviewDashboard.module.css"
+      - "src/features/operations/inbox-triage.ts"
+      - "src/features/operations/OperationalProductRoute.tsx"
+      - "src/features/operations/OperationalProductRoute.module.css"
+      - "src/app/app/[workspace]/inbox/page.tsx"
+      - "tests/e2e/v3-inbox-triage.test.ts"
       - "tests/e2e/staff-v3-navigation.test.tsx"
       - "src/features/auth/registration.ts"
       - "src/features/auth/email-origin.ts"
@@ -74,6 +79,7 @@ jobs:
           tests/providers/whatsapp-durable-inbound-handler.test.ts
           tests/e2e/staff-v3-navigation.test.tsx
           tests/e2e/v3-owner-registration-flow.test.tsx
+          tests/e2e/v3-inbox-triage.test.ts
           tests/e2e/v2-public-marketing-professional-ui.test.ts
       - name: Typecheck
         run: pnpm typecheck
@@ -95,6 +101,10 @@ jobs:
           tests/e2e/v3-owner-registration-flow.test.tsx
           tests/e2e/v2-public-marketing-professional-ui.test.ts
           src/features/auth/registration.ts
+          src/features/operations/inbox-triage.ts
+          src/features/operations/OperationalProductRoute.tsx
+          src/app/app/[workspace]/inbox/page.tsx
+          tests/e2e/v3-inbox-triage.test.ts
           src/features/auth/email-origin.ts
           src/app/auth/forgot-password/actions.ts
           src/app/auth/forgot-password/page.tsx
