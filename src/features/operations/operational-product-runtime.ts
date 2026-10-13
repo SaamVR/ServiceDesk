@@ -1935,7 +1935,7 @@ export async function calculateOperationalQuote(
   return result.ok
     ? { ok: true, message: humanConfirmedAddons?.oven === true
       ? "Quote calculated and saved. Review the persisted line items before sending; an oven charge requires confirmed customer agreement."
-      : "Quote calculated and saved. No optional oven charge was included." }
+      : "Quote calculated and saved." }
     : safeCoreFailure(result, "Could not calculate the quote. Check the request details and try again.");
 }
 
