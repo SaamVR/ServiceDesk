@@ -140,6 +140,12 @@ function parseCheckoutResponse(body: string, mode: ProviderMode): Result<{ id: s
     return { ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID", message: "Payment provider checkout response is malformed JSON." };
   }
 
+  // A 200 status carrying null/arrays is an invalid provider contract, not
+  // a network failure or a confirmed checkout session.
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { ok: false, code: "PAYMENT_PROVIDER_RESPONSE_INVALID",
+      message: "Payment provider checkout response was not an object." };
+  }
   const id = (parsed as { id?: unknown }).id;
   const url = (parsed as { url?: unknown }).url;
   if (typeof id !== "string" || !/^cs_(?:test|live)_[A-Za-z0-9_]+$/.test(id) ||
@@ -207,6 +213,16 @@ export async function createStripeCheckoutSession(
     }
     if (input.hold.workspaceId !== input.quote.workspaceId || input.hold.quoteId !== input.quote.id) {
       return { ok: false, code: "CHECKOUT_SCOPE_MISMATCH", message: "Hold and quote do not share workspace/quote scope." };
+    }
+    const expiry = Date.parse(input.hold.expiresAt);
+    const now = Date.parse(config.now());
+    if (!Number.isFinite(expiry) || !Number.isFinite(now)) {
+      return { ok: false, code: "PAYMENT_HOLD_EXPIRY_INVALID",
+        message: "Authoritative checkout hold timestamps are invalid." };
+    }
+    if (expiry <= now) {
+      return { ok: false, code: "PAYMENT_HOLD_EXPIRED",
+        message: "An expired checkout hold cannot create a new provider session." };
     }
   }
   if (input.purpose === "BALANCE" && (!input.invoiceId?.trim() || !Number.isInteger(input.balanceMinor) || (input.balanceMinor ?? 0) <= 0)) {
