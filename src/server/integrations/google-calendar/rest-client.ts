@@ -143,6 +143,10 @@ function parseJson(body: string): Result<unknown> {
 }
 
 function providerEventId(parsed: unknown): Result<string> {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE",
+      message:"Google Calendar returned an invalid event response."};
+  }
   const id = (parsed as { id?: unknown }).id;
   if (typeof id !== "string" || !id.trim()) {
     return { ok: false, code: "GOOGLE_CALENDAR_INVALID_RESPONSE", message: "Google Calendar event response is missing an event ID." };
@@ -198,8 +202,15 @@ export async function freeBusyGoogleCalendar(
   const parsed = parseJson(response.value.body);
   if (!parsed.ok) return parsed;
 
-  const calendars = (parsed.value as { calendars?: Record<string, { busy?: Array<{ start?: unknown; end?: unknown }> }> }).calendars;
-  if (!calendars || typeof calendars !== "object") {
+  if (!parsed.value || typeof parsed.value !== "object" ||
+      Array.isArray(parsed.value)) {
+    return {ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE",
+      message:"Google Calendar FreeBusy response is not an object."};
+  }
+  const calendars = (parsed.value as {
+    calendars?: Record<string, {busy?: Array<{start?:unknown;end?:unknown}>}>
+  }).calendars;
+  if (!calendars || typeof calendars !== "object" || Array.isArray(calendars)) {
     return { ok: false, code: "GOOGLE_CALENDAR_INVALID_RESPONSE", message: "Google Calendar FreeBusy response is missing calendars." };
   }
 
