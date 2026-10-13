@@ -65,7 +65,7 @@ export async function listGoogleCalendarEventsPage(
   }
   if (!input.calendarId || input.calendarId.length > 512 ||
       input.calendarId.trim() !== input.calendarId ||
-      /[\\x00-\\x1f\\x7f]/.test(input.calendarId)) {
+      /[\x00-\x1f\x7f]/.test(input.calendarId)) {
     return { ok: false, code: "GOOGLE_CALENDAR_MISSING_CALENDAR", message: "Calendar ID is required for event sync." };
   }
 
