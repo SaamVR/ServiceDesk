@@ -55,7 +55,8 @@ describe("V4 real customer invoice sandbox payment preflight", () => {
     expect(action.indexOf('.from("sandbox_checkout_sessions")'))
       .toBeGreaterThan(action.indexOf("customerInvoiceSandboxReadiness({"));
     expect(ui).toContain("const invoiceReadiness = customerInvoiceSandboxReadiness(");
-    expect(ui).toContain("invoiceReadiness.ok ? (");
+    expect(ui).toContain("invoiceReadiness.ok && ledger.ok ? (");
+    expect(ui).toContain("readCustomerInvoiceLedgerSummary(invoice)");
     expect(ui).toContain("Invoice payment needs review");
   });
 });
