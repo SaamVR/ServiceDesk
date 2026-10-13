@@ -18,7 +18,8 @@ describe("V2 professional request and quote UI", () => {
     const route = source("src/features/operations/OperationalProductRoute.tsx");
     expect(route).toContain("Quote financial summary");
     expect(route).toContain("Ready to send");
-    expect(route).toContain("Waiting for customer");
+    expect(route).toContain("Delivery verification");
+    expect(route).toContain("Delivery not proven here");
     expect(route).toContain("Ready to schedule");
     expect(route).toContain("sendOperationalQuote");
   });
