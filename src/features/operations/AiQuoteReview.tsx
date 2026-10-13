@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { generateQuoteReviewAction } from "./ai-quote-review-action";
+
 
 type State = { busy: boolean; review?: string; model?: string; error?: string };
 
@@ -18,29 +18,52 @@ function ScopedQuoteReview({
 }: { workspaceSlug: string; quoteId: string; configured: boolean }) {
   const [state, setState] = useState<State>({ busy: false });
   const requestSequence = useRef(0);
+  const activeRequest = useRef<AbortController | null>(null);
 
-  useEffect(() => () => { requestSequence.current += 1; }, []);
+  useEffect(() => () => {
+    requestSequence.current += 1;
+    activeRequest.current?.abort();
+  }, []);
 
   async function generate() {
     if (!configured || state.busy) return;
     const id = ++requestSequence.current;
+    const controller = new AbortController();
+    activeRequest.current = controller;
     setState({ busy: true });
     try {
-      const result = await generateQuoteReviewAction(workspaceSlug, quoteId);
-      // Cancelled or superseded responses must not overwrite a new quote.
-      if (requestSequence.current !== id) return;
-      setState(result.ok ? { busy: false, review: result.review, model: result.model }
-        : { busy: false, error: result.message });
+      const response = await fetch("/api/internal/ai/quote-review", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ workspaceSlug, quoteId }),
+        signal: controller.signal,
+      });
+      if (requestSequence.current !== id || controller.signal.aborted) return;
+      const result: unknown = await response.json();
+      if (requestSequence.current !== id || controller.signal.aborted) return;
+      if (response.ok && result && typeof result === "object" &&
+          "state" in result && result.state === "AI_STAFF_REVIEW_ONLY" &&
+          "review" in result && typeof result.review === "string" &&
+          "model" in result && typeof result.model === "string") {
+        setState({ busy: false, review: result.review, model: result.model });
+      } else {
+        setState({ busy: false, error: "AI review was unavailable. Check model configuration and your access to this saved quote; no message was sent." });
+      }
     } catch {
-      if (requestSequence.current !== id) return;
+      if (requestSequence.current !== id || controller.signal.aborted) return;
       setState({ busy: false, error: "AI review could not be completed. Use the verified saved quote instead." });
+    } finally {
+      if (requestSequence.current === id) activeRequest.current = null;
     }
   }
 
   function cancelReview() {
     if (!state.busy) return;
     requestSequence.current += 1;
-    setState({ busy: false, error: "The review display was cancelled. A paid provider request may still be processing; no quote or customer action was changed." });
+    activeRequest.current?.abort();
+    activeRequest.current = null;
+    setState({ busy: false, error: "Cancellation was requested. A paid provider request may still be processing; no quote or customer action was changed." });
   }
 
   return <section aria-label="Staff AI quote review"
