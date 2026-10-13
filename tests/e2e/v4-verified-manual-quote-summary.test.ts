@@ -33,7 +33,7 @@ describe("manual quote handoff with real owner-priced, verified itemization", ()
       { status: "DRAFT" }, { validUntil:"2010-01-01T00:00:00Z" },
       { taxMinor:500 }, { totalMinor:35000 }, { balanceMinor:23000 },
       { lineItems: [] }, { lineItems: null },
-      { lineItems: [{code:"BASE",description:"Wrong amount",amountMinor:31000,durationMinutes:210}] },
+      { lineItems: [{code:"BASE",description:"Wrong amount",amountMinor:31001,durationMinutes:210}] },
       { currency:"usd" }, { quoteId:"foreign" },
     ]) {
       expect(verifiedManualQuoteHandoffMessage({...facts,...patch},origin,now)).toBeNull();
