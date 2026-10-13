@@ -64,7 +64,13 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
       expectedWorkspaceId: input.expectedWorkspaceId,
       expectedChannel: input.job.channel,
     });
-    if (!result.ok) return result;
+    if (!result.ok) {
+      // Provider adapters may include raw HTTP bodies, bearer tokens or
+      // recipient data in error Result.message. Never forward them to the
+      // persisted outbox or operator diagnostics.
+      return failure(input, "PROVIDER_ADAPTER_REJECTED",
+        "The provider adapter rejected this attempt; manual review required.");
+    }
 
     // A success receipt must not be applied to a different committed job.
     // Connector implementations and provider payloads cannot authorize a
@@ -80,6 +86,23 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
           !validAcceptedReceipt(outcome as unknown as Record<string, unknown>))) {
       return failure(input, "DISPATCH_OUTCOME_IDENTITY_MISMATCH",
         "Provider adapter returned an invalid receipt for the claimed outbox job; manual review required.");
+    }
+    if (outcome.outcome !== "ACCEPTED") {
+      // Failure strings/evidence are untrusted adapter data. Preserve the
+      // classified state and a bounded machine code, not raw provider text.
+      const code = typeof outcome.code === "string" &&
+        /^[A-Z][A-Z0-9_]{0,79}$/.test(outcome.code)
+          ? outcome.code : "PROVIDER_FAILURE_UNVERIFIED";
+      const retry = outcome.outcome === "RETRYABLE_FAILURE" &&
+        Number.isSafeInteger(outcome.retryAfterSeconds) &&
+        (outcome.retryAfterSeconds ?? 0) > 0 &&
+        (outcome.retryAfterSeconds ?? 0) <= 86_400
+          ? { retryAfterSeconds: outcome.retryAfterSeconds } : {};
+      return { ok: true, value: {
+        ...dispatchOutcomeBase(input.job), outcome: outcome.outcome,
+        code, message: "Provider outcome recorded without raw response data.",
+        ...retry,
+      } };
     }
     return result;
   } catch {
