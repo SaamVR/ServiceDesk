@@ -14,6 +14,7 @@ import {
   readVerifiedCustomerQuoteLineItems,
   type CustomerQuoteLineItem,
 } from "./customer-quote-line-items";
+import { verifyCustomerQuoteForAcceptance } from "./customer-quote-acceptance";
 
 type Row = Record<string, unknown>;
 
@@ -525,6 +526,17 @@ export async function acceptCustomerPortalQuote(quoteId: string): Promise<Custom
   }
 
   const quote = mapQuote(quoteResult.data as Row, resolved.value.workspace.id);
+  // Read persisted monetary truth AFTER verifying customer ownership and
+  // immediately BEFORE the version-guarded acceptance transaction.
+  // A UI warning alone cannot prevent direct server-action invocation.
+  const acceptance = verifyCustomerQuoteForAcceptance(
+    quoteResult.data as Row, new Date().toISOString(),
+  );
+  if (!acceptance.ok && acceptance.code !== "QUOTE_NOT_SENT") {
+    return { ok: false, message: acceptance.code === "QUOTE_EXPIRED"
+      ? "This quote has expired. Ask the business for an updated quote."
+      : "This quote's saved charges could not be verified. Ask the business to review and re-send it before accepting." };
+  }
   if (quote.status !== "SENT") {
     return {
       ok: false,
