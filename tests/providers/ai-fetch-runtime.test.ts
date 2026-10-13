@@ -147,7 +147,15 @@ describe("operational AI runtime enablement", () => {
     });
     expect(result).toMatchObject({ ok: true, value: {
       apiBaseUrl: "https://api.openai.com/v1", model: "gpt-6", timeoutMs: 30_000,
+      maxOutputTokens: 4096,
     } });
+  });
+
+  it("accepts approved configurable per-inference output budget", () => {
+    const ready = readConfiguredAiRuntimeConfig({
+      ...configured, SERVICEDESK_AI_MAX_OUTPUT_TOKENS: "1536",
+    });
+    expect(ready).toMatchObject({ ok: true, value: { maxOutputTokens: 1536 } });
   });
 
   it("rejects invalid or credential-bearing origins, malformed models and invalid budgets", () => {
@@ -159,6 +167,11 @@ describe("operational AI runtime enablement", () => {
       { SERVICEDESK_AI_MODEL: "" },
       { SERVICEDESK_AI_TIMEOUT_MS: "Infinity" },
       { SERVICEDESK_AI_TIMEOUT_MS: "50" },
+      { SERVICEDESK_AI_MAX_OUTPUT_TOKENS: "0" },
+      { SERVICEDESK_AI_MAX_OUTPUT_TOKENS: "511" },
+      { SERVICEDESK_AI_MAX_OUTPUT_TOKENS: "8193" },
+      { SERVICEDESK_AI_MAX_OUTPUT_TOKENS: "1500.5" },
+      { SERVICEDESK_AI_MAX_OUTPUT_TOKENS: "Infinity" },
     ];
     for (const mutation of mutations) {
       expect(readConfiguredAiRuntimeConfig({ ...configured, ...mutation }).ok).toBe(false);
