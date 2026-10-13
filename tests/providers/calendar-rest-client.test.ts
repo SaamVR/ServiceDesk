@@ -149,6 +149,18 @@ describe("Google Calendar REST client", () => {
     expect(server).toMatchObject({ ok: false, code: "GOOGLE_CALENDAR_TRANSIENT_FAILURE" });
   });
 
+  test("rejects null and array provider JSON envelopes without throwing", async () => {
+    for (const envelope of ["null","[]"]) {
+      const event = await getGoogleCalendarEvent(
+        config,"primary","event-1",transport(200,envelope));
+      expect(event).toMatchObject({ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE"});
+      const free = await freeBusyGoogleCalendar(
+        config,{calendarIds:["primary"],timeMin:"2026-10-04T09:00:00Z",
+          timeMax:"2026-10-04T12:00:00Z"},transport(200,envelope));
+      expect(free).toMatchObject({ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE"});
+    }
+  });
+
   test("rejects malformed provider responses and timeouts without leaking tokens", async () => {
     const malformed = await getGoogleCalendarEvent(config, "primary", "event-1", transport(200, { status: "confirmed" }));
     const timeout = await getGoogleCalendarEvent(config, "primary", "event-1", async () => {
