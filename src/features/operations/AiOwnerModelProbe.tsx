@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./AiOwnerModelProbe.module.css";
 
 interface ProbeResult {
@@ -18,6 +18,13 @@ export function AiOwnerModelProbe({
   workspaceSlug: string;
   configured: boolean;
 }) {
+  const activeRequest = useRef<AbortController | null>(null);
+  // Leaving this workspace cancels a pending diagnostic instead of letting
+  // the browser continue an obsolete potentially billable provider call.
+  useEffect(() => () => {
+    activeRequest.current?.abort();
+    activeRequest.current = null;
+  }, [workspaceSlug]);
   // A model probe proves only a single owner-controlled request.
   // Never display another workspace's response after client-side navigation.
   const [status, setStatus] = useState<{
@@ -31,6 +38,9 @@ export function AiOwnerModelProbe({
   async function check() {
     if (!configured || busy) return;
     const submittedWorkspace = workspaceSlug;
+    const controller = new AbortController();
+    activeRequest.current?.abort();
+    activeRequest.current = controller;
     setStatus({ workspace: submittedWorkspace, busy: true });
     let verified: ProbeResult | undefined;
     let failed = false;
@@ -39,6 +49,7 @@ export function AiOwnerModelProbe({
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
+        signal: controller.signal,
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ workspaceSlug }),
       });
@@ -57,6 +68,7 @@ export function AiOwnerModelProbe({
     } catch {
       failed = true;
     } finally {
+      if (activeRequest.current === controller) activeRequest.current = null;
       setStatus(previous => previous?.workspace === submittedWorkspace
         ? { workspace: submittedWorkspace, busy: false, result: verified, error: failed }
         : previous);
