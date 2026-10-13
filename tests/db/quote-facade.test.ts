@@ -62,14 +62,16 @@ describe("quote facade methods", () => {
         id: "quote_1",
         workspaceId: "ws_1",
         requestId: "req_1",
-        totalMinor: 34_000,
-        depositMinor: 8_500,
-        balanceMinor: 25_500,
-        durationMinutes: 240,
+        totalMinor: 31_000,
+        depositMinor: 7_750,
+        balanceMinor: 23_250,
+        durationMinutes: 210,
         bufferMinutes: 30,
         status: "APPROVED",
       },
     });
+    expect(quotes.saved).toHaveLength(1);
+    expect(quotes.saved[0].lineItems.some(line => line.code === "OVEN")).toBe(false);
   });
 
   it("denies a repository result from another workspace", async () => {
