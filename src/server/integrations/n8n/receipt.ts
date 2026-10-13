@@ -1,6 +1,6 @@
 import type { N8nDeliveryState, N8nExecutionStatus } from "./execution";
 
-export type N8nReceiptMergeResult = "INSERTED" | "UPDATED" | "DUPLICATE_FINAL";
+export type N8nReceiptMergeResult = "INSERTED" | "UPDATED" | "DUPLICATE_FINAL" | "IDENTITY_MISMATCH" | "STALE_UPDATE";
 
 export interface N8nReceiptKeyInput {
   workspaceId: string;
@@ -48,6 +48,22 @@ export function mergeN8nExecutionReceipt(
   update: N8nExecutionReceiptUpdate,
 ): N8nReceiptMergeDecision {
   if (!current) return { result: "INSERTED", receipt: receiptFrom(update) };
+  // This boundary must never let a late callback for another tenant or
+  // workflow replace the verified current receipt, even if caller supplied
+  // the wrong cache key. Compare individual identity fields as well as key.
+  if (current.workspaceId !== update.workspaceId ||
+      current.workflowId !== update.workflowId ||
+      current.executionId !== update.executionId ||
+      current.triggeredEventId !== update.triggeredEventId ||
+      current.receiptKey !== n8nReceiptKey(update)) {
+    return { result: "IDENTITY_MISMATCH", receipt: current };
+  }
   if (current.final) return { result: "DUPLICATE_FINAL", receipt: current };
+  const previousTime = Date.parse(current.capturedAt);
+  const incomingTime = Date.parse(update.capturedAt);
+  if (!Number.isFinite(previousTime) || !Number.isFinite(incomingTime) ||
+      incomingTime <= previousTime) {
+    return { result: "STALE_UPDATE", receipt: current };
+  }
   return { result: "UPDATED", receipt: receiptFrom(update) };
 }

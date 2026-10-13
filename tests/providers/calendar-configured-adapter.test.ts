@@ -93,6 +93,51 @@ describe("ConfiguredGoogleCalendarAdapter", () => {
     expect(JSON.stringify(created)).not.toContain("access-token");
   });
 
+  test("rejects foreign workspace and crew visits before event writes or cancellations", async () => {
+    const calls: Array<Parameters<GoogleCalendarHttpTransport>[0]> = [];
+    const calendar = adapter({eventIdsByVisitId:{"visit-1":"event-1"}}, calls);
+    for (const invalid of [
+      {...visit, workspaceId:"another-workspace"},
+      {...visit, crewId:"other-crew"},
+    ]) {
+      expect(await calendar.createOrUpdate(invalid))
+        .toMatchObject({ok:false,code:"CALENDAR_VISIT_SCOPE_MISMATCH"});
+      expect(await calendar.cancel(invalid,{idempotencyKey:"cancel-1",now:visit.startAt}))
+        .toMatchObject({ok:false,code:"CALENDAR_VISIT_SCOPE_MISMATCH"});
+    }
+    expect(calls).toHaveLength(0);
+  });
+
+  test("rejects invalid duration and date before any Google API request", async () => {
+    const calls: Array<Parameters<GoogleCalendarHttpTransport>[0]> = [];
+    const calendar = adapter({},calls);
+    for (const invalid of [
+      {...visit,startAt:"invalid-time"},
+      {...visit,serviceMinutes:0},
+      {...visit,serviceMinutes:-20},
+      {...visit,bufferMinutes:-1},
+      {...visit,serviceMinutes:Number.POSITIVE_INFINITY},
+    ]) {
+      expect(await calendar.createOrUpdate(invalid))
+        .toMatchObject({ok:false,code:"CALENDAR_VISIT_WINDOW_INVALID"});
+    }
+    expect(calls).toHaveLength(0);
+  });
+
+  test("denies invalid or unbounded busy ranges before provider access", async () => {
+    const calls: Array<Parameters<GoogleCalendarHttpTransport>[0]> = [];
+    const calendar = adapter({},calls);
+    for (const range of [
+      {from:"bad-date",to:"2026-10-04T12:00:00Z"},
+      {from:"2026-10-05T12:00:00Z",to:"2026-10-04T12:00:00Z"},
+      {from:"2026-10-04T12:00:00Z",to:"2027-01-04T12:00:00Z"},
+    ]) {
+      expect(await calendar.listBusy(range,"crew-1"))
+        .toMatchObject({ok:false,code:"CALENDAR_BUSY_RANGE_INVALID"});
+    }
+    expect(calls).toHaveLength(0);
+  });
+
   test("returns a typed error without provider call when cancelling without a mapped event", async () => {
     const calls: Array<Parameters<GoogleCalendarHttpTransport>[0]> = [];
     const result = await adapter({}, calls).cancel(visit, { idempotencyKey: "cmd-1", now: "2026-10-04T09:00:00.000Z" });

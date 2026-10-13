@@ -98,6 +98,11 @@ async function callGoogleCalendar(
   request: Omit<GoogleCalendarHttpRequest, "headers" | "signal">,
   http: GoogleCalendarHttpTransport,
 ): Promise<Result<GoogleCalendarHttpResponse>> {
+  const trustedBase = "https://www.googleapis.com/calendar/v3";
+  if (!([trustedBase, trustedBase + "/"].includes(config.calendarApiBaseUrl))) {
+    return { ok:false, code:"GOOGLE_CALENDAR_CONFIGURATION_BLOCKED",
+      message:"Google Calendar requires the official HTTPS API endpoint." };
+  }
   if (!config.calendarApiBaseUrl || !config.accessToken) {
     return { ok: false, code: "GOOGLE_CALENDAR_CONFIGURATION_BLOCKED", message: "Google Calendar REST configuration is incomplete." };
   }
@@ -138,6 +143,10 @@ function parseJson(body: string): Result<unknown> {
 }
 
 function providerEventId(parsed: unknown): Result<string> {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE",
+      message:"Google Calendar returned an invalid event response."};
+  }
   const id = (parsed as { id?: unknown }).id;
   if (typeof id !== "string" || !id.trim()) {
     return { ok: false, code: "GOOGLE_CALENDAR_INVALID_RESPONSE", message: "Google Calendar event response is missing an event ID." };
@@ -193,17 +202,41 @@ export async function freeBusyGoogleCalendar(
   const parsed = parseJson(response.value.body);
   if (!parsed.ok) return parsed;
 
-  const calendars = (parsed.value as { calendars?: Record<string, { busy?: Array<{ start?: unknown; end?: unknown }> }> }).calendars;
-  if (!calendars || typeof calendars !== "object") {
+  if (!parsed.value || typeof parsed.value !== "object" ||
+      Array.isArray(parsed.value)) {
+    return {ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE",
+      message:"Google Calendar FreeBusy response is not an object."};
+  }
+  const calendars = (parsed.value as {
+    calendars?: Record<string, {busy?: Array<{start?:unknown;end?:unknown}>}>
+  }).calendars;
+  if (!calendars || typeof calendars !== "object" || Array.isArray(calendars)) {
     return { ok: false, code: "GOOGLE_CALENDAR_INVALID_RESPONSE", message: "Google Calendar FreeBusy response is missing calendars." };
   }
 
   const busy: CalendarBusyRange[] = [];
-  for (const [calendarId, calendar] of Object.entries(calendars)) {
-    const blocks = Array.isArray(calendar.busy) ? calendar.busy : [];
-    for (const block of blocks) {
-      if (typeof block.start !== "string" || typeof block.end !== "string") continue;
-      busy.push({ calendarId, startAt: block.start, endAt: block.end, source: "EXTERNAL_BUSY", freshness: "FRESH" });
+  // Google returns one entry per requested calendar. A missing calendar or
+  // an error-bearing entry is NOT a free schedule: fail closed to avoid
+  // overbooking when the provider has only returned partial availability.
+  for (const calendarId of input.calendarIds) {
+    const calendar = Object.prototype.hasOwnProperty.call(calendars, calendarId)
+      ? calendars[calendarId] : undefined;
+    if (!calendar || !Array.isArray(calendar.busy) ||
+        (calendar as {errors?:unknown}).errors !== undefined) {
+      return {ok:false,code:"GOOGLE_CALENDAR_BUSY_UNVERIFIED",
+        message:"Google Calendar did not verify all requested crew availability."};
+    }
+    for (const block of calendar.busy) {
+      if (!block || typeof block.start !== "string" ||
+          typeof block.end !== "string" ||
+          !Number.isFinite(Date.parse(block.start)) ||
+          !Number.isFinite(Date.parse(block.end)) ||
+          Date.parse(block.start) >= Date.parse(block.end)) {
+        return {ok:false,code:"GOOGLE_CALENDAR_BUSY_UNVERIFIED",
+          message:"Google Calendar returned an invalid busy interval."};
+      }
+      busy.push({calendarId,startAt:block.start,endAt:block.end,
+        source:"EXTERNAL_BUSY",freshness:"FRESH"});
     }
   }
   return { ok: true, value: busy };
