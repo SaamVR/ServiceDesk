@@ -100,7 +100,7 @@ describe("Google Calendar REST event list sync", () => {
       {calendarId:"crew@example.test",pageToken:"x".repeat(4097)},
       {calendarId:"crew@example.test",timeMin:"not-a-clock"},
       {calendarId:"crew@example.test",timeMin:"2026-10-20T00:00:00Z",timeMax:"2026-10-19T00:00:00Z"},
-      {calendarId:"crew@example.test\\n"},
+      {calendarId:"crew@example.test" + String.fromCharCode(10)},
     ]) {
       expect((await listGoogleCalendarEventsPage(config,request,http)).ok).toBe(false);
     }
