@@ -1314,6 +1314,15 @@ function RequestsView({
                         ? pricingReadiness.message
                         : "Complete the missing intake details before pricing."}</span>
                   </form>
+                  {selectedRequest.serviceCode === "MOVE_OUT" ? (
+                    <p role="note" style={{ margin: "8px 0 0", fontSize: ".82rem",
+                      lineHeight: 1.6, color: "#416d63" }}>
+                      <strong>Move-out add-on policy:</strong> The optional oven clean is
+                      not included in automatic quote calculation. A separate
+                      customer-approved add-on is required before staff can promise
+                      or charge for that work.
+                    </p>
+                  ) : null}
                 </>
               )}
             </section>
