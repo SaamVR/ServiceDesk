@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import type { Result } from "../../../contracts";
 import { classifyWebhookDeliveryResult, nextWebhookRetryAt, signOutboundWebhook, type OutboundWebhookEnvelope, type WebhookDeliveryDecision } from "./signed";
 
@@ -47,19 +48,28 @@ function validateDestination(config: WebhookExecutorConfig): Result<{ url: URL; 
   } catch {
     return { ok: false, code: "WEBHOOK_DESTINATION_INVALID", message: "Webhook destination URL is invalid." };
   }
-  if (parsed.protocol !== "https:") {
-    return { ok: false, code: "WEBHOOK_DESTINATION_INVALID", message: "Webhook destination must use HTTPS." };
+  if (parsed.protocol !== "https:" || parsed.username || parsed.password ||
+      parsed.port || parsed.hash || !parsed.hostname.includes(".") ||
+      isIP(parsed.hostname) !== 0 || parsed.hostname === "localhost" ||
+      parsed.hostname.endsWith(".localhost") ||
+      parsed.hostname.endsWith(".local") ||
+      parsed.hostname.endsWith(".internal")) {
+    return { ok: false, code: "WEBHOOK_DESTINATION_INVALID",
+      message: "Webhook destination must be a safe public HTTPS hostname." };
   }
-  if (config.allowedHosts && !config.allowedHosts.includes(parsed.host)) {
-    return { ok: false, code: "WEBHOOK_DESTINATION_NOT_ALLOWED", message: "Webhook destination host is not allowlisted." };
+  // Missing or empty allowlists never grant outbound access to customer data.
+  if (!Array.isArray(config.allowedHosts) || config.allowedHosts.length === 0 ||
+      !config.allowedHosts.includes(parsed.hostname)) {
+    return { ok: false, code: "WEBHOOK_DESTINATION_NOT_ALLOWED",
+      message: "Webhook destination host is not allowlisted." };
   }
   return { ok: true, value: { url: parsed, host: parsed.host } };
 }
 
 function redactedExcerpt(body: string | undefined): string | undefined {
-  if (!body) return undefined;
-  const text = body.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[redacted-email]");
-  return text.slice(0, 120);
+  // Provider responses can echo customer text, auth tokens and private IDs.
+  // A fixed marker avoids partial regex redaction leaking sensitive content.
+  return body ? "[provider-response-redacted]" : undefined;
 }
 
 function finalResult(input: {
@@ -91,6 +101,17 @@ export async function executeSignedWebhookDelivery(
 ): Promise<WebhookExecutionResult> {
   const now = config.now();
   const destination = validateDestination(config);
+  const validAttempt = Number.isSafeInteger(input.attempt) &&
+    Number.isSafeInteger(config.maxAttempts) &&
+    input.attempt >= 1 && config.maxAttempts >= 1 &&
+    input.attempt <= config.maxAttempts && config.maxAttempts <= 25;
+  if (!validAttempt || !config.signingSecret ||
+      !Number.isFinite(Date.parse(now))) {
+    return {eventId:input.envelope.id,attempt:input.attempt,
+      maxAttempts:config.maxAttempts,outcome:"FAILED_FINAL",
+      retryable:false,reason:"DETERMINISTIC_HTTP_FAILURE",
+      businessMutationAllowed:false};
+  }
   if (!destination.ok) {
     return {
       eventId: input.envelope.id,
