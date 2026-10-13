@@ -4,6 +4,18 @@ on:
     branches: [feat/v4-quote-source-recovery-current-20261012]
   pull_request:
     branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    # Universal exact PR-head source RC remains unfiltered; this expensive
+    # specialist gate runs only for code it actually owns.
+    paths:
+      - "supabase/migrations/0063*"
+      - "src/server/workflows/customer-quote-source*"
+      - "src/server/workflows/owner-quote-recovery-queue.ts"
+      - "src/app/api/internal/workflows/quote-source/**"
+      - "src/features/operations/OwnerQuoteRecoveryQueue.tsx"
+      - "tests/sql/v4-quote-source*"
+      - "scripts/release/v4-quote-source*"
+      - "tests/e2e/v4-quote-source*"
+      - ".github/workflows/v4-quote-source-recovery-rc.yml"
 permissions:
   contents: read
 concurrency:

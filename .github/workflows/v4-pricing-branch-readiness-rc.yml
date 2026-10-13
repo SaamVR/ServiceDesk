@@ -4,6 +4,19 @@ on:
     branches: [fix/v4-owner-pricing-branch-readiness-20261012]
   pull_request:
     branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    # Universal exact PR-head source RC remains unfiltered; this expensive
+    # specialist gate runs only for code it actually owns.
+    paths:
+      - "src/features/operations/owner-pricing-readiness.ts"
+      - "src/features/operations/OwnerCleaningPricing*"
+      - "src/server/core/owner-cleaning-pricing-*"
+      - "src/app/app/[workspace]/settings/**"
+      - "supabase/migrations/0061*"
+      - "supabase/migrations/0062*"
+      - "tests/e2e/v4-owner-branch-price-readiness.test.ts"
+      - "tests/e2e/v4-owner-first-run-pricing.test.ts"
+      - "tests/e2e/v4-owner-pricing-worksheet.test.ts"
+      - ".github/workflows/v4-pricing-branch-readiness-rc.yml"
 permissions:
   contents: read
 concurrency:
