@@ -27,36 +27,56 @@ test("real Chrome expected headings agree with route-authored product text", () 
   const staticPage = file("src/features/product/StaticProductPage.tsx");
   const signIn = file("src/app/auth/sign-in/page.tsx");
   const expected = [
-    "Run cleaning operations from enquiry to paid job.",
+    "A cleaner way to run your cleaning business.",
     "Everything a cleaning operations team needs to move work forward.",
+    "Built for residential cleaning operations.",
     "Service quote pricing stays transparent and controlled.",
     "Connect the systems your operation already uses.",
     "See ServiceDesk against your real cleaning workflow.",
+    "Help for the workflows your team uses every day.",
+    "Privacy starts with workspace and role boundaries.",
+    "Clear product boundaries before launch.",
     "Ready for what's next?",
   ];
   for (const title of expected) {
     assert.ok(script.includes(title), title);
     assert.ok(home.includes(title) || staticPage.includes(title) || signIn.includes(title), title);
   }
-  assert.equal((script.match(/\{ slug: "(?:home|features|pricing|integrations|contact|sign-in)"/g) ?? []).length, 6);
+  assert.equal((script.match(/\{ slug: "(?:home|features|cleaning|pricing|integrations|contact|help|privacy|terms|sign-in)"/g) ?? []).length, 10);
 });
 
-test("public Chrome requires different authored storyboards instead of a repeated default illustration", () => {
+test("public Chrome requires page-specific bright workboards rather than repeated V3 cards", () => {
   const script = file("scripts/release/v3-public-browser-proof.mjs");
-  const component = file("src/components/shell/ProductStoryHero.tsx");
+  const component = file("src/features/product/BrightProductExperience.tsx");
+  const home = file("src/features/product/BrightHomeExperience.tsx");
   const shell = file("src/components/shell/MarketingShell.tsx");
-  for (const name of [
-    "Four stages of the cleaning operations workflow",
-    "Feature workflow from intake through quality",
-    "Illustrative service quote breakdown, not subscription prices",
-    "Integration readiness categories, not live provider status",
-    "ServiceDesk walkthrough preparation agenda",
-  ]) {
+  const names = [
+    "Illustrative AI-assisted service request",
+    "Illustrative request-to-visit workboard",
+    "Bright, tidy home illustrating cleaning-service operations",
+    "Example service quote with transparent total and deposit",
+    "Illustrative integration control system",
+    "An illustrative cleaning workflow conversation",
+    "help overview", "privacy overview", "terms overview",
+  ];
+  for (const name of names) {
     assert.ok(script.includes('heroLabel: "' + name + '"'), name);
-    assert.ok(component.includes(name) || file("src/components/shell/OperationalFlowHero.tsx").includes(name));
+    assert.ok(component.includes(name) || home.includes(name), name);
   }
   assert.ok(script.includes("state.heroLabel !== page.heroLabel"));
+  assert.ok(shell.includes('brightEdition'));
   assert.ok(shell.includes('heroStory ? <ProductStoryHero kind={heroStory} /> : <OperationalFlowHero />'));
+});
+
+test("V4 public Chrome exercises local-only interactive workflows and mobile actions", () => {
+  const script = file("scripts/release/v3-public-browser-proof.mjs");
+  const pages = file("src/features/product/BrightPageInteractions.tsx");
+  assert.ok(script.includes('page.slug === "home" && (width === 390 || width === 1280)'));
+  assert.ok(script.includes("V4 product interaction failed"));
+  assert.ok(script.includes("interactive-selected"));
+  assert.ok(script.includes("a[data-public-primary],a[data-public-secondary]"));
+  assert.ok(pages.includes('aria-pressed={'));
+  assert.ok(!pages.includes("fetch("));
 });
 
 test("browser acceptance remains fully public, five-width, no secrets, and labelled as partial evidence", () => {
@@ -94,4 +114,26 @@ test("real Chrome checks truthful page titles and blocks unapproved preview inde
   assert.ok(script.includes("Unapproved public preview unexpectedly permits search engine indexing"));
   assert.ok(root.includes('index: publicIndexingEnabled'));
   assert.ok(root.includes('follow: publicIndexingEnabled'));
+});
+
+test("new Clean Air homepage retains semantic photo-led layouts and a real controllable AI explainer", () => {
+  const proof = file("scripts/release/v3-public-browser-proof.mjs");
+  const home = file("src/features/product/BrightHomeExperience.tsx");
+  const ai = file("src/features/product/BrightHomeInteractions.tsx");
+  const css = file("src/features/product/BrightHomeExperience.module.css");
+  const page = file("src/app/page.tsx");
+  assert.ok(page.includes("homeEdition"));
+  assert.ok(page.includes("BrightHomeExperience"));
+  assert.ok(home.includes("Illustrative AI-assisted service request"));
+  assert.ok(home.includes("THE WAY WORK SHOULD FLOW"));
+  assert.ok(home.includes("data-home-cta"));
+  assert.ok(home.includes("data-home-link"));
+  assert.ok(proof.includes('page.slug === "home" && (width === 390 || width === 1280)'));
+  assert.ok(proof.includes("V4 public AI workflow interaction failed"));
+  assert.ok(proof.includes("ai-scheduling-selected"));
+  assert.ok(ai.includes('aria-pressed={selected === story.id}'));
+  assert.ok(ai.includes("No AI request, booking, message or payment is sent."));
+  assert.ok(css.includes("@media (prefers-reduced-motion: reduce)"));
+  assert.ok(css.includes('images.unsplash.com'));
+  assert.ok(css.includes('color: #fff'));
 });

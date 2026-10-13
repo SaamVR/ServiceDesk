@@ -248,3 +248,131 @@
   color: #10323a;
   cursor: not-allowed;
 }
+
+
+/* V4 Clean Air authentication family: a bright continuation of the homepage.
+   Keep all server actions, form contracts and QA registration gates untouched. */
+.root {
+  font-family: "DM Sans", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  background: #fff;
+  color: #233d3b;
+}
+.pageHeader {
+  height: 84px;
+  border-bottom: 1px solid #e9f1ee;
+  background: #fff;
+}
+.brand { color: #254d49; font-family: "Manrope", "DM Sans", sans-serif; font-size: 1.08rem; font-weight: 800; }
+.brandMark {
+  color: #fff; background: #219d99; font-family: "Manrope", sans-serif;
+  border-radius: 11px; font-weight: 840;
+}
+.brandMark span { color: #d8fff2; }
+.brandAi { color: #219d99; font-weight: 750; }
+.backLink { color: #4b776c; font-weight: 740; }
+.backLink:hover { color: #1c8d80; }
+.columns {
+  width: min(100% - 72px, 1370px);
+  min-height: 630px;
+  margin-block: clamp(28px, 4vw, 54px);
+  border: 1px solid #e1efea;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 20px 65px rgb(35 90 78 / 6%);
+}
+.story {
+  background: #e8f7f3;
+  color: #244944;
+  isolation: isolate;
+}
+.story::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: -1;
+  height: 56%;
+  background:
+    linear-gradient(to bottom, #e8f7f3 5%, rgb(232 247 243 / 45%) 38%, rgb(232 247 243 / 15%) 100%),
+    url("https://images.unsplash.com/photo-1773579223066-4b54a17ec8cc?auto=format&fit=crop&w=1100&q=78") center 58% / cover;
+  opacity: .55;
+}
+.story::after {
+  right: -300px;
+  bottom: -410px;
+  border-color: rgb(46 159 140 / 20%);
+  box-shadow: 0 0 0 74px rgb(39 161 143 / 4%), 0 0 0 148px rgb(39 161 143 / 3%), 0 0 0 222px rgb(39 161 143 / 3%);
+}
+.storyInner { padding: clamp(41px, 5.7vw, 76px); }
+.storyKicker { color: #1e9386; font-size: .68rem; letter-spacing: .14em; margin-bottom: 25px; }
+.story h2 {
+  color: #28504c;
+  font-family: "Manrope", "DM Sans", "Segoe UI", sans-serif;
+  font-size: clamp(2.7rem, 3.7vw, 4.5rem);
+  line-height: 1.11;
+  font-weight: 760;
+}
+.storyRule { margin: 45px 0 25px; background: #bfe6dc; }
+.storySteps { gap: 17px; }
+.storyStep {
+  color: #416a62;
+  font-size: .91rem;
+  font-weight: 650;
+}
+.stepIndex { color: #1c9c8d; font-weight: 820; }
+.storyBottom p { color: #508477; font-weight: 730; }
+.storyEmblem { border-color: #a3dace; background: #dff5eb; color: #158a7a; }
+.formSide { background: #fff; }
+.eyebrow { color: #22998d; font-size: .7rem; font-weight: 830; }
+.formSide h1 {
+  color: #25433f;
+  font-family: "Manrope", "DM Sans", sans-serif;
+  font-size: clamp(2.8rem, 3.65vw, 4.1rem);
+  font-weight: 760;
+  letter-spacing: -.07em;
+}
+.description { color: #70847e; font-size: .98rem; line-height: 1.76; }
+.formBody label { color: #385a52; font-weight: 730; }
+.formBody input:not([type=checkbox]), .formBody select {
+  min-height: 51px;
+  border: 1px solid #d8e6e0;
+  border-radius: 9px;
+  background: #fdfefd;
+  color: #284c44;
+}
+.formBody input:focus-visible, .formBody select:focus-visible {
+  border-color: #1b9b91; outline-color: #75cfc3;
+}
+.formBody button[type=submit] {
+  min-height: 52px;
+  border-color: #f27b62;
+  background: #fa785f;
+  color: #fff;
+  border-radius: 9px;
+  box-shadow: 0 10px 22px rgb(250 120 95 / 15%);
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.formBody button[type=submit]:hover { background: #e56950; transform: translateY(-1px); box-shadow: 0 13px 26px rgb(250 120 95 / 19%); }
+.formBody button[type=submit]:disabled,
+.formBody button[type=submit]:disabled:hover {
+  background: #9caeaa; border-color: #9caeaa; color: #f4f8f6; box-shadow: none; transform: none;
+}
+.formBody a { color: #178f82; }
+.footer { padding-block: 26px; border-top: 1px solid #edf3f1; color: #6e8980; }
+@media (max-width: 920px) {
+  .columns { width: min(100% - 34px, 1370px); }
+  .storyInner { padding: 40px 27px; }
+}
+@media (max-width: 690px) {
+  .pageHeader { height: 70px; }
+  .columns { width: calc(100% - 24px); margin-block: 15px 23px; border-radius: 13px; }
+  .formSide { padding: 35px 24px 43px; }
+  .story { min-height: 260px; }
+  .story::before { height: 100%; opacity: .32; }
+  .storyInner { padding: 28px 24px 34px; }
+  .story h2 { font-size: clamp(1.85rem, 7vw, 2.35rem); }
+  .storyRule { margin: 23px 0; }
+  .formSide h1 { font-size: clamp(2.35rem, 9vw, 3rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .root *, .root *::before, .root *::after { transition: none !important; animation: none !important; }
+}
