@@ -189,7 +189,7 @@ describe("bounded configured AI model transport", () => {
     for (const userText of ["", "  ", "private " + "x".repeat(16_000)]) {
       const result = await callAiModel(official, { ...input, userText }, transport);
       expect(result).toMatchObject({ ok: false, code: "AI_MODEL_INPUT_TOO_LARGE" });
-      expect(JSON.stringify(result)).not.toContain(userText.slice(0, 16));
+      if (userText.trim()) expect(JSON.stringify(result)).not.toContain(userText.slice(0, 16));
     }
     expect(calls).toBe(0);
     expect((await callAiModel(official, { ...input, userText: "x".repeat(16_000) }, transport)).ok).toBe(true);
