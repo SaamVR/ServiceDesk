@@ -42,6 +42,23 @@ describe("n8n execution receipt boundary", () => {
     expect(receipt.blockers).toContain("controlled_receiver_missing");
   });
 
+  test("does not claim successful controlled automation without a redacted output receipt", () => {
+    for (const redactedOutputRef of [undefined,"","  ","untrusted\\nvalue"]) {
+      const receipt = buildN8nExecutionReceipt({
+        workspaceId:"ws-clearnest",workflowId:"wf-alert",
+        workflowName:"Staff alert",executionId:"exec-missing-output",
+        status:"success",startedAt:"2026-10-04T10:00:00.000Z",
+        finishedAt:"2026-10-04T10:00:03.000Z",
+        controlledReceiver:true,
+        triggeredEventId:"evt-1",redactedOutputRef,
+      });
+      expect(receipt.deliveryState).toBe("CONFIGURATION_BLOCKED");
+      expect(receipt.evidence.verification).toBe("CONFIGURATION_BLOCKED");
+      expect(receipt.blockers).toContain("redacted_output_receipt_missing");
+      expect(receipt.businessMutationAllowed).toBe(false);
+    }
+  });
+
   test("classifies failed workflow execution as retryable when it is transient", () => {
     const receipt = buildN8nExecutionReceipt({
       workspaceId: "ws-clearnest",
