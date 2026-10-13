@@ -42,8 +42,23 @@ interface ReadyGoogleCalendarConnection {
   scopes: string[];
 }
 
-function visitEnd(visit: VisitDTO): string {
-  return new Date(new Date(visit.startAt).getTime() + (visit.serviceMinutes + visit.bufferMinutes) * 60_000).toISOString();
+function safeVisitWindow(visit: VisitDTO): Result<{ endAt: string }> {
+  const start = Date.parse(visit.startAt);
+  const service = visit.serviceMinutes;
+  const buffer = visit.bufferMinutes;
+  if (!Number.isFinite(start) || !Number.isSafeInteger(service) ||
+      service <= 0 || service > 10080 || !Number.isSafeInteger(buffer) ||
+      buffer < 0 || buffer > 1440) {
+    return {ok:false,code:"CALENDAR_VISIT_WINDOW_INVALID",
+      message:"Saved service time or visit start is invalid."};
+  }
+  const end = start + (service + buffer) * 60_000;
+  if (!Number.isFinite(end) || end <= start ||
+      !Number.isFinite(new Date(end).getTime())) {
+    return {ok:false,code:"CALENDAR_VISIT_WINDOW_INVALID",
+      message:"The saved visit end time cannot be confirmed."};
+  }
+  return {ok:true,value:{endAt:new Date(end).toISOString()}};
 }
 
 function evidence(mode: ProviderMode, capturedAt: string, controlledId: string, notes: string[]): RedactedProviderEvidence {
@@ -131,6 +146,12 @@ export class ConfiguredGoogleCalendarAdapter implements CalendarAdapter {
   }
 
   async createOrUpdate(visit: VisitDTO): Promise<Result<{ providerEventId: string; evidence: RedactedProviderEvidence }>> {
+    if (visit.workspaceId !== this.options.workspaceId || visit.crewId !== this.options.crewId) {
+      return {ok:false,code:"CALENDAR_VISIT_SCOPE_MISMATCH",
+        message:"Visit belongs to a different authorized calendar scope."};
+    }
+    const window = safeVisitWindow(visit);
+    if (!window.ok) return window;
     const ready = await this.ready(true);
     if (!ready.ok) return ready;
 
@@ -138,7 +159,7 @@ export class ConfiguredGoogleCalendarAdapter implements CalendarAdapter {
     const event = {
       summary: "ServiceDesk visit",
       startAt: visit.startAt,
-      endAt: visitEnd(visit),
+      endAt: window.value.endAt,
       timeZone: this.options.timeZone ?? "UTC",
       externalId: visit.id,
     };
@@ -160,6 +181,10 @@ export class ConfiguredGoogleCalendarAdapter implements CalendarAdapter {
   }
 
   async cancel(visit: VisitDTO, _meta: CommandMeta): Promise<Result<{ providerEventId: string; evidence: RedactedProviderEvidence }>> {
+    if (visit.workspaceId !== this.options.workspaceId || visit.crewId !== this.options.crewId) {
+      return {ok:false,code:"CALENDAR_VISIT_SCOPE_MISMATCH",
+        message:"Visit belongs to a different authorized calendar scope."};
+    }
     const ready = await this.ready(true);
     if (!ready.ok) return ready;
 
@@ -187,6 +212,13 @@ export class ConfiguredGoogleCalendarAdapter implements CalendarAdapter {
       return { ok: false, code: "CALENDAR_CREW_MISMATCH", message: "Configured Google Calendar adapter cannot query another crew calendar." };
     }
 
+    const start = Date.parse(range.from);
+    const end = Date.parse(range.to);
+    if (!Number.isFinite(start) || !Number.isFinite(end) ||
+        start >= end || end - start > 31 * 24 * 60 * 60 * 1000) {
+      return {ok:false,code:"CALENDAR_BUSY_RANGE_INVALID",
+        message:"Choose a valid availability range of up to 31 days."};
+    }
     const ready = await this.ready(false);
     if (!ready.ok) return ready;
     return freeBusyGoogleCalendar(
