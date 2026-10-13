@@ -39,7 +39,10 @@ function isProviderEvent(value: unknown): value is GoogleCalendarProviderEvent {
 }
 
 function parseJson(body: string): Result<unknown> {
-  if (!body) return { ok: true, value: {} };
+  if (!body || Buffer.byteLength(body,"utf8") > 512 * 1024) {
+    return {ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE",
+      message:"Google Calendar event list response is missing or oversized."};
+  }
   try {
     return { ok: true, value: JSON.parse(body) };
   } catch {
@@ -52,13 +55,31 @@ export async function listGoogleCalendarEventsPage(
   input: GoogleCalendarEventsPageRequest,
   http: GoogleCalendarHttpTransport,
 ): Promise<Result<GoogleCalendarEventsPageResult>> {
-  if (!config.calendarApiBaseUrl || !config.accessToken) {
-    return { ok: false, code: "GOOGLE_CALENDAR_CONFIGURATION_BLOCKED", message: "Google Calendar REST sync configuration is incomplete." };
+  // The event-list path uses an OAuth bearer token. Never allow a caller to
+  // substitute an arbitrary HTTPS host for the official Google API.
+  if (!["https://www.googleapis.com/calendar/v3",
+        "https://www.googleapis.com/calendar/v3/"].includes(config.calendarApiBaseUrl) ||
+      !config.accessToken || config.accessToken.trim() !== config.accessToken) {
+    return {ok:false,code:"GOOGLE_CALENDAR_CONFIGURATION_BLOCKED",
+      message:"Google Calendar REST sync requires an authorized provider endpoint."};
   }
-  if (!input.calendarId) {
+  if (!input.calendarId || input.calendarId.length > 512 ||
+      input.calendarId.trim() !== input.calendarId ||
+      /[\x00-\x1f\x7f]/.test(input.calendarId)) {
     return { ok: false, code: "GOOGLE_CALENDAR_MISSING_CALENDAR", message: "Calendar ID is required for event sync." };
   }
 
+  if ((input.syncToken && (input.timeMin || input.timeMax)) ||
+      [input.syncToken,input.pageToken].some(token =>
+        token !== undefined && (token.length === 0 || token.length > 4096 ||
+          token.trim() !== token)) ||
+      [input.timeMin,input.timeMax].some(time =>
+        time !== undefined && !Number.isFinite(Date.parse(time))) ||
+      (input.timeMin && input.timeMax &&
+        Date.parse(input.timeMin) >= Date.parse(input.timeMax))) {
+    return {ok:false,code:"GOOGLE_CALENDAR_SYNC_REQUEST_INVALID",
+      message:"Google Calendar sync cursor or requested time window is invalid."};
+  }
   const url = new URL(`${baseUrl(config)}/calendars/${encodeURIComponent(input.calendarId)}/events`);
   url.searchParams.set("singleEvents", "true");
   url.searchParams.set("showDeleted", input.syncToken ? "true" : "false");
@@ -87,8 +108,28 @@ export async function listGoogleCalendarEventsPage(
     const parsed = parseJson(response.body);
     if (!parsed.ok) return parsed;
 
-    const payload = parsed.value as { items?: unknown[]; nextPageToken?: unknown; nextSyncToken?: unknown };
-    const items = Array.isArray(payload.items) ? payload.items.filter(isProviderEvent) : [];
+    if (!parsed.value || typeof parsed.value !== "object" ||
+        Array.isArray(parsed.value)) {
+      return {ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE",
+        message:"Google Calendar event list response is not an object."};
+    }
+    const payload = parsed.value as {
+      items?: unknown;nextPageToken?:unknown;nextSyncToken?:unknown;
+    };
+    if (!Array.isArray(payload.items) || payload.items.length > 2500 ||
+        !payload.items.every(isProviderEvent)) {
+      return {ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE",
+        message:"Google Calendar event list contained missing or invalid events."};
+    }
+    const tokens = [payload.nextPageToken,payload.nextSyncToken];
+    if (tokens.some(token => token !== undefined &&
+        (typeof token !== "string" || token.length < 1 ||
+         token.length > 4096 || token.trim() !== token)) ||
+        (payload.nextPageToken && payload.nextSyncToken)) {
+      return {ok:false,code:"GOOGLE_CALENDAR_INVALID_RESPONSE",
+        message:"Google Calendar returned invalid sync continuation tokens."};
+    }
+    const items = payload.items as GoogleCalendarProviderEvent[];
     return {
       ok: true,
       value: {

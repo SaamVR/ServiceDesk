@@ -57,7 +57,8 @@ export function normalizeGoogleCalendarEventBusy(calendarId: string, event: Goog
 
   const startAt = event.start?.dateTime;
   const endAt = event.end?.dateTime;
-  if (!isIsoLike(startAt) || !isIsoLike(endAt)) return null;
+  if (!isIsoLike(startAt) || !isIsoLike(endAt) ||
+      Date.parse(startAt) >= Date.parse(endAt)) return null;
 
   return {
     calendarId,
@@ -94,8 +95,24 @@ export async function runGoogleCalendarSync(input: CalendarSyncRunInput): Promis
   let pageToken: string | undefined;
   let nextSyncToken: string | undefined;
   let pagesFetched = 0;
+  const seenPageTokens = new Set<string>();
+  if (!isIsoLike(input.now)) {
+    return {ok:false,code:"GOOGLE_CALENDAR_SYNC_CLOCK_INVALID",
+      message:"Calendar sync cannot mark an invalid clock as fresh."};
+  }
 
   do {
+    if (pagesFetched >= 100) {
+      return {ok:false,code:"GOOGLE_CALENDAR_SYNC_PAGE_LIMIT",
+        message:"Calendar sync exceeded the safe provider pagination limit."};
+    }
+    if (pageToken) {
+      if (seenPageTokens.has(pageToken)) {
+        return {ok:false,code:"GOOGLE_CALENDAR_SYNC_PAGINATION_CYCLE",
+          message:"Calendar provider repeated an event-page cursor."};
+      }
+      seenPageTokens.add(pageToken);
+    }
     const page = await input.fetchPage({
       calendarId: input.state.calendarId,
       timeMin: fullSync ? input.fullSyncRange?.timeMin : undefined,
@@ -113,22 +130,40 @@ export async function runGoogleCalendarSync(input: CalendarSyncRunInput): Promis
       return page;
     }
 
+    if (!Array.isArray(page.value.events) ||
+        page.value.events.length > 2500) {
+      return {ok:false,code:"GOOGLE_CALENDAR_SYNC_PAGE_INVALID",
+        message:"Calendar provider page contains unbounded or invalid events."};
+    }
     for (const providerEvent of page.value.events) {
-      const normalized = normalizeGoogleCalendarEventBusy(input.state.calendarId, providerEvent);
-      if (normalized) busy.push(normalized);
+      const normalized = normalizeGoogleCalendarEventBusy(
+        input.state.calendarId, providerEvent);
+      if (normalized) {
+        busy.push(normalized);
+      } else if (providerEvent.status !== "cancelled" &&
+                 providerEvent.transparency !== "transparent") {
+        // Invalid opaque/all-day times cannot be silently ignored and
+        // interpreted as free crew availability.
+        return {ok:false,code:"GOOGLE_CALENDAR_EVENT_TIME_UNVERIFIED",
+          message:"Calendar contains an event whose occupied time was not verified."};
+      }
     }
 
     pageToken = page.value.nextPageToken;
     nextSyncToken = page.value.nextSyncToken ?? nextSyncToken;
   } while (pageToken);
 
+  if (!nextSyncToken) {
+    return {ok:false,code:"GOOGLE_CALENDAR_SYNC_CURSOR_MISSING",
+      message:"Calendar provider omitted its final sync cursor; availability stays unverified."};
+  }
   return {
     ok: true,
     value: {
       mode,
       nextState: {
         ...input.state,
-        syncToken: nextSyncToken ?? input.state.syncToken,
+        syncToken: nextSyncToken,
         stale: false,
         lastSyncedAt: input.now,
       },

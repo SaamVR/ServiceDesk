@@ -93,6 +93,58 @@ describe("Google Calendar sync state machine", () => {
     }
   });
 
+  test("never marks a partial full or incremental sync fresh without final cursor", async () => {
+    for(const state of [
+      baseState,
+      {...baseState,syncToken:"previous",lastSyncedAt:"2026-10-04T07:30:00Z"},
+    ]) {
+      const result=await runGoogleCalendarSync({
+        state,now:"2026-10-04T07:55:00.000Z",
+        fetchPage:async()=>({ok:true,value:{
+          events:[event("evt-1")],
+        }}),
+      });
+      expect(result).toMatchObject({
+        ok:false,code:"GOOGLE_CALENDAR_SYNC_CURSOR_MISSING",
+      });
+    }
+  });
+
+  test("rejects repeated pagination cursors instead of infinite provider loops", async () => {
+    let calls=0;
+    const result=await runGoogleCalendarSync({
+      state:baseState,now:"2026-10-04T07:55:00.000Z",
+      fetchPage:async()=>{
+        calls++;
+        return {ok:true,value:{events:[],nextPageToken:"repeated-token"}};
+      },
+    });
+    expect(result).toMatchObject({
+      ok:false,code:"GOOGLE_CALENDAR_SYNC_PAGINATION_CYCLE",
+    });
+    expect(calls).toBe(2);
+  });
+
+  test("rejects opaque all-day or malformed intervals instead of claiming crew is free", async () => {
+    for(const bad of [
+      event("all-day",{start:{date:"2026-11-01"},
+        end:{date:"2026-11-02"}}),
+      event("backward",{start:{dateTime:"2026-11-01T11:00:00Z"},
+        end:{dateTime:"2026-11-01T10:00:00Z"}}),
+      event("invalid",{start:{dateTime:"invalid"}}),
+    ]) {
+      const result=await runGoogleCalendarSync({
+        state:baseState,now:"2026-10-04T07:55:00.000Z",
+        fetchPage:async()=>({ok:true,value:{
+          events:[bad],nextSyncToken:"sync-next",
+        }}),
+      });
+      expect(result).toMatchObject({
+        ok:false,code:"GOOGLE_CALENDAR_EVENT_TIME_UNVERIFIED",
+      });
+    }
+  });
+
   test("normalizes external busy without leaking summary or description", () => {
     const busy = normalizeGoogleCalendarEventBusy("cal-private", event("private-event"));
 
