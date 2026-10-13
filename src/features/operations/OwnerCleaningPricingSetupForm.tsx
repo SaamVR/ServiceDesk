@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { OwnerCleaningPricingWorksheet } from "./OwnerCleaningPricingWorksheet";
+import { OwnerPricingCompletionGuide } from "./OwnerPricingCompletionGuide";
 import type { OperationalBranchScope } from "./operational-product-runtime";
 import { availableFirstRunUsdBranches, type OwnerPricingBookProof } from "./owner-pricing-readiness";
 
@@ -118,6 +119,7 @@ export function OwnerCleaningPricingSetupForm({
             <MoneyField label="Max quote eligible for automatic approval" name="autoApprovalMax" />
           </div>
         </fieldset>
+        <OwnerPricingCompletionGuide />
         <OwnerCleaningPricingWorksheet />
         <StaffSubmitButton className="app-button-primary" style={{ justifySelf: "start" }}
           pendingLabel="Saving pricing…">
