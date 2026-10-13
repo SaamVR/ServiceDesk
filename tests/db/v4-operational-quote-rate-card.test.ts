@@ -142,4 +142,35 @@ describe("V4 real tenant quote pricing", () => {
     ]));
     expect(rpc).toHaveBeenCalledTimes(2);
   });
+  it("honors a separately staff-confirmed oven add-on only for persisted MOVE_OUT", async () => {
+    for (const serviceCode of ["MOVE_OUT", "STANDARD"] as const) {
+      let saved: Record<string, unknown> | undefined;
+      const rpc = vi.fn(async (method: string, params?: { p_input?: Record<string, unknown> }) => {
+        if (method === "servicedesk_get_request") return { data: { ok: true, request: {
+          id: request, workspaceId: workspace, serviceCode,
+          status: "READY", bedrooms: 3, bathrooms: 2, version: 1,
+          createdAt: "2026-10-04T00:00:00Z", updatedAt: "2026-10-04T00:00:00Z",
+        } }, error: null };
+        if (method === "servicedesk_persist_quote_snapshot") {
+          saved = params?.p_input?.snapshot as Record<string, unknown>;
+          return { data: { ok: true, quote: saved }, error: null };
+        }
+        return { data: null, error: { message: "Unexpected RPC" } };
+      });
+      const facade = createPostgresRequestQuoteCapacityFacadeMethods(
+        { rpc } as unknown as SupabaseRpcClient,
+        { ...defaultRateCard, version: "fixture-of-owner-configured-rates" },
+        { oven: true },
+      );
+      const result = await facade.calculateQuote(
+        { workspaceId: workspace, userId: "owner-auth", role: "OWNER" }, request);
+      expect(result).toMatchObject({ ok: true, value: {
+        totalMinor: serviceCode === "MOVE_OUT" ? 34000 : 19000,
+      } });
+      const items = saved?.lineItems as Array<{ code: string }> | undefined;
+      expect(items?.some(item => item.code === "OVEN")).toBe(serviceCode === "MOVE_OUT");
+      expect(rpc).toHaveBeenCalledTimes(2);
+    }
+  });
+
 });
