@@ -12,7 +12,11 @@ function dependencies(count:number) {
   const requestedLimits:number[]=[];
   const tableCounts:Record<string,Record<string,unknown>[]> = {
     requests:[{id:request,workspace_id:workspace,branch_id:branch,service_id:null,customer_id:null}],
-    quotes:[{id:quote,workspace_id:workspace,request_id:request,status:"ACCEPTED",currency:"USD",service_code:""}],
+    quotes:[{id:quote,workspace_id:workspace,request_id:request,status:"ACCEPTED",currency:"USD",service_code:"",
+      subtotal_minor:10000,tax_minor:0,total_minor:10000,deposit_minor:2500,
+      balance_minor:7500,duration_minutes:75,
+      snapshot:{lineItems:[{code:"BASE",description:"Base cleaning",
+        amountMinor:10000,durationMinutes:75}]}}],
     workspace_branches:[{id:branch,workspace_id:workspace,code:"MAIN"}],
     workflow_rules:Array.from({length:count},(_,i)=>({
       id:"rule-"+i,workspace_id:workspace,branch_id:branch,status:"ACTIVE",published_version_number:null,
