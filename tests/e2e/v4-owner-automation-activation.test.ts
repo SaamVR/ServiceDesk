@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { summarizeAutomationActivation } from "@/features/operations/owner-automation-activation";
 
@@ -63,6 +65,23 @@ const priced: Input = {
 };
 
 describe("owner automation activation evidence", () => {
+  it("labels same-branch success as branch-level evidence, never exact quote causality", () => {
+    const summary = summarizeAutomationActivation({
+      ...priced,
+      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      requests: [acceptedRequest], quotes: [acceptedQuote],
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      workflowExecutions: [live], workflowActionExecutions: [completedAttention],
+    });
+    expect(summary.allEvidenceReady).toBe(true);
+    expect(summary.steps[4].detail).toContain("Source-quote identity is not joined");
+    expect(summary.steps[4].detail).toContain("remain unverified");
+    const ui = readFileSync(join(process.cwd(),
+      "src/features/operations/OwnerAutomationActivationChecklist.tsx"), "utf8");
+    expect(ui).toContain("Branch evidence");
+    expect(ui).toContain("does not join an execution to the exact accepted quote");
+  });
+
   it("never calls empty workspace or unavailable pricing an operational success", () => {
     const summary = summarizeAutomationActivation(empty);
     expect(summary.readyCount).toBe(0);
