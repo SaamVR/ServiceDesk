@@ -20,3 +20,29 @@ export function validateStaffQuoteReviewDraft(value: unknown): string | undefine
   if (/\b(?:customer\s+has\s+paid|we\s+(?:will|can)\s+(?:charge|refund|schedule|book|confirm|send)\b)/i.test(draft)) return undefined;
   return draft;
 }
+
+/** The model only received persisted codes, never the customer's request.
+ * Reject a checklist that presumes a chargeable area/add-on absent from the
+ * saved quote. This is deliberately narrower than broad semantic grounding:
+ * it makes no claim to validate other natural-language instructions.
+ */
+export function validateStaffQuoteReviewGrounding(
+  review: unknown,
+  savedLineCodes: readonly string[],
+): string | undefined {
+  const text = validateStaffQuoteReviewDraft(review);
+  if (!text || !Array.isArray(savedLineCodes) ||
+      savedLineCodes.length < 1 || savedLineCodes.length > 25 ||
+      savedLineCodes.some(code => typeof code !== "string" ||
+        !/^[A-Z][A-Z0-9_]{1,31}$/.test(code))) return undefined;
+  const saved = new Set(savedLineCodes);
+  const namedItems: ReadonlyArray<[RegExp, string]> = [
+    [/\bovens?\b/i, "OVEN"],
+    [/\bbedrooms?\b/i, "BEDROOM"],
+    [/\b(?:bathrooms?|restrooms?)\b/i, "BATHROOM"],
+  ];
+  for (const [pattern, code] of namedItems) {
+    if (pattern.test(text) && !saved.has(code)) return undefined;
+  }
+  return text;
+}
