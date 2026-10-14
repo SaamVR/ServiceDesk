@@ -51,7 +51,9 @@ const acceptedRequest: NonNullable<Input["requests"]>[number] = {
 const acceptedQuote: NonNullable<Input["quotes"]>[number] = {
   id: "quote-accepted", requestId: acceptedRequest.id, version: 2,
   status: "ACCEPTED", currency: "USD", totalMinor: 20000,
+  subtotalMinor: 20000, taxMinor: 0,
   depositMinor: 5000, balanceMinor: 15000, durationMinutes: 120,
+  lineItems: [{ code: "BASE", description: "Base service", amountMinor: 20000, durationMinutes: 120 }],
   bufferMinutes: 15,
 };
 
@@ -105,6 +107,25 @@ describe("owner automation activation evidence", () => {
       ...priced, workflowRules: [{ ...activeRule, publishedVersionNumber: 3 }],
       workflowRuleVersions: [published],
     }).steps[2].status).toBe("ACTION_REQUIRED");
+  });
+
+  it("does not overclaim accepted-quote workflow readiness from a corrupted price snapshot", () => {
+    const baseline: Input = {
+      ...priced, requests: [acceptedRequest], quotes: [acceptedQuote],
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      workflowExecutions: [live], workflowActionExecutions: [completedAttention],
+    };
+    expect(summarizeAutomationActivation(baseline).steps[3].status).toBe("READY");
+    for (const patch of [
+      { subtotalMinor: 19000 }, { taxMinor: -1 }, { lineItems: [] },
+      { depositMinor: 5100 }, { durationMinutes: 80 }, { lineItems: undefined },
+    ]) {
+      const invalid = summarizeAutomationActivation({
+        ...baseline, quotes: [{ ...acceptedQuote, ...patch }],
+      });
+      expect(invalid.steps[3].status).not.toBe("READY");
+      expect(invalid.allEvidenceReady).toBe(false);
+    }
   });
 
   it("does not credit previews, other rule executions or unsucceeded actions", () => {

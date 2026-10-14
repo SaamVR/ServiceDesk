@@ -1,4 +1,5 @@
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
+import { readVerifiedCustomerQuoteLineItems } from "./customer-quote-line-items";
 
 export type ActivationStatus = "READY" | "ACTION_REQUIRED" | "UNVERIFIED";
 export type ActivationStepId = "service-catalog" | "pricing" | "quote-rule" | "accepted-quote" | "execution-proof";
@@ -76,9 +77,20 @@ export function summarizeAutomationActivation(
     const request = requestsById.get(quote.requestId);
     const branchCurrency = data.branchScope?.branches.find(
       branch => branch.id === request?.branchId)?.currency;
-    return Boolean(request) && quote.status === "ACCEPTED" &&
-      Number.isSafeInteger(quote.totalMinor) && quote.totalMinor >= 0 &&
-      quote.currency === "USD" && quote.currency === branchCurrency;
+    if (!request || quote.status !== "ACCEPTED" ||
+        quote.currency !== "USD" || quote.currency !== branchCurrency ||
+        !Number.isSafeInteger(quote.totalMinor) || quote.totalMinor < 0 ||
+        typeof quote.subtotalMinor !== "number" || typeof quote.taxMinor !== "number" ||
+        !Number.isSafeInteger(quote.depositMinor) || quote.depositMinor < 0 ||
+        !Number.isSafeInteger(quote.balanceMinor) || quote.balanceMinor < 0 ||
+        quote.depositMinor + quote.balanceMinor !== quote.totalMinor ||
+        !Array.isArray(quote.lineItems)) return false;
+    // Match the actual owner workflow source gate, not only its status label.
+    // An ACCEPTED flag without persisted, reconciled line items cannot run.
+    return readVerifiedCustomerQuoteLineItems(
+      { lineItems: quote.lineItems }, quote.subtotalMinor, quote.durationMinutes,
+      quote.taxMinor, quote.totalMinor,
+    ) !== null;
   });
   const acceptedQuoteVerified = acceptedSavedQuotes.length > 0;
   // Independently ready milestones may come from different branches in an
