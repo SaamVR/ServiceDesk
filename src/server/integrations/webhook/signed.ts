@@ -147,8 +147,22 @@ function canRetry(input: WebhookDeliveryInput): boolean {
 
 export function classifyWebhookDeliveryResult(input: WebhookDeliveryInput): WebhookDeliveryDecision {
   const noBusinessMutation = { businessMutationAllowed: false as const };
+  // Recovery inputs may originate from a failed transport adapter. Invalid
+  // attempt counters, mixed success/error receipts or malformed HTTP codes
+  // must fail closed rather than produce a false delivery or unbounded retry.
+  if (!Number.isSafeInteger(input.attempt) || input.attempt < 1 ||
+      !Number.isSafeInteger(input.maxAttempts) || input.maxAttempts < 1 ||
+      input.maxAttempts > 100 || input.attempt > input.maxAttempts ||
+      (input.statusCode !== undefined &&
+        (!Number.isSafeInteger(input.statusCode) || input.statusCode < 100 || input.statusCode > 599)) ||
+      (input.errorCode !== undefined &&
+        (typeof input.errorCode !== "string" || !/^[A-Z0-9_:-]{2,64}$/.test(input.errorCode))) ||
+      (input.statusCode !== undefined && input.errorCode !== undefined) ||
+      (input.statusCode === undefined && input.errorCode === undefined)) {
+    return { outcome: "FAILED_FINAL", retryable: false, reason: "DETERMINISTIC_HTTP_FAILURE", ...noBusinessMutation };
+  }
 
-  if (input.statusCode && input.statusCode >= 200 && input.statusCode < 300) {
+  if (input.statusCode !== undefined && input.statusCode >= 200 && input.statusCode < 300) {
     return { outcome: "DELIVERED", retryable: false, reason: "SUCCESS", ...noBusinessMutation };
   }
 
@@ -173,6 +187,13 @@ export function classifyWebhookDeliveryResult(input: WebhookDeliveryInput): Webh
 }
 
 export function nextWebhookRetryAt(input: { now: string; attempt: number; maxDelayMinutes?: number }): string {
-  const delayMinutes = Math.min(2 ** Math.max(input.attempt - 1, 0), input.maxDelayMinutes ?? 30);
-  return new Date(new Date(input.now).getTime() + delayMinutes * 60_000).toISOString();
+  const maxDelay = input.maxDelayMinutes ?? 30;
+  const start = Date.parse(input.now);
+  if (!Number.isFinite(start) || !Number.isSafeInteger(input.attempt) ||
+      input.attempt < 1 || input.attempt > 100 ||
+      !Number.isSafeInteger(maxDelay) || maxDelay < 1 || maxDelay > 1440) {
+    throw new RangeError("Invalid webhook retry schedule input");
+  }
+  const delayMinutes = Math.min(2 ** (input.attempt - 1), maxDelay);
+  return new Date(start + delayMinutes * 60_000).toISOString();
 }
