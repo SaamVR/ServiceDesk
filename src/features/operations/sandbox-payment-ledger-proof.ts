@@ -6,7 +6,18 @@ export function verifiedSandboxPaymentLedgerMatch(
   session: Record<string, unknown>,
   application: Record<string, unknown> | null,
 ): boolean {
-  if (!application || typeof session.id !== "string") return false;
+  // Equality of two absent fields is not financial identity evidence.
+  // The UI can only claim an applied sandbox ledger record for a real,
+  // self-contained scoped session with a positive minor-unit amount.
+  const uuid = (value: unknown): value is string => typeof value === "string" &&
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
+  if (!application || !uuid(session.id) ||
+      !uuid(session.workspace_id) || !uuid(session.quote_id) ||
+      !(session.status === "APPLIED" || session.status === "DUPLICATE") ||
+      (session.purpose === "DEPOSIT" ? !uuid(session.hold_id) : !uuid(session.invoice_id)) ||
+      typeof session.currency !== "string" || !/^[A-Z]{3}$/.test(session.currency) ||
+      typeof session.amount_minor !== "number" ||
+      !Number.isSafeInteger(session.amount_minor) || session.amount_minor <= 0) return false;
   const compact = session.id.replaceAll("-", "");
   const eventId = "evt_sd_demo_" + compact;
   const transactionId = "pi_sd_demo_" + compact;
