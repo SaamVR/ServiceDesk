@@ -197,21 +197,21 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
       return { ok: false, code: "AI_MODEL_INVALID_RESPONSE",
         message: "AI response contained an unapproved provider action or output." };
     }
-    let text: string | undefined = typeof response.output_text === "string"
-      ? response.output_text : undefined;
-    if (!text) {
-      const chunks: string[] = [];
-      if (Array.isArray(response.output)) {
-        for (const item of response.output) {
-          if (!item || typeof item !== "object" || item.type !== "message" || !Array.isArray(item.content)) continue;
-          for (const part of item.content) {
-            if (part && typeof part === "object" && part.type === "output_text" && typeof part.text === "string") {
-              chunks.push(part.text);
-            }
-          }
-        }
+    // Only the previously validated output[] message parts are authoritative.
+    // A top-level output_text convenience field must never smuggle in JSON
+    // when the response lacks message content or disagrees with its content.
+    const chunks: string[] = [];
+    for (const item of response.output) {
+      if (item?.type !== "message") continue;
+      for (const part of item.content) {
+        if (part?.type === "output_text") chunks.push(part.text);
       }
-      text = chunks.join("");
+    }
+    const text = chunks.join("");
+    if (response.output_text !== undefined &&
+        (typeof response.output_text !== "string" || response.output_text !== text)) {
+      return { ok: false, code: "AI_MODEL_INVALID_RESPONSE",
+        message: "AI response text did not match verified message output." };
     }
     if (!text || text.length > 262_144) {
       return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model response contained no bounded JSON output text." };
