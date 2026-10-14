@@ -18,7 +18,9 @@ export function verifyCustomerQuoteForAcceptance(
   }
   const amounts = [row.subtotal_minor, row.tax_minor, row.total_minor,
     row.deposit_minor, row.balance_minor, row.duration_minutes];
-  if (amounts.some(n => typeof n !== "number" || !Number.isSafeInteger(n) || n < 0) ||
+  if (typeof row.currency !== "string" || !/^[A-Z]{3}$/.test(row.currency) ||
+      amounts.some(n => typeof n !== "number" || !Number.isSafeInteger(n) || n < 0) ||
+      (row.total_minor as number) <= 0 ||
       (row.subtotal_minor as number) + (row.tax_minor as number) !== row.total_minor ||
       (row.deposit_minor as number) + (row.balance_minor as number) !== row.total_minor) {
     return { ok: false, code: "QUOTE_TOTAL_UNVERIFIED" };

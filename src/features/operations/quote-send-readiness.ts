@@ -12,8 +12,10 @@ export function assessOperationalQuoteSend(
   }
   const values = [quote.subtotal_minor, quote.tax_minor, quote.total_minor,
     quote.deposit_minor, quote.balance_minor, quote.duration_minutes];
-  if (values.some(value => typeof value !== "number" ||
+  if (typeof quote.currency !== "string" || !/^[A-Z]{3}$/.test(quote.currency) ||
+      values.some(value => typeof value !== "number" ||
       !Number.isSafeInteger(value) || value < 0) ||
+      (quote.total_minor as number) <= 0 ||
       (quote.subtotal_minor as number) + (quote.tax_minor as number) !== quote.total_minor ||
       (quote.deposit_minor as number) + (quote.balance_minor as number) !== quote.total_minor) {
     return { ok: false, reason: "CHARGES_UNVERIFIED" };
