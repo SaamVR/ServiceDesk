@@ -84,7 +84,7 @@ async function main() {
     if (env.V4_QA_REQUIRE_AUTOMATION_EVIDENCE === "1") {
       await verifyTwoTenantAutomationRls(a,b,fail);
       await verifyTwoTenantAutomationRls(b,a,fail);
-      console.log("REAL_AUTHENTICATED_STAGING_AUTOMATION_RLS_POSITIVE_NEGATIVE_PASS: own persisted execution/action/attention and foreign tenant denial for distinct owners; provider delivery not tested");
+      console.log("REAL_AUTHENTICATED_STAGING_AUTOMATION_RLS_POSITIVE_NEGATIVE_PASS: each distinct owner has a saved LIVE matched QUOTE_ACCEPTED execution with same-branch SUCCEEDED internal attention action and linked persisted attention; three-table foreign tenant denials passed; provider delivery and full payment journey NOT proven");
     }
   } finally {
     await Promise.allSettled(dbs.map(db => db.auth.signOut()));
