@@ -98,6 +98,28 @@ describe("workflow evaluator", () => {
       .toMatchObject({ ok: false, code: "WORKFLOW_SOURCE_EVENT_ID_INVALID" });
   });
 
+  it("does not treat an omitted safe signal as negative evidence for NEQ", () => {
+    const published = { ...version, state: "PUBLISHED" as const,
+      eventType: "VISIT_COMPLETED" as const,
+      conditions: [{ field: "visit.hasIncident", operator: "NEQ" as const, value: true }],
+    };
+    const source = { ...event, eventType: "VISIT_COMPLETED" as const,
+      snapshot: { "visit.branchCode": "MAIN", "request.serviceCode": "MOVE_OUT" },
+    };
+    expect(evaluateWorkflowRule(published, source, "LIVE"))
+      .toMatchObject({ ok: true, value: { matched: false, actionPlans: [] } });
+    expect(evaluateWorkflowRule(published, { ...source,
+      snapshot: { ...source.snapshot, "visit.hasIncident": false } }, "LIVE"))
+      .toMatchObject({ ok: true, value: { matched: true } });
+    expect(evaluateWorkflowRule(published, { ...source,
+      snapshot: { ...source.snapshot, "visit.hasIncident": true } }, "LIVE"))
+      .toMatchObject({ ok: true, value: { matched: false } });
+    // An explicit null is evidence of null, unlike a field that was omitted.
+    expect(evaluateWorkflowRule(published, { ...source,
+      snapshot: { ...source.snapshot, "visit.hasIncident": null } }, "LIVE"))
+      .toMatchObject({ ok: true, value: { matched: true } });
+  });
+
   it("does not plan actions when conditions do not match", () => {
     const result = evaluateWorkflowRule(version, {
       ...event,

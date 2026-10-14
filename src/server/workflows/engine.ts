@@ -62,6 +62,12 @@ function evaluateCondition(
   condition: WorkflowConditionDTO,
   snapshot: Record<string, WorkflowEventValue>,
 ): WorkflowConditionDecision {
+  // Omitted facts are UNKNOWN, not negative evidence. A NEQ rule must not
+  // interpret a missing incident/payment signal as evidence it was false.
+  // An explicitly persisted null is still a known value and can be compared.
+  if (!Object.prototype.hasOwnProperty.call(snapshot, condition.field)) {
+    return { field: condition.field, operator: condition.operator, matched: false };
+  }
   const actual = snapshot[condition.field];
   let matched = false;
 
