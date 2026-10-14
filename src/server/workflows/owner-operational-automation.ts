@@ -4,6 +4,7 @@ import { operationalDatabaseMode } from "@/features/auth/operational-preview-mod
 import { PostgresWorkflowExecutionPort } from "./postgres";
 import { MAX_ACTIVE_WORKFLOW_RULES_PER_BRANCH, WORKFLOW_RULE_OVERFLOW_FETCH_LIMIT } from "./automation-limits";
 import { isVerifiedPaidInvoiceMilestone } from "./paid-invoice-milestone";
+import { isVerifiedAcceptedQuoteMilestone } from "./accepted-quote-milestone";
 import type { WorkflowEventEnvelope } from "./engine";
 
 export type OwnerOperationalEventType = Extract<WorkflowEventType,
@@ -76,12 +77,13 @@ export async function runOwnerSavedOperationalAutomation(
   let attentionSeverity = "";
   if (eventType === "QUOTE_ACCEPTED") {
     const row = await service.from("quotes")
-      .select("id,request_id,status,currency,service_code")
+      .select("id,request_id,status,currency,service_code,subtotal_minor,tax_minor,total_minor,deposit_minor,balance_minor,duration_minutes,snapshot")
       .eq("id",sourceId).eq("workspace_id",workspace.id).maybeSingle();
     if (row.error) return fail("OPERATIONAL_AUTOMATION_SOURCE_UNAVAILABLE","Saved quote could not be read.");
     if (!row.data) return fail("OPERATIONAL_AUTOMATION_NOT_FOUND","Quote is not in this workspace.");
-    if (row.data.status !== "ACCEPTED" || !uuid(row.data.request_id)) {
-      return fail("OPERATIONAL_AUTOMATION_SOURCE_NOT_READY","Only accepted persisted quotes can be processed.");
+    if (!uuid(row.data.request_id) || !isVerifiedAcceptedQuoteMilestone(row.data)) {
+      return fail("OPERATIONAL_AUTOMATION_SOURCE_NOT_READY",
+        "Only accepted quotes with a reconciled saved price, deposit and service breakdown can trigger workflows.");
     }
     requestId = row.data.request_id;
     currency = code(String(row.data.currency ?? "").trim());

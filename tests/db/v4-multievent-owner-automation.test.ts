@@ -29,7 +29,11 @@ function fixture(eventType: OwnerOperationalEventType,options:{
       eventType === "ATTENTION_OPENED" ? "OPEN" : "PAID");
   const rows: Record<string,Record<string,unknown>[]> = {
     quotes:[{id:quote,workspace_id:options.otherTenant?"foreign":workspace,request_id:request,
-      status:eventType==="QUOTE_ACCEPTED"?selectedStatus:"ACCEPTED",currency:"USD",service_code:"MOVE_OUT"}],
+      status:eventType==="QUOTE_ACCEPTED"?selectedStatus:"ACCEPTED",currency:"USD",service_code:"MOVE_OUT",
+      subtotal_minor:24000,tax_minor:0,total_minor:24000,deposit_minor:6000,
+      balance_minor:18000,duration_minutes:120,
+      snapshot:{lineItems:[{code:"BASE",description:"Base cleaning",
+        amountMinor:24000,durationMinutes:120}]}}],
     visits:[{id:visit,workspace_id:options.otherTenant?"foreign":workspace,request_id:request,
       branch_id:options.wrongBranch?"99999999-9999-4999-8999-999999999999":branch,
       status:eventType==="VISIT_COMPLETED"?selectedStatus:"COMPLETED"}],
