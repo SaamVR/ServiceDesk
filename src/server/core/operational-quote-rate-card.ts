@@ -20,6 +20,9 @@ function parseRule(value: unknown): ServiceRateRule | null {
     const max = key.endsWith("Minutes") ? 1440 : 10_000_000;
     if (!integer(row[key], key === "baseMinutes" ? 1 : 0, max)) return null;
   }
+  // An incomplete add-on cannot be turned into a free price or zero-minute
+  // operation by the quote calculator's optional-field fallbacks.
+  if ((row.ovenMinor === undefined) !== (row.ovenMinutes === undefined)) return null;
   for (const key of ["ovenMinor", "ovenMinutes"]) {
     const max = key.endsWith("Minutes") ? 1440 : 10_000_000;
     if (row[key] !== undefined && !integer(row[key], 0, max)) return null;
@@ -55,7 +58,9 @@ export function parsePersistedQuoteRateCard(input: unknown): Result<RateCard> {
   const moveOut = parseRule(rules.moveOut);
   const standard = parseRule(rules.standard);
   const deep = parseRule(rules.deep);
-  if (!moveOut || !standard || !deep) {
+  // MOVE_OUT exposes the oven option. A persisted owner card must explicitly
+  // price and time it, even when both values are deliberately zero.
+  if (!moveOut || moveOut.ovenMinor === undefined || moveOut.ovenMinutes === undefined || !standard || !deep) {
     return fail("QUOTE_RATE_CARD_INVALID", "Required cleaning pricing rules are missing or invalid.");
   }
   return { ok: true, value: {

@@ -105,6 +105,33 @@ describe("V4 real tenant quote pricing", () => {
       .toMatchObject({ ok: false });
   });
 
+  it("fails closed when a saved MOVE_OUT oven rate or time is missing or unpaired", () => {
+    const moveOut = { ...defaultRateCard.moveOut };
+    for (const invalid of [
+      { ...moveOut, ovenMinor: undefined },
+      { ...moveOut, ovenMinutes: undefined },
+      { ...moveOut, ovenMinor: undefined, ovenMinutes: undefined },
+      { ...moveOut, ovenMinor: null },
+      { ...moveOut, ovenMinutes: Number.NaN },
+    ]) {
+      expect(parsePersistedQuoteRateCard({
+        ...rate, rules: { ...rate.rules, moveOut: invalid },
+      })).toMatchObject({ ok: false, code: "QUOTE_RATE_CARD_INVALID" });
+    }
+    // Zero is a deliberate owner-selected free/instant option, not a missing field.
+    expect(parsePersistedQuoteRateCard({
+      ...rate, rules: { ...rate.rules, moveOut: { ...moveOut, ovenMinor: 0, ovenMinutes: 0 } },
+    })).toMatchObject({ ok: true });
+  });
+
+  it("rejects partially configured oven pricing even on other saved service rules", () => {
+    expect(parsePersistedQuoteRateCard({
+      ...rate, rules: { ...rate.rules,
+        standard: { ...defaultRateCard.standard, ovenMinor: 1500 },
+      },
+    })).toMatchObject({ ok: false, code: "QUOTE_RATE_CARD_INVALID" });
+  });
+
   it("refuses to generate a real quote without a rate card before any persistence RPC", async () => {
     const rpc = vi.fn();
     const facade = createPostgresRequestQuoteCapacityFacadeMethods({ rpc } as unknown as SupabaseRpcClient);

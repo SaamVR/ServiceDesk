@@ -44,6 +44,24 @@ describe("sandbox APPLIED/DUPLICATE replay verifies real payment ledger",()=>{
     ])expect(verifiedSandboxPaymentLedgerMatch({...session,...bad},applied)).toBe(false);
     expect(verifiedSandboxPaymentLedgerMatch(session,null)).toBe(false);
   });
+  test("fails closed on missing matching identifiers, malformed currency, zero amount and unsettled session",()=>{
+    const missingPairs = [
+      "workspace_id", "quote_id", "invoice_id",
+    ] as const;
+    for (const key of missingPairs) {
+      expect(verifiedSandboxPaymentLedgerMatch(
+        {...session,[key]:undefined},{...applied,[key]:undefined})).toBe(false);
+    }
+    expect(verifiedSandboxPaymentLedgerMatch(
+      {...session,purpose:"DEPOSIT",hold_id:undefined},
+      {...applied,purpose:"DEPOSIT",hold_id:undefined})).toBe(false);
+    for (const bad of [
+      {status:"PENDING"}, {status:"REVIEW"}, {status:undefined},
+      {id:"not-a-uuid"}, {workspace_id:""}, {quote_id:""},
+      {amount_minor:0},{amount_minor:-100},{amount_minor:1.25},
+      {currency:"usd"},{currency:"USDX"},{currency:""},
+    ])expect(verifiedSandboxPaymentLedgerMatch({...session,...bad},applied)).toBe(false);
+  });
   test("re-reads authoritative Core payment record at both UI display and replay completion",()=>{
     const source=readFileSync(join(process.cwd(),"src/features/operations/customer-product-runtime.ts"),"utf8");
     const lookup=source.slice(source.indexOf("async function hasCommittedSandboxPayment"),
