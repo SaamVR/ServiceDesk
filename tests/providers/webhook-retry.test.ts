@@ -23,6 +23,43 @@ describe("outbound webhook retry policy", () => {
     expect(exhausted.businessMutationAllowed).toBe(false);
   });
 
+  test("corrupt provider receipts and retry counters never claim delivered or schedule a new send", () => {
+    const invalid = [
+      { statusCode: 200, attempt: 0, maxAttempts: 5 },
+      { statusCode: 200, attempt: -1, maxAttempts: 5 },
+      { statusCode: 200, attempt: 1.5, maxAttempts: 5 },
+      { statusCode: 200, attempt: 1, maxAttempts: 0 },
+      { statusCode: 200, attempt: 1, maxAttempts: 101 },
+      { statusCode: 200, attempt: 6, maxAttempts: 5 },
+      { statusCode: Number.NaN, attempt: 1, maxAttempts: 5 },
+      { statusCode: 200, errorCode: "ECONNRESET", attempt: 1, maxAttempts: 5 },
+      { statusCode: 99, attempt: 1, maxAttempts: 5 },
+      { statusCode: 600, attempt: 1, maxAttempts: 5 },
+      { errorCode: "provider secret in logs", attempt: 1, maxAttempts: 5 },
+      { attempt: 1, maxAttempts: 5 },
+    ];
+    for (const row of invalid) {
+      const decision = classifyWebhookDeliveryResult(row);
+      expect(decision).toMatchObject({
+        outcome: "FAILED_FINAL", retryable: false,
+        businessMutationAllowed: false,
+      });
+      expect(decision).not.toHaveProperty("nextAttempt");
+      expect(JSON.stringify(decision)).not.toContain("provider secret");
+    }
+  });
+
+  test("rejects malformed and unbounded retry timestamps instead of synthesizing deadlines", () => {
+    for (const input of [
+      { now: "bad-date", attempt: 1 },
+      { now: "2026-10-04T09:00:00Z", attempt: 0 },
+      { now: "2026-10-04T09:00:00Z", attempt: Number.NaN },
+      { now: "2026-10-04T09:00:00Z", attempt: 101 },
+      { now: "2026-10-04T09:00:00Z", attempt: 1, maxDelayMinutes: 0 },
+      { now: "2026-10-04T09:00:00Z", attempt: 1, maxDelayMinutes: 1441 },
+    ]) expect(() => nextWebhookRetryAt(input)).toThrow(RangeError);
+  });
+
   test("retries network errors without exposing secrets", () => {
     const retry = classifyWebhookDeliveryResult({ errorCode: "ECONNRESET", attempt: 2, maxAttempts: 5 });
 

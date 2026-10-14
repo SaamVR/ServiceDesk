@@ -12,10 +12,30 @@ test("unverified rates and missing rooms do not authorize quote claims",()=>{
  expect(view.quoteReady).toBe(false);
  expect(view.steps.find(x=>x.id==="pricing")?.state).toBe("UNVERIFIED");
 });
+const verifiedQuote = {
+  status:"SENT", totalMinor:12000, currency:"USD",
+  subtotalMinor:12000, taxMinor:0, depositMinor:3000,
+  balanceMinor:9000, durationMinutes:90,
+  lineItems:[{code:"BASE",description:"Saved cleaning",amountMinor:12000,durationMinutes:90}],
+};
 test("a quote is not delivered merely because status says sent",()=>{
- const view=cleaningRequestNextSteps({...base,currentQuote:{status:"SENT",totalMinor:12000,currency:"USD"}});
+ const view=cleaningRequestNextSteps({...base,currentQuote:verifiedQuote});
  expect(view.complete).toBe(4);
  expect(view.steps.find(x=>x.id==="quote")?.detail).toContain("does not mean it was delivered");
+});
+test("an unverified quote status and total are not counted as completed financial proof",()=>{
+  for(const currentQuote of [
+    {status:"SENT",totalMinor:12000,currency:"USD"},
+    {...verifiedQuote, depositMinor:2999},
+    {...verifiedQuote, lineItems:[{...verifiedQuote.lineItems[0],amountMinor:11000}]},
+    {...verifiedQuote, lineItems:null},
+    {...verifiedQuote, subtotalMinor:11999},
+  ]) {
+    const view=cleaningRequestNextSteps({...base,currentQuote});
+    expect(view.complete).toBe(3);
+    expect(view.steps.find(x=>x.id==="quote")?.state).toBe("UNVERIFIED");
+    expect(view.steps.find(x=>x.id==="quote")?.detail).toContain("do not reconcile");
+  }
 });
 test("invalid monetary or unsupported quote state fails closed",()=>{
  for(const currentQuote of [

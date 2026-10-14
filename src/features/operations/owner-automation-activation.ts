@@ -198,7 +198,7 @@ export function summarizeAutomationActivation(
         pricing?.state !== "VERIFIED"
         ? "Authorized branch, pricing or execution history is unavailable; do not claim a live result."
         : internalExecutionSucceeded
-          ? "A LIVE quote rule, accepted customer quote and succeeded internal attention match the same authorized priced branch. Session-level acceptance remains separate."
+          ? "An accepted quote and succeeded LIVE internal attention are evidenced in the same authorized priced branch. Source-quote identity is not joined in this snapshot; exact quote-to-action causality and session UAT remain unverified."
           : "Verify a succeeded LIVE internal action in the same priced branch as a saved customer-accepted quote.",
       module: "automations",
     },

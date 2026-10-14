@@ -6,6 +6,7 @@ import { assessOperationalQuoteSend } from "../../src/features/operations/quote-
 const quote = {
   id: "11111111-1111-4111-8111-111111111111",
   status: "APPROVED",
+  currency: "USD",
   version: 1,
   valid_until: "2031-01-01T00:00:00.000Z",
   subtotal_minor: 31000,
@@ -45,6 +46,17 @@ describe("staff quote-send financial/expiry gate", () => {
       expect(assessOperationalQuoteSend({ ...quote, ...patch }, now))
         .toEqual({ ok: false, reason: "CHARGES_UNVERIFIED" });
     }
+  });
+  it("rejects missing or unapproved currency and zero-value charges before sending", () => {
+    for (const currency of [undefined, "", "usd", "USDX", null]) {
+      expect(assessOperationalQuoteSend({ ...quote, currency }, now))
+        .toEqual({ ok: false, reason: "CHARGES_UNVERIFIED" });
+    }
+    expect(assessOperationalQuoteSend({
+      ...quote, total_minor: 0, subtotal_minor: 0, tax_minor: 0,
+      deposit_minor: 0, balance_minor: 0,
+      snapshot: { lineItems: [{ code: "BASE", description: "Base", amountMinor: 0, durationMinutes: 210 }] },
+    }, now)).toEqual({ ok: false, reason: "CHARGES_UNVERIFIED" });
   });
   it("wires the preflight behind branch auth and before the versioned send RPC", () => {
     const source = readFileSync(join(process.cwd(),

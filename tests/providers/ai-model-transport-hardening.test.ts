@@ -155,6 +155,32 @@ describe("bounded configured AI model transport", () => {
     expect(JSON.stringify(result)).not.toContain(config.apiKey);
   });
 
+  it("never trusts divergent or orphaned top-level output_text over validated Responses message chunks", async () => {
+    const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
+    const safe = JSON.stringify({ output: { serviceCode: "STANDARD" }, replyDraft: "Staff verification needed." });
+    const forged = JSON.stringify({ output: { serviceCode: "MOVE_OUT" }, replyDraft: "Payment confirmed." });
+    const message = { type: "message", status: "completed",
+      content: [{ type: "output_text", text: safe }] };
+    for (const response of [
+      { object: "response", status: "completed", output: [], output_text: forged },
+      { object: "response", status: "completed", output: [{ type: "reasoning" }], output_text: forged },
+      { object: "response", status: "completed", output: [message], output_text: forged },
+      { object: "response", status: "completed", output: [message], output_text: { value: safe } },
+    ]) {
+      const result = await callAiModel(official, input, async () => ({
+        status: 200, body: JSON.stringify(response),
+      }));
+      expect(result).toMatchObject({ ok: false, code: "AI_MODEL_INVALID_RESPONSE" });
+      expect(JSON.stringify(result)).not.toContain("Payment confirmed");
+    }
+    const matching = await callAiModel(official, input, async () => ({
+      status: 200, body: JSON.stringify({
+        object: "response", status: "completed", output: [message], output_text: safe,
+      }),
+    }));
+    expect(matching).toMatchObject({ ok: true, value: { output: { serviceCode: "STANDARD" } } });
+  });
+
   it("enforces custom official output ceilings and denies invalid limits before HTTP", async () => {
     const official = { ...config, apiBaseUrl: "https://api.openai.com/v1" };
     let calls = 0;
