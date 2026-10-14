@@ -5,6 +5,7 @@ import { verifyCustomerQuoteForAcceptance } from "../../src/features/operations/
 
 const saved = {
   status: "SENT",
+  currency: "USD",
   valid_until: "2031-01-01T00:00:00.000Z",
   subtotal_minor: 31000,
   tax_minor: 0,
@@ -40,6 +41,17 @@ describe("V4 customer real quote accept authorization and monetary truth", () =>
       expect(verifyCustomerQuoteForAcceptance({ ...saved, ...patch }, now))
         .toEqual({ ok: false, code: "QUOTE_TOTAL_UNVERIFIED" });
     }
+  });
+  it("rejects missing or malformed currency and zero-value accepted charges", () => {
+    for (const currency of [undefined, "", "usd", "USDX", "US D", null]) {
+      expect(verifyCustomerQuoteForAcceptance({ ...saved, currency }, now))
+        .toEqual({ ok: false, code: "QUOTE_TOTAL_UNVERIFIED" });
+    }
+    expect(verifyCustomerQuoteForAcceptance({
+      ...saved, subtotal_minor: 0, total_minor: 0, deposit_minor: 0,
+      balance_minor: 0, tax_minor: 0,
+      snapshot: { lineItems: [{ code: "BASE", description: "Base", amountMinor: 0, durationMinutes: 210 }] },
+    }, now)).toEqual({ ok: false, code: "QUOTE_TOTAL_UNVERIFIED" });
   });
   it("rejects stale, invalid, expired and non-sent quotes", () => {
     expect(verifyCustomerQuoteForAcceptance({ ...saved, status: "DRAFT" }, now))
