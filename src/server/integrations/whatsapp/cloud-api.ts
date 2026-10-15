@@ -131,8 +131,11 @@ function requestBody(message: WhatsAppCloudMessage): Result<Record<string, unkno
   }
 
   if (message.kind === "template") {
-    if (!message.templateName.trim() || !message.languageCode.trim()) {
-      return { ok: false, code: "WHATSAPP_INVALID_TEMPLATE", message: "WhatsApp template name and language are required." };
+    // Meta template names are lowercase, underscore-separated identifiers.
+    // Reject unbounded/untrusted values before sending credentials to Graph.
+    if (!/^[a-z0-9_]{1,128}$/.test(message.templateName) ||
+        !/^[a-z]{2,3}(?:_[A-Z]{2})?$/.test(message.languageCode)) {
+      return { ok: false, code: "WHATSAPP_INVALID_TEMPLATE", message: "WhatsApp template name or language is invalid." };
     }
     return {
       ok: true,
@@ -146,8 +149,8 @@ function requestBody(message: WhatsAppCloudMessage): Result<Record<string, unkno
     };
   }
 
-  if (!message.mediaId.trim()) {
-    return { ok: false, code: "WHATSAPP_INVALID_MEDIA", message: "WhatsApp media ID is required." };
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(message.mediaId)) {
+    return { ok: false, code: "WHATSAPP_INVALID_MEDIA", message: "WhatsApp media ID is invalid." };
   }
   return {
     ok: true,
