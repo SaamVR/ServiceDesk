@@ -97,6 +97,14 @@ export async function generateAuthorizedQuoteReview(
     row.subtotal_minor as number, row.duration_minutes as number,
     row.tax_minor as number, row.total_minor as number);
   if (!lines) return fail("AI_QUOTE_LINES_UNVERIFIED");
+  // Capture primitives, not a reference to a mutable DB-mock or service row.
+  // This guards even if an external writer mutates the snapshot without
+  // incrementing the quote version during a slow paid model operation.
+  const authorizedAmounts = {
+    subtotal: row.subtotal_minor, tax: row.tax_minor,
+    total: row.total_minor, deposit: row.deposit_minor,
+    balance: row.balance_minor, duration: row.duration_minutes,
+  };
   if (deps.signal?.aborted) return fail("AI_QUOTE_CANCELLED");
 
   let config: ReturnType<ConfigReader>;
@@ -173,12 +181,12 @@ export async function generateAuthorizedQuoteReview(
         typeof saved.valid_until !== "string" ||
         saved.valid_until !== authorizedExpiry ||
         Date.parse(saved.valid_until) <= Date.now() ||
-        saved.subtotal_minor !== row.subtotal_minor ||
-        saved.tax_minor !== row.tax_minor ||
-        saved.total_minor !== row.total_minor ||
-        saved.deposit_minor !== row.deposit_minor ||
-        saved.balance_minor !== row.balance_minor ||
-        saved.duration_minutes !== row.duration_minutes) {
+        saved.subtotal_minor !== authorizedAmounts.subtotal ||
+        saved.tax_minor !== authorizedAmounts.tax ||
+        saved.total_minor !== authorizedAmounts.total ||
+        saved.deposit_minor !== authorizedAmounts.deposit ||
+        saved.balance_minor !== authorizedAmounts.balance ||
+        saved.duration_minutes !== authorizedAmounts.duration) {
       return fail("AI_QUOTE_STALE");
     }
     const latestLines = readVerifiedCustomerQuoteLineItems(
