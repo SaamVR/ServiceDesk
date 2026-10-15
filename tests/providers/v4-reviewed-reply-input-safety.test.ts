@@ -32,6 +32,6 @@ describe("explicit staff-approved provider reply safety", () => {
     expect(action.indexOf("!verifiedReviewedReplyBody(input.reviewedBody)"))
       .toBeLessThan(action.indexOf("deps.resolveActor(input.workspaceSlug)"));
     expect(action.indexOf("!verifiedReviewedReplyBody(input.reviewedBody)"))
-      .toBeLessThan(action.indexOf("rpc("));
+      .toBeLessThan(action.indexOf(".enqueueConversationReply("));
   });
 });
