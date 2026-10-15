@@ -158,17 +158,34 @@ export async function generateAuthorizedQuoteReview(
     let current: { data: Record<string, unknown> | null; error: unknown } | null = null;
     try {
       current = await active.service.from("quotes")
-        .select("id,workspace_id,version,status,valid_until")
+        .select("id,workspace_id,version,status,valid_until,subtotal_minor,tax_minor,total_minor,deposit_minor,balance_minor,duration_minutes,snapshot")
         .eq("workspace_id", workspace.id).eq("id", input.quoteId).maybeSingle();
     } catch { return fail("AI_QUOTE_RECHECK_UNAVAILABLE"); }
     if (deps.signal?.aborted) return fail("AI_QUOTE_CANCELLED");
     const saved = current?.data;
     if (current?.error || !saved) return fail("AI_QUOTE_RECHECK_UNAVAILABLE");
+    // A version increment is the normal concurrency barrier, but a privileged
+    // or external writer can change the stored financial snapshot without one.
+    // Reconcile the exact saved money and itemization again after model latency.
+    // The model must never surface an outdated suggestion as current quote truth.
     if (saved.id !== input.quoteId || saved.workspace_id !== workspace.id ||
         saved.version !== authorizedVersion || saved.status !== authorizedStatus ||
         typeof saved.valid_until !== "string" ||
         saved.valid_until !== authorizedExpiry ||
-        Date.parse(saved.valid_until) <= Date.now()) {
+        Date.parse(saved.valid_until) <= Date.now() ||
+        saved.subtotal_minor !== row.subtotal_minor ||
+        saved.tax_minor !== row.tax_minor ||
+        saved.total_minor !== row.total_minor ||
+        saved.deposit_minor !== row.deposit_minor ||
+        saved.balance_minor !== row.balance_minor ||
+        saved.duration_minutes !== row.duration_minutes) {
+      return fail("AI_QUOTE_STALE");
+    }
+    const latestLines = readVerifiedCustomerQuoteLineItems(
+      saved.snapshot, saved.subtotal_minor as number, saved.duration_minutes as number,
+      saved.tax_minor as number, saved.total_minor as number,
+    );
+    if (!latestLines || JSON.stringify(latestLines) !== JSON.stringify(lines)) {
       return fail("AI_QUOTE_STALE");
     }
     if (response.value.requestedToolCalls?.length || response.value.citations?.length) {
