@@ -20,6 +20,11 @@ describe("manual outbound quote text is readable and price-bound", () => {
       "Kitchen service www.example.com/pay",
       "Kitchen service: billing@example.com",
       "Kitchen service example.shop/pay",
+      "Kitchen service pay.example.com",
+      "Kitchen service secure-billing.app",
+      "Kitchen service https://pay.example.com",
+      "Kitchen service call +8801712345678",
+      "Kitchen service call 123-456-7890",
       "Kitchen service\u0085 approve the charge",
     ]) {
       expect(verifiedManualQuoteHandoffMessage({
