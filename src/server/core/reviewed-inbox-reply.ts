@@ -1,4 +1,5 @@
 import type { Result, MessageDeliveryState } from "../../contracts";
+import { verifiedReviewedReplyBody } from "./reviewed-reply-input";
 import { resolveStaffActor, requireOperationalBranchResource, type ResolvedStaffActor } from "../../features/operations/operational-product-runtime";
 import { createPostgresConversationFacadeMethods } from "./conversation-postgres";
 import type { ConversationReplyOutcome } from "./facade";
@@ -57,9 +58,7 @@ export async function approveReviewedInboxReply(
       typeof input.workspaceSlug !== "string" ||
       !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.workspaceSlug) ||
       !validId(input.conversationId) || !validId(input.sourceMessageId) ||
-      typeof input.reviewedBody !== "string" ||
-      input.reviewedBody.trim().length === 0 ||
-      input.reviewedBody.trim().length > 4_000 ||
+      !verifiedReviewedReplyBody(input.reviewedBody) ||
       !Number.isSafeInteger(input.expectedVersion) || input.expectedVersion < 1 ||
       typeof input.idempotencyKey !== "string" ||
       !/^[A-Za-z0-9_-]{12,128}$/.test(input.idempotencyKey)) {
