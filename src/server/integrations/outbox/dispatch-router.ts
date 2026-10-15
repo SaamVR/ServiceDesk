@@ -75,7 +75,24 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
       Array.isArray(job.recipient) ||
       typeof job.recipient.optedOut !== "boolean" ||
       typeof job.recipient.consentRequired !== "boolean" ||
-      typeof job.recipient.hasOptIn !== "boolean") {
+      typeof job.recipient.hasOptIn !== "boolean" ||
+      typeof job.recipient.recipientRef !== "string" ||
+      job.recipient.recipientRef.length < 1 ||
+      job.recipient.recipientRef.length > 256 ||
+      job.recipient.recipientRef.trim() !== job.recipient.recipientRef ||
+      /[\u0000-\u001f\u007f-\u009f\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(job.recipient.recipientRef) ||
+      (job.recipient.quietHoursBlocked !== undefined &&
+        typeof job.recipient.quietHoursBlocked !== "boolean") ||
+      !job.payload || typeof job.payload !== "object" ||
+      Array.isArray(job.payload) ||
+      (job.handoverGuard !== undefined &&
+        (!job.handoverGuard || typeof job.handoverGuard !== "object" ||
+         Array.isArray(job.handoverGuard) ||
+         typeof job.handoverGuard.conversationId !== "string" ||
+         job.handoverGuard.conversationId.trim().length === 0 ||
+         !Number.isSafeInteger(job.handoverGuard.expectedConversationVersion) ||
+         job.handoverGuard.expectedConversationVersion < 0 ||
+         typeof job.handoverGuard.handoverActive !== "boolean"))) {
     return {
       ok: false,
       code: "OUTBOX_COMMIT_CLAIM_INVALID",
