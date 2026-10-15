@@ -55,6 +55,29 @@ function failure(input: CommittedOutboxDispatchInput, code: string, message: str
 }
 
 export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJobInput): Promise<Result<CommittedOutboxDispatchOutcome>> {
+  // A corrupted decoded job cannot supply the identity fields required by
+  // dispatchOutcomeBase(). Return a sanitized Result failure BEFORE that
+  // helper, suppression policy or any provider adapter can dereference it.
+  // Keep the existing persisted TERMINAL_FAILURE contract for valid jobs
+  // whose attempt/timestamps are corrupt.
+  const job = input?.job;
+  if (!job || typeof job !== "object" || Array.isArray(job) ||
+      typeof job.id !== "string" || job.id.length === 0 ||
+      typeof job.workspaceId !== "string" || job.workspaceId.length === 0 ||
+      typeof job.idempotencyKey !== "string" || job.idempotencyKey.length === 0 ||
+      typeof job.channel !== "string" || job.channel.length === 0 ||
+      typeof job.purpose !== "string" || job.purpose.length === 0 ||
+      !job.recipient || typeof job.recipient !== "object" ||
+      Array.isArray(job.recipient) ||
+      typeof job.recipient.optedOut !== "boolean" ||
+      typeof job.recipient.consentRequired !== "boolean" ||
+      typeof job.recipient.hasOptIn !== "boolean") {
+    return {
+      ok: false,
+      code: "OUTBOX_COMMIT_CLAIM_INVALID",
+      message: "A committed outbox job is missing required identity or recipient policy fields.",
+    };
+  }
   // The outbox claim is the only authority for invoking an external provider.
   // Refuse corrupt attempts and timestamps BEFORE opt-in or dispatcher selection.
   // Otherwise malformed persisted jobs could still consume provider sends.
