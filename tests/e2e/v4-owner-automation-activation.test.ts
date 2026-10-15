@@ -17,6 +17,7 @@ const empty: Input = {
   workflowRuleVersions: [],
   workflowExecutions: [],
   workflowActionExecutions: [],
+  attentionItems: [],
 };
 
 const activeRule: NonNullable<Input["workflowRules"]>[number] = {
@@ -34,6 +35,7 @@ const published: NonNullable<Input["workflowRuleVersions"]>[number] = {
 
 const live: NonNullable<Input["workflowExecutions"]>[number] = {
   id: "execution-1", mode: "LIVE", ruleVersionId: "rule-v1",
+  sourceQuoteId: "quote-accepted",
   ruleId: "rule-1", branchId: "branch-1", matched: true,
   eventType: "QUOTE_ACCEPTED", state: "COMPLETED", recursionDepth: 0,
   createdAt: "2026-10-12T12:00:00Z",
@@ -46,6 +48,11 @@ const completedAttention: NonNullable<Input["workflowActionExecutions"]>[number]
   createdAt: "2026-10-12T12:00:00Z",
 };
 
+const persistedAttention: NonNullable<Input["attentionItems"]>[number] = {
+  id: "attention-1", type: "WORKFLOW_RULE", status: "OPEN",
+  severity: "INFO", resourceType: "workflow_execution",
+  resourceId: live.id, summary: "Owner must review the accepted quote",
+};
 const acceptedRequest: NonNullable<Input["requests"]>[number] = {
   id: "request-accepted", branchId: "branch-1",
   status: "READY", serviceLabel: "Standard cleaning", version: 2,
@@ -65,21 +72,50 @@ const priced: Input = {
 };
 
 describe("owner automation activation evidence", () => {
-  it("labels same-branch success as branch-level evidence, never exact quote causality", () => {
+  it("credits source-key-verified quote identity and linked internal attention, not branch coincidence", () => {
     const summary = summarizeAutomationActivation({
       ...priced,
       serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
       requests: [acceptedRequest], quotes: [acceptedQuote],
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention],
+      attentionItems: [persistedAttention],
     });
     expect(summary.allEvidenceReady).toBe(true);
-    expect(summary.steps[4].detail).toContain("Source-quote identity is not joined");
+    expect(summary.steps[4].detail).toContain("exact accepted quote");
     expect(summary.steps[4].detail).toContain("remain unverified");
     const ui = readFileSync(join(process.cwd(),
       "src/features/operations/OwnerAutomationActivationChecklist.tsx"), "utf8");
-    expect(ui).toContain("Branch evidence");
-    expect(ui).toContain("does not join an execution to the exact accepted quote");
+    expect(ui).toContain("Source-linked evidence");
+    expect(ui).toContain("Exact saved quote-source and linked internal attention");
+  });
+
+  it("rejects same-branch but different-quote executions and missing saved attention items", () => {
+    const base: Input = {
+      ...priced, serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      workflowRules: [activeRule], workflowRuleVersions: [published],
+      requests: [acceptedRequest], quotes: [acceptedQuote],
+      workflowExecutions: [live], workflowActionExecutions: [completedAttention],
+      attentionItems: [persistedAttention],
+    };
+    expect(summarizeAutomationActivation(base).steps[4].status).toBe("READY");
+    for (const workflowExecutions of [
+      [{ ...live, sourceQuoteId: undefined }],
+      [{ ...live, sourceQuoteId: "other-accepted-quote" }],
+      [{ ...live, mode: "PREVIEW" as const }],
+    ]) {
+      expect(summarizeAutomationActivation({ ...base, workflowExecutions }).steps[4].status)
+        .toBe("ACTION_REQUIRED");
+    }
+    for (const attentionItems of [
+      [],
+      [{ ...persistedAttention, resourceId: "another-execution" }],
+      [{ ...persistedAttention, resourceType: "request" }],
+      [{ ...persistedAttention, type: "OTHER" }],
+    ]) expect(summarizeAutomationActivation({ ...base, attentionItems }).steps[4].status)
+      .toBe("ACTION_REQUIRED");
+    expect(summarizeAutomationActivation({ ...base, attentionItems: undefined }).steps[4].status)
+      .toBe("UNVERIFIED");
   });
 
   it("never calls empty workspace or unavailable pricing an operational success", () => {
@@ -173,6 +209,7 @@ describe("owner automation activation evidence", () => {
       workflowRuleVersions: [published],
       workflowExecutions: [live],
       workflowActionExecutions: [completedAttention],
+      attentionItems: [persistedAttention],
       requests: [acceptedRequest], quotes: [acceptedQuote],
     });
     expect(summary.readyCount).toBe(5);
@@ -186,6 +223,7 @@ describe("owner automation activation evidence", () => {
       ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
+      attentionItems: [persistedAttention],
       workflowActionExecutions: [
         completedAttention,
         { ...completedAttention, id: "outbound", actionIndex: 1,
@@ -226,6 +264,7 @@ describe("owner automation activation evidence", () => {
         { type: "CREATE_ATTENTION" },
       ] }],
       workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
+      attentionItems: [persistedAttention, { ...persistedAttention, id: "attention-2" }],
       workflowActionExecutions: [completedAttention, internalSecond],
       requests: [acceptedRequest], quotes: [acceptedQuote],
     };
@@ -324,7 +363,7 @@ describe("owner automation activation evidence", () => {
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention],
       requests: [{ ...acceptedRequest, branchId: "branch-2" }],
-      quotes: [acceptedQuote],
+      quotes: [acceptedQuote], attentionItems: [persistedAttention],
     };
     const crossBranch = summarizeAutomationActivation(base);
     expect(crossBranch.steps[1].status).toBe("READY");
