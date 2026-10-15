@@ -158,6 +158,31 @@ describe("commercial profitability postgres boundary", () => {
     expect(result).toMatchObject({ ok: false, code: "COMMERCIAL_PROFITABILITY_READ_MALFORMED" });
   });
 
+  it("turns thrown transport errors and raw backend diagnostics into safe independent panel unavailability", async () => {
+    const privateDetail = "Bearer secret-token client@example.com";
+    const throws = vi.fn().mockRejectedValue(new Error(privateDetail));
+    const thrown = await createPostgresCommercialProfitabilityReader({
+      rpc: throws,
+    } as SupabaseRpcClient).readCommercialProfitabilitySnapshot(ctx);
+    expect(thrown).toMatchObject({
+      ok: false, code: "COMMERCIAL_PROFITABILITY_READ_UNAVAILABLE",
+    });
+    expect(JSON.stringify(thrown)).not.toContain("secret-token");
+    expect(JSON.stringify(thrown)).not.toContain("client@example.com");
+
+    const errors = vi.fn().mockResolvedValue({
+      data: null, error: { code: "SQL_SECRET", message: privateDetail },
+    });
+    const errored = await createPostgresCommercialProfitabilityReader({
+      rpc: errors,
+    } as SupabaseRpcClient).readCommercialProfitabilitySnapshot(ctx);
+    expect(errored).toMatchObject({
+      ok: false, code: "COMMERCIAL_PROFITABILITY_READ_ERROR",
+    });
+    expect(JSON.stringify(errored)).not.toContain("SQL_SECRET");
+    expect(JSON.stringify(errored)).not.toContain("secret-token");
+  });
+
   it("blocks crew access before the database call", async () => {
     const rpc = vi.fn();
     const reader = createPostgresCommercialProfitabilityReader({ rpc } as SupabaseRpcClient);
