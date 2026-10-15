@@ -15,18 +15,23 @@ export type CustomerInvoiceCheckoutFacts = {
 export function customerInvoiceSandboxReadiness(f: CustomerInvoiceCheckoutFacts):
   | { ok: true; amountMinor: number; currency: string }
   | { ok: false; reason: "NOT_ISSUED" | "NO_BALANCE" | "AMOUNTS_MISMATCH" | "CURRENCY_MISMATCH" | "QUOTE_NOT_ACCEPTED" } {
-  if (f.status === "PAID") return { ok: false, reason: "NO_BALANCE" };
-  if (f.status !== "ISSUED" && f.status !== "PARTIALLY_PAID") {
+  if (f.status !== "PAID" && f.status !== "ISSUED" && f.status !== "PARTIALLY_PAID") {
     return { ok: false, reason: "NOT_ISSUED" };
   }
-  if (f.balanceMinor === 0) return { ok: false, reason: "NO_BALANCE" };
+  // Never call an inconsistent PAID flag or a zero-balance corrupt ledger
+  // "payment complete". Reconcile financial truth before status messaging.
   const values = [f.totalMinor, f.allocatedMinor, f.refundedMinor, f.balanceMinor];
+  const net = f.allocatedMinor - f.refundedMinor;
+  const reconciled = net + f.balanceMinor;
   if (values.some(n => !Number.isSafeInteger(n) || n < 0) ||
-      f.totalMinor <= 0 || f.balanceMinor <= 0 ||
-      f.allocatedMinor < f.refundedMinor ||
-      f.allocatedMinor - f.refundedMinor + f.balanceMinor !== f.totalMinor) {
+      f.totalMinor <= 0 || f.allocatedMinor < f.refundedMinor ||
+      !Number.isSafeInteger(net) || !Number.isSafeInteger(reconciled) ||
+      reconciled !== f.totalMinor) {
     return { ok: false, reason: "AMOUNTS_MISMATCH" };
   }
+  if (f.status === "PAID") return f.balanceMinor === 0
+    ? { ok: false, reason: "NO_BALANCE" } : { ok: false, reason: "AMOUNTS_MISMATCH" };
+  if (f.balanceMinor === 0) return { ok: false, reason: "NO_BALANCE" };
   if (!/^[A-Z]{3}$/.test(f.currency) || f.currency !== f.quoteCurrency) {
     return { ok: false, reason: "CURRENCY_MISMATCH" };
   }
