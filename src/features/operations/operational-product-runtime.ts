@@ -1,4 +1,5 @@
 import { verifiedPricedOwnerBranchIds } from "./verified-owner-price-evidence";
+import { matchingQuoteSourceForLiveExecution } from "@/server/workflows/quote-execution-source-evidence";
 import { createHash, randomBytes } from "node:crypto";
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -262,6 +263,9 @@ export interface OperationalWorkflowExecution {
   branchId: string;
   ruleId: string;
   ruleVersionId: string;
+  /** Derived server-side by matching the persisted LIVE execution key to
+   * this owner's authorized saved quote IDs. Missing means unverified. */
+  sourceQuoteId?: string;
   mode: "PREVIEW" | "LIVE";
   eventType: string;
   matched: boolean;
@@ -913,7 +917,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       .limit(1000),
     service
       .from("workflow_executions")
-      .select("id,branch_id,rule_id,rule_version_id,mode,event_type,matched,recursion_depth,state,created_at,completed_at")
+      .select("id,branch_id,rule_id,rule_version_id,execution_key,mode,event_type,matched,recursion_depth,state,created_at,completed_at")
       .eq("workspace_id", workspace.id)
       .order("created_at", { ascending: false })
       .limit(1000),
@@ -1100,6 +1104,16 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     ? rawQuoteRows.filter((row) => requestIds.has(String(row.request_id)))
     : rawQuoteRows;
   const quoteIds = new Set(quoteRows.map((row) => String(row.id)));
+  // Only persisted quotes from authorized branch-scoped request rows can
+  // supply source identity for a saved LIVE workflow execution.
+  const requestBranchById = new Map(requestRows.map(row =>
+    [String(row.id), String(row.branch_id)]));
+  const authorizedQuoteSources = quoteRows
+    .map(row => ({
+      id: String(row.id),
+      branchId: requestBranchById.get(String(row.request_id)) ?? "",
+    }))
+    .filter(source => source.branchId !== "");
   const visitRows = rawVisitRows.filter(inSelectedBranch);
   const visitIds = new Set(visitRows.map((row) => String(row.id)));
   const conversationRows = rawConversationRows.filter(inSelectedBranch);
@@ -1552,6 +1566,18 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         branchId: String(row.branch_id),
         ruleId: String(row.rule_id),
         ruleVersionId: String(row.rule_version_id),
+        sourceQuoteId: matchingQuoteSourceForLiveExecution({
+          workspaceId: workspace.id,
+          execution: {
+            executionKey: row.execution_key,
+            mode: row.mode,
+            eventType: row.event_type,
+            recursionDepth: row.recursion_depth,
+            ruleVersionId: row.rule_version_id,
+            branchId: row.branch_id,
+          },
+          quoteSources: authorizedQuoteSources,
+        }),
         mode: String(row.mode) as OperationalWorkflowExecution["mode"],
         eventType: String(row.event_type),
         matched: row.matched === true,
