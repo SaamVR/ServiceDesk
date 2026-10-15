@@ -25,6 +25,8 @@ import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/r
 import { loadOperationalQuoteRateCard } from "@/server/core/operational-quote-rate-card";
 import { readVerifiedCustomerQuoteLineItems, type CustomerQuoteLineItem } from "./customer-quote-line-items";
 import { isVerifiedStaffCollectibleInvoice } from "./staff-invoice-collection-readiness";
+import { stableManualPaymentIdempotencyKey } from "./manual-payment-idempotency";
+import { verifiedManualPaymentReplay } from "./manual-payment-replay-proof";
 import { normalizeStaffPaymentReference } from "./manual-payment-reference";
 import { assessOperationalQuoteSend } from "./quote-send-readiness";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
@@ -1906,6 +1908,33 @@ export async function applyOperationalManualPayment(
     .eq("id", invoiceId)
     .maybeSingle();
   if (invoice.error || !invoice.data) return { ok: false, message: "The invoice is no longer available." };
+  if (invoice.data.status === "PAID") {
+    const key = stableManualPaymentIdempotencyKey({
+      workspaceId: resolved.value.workspace.id,
+      invoiceId,
+      amountMinor,
+      currency: String(invoice.data.currency),
+      method,
+      reference: verifiedReference,
+    });
+    // Staff can lose a success response after the database commits payment.
+    // Never guess paid means duplicate: retrieve exact ledger-backed receipt.
+    const saved = await resolved.value.service.from("manual_payment_records")
+      .select("id,ledger_entry_id,workspace_id,invoice_id,amount_minor,currency,method,reference,idempotency_key")
+      .eq("workspace_id", resolved.value.workspace.id)
+      .eq("invoice_id", invoiceId)
+      .eq("idempotency_key", key)
+      .maybeSingle();
+    if (saved.error) return { ok: false, message: "Could not verify the previous receipt. No new payment was recorded." };
+    const duplicate = verifiedManualPaymentReplay(invoice.data, saved.data ?? null, {
+      workspaceId: resolved.value.workspace.id, invoiceId,
+      amountMinor, currency: String(invoice.data.currency),
+      method, reference: verifiedReference, idempotencyKey: key,
+    });
+    return duplicate
+      ? { ok: true, message: "This exact manual payment was already recorded. No duplicate payment was created." }
+      : { ok: false, message: "The invoice is already paid, but this submitted receipt could not be verified. No new payment was recorded." };
+  }
   if (!isVerifiedStaffCollectibleInvoice({
     status: invoice.data.status,
     currency: invoice.data.currency,
@@ -1928,7 +1957,14 @@ export async function applyOperationalManualPayment(
       reference: verifiedReference,
       occurredAt: new Date().toISOString(),
     },
-    { idempotencyKey: "manual-payment-" + crypto.randomUUID(), now: new Date().toISOString() },
+    { idempotencyKey: stableManualPaymentIdempotencyKey({
+      workspaceId: resolved.value.workspace.id,
+      invoiceId,
+      amountMinor,
+      currency: String(invoice.data.currency),
+      method,
+      reference: verifiedReference,
+    }), now: new Date().toISOString() },
   );
   return result.ok
     ? { ok: true, message: "Manual payment recorded on the invoice." }

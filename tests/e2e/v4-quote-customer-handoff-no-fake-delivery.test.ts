@@ -7,7 +7,7 @@ describe("human-review customer quote handoff does not fake provider delivery", 
   const handoff=readFileSync(join(process.cwd(),"src/features/operations/QuoteCustomerHandoff.tsx"),"utf8");
   it("only offers manual link after a quote is marked SENT", () => {
     expect(route).toContain('selectedQuote.status === "SENT" ? (');
-    expect(route).toContain("<QuoteCustomerHandoff quoteId={selectedQuote.id}");
+    expect(route).toContain(`<QuoteCustomerHandoff key={selectedQuote.id + ":" + selectedQuote.version} quoteId={selectedQuote.id}`);
     expect(route).toContain("facts={selectedQuote.lineItems?.length ? {");
     expect(route).toContain("Delivery not proven here");
     expect(route).toContain("marked sent (delivery unverified)");
