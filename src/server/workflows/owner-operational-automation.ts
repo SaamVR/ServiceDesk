@@ -4,6 +4,7 @@ import { operationalDatabaseMode } from "@/features/auth/operational-preview-mod
 import { PostgresWorkflowExecutionPort } from "./postgres";
 import { MAX_ACTIVE_WORKFLOW_RULES_PER_BRANCH, WORKFLOW_RULE_OVERFLOW_FETCH_LIMIT } from "./automation-limits";
 import { isVerifiedPaidInvoiceMilestone } from "./paid-invoice-milestone";
+import { isVerifiedCompletedVisit } from "./verified-visit-completion";
 import { isVerifiedAcceptedQuoteMilestone } from "./accepted-quote-milestone";
 import type { WorkflowEventEnvelope } from "./engine";
 
@@ -90,12 +91,13 @@ export async function runOwnerSavedOperationalAutomation(
     sourceServiceCode = code(row.data.service_code);
   } else if (eventType === "VISIT_COMPLETED") {
     const row = await service.from("visits")
-      .select("id,request_id,branch_id,status")
+      .select("id,request_id,branch_id,status,starts_at,ends_at")
       .eq("id",sourceId).eq("workspace_id",workspace.id).maybeSingle();
     if (row.error) return fail("OPERATIONAL_AUTOMATION_SOURCE_UNAVAILABLE","Saved visit could not be read.");
     if (!row.data) return fail("OPERATIONAL_AUTOMATION_NOT_FOUND","Visit is not in this workspace.");
-    if (row.data.status !== "COMPLETED" || !uuid(row.data.request_id) || !uuid(row.data.branch_id)) {
-      return fail("OPERATIONAL_AUTOMATION_SOURCE_NOT_READY","Only completed persisted visits can be processed.");
+    if (!isVerifiedCompletedVisit(row.data) || !uuid(row.data.request_id) || !uuid(row.data.branch_id)) {
+      return fail("OPERATIONAL_AUTOMATION_SOURCE_NOT_READY",
+        "Only completed visits with a verified elapsed start and coherent saved schedule can trigger owner workflows.");
     }
     requestId = row.data.request_id;
     branchId = row.data.branch_id;
