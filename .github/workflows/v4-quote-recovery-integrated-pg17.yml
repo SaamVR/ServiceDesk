@@ -4,6 +4,9 @@ on:
     branches:
       - feat/v4-quote-worker-integrated-gate-20261013
       - feat/v4-quote-recovery-rebased-source-20261013
+      # Canonical integration must prove disposable PG17 every time it moves,
+      # without relying on a remote desktop to manually dispatch this gate.
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
   # Validate the actual reconciled PR, not just the historical recovery branch.
   # Runs against GitHub's PR merge commit, proving canonical compatibility.
   pull_request:
