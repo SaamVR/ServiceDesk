@@ -147,7 +147,10 @@ export function createPostgresCommercialProfitabilityReader(
         return fail("FORBIDDEN", "Owner or dispatcher access is required for commercial profitability.");
       }
 
-      const { data, error } = await client.rpc<RpcRow>(
+      // An offline RPC transport must degrade this independent read-only
+      // panel, not reject Promise.all() and bring down the entire billing UI.
+      // Do not reflect raw PostgREST/network diagnostics to staff.
+      const result = await client.rpc<RpcRow>(
         "servicedesk_read_commercial_profitability_snapshot",
         {
           p_input: {
@@ -158,9 +161,16 @@ export function createPostgresCommercialProfitabilityReader(
             toDate: query.toDate,
           },
         },
+      ).catch(() => null);
+      if (!result) {
+        return fail("COMMERCIAL_PROFITABILITY_READ_UNAVAILABLE",
+          "Commercial profitability reporting is temporarily unavailable.");
+      }
+      const { data, error } = result;
+      if (error) return fail(
+        "COMMERCIAL_PROFITABILITY_READ_ERROR",
+        "Commercial profitability reporting could not be loaded.",
       );
-
-      if (error) return fail(error.code ?? "COMMERCIAL_PROFITABILITY_READ_ERROR", error.message);
       if (!data) return fail("COMMERCIAL_PROFITABILITY_READ_EMPTY", "Commercial profitability read returned no payload.");
       if (data.ok === false) {
         return fail(
