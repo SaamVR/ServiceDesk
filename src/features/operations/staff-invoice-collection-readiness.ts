@@ -16,5 +16,6 @@ export function isVerifiedStaffCollectibleInvoice(f: StaffCollectibleLedger): bo
     amounts.every(n=>typeof n==="number" && Number.isSafeInteger(n) && n>=0) &&
     (f.totalMinor as number)>0 && (f.balanceMinor as number)>0 &&
     (f.allocatedMinor as number)>=(f.refundedMinor as number) &&
+    Number.isSafeInteger((f.allocatedMinor as number)-(f.refundedMinor as number)+(f.balanceMinor as number)) &&
     (f.allocatedMinor as number)-(f.refundedMinor as number)+(f.balanceMinor as number)===f.totalMinor;
 }
