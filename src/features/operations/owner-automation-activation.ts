@@ -137,19 +137,21 @@ export function summarizeAutomationActivation(
   }
   // An action SUCCEEDED status without a corresponding durable attention
   // item is not accepted as owner-facing quote-to-attention proof.
-  const linkedAttentionCounts = new Map<string, number>();
+  const linkedAttentionIds = new Map<string, Set<string>>();
   for (const item of data.attentionItems ?? []) {
     if (item.resourceType !== "workflow_execution" ||
         item.type !== "WORKFLOW_RULE" ||
+        typeof item.id !== "string" || item.id.length === 0 ||
         !verifiedLiveExecutions.has(item.resourceId)) continue;
-    linkedAttentionCounts.set(item.resourceId,
-      (linkedAttentionCounts.get(item.resourceId) ?? 0) + 1);
+    const ids = linkedAttentionIds.get(item.resourceId) ?? new Set<string>();
+    ids.add(item.id);
+    linkedAttentionIds.set(item.resourceId, ids);
   }
   const internalExecutionSucceeded = [...verifiedLiveExecutions.entries()]
     .some(([executionId, verified]) =>
       verified.requiredIndexes.length > 0 &&
       verified.requiredIndexes.every(index => succeededIndexes.get(executionId)?.has(index)) &&
-      (linkedAttentionCounts.get(executionId) ?? 0) >= verified.requiredIndexes.length);
+      (linkedAttentionIds.get(executionId)?.size ?? 0) >= verified.requiredIndexes.length);
 
   const steps: ActivationStep[] = [
     {

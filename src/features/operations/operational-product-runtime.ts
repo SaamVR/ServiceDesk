@@ -1170,6 +1170,11 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
         if (type === "visit" || type === "job") return visitIds.has(id);
         if (type === "conversation") return conversationIds.has(id);
         if (type === "invoice") return invoiceIds.has(id);
+        // Workflow CREATE_ATTENTION writes resource_type=workflow_execution.
+        // Its parent IDs were already scoped by workspace, authorized branch,
+        // active rule and published version above. Without this case, an
+        // owner in branch mode can never see the causal attention it saved.
+        if (type === "workflow_execution") return workflowExecutionIds.has(id);
         if (type === "quality" || type === "quality_case") return qualityIds.has(id);
         return false;
       })
