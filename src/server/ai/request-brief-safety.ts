@@ -7,7 +7,10 @@
 export function validateRequestBriefDraft(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const draft = value.trim();
-  if (!draft || draft.length > 900 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(draft)) return undefined;
+  if (!draft || draft.length > 900 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(draft) ||
+      // Invisible and bidi control characters can disguise a URL, contact
+      // identity or misleading operational assertion in rendered AI copy.
+      /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(draft)) return undefined;
   // A request brief is intentionally generated without customer contact
   // details. A model that inserts any such data is hallucinating.
   if (/\bhttps?:\/\/\S+|www\.[a-z0-9-]+\.[a-z]{2,}|[\w.+-]+@[\w.-]+\.[a-z]{2,}\b/i.test(draft)) return undefined;
@@ -18,6 +21,10 @@ export function validateRequestBriefDraft(value: unknown): string | undefined {
   // A convincing US/international phone number should not appear from facts
   // consisting solely of a service code, room counts, and request status.
   if (/(?:\+\d{1,3}[-. ]?)?\(?\d{3}\)?[-. ]?\d{3}[-. ]?\d{4}\b/.test(draft)) return undefined;
+  // Some valid mobile formats have 11-15 consecutive digits, including
+  // international E.164 forms without separators. These were never supplied
+  // to the model, so they are also untrusted model-invented contact data.
+  if (/(?:^|[^\d])\+?\d{11,15}(?!\d)/.test(draft)) return undefined;
   if (/<\/?(?:script|iframe|form|a|img|style|button)\b/i.test(draft)) return undefined;
   // Do not present a simulated state change as an already completed action.
   if (/\b(?:we|i|our team)\s+(?:have\s+)?(?:sent|charged|booked|scheduled|confirmed|approved|paid|invoiced)\b/i.test(draft)) return undefined;

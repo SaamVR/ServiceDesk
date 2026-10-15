@@ -28,7 +28,7 @@ export function summarizeAutomationActivation(
   data: Pick<OperationalStaffSnapshot,
     "serviceCatalog" | "ownerPricingBookProof" | "branchScope" | "workflowAvailable" |
     "workflowRules" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions"> &
-    Partial<Pick<OperationalStaffSnapshot, "requests" | "quotes">>,
+    Partial<Pick<OperationalStaffSnapshot, "requests" | "quotes" | "attentionItems">>,
 ): AutomationActivationSummary {
   const catalogReady = data.serviceCatalog.some(item => item.active);
   const pricing = data.ownerPricingBookProof;
@@ -93,15 +93,14 @@ export function summarizeAutomationActivation(
     ) !== null;
   });
   const acceptedQuoteVerified = acceptedSavedQuotes.length > 0;
-  // Independently ready milestones may come from different branches in an
-  // ALL-branches view. Full quote-to-attention evidence must be branch
-  // coherent; otherwise Branch B's accepted quote could certify Branch A's
-  // unrelated workflow execution.
-  const acceptedQuoteBranchIds = new Set(acceptedSavedQuotes
-    .map(quote => requestsById.get(quote.requestId)?.branchId)
-    .filter((id): id is string => typeof id === "string"));
+  // The owner DTO includes a verified sourceQuoteId only when the existing
+  // persisted execution_key exactly hashes to one authorized saved quote.
+  // Joining solely by branch lets Quote A falsely certify Quote B's action.
+  const acceptedQuoteBranches = new Map(acceptedSavedQuotes
+    .map(quote => [quote.id, requestsById.get(quote.requestId)?.branchId] as const));
   const executionsLoaded = Array.isArray(data.workflowExecutions) &&
-    Array.isArray(data.workflowActionExecutions) && versionsLoaded;
+    Array.isArray(data.workflowActionExecutions) &&
+    Array.isArray(data.attentionItems) && versionsLoaded;
   const verifiedLiveExecutions = new Map(
     (data.workflowExecutions ?? [])
       .filter(execution => {
@@ -109,7 +108,9 @@ export function summarizeAutomationActivation(
         return execution.mode === "LIVE" && execution.matched === true &&
           (execution.state === "COMPLETED" || execution.state === "ACTIONS_PENDING") &&
           execution.eventType === "QUOTE_ACCEPTED" &&
-          version?.ruleId === execution.ruleId && version?.branchId === execution.branchId;
+          version?.ruleId === execution.ruleId && version?.branchId === execution.branchId &&
+          typeof execution.sourceQuoteId === "string" &&
+          acceptedQuoteBranches.get(execution.sourceQuoteId) === execution.branchId;
       })
       .flatMap(execution => {
         const version = eligibleQuoteVersions.get(execution.ruleVersionId);
@@ -127,7 +128,6 @@ export function summarizeAutomationActivation(
     const verified = verifiedLiveExecutions.get(action.executionId);
     if (!verified || action.actionType !== "CREATE_ATTENTION" ||
         action.state !== "SUCCEEDED" ||
-        !acceptedQuoteBranchIds.has(action.branchId) ||
         verified.branchId !== action.branchId ||
         !Number.isSafeInteger(action.actionIndex) ||
         !verified.requiredIndexes.includes(action.actionIndex)) continue;
@@ -135,10 +135,21 @@ export function summarizeAutomationActivation(
     indexes.add(action.actionIndex);
     succeededIndexes.set(action.executionId, indexes);
   }
+  // An action SUCCEEDED status without a corresponding durable attention
+  // item is not accepted as owner-facing quote-to-attention proof.
+  const linkedAttentionCounts = new Map<string, number>();
+  for (const item of data.attentionItems ?? []) {
+    if (item.resourceType !== "workflow_execution" ||
+        item.type !== "WORKFLOW_RULE" ||
+        !verifiedLiveExecutions.has(item.resourceId)) continue;
+    linkedAttentionCounts.set(item.resourceId,
+      (linkedAttentionCounts.get(item.resourceId) ?? 0) + 1);
+  }
   const internalExecutionSucceeded = [...verifiedLiveExecutions.entries()]
-    .some(([executionId, verified]) => acceptedQuoteBranchIds.has(verified.branchId) &&
+    .some(([executionId, verified]) =>
       verified.requiredIndexes.length > 0 &&
-      verified.requiredIndexes.every(index => succeededIndexes.get(executionId)?.has(index)));
+      verified.requiredIndexes.every(index => succeededIndexes.get(executionId)?.has(index)) &&
+      (linkedAttentionCounts.get(executionId) ?? 0) >= verified.requiredIndexes.length);
 
   const steps: ActivationStep[] = [
     {
@@ -196,10 +207,10 @@ export function summarizeAutomationActivation(
         : internalExecutionSucceeded ? "READY" : "ACTION_REQUIRED",
       detail: !executionsLoaded || !pricingScopeKnown ||
         pricing?.state !== "VERIFIED"
-        ? "Authorized branch, pricing or execution history is unavailable; do not claim a live result."
+        ? "Authorized branch, pricing, execution or linked attention evidence is unavailable; do not claim a live result."
         : internalExecutionSucceeded
-          ? "An accepted quote and succeeded LIVE internal attention are evidenced in the same authorized priced branch. Source-quote identity is not joined in this snapshot; exact quote-to-action causality and session UAT remain unverified."
-          : "Verify a succeeded LIVE internal action in the same priced branch as a saved customer-accepted quote.",
+          ? "The saved LIVE execution key identifies the exact accepted quote, all required internal attention actions succeeded, and linked attention records are present. Independent customer-session UAT and provider delivery remain unverified."
+          : "Verify an exact quote-sourced LIVE execution, each required succeeded internal action and its linked attention item.",
       module: "automations",
     },
   ];

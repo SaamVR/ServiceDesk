@@ -24,7 +24,8 @@ describe("owner INVOICE_PAID workflow business-state proof",()=>{
     const part=s.slice(invoice,s.indexOf('} else {',invoice));
     expect(part).toContain('total_minor,allocated_minor,refunded_minor,balance_minor');
     expect(part).toContain('isVerifiedPaidInvoiceMilestone(row.data)');
-    expect(part).toContain('quote.data.status !== "ACCEPTED"');
+    expect(part).toContain('!isVerifiedAcceptedQuoteMilestone(quote.data)');
+    expect(part).toContain('quote.data.total_minor !== row.data.total_minor');
     expect(part).toContain('quote.data.currency !== row.data.currency');
     expect(s.indexOf("isVerifiedPaidInvoiceMilestone(row.data)")).toBeLessThan(s.indexOf('from("workflow_rules")'));
   });

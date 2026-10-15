@@ -111,12 +111,14 @@ export async function runOwnerSavedOperationalAutomation(
     }
     currency = code(String(row.data.currency ?? "").trim());
     const quote = await service.from("quotes")
-      .select("request_id,service_code,status,currency").eq("id",row.data.quote_id)
+      .select("request_id,service_code,status,currency,subtotal_minor,tax_minor,total_minor,deposit_minor,balance_minor,duration_minutes,snapshot").eq("id",row.data.quote_id)
       .eq("workspace_id",workspace.id).maybeSingle();
     if (quote.error || !quote.data || !uuid(quote.data.request_id) ||
-        quote.data.status !== "ACCEPTED" || quote.data.currency !== row.data.currency) {
+        quote.data.currency !== row.data.currency ||
+        !isVerifiedAcceptedQuoteMilestone(quote.data) ||
+        quote.data.total_minor !== row.data.total_minor) {
       return fail("OPERATIONAL_AUTOMATION_QUOTE_UNVERIFIED",
-        "The paid invoice quote, acceptance or currency could not be reconciled.");
+        "The paid invoice and accepted quote monetary snapshots could not be reconciled.");
     }
     requestId = quote.data.request_id;
     sourceServiceCode = code(quote.data.service_code);

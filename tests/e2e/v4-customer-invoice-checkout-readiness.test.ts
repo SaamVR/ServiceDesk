@@ -21,6 +21,9 @@ describe("V4 real customer invoice sandbox payment preflight", () => {
         .toMatchObject({ ok: false, reason: "NOT_ISSUED" });
     }
     expect(customerInvoiceSandboxReadiness({ ...issued, status: "PAID", balanceMinor: 0 }))
+      .toMatchObject({ ok: false, reason: "AMOUNTS_MISMATCH" });
+    expect(customerInvoiceSandboxReadiness({ ...issued, status: "PAID",
+      allocatedMinor: 34000, refundedMinor: 0, balanceMinor: 0 }))
       .toMatchObject({ ok: false, reason: "NO_BALANCE" });
     expect(customerInvoiceSandboxReadiness({ ...issued, status: "VOID", balanceMinor: 0 }))
       .toMatchObject({ ok: false, reason: "NOT_ISSUED" });

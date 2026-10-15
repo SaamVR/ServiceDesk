@@ -59,6 +59,30 @@ describe("V4 operator proof of persisted workflow activity",()=>{
     expect(s.internalAttentionSucceeded).toBe(0);
     expect(s.providerDeliveryVerified).toBe(false);
   });
+  it("does not inflate successful automation from another branch, unmatched event or corrupt action identity",()=>{
+    const valid = action("live-1","SUCCEEDED","CREATE_ATTENTION");
+    for(const invalid of [
+      { ...valid, branchId:"foreign-branch" },
+      { ...valid, actionIndex:-1 },
+      { ...valid, attemptNumber:0 },
+      { ...valid, attemptNumber:Number.NaN },
+      { ...valid, executionId:"missing" },
+    ]) {
+      const result = summarizeWorkflowEvidence({
+        workflowExecutions:[live],
+        workflowActionExecutions:[invalid],
+      });
+      expect(result.internalAttentionSucceeded).toBe(0);
+      expect(result.providerDeliveryVerified).toBe(false);
+    }
+    const unmatched = summarizeWorkflowEvidence({
+      workflowExecutions:[{...live,matched:false}],
+      workflowActionExecutions:[valid],
+    });
+    expect(unmatched.recordedLiveExecutions).toBe(1);
+    expect(unmatched.matchedLiveExecutions).toBe(0);
+    expect(unmatched.internalAttentionSucceeded).toBe(0);
+  });
   it("renders the evidence on both empty and nonempty recovery variants, with readable CSS",()=>{
     const path=(x:string)=>readFileSync(join(process.cwd(),x),"utf8");
     const route=path("src/features/operations/OperationalProductRoute.tsx");

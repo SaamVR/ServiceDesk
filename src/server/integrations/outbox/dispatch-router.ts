@@ -29,11 +29,19 @@ function validAcceptedReceipt(value: Record<string, unknown>, committedAt: strin
   // The adapter response cannot move payment-independent delivery history
   // backwards before the durable outbox claim or before provider acceptance.
   // We compare parsed instants only after strict UTC calendar validation.
+  const accepted = Date.parse(value.acceptedAt as string);
+  const captured = Date.parse(details.capturedAt as string);
+  const claimed = Date.parse(committedAt);
+  // A contract test receipt must never masquerade as LIVE delivery evidence.
+  // Provider acceptance and redacted capture must remain within a bounded
+  // claim window, rather than fabricating timestamps days or years ahead.
+  const liveVerified = mode !== "LIVE" || details.verification === "PROVIDER_VERIFIED";
+  const maxProofAgeMs = 24 * 60 * 60 * 1000;
   return details.mode === mode && details.provider === value.channel &&
     ["CONTRACT_TESTED", "PROVIDER_VERIFIED"].includes(String(details.verification)) &&
-    validUtcTime(details.capturedAt) && validUtcTime(committedAt) &&
-    Date.parse(value.acceptedAt as string) >= Date.parse(committedAt) &&
-    Date.parse(details.capturedAt as string) >= Date.parse(value.acceptedAt as string);
+    liveVerified && validUtcTime(details.capturedAt) && validUtcTime(committedAt) &&
+    accepted >= claimed && captured >= accepted &&
+    captured - claimed <= maxProofAgeMs;
 }
 
 export type DispatchRouterTable = Partial<Record<DeliveryChannel, CommittedOutboxDispatcher>>;
