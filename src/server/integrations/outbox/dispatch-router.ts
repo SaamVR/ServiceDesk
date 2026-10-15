@@ -41,7 +41,11 @@ function validAcceptedReceipt(value: Record<string, unknown>, committedAt: strin
     ["CONTRACT_TESTED", "PROVIDER_VERIFIED"].includes(String(details.verification)) &&
     liveVerified && validUtcTime(details.capturedAt) && validUtcTime(committedAt) &&
     accepted >= claimed && captured >= accepted &&
-    captured - claimed <= maxProofAgeMs;
+    captured - claimed <= maxProofAgeMs &&
+    // Provider clocks can drift briefly; dates from tomorrow cannot prove
+    // a receipt was accepted by an external service today.
+    accepted <= Date.now() + 5 * 60 * 1000 &&
+    captured <= Date.now() + 5 * 60 * 1000;
 }
 
 export type DispatchRouterTable = Partial<Record<DeliveryChannel, CommittedOutboxDispatcher>>;
@@ -62,7 +66,9 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
       input.attempt < 1 || input.attempt > 1_000_000 ||
       !validUtcTime(input.committedAt) ||
       !validUtcTime(input.job.createdAt) ||
-      Date.parse(input.committedAt) < Date.parse(input.job.createdAt)) {
+      Date.parse(input.committedAt) < Date.parse(input.job.createdAt) ||
+      Date.parse(input.committedAt) > Date.now() + 5 * 60 * 1000 ||
+      Date.parse(input.job.createdAt) > Date.now() + 5 * 60 * 1000) {
     return failure(input, "OUTBOX_COMMIT_CLAIM_INVALID",
       "Committed outbox attempt or chronological claim evidence is invalid.");
   }
