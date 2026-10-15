@@ -22,6 +22,7 @@ const cases: Array<{ kind: OwnerOperationalEventType; id: string; expected: Reco
 function fixture(eventType: OwnerOperationalEventType,options:{
   role?:string;mode?:"SERVICE_ROLE"|"QA_SESSION_RLS";sourceStatus?:string;
   otherTenant?:boolean;wrongBranch?:boolean;duplicate?:boolean;drift?:boolean;workflowGenerated?:boolean;
+  quoteDrift?:boolean;invoiceAmountDrift?:boolean;
 }={}) {
   let isPending = true;
   const selectedStatus = options.sourceStatus ??
@@ -30,7 +31,7 @@ function fixture(eventType: OwnerOperationalEventType,options:{
   const rows: Record<string,Record<string,unknown>[]> = {
     quotes:[{id:quote,workspace_id:options.otherTenant?"foreign":workspace,request_id:request,
       status:eventType==="QUOTE_ACCEPTED"?selectedStatus:"ACCEPTED",currency:"USD",service_code:"MOVE_OUT",
-      subtotal_minor:24000,tax_minor:0,total_minor:24000,deposit_minor:6000,
+      subtotal_minor:options.quoteDrift?23000:24000,tax_minor:0,total_minor:24000,deposit_minor:6000,
       balance_minor:18000,duration_minutes:120,
       snapshot:{lineItems:[{code:"BASE",description:"Base cleaning",
         amountMinor:24000,durationMinutes:120}]}}],
@@ -39,7 +40,8 @@ function fixture(eventType: OwnerOperationalEventType,options:{
       status:eventType==="VISIT_COMPLETED"?selectedStatus:"COMPLETED"}],
     invoices:[{id:invoice,workspace_id:options.otherTenant?"foreign":workspace,quote_id:quote,
       status:eventType==="INVOICE_PAID"?selectedStatus:"PAID",currency:"USD",
-      total_minor:24000,allocated_minor:27000,refunded_minor:3000,balance_minor:0}],
+      total_minor:options.invoiceAmountDrift?25000:24000,
+      allocated_minor:options.invoiceAmountDrift?28000:27000,refunded_minor:3000,balance_minor:0}],
     requests:[{id:request,workspace_id:workspace,branch_id:branch,service_id:serviceId}],
     service_catalog:[{id:serviceId,workspace_id:workspace,code:"MOVE_OUT"}],
     workspace_branches:[{id:branch,workspace_id:workspace,code:"MAIN"}],
@@ -138,6 +140,15 @@ describe("Owner-run persisted operational milestones",()=>{
     const drift=fixture("VISIT_COMPLETED",{wrongBranch:true});
     expect(await runOwnerSavedOperationalAutomation("fictional-qa","VISIT_COMPLETED",visit,drift.deps))
       .toMatchObject({ok:false,code:"OPERATIONAL_AUTOMATION_BRANCH_DRIFT"});
+  });
+  it("rejects paid invoices when the linked accepted quote no longer has verified financial truth",async()=>{
+    for (const patch of [{quoteDrift:true},{invoiceAmountDrift:true}]) {
+      const t=fixture("INVOICE_PAID",patch);
+      const result=await runOwnerSavedOperationalAutomation("fictional-qa","INVOICE_PAID",invoice,t.deps);
+      expect(result).toMatchObject({ok:false,code:"OPERATIONAL_AUTOMATION_QUOTE_UNVERIFIED"});
+      expect(t.evaluateAndRecord).not.toHaveBeenCalled();
+      expect(t.executeAttentionAction).not.toHaveBeenCalled();
+    }
   });
   it("refuses workflow-generated attention items to stop recursive exception fan-out",async()=>{
     const t=fixture("ATTENTION_OPENED",{workflowGenerated:true});
