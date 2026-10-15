@@ -25,6 +25,7 @@ import { createPostgresRequestQuoteCapacityFacadeMethods } from "@/server/core/r
 import { loadOperationalQuoteRateCard } from "@/server/core/operational-quote-rate-card";
 import { readVerifiedCustomerQuoteLineItems, type CustomerQuoteLineItem } from "./customer-quote-line-items";
 import { isVerifiedStaffCollectibleInvoice } from "./staff-invoice-collection-readiness";
+import { stableManualPaymentIdempotencyKey } from "./manual-payment-idempotency";
 import { normalizeStaffPaymentReference } from "./manual-payment-reference";
 import { assessOperationalQuoteSend } from "./quote-send-readiness";
 import { createPostgresVisitFieldRuntimeFacadeMethods } from "@/server/core/visit-field-postgres";
@@ -1928,7 +1929,14 @@ export async function applyOperationalManualPayment(
       reference: verifiedReference,
       occurredAt: new Date().toISOString(),
     },
-    { idempotencyKey: "manual-payment-" + crypto.randomUUID(), now: new Date().toISOString() },
+    { idempotencyKey: stableManualPaymentIdempotencyKey({
+      workspaceId: resolved.value.workspace.id,
+      invoiceId,
+      amountMinor,
+      currency: String(invoice.data.currency),
+      method,
+      reference: verifiedReference,
+    }), now: new Date().toISOString() },
   );
   return result.ok
     ? { ok: true, message: "Manual payment recorded on the invoice." }
