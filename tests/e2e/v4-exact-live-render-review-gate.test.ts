@@ -15,16 +15,16 @@ describe("read-only LIVE Render review exact SHA proof", () => {
     expect(script).toContain('throw new Error("LIVE_RENDER_SHA_MISMATCH');
   });
   test("requires public HTTP 200 plus all guarded business routes to redirect to sign in", () => {
-    for (const path of ["/", "/pricing", "/portal"]) {
-      expect(script).toContain('["/", "/pricing", "/portal"]');
-    }
+    expect(script).toContain('["/", "/pricing", "/portal"]');
     expect(script).toContain('response.status !== 307');
     expect(script).toContain('target.pathname !== "/auth/sign-in"');
     expect(script).toContain('target.searchParams.get("next") !== path');
   });
-  test("can run only by explicit reviewed-branch dispatch; cannot use a production secret", () => {
-    expect(workflow).toContain("workflow_dispatch:");
-    expect(workflow).not.toContain("push:");
+  test("runs on isolated review push after manual Render promotion without production secrets", () => {
+    expect(workflow).toContain("push:");
+    expect(workflow).toContain("branches: [deploy/servicedesk-v3-public-review-20261011]");
+    expect(workflow).toContain("Manual Render review promotion never reached this SHA");
+    expect(workflow).toContain("j.sourceSha===process.env.GITHUB_SHA");
     expect(workflow).toContain("github.ref == 'refs/heads/deploy/servicedesk-v3-public-review-20261011'");
     expect(workflow).toContain("contents: read");
     expect(script).not.toContain("Authorization");
