@@ -79,6 +79,66 @@ describe("commercial profitability postgres boundary", () => {
     );
   });
 
+  it("refuses fractional money, unsafe totals, negative counts, currency spoofing and unreconciled margins", async () => {
+    for (const patch of [
+      { quotedRevenueMinor: 40000.5 },
+      { paidRevenueMinor: Number.MAX_SAFE_INTEGER + 1 },
+      { completedVisitCount: -1 },
+      { quotedVisitCount: 4.5 },
+      { actualCostedPaidVisitCount: Number.NaN },
+      { recordedEstimatedCostMinor: Infinity },
+      { recordedQuotedMarginMinor: 27999 },
+      { recordedCompletedMarginMinor: 19001 },
+      { recordedPaidMarginMinor: 12999 },
+      { currency: "usd" },
+      { currency: "USD <script>" },
+    ]) {
+      const rpc = vi.fn().mockResolvedValue({
+        data: { ok: true, snapshot: {
+          workspaceId: ctx.workspaceId, rows: [row(patch)],
+          unattributedAdjustments: [], partialPaymentInvoiceCount: 0,
+        } }, error: null,
+      });
+      const result = await createPostgresCommercialProfitabilityReader({ rpc } as SupabaseRpcClient)
+        .readCommercialProfitabilitySnapshot(ctx);
+      expect(result, JSON.stringify(patch)).toMatchObject({
+        ok: false, code: "COMMERCIAL_PROFITABILITY_READ_MALFORMED",
+      });
+    }
+  });
+
+  it("rejects corrupted adjustment/count evidence without inventing margins", async () => {
+    for (const patch of [
+      { finalizedNetMinor: 0.1 },
+      { paidNetMinor: Number.MAX_SAFE_INTEGER + 100 },
+      { lineCount: -1 },
+      { lineCount: 0.2 },
+      { currency: "USD/USD" },
+    ]) {
+      const rpc = vi.fn().mockResolvedValue({ data: {
+        ok: true, snapshot: {
+          workspaceId: ctx.workspaceId,
+          rows: [],
+          unattributedAdjustments: [{
+            currency: "USD", finalizedNetMinor: -500,
+            paidNetMinor: -500, lineCount: 1, ...patch,
+          }],
+          partialPaymentInvoiceCount: 0,
+        },
+      }, error: null });
+      expect(await createPostgresCommercialProfitabilityReader({ rpc } as SupabaseRpcClient)
+        .readCommercialProfitabilitySnapshot(ctx))
+        .toMatchObject({ ok: false, code: "COMMERCIAL_PROFITABILITY_READ_MALFORMED" });
+    }
+    const rpc = vi.fn().mockResolvedValue({ data: { ok: true, snapshot: {
+      workspaceId: ctx.workspaceId, rows: [],
+      unattributedAdjustments: [], partialPaymentInvoiceCount: -2,
+    } }, error: null });
+    expect(await createPostgresCommercialProfitabilityReader({ rpc } as SupabaseRpcClient)
+      .readCommercialProfitabilitySnapshot(ctx))
+      .toMatchObject({ ok: false, code: "COMMERCIAL_PROFITABILITY_READ_MALFORMED" });
+  });
+
   it("rejects a cross-workspace snapshot", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: {
