@@ -9,9 +9,12 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# A newer canonical/review push supersedes an older release candidate.
+# Spending a full browser build on obsolete SHAs delays exact-current proof.
+# Branch-keyed cancellation never cancels a different review environment.
 concurrency:
   group: servicedesk-v4-reconciled-rc-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   exact-head-rc:
     runs-on: ubuntu-latest
