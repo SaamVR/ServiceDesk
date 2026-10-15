@@ -18,6 +18,15 @@ export function validateStaffQuoteReviewDraft(value: unknown): string | undefine
   if (/\b(?:guarantee(?:d|s)?|promise(?:d|s)?|definitely|certainly)\b/i.test(draft)) return undefined;
   if (/\b(?:quote|payment|invoice|appointment|booking|deposit|availability|service\s+slot)\s+(?:is|was|has\s+been)\s+(?:approved|paid|processed|confirmed|sent|delivered|booked|scheduled|secured)\b/i.test(draft)) return undefined;
   if (/\b(?:customer\s+has\s+paid|we\s+(?:will|can)\s+(?:charge|refund|schedule|book|confirm|send)\b)/i.test(draft)) return undefined;
+  // The model receives only service codes and durations. Statements about
+  // customer approval, delivery receipts or settled payments cannot be
+  // independently derived from those facts, even without a numeric amount.
+  if (/\b(?:the\s+)?(?:customer|client)\s+(?:has\s+|already\s+)?(?:approved|accepted|confirmed|booked|paid|received)\b/i.test(draft)) return undefined;
+  if (/\b(?:whats?app|e-?mail|message|notification)\s+(?:was|is|has\s+been)\s+(?:sent|delivered|received|confirmed)\b/i.test(draft)) return undefined;
+  if (/\b(?:payment|deposit|balance|invoice|refund)\s+(?:was|is|has\s+been)\s+(?:paid|charged|settled|processed|refunded|received)\b/i.test(draft)) return undefined;
+  // Invisible bidi controls can reverse quoted evidence/charges or spoof the
+  // order of fields while still passing ordinary printable-text checks.
+  if (/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(draft)) return undefined;
   return draft;
 }
 
