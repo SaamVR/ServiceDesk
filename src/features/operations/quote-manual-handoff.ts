@@ -46,7 +46,7 @@ export function verifiedManualQuoteHandoffMessage(
   // supplied URLs, email addresses or contact numbers disguised as services.
   // Only the canonical authenticated quote link is emitted by this function.
   const injectedContactOrLink =
-    /(?:https?:\/\/|www\.|\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b|\b[a-z0-9-]+\.(?:com|net|org|io|shop|co|bd)\/)/i;
+    /(?:https?:\/\/|www\.|\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b|\b[a-z0-9][a-z0-9.-]*\.(?:com|net|org|io|shop|co|bd|app|link|xyz)\b|(?:^|\D)\+?\d{10,15}(?!\d)|(?:^|\D)\d{3}[-. ]\d{3}[-. ]\d{4}(?!\d))/i;
   if (lines.some(item =>
     misleadingFormat.test(item.description) ||
     injectedContactOrLink.test(item.description))) return null;
