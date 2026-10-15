@@ -3,7 +3,9 @@ import { dispatchCommittedOutboxJob } from "../../src/server/integrations/outbox
 import { dispatchOutcomeBase, type CommittedOutboxDispatchOutcome } from "../../src/server/integrations/outbox/dispatch-port";
 import type { OutboxJob } from "../../src/server/integrations/types";
 
-const claimedAt = "2026-10-15T09:00:00.000Z";
+const claimMs = Date.now() - 2 * 60_000;
+const stamp = (offsetMs: number) => new Date(claimMs + offsetMs).toISOString();
+const claimedAt = stamp(0);
 const job: OutboxJob = {
   id: "job-quote", workspaceId: "ws-quoted", channel: "WHATSAPP", purpose: "QUOTE",
   recipient: { recipientRef: "ref-123", consentRequired: true, hasOptIn: true, optedOut: false },
@@ -35,7 +37,7 @@ describe("V4 outbox LIVE acceptance evidence and chronology", () => {
   });
   test("permits realistic provider-verified live acceptance after a committed claim", async () => {
     const result = await attempt("LIVE", "PROVIDER_VERIFIED",
-      "2026-10-15T09:01:00.000Z", "2026-10-15T09:01:02.000Z");
+      stamp(60_000), stamp(62_000));
     expect(result).toMatchObject({ ok: true, value: {
       outcome: "ACCEPTED", providerMode: "LIVE", providerMessageId: "wamid.provider.abc",
       evidence: { verification: "PROVIDER_VERIFIED" },
@@ -47,10 +49,10 @@ describe("V4 outbox LIVE acceptance evidence and chronology", () => {
   });
   test("rejects provider-created far-future and out-of-order receipts", async () => {
     const bad = [
-      ["2026-10-16T09:00:01.000Z", "2026-10-16T09:00:01.000Z"],
-      ["2026-10-15T09:00:00.000Z", "2026-10-16T09:01:00.000Z"],
-      ["2026-10-15T08:59:59.000Z", "2026-10-15T09:01:00.000Z"],
-      ["2026-10-15T09:01:00.000Z", "2026-10-15T09:00:59.000Z"],
+      [stamp(86_401_000), stamp(86_401_000)],
+      [stamp(0), stamp(86_460_000)],
+      [stamp(-1000), stamp(60_000)],
+      [stamp(60_000), stamp(59_000)],
     ] as const;
     for (const [accepted, captured] of bad) {
       const result = await attempt("LIVE", "PROVIDER_VERIFIED", accepted, captured);
