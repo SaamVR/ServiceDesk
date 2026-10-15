@@ -37,49 +37,80 @@ function optionalString(row: RpcRow, key: string): string | undefined {
   const value = row[key];
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
-
-function number(row: RpcRow, key: string): number {
-  const value = row[key];
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new Error(`Malformed commercial profitability payload: ${key}`);
+function currency(row: RpcRow, key: string): string {
+  const value = string(row, key);
+  if (!/^[A-Z]{3}$/.test(value)) {
+    throw new Error("Malformed commercial profitability payload: currency");
   }
   return value;
 }
 
+function minor(row: RpcRow, key: string): number {
+  const value = row[key];
+  // PostgreSQL returns integer minor units; a fractional/unsafe value must
+  // never be presented as an authoritative commercial amount.
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    throw new Error(`Malformed commercial profitability payload: ${key}`);
+  }
+  return value;
+}
+function count(row: RpcRow, key: string): number {
+  const value = minor(row, key);
+  if (value < 0) throw new Error(`Malformed commercial profitability payload: ${key}`);
+  return value;
+}
+
 function mapRow(row: RpcRow): CommercialProfitabilityRowDTO {
+  const quotedRevenueMinor = minor(row, "quotedRevenueMinor");
+  const completedRevenueMinor = minor(row, "completedRevenueMinor");
+  const paidRevenueMinor = minor(row, "paidRevenueMinor");
+  const recordedEstimatedCostMinor = minor(row, "recordedEstimatedCostMinor");
+  const recordedActualCompletedCostMinor = minor(row, "recordedActualCompletedCostMinor");
+  const recordedActualPaidCostMinor = minor(row, "recordedActualPaidCostMinor");
+  const recordedQuotedMarginMinor = minor(row, "recordedQuotedMarginMinor");
+  const recordedCompletedMarginMinor = minor(row, "recordedCompletedMarginMinor");
+  const recordedPaidMarginMinor = minor(row, "recordedPaidMarginMinor");
+  if (!Number.isSafeInteger(quotedRevenueMinor - recordedEstimatedCostMinor) ||
+      !Number.isSafeInteger(completedRevenueMinor - recordedActualCompletedCostMinor) ||
+      !Number.isSafeInteger(paidRevenueMinor - recordedActualPaidCostMinor) ||
+      recordedQuotedMarginMinor !== quotedRevenueMinor - recordedEstimatedCostMinor ||
+      recordedCompletedMarginMinor !== completedRevenueMinor - recordedActualCompletedCostMinor ||
+      recordedPaidMarginMinor !== paidRevenueMinor - recordedActualPaidCostMinor) {
+    throw new Error("Malformed commercial profitability payload: margin mismatch");
+  }
   return {
     siteId: string(row, "siteId"),
     siteCode: optionalString(row, "siteCode"),
     serviceId: string(row, "serviceId"),
     serviceCode: string(row, "serviceCode"),
     serviceName: string(row, "serviceName"),
-    currency: string(row, "currency") as CommercialProfitabilityRowDTO["currency"],
-    quotedVisitCount: number(row, "quotedVisitCount"),
-    completedVisitCount: number(row, "completedVisitCount"),
-    paidVisitCount: number(row, "paidVisitCount"),
-    unresolvedRateCount: number(row, "unresolvedRateCount"),
-    estimatedCostedVisitCount: number(row, "estimatedCostedVisitCount"),
-    actualCostedCompletedVisitCount: number(row, "actualCostedCompletedVisitCount"),
-    actualCostedPaidVisitCount: number(row, "actualCostedPaidVisitCount"),
-    partialPaymentVisitCount: number(row, "partialPaymentVisitCount"),
-    quotedRevenueMinor: number(row, "quotedRevenueMinor"),
-    completedRevenueMinor: number(row, "completedRevenueMinor"),
-    paidRevenueMinor: number(row, "paidRevenueMinor"),
-    recordedEstimatedCostMinor: number(row, "recordedEstimatedCostMinor"),
-    recordedActualCompletedCostMinor: number(row, "recordedActualCompletedCostMinor"),
-    recordedActualPaidCostMinor: number(row, "recordedActualPaidCostMinor"),
-    recordedQuotedMarginMinor: number(row, "recordedQuotedMarginMinor"),
-    recordedCompletedMarginMinor: number(row, "recordedCompletedMarginMinor"),
-    recordedPaidMarginMinor: number(row, "recordedPaidMarginMinor"),
+    currency: currency(row, "currency") as CommercialProfitabilityRowDTO["currency"],
+    quotedVisitCount: count(row, "quotedVisitCount"),
+    completedVisitCount: count(row, "completedVisitCount"),
+    paidVisitCount: count(row, "paidVisitCount"),
+    unresolvedRateCount: count(row, "unresolvedRateCount"),
+    estimatedCostedVisitCount: count(row, "estimatedCostedVisitCount"),
+    actualCostedCompletedVisitCount: count(row, "actualCostedCompletedVisitCount"),
+    actualCostedPaidVisitCount: count(row, "actualCostedPaidVisitCount"),
+    partialPaymentVisitCount: count(row, "partialPaymentVisitCount"),
+    quotedRevenueMinor,
+    completedRevenueMinor,
+    paidRevenueMinor,
+    recordedEstimatedCostMinor,
+    recordedActualCompletedCostMinor,
+    recordedActualPaidCostMinor,
+    recordedQuotedMarginMinor,
+    recordedCompletedMarginMinor,
+    recordedPaidMarginMinor,
   };
 }
 
 function mapAdjustment(row: RpcRow): CommercialProfitabilityAdjustmentTotalDTO {
   return {
-    currency: string(row, "currency") as CommercialProfitabilityAdjustmentTotalDTO["currency"],
-    finalizedNetMinor: number(row, "finalizedNetMinor"),
-    paidNetMinor: number(row, "paidNetMinor"),
-    lineCount: number(row, "lineCount"),
+    currency: currency(row, "currency") as CommercialProfitabilityAdjustmentTotalDTO["currency"],
+    finalizedNetMinor: minor(row, "finalizedNetMinor"),
+    paidNetMinor: minor(row, "paidNetMinor"),
+    lineCount: count(row, "lineCount"),
   };
 }
 
@@ -91,7 +122,7 @@ function mapSnapshot(value: unknown, workspaceId: string): CommercialProfitabili
     toDate: optionalString(row, "toDate"),
     rows: list(row.rows, "rows").map(mapRow),
     unattributedAdjustments: list(row.unattributedAdjustments, "unattributedAdjustments").map(mapAdjustment),
-    partialPaymentInvoiceCount: number(row, "partialPaymentInvoiceCount"),
+    partialPaymentInvoiceCount: count(row, "partialPaymentInvoiceCount"),
   };
 
   if (snapshot.workspaceId !== workspaceId) {
@@ -116,7 +147,10 @@ export function createPostgresCommercialProfitabilityReader(
         return fail("FORBIDDEN", "Owner or dispatcher access is required for commercial profitability.");
       }
 
-      const { data, error } = await client.rpc<RpcRow>(
+      // An offline RPC transport must degrade this independent read-only
+      // panel, not reject Promise.all() and bring down the entire billing UI.
+      // Do not reflect raw PostgREST/network diagnostics to staff.
+      const result = await client.rpc<RpcRow>(
         "servicedesk_read_commercial_profitability_snapshot",
         {
           p_input: {
@@ -127,9 +161,16 @@ export function createPostgresCommercialProfitabilityReader(
             toDate: query.toDate,
           },
         },
+      ).catch(() => null);
+      if (!result) {
+        return fail("COMMERCIAL_PROFITABILITY_READ_UNAVAILABLE",
+          "Commercial profitability reporting is temporarily unavailable.");
+      }
+      const { data, error } = result;
+      if (error) return fail(
+        "COMMERCIAL_PROFITABILITY_READ_ERROR",
+        "Commercial profitability reporting could not be loaded.",
       );
-
-      if (error) return fail(error.code ?? "COMMERCIAL_PROFITABILITY_READ_ERROR", error.message);
       if (!data) return fail("COMMERCIAL_PROFITABILITY_READ_EMPTY", "Commercial profitability read returned no payload.");
       if (data.ok === false) {
         return fail(
