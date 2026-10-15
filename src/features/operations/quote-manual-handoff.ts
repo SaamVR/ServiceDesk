@@ -36,6 +36,12 @@ export function verifiedManualQuoteHandoffMessage(
     facts.taxMinor, facts.totalMinor,
   );
   if (!lines) return null;
+  // Saved service descriptions are data, not trusted outbound copy. Bidirectional
+  // overrides/isolates and invisible zero-width controls can alter what a
+  // customer sees after pasting prices into a messenger. Require staff review
+  // of the original quote instead of silently removing those characters.
+  const misleadingFormat = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/u;
+  if (lines.some(item => misleadingFormat.test(item.description))) return null;
   let url: URL;
   try {
     const origin = new URL(currentOrigin);
