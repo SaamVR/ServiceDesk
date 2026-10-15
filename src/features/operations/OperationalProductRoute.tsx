@@ -2407,7 +2407,7 @@ function InvoicesView({
                     </FormField>
                   </FormGrid>
                   <StaffSubmitButton className="app-button-primary" pendingLabel="Recording payment…">Record payment</StaffSubmitButton>
-                  <p>Use this only for money already received outside the online checkout flow. It does not simulate online settlement.</p>
+                  <p>Use this only for money already received outside online checkout. Use a distinct bank or receipt reference for each new payment; reuse the same reference and amount when retrying an uncertain submission. It does not simulate online settlement.</p>
                 </form>
               ) : (
                 <div className={styles.financeClosedState}>
