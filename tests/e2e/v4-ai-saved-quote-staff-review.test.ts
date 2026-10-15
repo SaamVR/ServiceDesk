@@ -88,6 +88,14 @@ describe("real staff-triggered AI quality review on persisted quote", () => {
     for (const patch of [
       { version: 2 }, { status: "ACCEPTED" },
       { valid_until: "2010-01-01T00:00:00Z" },
+      // A privileged/imported DB mutation may omit the expected version bump.
+      { total_minor: 32001 }, { balance_minor: 23999 },
+      { duration_minutes: 211 },
+      { snapshot: { lineItems: [
+        { code: "BASE", description: "Private customer notes are hidden", amountMinor: 20000, durationMinutes: 120 },
+        { code: "BEDROOM", description: "Bedrooms", amountMinor: 9000, durationMinutes: 60 },
+        { code: "CARPET", description: "New unreviewed add-on", amountMinor: 3000, durationMinutes: 30 },
+      ] } },
     ]) {
       const saved = { ...quote };
       let calls = 0;

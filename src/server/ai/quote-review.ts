@@ -97,6 +97,14 @@ export async function generateAuthorizedQuoteReview(
     row.subtotal_minor as number, row.duration_minutes as number,
     row.tax_minor as number, row.total_minor as number);
   if (!lines) return fail("AI_QUOTE_LINES_UNVERIFIED");
+  // Capture primitives, not a reference to a mutable DB-mock or service row.
+  // This guards even if an external writer mutates the snapshot without
+  // incrementing the quote version during a slow paid model operation.
+  const authorizedAmounts = {
+    subtotal: row.subtotal_minor, tax: row.tax_minor,
+    total: row.total_minor, deposit: row.deposit_minor,
+    balance: row.balance_minor, duration: row.duration_minutes,
+  };
   if (deps.signal?.aborted) return fail("AI_QUOTE_CANCELLED");
 
   let config: ReturnType<ConfigReader>;
@@ -158,17 +166,34 @@ export async function generateAuthorizedQuoteReview(
     let current: { data: Record<string, unknown> | null; error: unknown } | null = null;
     try {
       current = await active.service.from("quotes")
-        .select("id,workspace_id,version,status,valid_until")
+        .select("id,workspace_id,version,status,valid_until,subtotal_minor,tax_minor,total_minor,deposit_minor,balance_minor,duration_minutes,snapshot")
         .eq("workspace_id", workspace.id).eq("id", input.quoteId).maybeSingle();
     } catch { return fail("AI_QUOTE_RECHECK_UNAVAILABLE"); }
     if (deps.signal?.aborted) return fail("AI_QUOTE_CANCELLED");
     const saved = current?.data;
     if (current?.error || !saved) return fail("AI_QUOTE_RECHECK_UNAVAILABLE");
+    // A version increment is the normal concurrency barrier, but a privileged
+    // or external writer can change the stored financial snapshot without one.
+    // Reconcile the exact saved money and itemization again after model latency.
+    // The model must never surface an outdated suggestion as current quote truth.
     if (saved.id !== input.quoteId || saved.workspace_id !== workspace.id ||
         saved.version !== authorizedVersion || saved.status !== authorizedStatus ||
         typeof saved.valid_until !== "string" ||
         saved.valid_until !== authorizedExpiry ||
-        Date.parse(saved.valid_until) <= Date.now()) {
+        Date.parse(saved.valid_until) <= Date.now() ||
+        saved.subtotal_minor !== authorizedAmounts.subtotal ||
+        saved.tax_minor !== authorizedAmounts.tax ||
+        saved.total_minor !== authorizedAmounts.total ||
+        saved.deposit_minor !== authorizedAmounts.deposit ||
+        saved.balance_minor !== authorizedAmounts.balance ||
+        saved.duration_minutes !== authorizedAmounts.duration) {
+      return fail("AI_QUOTE_STALE");
+    }
+    const latestLines = readVerifiedCustomerQuoteLineItems(
+      saved.snapshot, saved.subtotal_minor as number, saved.duration_minutes as number,
+      saved.tax_minor as number, saved.total_minor as number,
+    );
+    if (!latestLines || JSON.stringify(latestLines) !== JSON.stringify(lines)) {
       return fail("AI_QUOTE_STALE");
     }
     if (response.value.requestedToolCalls?.length || response.value.citations?.length) {
