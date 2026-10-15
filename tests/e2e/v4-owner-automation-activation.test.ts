@@ -118,6 +118,24 @@ describe("owner automation activation evidence", () => {
       .toBe("UNVERIFIED");
   });
 
+  it("never double-counts the same persisted attention ID as two required action effects", () => {
+    const multiRule = { ...published, maxActionsPerEvent: 2,
+      actions: [{ type: "CREATE_ATTENTION" }, { type: "CREATE_ATTENTION" }] };
+    const actionTwo = { ...completedAttention, id: "action-2", actionIndex: 1 };
+    const ready = {
+      ...priced, serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      workflowRules: [activeRule], workflowRuleVersions: [multiRule],
+      requests: [acceptedRequest], quotes: [acceptedQuote],
+      workflowExecutions: [live], workflowActionExecutions: [completedAttention, actionTwo],
+    };
+    expect(summarizeAutomationActivation({
+      ...ready, attentionItems: [persistedAttention, { ...persistedAttention }],
+    }).steps[4].status).toBe("ACTION_REQUIRED");
+    expect(summarizeAutomationActivation({
+      ...ready, attentionItems: [persistedAttention, { ...persistedAttention, id: "attention-2" }],
+    }).steps[4].status).toBe("READY");
+  });
+
   it("never calls empty workspace or unavailable pricing an operational success", () => {
     const summary = summarizeAutomationActivation(empty);
     expect(summary.readyCount).toBe(0);

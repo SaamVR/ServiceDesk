@@ -17,6 +17,7 @@ import {
 import { verifyCustomerQuoteForAcceptance } from "./customer-quote-acceptance";
 import { customerInvoiceSandboxReadiness } from "./customer-invoice-checkout-readiness";
 import { verifiedSandboxSessionShape } from "./sandbox-session-integrity";
+import { isReusableBalanceSession } from "./sandbox-checkout-reuse";
 import { verifiedSandboxPaymentLedgerMatch } from "./sandbox-payment-ledger-proof";
 
 type Row = Record<string, unknown>;
@@ -885,10 +886,12 @@ export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): P
   const now = new Date();
   const existing = await resolved.value.service
     .from("sandbox_checkout_sessions")
-    .select("id,amount_minor,currency,status,expires_at")
+    .select("id,quote_id,invoice_id,purpose,amount_minor,currency,status,expires_at")
     .eq("workspace_id", resolved.value.workspace.id)
     .eq("customer_id", resolved.value.customer.id)
     .eq("invoice_id", context.invoice.id)
+    .eq("quote_id", context.quote.id)
+    .eq("purpose", "BALANCE")
     .eq("status", "OPEN")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -899,16 +902,12 @@ export async function launchCustomerInvoiceSandboxCheckout(invoiceId: string): P
   if (existing.error) {
     return { ok: false, message: "Existing checkout state could not be verified. Please retry safely." };
   }
-  if (existing.data) {
-    const expiresAt = new Date(String(existing.data.expires_at)).getTime();
-    if (
-      Number(existing.data.amount_minor) === context.invoice.balanceMinor
-      && String(existing.data.currency) === context.invoice.currency
-      && Number.isFinite(expiresAt)
-      && expiresAt > now.getTime()
-    ) {
-      return { ok: true, checkoutPath: `/portal/sandbox-checkout/${encodeURIComponent(String(existing.data.id))}` };
-    }
+  if (isReusableBalanceSession(existing.data, {
+    quoteId: context.quote.id, invoiceId: context.invoice.id,
+    amountMinor: context.invoice.balanceMinor, currency: context.invoice.currency,
+    nowMs: now.getTime(),
+  })) {
+    return { ok: true, checkoutPath: `/portal/sandbox-checkout/${encodeURIComponent(String(existing.data!.id))}` };
   }
 
   const sessionId = crypto.randomUUID();

@@ -41,7 +41,11 @@ function validAcceptedReceipt(value: Record<string, unknown>, committedAt: strin
     ["CONTRACT_TESTED", "PROVIDER_VERIFIED"].includes(String(details.verification)) &&
     liveVerified && validUtcTime(details.capturedAt) && validUtcTime(committedAt) &&
     accepted >= claimed && captured >= accepted &&
-    captured - claimed <= maxProofAgeMs;
+    captured - claimed <= maxProofAgeMs &&
+    // Provider clocks can drift briefly; dates from tomorrow cannot prove
+    // a receipt was accepted by an external service today.
+    accepted <= Date.now() + 5 * 60 * 1000 &&
+    captured <= Date.now() + 5 * 60 * 1000;
 }
 
 export type DispatchRouterTable = Partial<Record<DeliveryChannel, CommittedOutboxDispatcher>>;
@@ -55,6 +59,29 @@ function failure(input: CommittedOutboxDispatchInput, code: string, message: str
 }
 
 export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJobInput): Promise<Result<CommittedOutboxDispatchOutcome>> {
+  // A corrupted decoded job cannot supply the identity fields required by
+  // dispatchOutcomeBase(). Return a sanitized Result failure BEFORE that
+  // helper, suppression policy or any provider adapter can dereference it.
+  // Keep the existing persisted TERMINAL_FAILURE contract for valid jobs
+  // whose attempt/timestamps are corrupt.
+  const job = input?.job;
+  if (!job || typeof job !== "object" || Array.isArray(job) ||
+      typeof job.id !== "string" || job.id.length === 0 ||
+      typeof job.workspaceId !== "string" || job.workspaceId.length === 0 ||
+      typeof job.idempotencyKey !== "string" || job.idempotencyKey.length === 0 ||
+      typeof job.channel !== "string" || job.channel.length === 0 ||
+      typeof job.purpose !== "string" || job.purpose.length === 0 ||
+      !job.recipient || typeof job.recipient !== "object" ||
+      Array.isArray(job.recipient) ||
+      typeof job.recipient.optedOut !== "boolean" ||
+      typeof job.recipient.consentRequired !== "boolean" ||
+      typeof job.recipient.hasOptIn !== "boolean") {
+    return {
+      ok: false,
+      code: "OUTBOX_COMMIT_CLAIM_INVALID",
+      message: "A committed outbox job is missing required identity or recipient policy fields.",
+    };
+  }
   // The outbox claim is the only authority for invoking an external provider.
   // Refuse corrupt attempts and timestamps BEFORE opt-in or dispatcher selection.
   // Otherwise malformed persisted jobs could still consume provider sends.
@@ -62,7 +89,9 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
       input.attempt < 1 || input.attempt > 1_000_000 ||
       !validUtcTime(input.committedAt) ||
       !validUtcTime(input.job.createdAt) ||
-      Date.parse(input.committedAt) < Date.parse(input.job.createdAt)) {
+      Date.parse(input.committedAt) < Date.parse(input.job.createdAt) ||
+      Date.parse(input.committedAt) > Date.now() + 5 * 60 * 1000 ||
+      Date.parse(input.job.createdAt) > Date.now() + 5 * 60 * 1000) {
     return failure(input, "OUTBOX_COMMIT_CLAIM_INVALID",
       "Committed outbox attempt or chronological claim evidence is invalid.");
   }
