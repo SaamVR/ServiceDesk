@@ -34,7 +34,7 @@ export function OwnerAutomationActivationChecklist({
         </div>
         <div className={styles.progress} aria-label={`${summary.readyCount} of ${summary.total} checks ready`}>
           <strong>{summary.readyCount}<span> / {summary.total}</span></strong>
-          <small>Branch evidence</small>
+          <small>Source-linked evidence</small>
         </div>
       </header>
       <div className={styles.grid}>
@@ -68,7 +68,7 @@ export function OwnerAutomationActivationChecklist({
       </div>
       <p className={styles.disclosure} role="note">
         {summary.allEvidenceReady
-          ? "Five branch-scoped prerequisite signals are recorded. The snapshot does not join an execution to the exact accepted quote; causal owner UAT, provider delivery and deployment opt-in still require independent checks."
+          ? "Exact saved quote-source and linked internal attention are evidenced with the other workspace prerequisites. Independent customer-session UAT, provider delivery and deployment opt-in still require separate checks."
           : "These checks are based on saved workspace records—not a demo, a model configuration flag, or provider-delivery proof."}
         {" "}Email, WhatsApp, scheduling and payments are never activated by this checklist.
       </p>

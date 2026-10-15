@@ -16,6 +16,8 @@ const base = {
   workflowRuleVersions:[],
   workflowExecutions:[],
   workflowActionExecutions:[],
+  // Empty-but-loaded persisted attention is distinct from unavailable proof.
+  attentionItems:[],
 };
 type Snapshot = Parameters<typeof summarizeAutomationActivation>[0];
 const steps=(snapshot:Snapshot)=>summarizeAutomationActivation(snapshot).steps
