@@ -8,7 +8,7 @@ describe("staff manual customer quote clipboard isolation", () => {
 
   test("forces a fresh draft when quote identity or persisted version changes", () => {
     expect(route).toContain(
-      '<QuoteCustomerHandoff key={selectedQuote.id + ":" + selectedQuote.version} quoteId={selectedQuote.id}',
+      '<QuoteCustomerHandoff key={selectedQuote.id + ":" + selectedQuote.version} workspaceSlug={workspaceSlug} quoteId={selectedQuote.id}',
     );
     expect(route).toContain("facts={selectedQuote.lineItems?.length ? {");
   });
@@ -18,7 +18,7 @@ describe("staff manual customer quote clipboard isolation", () => {
     // A keyed remount resets them before a different quote can render.
     expect(handoff).toContain('const [manualSummary, setManualSummary] = useState("")');
     expect(handoff).toContain('const [result, setResult] = useState<');
-    expect(handoff).toContain('verifiedManualQuoteHandoffMessage(facts, window.location.origin)');
+    expect(handoff).toContain('verifiedManualQuoteHandoffMessage(current.facts, window.location.origin)');
     expect(handoff).toContain("setManualSummary(draft)");
   });
 });

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { verifiedManualQuoteHandoffMessage, type ManualQuoteHandoffFacts } from "./quote-manual-handoff";
+import { getCurrentVerifiedManualQuoteHandoff } from "./current-quote-handoff-action";
 
 /** Explicit human handoff; copying a link does not prove provider delivery. */
-export function QuoteCustomerHandoff({ quoteId, facts }: { quoteId: string; facts?: ManualQuoteHandoffFacts }) {
+export function QuoteCustomerHandoff({ workspaceSlug, quoteId, facts }: { workspaceSlug: string; quoteId: string; facts?: ManualQuoteHandoffFacts }) {
   const path = "/portal/quotes/" + encodeURIComponent(quoteId);
   const [result, setResult] = useState<"idle" | "copied" | "manual" | "summary-copied" | "summary-manual" | "stale">("idle");
   const [manualSummary, setManualSummary] = useState("");
@@ -28,9 +29,22 @@ export function QuoteCustomerHandoff({ quoteId, facts }: { quoteId: string; fact
 
   async function copyVerifiedQuoteSummary() {
     setResult("idle");
-    const draft = facts && typeof window !== "undefined"
-      ? verifiedManualQuoteHandoffMessage(facts, window.location.origin) : null;
-    if (!draft) { setManualSummary(""); setResult("stale"); return; }
+    // Current persisted quote state may have changed after page render.
+    // Read again with fresh staff membership and branch scope before any
+    // prices reach the clipboard. A stale page is never delivery evidence.
+    setManualSummary("");
+    if (!facts || typeof window === "undefined") {
+      setResult("stale");
+      return;
+    }
+    let draft: string | null = null;
+    try {
+      const current = await getCurrentVerifiedManualQuoteHandoff(workspaceSlug, quoteId);
+      if (current.ok) {
+        draft = verifiedManualQuoteHandoffMessage(current.facts, window.location.origin);
+      }
+    } catch { /* Fail closed; show no stale commercial copy. */ }
+    if (!draft) { setResult("stale"); return; }
     setManualSummary(draft);
     try {
       if (!window.isSecureContext || !window.navigator.clipboard?.writeText) {

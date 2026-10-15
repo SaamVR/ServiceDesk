@@ -52,7 +52,7 @@ describe("manual quote handoff with real owner-priced, verified itemization", ()
       "src/features/operations/OperationalProductRoute.tsx"),"utf8");
     expect(page).toContain('selectedQuote.status === "SENT" ? (');
     expect(page).toContain("facts={selectedQuote.lineItems?.length ? {");
-    expect(component).toContain("verifiedManualQuoteHandoffMessage(facts, window.location.origin)");
+    expect(component).toContain("verifiedManualQuoteHandoffMessage(current.facts, window.location.origin)");
     expect(component).toContain("Staff must check the recipient and send it manually;");
     expect(component).toContain("This is not a delivery receipt");
     expect(component).not.toContain("fetch(");
