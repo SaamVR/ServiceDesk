@@ -25,10 +25,32 @@ const saved = {
   method: args.method, reference: args.reference, idempotency_key: key,
 };
 
+const ledger = {
+  id: saved.ledger_entry_id, workspace_id: args.workspaceId,
+  resource_type: "invoice", resource_id: args.invoiceId,
+  direction: "CREDIT", amount_minor: args.amountMinor,
+  currency: args.currency, idempotency_key: "manual-payment-ledger:" + key,
+};
+
 describe("manual payment after-commit retry", () => {
   test("only a matching ledger-backed receipt can confirm an already paid invoice", () => {
-    expect(verifiedManualPaymentReplay(invoice, saved, { ...args, idempotencyKey: key })).toBe(true);
-    expect(verifiedManualPaymentReplay(invoice, null, { ...args, idempotencyKey: key })).toBe(false);
+    expect(verifiedManualPaymentReplay(invoice, saved, ledger, { ...args, idempotencyKey: key })).toBe(true);
+    expect(verifiedManualPaymentReplay(invoice, null, ledger, { ...args, idempotencyKey: key })).toBe(false);
+  });
+
+  test("refuses a forged, missing or cross-tenant ledger even when record UUID is plausible", () => {
+    expect(verifiedManualPaymentReplay(invoice, saved, null,
+      { ...args, idempotencyKey: key })).toBe(false);
+    for (const change of [
+      { id: "55555555-5555-4555-8555-555555555555" },
+      { workspace_id: "66666666-6666-4666-8666-666666666666" },
+      { resource_type: "visit" }, { resource_id: "77777777-7777-4777-8777-777777777777" },
+      { direction: "DEBIT" }, { amount_minor: 5000 },
+      { currency: "EUR" }, { idempotency_key: "other-ledger-key" },
+    ]) {
+      expect(verifiedManualPaymentReplay(invoice, saved, { ...ledger, ...change },
+        { ...args, idempotencyKey: key })).toBe(false);
+    }
   });
 
   test("never claims success for foreign payment, changed amount, or inconsistent paid flags", () => {
@@ -40,7 +62,7 @@ describe("manual payment after-commit retry", () => {
       { reference: "different" }, { method: "CASH" },
       { idempotency_key: "manual-payment-v4:forged" },
     ]) {
-      expect(verifiedManualPaymentReplay(invoice, { ...saved, ...patch },
+      expect(verifiedManualPaymentReplay(invoice, { ...saved, ...patch }, ledger,
         { ...args, idempotencyKey: key })).toBe(false);
     }
     for (const patch of [
@@ -48,7 +70,7 @@ describe("manual payment after-commit retry", () => {
       { total_minor: 7600 }, { allocated_minor: 7600 },
       { refunded_minor: 1 }, { allocated_minor: Number.NaN },
     ]) {
-      expect(verifiedManualPaymentReplay({ ...invoice, ...patch }, saved,
+      expect(verifiedManualPaymentReplay({ ...invoice, ...patch }, saved, ledger,
         { ...args, idempotencyKey: key })).toBe(false);
     }
   });
@@ -65,7 +87,10 @@ describe("manual payment after-commit retry", () => {
     expect(action).toContain('eq("workspace_id", resolved.value.workspace.id)');
     expect(action).toContain('eq("invoice_id", invoiceId)');
     expect(action).toContain('eq("idempotency_key", key)');
-    expect(action).toContain('verifiedManualPaymentReplay(invoice.data, saved.data ?? null');
+    expect(action).toContain('from("ledger_entries")');
+    expect(action).toContain('eq("resource_type", "invoice")');
+    expect(action).toContain('eq("resource_id", invoiceId)');
+    expect(action).toContain('verifiedManualPaymentReplay(invoice.data, saved.data ?? null, ledger?.data ?? null');
     expect(action).toContain("No duplicate payment was created.");
     expect(action.indexOf('from("manual_payment_records")')).toBeLessThan(
       action.indexOf("isVerifiedStaffCollectibleInvoice({"));
