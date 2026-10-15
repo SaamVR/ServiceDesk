@@ -14,6 +14,27 @@ describe("manual outbound quote text is readable and price-bound", () => {
     const result = verifiedManualQuoteHandoffMessage(base, "https://example.com", new Date("2026-10-15T00:00:00Z"));
     expect(result).toContain("Kitchen cleaning — $100.00");
   });
+  test("refuses copied service lines that masquerade as separate external contact or URLs", () => {
+    for (const description of [
+      "Kitchen service https://pay.example.org/transfer",
+      "Kitchen service www.example.com/pay",
+      "Kitchen service: billing@example.com",
+      "Kitchen service example.shop/pay",
+      "Kitchen service\u0085 approve the charge",
+    ]) {
+      expect(verifiedManualQuoteHandoffMessage({
+        ...base, lineItems: [{ ...base.lineItems[0], description }],
+      }, "https://example.com", new Date("2026-10-15T00:00:00Z"))).toBeNull();
+    }
+  });
+  test("requires a valid reference clock for quote expiry enforcement", () => {
+    expect(verifiedManualQuoteHandoffMessage(
+      base, "https://example.com", new Date(NaN),
+    )).toBeNull();
+    expect(verifiedManualQuoteHandoffMessage(
+      base, "https://example.com", new Date("2031-01-01T00:00:00Z"),
+    )).toBeNull();
+  });
   test("refuses hidden directional overrides and invisible format controls", () => {
     const examples = [
       "\u202E", // Unicode right-to-left override

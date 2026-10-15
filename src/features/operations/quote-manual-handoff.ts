@@ -21,7 +21,7 @@ export interface ManualQuoteHandoffFacts {
 export function verifiedManualQuoteHandoffMessage(
   facts: ManualQuoteHandoffFacts, currentOrigin: string, now: Date = new Date(),
 ): string | null {
-  if (facts.status !== "SENT" ||
+  if (!Number.isFinite(now.getTime()) || facts.status !== "SENT" ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(facts.quoteId) ||
       !/^[A-Z]{3}$/.test(facts.currency) ||
       !Array.isArray(facts.lineItems) ||
@@ -40,8 +40,16 @@ export function verifiedManualQuoteHandoffMessage(
   // overrides/isolates and invisible zero-width controls can alter what a
   // customer sees after pasting prices into a messenger. Require staff review
   // of the original quote instead of silently removing those characters.
-  const misleadingFormat = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/u;
-  if (lines.some(item => misleadingFormat.test(item.description))) return null;
+  const misleadingFormat = /[\u0000-\u001f\u007f-\u009f\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u;
+  // Copying a saved service description into a messenger gives it the
+  // appearance of staff-approved outbound text. Do not include separately
+  // supplied URLs, email addresses or contact numbers disguised as services.
+  // Only the canonical authenticated quote link is emitted by this function.
+  const injectedContactOrLink =
+    /(?:https?:\/\/|www\.|\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b|\b[a-z0-9-]+\.(?:com|net|org|io|shop|co|bd)\/)/i;
+  if (lines.some(item =>
+    misleadingFormat.test(item.description) ||
+    injectedContactOrLink.test(item.description))) return null;
   let url: URL;
   try {
     const origin = new URL(currentOrigin);
