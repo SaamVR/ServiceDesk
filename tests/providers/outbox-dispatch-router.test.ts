@@ -34,6 +34,35 @@ const dispatcher: CommittedOutboxDispatcher = {
 };
 
 describe("committed outbox dispatch router", () => {
+  test("malformed or absent committed job is a sanitized failure, never a provider call or a thrown exception", async () => {
+    let sends = 0;
+    const dispatchers = { WHATSAPP: { async dispatch() {
+      sends++;
+      throw Error("Bearer secret-provider-token");
+    } } };
+    const invalid = [
+      undefined, null, "a decoded string",
+      { ...job(), id: "" },
+      { ...job(), workspaceId: undefined },
+      { ...job(), idempotencyKey: "" },
+      { ...job(), channel: null },
+      { ...job(), purpose: null },
+      { ...job(), recipient: null },
+      { ...job(), recipient: {} },
+      { ...job(), recipient: { ...job().recipient, hasOptIn: undefined } },
+    ];
+    for (const untrusted of invalid) {
+      const response = await dispatchCommittedOutboxJob({
+        job: untrusted as OutboxJob,
+        committedAt: "2026-10-04T12:01:00.000Z",
+        attempt: 1, dispatchers,
+      });
+      expect(response).toMatchObject({ ok: false, code: "OUTBOX_COMMIT_CLAIM_INVALID" });
+      expect(JSON.stringify(response)).not.toContain("secret-provider-token");
+    }
+    expect(sends).toBe(0);
+  });
+
   test("routes supported channel through injected dispatcher and preserves identity", async () => {
     const result = await dispatchCommittedOutboxJob({ job: job(), committedAt: "2026-10-04T12:01:00.000Z", attempt: 1, expectedWorkspaceId: "ws-1", dispatchers: { WHATSAPP: dispatcher } });
     expect(result.ok).toBe(true);
