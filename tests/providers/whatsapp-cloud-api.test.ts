@@ -48,6 +48,33 @@ describe("WhatsApp Cloud API transport", () => {
     expect(bodies[1]).toMatchObject({ type: "image", image: { id: "media-1" } });
   });
 
+  test("blocks malformed template, locale and media reference before Graph HTTP", async () => {
+    let calls = 0;
+    const http: WhatsAppCloudHttpTransport = async () => {
+      calls++;
+      return { status: 200, body: JSON.stringify({ messages: [{ id: "wamid.mock" }] }) };
+    };
+    for (const templateName of ["", "Quote Ready", "../template", "UPPERCASE", "a".repeat(129), "name\\nheader"]) {
+      const result = await sendWhatsAppCloudMessage(config,
+        { to: "15551234567", kind: "template", templateName, languageCode: "en_US" }, http);
+      expect(result).toMatchObject({ ok: false, code: "WHATSAPP_INVALID_TEMPLATE" });
+    }
+    for (const languageCode of ["", "en-US", "en_us", "../en_US", "english", "x".repeat(129)]) {
+      const result = await sendWhatsAppCloudMessage(config,
+        { to: "15551234567", kind: "template", templateName: "quote_ready_v1", languageCode }, http);
+      expect(result).toMatchObject({ ok: false, code: "WHATSAPP_INVALID_TEMPLATE" });
+    }
+    for (const mediaId of ["", " ", "../media", "media id", "x".repeat(129), "media\\nline"]) {
+      const result = await sendWhatsAppCloudMessage(config,
+        { to: "15551234567", kind: "image", mediaId }, http);
+      expect(result).toMatchObject({ ok: false, code: "WHATSAPP_INVALID_MEDIA" });
+    }
+    expect(calls).toBe(0);
+    expect((await sendWhatsAppCloudMessage(config,
+      { to: "15551234567", kind: "template", templateName: "quote_ready_v1", languageCode: "en" }, http)).ok).toBe(true);
+    expect(calls).toBe(1);
+  });
+
   test("normalizes auth, rate-limit, and provider failures", async () => {
     const auth = await sendWhatsAppCloudMessage(config, { to: "15551234567", kind: "text", text: "Hi" }, transport(401, { error: { message: "bad token" } }));
     const rate = await sendWhatsAppCloudMessage(config, { to: "15551234567", kind: "text", text: "Hi" }, transport(429, { error: { message: "slow down" } }));
