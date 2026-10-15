@@ -10,6 +10,9 @@ export function isVerifiedAcceptedQuoteMilestone(row: Record<string, unknown>): 
   if (row.status !== "ACCEPTED" ||
       typeof row.currency !== "string" || !/^[A-Z]{3}$/.test(row.currency) ||
       numbers.some(n => typeof n !== "number" || !Number.isSafeInteger(n) || n < 0) ||
+      // A zero-priced fake ACCEPTED flag cannot drive a commercial workflow.
+      // The send/accept boundaries already require a positive quote total.
+      row.total_minor === 0 ||
       (row.subtotal_minor as number) + (row.tax_minor as number) !== row.total_minor ||
       (row.deposit_minor as number) + (row.balance_minor as number) !== row.total_minor) {
     return false;
