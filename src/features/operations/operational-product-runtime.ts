@@ -1926,7 +1926,20 @@ export async function applyOperationalManualPayment(
       .eq("idempotency_key", key)
       .maybeSingle();
     if (saved.error) return { ok: false, message: "Could not verify the previous receipt. No new payment was recorded." };
-    const duplicate = verifiedManualPaymentReplay(invoice.data, saved.data ?? null, {
+    // The payment record stores a ledger pointer; independently verify that
+    // the pointed row is the exact committed CREDIT for this invoice/payment.
+    // Missing or unreadable ledger evidence must fail closed without writing.
+    const ledger = saved.data?.ledger_entry_id
+      ? await resolved.value.service.from("ledger_entries")
+          .select("id,workspace_id,resource_type,resource_id,direction,amount_minor,currency,idempotency_key")
+          .eq("workspace_id", resolved.value.workspace.id)
+          .eq("id", saved.data.ledger_entry_id)
+          .eq("resource_type", "invoice")
+          .eq("resource_id", invoiceId)
+          .maybeSingle()
+      : null;
+    if (ledger?.error) return { ok: false, message: "Could not verify the committed ledger entry. No new payment was recorded." };
+    const duplicate = verifiedManualPaymentReplay(invoice.data, saved.data ?? null, ledger?.data ?? null, {
       workspaceId: resolved.value.workspace.id, invoiceId,
       amountMinor, currency: String(invoice.data.currency),
       method, reference: verifiedReference, idempotencyKey: key,

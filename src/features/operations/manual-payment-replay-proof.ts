@@ -5,6 +5,7 @@
 export function verifiedManualPaymentReplay(
   invoice: Record<string, unknown>,
   record: Record<string, unknown> | null,
+  ledger: Record<string, unknown> | null,
   expected: {
     workspaceId: string;
     invoiceId: string;
@@ -15,7 +16,7 @@ export function verifiedManualPaymentReplay(
     idempotencyKey: string;
   },
 ): boolean {
-  if (!record ||
+  if (!record || !ledger ||
       invoice.status !== "PAID" || invoice.currency !== expected.currency ||
       invoice.balance_minor !== 0 ||
       typeof invoice.total_minor !== "number" ||
@@ -28,10 +29,22 @@ export function verifiedManualPaymentReplay(
       invoice.allocated_minor < invoice.refunded_minor ||
       invoice.allocated_minor - invoice.refunded_minor !== invoice.total_minor) return false;
 
-  return record.workspace_id === expected.workspaceId &&
+  // The record's ledger_entry_id is only a pointer. Independently read the
+  // committed invoice CREDIT entry and verify its tenant/source/amount/key
+  // before confirming an after-commit retry; a plausible UUID is not proof.
+  return ledger.id === record.ledger_entry_id &&
+    ledger.workspace_id === expected.workspaceId &&
+    ledger.resource_type === "invoice" &&
+    ledger.resource_id === expected.invoiceId &&
+    ledger.direction === "CREDIT" &&
+    ledger.currency === expected.currency &&
+    ledger.amount_minor === expected.amountMinor &&
+    ledger.idempotency_key === "manual-payment-ledger:" + expected.idempotencyKey &&
+    record.workspace_id === expected.workspaceId &&
     record.invoice_id === expected.invoiceId &&
     record.currency === expected.currency &&
     record.amount_minor === expected.amountMinor &&
+    Number.isSafeInteger(expected.amountMinor) && expected.amountMinor > 0 &&
     record.method === expected.method &&
     record.reference === expected.reference &&
     record.idempotency_key === expected.idempotencyKey &&

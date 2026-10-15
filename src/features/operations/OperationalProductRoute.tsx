@@ -1668,7 +1668,7 @@ function QuotesView({
                     <p>The quote status was recorded as sent. Provider acceptance,
                       delivery and customer receipt are separate verifiable events.</p>
                     <StatusBadge tone="warning">Delivery not proven here</StatusBadge>
-                    <QuoteCustomerHandoff key={selectedQuote.id + ":" + selectedQuote.version} quoteId={selectedQuote.id}
+                    <QuoteCustomerHandoff key={selectedQuote.id + ":" + selectedQuote.version} workspaceSlug={workspaceSlug} quoteId={selectedQuote.id}
                       facts={selectedQuote.lineItems?.length ? {
                         quoteId: selectedQuote.id,
                         status: selectedQuote.status,

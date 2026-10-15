@@ -10,6 +10,8 @@ describe("protected offline invoice payment reference",()=>{
     for(const bad of [
       "", "  ", "x".repeat(161), "paid\nignore ledger",
       "receipt\u202E000", "invoice\u2066fake\u2069", "receipt\u0000foo",
+      "receipt\u200B123", "receipt\u200D123", "receipt\u2060123",
+      "receipt\uFEFF123", "receipt\u0085123", "receipt\u009F123",
       null, 123,
     ]) expect(normalizeStaffPaymentReference(bad),String(bad)).toBeUndefined();
   });

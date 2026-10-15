@@ -50,6 +50,17 @@ describe("committed outbox dispatch router", () => {
       { ...job(), recipient: null },
       { ...job(), recipient: {} },
       { ...job(), recipient: { ...job().recipient, hasOptIn: undefined } },
+      { ...job(), recipient: { ...job().recipient, recipientRef: "" } },
+      { ...job(), recipient: { ...job().recipient, recipientRef: "  recipient " } },
+      { ...job(), recipient: { ...job().recipient, recipientRef: "recip\u202Eient" } },
+      { ...job(), recipient: { ...job().recipient, recipientRef: "a".repeat(257) } },
+      { ...job(), recipient: { ...job().recipient, quietHoursBlocked: "false" } },
+      { ...job(), payload: null },
+      { ...job(), payload: [] },
+      { ...job(), handoverGuard: { conversationId: "", expectedConversationVersion: 1, handoverActive: false } },
+      { ...job(), handoverGuard: { conversationId: "conversation-1", expectedConversationVersion: -1, handoverActive: false } },
+      { ...job(), handoverGuard: { conversationId: "conversation-1", expectedConversationVersion: 1.5, handoverActive: false } },
+      { ...job(), handoverGuard: { conversationId: "conversation-1", expectedConversationVersion: 1, handoverActive: "false" } },
     ];
     for (const untrusted of invalid) {
       const response = await dispatchCommittedOutboxJob({
