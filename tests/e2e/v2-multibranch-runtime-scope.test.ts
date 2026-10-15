@@ -44,6 +44,19 @@ describe("V2 multi-branch operational runtime", () => {
     expect(runtime).toContain("!branchId || requestIds.has(String(row.request_id))");
   });
 
+  it("includes internal workflow attention only for workspace-and-branch-filtered execution IDs", () => {
+    const rule = runtime.indexOf("const workflowExecutionRows = rawWorkflowExecutions");
+    const ids = runtime.indexOf("const workflowExecutionIds = new Set(workflowExecutionRows");
+    const attention = runtime.indexOf("const attentionRows = branchId");
+    expect(rule).toBeGreaterThan(-1);
+    expect(ids).toBeGreaterThan(rule);
+    expect(attention).toBeGreaterThan(ids);
+    expect(runtime).toContain('if (type === "workflow_execution") return workflowExecutionIds.has(id)');
+    expect(runtime).toContain('workflowRuleIds.has(String(row.rule_id)) && workflowVersionIds.has(String(row.rule_version_id))');
+    expect(runtime).toContain("const workflowActionRows = rawWorkflowActions");
+    expect(runtime).toContain("workflowExecutionIds.has(String(row.execution_id))");
+  });
+
   it("fails closed for unknown attention resource types in branch mode", () => {
     expect(runtime).toContain('if (type === "conversation") return conversationIds.has(id)');
     expect(runtime).toContain('if (type === "quality" || type === "quality_case") return qualityIds.has(id)');
