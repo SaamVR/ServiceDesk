@@ -37,6 +37,32 @@ describe("R6 conversation commands fail closed on untrusted RPC output",()=>{
     .enqueueConversationReply(ctx,cid,replyInput,meta))
       .toMatchObject({ok:false,code:"REPLY_RPC_SCOPE_MISMATCH"});
  });
+ it("requires literal persisted handover state instead of a successful RPC envelope",async()=>{
+  for(const handoverActive of [undefined,null,"false","true",0,1,false]){
+    const result=await facade({ok:true,...handover,handoverActive})
+      .setConversationHandover(ctx,cid,{active:true},meta);
+    expect(result,JSON.stringify(handoverActive))
+      .toMatchObject({ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH"});
+  }
+  expect(await facade({ok:true,...handover,handoverActive:false})
+    .setConversationHandover(ctx,cid,{active:false},meta))
+    .toMatchObject({ok:true,value:{handoverActive:false}});
+  expect(await facade({ok:true,...handover,handoverActive:true})
+    .setConversationHandover(ctx,cid,{active:false},meta))
+    .toMatchObject({ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH"});
+ });
+ it("verifies the exact saved assignee when staff requests an assigned handover",async()=>{
+  const expected="55555555-5555-4555-8555-555555555555";
+  const requested={active:true,assignedUserId:expected};
+  for(const assignedUserId of [undefined,null,"other-user"]){
+    const result=await facade({ok:true,...handover,assignedUserId})
+      .setConversationHandover(ctx,cid,requested,meta);
+    expect(result).toMatchObject({ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH"});
+  }
+  expect(await facade({ok:true,...handover,assignedUserId:expected})
+    .setConversationHandover(ctx,cid,requested,meta))
+    .toMatchObject({ok:true,value:{assignedUserId:expected}});
+ });
  it("refuses a foreign tenant row from the workspace snapshot instead of displaying it",async()=>{
   const foreign={...handover,workspaceId:"foreign"};
   const result=await facade({ok:true,conversations:[foreign]})
