@@ -277,10 +277,19 @@ export function createPostgresConversationFacadeMethods(
         message:"Handover database is temporarily unavailable." };
       const parsed = asResult(result.data, result.error, "HANDOVER_RPC_ERROR", conversationFromRpc);
       if (!parsed.ok) return parsed;
+      // SQL success is not evidence that the intended handover transition
+      // actually persisted. A missing flag, string "false", unchanged active
+      // state or wrong assigned staff must not be acknowledged as successful.
+      const persisted = asRow(asRow(result.data)?.conversation) ?? asRow(result.data);
+      const rawActive = persisted ? field(persisted, "handoverActive", "handover_active") : undefined;
+      const savedAssignment = persisted ? field(persisted, "assignedUserId", "assigned_user_id") : undefined;
       if (parsed.value.id !== id || parsed.value.workspaceId !== ctx.workspaceId ||
-          !Number.isSafeInteger(parsed.value.version) || parsed.value.version < 0) {
+          !Number.isSafeInteger(parsed.value.version) || parsed.value.version < 0 ||
+          typeof rawActive !== "boolean" || rawActive !== input.active ||
+          (input.active && input.assignedUserId !== undefined &&
+            (typeof savedAssignment !== "string" || savedAssignment !== input.assignedUserId))) {
         return {ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH",
-          message:"The saved handover identity could not be verified."};
+          message:"The saved handover identity and state could not be verified."};
       }
       return parsed;
     },
