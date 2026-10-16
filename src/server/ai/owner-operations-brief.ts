@@ -1,6 +1,6 @@
 import type { Result } from "../../contracts";
 import { resolveStaffActor, loadOperationalStaffSnapshot, type OperationalStaffSnapshot } from "@/features/operations/operational-product-runtime";
-import { summarizeVerifiedOutstandingInvoices } from "@/features/operations/product-truth";
+import { isVerifiedStaffCollectibleInvoice } from "@/features/operations/staff-invoice-collection-readiness";
 import { buildQuotePipeline } from "@/features/operations/quote-pipeline";
 import { readConfiguredAiRuntimeConfig } from "./runtime-config";
 import { callAiModel } from "./model-transport";
@@ -57,21 +57,32 @@ export function deriveOwnerOperationsBriefFacts(
     snapshot.visits,snapshot.attentionItems];
   if (arrays.some(x => !Array.isArray(x) || x.length > 5000) ||
       !Number.isFinite(Date.parse(snapshot.loadedAt))) return null;
-  const quoteQueue=buildQuotePipeline(snapshot.quotes, snapshot.loadedAt);
+  const quoteQueue=buildQuotePipeline(snapshot.quotes);
+  const currentQuotes=[...quoteQueue.currentQuoteByRequest.values()];
+  const sent=currentQuotes.filter(row => row.status === "SENT");
+  const now=Date.parse(snapshot.loadedAt);
+  const waitingOnCustomerQuotes=sent.filter(row =>
+    typeof row.validUntil === "string" &&
+    Number.isFinite(Date.parse(row.validUntil)) &&
+    Date.parse(row.validUntil)>now).length;
+  const quoteValidityNeedsReview=sent.length-waitingOnCustomerQuotes;
   const openRequests=snapshot.requests.filter(row =>
     ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(row.status)).length;
-  const verifiedInvoices=summarizeVerifiedOutstandingInvoices(
-    snapshot.invoices.filter(row => Boolean(row.quoteId)));
+  const collectibleCandidates=snapshot.invoices.filter(row =>
+    !!row.quoteId &&
+    ["ISSUED", "PARTIALLY_PAID"].includes(row.status) &&
+    typeof row.balanceMinor === "number" && row.balanceMinor>0);
+  const collectibleInvoices=collectibleCandidates.filter(isVerifiedStaffCollectibleInvoice).length;
   const unassignedActiveVisits=snapshot.visits.filter(row =>
     !["COMPLETED", "CANCELLED"].includes(row.status) && !row.crewId).length;
   const unresolvedCriticalAttentions=snapshot.attentionItems.filter(row =>
     row.status !== "RESOLVED" && row.severity === "CRITICAL").length;
   return {
     openRequests,
-    waitingOnCustomerQuotes: quoteQueue.awaitingCustomer,
-    quoteValidityNeedsReview: quoteQueue.sentNeedsExpiryReview,
-    collectibleInvoices: verifiedInvoices.count,
-    invoiceLedgersNeedingReview: verifiedInvoices.needsLedgerReview,
+    waitingOnCustomerQuotes,
+    quoteValidityNeedsReview,
+    collectibleInvoices,
+    invoiceLedgersNeedingReview: collectibleCandidates.length-collectibleInvoices,
     unassignedActiveVisits,
     unresolvedCriticalAttentions,
   };
