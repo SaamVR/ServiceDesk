@@ -31,6 +31,7 @@ export function cleaningRequestNextSteps(input: CleaningRequestNextStepsInput): 
     (input.bedrooms ?? -1) >= 0 && (input.bedrooms ?? 11) <= 10 &&
     (input.bathrooms ?? -1) >= 0 && (input.bathrooms ?? 11) <= 10;
   const quote = input.currentQuote;
+  const terminalQuote = Boolean(quote && ["DECLINED", "REJECTED", "EXPIRED", "SUPERSEDED"].includes(quote.status));
   const savedQuotePresent = Boolean(quote &&
     ["DRAFT", "PENDING_APPROVAL", "APPROVED", "SENT", "ACCEPTED",
       "DECLINED", "REJECTED", "EXPIRED", "SUPERSEDED"].includes(quote.status) &&
@@ -39,7 +40,7 @@ export function cleaningRequestNextSteps(input: CleaningRequestNextStepsInput): 
   // A saved status and plausible total do not establish an approved price.
   // Reuse the customer-facing exact line-item reader and persisted deposit
   // reconciliation; never fill in missing lines or zero-valued unknowns.
-  const confirmedQuote = Boolean(savedQuotePresent && quote &&
+  const confirmedQuote = Boolean(savedQuotePresent && !terminalQuote && quote &&
     Number.isSafeInteger(quote.subtotalMinor) &&
     Number.isSafeInteger(quote.taxMinor) &&
     Number.isSafeInteger(quote.depositMinor) &&
@@ -62,9 +63,11 @@ export function cleaningRequestNextSteps(input: CleaningRequestNextStepsInput): 
       state:input.pricingState==="VERIFIED"?"DONE":input.pricingState==="UNVERIFIED"?"UNVERIFIED":"ACTION_REQUIRED",
       detail:input.pricingState==="VERIFIED"?"Authorized branch rates verified.":input.pricingState==="UNVERIFIED"?"Price-book evidence unavailable; do not assume any rate.":"Owner must save approved rates for this request's branch."},
     {id:"quote",label:"Save a calculated quote",
-      state:confirmedQuote?"DONE":savedQuotePresent?"UNVERIFIED":"ACTION_REQUIRED",
-      detail:confirmedQuote
-        ?"A saved USD quote has reconciled charge lines and deposit. This does not mean it was delivered or paid."
+      state:terminalQuote?"ACTION_REQUIRED":confirmedQuote?"DONE":savedQuotePresent?"UNVERIFIED":"ACTION_REQUIRED",
+      detail:terminalQuote
+        ?"The saved quote is no longer actionable. Prepare a new verified quote rather than reusing a declined, rejected, expired or superseded quote."
+        :confirmedQuote
+          ?"A saved USD quote has reconciled charge lines and deposit. This does not mean it was delivered or paid."
         :savedQuotePresent
           ?"A saved quote status exists, but financial line items or deposit do not reconcile. Verify before using this quote."
           :"Staff must calculate and verify a persisted quote; preview totals are not enough."},
