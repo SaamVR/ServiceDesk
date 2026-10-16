@@ -79,6 +79,35 @@ describe("R6 conversation commands fail closed on untrusted RPC output",()=>{
   expect(await facade({ok:true,conversations:[handover]})
     .readWorkspaceSnapshot(ctx,{} as never)).toMatchObject({ok:true,value:{conversations:[{id:cid}]}});
  });
+ it("never converts malformed saved conversation handover or version into trusted staff state",async()=>{
+  for(const patch of [
+    {handoverActive:"false"},{handoverActive:"true"},
+    {handoverActive:null},{handoverActive:0},{handoverActive:undefined},
+    {version:"2"},{version:null},{version:undefined},
+    {version:-1},{version:1.5},
+    {channel:"SMS"},{channel:undefined},
+  ]) {
+    const snapshot=await facade({ok:true,conversations:[{...handover,...patch}]})
+      .readWorkspaceSnapshot(ctx,{} as never);
+    expect(snapshot,JSON.stringify(patch))
+      .toMatchObject({ok:false,code:"SNAPSHOT_RPC_ERROR_MALFORMED"});
+  }
+  for(const patch of [
+    {handoverActive:"false"},{handoverActive:null},
+    {version:"2"},{version:undefined},{channel:"SMS"},
+  ]) {
+    const inbound=await facade({ok:true,state:"APPLIED",conversation:{...handover,...patch}})
+      .applyInboundMessage({
+        workspaceId:ctx.workspaceId,channel:"EMAIL",provider:"EMAIL",providerAccountId:"acct",
+        providerMessageId:"mail-1",sender:"customer@example.com",body:"hi",
+        receivedAt:"2026-10-16T08:00:00Z",
+      } as never);
+    expect(inbound.ok,JSON.stringify(patch)).toBe(false);
+  }
+  const valid=await facade({ok:true,conversations:[handover]})
+    .readWorkspaceSnapshot(ctx,{} as never);
+  expect(valid).toMatchObject({ok:true,value:{conversations:[{handoverActive:true,version:2}]}});
+ });
  it("sanitizes error codes and raw SQL exceptions across all conversation commands",async()=>{
   const token="Bearer live-secret customer@example.com";
   for(const error of [
