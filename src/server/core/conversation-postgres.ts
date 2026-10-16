@@ -298,7 +298,18 @@ export function createPostgresConversationFacadeMethods(
       });
       if (!result) return { ok:false, code:"SNAPSHOT_RPC_UNAVAILABLE",
         message:"Workspace snapshot database is temporarily unavailable." };
-      const parsed = asResult(result.data, result.error, "SNAPSHOT_RPC_ERROR", (row) => ({
+      const parsed = asResult(result.data, result.error, "SNAPSHOT_RPC_ERROR", (row) => {
+        // A corrupt RPC array or an invalid item is not an empty queue.
+        // Older/partial SQL snapshots may omit a collection, but a present
+        // collection must be losslessly projectable before any staff use.
+        const keys = ["invoices","conversations","messages","recurrenceRules",
+          "visitEvidence","visitChecklistItems","attentionItems","qualityCases"] as const;
+        if (keys.some(key =>
+          row[key] !== undefined && (!Array.isArray(row[key]) ||
+          (row[key] as unknown[]).some(item => !asRow(item))))) {
+          throw new Error("Malformed workspace snapshot collection");
+        }
+        return {
         requests: [],
         quotes: [],
         visits: [],
@@ -310,7 +321,8 @@ export function createPostgresConversationFacadeMethods(
         visitChecklistItems: rows(row.visitChecklistItems).map(checklistItemFromRpc),
         attentionItems: rows(row.attentionItems).map(attentionItemFromRpc),
         qualityCases: rows(row.qualityCases).map(qualityCaseFromRpc),
-      }));
+        };
+      });
       if (!parsed.ok) return parsed;
       const snapshot=parsed.value;
       // Reject foreign-tenant rows even if a broken server-side RPC returned
