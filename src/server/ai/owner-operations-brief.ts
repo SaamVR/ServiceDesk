@@ -68,15 +68,16 @@ export function deriveOwnerOperationsBriefFacts(
     snapshot.visits,snapshot.attentionItems];
   if (arrays.some(x => !Array.isArray(x) || x.length > 5000) ||
       !Number.isFinite(Date.parse(snapshot.loadedAt))) return null;
-  const quoteQueue=buildQuotePipeline(snapshot.quotes);
-  const currentQuotes=[...quoteQueue.currentQuoteByRequest.values()];
-  const sent=currentQuotes.filter(row => row.status === "SENT");
-  const now=Date.parse(snapshot.loadedAt);
-  const waitingOnCustomerQuotes=sent.filter(row =>
-    typeof row.validUntil === "string" &&
-    Number.isFinite(Date.parse(row.validUntil)) &&
-    Date.parse(row.validUntil)>now).length;
-  const quoteValidityNeedsReview=sent.length-waitingOnCustomerQuotes;
+  // Use the same persisted-source, snapshot-clock-aware queue as the staff
+  // Quotes workspace. Otherwise an expired APPROVED offer shows "review
+  // required" in staff UX but silently disappears from owner AI priorities.
+  // Current-request indexing prevents historical/superseded offers from
+  // inflating the owner summary.
+  const quoteQueue=buildQuotePipeline(snapshot.quotes,snapshot.loadedAt);
+  if (quoteQueue.quoteClockUnverified) return null;
+  const waitingOnCustomerQuotes=quoteQueue.awaitingCustomer;
+  const quoteValidityNeedsReview=
+    quoteQueue.sentNeedsExpiryReview+quoteQueue.approvedNeedsExpiryReview;
   const openRequests=snapshot.requests.filter(row =>
     ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(row.status)).length;
   const collectibleCandidates=snapshot.invoices.filter(row =>
