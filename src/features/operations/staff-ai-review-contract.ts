@@ -37,8 +37,8 @@ export function parseReviewedAiDraft(
       r.replyDraft.length > 4_000 || !r.replyDraft.trim() ||
       // Never present a draft with invisible bidi/formatting controls that
       // could visually spoof prices or recipient instructions to a reviewer.
-      /[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/u.test(r.replyDraft) ||
-      /[\\u200B-\\u200F\\u202A-\\u202E\\u2060-\\u206F\\uFEFF]/u.test(r.replyDraft) ||
+      /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(r.replyDraft) ||
+      /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(r.replyDraft) ||
       typeof r.handoverRequired !== "boolean") return undefined;
   return {
     replyDraft: r.replyDraft,
