@@ -114,7 +114,7 @@ function messageFromRpc(row: RpcRow): MessageDTO {
       !["INBOUND", "OUTBOUND", "INTERNAL"].includes(String(direction)) ||
       !["CUSTOMER", "STAFF", "AI", "SYSTEM"].includes(String(senderKind)) ||
       typeof createdAt !== "string" ||
-      !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$/i.test(createdAt) ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(createdAt) ||
       !Number.isFinite(Date.parse(createdAt)) ||
       (deliveryState != null &&
         !["QUEUED", "RUNNING", "PROVIDER_ACCEPTED", "DELIVERED", "READ", "FAILED", "SUPPRESSED"]
