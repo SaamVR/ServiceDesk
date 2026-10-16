@@ -16,7 +16,8 @@ describe("Studio OS timezone-correct daily dispatch", () => {
     expect(newYork("2026-03-08T07:30:00Z")).toBe("2026-03-08");
   });
   it("treats invalid saved timezone and clock as unknown rather than a clear workday",()=>{
-    for(const timezone of ["Not/A_Timezone","Mars/Olympus_Mons","", "UTC\u0000"]) {
+    for(const timezone of ["Not/A_Timezone","Mars/Olympus_Mons","", "   ", "UTC\u0000",
+      undefined as unknown as string, null as unknown as string]) {
       const key=createLocalDayKey(timezone);
       expect(key("2026-10-17T09:00:00Z"),timezone).toBeUndefined();
     }
