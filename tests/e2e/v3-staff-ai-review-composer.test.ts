@@ -37,6 +37,23 @@ describe("V3 staff-only reviewed AI reply path", () => {
     expect(parseReviewedAiDraft({...draft, handoverRequired:"false"}, "conv-7", "msg-9")).toBeUndefined();
   });
 
+  it("rejects blank or invisible spoofed model drafts before staff review UI", () => {
+    const unsafe = [
+      "  \t\n ",
+      "Cleaning quote " + String.fromCodePoint(0x202e) + "$999",
+      "Recipient " + String.fromCodePoint(0x200b) + "hidden",
+      "Total " + String.fromCharCode(1) + "$100",
+      "Message " + String.fromCodePoint(0xfeff) + "confusion",
+    ];
+    for (const replyDraft of unsafe) {
+      expect(parseReviewedAiDraft({...draft, replyDraft}, "conv-7", "msg-9"))
+        .toBeUndefined();
+    }
+    const readable = "Hello,\nPlease confirm your preferred date.\tThank you.";
+    expect(parseReviewedAiDraft({...draft, replyDraft: readable}, "conv-7", "msg-9")?.replyDraft)
+      .toBe(readable);
+  });
+
   it("does not mistake a durable queue receipt for delivered customer confirmation", () => {
     expect(parseReviewedReplyReceipt(receipt, "conv-7", "msg-9")).toEqual({
       state: "QUEUED_FOR_PROVIDER", conversationId:"conv-7",
