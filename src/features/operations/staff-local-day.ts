@@ -3,6 +3,10 @@
  * Construct an Intl formatter once per rendered snapshot, not per visit.
  */
 export function createLocalDayKey(timeZone: string): (timestamp: string) => string | undefined {
+  // A missing runtime timezone must not silently fall back to the CI
+  // runner's or server's local timezone and misclassify today's visits.
+  if (typeof timeZone !== "string" || !timeZone.trim())
+    return () => undefined;
   let formatter: Intl.DateTimeFormat;
   try {
     formatter = new Intl.DateTimeFormat("en-US", {
