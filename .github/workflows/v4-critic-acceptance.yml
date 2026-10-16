@@ -1,0 +1,26 @@
+name: V4 independent Critic acceptance integrity
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+    paths:
+      - 'docs/control-tower/critic/**'
+      - 'scripts/release/critic-acceptance-ledger.mjs'
+      - 'scripts/release/tests/**'
+      - '.github/workflows/v4-critic-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  critic-claim-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test fail-closed acceptance rules
+        run: node --test scripts/release/tests/critic-acceptance-check.mjs
+      - name: Validate current source and deployment claims
+        run: node scripts/release/critic-acceptance-ledger.mjs docs/control-tower/critic/acceptance/r6-20261016.json
