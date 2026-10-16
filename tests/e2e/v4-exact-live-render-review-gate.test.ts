@@ -24,6 +24,12 @@ describe("read-only LIVE Render review exact SHA proof", () => {
     expect(workflow).toContain("push:");
     expect(workflow).toContain("branches: [deploy/servicedesk-v3-public-review-20261011]");
     expect(workflow).toContain("Manual Render review promotion never reached this SHA");
+    // Render autoDeploy OFF must not consume long full-RC runner time waiting
+    // for an unrelated manual deployment. Same-sha rerun is the release proof.
+    expect(workflow).toContain("for i in $(seq 1 6); do");
+    expect(workflow).not.toContain("seq 1 60");
+    expect(workflow).toContain("rerun this same pinned-SHA job only after the authorized Render deploy is LIVE");
+    expect(workflow).toContain("sleep 8");
     expect(workflow).toContain("j.sourceSha===process.env.GITHUB_SHA");
     expect(workflow).toContain("github.ref == 'refs/heads/deploy/servicedesk-v3-public-review-20261011'");
     expect(workflow).toContain("contents: read");
