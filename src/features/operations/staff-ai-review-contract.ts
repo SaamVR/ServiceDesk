@@ -9,6 +9,19 @@ export interface ReviewedAiDraft {
   savedHumanMessageId: string;
   handoverRequired: boolean;
 }
+/**
+ * An HTTP 409 indicates the approved conversation/source is stale.
+ * Editing local text must never re-enable submission against the same
+ * obsolete expectedVersion; reloading/remounting a new scoped message does.
+ */
+export type StaffAiReviewError = "draft" | "approval" | "stale" | "cancelled";
+
+export function staffAiReviewErrorAfterEdit(
+  current: StaffAiReviewError | undefined,
+): StaffAiReviewError | undefined {
+  return current === "stale" ? "stale" : undefined;
+}
+
 export interface ApprovedReplyReceipt {
   state: "QUEUED_FOR_PROVIDER" | "EXISTING_REPLY";
   conversationId: string;

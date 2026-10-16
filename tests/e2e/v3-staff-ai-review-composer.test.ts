@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseReviewedAiDraft,
   parseReviewedReplyReceipt,
+  staffAiReviewErrorAfterEdit,
 } from "@/features/operations/staff-ai-review-contract";
 
 const draft = {
@@ -52,6 +53,18 @@ describe("V3 staff-only reviewed AI reply path", () => {
     const readable = "Hello,\nPlease confirm your preferred date.\tThank you.";
     expect(parseReviewedAiDraft({...draft, replyDraft: readable}, "conv-7", "msg-9")?.replyDraft)
       .toBe(readable);
+  });
+
+  it("locks stale approval after staff edits until the conversation is reloaded", () => {
+    expect(staffAiReviewErrorAfterEdit("stale")).toBe("stale");
+    for (const error of ["draft", "approval", "cancelled"] as const) {
+      expect(staffAiReviewErrorAfterEdit(error)).toBeUndefined();
+    }
+    expect(staffAiReviewErrorAfterEdit(undefined)).toBeUndefined();
+    const ui = readFileSync(join(process.cwd(), "src/features/operations/StaffAiReviewComposer.tsx"), "utf8");
+    expect(ui).toContain("setError(staffAiReviewErrorAfterEdit)");
+    expect(ui).toContain('error !== "stale"');
+    expect(ui).toContain("Reload this conversation before approving another reply.");
   });
 
   it("does not mistake a durable queue receipt for delivered customer confirmation", () => {

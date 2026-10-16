@@ -6,6 +6,8 @@ import {
   parseReviewedReplyReceipt,
   type ReviewedAiDraft,
   type ApprovedReplyReceipt,
+  type StaffAiReviewError,
+  staffAiReviewErrorAfterEdit,
 } from "./staff-ai-review-contract";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
@@ -44,7 +46,7 @@ function ScopedStaffAiReviewComposer({
   const [body, setBody] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState<"idle" | "drafting" | "approving">("idle");
-  const [error, setError] = useState<"draft" | "approval" | "stale" | "cancelled">();
+  const [error, setError] = useState<StaffAiReviewError>();
   const [receipt, setReceipt] = useState<ApprovedReplyReceipt>();
   const controller = useRef<AbortController | null>(null);
   const idempotencyKey = useRef<string | null>(null);
@@ -213,7 +215,7 @@ function ScopedStaffAiReviewComposer({
               onChange={(event) => {
                 setBody(event.target.value);
                 setConfirmed(false);
-                setError(undefined);
+                setError(staffAiReviewErrorAfterEdit);
                 idempotencyKey.current = null;
               }}
               disabled={busy !== "idle" || draft.handoverRequired}
