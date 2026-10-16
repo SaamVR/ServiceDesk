@@ -154,9 +154,17 @@ export async function readOperationalDeliveryTriage(
       return !permittedRequestIds ||
         (Boolean(conversation.requestId) && permittedRequestIds.has(conversation.requestId!));
     });
-    const outboxIds = [...new Set(authorized
+    const referencedOutboxIds = authorized
       .map(row => row.outbox_event_id)
-      .filter((id): id is string => validId(id)))];
+      .filter((id): id is string => validId(id));
+    // One provider acceptance event is not proof of dispatch for multiple
+    // distinct saved messages. Fail closed on ambiguous linkage rather than
+    // counting a single durable provider receipt as multiple sends.
+    const outboxIds = [...new Set(referencedOutboxIds)];
+    if (referencedOutboxIds.length !== outboxIds.length) {
+      return fail("DELIVERY_TRIAGE_OUTBOX_MESSAGE_AMBIGUOUS",
+        "Outbound messages have ambiguous provider evidence.");
+    }
     const evidenceById = new Map<string, DeliveryOutboxEvidence>();
     if (outboxIds.length > 0) {
       const evidence = await service.from("outbox_events")
@@ -169,7 +177,7 @@ export async function readOperationalDeliveryTriage(
       }
       for (const e of evidence.data) {
         if (!validId(e.id) || !outboxIds.includes(e.id) ||
-            e.workspace_id !== workspace.id || typeof e.topic !== "string" ||
+            e.workspace_id !== workspace.id || e.topic !== "conversation.reply" ||
             !["PENDING", "SENT", "FAILED", "SUPPRESSED"].includes(e.status) ||
             (e.provider_reference !== null && typeof e.provider_reference !== "string") ||
             evidenceById.has(e.id)) {

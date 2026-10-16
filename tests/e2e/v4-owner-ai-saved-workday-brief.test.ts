@@ -33,7 +33,7 @@ function deps(persisted=()=>snapshot,receive:(p:string)=>void=()=>{}) {
     callModel:async(_cfg:unknown,request:{userText:string})=>{
       receive(request.userText);
       return {ok:true,value:{output:{},replyDraft:
-        "Review unassigned visits and expired quotes, then inspect the invoice ledger before contacting customers.",
+        "Review unassigned visits and expired quotes, then inspect the invoice ledger.",
         requestedToolCalls:[],citations:[]}};
     },
   } as never;
@@ -45,6 +45,30 @@ describe("real authorized AI daily owner operations brief",()=>{
       collectibleInvoices:1,invoiceLedgersNeedingReview:0,
       unassignedActiveVisits:1,unresolvedCriticalAttentions:1,
     });
+  });
+  it("counts expired APPROVED offers as owner validity work, not as ready customer delivery",()=>{
+    const records=[
+      {id:"offer-one",requestId:"one",status:"APPROVED",version:2,
+        validUntil:"2026-10-16T11:59:59Z"},
+      {id:"offer-two",requestId:"two",status:"APPROVED",version:1,
+        validUntil:"2026-10-20T12:00:00Z"},
+      {id:"offer-three",requestId:"three",status:"APPROVED",version:1},
+      {id:"offer-four",requestId:"four",status:"SENT",version:1,
+        validUntil:"2026-10-17T12:00:00Z"},
+      {id:"offer-five",requestId:"five",status:"SENT",version:1,
+        validUntil:"2026-10-16T12:00:00Z"},
+      {id:"old-sent",requestId:"one",status:"SENT",version:1,
+        validUntil:"2026-10-01T12:00:00Z"},
+      {id:"accepted",requestId:"six",status:"ACCEPTED",version:1,
+        validUntil:"2026-10-01T12:00:00Z"},
+    ];
+    const facts=deriveOwnerOperationsBriefFacts({...snapshot,quotes:records} as never);
+    expect(facts).toMatchObject({
+      waitingOnCustomerQuotes:1,
+      quoteValidityNeedsReview:3,
+    });
+    expect(deriveOwnerOperationsBriefFacts({...snapshot,quotes:[]} as never))
+      .toMatchObject({waitingOnCustomerQuotes:0,quoteValidityNeedsReview:0});
   });
   it("calls model only for verified owner and forwards numeric counts, not PII or money",async()=>{
     let prompt="";

@@ -58,6 +58,45 @@ describe("R6 verified payment RPC requires financial and tenant truth",()=>{
        JSON.stringify(mismatched)).toMatchObject({ok:false,code:"PAYMENT_RPC_SCOPE_MISMATCH"});
    }
  });
+ it("never acknowledges applied or duplicate payments with missing durable business objects",async()=>{
+  for(const state of ["APPLIED","DUPLICATE"] as const){
+    for(const changed of [
+      {invoice:null,visit},
+      {invoice,visit:null},
+      {invoice:{...invoice,visitId:undefined},visit},
+    ]) {
+      const result=await build({ok:true,state,...changed}).applyVerifiedPayment(event);
+      expect(result,state+" "+JSON.stringify(changed))
+        .toMatchObject({ok:false,code:"PAYMENT_RPC_RECEIPT_UNVERIFIED"});
+    }
+  }
+  expect(await build({ok:true,state:"PAYMENT_REVIEW",attentionItemId:"attention-1"})
+    .applyVerifiedPayment(event))
+    .toMatchObject({ok:true,value:{state:"PAYMENT_REVIEW"}});
+ });
+ it("requires BALANCE invoice identity and PAID ledger while excluding subscriptions",async()=>{
+  const balance={...event,purpose:"BALANCE" as const,invoiceId:invoice.id,quoteId:undefined,holdId:undefined};
+  expect(await build({ok:true,state:"APPLIED",invoice,visit}).applyVerifiedPayment(balance))
+    .toMatchObject({ok:true,value:{state:"APPLIED"}});
+  for(const attempted of [
+    {event:balance,payload:{ok:true,state:"APPLIED",invoice:null,visit}},
+    {event:{...balance,invoiceId:undefined},payload:{ok:true,state:"APPLIED",invoice,visit}},
+    {event:balance,payload:{ok:true,state:"APPLIED",invoice:{...invoice,status:"PARTIALLY_PAID",allocatedMinor:9000,balanceMinor:1000},visit}},
+    {event:{...balance,purpose:"PLATFORM_SUBSCRIPTION" as const},
+      payload:{ok:true,state:"APPLIED",invoice,visit}},
+  ]) {
+    expect(await build(attempted.payload).applyVerifiedPayment(attempted.event))
+      .toMatchObject({ok:false,code:"PAYMENT_RPC_RECEIPT_UNVERIFIED"});
+  }
+  expect(await build({ok:true,state:"DUPLICATE",invoice,visit}).applyVerifiedPayment(balance))
+    .toMatchObject({ok:true,value:{state:"DUPLICATE"}});
+ });
+ it("does not claim a fresh DEPOSIT whose saved allocation differs from the provider amount",async()=>{
+  const wrongInvoice={...invoice,totalMinor:11000,allocatedMinor:9000,balanceMinor:2000,status:"PARTIALLY_PAID"};
+  expect(await build({ok:true,state:"APPLIED",invoice:wrongInvoice,visit})
+    .applyVerifiedPayment(event))
+    .toMatchObject({ok:false,code:"PAYMENT_RPC_RECEIPT_UNVERIFIED"});
+ });
  it("does not leak raw SQL/provider secrets on thrown, rejected or malformed RPC",async()=>{
   const token="Bearer private-key user@example.com";
   for(const response of [

@@ -123,6 +123,27 @@ export function createPostgresPaymentApplicationFacadeMethods(client: SupabaseRp
         const state = stateFromRpc(data);
         const invoice = invoiceFromRpc(data.invoice);
         const visit = visitFromRpc(data.visit);
+        // Installed SQL always persists and returns an invoice for a customer
+        // APPLIED/DUPLICATE receipt. A DEPOSIT also creates a visit linked
+        // to that invoice; BALANCE must be tied to its named invoice. Do not
+        // interpret a bare RPC success envelope as a completed transaction.
+        const appliedCustomerPayment = state === "APPLIED" || state === "DUPLICATE";
+        const missingBusinessProof = appliedCustomerPayment && (
+          event.purpose === "PLATFORM_SUBSCRIPTION" ||
+          !invoice ||
+          (event.purpose === "DEPOSIT" &&
+            (!event.quoteId || !event.holdId || !visit || invoice?.visitId !== visit.id)) ||
+          (event.purpose === "BALANCE" &&
+            (!event.invoiceId || invoice?.id !== event.invoiceId)) ||
+          (state === "APPLIED" && event.purpose === "DEPOSIT" &&
+            invoice?.allocatedMinor !== event.amountMinor) ||
+          (state === "APPLIED" && event.purpose === "BALANCE" &&
+            (invoice?.status !== "PAID" || invoice?.balanceMinor !== 0))
+        );
+        if (missingBusinessProof) {
+          return fail("PAYMENT_RPC_RECEIPT_UNVERIFIED",
+            "The persisted invoice or visit for this payment could not be verified.");
+        }
         // A real payment must never acknowledge an invoice or visit from a
         // different workspace, or a visit unrelated to its persisted invoice.
         if ((invoice && invoice.workspaceId !== event.workspaceId) ||

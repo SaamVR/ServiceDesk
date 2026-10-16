@@ -18,7 +18,8 @@ describe("stored quote queue validity, no fake waiting customer", () => {
     const q = buildQuotePipeline(rows, now);
     expect(q.awaitingCustomer).toBe(1);
     expect(q.sentNeedsExpiryReview).toBe(2);
-    expect(q.readyToSend).toBe(1);
+    expect(q.readyToSend).toBe(0); // APPROVED is expired, not send-ready
+    expect(q.approvedNeedsExpiryReview).toBe(1);
   });
   it("only counts current quote version and includes equality at expiry", () => {
     const rows = [

@@ -1,0 +1,35 @@
+name: ServiceDesk V4 review merge tree source parity
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+      - deploy/servicedesk-v3-public-review-20261011
+permissions:
+  contents: read
+jobs:
+  parity-contract-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Negative and positive parity identity checks
+        run: node --test scripts/release/tests/review-merge-tree-parity-check.mjs
+  source-tree-equality:
+    if: github.base_ref == 'deploy/servicedesk-v3-public-review-20261011' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify review synthetic merge retains exact controller source tree
+        env:
+          REVIEW_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REVIEW_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/release/v4-review-merge-tree-parity.mjs

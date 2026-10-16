@@ -21,6 +21,20 @@ describe("untrusted staff quote model claims",()=>{
       "Your price is $200", "Appointment 2026-10-20",
     ]) expect(validateStaffQuoteReviewDraft(claim),claim).toBeUndefined();
   });
+  test("rejects unsupported first-person and passive operational completion claims",()=>{
+    for(const claim of [
+      "We already sent the quote. Review the service lines.",
+      "Our team has approved the estimate, check the checklist.",
+      "Staff delivered the offer to the customer.",
+      "I have booked a service slot; review durations.",
+      "You already charged the customer. Check the details.",
+      "The offer has been delivered.",
+      "Your invoice has been confirmed.",
+      "The job was scheduled and the crew assigned.",
+    ]) expect(validateStaffQuoteReviewDraft(claim),claim).toBeUndefined();
+    const advisory="Review the saved quote and confirm service scope before sending it to the customer.";
+    expect(validateStaffQuoteReviewDraft(advisory)).toBe(advisory);
+  });
   test("rejects non-text and oversized untrusted outputs",()=>{
     expect(validateStaffQuoteReviewDraft({replyDraft:"Approved"})).toBeUndefined();
     expect(validateStaffQuoteReviewDraft("a".repeat(901))).toBeUndefined();

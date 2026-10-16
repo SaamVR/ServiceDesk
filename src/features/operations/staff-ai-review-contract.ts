@@ -9,6 +9,19 @@ export interface ReviewedAiDraft {
   savedHumanMessageId: string;
   handoverRequired: boolean;
 }
+/**
+ * An HTTP 409 indicates the approved conversation/source is stale.
+ * Editing local text must never re-enable submission against the same
+ * obsolete expectedVersion; reloading/remounting a new scoped message does.
+ */
+export type StaffAiReviewError = "draft" | "approval" | "stale" | "cancelled";
+
+export function staffAiReviewErrorAfterEdit(
+  current: StaffAiReviewError | undefined,
+): StaffAiReviewError | undefined {
+  return current === "stale" ? "stale" : undefined;
+}
+
 export interface ApprovedReplyReceipt {
   state: "QUEUED_FOR_PROVIDER" | "EXISTING_REPLY";
   conversationId: string;
@@ -34,7 +47,11 @@ export function parseReviewedAiDraft(
       r.conversationId !== conversationId ||
       r.savedHumanMessageId !== messageId ||
       typeof r.replyDraft !== "string" ||
-      r.replyDraft.length > 4_000 ||
+      r.replyDraft.length > 4_000 || !r.replyDraft.trim() ||
+      // Never present a draft with invisible bidi/formatting controls that
+      // could visually spoof prices or recipient instructions to a reviewer.
+      /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(r.replyDraft) ||
+      /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(r.replyDraft) ||
       typeof r.handoverRequired !== "boolean") return undefined;
   return {
     replyDraft: r.replyDraft,
@@ -55,7 +72,10 @@ export function parseReviewedReplyReceipt(
       r.conversationId !== conversationId ||
       r.sourceMessageId !== sourceMessageId ||
       typeof r.deliveryState !== "string" ||
-      !outboundStates.has(r.deliveryState)) return undefined;
+      !outboundStates.has(r.deliveryState) ||
+      // The server labels only an actually QUEUED result as newly queued.
+      // Never render a contradictory success envelope as provider delivery.
+      (r.state === "QUEUED_FOR_PROVIDER" && r.deliveryState !== "QUEUED")) return undefined;
   return {
     state: r.state as ApprovedReplyReceipt["state"],
     conversationId,

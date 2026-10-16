@@ -6,9 +6,12 @@ import {
   parseReviewedReplyReceipt,
   type ReviewedAiDraft,
   type ApprovedReplyReceipt,
+  type StaffAiReviewError,
+  staffAiReviewErrorAfterEdit,
 } from "./staff-ai-review-contract";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
+import { boundedStaffRequestSignal } from "./staff-ai-request-signal";
 import styles from "./StaffAiReviewComposer.module.css";
 
 /**
@@ -43,7 +46,7 @@ function ScopedStaffAiReviewComposer({
   const [body, setBody] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState<"idle" | "drafting" | "approving">("idle");
-  const [error, setError] = useState<"draft" | "approval" | "stale" | "cancelled">();
+  const [error, setError] = useState<StaffAiReviewError>();
   const [receipt, setReceipt] = useState<ApprovedReplyReceipt>();
   const controller = useRef<AbortController | null>(null);
   const idempotencyKey = useRef<string | null>(null);
@@ -55,6 +58,7 @@ function ScopedStaffAiReviewComposer({
     controller.current?.abort();
     const pending = new AbortController();
     controller.current = pending;
+    const requestSignal = boundedStaffRequestSignal(pending);
     setBusy("drafting");
     setError(undefined);
     setDraft(undefined);
@@ -68,7 +72,7 @@ function ScopedStaffAiReviewComposer({
         cache: "no-store",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ workspaceSlug, conversationId, messageId: sourceMessageId }),
-        signal: pending.signal,
+        signal: requestSignal,
       });
       if (pending.signal.aborted) return;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
@@ -110,6 +114,7 @@ function ScopedStaffAiReviewComposer({
     controller.current?.abort();
     const pending = new AbortController();
     controller.current = pending;
+    const requestSignal = boundedStaffRequestSignal(pending);
     setBusy("approving");
     setError(undefined);
     // Preserve this key across uncertain network retries. An edit starts a
@@ -129,7 +134,7 @@ function ScopedStaffAiReviewComposer({
           idempotencyKey: idempotencyKey.current,
           confirmedByStaff: true,
         }),
-        signal: pending.signal,
+        signal: requestSignal,
       });
       if (response.status === 409) {
         setError("stale");
@@ -210,7 +215,7 @@ function ScopedStaffAiReviewComposer({
               onChange={(event) => {
                 setBody(event.target.value);
                 setConfirmed(false);
-                setError(undefined);
+                setError(staffAiReviewErrorAfterEdit);
                 idempotencyKey.current = null;
               }}
               disabled={busy !== "idle" || draft.handoverRequired}

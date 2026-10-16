@@ -1,0 +1,29 @@
+name: V4 independent Critic acceptance integrity
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  critic-claim-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test fail-closed acceptance and risk-scoping rules
+        run: node --test scripts/release/tests/critic-acceptance-check.mjs scripts/release/tests/critic-change-scope-check.mjs
+      - name: Scope practical review for every code PR
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/critic-changed-paths.txt"
+          node scripts/release/critic-change-scope.mjs "$RUNNER_TEMP/critic-changed-paths.txt" >> "$GITHUB_STEP_SUMMARY"
+      - name: Validate current source and deployment claims
+        run: node scripts/release/critic-acceptance-ledger.mjs docs/control-tower/critic/acceptance/r6-20261016.json
