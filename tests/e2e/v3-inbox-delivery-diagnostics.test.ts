@@ -56,6 +56,44 @@ describe("read-only authorized delivery diagnostics", () => {
     ] })).toBeUndefined();
   });
 
+  it("does not mark failed, suppressed or unknown delivery as healthy", () => {
+    const first = valid().items[0];
+    for (const altered of [
+      { ...first, deliveryState: "FAILED" },
+      { ...first, deliveryState: "SUPPRESSED" },
+      { ...first, deliveryState: "UNKNOWN" },
+      { ...first, deliveryState: "QUEUED" },
+      { ...first, deliveryState: "PROVIDER_ACCEPTED" },
+      { ...first, deliveryState: "READ", health: "NEEDS_REVIEW", reason: "STALE_PENDING" },
+    ]) {
+      expect(parseInboxDeliveryDiagnostics({ ...valid(), items: [altered, ...valid().items.slice(1)] }))
+        .toBeUndefined();
+    }
+  });
+
+  it("requires a state-consistent reason and a 30-minute pending threshold", () => {
+    const base = valid().items[2];
+    for (const altered of [
+      { ...base, health: "OK" },
+      { ...base, reason: "PROVIDER_FAILURE" },
+      { ...base, ageMinutes: 29, health: "NEEDS_REVIEW" },
+      { ...base, ageMinutes: 40, health: "PENDING" },
+      { ...base, reason: undefined },
+    ]) {
+      expect(parseInboxDeliveryDiagnostics({ ...valid(), items: [valid().items[0], valid().items[1], altered] }))
+        .toBeUndefined();
+    }
+    for (const accepted of [
+      { ...base, deliveryState: "FAILED", reason: "PROVIDER_FAILURE" },
+      { ...base, deliveryState: "SUPPRESSED", reason: "SUPPRESSED_BY_POLICY" },
+      { ...base, deliveryState: "UNKNOWN", reason: "OUTBOX_RECEIPT_MISSING" },
+      { ...base, deliveryState: "RUNNING", ageMinutes: 30, reason: "STALE_PENDING" },
+    ]) {
+      expect(parseInboxDeliveryDiagnostics({ ...valid(), items: [valid().items[0], valid().items[1], accepted] }))
+        .toBeDefined();
+    }
+  });
+
   it("uses bounded operator-friendly review reason labels", () => {
     expect(deliveryReviewLabel("STALE_PENDING")).toBe("Pending longer than expected");
     expect(deliveryReviewLabel("OUTBOX_RECEIPT_MISSING")).toBe("Provider acceptance receipt missing");
