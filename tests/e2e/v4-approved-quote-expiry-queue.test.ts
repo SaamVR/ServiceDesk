@@ -37,6 +37,21 @@ describe("V4 approved quote pipeline enforces live expiry for staff readiness",(
     expect(summary.quoteClockUnverified).toBe(true);
   }
  });
+ it("keeps Today's staff waiting pipeline aligned with both expired quote statuses",()=>{
+  const summary=buildQuotePipeline(quotes,now);
+  expect(summary.sentNeedsExpiryReview).toBe(1);
+  expect(summary.approvedNeedsExpiryReview).toBe(2);
+  const totalValidityReview=summary.sentNeedsExpiryReview+summary.approvedNeedsExpiryReview;
+  expect(totalValidityReview).toBe(3);
+  const today=readFileSync(join(process.cwd(),
+    "src/features/operations/StaffOverviewDashboard.tsx"),"utf8");
+  // The headline and detailed text must both include approved and sent
+  // invalidity; previous Today showed fewer tasks than the Quotes workspace.
+  expect(today).toContain("const approvedNeedsExpiryReview = quoteQueue.approvedNeedsExpiryReview");
+  expect(today).toContain("waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview");
+  expect(today).toContain("sentNeedsExpiryReview + approvedNeedsExpiryReview");
+  expect(today).toContain("need quote validity review");
+ });
  it("wire quote workspace aggregate counters to the same expiry-aware snapshot",()=>{
   const src=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
   const view=src.slice(src.indexOf("function QuotesView("),src.indexOf("function ScheduleView("));
