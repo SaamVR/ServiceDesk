@@ -130,6 +130,23 @@ export function validateOwnerOperationsBriefGrounding(
     [/\bopen\s+requests?\b/i,facts.openRequests],
   ];
   if (buckets.some(([pattern,count]) => pattern.test(draft) && count <= 0)) return undefined;
+  // A positive count in one queue never authorizes advice about a different,
+  // empty queue. Generic category mentions previously bypassed the precise
+  // bucket patterns (for example: "Review invoices" when invoice counts=0).
+  const categoryMentions: ReadonlyArray<[RegExp,number]> = [
+    [/\brequests?\b/i,facts.openRequests],
+    [/\bquotes?\b/i,facts.waitingOnCustomerQuotes+facts.quoteValidityNeedsReview],
+    [/\b(?:invoices?|ledgers?)\b/i,facts.collectibleInvoices+facts.invoiceLedgersNeedingReview],
+    [/\bvisits?\b/i,facts.unassignedActiveVisits],
+    [/\battentions?\b/i,facts.unresolvedCriticalAttentions],
+  ];
+  if (categoryMentions.some(([pattern,count]) => pattern.test(draft) && count <= 0)) return undefined;
+  // These categories are not part of the authorized numeric snapshot. Even a
+  // real, successful model invocation cannot infer their persisted state.
+  if (/\b(?:payments?|refunds?|bookings?|messages?|revenue|profit|capacity)\b/i.test(draft)) return undefined;
+  // Only recommend inspection of saved queues, never customer outreach whose
+  // authorization, recipients and review state were not part of the source.
+  if (/\b(?:contact|call|text|email|notify|message|reach\s+out\s+to|send\s+to)\s+(?:the\s+)?customers?\b/i.test(draft)) return undefined;
   // A briefing is a suggestion for deliberate owner review, not a new
   // authoritative business event or a model-made completion certificate.
   if (!/\b(?:review|check|inspect|verify|consider|prioritize|look\s+at|follow\s+up)\b/i.test(draft)) return undefined;
