@@ -23,7 +23,8 @@ const rate = {
 };
 
 function fakeDb(options: { noBook?: boolean; badRates?: boolean; inactiveService?: boolean; otherTenant?: boolean;
-  branchCurrency?: string; cardCurrency?: string; inactiveBranch?: boolean; missingBranch?: boolean; foreignBranch?: boolean } = {}) {
+  branchCurrency?: string; cardCurrency?: string; inactiveBranch?: boolean; missingBranch?: boolean; foreignBranch?: boolean;
+  priceBooks?: Record<string, unknown>[] } = {}) {
   const calls: Array<{ table: string; filters: [string, unknown][] }> = [];
   const tables: Record<string, Record<string, unknown>[]> = {
     requests: [{ id: request, workspace_id: workspace, branch_id: branch, service_id: service }],
@@ -32,7 +33,7 @@ function fakeDb(options: { noBook?: boolean; badRates?: boolean; inactiveService
       currency: options.branchCurrency ?? "USD", active: !options.inactiveBranch,
     }],
     service_catalog: [{ id: service, workspace_id: options.otherTenant ? "foreign-ws" : workspace, active: !options.inactiveService, code: "MOVE_OUT" }],
-    branch_price_books: options.noBook ? [] : [{ workspace_id: workspace, branch_id: branch, rate_card_id: card, active: true, starts_at: null, ends_at: null }],
+    branch_price_books: options.priceBooks ?? (options.noBook ? [] : [{ workspace_id: workspace, branch_id: branch, rate_card_id: card, active: true, starts_at: null, ends_at: null }]),
     rate_cards: [{ id: card, workspace_id: workspace, ...rate,
       currency: options.cardCurrency ?? rate.currency,
       rules: options.badRates ? { ...rate.rules, standard: { baseMinor: -90 } } : rate.rules }],
@@ -62,6 +63,30 @@ describe("V4 real tenant quote pricing", () => {
     expect(t.calls.map(call => call.table)).toEqual(["requests", "workspace_branches", "service_catalog", "branch_price_books", "rate_cards"]);
     for (const call of t.calls) expect(call.filters).toContainEqual(["workspace_id", workspace]);
     expect(t.calls.find(c => c.table === "branch_price_books")?.filters).toContainEqual(["branch_id", branch]);
+  });
+
+  it("rejects a second currently valid price book after the first ten historical records", async () => {
+    const entry = { workspace_id: workspace, branch_id: branch,
+      rate_card_id: card, active: true, starts_at: null, ends_at: null };
+    const old = Array.from({ length: 9 }, (_,i) => ({
+      ...entry, rate_card_id: "historical-" + i, ends_at: "2025-01-01T00:00:00Z",
+    }));
+    const t = fakeDb({ priceBooks: [entry, ...old, { ...entry, rate_card_id: "another-live-card" }] });
+    const result = await loadOperationalQuoteRateCard(t.db, workspace, request, new Date("2026-10-17T00:00:00Z"));
+    expect(result).toMatchObject({ ok:false, code:"QUOTE_RATE_BOOK_NOT_CONFIGURED" });
+    expect(t.calls.map(call=>call.table)).not.toContain("rate_cards");
+  });
+
+  it("refuses truncated history rather than assuming the unseen book cannot be effective", async () => {
+    const entry = { workspace_id: workspace, branch_id: branch,
+      rate_card_id: card, active: true, starts_at: null, ends_at: null };
+    const historical = Array.from({length:100}, (_,i)=>({
+      ...entry, rate_card_id:"prior-"+i, ends_at:"2025-01-01T00:00:00Z",
+    }));
+    const t = fakeDb({ priceBooks:[entry,...historical] });
+    const result = await loadOperationalQuoteRateCard(t.db, workspace, request, new Date("2026-10-17T00:00:00Z"));
+    expect(result).toMatchObject({ ok:false, code:"QUOTE_RATE_BOOK_HISTORY_UNVERIFIED" });
+    expect(t.calls.map(call=>call.table)).not.toContain("rate_cards");
   });
 
   it("fails closed without a current branch price book, an active service or valid rates", async () => {
