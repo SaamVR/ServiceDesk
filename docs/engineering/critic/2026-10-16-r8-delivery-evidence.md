@@ -26,3 +26,8 @@ Can ServiceDesk genuinely tell the owner whether an outbound customer message wa
 5. Faster throughput comes from non-overlapping implementation/test paths, exact-head CI and brief actionable critic receipts — not inflated agent counts or repeated full-suite polling while no manual Render promotion exists.
 
 Verdict at draft creation: **source changes proposed; real owner/provider/deployment acceptance BLOCKED**. Update after recorded exact PR-head and integrated checks; never manufacture a PASS.
+
+## Connected database schema audit (read-only)
+The connected `public.messages` table has `messages_outbox_event_fk`: `FOREIGN KEY (workspace_id,outbox_event_id) REFERENCES outbox_events(workspace_id,id) ON DELETE SET NULL (outbox_event_id)`. The `pg_constraint` inventory has no uniqueness constraint on that column; a `pg_indexes` search also found no index covering `outbox_event_id`. Thus the code-level ambiguous-reference test is not demonstrably redundant with an existing uniqueness guarantee. This does not prove duplicates currently exist.
+
+Track the possible structural one-event-per-message invariant independently in [issue #504](https://github.com/SaamVR/ServiceDesk/issues/504), but verify whether any legitimate fanout is modeled before approving DDL. This critic neither changed migrations nor applied connected SQL.
