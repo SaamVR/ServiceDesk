@@ -96,7 +96,7 @@ describe("real authorized AI daily owner operations brief",()=>{
       .toBe("Check the authoritative workspace queues before making changes.");
   });
   it("rejects an ungrounded AI output after saving verified counts rather than surfacing it",async()=>{
-    const config=deps();
+    const config=deps() as unknown as Record<string, unknown>;
     const result=await generateOwnerOperationsBrief("ctg",{
       ...config,
       callModel:async()=>({ok:true,value:{replyDraft:
@@ -106,7 +106,7 @@ describe("real authorized AI daily owner operations brief",()=>{
     expect(result).toMatchObject({ok:false,code:"OWNER_BRIEF_OUTPUT_UNSAFE"});
   });
   it("requires recent source evidence before and after model latency, even for identical counts",async()=>{
-    const base=deps();
+    const base=deps() as unknown as Record<string, unknown>;
     const stale=await generateOwnerOperationsBrief("ctg",{
       ...base,now:()=>Date.parse("2026-10-16T13:00:01Z"),
     } as never);
