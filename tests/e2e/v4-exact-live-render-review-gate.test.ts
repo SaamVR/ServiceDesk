@@ -31,6 +31,9 @@ describe("read-only LIVE Render review exact SHA proof", () => {
     expect(workflow).toContain("rerun this same pinned-SHA job only after the authorized Render deploy is LIVE");
     expect(workflow).toContain("sleep 8");
     expect(workflow).toContain("j.sourceSha===process.env.GITHUB_SHA");
+    expect(workflow).toContain("git ls-remote --heads https://github.com/SaamVR/ServiceDesk.git");
+    expect(workflow).toContain('"$live_branch_sha" != "$GITHUB_SHA"');
+    expect(workflow).toContain("STALE_REVIEW_HEAD");
     expect(workflow).toContain("github.ref == 'refs/heads/deploy/servicedesk-v3-public-review-20261011'");
     expect(workflow).toContain("contents: read");
     expect(script).not.toContain("Authorization");
