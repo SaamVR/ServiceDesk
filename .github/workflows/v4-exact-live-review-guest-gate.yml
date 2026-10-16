@@ -21,6 +21,14 @@ jobs:
       - name: Checkout exact review commit
         uses: actions/checkout@v4
         with: {persist-credentials: false}
+      - name: Reject stale rerun if the review branch advanced
+        shell: bash
+        run: |
+          live_branch_sha="$(git ls-remote --heads https://github.com/SaamVR/ServiceDesk.git refs/heads/deploy/servicedesk-v3-public-review-20261011 | cut -f1)"
+          if [ -z "$live_branch_sha" ] || [ "$live_branch_sha" != "$GITHUB_SHA" ]; then
+            echo "STALE_REVIEW_HEAD: cannot certify a deployment for an outdated review branch commit" >&2
+            exit 1
+          fi
       - name: Node 22
         uses: actions/setup-node@v4
         with: {node-version: 22.23.2}
