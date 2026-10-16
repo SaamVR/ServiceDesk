@@ -52,7 +52,7 @@ import { filterJobsQueue, filterJobsSearch, indexJobProgress, jobsActionFeedback
 import { JobQueueSearch } from "./JobQueueSearch";
 import { JobQueueFilters } from "./JobQueueFilters";
 import { countStaffBy, indexCurrentQuoteByRequest, indexStaffById } from "./staff-snapshot-index";
-import { buildQuotePipeline, isCurrentApprovedQuote } from "./quote-pipeline";
+import { buildQuotePipeline, isCurrentApprovedQuote, needsSentQuoteExpiryReview } from "./quote-pipeline";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { QuoteCustomerHandoff } from "./QuoteCustomerHandoff";
 import { InboxThreadNavigator } from "./InboxThreadNavigator";
@@ -1507,7 +1507,7 @@ function QuotesView({
     return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." action={{ label: "Review service requests", href: buildStaffModuleHref(workspaceSlug, "requests") }} />;
   }
 
-  const { currentQuoteByRequest, orderedQuotes, readyToSend, awaitingCustomer } = buildQuotePipeline(data.quotes);
+  const { currentQuoteByRequest, orderedQuotes, readyToSend, awaitingCustomer, sentNeedsExpiryReview } = buildQuotePipeline(data.quotes, data.loadedAt);
   const search = normalizeDirectoryQuery(searchQuery);
   const requestById = new Map(data.requests.map((request) => [request.id, request]));
   const customerById = new Map(data.customers.map((customer) => [customer.id, customer]));
@@ -1526,6 +1526,7 @@ function QuotesView({
   const selectedQuote = visibleQuotes.find((quote) => quote.id === selectedQuoteId) ?? visibleQuotes[0];
   const currentQuote = currentQuoteByRequest.get(selectedQuote.requestId);
   const selectedQuoteIsCurrent = currentQuote?.id === selectedQuote.id;
+  const selectedQuoteNeedsExpiryReview = needsSentQuoteExpiryReview(selectedQuote, data.loadedAt);
   const selectedQuoteCanSend = isCurrentApprovedQuote(selectedQuote, currentQuoteByRequest)
     && Boolean(selectedQuote.lineItems?.length)
     && Number.isFinite(Date.parse(selectedQuote.validUntil ?? ""))
@@ -1540,7 +1541,7 @@ function QuotesView({
         <div>
           <p className={styles.salesEyebrow}>Quote workspace</p>
           <h2>Quote pipeline</h2>
-          <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} marked sent (delivery unverified)</p>
+          <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} currently sent (delivery unverified) · {sentNeedsExpiryReview} need validity review</p>
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "requests")}>Open requests</a>
       </header>
@@ -1640,7 +1641,7 @@ function QuotesView({
 
             <section className={styles.salesSection}>
               <div className={styles.salesSectionHeader}>
-                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{!selectedQuoteIsCurrent ? "Historical quote" : selectedQuote.status === "APPROVED" ? selectedQuoteCanSend ? "Ready to send" : "Review required" : selectedQuote.status === "SENT" ? "Delivery verification" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
+                <div><p className={styles.salesSectionEyebrow}>Next step</p><h3>{!selectedQuoteIsCurrent ? "Historical quote" : selectedQuote.status === "APPROVED" ? selectedQuoteCanSend ? "Ready to send" : "Review required" : selectedQuote.status === "SENT" ? selectedQuoteNeedsExpiryReview ? "Quote expired or unverified" : "Delivery verification" : selectedQuote.status === "ACCEPTED" ? "Ready to schedule" : "Quote status"}</h3></div>
               </div>
               <div className={styles.quoteNextStep}>
                 {!selectedQuoteIsCurrent ? (
@@ -1663,6 +1664,16 @@ function QuotesView({
                     Review and recalculate the request before sending.</p>
                     <a className="app-button-secondary"
                       href={buildStaffModuleHref(workspaceSlug, "requests")}>Review requests</a></>
+                ) : selectedQuote.status === "SENT" && selectedQuoteNeedsExpiryReview ? (
+                  <>
+                    <p role="alert">The saved quote validity deadline is expired or cannot be verified.
+                      It must be recalculated before the customer can accept a new offer.
+                      Its internal SENT status is not delivery evidence.</p>
+                    <a className="app-button-secondary"
+                      href={buildStaffModuleHref(workspaceSlug, "requests")}>
+                      Recalculate request quote
+                    </a>
+                  </>
                 ) : selectedQuote.status === "SENT" ? (
                   <>
                     <p>The quote status was recorded as sent. Provider acceptance,
