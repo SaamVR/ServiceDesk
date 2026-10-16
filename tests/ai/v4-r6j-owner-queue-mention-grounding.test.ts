@@ -45,6 +45,13 @@ describe("V4 independent queue-mention grounding regressions", () => {
       "Review unassigned visits, then email the customers.",
       "Review unassigned visits and follow up with customers.",
       "Check unassigned visits then reply to customers.",
+      "Review unassigned visits and contact the clients.",
+      "Review unassigned visits then call our leads.",
+      "Inspect unassigned visits then follow up with a client.",
+      "Check unassigned visits and reach out to prospects.",
+      "Review unassigned visits then text them.",
+      "Review unassigned visits and email the team.",
+      "Review unassigned visits and notify guests.",
     ]) {
       expect(validateOwnerOperationsBriefGrounding(claim, onlyVisits), claim).toBeUndefined();
     }
