@@ -177,7 +177,7 @@ export async function readOperationalDeliveryTriage(
       }
       for (const e of evidence.data) {
         if (!validId(e.id) || !outboxIds.includes(e.id) ||
-            e.workspace_id !== workspace.id || typeof e.topic !== "string" ||
+            e.workspace_id !== workspace.id || e.topic !== "conversation.reply" ||
             !["PENDING", "SENT", "FAILED", "SUPPRESSED"].includes(e.status) ||
             (e.provider_reference !== null && typeof e.provider_reference !== "string") ||
             evidenceById.has(e.id)) {
