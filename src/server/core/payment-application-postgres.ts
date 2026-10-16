@@ -117,7 +117,7 @@ export function createPostgresPaymentApplicationFacadeMethods(client: SupabaseRp
       // responses. Never expose those diagnostics as public failure messages.
       if (error) return fail(safeCode(error.code, "PAYMENT_RPC_ERROR"), "Payment evidence could not be applied.");
       if (!data) return fail("PAYMENT_RPC_EMPTY", "Verified payment RPC returned no payload.");
-      if (data.ok === false) return fail(safeCode(data.code, "PAYMENT_RPC_REJECTED"), "Verified payment was rejected by the database RPC.");
+      if (data.ok !== true) return fail(safeCode(data.code, "PAYMENT_RPC_REJECTED"), "Verified payment was rejected by the database RPC.");
 
       try {
         const state = stateFromRpc(data);
