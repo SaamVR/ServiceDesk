@@ -5,6 +5,11 @@ name: ServiceDesk V4 canonical PR full source RC
 on:
   pull_request:
     branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    # Critic-owned reports and ordinary documentation cannot alter runtime
+    # behavior. Their dedicated integrity CI remains active, while mixed
+    # docs+source PRs still run this complete 35-minute-capable gate.
+    paths-ignore:
+      - "docs/**"
 permissions:
   contents: read
 concurrency:
