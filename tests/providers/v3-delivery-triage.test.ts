@@ -142,6 +142,50 @@ describe("real outbound delivery triage", () => {
     }
   });
 
+  it("rejects one persisted outbox event reused for two different outbound messages", async () => {
+    const h = fixture({
+      rows: [
+        { ...outbound[0], outbox_event_id: "outbox1" },
+        { ...outbound[1], outbox_event_id: "outbox1" },
+      ],
+      outbox: [{ id: "outbox1", workspace_id: "ws1", topic: "conversation.reply",
+        status: "SENT", provider_reference: "one-provider-receipt" }],
+    });
+    expect(await readOperationalDeliveryTriage("service-desk", h.deps)).toMatchObject({
+      ok: false, code: "DELIVERY_TRIAGE_OUTBOX_MESSAGE_AMBIGUOUS",
+    });
+    // Invalid fanout is rejected before querying or treating a provider
+    // acceptance receipt as proof of either customer's delivery.
+    expect(h.seen).toEqual(["messages", "conversations"]);
+  });
+
+  it("accepts independent outbox receipts for separate outbound messages", async () => {
+    const h = fixture({
+      rows: [
+        { ...outbound[0], outbox_event_id: "outbox1" },
+        { ...outbound[1], outbox_event_id: "outbox2" },
+      ],
+      outbox: [
+        { id: "outbox1", workspace_id: "ws1", topic: "conversation.reply",
+          status: "SENT", provider_reference: "ref-a" },
+        { id: "outbox2", workspace_id: "ws1", topic: "conversation.reply",
+          status: "FAILED", provider_reference: null },
+      ],
+    });
+    const outcome = await readOperationalDeliveryTriage("service-desk", h.deps);
+    expect(outcome).toMatchObject({ ok: true, value: {
+      scannedOutboundMessages: 2,
+      counts: { ok: 0, pending: 0, review: 2 },
+      items: [
+        { messageId: "msg1", deliveryState: "PROVIDER_ACCEPTED" },
+        { messageId: "msg2", deliveryState: "FAILED" },
+      ],
+    } });
+    expect(h.inclusions).toContainEqual({
+      table: "outbox_events", column: "id", ids: ["outbox1", "outbox2"],
+    });
+  });
+
   it("reports age, review, pending and completed states without customer details", async () => {
     const h = fixture();
     const result = await readOperationalDeliveryTriage("service-desk", h.deps);
