@@ -128,6 +128,11 @@ export function createPostgresPaymentApplicationFacadeMethods(client: SupabaseRp
         if ((invoice && invoice.workspaceId !== event.workspaceId) ||
             (visit && visit.workspaceId !== event.workspaceId) ||
             (invoice?.visitId && visit && invoice.visitId !== visit.id) ||
+            // The provider callback names its source quote/invoice. A valid
+            // workspace alone cannot authorize an unrelated saved business
+            // object (particularly across concurrent invoice payments).
+            (event.invoiceId && invoice && invoice.id !== event.invoiceId) ||
+            (event.quoteId && visit && visit.quoteId !== event.quoteId) ||
             ((state === "APPLIED" || state === "DUPLICATE") &&
               invoice && invoice.currency !== event.currency)) {
           return fail("PAYMENT_RPC_SCOPE_MISMATCH", "Payment application identity could not be verified.");
