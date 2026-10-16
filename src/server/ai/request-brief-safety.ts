@@ -31,6 +31,7 @@ export function validateRequestBriefDraft(value: unknown): string | undefined {
   // first-person-only filter allowed "the invoice was paid" or "the customer
   // has accepted the quote" to appear as verified business state.
   if (/\b(?:we|i|our team)\s+(?:have\s+)?(?:sent|charged|booked|scheduled|confirmed|approved|paid|invoiced)\b/i.test(draft) ||
-      /\b(?:the\s+)?(?:customer|client|guest|request|quote|invoice|payment|deposit|booking|appointment|visit|job|message|email|refund)\s+(?:has\s+been|have\s+been|was|were|is|are|has|have)\s+(?:sent|charged|booked|scheduled|confirmed|approved|paid|invoiced|delivered|received|processed|completed|settled|accepted)\b/i.test(draft)) return undefined;
+      /\b(?:the\s+)?(?:customer|client|guest|request|quote|invoice|payment|deposit|booking|appointment|visit|job|message|email|refund)\s+(?:has\s+been|have\s+been|was|were|is|are|has|have)\s+(?:sent|charged|booked|scheduled|confirmed|approved|paid|invoiced|delivered|received|processed|completed|settled|accepted)\b/i.test(draft) ||
+      /\b(?:the\s+)?(?:customer|client|guest)\s+(?:accepted|received|confirmed|paid)\b/i.test(draft)) return undefined;
   return draft;
 }
