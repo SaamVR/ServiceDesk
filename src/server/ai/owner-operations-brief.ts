@@ -34,11 +34,22 @@ export interface OwnerOperationsBriefDependencies {
   readConfig?: ConfigReader;
   callModel?: ModelCaller;
   signal?: AbortSignal;
+  /** Injectable wall clock for deterministic source-freshness proof. */
+  now?: () => number;
 }
 const error = (code: string): Result<never> => ({
   ok: false, code,
   message: "A verified owner AI brief is unavailable. Use the authoritative workspace queues instead.",
 });
+
+const MAX_SOURCE_AGE_MS = 30 * 60 * 1000;
+const MAX_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
+function freshSnapshotAt(loadedAt: unknown, now: number): boolean {
+  const timestamp = typeof loadedAt === "string" ? Date.parse(loadedAt) : NaN;
+  return Number.isFinite(now) && Number.isFinite(timestamp) &&
+    timestamp >= now - MAX_SOURCE_AGE_MS &&
+    timestamp <= now + MAX_FUTURE_CLOCK_SKEW_MS;
+}
 
 function sameFacts(a: OwnerOperationsBriefFacts, b: OwnerOperationsBriefFacts): boolean {
   return (Object.keys(a) as Array<keyof OwnerOperationsBriefFacts>)
@@ -160,6 +171,9 @@ export async function generateOwnerOperationsBrief(
       saved.value.actor.role !== "OWNER") return error("OWNER_BRIEF_SNAPSHOT_UNAVAILABLE");
   const facts=deriveOwnerOperationsBriefFacts(saved.value);
   if (!facts) return error("OWNER_BRIEF_COUNTS_UNVERIFIED");
+  const now=deps.now ?? Date.now;
+  if (!freshSnapshotAt(saved.value.loadedAt,now()))
+    return error("OWNER_BRIEF_STALE_SNAPSHOT");
   let cfg: ReturnType<ConfigReader>;
   try { cfg=(deps.readConfig ?? readConfiguredAiRuntimeConfig)(); }
   catch { return error("OWNER_BRIEF_MODEL_DISABLED"); }
@@ -204,7 +218,9 @@ export async function generateOwnerOperationsBrief(
     return error("OWNER_BRIEF_ACCESS_REVOKED");
   }
   const latest=deriveOwnerOperationsBriefFacts(fresh.value);
-  if (!latest || !sameFacts(facts,latest)) return error("OWNER_BRIEF_STALE_SNAPSHOT");
+  if (!latest || !sameFacts(facts,latest) ||
+      !freshSnapshotAt(fresh.value.loadedAt,now()))
+    return error("OWNER_BRIEF_STALE_SNAPSHOT");
   return {ok:true,value:{
     state:"OWNER_AI_ADVISORY_ONLY",model:cfg.value.model,
     source:"AUTHORIZED_SAVED_WORKSPACE_COUNTS",facts,brief,
