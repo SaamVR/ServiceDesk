@@ -6,7 +6,7 @@ import { createPostgresConversationFacadeMethods } from "../../src/server/core/c
 const ctx={workspaceId:"11111111-1111-4111-8111-111111111111",userId:"22222222-2222-4222-8222-222222222222",role:"OWNER"} as ActorContext;
 const cid="33333333-3333-4333-8333-333333333333";
 const meta={expectedVersion:1,now:"2026-10-16T08:00:00Z",idempotencyKey:"R6-REPLY-123456"} as CommandMeta;
-const handover={id:cid,workspaceId:ctx.workspaceId,channel:"EMAIL",version:2,handoverActive:true};
+const handover={id:cid,workspaceId:ctx.workspaceId,channel:"EMAIL",version:2,handoverActive:true,assignedUserId:ctx.userId};
 const message={id:"44444444-4444-4444-8444-444444444444",
   workspaceId:ctx.workspaceId,conversationId:cid,direction:"OUTBOUND",senderKind:"STAFF",
   body:"Approved by human staff",deliveryState:"QUEUED",createdAt:"2026-10-16T08:00:00Z"};
@@ -44,12 +44,20 @@ describe("R6 conversation commands fail closed on untrusted RPC output",()=>{
     expect(result,JSON.stringify(handoverActive))
       .toMatchObject({ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH"});
   }
-  expect(await facade({ok:true,...handover,handoverActive:false})
+  expect(await facade({ok:true,...handover,handoverActive:false,assignedUserId:null})
     .setConversationHandover(ctx,cid,{active:false},meta))
     .toMatchObject({ok:true,value:{handoverActive:false}});
-  expect(await facade({ok:true,...handover,handoverActive:true})
+  expect(await facade({ok:true,...handover,handoverActive:true,assignedUserId:null})
     .setConversationHandover(ctx,cid,{active:false},meta))
     .toMatchObject({ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH"});
+ });
+ it("requires the SQL-default assigned staff and removal on deactivation",async()=>{
+  const notDefault=await facade({ok:true,...handover,assignedUserId:"someone-else"})
+    .setConversationHandover(ctx,cid,{active:true},meta);
+  expect(notDefault).toMatchObject({ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH"});
+  const stale=await facade({ok:true,...handover,handoverActive:false,assignedUserId:ctx.userId})
+    .setConversationHandover(ctx,cid,{active:false},meta);
+  expect(stale).toMatchObject({ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH"});
  });
  it("verifies the exact saved assignee when staff requests an assigned handover",async()=>{
   const expected="55555555-5555-4555-8555-555555555555";
