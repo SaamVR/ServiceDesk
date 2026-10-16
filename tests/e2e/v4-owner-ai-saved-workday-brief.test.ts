@@ -33,7 +33,7 @@ function deps(persisted=()=>snapshot,receive:(p:string)=>void=()=>{}) {
     callModel:async(_cfg:unknown,request:{userText:string})=>{
       receive(request.userText);
       return {ok:true,value:{output:{},replyDraft:
-        "Review unassigned visits and expired quotes, then inspect the invoice ledger before contacting customers.",
+        "Review unassigned visits and expired quotes, then inspect the invoice ledger.",
         requestedToolCalls:[],citations:[]}};
     },
   } as never;
