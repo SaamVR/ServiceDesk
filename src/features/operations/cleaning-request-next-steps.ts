@@ -12,8 +12,11 @@ export interface CleaningRequestNextStepsInput {
     subtotalMinor?: number; taxMinor?: number; depositMinor?: number;
     balanceMinor?: number; durationMinutes?: number;
     lineItems?: CustomerQuoteLineItem[] | null;
+    validUntil?: string;
   };
   requestedStartAt?: string;
+  /** Time of this staff read; injectable for deterministic expiry tests. */
+  asOf?: string;
 }
 export interface CleaningRequestStep {
   id: "service" | "rooms" | "pricing" | "quote";
@@ -37,10 +40,20 @@ export function cleaningRequestNextSteps(input: CleaningRequestNextStepsInput): 
       "DECLINED", "REJECTED", "EXPIRED", "SUPERSEDED"].includes(quote.status) &&
     quote.currency === "USD" && Number.isSafeInteger(quote.totalMinor) &&
     quote.totalMinor > 0);
+  // An approved/sent quote is no longer staff-actionable after its validity
+  // deadline. An absent/invalid timestamp cannot be treated as a fresh offer.
+  // ACCEPTED is final: expiry of an already accepted quote does not undo it.
+  const asOf = input.asOf === undefined ? Date.now() : Date.parse(input.asOf);
+  const expiryReviewRequired = Boolean(quote &&
+    ["APPROVED", "SENT"].includes(quote.status) &&
+    (!Number.isFinite(asOf) ||
+      typeof quote.validUntil !== "string" ||
+      !Number.isFinite(Date.parse(quote.validUntil)) ||
+      Date.parse(quote.validUntil) <= asOf));
   // A saved status and plausible total do not establish an approved price.
   // Reuse the customer-facing exact line-item reader and persisted deposit
   // reconciliation; never fill in missing lines or zero-valued unknowns.
-  const confirmedQuote = Boolean(savedQuotePresent && !terminalQuote && quote &&
+  const confirmedQuote = Boolean(savedQuotePresent && !terminalQuote && !expiryReviewRequired && quote &&
     Number.isSafeInteger(quote.subtotalMinor) &&
     Number.isSafeInteger(quote.taxMinor) &&
     Number.isSafeInteger(quote.depositMinor) &&
@@ -63,9 +76,11 @@ export function cleaningRequestNextSteps(input: CleaningRequestNextStepsInput): 
       state:input.pricingState==="VERIFIED"?"DONE":input.pricingState==="UNVERIFIED"?"UNVERIFIED":"ACTION_REQUIRED",
       detail:input.pricingState==="VERIFIED"?"Authorized branch rates verified.":input.pricingState==="UNVERIFIED"?"Price-book evidence unavailable; do not assume any rate.":"Owner must save approved rates for this request's branch."},
     {id:"quote",label:"Save a calculated quote",
-      state:terminalQuote?"ACTION_REQUIRED":confirmedQuote?"DONE":savedQuotePresent?"UNVERIFIED":"ACTION_REQUIRED",
+      state:terminalQuote || expiryReviewRequired?"ACTION_REQUIRED":confirmedQuote?"DONE":savedQuotePresent?"UNVERIFIED":"ACTION_REQUIRED",
       detail:terminalQuote
         ?"The saved quote is no longer actionable. Prepare a new verified quote rather than reusing a declined, rejected, expired or superseded quote."
+        :expiryReviewRequired
+          ?"The saved approved or sent quote has expired or its validity is unverified. Recalculate and verify an actionable offer; do not send or reuse the old quote."
         :confirmedQuote
           ?"A saved USD quote has reconciled charge lines and deposit. This does not mean it was delivered or paid."
         :savedQuotePresent
