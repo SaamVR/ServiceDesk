@@ -99,16 +99,33 @@ function messageFromRpc(row: RpcRow): MessageDTO {
 }
 
 function invoiceFromRpc(row: RpcRow): InvoiceDTO {
+  const status = field(row, "status");
+  const currency = field(row, "currency");
+  const money = (key: string, snake: string) => field(row, key, snake);
+  const totalMinor = money("totalMinor", "total_minor");
+  const allocatedMinor = money("allocatedMinor", "allocated_minor");
+  const refundedMinor = money("refundedMinor", "refunded_minor");
+  const balanceMinor = money("balanceMinor", "balance_minor");
+  const amounts = [totalMinor, allocatedMinor, refundedMinor, balanceMinor];
+  // A missing/non-numeric field cannot be "helpfully" coerced into zero:
+  // that would present a damaged ledger as a verified empty finance queue.
+  if (!["DRAFT","ISSUED","PARTIALLY_PAID","PAID","VOID"].includes(String(status)) ||
+      typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency) ||
+      amounts.some(v => typeof v !== "number" || !Number.isSafeInteger(v) || v < 0) ||
+      (allocatedMinor as number) < (refundedMinor as number) ||
+      !Number.isSafeInteger((allocatedMinor as number) - (refundedMinor as number)) ||
+      !Number.isSafeInteger((allocatedMinor as number) - (refundedMinor as number) + (balanceMinor as number)) ||
+      (allocatedMinor as number) - (refundedMinor as number) + (balanceMinor as number) !== totalMinor ||
+      (status === "PAID" && balanceMinor !== 0)) {
+    throw new Error("Malformed workspace invoice monetary evidence");
+  }
   return {
     id: String(field(row, "id")),
     workspaceId: String(field(row, "workspaceId", "workspace_id")),
     visitId: maybeString(field(row, "visitId", "visit_id")),
-    status: String(field(row, "status")) as InvoiceDTO["status"],
-    currency: String(field(row, "currency")) as InvoiceDTO["currency"],
-    totalMinor: Number(field(row, "totalMinor", "total_minor") ?? 0),
-    allocatedMinor: Number(field(row, "allocatedMinor", "allocated_minor") ?? 0),
-    refundedMinor: Number(field(row, "refundedMinor", "refunded_minor") ?? 0),
-    balanceMinor: Number(field(row, "balanceMinor", "balance_minor") ?? 0),
+    status: status as InvoiceDTO["status"], currency: currency as InvoiceDTO["currency"],
+    totalMinor: totalMinor as number, allocatedMinor: allocatedMinor as number,
+    refundedMinor: refundedMinor as number, balanceMinor: balanceMinor as number,
   };
 }
 
