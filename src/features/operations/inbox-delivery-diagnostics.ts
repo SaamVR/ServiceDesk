@@ -36,6 +36,27 @@ const validReasons = new Set(["PROVIDER_FAILURE", "SUPPRESSED_BY_POLICY", "STALE
 const validCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 200;
 
+/** Never render server-inconsistent delivery health as operational success. */
+function consistentDeliveryHealth(
+  state: DeliveryTriageState,
+  health: DeliveryTriageHealth,
+  ageMinutes: number,
+  reason: DeliveryTriageReason | undefined,
+): boolean {
+  if (state === "DELIVERED" || state === "READ") return health === "OK" && reason === undefined;
+  if (state === "FAILED") return health === "NEEDS_REVIEW" && reason === "PROVIDER_FAILURE";
+  if (state === "SUPPRESSED") return health === "NEEDS_REVIEW" && reason === "SUPPRESSED_BY_POLICY";
+  if (state === "UNKNOWN") return health === "NEEDS_REVIEW" &&
+    ["STATUS_MISSING", "OUTBOX_RECEIPT_MISSING", "OUTBOX_REFERENCE_MISSING"].includes(reason ?? "");
+  // A durable queued/running/provider-accepted state is NOT customer delivery.
+  if (state === "QUEUED" || state === "RUNNING" || state === "PROVIDER_ACCEPTED") {
+    return ageMinutes >= 30
+      ? health === "NEEDS_REVIEW" && reason === "STALE_PENDING"
+      : health === "PENDING" && reason === undefined;
+  }
+  return false;
+}
+
 export function parseInboxDeliveryDiagnostics(value: unknown): InboxDeliveryDiagnosticsSnapshot | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
@@ -59,7 +80,10 @@ export function parseInboxDeliveryDiagnostics(value: unknown): InboxDeliveryDiag
         typeof item.deliveryState !== "string" || !validState.has(item.deliveryState) ||
         typeof item.health !== "string" || !validHealth.has(item.health) ||
         !(typeof item.ageMinutes === "number" && Number.isSafeInteger(item.ageMinutes) && item.ageMinutes >= 0) ||
-        (item.reason !== undefined && (typeof item.reason !== "string" || !validReasons.has(item.reason)))) {
+        (item.reason !== undefined && (typeof item.reason !== "string" || !validReasons.has(item.reason))) ||
+        !consistentDeliveryHealth(item.deliveryState as DeliveryTriageState,
+          item.health as DeliveryTriageHealth, item.ageMinutes as number,
+          item.reason as DeliveryTriageReason | undefined)) {
       return undefined;
     }
     if (item.health === "OK") ok++;
