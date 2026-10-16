@@ -15,8 +15,9 @@ function quoteValidityUnverified(quote: QuotePipelineRecord, snapshotAt: string)
   const now = Date.parse(snapshotAt);
   const expires = typeof quote.validUntil === "string"
     ? Date.parse(quote.validUntil) : NaN;
-  // Unknown snapshot clock is not proof of an unexpired customer offer.
-  return !Number.isFinite(now) || !Number.isFinite(expires) || expires <= now;
+  // An invalid snapshot clock cannot establish expiry or freshness.
+  // The aggregate queue separately fails closed on clock uncertainty.
+  return Number.isFinite(now) && (!Number.isFinite(expires) || expires <= now);
 }
 
 export function needsSentQuoteExpiryReview(quote: QuotePipelineRecord, snapshotAt: string): boolean {
@@ -49,19 +50,21 @@ export function buildQuotePipeline<T extends QuotePipelineRecord>(
       || left.id.localeCompare(right.id);
   });
   const currentQuotes = [...currentQuoteByRequest.values()];
+  const clockValid = !snapshotAt || Number.isFinite(Date.parse(snapshotAt));
   return {
     currentQuoteByRequest,
     orderedQuotes,
     awaitingCustomer: currentQuotes.filter(quote =>
       quote.status === "SENT" &&
-      (!snapshotAt || !needsSentQuoteExpiryReview(quote, snapshotAt))).length,
-    sentNeedsExpiryReview: snapshotAt ? currentQuotes.filter(quote =>
+      (!snapshotAt || (clockValid && !needsSentQuoteExpiryReview(quote, snapshotAt)))).length,
+    sentNeedsExpiryReview: snapshotAt && clockValid ? currentQuotes.filter(quote =>
       needsSentQuoteExpiryReview(quote, snapshotAt)).length : 0,
     readyToSend: currentQuotes.filter(quote =>
       quote.status === "APPROVED" &&
-      (!snapshotAt || !needsApprovedQuoteExpiryReview(quote, snapshotAt))).length,
-    approvedNeedsExpiryReview: snapshotAt ? currentQuotes.filter(quote =>
+      (!snapshotAt || (clockValid && !needsApprovedQuoteExpiryReview(quote, snapshotAt)))).length,
+    approvedNeedsExpiryReview: snapshotAt && clockValid ? currentQuotes.filter(quote =>
       needsApprovedQuoteExpiryReview(quote, snapshotAt)).length : 0,
+    quoteClockUnverified: Boolean(snapshotAt && !clockValid),
   };
 }
 
