@@ -49,6 +49,7 @@ function fakeClient(calls: string[]) {
         id: "conv-1", workspaceId: payload.workspaceId, channel: "WHATSAPP",
       }, message: {
         id: "msg-1", workspaceId: payload.workspaceId, conversationId: "conv-1",
+        direction: "INBOUND", senderKind: "CUSTOMER",
         providerMessageId: payload.providerMessageId,
       } }, error: null };
     },
