@@ -305,7 +305,7 @@ export function createPostgresConversationFacadeMethods(
         const keys = ["invoices","conversations","messages","recurrenceRules",
           "visitEvidence","visitChecklistItems","attentionItems","qualityCases"] as const;
         if (keys.some(key =>
-          row[key] != null && (!Array.isArray(row[key]) ||
+          row[key] !== undefined && (!Array.isArray(row[key]) ||
           (row[key] as unknown[]).some(item => !asRow(item))))) {
           throw new Error("Malformed workspace snapshot collection");
         }
