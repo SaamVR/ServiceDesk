@@ -198,6 +198,9 @@ export function StaffOverviewDashboard({
   const quoteQueue = buildQuotePipeline(snapshot.quotes, snapshot.loadedAt);
   const waitingQuoteCount = quoteQueue.awaitingCustomer;
   const sentNeedsExpiryReview = quoteQueue.sentNeedsExpiryReview;
+  // An expired/invalid APPROVED quote also requires staff intervention, not
+  // a send action. Today's worklist must agree with the Quotes workspace.
+  const approvedNeedsExpiryReview = quoteQueue.approvedNeedsExpiryReview;
   // The reply queue is derived from stored external-message direction, not a fake unread badge.
   // Older server test fixtures can omit these optional records without implying zero replies.
   const replyTriage = snapshot.conversations && snapshot.messages
@@ -317,9 +320,11 @@ export function StaffOverviewDashboard({
         <KpiCard
           label="Waiting pipeline"
           href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
-          value={waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview}
+          value={waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview}
           detail={`${waitingRequests.length} requests · ${waitingQuoteCount} awaiting customer` +
-            (sentNeedsExpiryReview ? ` · ${sentNeedsExpiryReview} need quote validity review` : "")}
+            (sentNeedsExpiryReview + approvedNeedsExpiryReview
+              ? ` · ${sentNeedsExpiryReview + approvedNeedsExpiryReview} need quote validity review`
+              : "")}
         />
         <KpiCard
           label="Outstanding"
