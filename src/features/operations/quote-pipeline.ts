@@ -50,21 +50,21 @@ export function buildQuotePipeline<T extends QuotePipelineRecord>(
       || left.id.localeCompare(right.id);
   });
   const currentQuotes = [...currentQuoteByRequest.values()];
-  const clockValid = !snapshotAt || Number.isFinite(Date.parse(snapshotAt));
+  const clockValid = snapshotAt === undefined || (snapshotAt.trim().length > 0 && Number.isFinite(Date.parse(snapshotAt)));
   return {
     currentQuoteByRequest,
     orderedQuotes,
     awaitingCustomer: currentQuotes.filter(quote =>
       quote.status === "SENT" &&
-      (!snapshotAt || (clockValid && !needsSentQuoteExpiryReview(quote, snapshotAt)))).length,
-    sentNeedsExpiryReview: snapshotAt && clockValid ? currentQuotes.filter(quote =>
+      (snapshotAt === undefined || (clockValid && !needsSentQuoteExpiryReview(quote, snapshotAt)))).length,
+    sentNeedsExpiryReview: snapshotAt !== undefined && clockValid ? currentQuotes.filter(quote =>
       needsSentQuoteExpiryReview(quote, snapshotAt)).length : 0,
     readyToSend: currentQuotes.filter(quote =>
       quote.status === "APPROVED" &&
-      (!snapshotAt || (clockValid && !needsApprovedQuoteExpiryReview(quote, snapshotAt)))).length,
-    approvedNeedsExpiryReview: snapshotAt && clockValid ? currentQuotes.filter(quote =>
+      (snapshotAt === undefined || (clockValid && !needsApprovedQuoteExpiryReview(quote, snapshotAt)))).length,
+    approvedNeedsExpiryReview: snapshotAt !== undefined && clockValid ? currentQuotes.filter(quote =>
       needsApprovedQuoteExpiryReview(quote, snapshotAt)).length : 0,
-    quoteClockUnverified: Boolean(snapshotAt && !clockValid),
+    quoteClockUnverified: snapshotAt !== undefined && !clockValid,
   };
 }
 
