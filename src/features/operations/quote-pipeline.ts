@@ -11,16 +11,20 @@ export interface QuotePipelineRecord {
 /** A SENT database status does not establish that the customer can still
  * accept the quote. Invalid or elapsed deadlines require staff review, not
  * a fabricated response or an automatic status mutation. */
-export function needsSentQuoteExpiryReview(
-  quote: QuotePipelineRecord,
-  snapshotAt: string,
-): boolean {
-  if (quote.status !== "SENT") return false;
+function quoteValidityUnverified(quote: QuotePipelineRecord, snapshotAt: string): boolean {
   const now = Date.parse(snapshotAt);
   const expires = typeof quote.validUntil === "string"
     ? Date.parse(quote.validUntil) : NaN;
-  return Number.isFinite(now) &&
-    (!Number.isFinite(expires) || expires <= now);
+  // Unknown snapshot clock is not proof of an unexpired customer offer.
+  return !Number.isFinite(now) || !Number.isFinite(expires) || expires <= now;
+}
+
+export function needsSentQuoteExpiryReview(quote: QuotePipelineRecord, snapshotAt: string): boolean {
+  return quote.status === "SENT" && quoteValidityUnverified(quote, snapshotAt);
+}
+
+export function needsApprovedQuoteExpiryReview(quote: QuotePipelineRecord, snapshotAt: string): boolean {
+  return quote.status === "APPROVED" && quoteValidityUnverified(quote, snapshotAt);
 }
 
 /**
@@ -53,7 +57,11 @@ export function buildQuotePipeline<T extends QuotePipelineRecord>(
       (!snapshotAt || !needsSentQuoteExpiryReview(quote, snapshotAt))).length,
     sentNeedsExpiryReview: snapshotAt ? currentQuotes.filter(quote =>
       needsSentQuoteExpiryReview(quote, snapshotAt)).length : 0,
-    readyToSend: currentQuotes.filter((quote) => quote.status === "APPROVED").length,
+    readyToSend: currentQuotes.filter(quote =>
+      quote.status === "APPROVED" &&
+      (!snapshotAt || !needsApprovedQuoteExpiryReview(quote, snapshotAt))).length,
+    approvedNeedsExpiryReview: snapshotAt ? currentQuotes.filter(quote =>
+      needsApprovedQuoteExpiryReview(quote, snapshotAt)).length : 0,
   };
 }
 
