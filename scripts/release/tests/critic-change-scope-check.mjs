@@ -19,6 +19,23 @@ test("flags distinct high-risk code paths without claiming acceptance", () => {
   ]) assert.ok(summary.includes(required), required);
   assert.ok(!summary.includes("UAT PASS"));
 });
+test("requires security proof for authenticated API and webhook adapters", () => {
+  const report = classifyCriticScope([
+    "src/server/api-handlers/reviewed-inbox-reply-http.ts",
+    "src/app/api/internal/inbox/reply/route.ts",
+    "src/features/operations/StaffAiReviewComposer.tsx",
+  ]);
+  assert.deepEqual(report.categories.map(x => x.name), [
+    "Authenticated HTTP / webhook trust boundaries",
+    "Authenticated UX / business journeys",
+  ]);
+  const rendered = renderCriticScopeReport(report);
+  assert.match(rendered, /origin and session checks/);
+  assert.match(rendered, /negative forged HTTP receipts/);
+  assert.match(rendered, /REVIEW REQUIRED/);
+  assert.doesNotMatch(rendered, /UAT PASS/);
+});
+
 test("recognizes backend persistence independent of visual frontend review", () => {
   const report = classifyCriticScope(["src/server/core/quote-repository.ts"]);
   assert.deepEqual(report.categories.map(x => x.name), [

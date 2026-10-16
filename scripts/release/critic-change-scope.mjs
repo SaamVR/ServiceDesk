@@ -10,6 +10,8 @@ const RULES = [
     ask: "Run isolated PG17 migrations, negative two-tenant RLS tests, and saved readback before any approved staging application." },
   { name: "Backend financial / persisted commands", match: /^src\/server\/core\//,
     ask: "Show atomic persistence and retry/idempotency outcomes, monetary ledger checks, and tenant/branch authorization." },
+  { name: "Authenticated HTTP / webhook trust boundaries", match: /^src\/(?:server\/api-handlers\/|app\/api\/)/,
+    ask: "Require origin and session checks, exact tenant/resource scope, input and output validation, bounded requests, no PII leakage, and negative forged HTTP receipts." },
   { name: "AI model / agents", match: /^src\/server\/ai\//,
     ask: "Demonstrate actual configured model output only with authorization, safe tool boundaries, grounding, negative hallucination cases, and cost controls." },
   { name: "External providers / automation", match: /^src\/server\/(?:integrations|jobs)\//,
