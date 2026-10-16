@@ -186,6 +186,13 @@ export async function approveReviewedInboxReply(
           idempotencyKey: input.idempotencyKey },
       );
     if (!queued.ok) {
+      // The lower-level RPC facade now rejects wrong-workspace, unrelated
+      // or altered queued message receipts before callers can see them.
+      // Preserve the explicit staff command's established mismatch contract.
+      if (queued.code === "REPLY_RPC_SCOPE_MISMATCH") {
+        return failure("REVIEWED_REPLY_RECEIPT_MISMATCH",
+          "The queued reply did not match the reviewed message.");
+      }
       // Never reflect raw database errors or recipient/customer details.
       if (queued.code === "VERSION_CONFLICT") {
         return failure("REVIEWED_REPLY_VERSION_CONFLICT", "Conversation changed; refresh and review again.");
