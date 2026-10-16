@@ -25,6 +25,7 @@ function deps(persisted=()=>snapshot,receive:(p:string)=>void=()=>{}) {
   return {
     resolveActor:async()=>authorized(),
     loadSnapshot:async()=>({ok:true,value:persisted()} as never),
+    now:()=>Date.parse("2026-10-16T12:14:00.000Z"),
     readConfig:()=>({ok:true,value:{
       apiBaseUrl:"https://api.openai.com/v1",apiKey:"mock-only",
       model:"test-model",now:()=>new Date().toISOString(),
@@ -103,6 +104,29 @@ describe("real authorized AI daily owner operations brief",()=>{
         requestedToolCalls:[],citations:[]}}),
     } as never);
     expect(result).toMatchObject({ok:false,code:"OWNER_BRIEF_OUTPUT_UNSAFE"});
+  });
+  it("requires recent source evidence before and after model latency, even for identical counts",async()=>{
+    const base=deps();
+    const stale=await generateOwnerOperationsBrief("ctg",{
+      ...base,now:()=>Date.parse("2026-10-16T13:00:01Z"),
+    } as never);
+    expect(stale).toMatchObject({ok:false,code:"OWNER_BRIEF_STALE_SNAPSHOT"});
+    const future=await generateOwnerOperationsBrief("ctg",{
+      ...base,now:()=>Date.parse("2026-10-16T11:54:00Z"),
+    } as never);
+    expect(future).toMatchObject({ok:false,code:"OWNER_BRIEF_STALE_SNAPSHOT"});
+    let clockCalls=0;
+    const changedDuringModel=await generateOwnerOperationsBrief("ctg",{
+      ...base,
+      now:()=>++clockCalls===1
+        ? Date.parse("2026-10-16T12:14:00Z")
+        : Date.parse("2026-10-16T12:40:01Z"),
+    } as never);
+    expect(changedDuringModel)
+      .toMatchObject({ok:false,code:"OWNER_BRIEF_STALE_SNAPSHOT"});
+    expect(await generateOwnerOperationsBrief("ctg",{
+      ...base,now:()=>Number.NaN,
+    } as never)).toMatchObject({ok:false,code:"OWNER_BRIEF_STALE_SNAPSHOT"});
   });
   it("requires deliberate owner UI and never sends or charges",()=>{
     const view=readFileSync(join(process.cwd(),"src/features/operations/StaffOverviewDashboard.tsx"),"utf8");
