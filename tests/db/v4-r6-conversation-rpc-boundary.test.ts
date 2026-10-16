@@ -37,7 +37,8 @@ describe("R6 conversation commands fail closed on untrusted RPC output",()=>{
     {direction:"INBOUND"},{senderKind:"AI"},{body:"different text"},{id:undefined}
   ]) expect(await facade({ok:true,message:{...message,...patch},outboxEventId:"event1"})
     .enqueueConversationReply(ctx,cid,replyInput,meta))
-      .toMatchObject({ok:false,code:"REPLY_RPC_SCOPE_MISMATCH"});
+      .toMatchObject({ok:false,code:patch.id===undefined && Object.hasOwn(patch,"id")
+        ? "REPLY_RPC_ERROR_MALFORMED" : "REPLY_RPC_SCOPE_MISMATCH"});
  });
  it("requires literal persisted handover state instead of a successful RPC envelope",async()=>{
   for(const handoverActive of [undefined,null,"false","true",0,1,false]){
@@ -110,6 +111,28 @@ describe("R6 conversation commands fail closed on untrusted RPC output",()=>{
   const valid=await facade({ok:true,conversations:[handover]})
     .readWorkspaceSnapshot(ctx,{} as never);
   expect(valid).toMatchObject({ok:true,value:{conversations:[{handoverActive:true,version:2}]}});
+ });
+ it("rejects malformed persisted message records instead of inventing epoch or staff sender",async()=>{
+  for(const patch of [
+    {id:undefined},{workspaceId:undefined},{conversationId:undefined},
+    {createdAt:undefined},{createdAt:"not-a-date"},
+    {createdAt:"1970-01-01"}, {createdAt:"2026-10-16T08:00:00"},
+    {direction:undefined},{direction:"UNKNOWN"},
+    {senderKind:undefined},{senderKind:"GUEST"},
+    {deliveryState:"MAGIC"},
+  ]) {
+    const result=await facade({ok:true,messages:[{...message,...patch}]})
+      .readWorkspaceSnapshot(ctx,{} as never);
+    expect(result,JSON.stringify(patch)).toMatchObject({
+      ok:false,code:"SNAPSHOT_RPC_ERROR_MALFORMED",
+    });
+  }
+  const valid=await facade({ok:true,messages:[message]})
+    .readWorkspaceSnapshot(ctx,{} as never);
+  expect(valid).toMatchObject({ok:true,value:{messages:[{
+    id:message.id,workspaceId:ctx.workspaceId,createdAt:message.createdAt,
+    direction:"OUTBOUND",senderKind:"STAFF",
+  }]}});
  });
  it("sanitizes error codes and raw SQL exceptions across all conversation commands",async()=>{
   const token="Bearer live-secret customer@example.com";
