@@ -11,7 +11,7 @@ describe("staff AI network request deadline and cancellation", () => {
     expect(STAFF_AI_REQUEST_TIMEOUT_MS).toBe(20_000);
     const ui = readFileSync(join(process.cwd(),
       "src/features/operations/StaffAiReviewComposer.tsx"), "utf8");
-    expect(ui.match(/boundedStaffRequestSignal\\(pending\\)/g)).toHaveLength(2);
+    expect(ui.split("boundedStaffRequestSignal(pending)").length - 1).toBe(2);
     expect(ui.match(/signal: requestSignal/g)).toHaveLength(2);
     expect(ui).toContain("idempotencyKey.current ??= crypto.randomUUID()");
     expect(ui).toContain("Check the saved conversation before trying again");
