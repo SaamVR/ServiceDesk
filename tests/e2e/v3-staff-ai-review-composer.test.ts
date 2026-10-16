@@ -77,6 +77,22 @@ describe("V3 staff-only reviewed AI reply path", () => {
     expect(parseReviewedReplyReceipt({...receipt, deliveryState:"PAYMENT_SUCCESS"}, "conv-7", "msg-9")).toBeUndefined();
   });
 
+  it("refuses impossible newly-queued reply receipts while preserving authorized replay truth", () => {
+    for (const deliveryState of [
+      "RUNNING", "PROVIDER_ACCEPTED", "DELIVERED", "READ", "FAILED", "SUPPRESSED",
+    ]) {
+      expect(parseReviewedReplyReceipt({ ...receipt, deliveryState }, "conv-7", "msg-9"))
+        .toBeUndefined();
+    }
+    // A prior idempotent reply may already have reached the provider and
+    // truthfully report the latest persisted status on safe replay.
+    for (const deliveryState of ["QUEUED", "DELIVERED", "FAILED"] as const) {
+      expect(parseReviewedReplyReceipt({
+        ...receipt, state: "EXISTING_REPLY", deliveryState,
+      }, "conv-7", "msg-9")?.deliveryState).toBe(deliveryState);
+    }
+  });
+
   it("requires human review, exact source and version, and durable idempotency before approval", () => {
     const ui = readFileSync(join(process.cwd(),"src/features/operations/StaffAiReviewComposer.tsx"),"utf8");
     const route = readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
