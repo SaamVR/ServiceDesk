@@ -208,6 +208,28 @@ describe("real outbound delivery triage", () => {
     });
   });
 
+  it("fails closed on send timestamps far ahead of verified reporting time",async()=>{
+    const current="2026-10-11T06:00:00Z";
+    for(const future of [
+      "2026-10-11T06:05:01Z",
+      "2026-10-11T06:15:00Z",
+      "2036-10-11T05:59:00Z",
+    ]) {
+      const h=fixture({rows:[{...outbound[0],created_at:future,
+        delivery_state:"PROVIDER_ACCEPTED"}]});
+      expect(await readOperationalDeliveryTriage("service-desk",h.deps))
+        .toMatchObject({ok:false,code:"DELIVERY_TRIAGE_MESSAGE_SCOPE_INVALID"});
+      // Do not continue querying customer conversations or outbox receipts.
+      expect(h.seen).toEqual(["messages"]);
+    }
+    const tolerated=fixture({rows:[{...outbound[0],
+      created_at:"2026-10-11T06:04:59Z"}]});
+    const result=await readOperationalDeliveryTriage("service-desk",tolerated.deps);
+    expect(result).toMatchObject({ok:true,value:{
+      items:[{ageMinutes:0,health:"PENDING"}],
+    }});
+    expect(current).toBe("2026-10-11T06:00:00Z");
+  });
   it("reports age, review, pending and completed states without customer details", async () => {
     const h = fixture();
     const result = await readOperationalDeliveryTriage("service-desk", h.deps);
