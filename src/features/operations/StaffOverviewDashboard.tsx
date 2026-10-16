@@ -402,9 +402,9 @@ export function StaffOverviewDashboard({
               <small>Needs intake or staff review</small>
             </Link>
             <Link href={buildStaffModuleHref(workspace, "quotes")} className={styles.pipelineItem}>
-              <span>Quotes with customer</span>
-              <strong>{waitingQuoteCount}</strong>
-              <small>Waiting for customer reply</small>
+              <span>Quotes needing follow-up</span>
+              <strong>{waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview}</strong>
+              <small>{waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review</small>
             </Link>
             <Link href={buildStaffModuleHref(workspace, "invoices")} className={styles.pipelineItem}>
               <span>Customer invoices to collect</span>
