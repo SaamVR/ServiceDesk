@@ -10,10 +10,12 @@ const RULES = [
     ask: "Run isolated PG17 migrations, negative two-tenant RLS tests, and saved readback before any approved staging application." },
   { name: "Backend financial / persisted commands", match: /^src\/server\/core\//,
     ask: "Show atomic persistence and retry/idempotency outcomes, monetary ledger checks, and tenant/branch authorization." },
+  { name: "API / HTTP authorization and receipt truth", match: /^src\/server\/api-handlers\//,
+    ask: "Require authenticated role/tenant checks, exact HTTP status and durable source-bound receipts; challenge replay, origin and body validation with real HTTP negatives." },
   { name: "AI model / agents", match: /^src\/server\/ai\//,
     ask: "Demonstrate actual configured model output only with authorization, safe tool boundaries, grounding, negative hallucination cases, and cost controls." },
-  { name: "External providers / automation", match: /^src\/server\/(?:integrations|jobs)\//,
-    ask: "Check trigger-to-durable-outcome, dedupe, provider callback identity, retries, and authorized sandbox delivery receipts." },
+  { name: "External providers / automation", match: /^src\/server\/(?:integrations|jobs|workflows|providers)\//,
+    ask: "Check trigger-to-durable-outcome, dedupe, callback/source event identity, authorization, lease/retry/recovery, and authorized provider sandbox receipts." },
   { name: "Authenticated UX / business journeys", match: /^src\/(?:app|features|components)\//,
     ask: "Verify signed-in role-scoped desktop/mobile actions, expected saved business state, and real user usability." },
   { name: "Release / test infrastructure", match: /^(?:\.github\/workflows\/|scripts\/release\/)/,
@@ -21,7 +23,9 @@ const RULES = [
 ];
 export function classifyCriticScope(paths) {
   if (!Array.isArray(paths) || paths.some(path => typeof path !== "string" ||
-      !path.trim() || path.includes("\0") || path.includes("\n")))
+      !path.trim() || path.includes("\0") || path.includes("\n") ||
+      path.includes("\r") || path.includes("\\") || path.startsWith("/") ||
+      path.split("/").some(part => part === ".." || part === ".")))
     throw new Error("Malformed list of changed file paths");
   const unique = [...new Set(paths)];
   return {
