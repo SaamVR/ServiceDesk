@@ -42,7 +42,7 @@ describe("Studio OS version-safe quoting", () => {
     const quotesView = route.slice(route.indexOf("function QuotesView("), route.indexOf("function ScheduleView("));
     const overview = readFileSync(join(process.cwd(), "src/features/operations/StaffOverviewDashboard.tsx"), "utf8");
     const badges = readFileSync(join(process.cwd(), "src/features/operations/operational-journey-counts.ts"), "utf8");
-    expect(quotesView).toContain("buildQuotePipeline(data.quotes)");
+    expect(quotesView).toContain("buildQuotePipeline(data.quotes, data.loadedAt)");
     expect(quotesView).toContain("isCurrentApprovedQuote(selectedQuote, currentQuoteByRequest)");
     expect(quotesView).toContain("Historical version");
     expect(quotesView).toContain("This is not the current quote version");
