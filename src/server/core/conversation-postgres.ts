@@ -37,7 +37,7 @@ function asResult<T>(
   // SQL diagnostics, customer identifiers or secrets: never echo them.
   if (error) return { ok: false, code: safeCode(error.code),
     message: "Conversation database operation could not be completed." };
-  if (!data || typeof data !== "object" || Array.isArray(data) || data.ok === false) {
+  if (!data || typeof data !== "object" || Array.isArray(data) || data.ok !== true) {
     return { ok: false, code: safeCode(data?.code),
       message: "Conversation command was rejected by the database RPC." };
   }

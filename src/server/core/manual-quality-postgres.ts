@@ -121,7 +121,9 @@ function fromRpc<T>(
       ? value : fallbackCode;
   if (error) return fail(safeCode(error.code), "Database command could not be completed.");
   if (!data) return fail(`${fallbackCode}_EMPTY`, "RPC returned no payload.");
-  if (data.ok === false) return fail(safeCode(data.code), "Database rejected the command.");
+  // Only a literal SQL ok:true authorizes a business success. Missing,
+  // null, string or numeric "truthy" receipts are not committed evidence.
+  if (data.ok !== true) return fail(safeCode(data.code), "Database rejected the command.");
   try {
     return { ok: true, value: mapper(data[key]) };
   } catch {
