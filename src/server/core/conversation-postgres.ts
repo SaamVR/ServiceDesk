@@ -69,15 +69,28 @@ function rows(value: unknown): RpcRow[] {
 
 function conversationFromRpc(row: RpcRow): ConversationDTO {
   const src = asRow(row.conversation) ?? row;
+  const id = field(src, "id") ?? field(src, "conversationId", "conversation_id");
+  const workspaceId = field(src, "workspaceId", "workspace_id");
+  const channel = field(src, "channel");
+  const handoverActive = field(src, "handoverActive", "handover_active");
+  const version = field(src, "version") ?? field(src, "conversationVersion", "conversation_version");
+  // A missing saved field is not a false handover or version zero. In
+  // particular Boolean("false") is true: coercing persisted evidence can
+  // silently misroute a customer conversation to a staff member.
+  if (typeof id !== "string" || !id ||
+      typeof workspaceId !== "string" || !workspaceId ||
+      !["WEB", "WHATSAPP", "EMAIL"].includes(String(channel)) ||
+      typeof handoverActive !== "boolean" ||
+      typeof version !== "number" || !Number.isSafeInteger(version) || version < 0) {
+    throw new Error("Malformed persisted conversation identity, handover or version");
+  }
   return {
-    id: String(field(src, "id") ?? field(src, "conversationId", "conversation_id")),
-    workspaceId: String(field(src, "workspaceId", "workspace_id")),
+    id, workspaceId,
     requestId: maybeString(field(src, "requestId", "request_id")),
     customerId: maybeString(field(src, "customerId", "customer_id")),
-    channel: String(field(src, "channel") ?? "WHATSAPP") as ConversationDTO["channel"],
+    channel: channel as ConversationDTO["channel"],
     assignedUserId: maybeString(field(src, "assignedUserId", "assigned_user_id")),
-    handoverActive: Boolean(field(src, "handoverActive", "handover_active")),
-    version: Number(field(src, "version") ?? field(src, "conversationVersion", "conversation_version") ?? 0),
+    handoverActive, version,
     lastMessageAt: maybeString(field(src, "lastMessageAt", "last_message_at")),
   };
 }
