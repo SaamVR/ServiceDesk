@@ -1666,7 +1666,7 @@ function QuotesView({
                       href={buildStaffModuleHref(workspaceSlug, "requests")}>Review requests</a></>
                 ) : selectedQuote.status === "SENT" && selectedQuoteNeedsExpiryReview ? (
                   <>
-                    <p role="alert">This saved quote's validity deadline is expired or cannot be verified.
+                    <p role="alert">The saved quote validity deadline is expired or cannot be verified.
                       It must be recalculated before the customer can accept a new offer.
                       Its internal SENT status is not delivery evidence.</p>
                     <a className="app-button-secondary"
