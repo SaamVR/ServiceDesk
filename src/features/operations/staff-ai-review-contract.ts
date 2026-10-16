@@ -72,7 +72,10 @@ export function parseReviewedReplyReceipt(
       r.conversationId !== conversationId ||
       r.sourceMessageId !== sourceMessageId ||
       typeof r.deliveryState !== "string" ||
-      !outboundStates.has(r.deliveryState)) return undefined;
+      !outboundStates.has(r.deliveryState) ||
+      // The server labels only an actually QUEUED result as newly queued.
+      // Never render a contradictory success envelope as provider delivery.
+      (r.state === "QUEUED_FOR_PROVIDER" && r.deliveryState !== "QUEUED")) return undefined;
   return {
     state: r.state as ApprovedReplyReceipt["state"],
     conversationId,
