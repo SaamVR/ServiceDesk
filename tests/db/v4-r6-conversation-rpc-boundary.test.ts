@@ -14,8 +14,8 @@ function facade(data:unknown,error:unknown=null) {
  const rpc=vi.fn().mockResolvedValue({data,error});
  return createPostgresConversationFacadeMethods({rpc} as unknown as SupabaseRpcClient);
 }
-const handoverInput={handoverActive:true};
-const replyInput={body:message.body,channel:"EMAIL"};
+const handoverInput={active:true};
+const replyInput={body:message.body,channel:"EMAIL" as const};
 describe("R6 conversation commands fail closed on untrusted RPC output",()=>{
  it("returns valid tenant-scoped handover and queued reply",async()=>{
   expect(await facade({ok:true,...handover}).setConversationHandover(ctx,cid,handoverInput,meta))
