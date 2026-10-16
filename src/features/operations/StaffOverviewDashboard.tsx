@@ -15,6 +15,8 @@ import { createLocalDayKey } from "./staff-local-day";
 import { indexStaffById } from "./staff-snapshot-index";
 import { buildInboxTriage } from "./inbox-triage";
 import { AiOperationsStatus } from "./AiOperationsStatus";
+import { AiOwnerOperationsBrief } from "./AiOwnerOperationsBrief";
+import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import styles from "./StaffOverviewDashboard.module.css";
 
@@ -168,7 +170,7 @@ export function StaffOverviewDashboard({
     | "attentionItems"
     | "qualityCases"
     | "crews"
-  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions" | "serviceCatalog" | "branchScope" | "ownerPricingBookProof">>;
+  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions" | "serviceCatalog" | "branchScope" | "ownerPricingBookProof" | "actor">>;
   errorMessage?: string;
 }) {
   if (!snapshot) {
@@ -289,6 +291,11 @@ export function StaffOverviewDashboard({
         actions={snapshot.workflowActionExecutions}
         compact
       />
+      {snapshot.actor?.role === "OWNER" ? (
+        <AiOwnerOperationsBrief key={workspace}
+          workspaceSlug={workspace}
+          configured={readConfiguredAiRuntimeConfig().ok} />
+      ) : null}
 
       <nav className={styles.kpiGrid} aria-label="Open operational queues">
         <KpiCard
