@@ -7,7 +7,7 @@ import type {
   OperationalStaffSnapshot,
   OperationalVisit,
 } from "./operational-product-runtime";
-import { summarizeOutstandingInvoices } from "./product-truth";
+import { summarizeVerifiedOutstandingInvoices } from "./product-truth";
 import { buildQuotePipeline } from "./quote-pipeline";
 import { isOverdueQualityCase, prioritizeQualityFollowUp } from "./quality-queue";
 import { formatMinorMoney } from "./view-models";
@@ -15,6 +15,8 @@ import { createLocalDayKey } from "./staff-local-day";
 import { indexStaffById } from "./staff-snapshot-index";
 import { buildInboxTriage } from "./inbox-triage";
 import { AiOperationsStatus } from "./AiOperationsStatus";
+import { AiOwnerOperationsBrief } from "./AiOwnerOperationsBrief";
+import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import styles from "./StaffOverviewDashboard.module.css";
 
@@ -168,7 +170,7 @@ export function StaffOverviewDashboard({
     | "attentionItems"
     | "qualityCases"
     | "crews"
-  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions" | "serviceCatalog" | "branchScope" | "ownerPricingBookProof">>;
+  > & Partial<Pick<OperationalStaffSnapshot, "conversations" | "messages" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions" | "serviceCatalog" | "branchScope" | "ownerPricingBookProof" | "actor">>;
   errorMessage?: string;
 }) {
   if (!snapshot) {
@@ -193,7 +195,9 @@ export function StaffOverviewDashboard({
 
   const attention = snapshot.attentionItems.filter((item) => item.status !== "RESOLVED");
   const waitingRequests = snapshot.requests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status));
-  const waitingQuoteCount = buildQuotePipeline(snapshot.quotes).awaitingCustomer;
+  const quoteQueue = buildQuotePipeline(snapshot.quotes, snapshot.loadedAt);
+  const waitingQuoteCount = quoteQueue.awaitingCustomer;
+  const sentNeedsExpiryReview = quoteQueue.sentNeedsExpiryReview;
   // The reply queue is derived from stored external-message direction, not a fake unread badge.
   // Older server test fixtures can omit these optional records without implying zero replies.
   const replyTriage = snapshot.conversations && snapshot.messages
@@ -203,12 +207,12 @@ export function StaffOverviewDashboard({
   const qualityIssues = prioritizeQualityFollowUp(snapshot.qualityCases, snapshot.loadedAt)
     .filter((qualityCase) => qualityCase.state !== "RESOLVED");
   const overdueQualityCount = qualityIssues.filter((qualityCase) => isOverdueQualityCase(qualityCase, snapshot.loadedAt)).length;
-  const outstanding = summarizeOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId)));
+  const outstanding = summarizeVerifiedOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId)));
   const outstandingValue = outstanding.currency && outstanding.totalMinor !== undefined
     ? formatMinorMoney(outstanding.totalMinor, outstanding.currency)
     : outstanding.multipleCurrencies
       ? "Multiple currencies"
-      : "—";
+      : outstanding.needsLedgerReview ? "Review required" : "—";
 
   // A single timezone formatter per request avoids repeated Intl construction.
   // Invalid snapshot dates must never silently match invalid visit dates.
@@ -289,6 +293,11 @@ export function StaffOverviewDashboard({
         actions={snapshot.workflowActionExecutions}
         compact
       />
+      {snapshot.actor?.role === "OWNER" ? (
+        <AiOwnerOperationsBrief key={workspace}
+          workspaceSlug={workspace}
+          configured={readConfiguredAiRuntimeConfig().ok} />
+      ) : null}
 
       <nav className={styles.kpiGrid} aria-label="Open operational queues">
         <KpiCard
@@ -308,14 +317,18 @@ export function StaffOverviewDashboard({
         <KpiCard
           label="Waiting pipeline"
           href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
-          value={waitingRequests.length + waitingQuoteCount}
-          detail={`${waitingRequests.length} requests · ${waitingQuoteCount} quotes`}
+          value={waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview}
+          detail={`${waitingRequests.length} requests · ${waitingQuoteCount} awaiting customer` +
+            (sentNeedsExpiryReview ? ` · ${sentNeedsExpiryReview} need quote validity review` : "")}
         />
         <KpiCard
           label="Outstanding"
           href={buildStaffModuleHref(workspace, "invoices")}
           value={outstandingValue}
-          detail={outstanding.count ? `${outstanding.count} customer invoice${outstanding.count === 1 ? "" : "s"} to collect` : "No customer invoices to collect"}
+          detail={outstanding.count || outstanding.needsLedgerReview
+            ? `${outstanding.count} verified to collect` +
+              (outstanding.needsLedgerReview ? ` · ${outstanding.needsLedgerReview} need ledger review` : "")
+            : "No verified customer invoices to collect"}
         />
       </nav>
 

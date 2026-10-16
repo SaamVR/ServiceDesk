@@ -10,7 +10,7 @@ describe("human-review customer quote handoff does not fake provider delivery", 
     expect(route).toContain(`<QuoteCustomerHandoff key={selectedQuote.id + ":" + selectedQuote.version} workspaceSlug={workspaceSlug} quoteId={selectedQuote.id}`);
     expect(route).toContain("facts={selectedQuote.lineItems?.length ? {");
     expect(route).toContain("Delivery not proven here");
-    expect(route).toContain("marked sent (delivery unverified)");
+    expect(route).toContain("currently sent (delivery unverified)");
     expect(route).not.toContain("The quote is with the customer.");
   });
   it("copies a same-origin authenticated portal URL without dispatching any provider", () => {

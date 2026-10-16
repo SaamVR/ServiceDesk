@@ -36,7 +36,7 @@ describe("V4 Today: visual-only Clean Air operational workroom refinement", () =
 
   it("keeps real decision-first cards linked to actual operational records and their permissions", () => {
     expect(original).toContain("OperationalStaffSnapshot");
-    expect(original).toContain("summarizeOutstandingInvoices");
+    expect(original).toContain("summarizeVerifiedOutstandingInvoices");
     expect(original).toContain("buildQuotePipeline");
     expect(original).toContain("prioritizeQualityFollowUp");
     expect(original).toContain("attentionResourceHref");
