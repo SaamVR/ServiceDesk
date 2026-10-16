@@ -83,5 +83,31 @@ export async function handleReviewedInboxReplyHttpPost(
       queued.code === "REVIEWED_REPLY_CONSENT_REQUIRED" ? 422 : 503;
     return reply(status, { code: queued.code });
   }
-  return reply(200, queued.value);
+  // Do not forward arbitrary values from a privileged command as a successful
+  // staff receipt. Bind it to the exact approved conversation/source and
+  // project only public receipt fields; a malformed success fails closed.
+  const saved: unknown = queued.value;
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)) {
+    return reply(503, { code: "REVIEWED_REPLY_RECEIPT_UNVERIFIED" });
+  }
+  const receipt = saved as Record<string, unknown>;
+  if (!["QUEUED_FOR_PROVIDER", "EXISTING_REPLY"].includes(String(receipt.state)) ||
+      !validId(receipt.workspaceId) ||
+      receipt.conversationId !== input.conversationId ||
+      receipt.sourceMessageId !== input.sourceMessageId ||
+      !validId(receipt.outboundMessageId) || !validId(receipt.outboxEventId) ||
+      !["QUEUED", "RUNNING", "PROVIDER_ACCEPTED", "DELIVERED", "READ", "FAILED", "SUPPRESSED"]
+        .includes(String(receipt.deliveryState)) ||
+      (receipt.state === "QUEUED_FOR_PROVIDER" && receipt.deliveryState !== "QUEUED")) {
+    return reply(503, { code: "REVIEWED_REPLY_RECEIPT_UNVERIFIED" });
+  }
+  return reply(200, {
+    state: receipt.state,
+    workspaceId: receipt.workspaceId,
+    conversationId: receipt.conversationId,
+    sourceMessageId: receipt.sourceMessageId,
+    outboundMessageId: receipt.outboundMessageId,
+    outboxEventId: receipt.outboxEventId,
+    deliveryState: receipt.deliveryState,
+  });
 }
