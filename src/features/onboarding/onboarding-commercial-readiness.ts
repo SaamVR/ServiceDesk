@@ -10,6 +10,7 @@ export type CommercialSetupState = "VERIFIED" | "NEEDS_SERVICE" | "NEEDS_PRICE_B
 export interface CommercialSetupEvidence {
   state: CommercialSetupState;
   activeServices: number;
+  quoteableCleaningServices: number;
   eligibleUsdBranches: number;
   missingPriceBookBranches: number;
   detail: string;
@@ -26,7 +27,12 @@ export function summarizeOwnerCommercialSetup(input: {
   proof?: OwnerPricingBookProof;
 }): CommercialSetupEvidence {
   const activeServices = input.catalog?.filter(service => service.active).length ?? 0;
-  const common = { activeServices };
+  // Catalog services may include non-cleaning products. Only quote engine
+  // service codes can satisfy the cleaning quote onboarding prerequisite.
+  const quoteableCleaningServices = input.catalog?.filter(service =>
+    service.active && ["STANDARD", "DEEP", "MOVE_OUT"].includes(service.code)
+  ).length ?? 0;
+  const common = { activeServices, quoteableCleaningServices };
   if (!input.catalog) {
     return {
       ...common, state: "UNVERIFIED", eligibleUsdBranches: 0,
@@ -34,11 +40,11 @@ export function summarizeOwnerCommercialSetup(input: {
       detail: "The saved service catalog could not be verified. Reload Settings before taking a quote.",
     };
   }
-  if (activeServices === 0) {
+  if (quoteableCleaningServices === 0) {
     return {
       ...common, state: "NEEDS_SERVICE", eligibleUsdBranches: 0,
       missingPriceBookBranches: 0,
-      detail: "Create your actual cleaning services and their business-owned prices in Settings before quoting.",
+      detail: "Activate at least one saved Standard, Deep or Move-Out cleaning service and configure its business-owned price book before quoting.",
     };
   }
   if (!input.scope || input.proof?.state !== "VERIFIED") {
