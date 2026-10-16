@@ -25,6 +25,29 @@ test("recognizes backend persistence independent of visual frontend review", () 
     "Backend financial / persisted commands",
   ]);
 });
+test("reviews API receipt/auth and durable workflow changes even without frontend edits", () => {
+  const paths = [
+    "src/server/api-handlers/reviewed-inbox-reply-http.ts",
+    "src/server/workflows/owner-request-automation.ts",
+    "src/server/providers/whatsapp.ts",
+  ];
+  const report = classifyCriticScope(paths);
+  assert.equal(report.paths, 3);
+  assert.deepEqual(report.categories.map(x => x.name), [
+    "API / HTTP authorization and receipt truth",
+    "External providers / automation",
+  ]);
+  const summary=renderCriticScopeReport(report);
+  assert.match(summary, /durable source-bound receipts/);
+  assert.match(summary, /lease\/retry\/recovery/);
+  assert.doesNotMatch(summary, /UAT PASS/);
+});
+test("rejects adversarial changed-file names instead of skipping review", () => {
+  for(const malformed of [
+    "..\\unsafe", "/abs/path.ts", "src/server/../other.ts",
+    "src\\server\\core.ts", "src/server/./core/a.ts", "src/server/a\rfile.ts",
+  ]) assert.throws(() => classifyCriticScope([malformed]), /Malformed/);
+});
 test("does not classify documentation-only changes as business acceptance", () => {
   const report = classifyCriticScope(["docs/control-tower/critic/review.md"]);
   assert.equal(report.categories.length, 0);
