@@ -115,7 +115,7 @@ export async function OnboardingProductRoute({
   const activeMembers =
     ownerSettings?.members.filter((member) => member.active) ?? [];
   const businessReady = Boolean(workspace.name && workspace.timezone);
-  const servicesReady = enabledServices.length > 0;
+  const servicesReady = commercial.quoteableCleaningServices > 0;
   const teamReady = activeMembers.length > 0;
   // A recorded subscription is not necessarily usable: past-due and
   // cancelled records must never count as completed owner setup.
