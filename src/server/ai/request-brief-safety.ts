@@ -26,7 +26,11 @@ export function validateRequestBriefDraft(value: unknown): string | undefined {
   // to the model, so they are also untrusted model-invented contact data.
   if (/(?:^|[^\d])\+?\d{11,15}(?!\d)/.test(draft)) return undefined;
   if (/<\/?(?:script|iframe|form|a|img|style|button)\b/i.test(draft)) return undefined;
-  // Do not present a simulated state change as an already completed action.
-  if (/\b(?:we|i|our team)\s+(?:have\s+)?(?:sent|charged|booked|scheduled|confirmed|approved|paid|invoiced)\b/i.test(draft)) return undefined;
+  // No saved command receipt is supplied to the model. Reject both
+  // first-person and passive/third-person completion certificates; the old
+  // first-person-only filter allowed "the invoice was paid" or "the customer
+  // has accepted the quote" to appear as verified business state.
+  if (/\b(?:we|i|our team)\s+(?:have\s+)?(?:sent|charged|booked|scheduled|confirmed|approved|paid|invoiced)\b/i.test(draft) ||
+      /\b(?:the\s+)?(?:customer|client|guest|request|quote|invoice|payment|deposit|booking|appointment|visit|job|message|email|refund)\s+(?:has\s+been|have\s+been|was|were|is|are|has|have)\s+(?:sent|charged|booked|scheduled|confirmed|approved|paid|invoiced|delivered|received|processed|completed|settled|accepted)\b/i.test(draft)) return undefined;
   return draft;
 }
