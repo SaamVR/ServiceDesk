@@ -52,6 +52,7 @@ function fakeClient(calls: string[]) {
         id: "msg-1", workspaceId: payload.workspaceId, conversationId: "conv-1",
         direction: "INBOUND", senderKind: "CUSTOMER",
         providerMessageId: payload.providerMessageId,
+        createdAt: "2026-10-16T10:00:00.000Z",
       } }, error: null };
     },
   } as unknown as SupabaseRpcClient;

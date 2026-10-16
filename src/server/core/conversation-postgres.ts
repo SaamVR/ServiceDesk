@@ -97,17 +97,39 @@ function conversationFromRpc(row: RpcRow): ConversationDTO {
 
 function messageFromRpc(row: RpcRow): MessageDTO {
   const src = asRow(row.message) ?? row;
+  const id = field(src, "id") ?? field(src, "messageId", "message_id");
+  const workspaceId = field(src, "workspaceId", "workspace_id");
+  const conversationId = field(src, "conversationId", "conversation_id");
+  const direction = field(src, "direction");
+  const senderKind = field(src, "senderKind", "sender_kind");
+  const createdAt = field(src, "createdAt", "created_at");
+  const deliveryState = field(src, "deliveryState", "delivery_state");
+  // A malformed saved message is NOT an outbound staff message dated 1970.
+  // The installed inbound, reply and workspace-snapshot RPCs all project
+  // these literal persisted fields; reject omissions rather than fabricating
+  // a timestamp, direction, sender, or storage identity.
+  if (typeof id !== "string" || !id ||
+      typeof workspaceId !== "string" || !workspaceId ||
+      typeof conversationId !== "string" || !conversationId ||
+      !["INBOUND", "OUTBOUND", "INTERNAL"].includes(String(direction)) ||
+      !["CUSTOMER", "STAFF", "AI", "SYSTEM"].includes(String(senderKind)) ||
+      typeof createdAt !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(createdAt) ||
+      !Number.isFinite(Date.parse(createdAt)) ||
+      (deliveryState != null &&
+        !["QUEUED", "RUNNING", "PROVIDER_ACCEPTED", "DELIVERED", "READ", "FAILED", "SUPPRESSED"]
+          .includes(String(deliveryState)))) {
+    throw new Error("Malformed persisted message identity, actor, delivery state or timestamp");
+  }
   return {
-    id: String(field(src, "id") ?? field(src, "messageId", "message_id")),
-    workspaceId: String(field(src, "workspaceId", "workspace_id")),
-    conversationId: String(field(src, "conversationId", "conversation_id")),
-    direction: String(field(src, "direction") ?? "OUTBOUND") as MessageDTO["direction"],
-    senderKind: String(field(src, "senderKind", "sender_kind") ?? "STAFF") as MessageDTO["senderKind"],
+    id, workspaceId, conversationId,
+    direction: direction as MessageDTO["direction"],
+    senderKind: senderKind as MessageDTO["senderKind"],
     providerMessageId: maybeString(field(src, "providerMessageId", "provider_message_id")),
     body: maybeString(field(src, "body")),
     mediaReference: field(src, "mediaReference", "media_reference") as MessageDTO["mediaReference"],
-    deliveryState: field(src, "deliveryState", "delivery_state") as MessageDTO["deliveryState"],
-    createdAt: String(field(src, "createdAt", "created_at") ?? new Date(0).toISOString()),
+    deliveryState: deliveryState == null ? undefined : deliveryState as MessageDTO["deliveryState"],
+    createdAt,
   };
 }
 
