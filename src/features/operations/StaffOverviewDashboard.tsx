@@ -193,7 +193,9 @@ export function StaffOverviewDashboard({
 
   const attention = snapshot.attentionItems.filter((item) => item.status !== "RESOLVED");
   const waitingRequests = snapshot.requests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status));
-  const waitingQuoteCount = buildQuotePipeline(snapshot.quotes).awaitingCustomer;
+  const quoteQueue = buildQuotePipeline(snapshot.quotes, snapshot.loadedAt);
+  const waitingQuoteCount = quoteQueue.awaitingCustomer;
+  const sentNeedsExpiryReview = quoteQueue.sentNeedsExpiryReview;
   // The reply queue is derived from stored external-message direction, not a fake unread badge.
   // Older server test fixtures can omit these optional records without implying zero replies.
   const replyTriage = snapshot.conversations && snapshot.messages
@@ -308,8 +310,9 @@ export function StaffOverviewDashboard({
         <KpiCard
           label="Waiting pipeline"
           href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
-          value={waitingRequests.length + waitingQuoteCount}
-          detail={`${waitingRequests.length} requests · ${waitingQuoteCount} quotes`}
+          value={waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview}
+          detail={`${waitingRequests.length} requests · ${waitingQuoteCount} awaiting customer` +
+            (sentNeedsExpiryReview ? ` · ${sentNeedsExpiryReview} need quote validity review` : "")}
         />
         <KpiCard
           label="Outstanding"
