@@ -154,9 +154,17 @@ export async function readOperationalDeliveryTriage(
       return !permittedRequestIds ||
         (Boolean(conversation.requestId) && permittedRequestIds.has(conversation.requestId!));
     });
-    const outboxIds = [...new Set(authorized
+    const referencedOutboxIds = authorized
       .map(row => row.outbox_event_id)
-      .filter((id): id is string => validId(id)))];
+      .filter((id): id is string => validId(id));
+    // One provider acceptance event is not proof of dispatch for multiple
+    // distinct saved messages. Fail closed on ambiguous linkage rather than
+    // counting a single durable provider receipt as multiple sends.
+    const outboxIds = [...new Set(referencedOutboxIds)];
+    if (referencedOutboxIds.length !== outboxIds.length) {
+      return fail("DELIVERY_TRIAGE_OUTBOX_MESSAGE_AMBIGUOUS",
+        "Outbound messages have ambiguous provider evidence.");
+    }
     const evidenceById = new Map<string, DeliveryOutboxEvidence>();
     if (outboxIds.length > 0) {
       const evidence = await service.from("outbox_events")
