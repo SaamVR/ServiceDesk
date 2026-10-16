@@ -278,7 +278,7 @@ export function StaffOverviewDashboard({
             ? `${unassignedToday} visit${unassignedToday === 1 ? "" : "s"} still need a crew.`
             : todayVisits.length
               ? "Today's visits have crew coverage."
-              : "No visits are scheduled for today."}
+              : todayKey ? "No visits are scheduled for today." : "Today's schedule cannot be verified until the workspace timezone and snapshot clock are corrected."}
           {waitingReplies ? " " + waitingReplies + " customer conversation" + (waitingReplies === 1 ? "" : "s") + " awaiting reply." : ""}
         </p>
         <Link href={briefingLink}>
@@ -306,9 +306,10 @@ export function StaffOverviewDashboard({
         <KpiCard
           label="Today's jobs"
           href={buildStaffModuleHref(workspace, "schedule") + (unassignedToday ? "?queue=unassigned" : "")}
-          value={todayVisits.length}
-          detail={unassignedToday ? `${unassignedToday} need crew` : `${inProgressToday} underway`}
-          emphasis={unassignedToday ? "warning" : "default"}
+          value={todayKey ? todayVisits.length : "—"}
+          detail={!todayKey ? "Timezone or snapshot clock unavailable" :
+            unassignedToday ? `${unassignedToday} need crew` : `${inProgressToday} underway`}
+          emphasis={!todayKey || unassignedToday ? "warning" : "default"}
         />
         <KpiCard
           label="Needs attention"
@@ -369,7 +370,9 @@ export function StaffOverviewDashboard({
             <div>
               <p className={styles.cardEyebrow}>Today</p>
               <h2 id="today-heading">Today&apos;s field plan</h2>
-              <p>{todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` : "No active visits are scheduled for today."}</p>
+              <p>{!todayKey ? "Today's schedule cannot be verified until the timezone or snapshot clock is corrected." :
+                todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` :
+                "No active visits are scheduled for today."}</p>
             </div>
             <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "schedule")}>Open dispatch →</Link>
           </div>
@@ -380,7 +383,9 @@ export function StaffOverviewDashboard({
               ))}
             </div>
           ) : (
-            <EmptyBlock title="Schedule is clear" description="New confirmed visits will appear here automatically." />
+            todayKey
+              ? <EmptyBlock title="Schedule is clear" description="New confirmed visits will appear here automatically." />
+              : <EmptyBlock title="Schedule unavailable" description="Check the workspace timezone and snapshot time in Settings before relying on today's dispatch counts." />
           )}
         </section>
 
