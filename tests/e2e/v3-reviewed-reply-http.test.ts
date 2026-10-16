@@ -91,6 +91,39 @@ describe("explicit reviewed reply HTTP command", () => {
       expect(await response.json()).toEqual({ code });
     }
   });
+  it("rejects forged success receipts without exposing foreign source or unsupported provider state", async () => {
+    const altered: Array<unknown> = [
+      null, [],
+      { ...receipt, workspaceId: "" },
+      { ...receipt, conversationId: "different" },
+      { ...receipt, sourceMessageId: "anothercustomer" },
+      { ...receipt, outboundMessageId: "invalid/id" },
+      { ...receipt, outboxEventId: "" },
+      { ...receipt, state: "DELIVERED" },
+      { ...receipt, state: "QUEUED_FOR_PROVIDER", deliveryState: "DELIVERED" },
+      { ...receipt, deliveryState: "PAYMENT_APPLIED" },
+    ];
+    for (const value of altered) {
+      const response = await handleReviewedInboxReplyHttpPost(request(),
+        async () => ({ ok: true, value: value as ReviewedInboxReplyReceipt }));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ code: "REVIEWED_REPLY_RECEIPT_UNVERIFIED" });
+    }
+  });
+
+  it("projects only the public receipt fields and preserves legitimate replay states", async () => {
+    const forgedExtra = { ...receipt, debugSecret: "PRIVATE_TOKEN", recipient: "customer@example.test" };
+    const result = await handleReviewedInboxReplyHttpPost(request(),
+      async () => ({ ok: true, value: forgedExtra }));
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual(receipt);
+    const replay = { ...receipt, state: "EXISTING_REPLY" as const, deliveryState: "DELIVERED" as const };
+    const existing = await handleReviewedInboxReplyHttpPost(request(),
+      async () => ({ ok: true, value: replay }));
+    expect(existing.status).toBe(200);
+    expect(await existing.json()).toEqual(replay);
+  });
+
   it("does not reflect thrown SQL or provider data", async () => {
     const response = await handleReviewedInboxReplyHttpPost(request(), async () => {
       throw new Error("private SQL details");
