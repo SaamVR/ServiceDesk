@@ -47,7 +47,7 @@ describe("Studio OS version-safe quoting", () => {
     expect(quotesView).toContain("Historical version");
     expect(quotesView).toContain("This is not the current quote version");
     expect(quotesView).toContain("selectedQuoteCanSend ? (");
-    expect(overview).toContain("buildQuotePipeline(snapshot.quotes).awaitingCustomer");
+    expect(overview).toContain("buildQuotePipeline(snapshot.quotes, snapshot.loadedAt)");
     expect(badges).toContain("buildQuotePipeline(snapshot.quotes).readyToSend");
   });
 });
