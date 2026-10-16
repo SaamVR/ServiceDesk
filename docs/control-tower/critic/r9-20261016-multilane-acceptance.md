@@ -2,7 +2,7 @@
 Date: 2026-10-16. Lane D is a distinct **review role and GitHub workstream inside this conversation**, not a claim that a separate human or continuously running autonomous agent was present.
 
 ## Source/release truth
-At start: canonical V4 SHA `1cc6dc939fc640bce1f90d61a4ec1c996a2b6bc9`. Exact-head [full source RC](https://github.com/SaamVR/ServiceDesk/actions/runs/38926824892), [PG17 source recovery](https://github.com/SaamVR/ServiceDesk/actions/runs/38926825004), and [review merge-tree parity](https://github.com/SaamVR/ServiceDesk/actions/runs/38926829753) SUCCESS. Source-parity check is not deployment acceptance. Latest rendered review still observed LIVE at `5b876a7a806b5b63eca8e1b9396a3a7509240ec6`, and review PR [#509](https://github.com/SaamVR/ServiceDesk/pull/509) is intentionally draft/unpromoted.
+At start: canonical V4 SHA `1cc6dc939fc640bce1f90d61a4ec1c996a2b6bc9`. Exact-head [full source RC](https://github.com/SaamVR/ServiceDesk/actions/runs/38926824892), [PG17 source recovery](https://github.com/SaamVR/ServiceDesk/actions/runs/38926825004), and [review merge-tree parity](https://github.com/SaamVR/ServiceDesk/actions/runs/38926829753) SUCCESS. Source-parity check is not deployment acceptance. **Release update:** another lane merged [review PR #509](https://github.com/SaamVR/ServiceDesk/pull/509) as `3bea4f105fb6d7771d38653d1d12d634e80fd687`; Render reports this SHA **LIVE** at https://servicedesk-v3-frontend-review.onrender.com. Review [exact-head CI #38928375700](https://github.com/SaamVR/ServiceDesk/actions/runs/38928375700) and [live health/guest gate #38928375768](https://github.com/SaamVR/ServiceDesk/actions/runs/38928375768) passed. This is **R8**, older than the R9 source changes; authenticated merchant/product and real provider UAT remain unverified.
 
 ## Independent review of active lanes
 | Lane | Source | Defect challenged | What is validated | Real-world boundary |
@@ -23,6 +23,6 @@ At start: canonical V4 SHA `1cc6dc939fc640bce1f90d61a4ec1c996a2b6bc9`. Exact-hea
 - Connected stage still lacks owner-approved catalog/rate book/accepted quote/invoice/payment workflow evidence needed to complete a real commercial journey. Do not fabricate data.
 - Migration 0063 has no connected application approval and must remain default-off.
 - `servicedesk_default_branch(target_workspace uuid)` is an authenticated-callable SECURITY DEFINER function with no internal active-membership filter. This is an unproven cross-tenant metadata exposure hypothesis, not a witnessed exploit; mitigate only with a reviewed trigger-safe migration and negative/positive multi-owner PG17 proof. No SQL mutation was performed.
-- Manual isolated Render review promotion requires a separate release authorization; no deployed R9 feature is claimed.
+- R8 isolated Render review promotion is now LIVE on the verified R8 SHA from a concurrent lane. R9 fixes were not part of that deployed tree; do not claim R9 deployment or actual merchant/provider acceptance.
 
 **Overall: source engineering advancing; A and B source-integrated with exact-head PASS, C exact-head PASS but integration blocked, D reporting reviewed. OPERATIONS_VERIFIED, PROVIDER_VERIFIED, COMMERCIAL_READY all BLOCKED.**
