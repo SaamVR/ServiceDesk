@@ -151,7 +151,7 @@ function savedCount(row: RpcRow, key: string, snake?: string): number {
 }
 function savedTimestamp(row: RpcRow, key: string, snake?: string): string {
   const value = savedString(row, key, snake);
-  if (!/(?:Z|[+-]\\d{2}:\\d{2})$/i.test(value) || !Number.isFinite(Date.parse(value)))
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) || !Number.isFinite(Date.parse(value)))
     throw new Error("Malformed saved snapshot timestamp");
   return value;
 }
