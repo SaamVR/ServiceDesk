@@ -57,7 +57,7 @@ describe("real authorized AI daily owner operations brief",()=>{
   });
   it("rejects nonowners and stale saved business counts even after a paid model call",async()=>{
     const denied=await generateOwnerOperationsBrief("ctg",{
-      ...deps(),resolveActor:async()=>({ok:false,kind:"authentication",message:"denied"}),
+      resolveActor:async()=>({ok:false,kind:"authentication",message:"denied"}),
     } as never);
     expect(denied).toMatchObject({ok:false,code:"OWNER_BRIEF_OWNER_REQUIRED"});
     let reads=0;
