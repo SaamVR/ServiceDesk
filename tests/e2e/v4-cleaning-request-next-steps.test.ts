@@ -44,4 +44,14 @@ test("invalid monetary or unsupported quote state fails closed",()=>{
  {status:"APPROVED",totalMinor:2000,currency:"GBP"},
  ]) expect(cleaningRequestNextSteps({...base,currentQuote}).complete).toBe(3);
 });
+test("terminal quote records require replacement even with reconciled saved amounts",()=>{
+ for(const status of ["DECLINED","REJECTED","EXPIRED","SUPERSEDED"]) {
+  const view=cleaningRequestNextSteps({...base,currentQuote:{...verifiedQuote,status}});
+  expect(view.complete).toBe(3);
+  expect(view.quoteReady).toBe(true); // the request can be used to prepare a NEW quote
+  expect(view.steps.find(x=>x.id==="quote")?.state).toBe("ACTION_REQUIRED");
+  expect(view.steps.find(x=>x.id==="quote")?.detail).toContain("no longer actionable");
+ }
+ expect(cleaningRequestNextSteps({...base,currentQuote:{...verifiedQuote,status:"ACCEPTED"}}).complete).toBe(4);
+});
 });
