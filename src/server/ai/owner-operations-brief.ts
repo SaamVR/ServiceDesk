@@ -146,7 +146,7 @@ export function validateOwnerOperationsBriefGrounding(
   if (/\b(?:payments?|refunds?|bookings?|messages?|revenue|profit|capacity)\b/i.test(draft)) return undefined;
   // Only recommend inspection of saved queues, never customer outreach whose
   // authorization, recipients and review state were not part of the source.
-  if (/\b(?:contact|call|text|email|notify|message|reach\s+out\s+to|send\s+to)\s+(?:the\s+)?customers?\b/i.test(draft)) return undefined;
+  if (/\b(?:contact(?:ing)?|call(?:ing)?|text(?:ing)?|email(?:ing)?|notify(?:ing)?|messag(?:e|ing)|reach\s+out\s+to|send\s+to)\s+(?:the\s+)?customers?\b/i.test(draft)) return undefined;
   // A briefing is a suggestion for deliberate owner review, not a new
   // authoritative business event or a model-made completion certificate.
   if (!/\b(?:review|check|inspect|verify|consider|prioritize|look\s+at|follow\s+up)\b/i.test(draft)) return undefined;
