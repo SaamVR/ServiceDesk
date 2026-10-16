@@ -94,7 +94,11 @@ export async function readOperationalDeliveryTriage(
           (row.delivery_state !== null && !states.has(row.delivery_state)) ||
           (row.outbox_event_id != null && !validId(row.outbox_event_id)) ||
           typeof row.created_at !== "string" ||
-          !Number.isFinite(Date.parse(row.created_at))) {
+          !Number.isFinite(Date.parse(row.created_at)) ||
+          // A distant future-dated persisted send cannot be aged reliably.
+          // Previously Math.max(0, future-age) made the item look like a
+          // freshly pending or successfully delivered operation.
+          Date.parse(row.created_at) > now.getTime() + 5 * 60 * 1000) {
         return fail("DELIVERY_TRIAGE_MESSAGE_SCOPE_INVALID", "Persisted delivery row did not match this workspace.");
       }
     }
