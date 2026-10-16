@@ -31,8 +31,9 @@ describe("V4 approved quote pipeline enforces live expiry for staff readiness",(
   const summary=buildQuotePipeline(quotes,"not-an-instant");
   expect(summary.readyToSend).toBe(0);
   expect(summary.awaitingCustomer).toBe(0);
-  expect(summary.approvedNeedsExpiryReview).toBe(3);
-  expect(summary.sentNeedsExpiryReview).toBe(1);
+  expect(summary.approvedNeedsExpiryReview).toBe(0);
+  expect(summary.sentNeedsExpiryReview).toBe(0);
+  expect(summary.quoteClockUnverified).toBe(true);
  });
  it("wire quote workspace aggregate counters to the same expiry-aware snapshot",()=>{
   const src=readFileSync(join(process.cwd(),"src/features/operations/OperationalProductRoute.tsx"),"utf8");
@@ -40,5 +41,7 @@ describe("V4 approved quote pipeline enforces live expiry for staff readiness",(
   expect(view).toContain("buildQuotePipeline(data.quotes, data.loadedAt)");
   expect(view).toContain("sentNeedsExpiryReview + approvedNeedsExpiryReview");
   expect(view).toContain("selectedQuoteCanSend");
+  expect(view).toContain("quoteClockUnverified");
+  expect(view).toContain("quote snapshot time is unverified");
  });
 });
