@@ -33,5 +33,11 @@ export function validateRequestBriefDraft(value: unknown): string | undefined {
   if (/\b(?:we|i|our team)\s+(?:have\s+)?(?:sent|charged|booked|scheduled|confirmed|approved|paid|invoiced)\b/i.test(draft) ||
       /\b(?:the\s+)?(?:customer|client|guest|request|quote|invoice|payment|deposit|booking|appointment|visit|job|message|email|refund)\s+(?:has\s+been|have\s+been|was|were|is|are|has|have)\s+(?:sent|charged|booked|scheduled|confirmed|approved|paid|invoiced|delivered|received|processed|completed|settled|accepted)\b/i.test(draft) ||
       /\b(?:the\s+)?(?:customer|client|guest)\s+(?:accepted|received|confirmed|paid)\b/i.test(draft)) return undefined;
+  // These briefs have no reviewed recipient, consent or external-send
+  // authorization. Indirect instructions ("ask staff to email clients") are
+  // still unverified outreach even when the model never says "we sent".
+  if (/\b(?:ask|tell|instruct|have|remind|direct|prompt|get)\s+(?:(?:the|our|your)\s+)?(?:staff|teams?|dispatchers?|agents?|assistants?)\s+(?:to\s+)?(?:contact|call|email|text|message|notify|send|reach\s+out\s+to|follow\s+up\s+with)\b/i.test(draft) ||
+      /\b(?:send|email|text|notify|message|contact|call|reach\s+out\s+to|follow\s+up\s+with)\s+(?:(?:a|an|the)\s+)?(?:reminder|update|notice|notification|message|email|text)\s+(?:to|for)\s+(?:(?:the|our)\s+)?(?:customers?|clients?|leads?|prospects?|guests?|contacts?)\b/i.test(draft) ||
+      /\b(?:email|text|notify|message|contact|call|phone)\s+(?:(?:the|our)\s+)?(?:customers?|clients?|leads?|prospects?|guests?|contacts?)\b/i.test(draft)) return undefined;
   return draft;
 }
