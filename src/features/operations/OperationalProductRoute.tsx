@@ -1507,7 +1507,7 @@ function QuotesView({
     return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." action={{ label: "Review service requests", href: buildStaffModuleHref(workspaceSlug, "requests") }} />;
   }
 
-  const { currentQuoteByRequest, orderedQuotes, readyToSend, awaitingCustomer, sentNeedsExpiryReview } = buildQuotePipeline(data.quotes, data.loadedAt);
+  const { currentQuoteByRequest, orderedQuotes, readyToSend, awaitingCustomer, sentNeedsExpiryReview, approvedNeedsExpiryReview, quoteClockUnverified } = buildQuotePipeline(data.quotes, data.loadedAt);
   const search = normalizeDirectoryQuery(searchQuery);
   const requestById = new Map(data.requests.map((request) => [request.id, request]));
   const customerById = new Map(data.customers.map((customer) => [customer.id, customer]));
@@ -1541,7 +1541,8 @@ function QuotesView({
         <div>
           <p className={styles.salesEyebrow}>Quote workspace</p>
           <h2>Quote pipeline</h2>
-          <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} currently sent (delivery unverified) · {sentNeedsExpiryReview} need validity review</p>
+          <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} currently sent (delivery unverified) · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review</p>
+          {quoteClockUnverified ? <p role="alert">The quote snapshot time is unverified. Refresh this workspace before relying on send-readiness or expiry counts.</p> : null}
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "requests")}>Open requests</a>
       </header>

@@ -11,16 +11,21 @@ export interface QuotePipelineRecord {
 /** A SENT database status does not establish that the customer can still
  * accept the quote. Invalid or elapsed deadlines require staff review, not
  * a fabricated response or an automatic status mutation. */
-export function needsSentQuoteExpiryReview(
-  quote: QuotePipelineRecord,
-  snapshotAt: string,
-): boolean {
-  if (quote.status !== "SENT") return false;
+function quoteValidityUnverified(quote: QuotePipelineRecord, snapshotAt: string): boolean {
   const now = Date.parse(snapshotAt);
   const expires = typeof quote.validUntil === "string"
     ? Date.parse(quote.validUntil) : NaN;
-  return Number.isFinite(now) &&
-    (!Number.isFinite(expires) || expires <= now);
+  // An invalid snapshot clock cannot establish expiry or freshness.
+  // The aggregate queue separately fails closed on clock uncertainty.
+  return Number.isFinite(now) && (!Number.isFinite(expires) || expires <= now);
+}
+
+export function needsSentQuoteExpiryReview(quote: QuotePipelineRecord, snapshotAt: string): boolean {
+  return quote.status === "SENT" && quoteValidityUnverified(quote, snapshotAt);
+}
+
+export function needsApprovedQuoteExpiryReview(quote: QuotePipelineRecord, snapshotAt: string): boolean {
+  return quote.status === "APPROVED" && quoteValidityUnverified(quote, snapshotAt);
 }
 
 /**
@@ -45,15 +50,21 @@ export function buildQuotePipeline<T extends QuotePipelineRecord>(
       || left.id.localeCompare(right.id);
   });
   const currentQuotes = [...currentQuoteByRequest.values()];
+  const clockValid = snapshotAt === undefined || (snapshotAt.trim().length > 0 && Number.isFinite(Date.parse(snapshotAt)));
   return {
     currentQuoteByRequest,
     orderedQuotes,
     awaitingCustomer: currentQuotes.filter(quote =>
       quote.status === "SENT" &&
-      (!snapshotAt || !needsSentQuoteExpiryReview(quote, snapshotAt))).length,
-    sentNeedsExpiryReview: snapshotAt ? currentQuotes.filter(quote =>
+      (snapshotAt === undefined || (clockValid && !needsSentQuoteExpiryReview(quote, snapshotAt)))).length,
+    sentNeedsExpiryReview: snapshotAt !== undefined && clockValid ? currentQuotes.filter(quote =>
       needsSentQuoteExpiryReview(quote, snapshotAt)).length : 0,
-    readyToSend: currentQuotes.filter((quote) => quote.status === "APPROVED").length,
+    readyToSend: currentQuotes.filter(quote =>
+      quote.status === "APPROVED" &&
+      (snapshotAt === undefined || (clockValid && !needsApprovedQuoteExpiryReview(quote, snapshotAt)))).length,
+    approvedNeedsExpiryReview: snapshotAt !== undefined && clockValid ? currentQuotes.filter(quote =>
+      needsApprovedQuoteExpiryReview(quote, snapshotAt)).length : 0,
+    quoteClockUnverified: snapshotAt !== undefined && !clockValid,
   };
 }
 
