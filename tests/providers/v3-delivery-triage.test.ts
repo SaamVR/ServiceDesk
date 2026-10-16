@@ -186,6 +186,28 @@ describe("real outbound delivery triage", () => {
     });
   });
 
+  it("rejects unrelated outbox topic receipts even in the same workspace", async () => {
+    for (const topic of ["payment.received", "booking.confirmed", "workflow.action"]) {
+      const h = fixture({ rows: [{ ...outbound[0], outbox_event_id: "outbox1" }],
+        outbox: [{ id: "outbox1", workspace_id: "ws1",
+          topic, status: "SENT", provider_reference: "unrelated-success" }],
+      });
+      expect(await readOperationalDeliveryTriage("service-desk", h.deps)).toMatchObject({
+        ok: false, code: "DELIVERY_TRIAGE_OUTBOX_INVALID",
+      });
+    }
+    const valid = fixture({ rows: [{ ...outbound[0], outbox_event_id: "outbox1" }],
+      outbox: [{ id: "outbox1", workspace_id: "ws1",
+        topic: "conversation.reply", status: "SENT", provider_reference: "approved-send" }],
+    });
+    expect(await readOperationalDeliveryTriage("service-desk", valid.deps)).toMatchObject({
+      ok: true, value: { items: [
+        { messageId: "msg1", deliveryState: "PROVIDER_ACCEPTED",
+          evidenceSource: "OUTBOX_PROVIDER_ACCEPTANCE" },
+      ] },
+    });
+  });
+
   it("reports age, review, pending and completed states without customer details", async () => {
     const h = fixture();
     const result = await readOperationalDeliveryTriage("service-desk", h.deps);
