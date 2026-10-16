@@ -5,6 +5,22 @@ export interface QuotePipelineRecord {
   requestId: string;
   status: string;
   version: number;
+  validUntil?: string;
+}
+
+/** A SENT database status does not establish that the customer can still
+ * accept the quote. Invalid or elapsed deadlines require staff review, not
+ * a fabricated response or an automatic status mutation. */
+export function needsSentQuoteExpiryReview(
+  quote: QuotePipelineRecord,
+  snapshotAt: string,
+): boolean {
+  if (quote.status !== "SENT") return false;
+  const now = Date.parse(snapshotAt);
+  const expires = typeof quote.validUntil === "string"
+    ? Date.parse(quote.validUntil) : NaN;
+  return Number.isFinite(now) &&
+    (!Number.isFinite(expires) || expires <= now);
 }
 
 /**
@@ -12,7 +28,9 @@ export interface QuotePipelineRecord {
  * A superseded or older record is visible as history, never a live send target.
  * No quote mutations or external delivery decisions occur here.
  */
-export function buildQuotePipeline<T extends QuotePipelineRecord>(quotes: readonly T[]) {
+export function buildQuotePipeline<T extends QuotePipelineRecord>(
+  quotes: readonly T[], snapshotAt?: string,
+) {
   const currentQuoteByRequest = indexCurrentQuoteByRequest(quotes);
   const statusPriority: Record<string, number> = {
     APPROVED: 0, SENT: 1, ACCEPTED: 2, DRAFT: 3,
@@ -30,7 +48,11 @@ export function buildQuotePipeline<T extends QuotePipelineRecord>(quotes: readon
   return {
     currentQuoteByRequest,
     orderedQuotes,
-    awaitingCustomer: currentQuotes.filter((quote) => quote.status === "SENT").length,
+    awaitingCustomer: currentQuotes.filter(quote =>
+      quote.status === "SENT" &&
+      (!snapshotAt || !needsSentQuoteExpiryReview(quote, snapshotAt))).length,
+    sentNeedsExpiryReview: snapshotAt ? currentQuotes.filter(quote =>
+      needsSentQuoteExpiryReview(quote, snapshotAt)).length : 0,
     readyToSend: currentQuotes.filter((quote) => quote.status === "APPROVED").length,
   };
 }
