@@ -9,6 +9,7 @@ import {
 } from "./staff-ai-review-contract";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
+import { boundedStaffRequestSignal } from "./staff-ai-request-signal";
 import styles from "./StaffAiReviewComposer.module.css";
 
 /**
@@ -55,6 +56,7 @@ function ScopedStaffAiReviewComposer({
     controller.current?.abort();
     const pending = new AbortController();
     controller.current = pending;
+    const requestSignal = boundedStaffRequestSignal(pending);
     setBusy("drafting");
     setError(undefined);
     setDraft(undefined);
@@ -68,7 +70,7 @@ function ScopedStaffAiReviewComposer({
         cache: "no-store",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ workspaceSlug, conversationId, messageId: sourceMessageId }),
-        signal: pending.signal,
+        signal: requestSignal,
       });
       if (pending.signal.aborted) return;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
@@ -110,6 +112,7 @@ function ScopedStaffAiReviewComposer({
     controller.current?.abort();
     const pending = new AbortController();
     controller.current = pending;
+    const requestSignal = boundedStaffRequestSignal(pending);
     setBusy("approving");
     setError(undefined);
     // Preserve this key across uncertain network retries. An edit starts a
@@ -129,7 +132,7 @@ function ScopedStaffAiReviewComposer({
           idempotencyKey: idempotencyKey.current,
           confirmedByStaff: true,
         }),
-        signal: pending.signal,
+        signal: requestSignal,
       });
       if (response.status === 409) {
         setError("stale");
