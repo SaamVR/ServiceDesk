@@ -30,15 +30,20 @@ function asResult<T>(
   fallbackCode: string,
   value: (row: RpcRow) => T,
 ): Result<T> {
-  if (error) return { ok: false, code: error.code ?? fallbackCode, message: error.message };
-  if (!data || data.ok === false) {
-    return {
-      ok: false,
-      code: String(data?.code ?? fallbackCode),
-      message: "Conversation command was rejected by the database RPC.",
-    };
+  const safeCode = (code: unknown) =>
+    typeof code === "string" && /^[A-Z][A-Z0-9_]{0,79}$/.test(code)
+      ? code : fallbackCode;
+  // RPC errors and arbitrary machine codes may contain provider headers,
+  // SQL diagnostics, customer identifiers or secrets: never echo them.
+  if (error) return { ok: false, code: safeCode(error.code),
+    message: "Conversation database operation could not be completed." };
+  if (!data || typeof data !== "object" || Array.isArray(data) || data.ok === false) {
+    return { ok: false, code: safeCode(data?.code),
+      message: "Conversation command was rejected by the database RPC." };
   }
-  return { ok: true, value: value(data) };
+  try { return { ok: true, value: value(data) }; }
+  catch { return { ok: false, code: fallbackCode + "_MALFORMED",
+    message: "Conversation database returned invalid evidence." }; }
 }
 
 function asRow(value: unknown): RpcRow | undefined {
@@ -189,6 +194,11 @@ function qualityCaseFromRpc(row: RpcRow): QualityCaseDTO {
   };
 }
 
+async function safeRpc(client: SupabaseRpcClient, fn: string, args: Record<string, unknown>) {
+  try { return await client.rpc<RpcRow>(fn, args); }
+  catch { return null; }
+}
+
 export function createPostgresConversationFacadeMethods(
   client: SupabaseRpcClient,
 ): Pick<ServiceDeskFacade, "applyInboundMessage" | "setConversationHandover" | "enqueueConversationReply" | "readWorkspaceSnapshot"> {
@@ -197,8 +207,10 @@ export function createPostgresConversationFacadeMethods(
       const rpcName = event.channel === "EMAIL"
         ? "servicedesk_apply_inbound_email_message"
         : "servicedesk_apply_inbound_message";
-      const { data, error } = await client.rpc<RpcRow>(rpcName, { p_event: event });
-      const parsed = asResult(data, error, "INBOUND_RPC_ERROR", (row) => {
+      const result = await safeRpc(client, rpcName, { p_event: event });
+      if (!result) return { ok: false, code:"INBOUND_RPC_UNAVAILABLE",
+        message:"Inbound conversation database is temporarily unavailable." };
+      const parsed = asResult(result.data, result.error, "INBOUND_RPC_ERROR", (row) => {
         const messageRow = asRow(row.message) ?? (row.messageId || row.message_id ? row : undefined);
         return {
           state: String(row.state) as InboundMessageApplicationOutcome["state"],
@@ -226,7 +238,7 @@ export function createPostgresConversationFacadeMethods(
     },
 
     async setConversationHandover(ctx: ActorContext, id: string, input: ConversationHandoverInput, meta): Promise<Result<ConversationDTO>> {
-      const { data, error } = await client.rpc<RpcRow>("servicedesk_set_conversation_handover", {
+      const result = await safeRpc(client, "servicedesk_set_conversation_handover", {
         p_input: {
           workspaceId: ctx.workspaceId,
           actorRole: ctx.role,
@@ -236,11 +248,20 @@ export function createPostgresConversationFacadeMethods(
           ...input,
         },
       });
-      return asResult(data, error, "HANDOVER_RPC_ERROR", conversationFromRpc);
+      if (!result) return { ok:false, code:"HANDOVER_RPC_UNAVAILABLE",
+        message:"Handover database is temporarily unavailable." };
+      const parsed = asResult(result.data, result.error, "HANDOVER_RPC_ERROR", conversationFromRpc);
+      if (!parsed.ok) return parsed;
+      if (parsed.value.id !== id || parsed.value.workspaceId !== ctx.workspaceId ||
+          !Number.isSafeInteger(parsed.value.version) || parsed.value.version < 0) {
+        return {ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH",
+          message:"The saved handover identity could not be verified."};
+      }
+      return parsed;
     },
 
     async enqueueConversationReply(ctx: ActorContext, id: string, input: ConversationReplyInput, meta): Promise<Result<ConversationReplyOutcome>> {
-      const { data, error } = await client.rpc<RpcRow>("servicedesk_enqueue_conversation_reply", {
+      const result = await safeRpc(client, "servicedesk_enqueue_conversation_reply", {
         p_input: {
           workspaceId: ctx.workspaceId,
           actorRole: ctx.role,
@@ -251,17 +272,33 @@ export function createPostgresConversationFacadeMethods(
           ...input,
         },
       });
-      return asResult(data, error, "REPLY_RPC_ERROR", (row) => ({
+      if (!result) return { ok:false, code:"REPLY_RPC_UNAVAILABLE",
+        message:"Conversation reply database is temporarily unavailable." };
+      const parsed = asResult(result.data, result.error, "REPLY_RPC_ERROR", (row) => ({
         message: messageFromRpc(row),
         outboxEventId: String(field(row, "outboxEventId", "outbox_event_id")),
       }));
+      if (!parsed.ok) return parsed;
+      if (parsed.value.message.workspaceId !== ctx.workspaceId ||
+          parsed.value.message.conversationId !== id ||
+          parsed.value.message.direction !== "OUTBOUND" ||
+          parsed.value.message.senderKind !== "STAFF" ||
+          parsed.value.message.body !== input.body ||
+          !parsed.value.outboxEventId || parsed.value.outboxEventId === "undefined" ||
+          parsed.value.message.id === "undefined") {
+        return {ok:false,code:"REPLY_RPC_SCOPE_MISMATCH",
+          message:"The queued reply does not match the approved conversation."};
+      }
+      return parsed;
     },
 
     async readWorkspaceSnapshot(ctx: ActorContext, query: WorkspaceSnapshotQuery): Promise<Result<WorkspaceSnapshot>> {
-      const { data, error } = await client.rpc<RpcRow>("servicedesk_read_workspace_snapshot", {
+      const result = await safeRpc(client, "servicedesk_read_workspace_snapshot", {
         p_input: { workspaceId: ctx.workspaceId, actorRole: ctx.role, actorUserId: ctx.userId, ...query },
       });
-      return asResult(data, error, "SNAPSHOT_RPC_ERROR", (row) => ({
+      if (!result) return { ok:false, code:"SNAPSHOT_RPC_UNAVAILABLE",
+        message:"Workspace snapshot database is temporarily unavailable." };
+      const parsed = asResult(result.data, result.error, "SNAPSHOT_RPC_ERROR", (row) => ({
         requests: [],
         quotes: [],
         visits: [],
@@ -274,6 +311,18 @@ export function createPostgresConversationFacadeMethods(
         attentionItems: rows(row.attentionItems).map(attentionItemFromRpc),
         qualityCases: rows(row.qualityCases).map(qualityCaseFromRpc),
       }));
+      if (!parsed.ok) return parsed;
+      const snapshot=parsed.value;
+      // Reject foreign-tenant rows even if a broken server-side RPC returned
+      // them. Do not silently collapse data into a seemingly valid snapshot.
+      const collections=[snapshot.invoices,snapshot.conversations,snapshot.messages,
+        snapshot.recurrenceRules,snapshot.visitEvidence,snapshot.visitChecklistItems,
+        snapshot.attentionItems,snapshot.qualityCases];
+      if (collections.some(list => list.some(item => item.workspaceId !== ctx.workspaceId))) {
+        return {ok:false,code:"SNAPSHOT_RPC_SCOPE_MISMATCH",
+          message:"Workspace snapshot contained unrelated tenant records."};
+      }
+      return parsed;
     },
   };
 }
