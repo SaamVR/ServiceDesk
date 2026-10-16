@@ -11,7 +11,7 @@ describe("Studio OS / decision-first Today dashboard", () => {
     }
     expect(route).toContain("attentionResourceHref(workspace, item)");
     expect(route).toContain("unassignedToday");
-    expect(route).toContain("summarizeOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId)))");
+    expect(route).toContain("summarizeVerifiedOutstandingInvoices(snapshot.invoices.filter((invoice) => Boolean(invoice.quoteId)))");
     expect(route).toContain("Customer invoices to collect");
     expect(route).toContain("Snapshot updated");
     expect(route).toContain("Decisions waiting for you");
