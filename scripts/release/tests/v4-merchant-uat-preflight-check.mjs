@@ -18,7 +18,9 @@ test("actual read-only staging counts do not imply merchant acceptance",()=>{
   assert.ok(value.blockers.some(x=>x.includes("second isolated fictional workspace")));
   assert.ok(value.requiredWork.some(x=>x.includes("saved branch price book")));
   assert.ok(value.requiredWork.some(x=>x.includes("invoice")));
-  assert.ok(value.requiredWork.some(x=>x.includes("provider delivery UNVERIFIED")));
+  assert.equal(value.requiredWork.some(x=>x.includes("provider delivery")), false);
+  assert.ok(value.deferredExternalProof.some(x=>x.includes("PROVIDER_VERIFIED")));
+  assert.ok(value.deferredExternalProof.some(x=>x.includes("PAYMENT_VERIFIED")));
 });
 
 test("stale deployed SHA is never accepted even when fixture counts are complete",()=>{
@@ -43,6 +45,29 @@ test("fail-closed for absent, fractional and fabricated signed-in evidence",()=>
   assert.equal(assessMerchantUatPreflight(wrongProvenance).status,"EVIDENCE_INVALID");
   const effects=snapshot(); effects.externalEffectsDisabled=false;
   assert.equal(assessMerchantUatPreflight(effects).status,"BLOCKED_PREREQUISITES");
+});
+
+test("an internal pricing-to-invoice rehearsal does not need external provider sends",()=>{
+  const data=snapshot();
+  data.fictionalOwnerSessions=2;
+  Object.assign(data.counts,{workspaces:2,activeServices:3,activeUsdBranchBooks:2,
+    quotes:1,workflowExecutions:1,invoices:1,outboxEvents:0,outboundMessages:0});
+  const result=assessMerchantUatPreflight(data);
+  assert.equal(result.status,"READY_FOR_INDEPENDENT_ACCEPTANCE_REVIEW");
+  assert.deepEqual(result.requiredWork,[]);
+  assert.equal(result.acceptanceVerified,false);
+  assert.ok(result.deferredExternalProof.some(x=>x.includes("PROVIDER_VERIFIED")));
+  assert.ok(result.deferredExternalProof.some(x=>x.includes("MODEL_VERIFIED")));
+});
+
+test("self-reported outbox rows never turn external proof into a provider pass",()=>{
+  const data=snapshot();
+  data.fictionalOwnerSessions=2;
+  Object.assign(data.counts,{workspaces:2,activeServices:3,activeUsdBranchBooks:2,
+    quotes:1,workflowExecutions:1,invoices:1,outboxEvents:12,outboundMessages:12});
+  const result=assessMerchantUatPreflight(data);
+  assert.equal(result.acceptanceVerified,false);
+  assert.ok(result.deferredExternalProof.some(x=>x.includes("real provider receipt")));
 });
 
 test("complete declarations only permit independent review, never assert a commercial PASS",()=>{

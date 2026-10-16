@@ -51,14 +51,21 @@ export function assessMerchantUatPreflight(input) {
     requiredWork.push("With opted-in internal automation, verify a causally linked persisted quote-accepted workflow and tenant-scoped attention.");
   if (counts.invoices === 0)
     requiredWork.push("Verify invoice creation/read-back separately; do not infer it from accepted quote or quote totals.");
-  if (counts.outboxEvents === 0 || counts.outboundMessages === 0)
-    requiredWork.push("Keep provider delivery UNVERIFIED until an explicitly authorized, controlled receipt is collected; internal rehearsal sends none.");
+  // A safe internal UAT deliberately disables external sends and charges.
+  // Provider receipts belong to a SEPARATE approval and evidence gate; no
+  // outbox/message aggregate can substitute for an independently verified
+  // provider transaction, nor should their absence block internal UAT.
+  const deferredExternalProof = [
+    "PROVIDER_VERIFIED remains unproven without an authorized real provider receipt; internal rehearsal sends none.",
+    "PAYMENT_VERIFIED remains unproven without an approved sandbox transaction, durable ledger reconciliation and separate receipt.",
+    "MODEL_VERIFIED remains unproven without an approved controlled model evaluation; a rule-based recommendation is not live model quality proof.",
+  ];
   return {
     status: blockers.length > 0 ? "BLOCKED_PREREQUISITES" :
       requiredWork.length > 0 ? "SIGNED_IN_REHEARSAL_REQUIRED" : "READY_FOR_INDEPENDENT_ACCEPTANCE_REVIEW",
     acceptanceVerified: false,
     evidenceClass: "OPERATOR_REPORTED_PREFLIGHT_NOT_LIVE_UAT",
-    blockers, requiredWork,
+    blockers, requiredWork, deferredExternalProof,
     disclaimer: "Counts and flags are untrusted operator declarations, not signed-in transaction receipts. Even an empty checklist is never an automatic UAT PASS.",
   };
 }
