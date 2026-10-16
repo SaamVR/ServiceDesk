@@ -88,6 +88,40 @@ export function deriveOwnerOperationsBriefFacts(
   };
 }
 
+/**
+ * A numeric-count prompt is not an authorization for a generative model to
+ * invent exact totals, closed-loop actions or non-existent queues. Permit
+ * qualitative, explicitly manual review suggestions only when their source
+ * bucket actually has a positive verified count. These checks supplement
+ * (never replace) the generic contact/payment/date safety filter.
+ */
+export function validateOwnerOperationsBriefGrounding(
+  value: unknown,
+  facts: OwnerOperationsBriefFacts,
+): string | undefined {
+  const draft=validateRequestBriefDraft(value);
+  if (!draft) return undefined;
+  if (/[0-9]/.test(draft) ||
+      /\b(?:zero|none|every|all|no)\s+(?:open\s+|pending\s+|unassigned\s+|unpaid\s+|critical\s+)?(?:requests?|quotes?|invoices?|visits?|attentions?)\b/i.test(draft) ||
+      /\b(?:we|i|you|our team|the team|staff)\s+(?:have\s+)?(?:resolved|completed|cleared|delivered|contacted|processed|settled)\b/i.test(draft)) {
+    return undefined;
+  }
+  const buckets: ReadonlyArray<[RegExp,number]>=[
+    [/\bunassigned\s+(?:active\s+)?visits?\b/i,facts.unassignedActiveVisits],
+    [/\b(?:expired|stale|invalid)\s+(?:sent\s+)?quotes?\b/i,facts.quoteValidityNeedsReview],
+    [/\b(?:waiting\s+(?:on|for)\s+customers?\s+(?:on\s+)?quotes?|quotes?\s+awaiting\s+customers?)\b/i,facts.waitingOnCustomerQuotes],
+    [/\b(?:collectible|unpaid|outstanding)\s+invoices?\b/i,facts.collectibleInvoices],
+    [/\b(?:invoice\s+ledgers?\s+(?:needing|requiring)\s+review|invoices?\s+(?:with\s+)?ledger\s+(?:errors?|issues?|mismatches?|gaps?))\b/i,facts.invoiceLedgersNeedingReview],
+    [/\bcritical\s+(?:owner\s+)?attentions?\b/i,facts.unresolvedCriticalAttentions],
+    [/\bopen\s+requests?\b/i,facts.openRequests],
+  ];
+  if (buckets.some(([pattern,count]) => pattern.test(draft) && count <= 0)) return undefined;
+  // A briefing is a suggestion for deliberate owner review, not a new
+  // authoritative business event or a model-made completion certificate.
+  if (!/\b(?:review|check|inspect|verify|consider|prioritize|look\s+at|follow\s+up)\b/i.test(draft)) return undefined;
+  return draft;
+}
+
 function authorizedOwner(
   verified: Awaited<ReturnType<Resolver>>,
   slug: string,
@@ -154,7 +188,7 @@ export async function generateOwnerOperationsBrief(
   if (response.value.requestedToolCalls?.length || response.value.citations?.length) {
     return error("OWNER_BRIEF_OUTPUT_UNSAFE");
   }
-  const brief=validateRequestBriefDraft(response.value.replyDraft);
+  const brief=validateOwnerOperationsBriefGrounding(response.value.replyDraft,facts);
   if (!brief) return error("OWNER_BRIEF_OUTPUT_UNSAFE");
   let current: Awaited<ReturnType<Resolver>>;
   let fresh: Awaited<ReturnType<Loader>>;
