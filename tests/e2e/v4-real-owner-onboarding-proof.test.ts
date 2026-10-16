@@ -30,6 +30,21 @@ describe("V4 real owner first-run operational readiness", () => {
       .toMatchObject({ state: "UNVERIFIED", activeServices: 0 });
   });
 
+  it("does not call unrelated active catalog items cleaning-quote ready", () => {
+    const carpet = { ...service, code: "WINDOWS", name: "Window cleaning" };
+    const evidence = summarizeOwnerCommercialSetup({ catalog: [carpet], scope,
+      proof: { state: "VERIFIED", activeBranchIds: ["branch-a", "branch-b"] } });
+    expect(evidence).toMatchObject({
+      state: "NEEDS_SERVICE", activeServices: 1, quoteableCleaningServices: 0,
+    });
+    expect(evidence.detail).toContain("Standard, Deep or Move-Out");
+    const mixed = summarizeOwnerCommercialSetup({ catalog: [carpet, service], scope,
+      proof: { state: "VERIFIED", activeBranchIds: ["branch-a", "branch-b"] } });
+    expect(mixed).toMatchObject({
+      state: "VERIFIED", activeServices: 2, quoteableCleaningServices: 1,
+    });
+  });
+
   it("fails closed when the branch book proof cannot be read", () => {
     expect(summarizeOwnerCommercialSetup({ catalog: [service], scope }))
       .toMatchObject({ state: "UNVERIFIED", eligibleUsdBranches: 0 });
@@ -68,6 +83,7 @@ describe("V4 real owner first-run operational readiness", () => {
     const route = read("src/features/onboarding/OnboardingProductRoute.tsx");
     expect(route).toContain("serviceCatalog.filter(service => service.active)");
     expect(route).toContain("summarizeOwnerCommercialSetup");
+    expect(route).toContain("commercial.quoteableCleaningServices > 0");
     expect(route).toContain("ownerPricingBookProof");
     expect(route).toContain('String(readyCount) + "/5"');
     expect(route).toContain("Branch price books");

@@ -29,20 +29,24 @@ describe("R6 conversation commands fail closed on untrusted RPC output",()=>{
     {id:"wrong"},{workspaceId:"wrong"},{version:1.5},{version:-1}
   ]) expect(await facade({ok:true,...handover,...patch})
     .setConversationHandover(ctx,cid,handoverInput,meta))
-      .toMatchObject({ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH"});
+      .toMatchObject({ok:false,code: typeof patch.version === "number" &&
+        (!Number.isSafeInteger(patch.version) || patch.version < 0)
+        ? "HANDOVER_RPC_ERROR_MALFORMED" : "HANDOVER_RPC_SCOPE_MISMATCH"});
   for (const patch of [
     {workspaceId:"foreign"},{conversationId:"foreign"},
     {direction:"INBOUND"},{senderKind:"AI"},{body:"different text"},{id:undefined}
   ]) expect(await facade({ok:true,message:{...message,...patch},outboxEventId:"event1"})
     .enqueueConversationReply(ctx,cid,replyInput,meta))
-      .toMatchObject({ok:false,code:"REPLY_RPC_SCOPE_MISMATCH"});
+      .toMatchObject({ok:false,code:patch.id===undefined && Object.hasOwn(patch,"id")
+        ? "REPLY_RPC_ERROR_MALFORMED" : "REPLY_RPC_SCOPE_MISMATCH"});
  });
  it("requires literal persisted handover state instead of a successful RPC envelope",async()=>{
   for(const handoverActive of [undefined,null,"false","true",0,1,false]){
     const result=await facade({ok:true,...handover,handoverActive})
       .setConversationHandover(ctx,cid,{active:true},meta);
     expect(result,JSON.stringify(handoverActive))
-      .toMatchObject({ok:false,code:"HANDOVER_RPC_SCOPE_MISMATCH"});
+      .toMatchObject({ok:false,code:handoverActive===false
+        ? "HANDOVER_RPC_SCOPE_MISMATCH" : "HANDOVER_RPC_ERROR_MALFORMED"});
   }
   expect(await facade({ok:true,...handover,handoverActive:false,assignedUserId:null})
     .setConversationHandover(ctx,cid,{active:false},meta))
@@ -78,6 +82,57 @@ describe("R6 conversation commands fail closed on untrusted RPC output",()=>{
   expect(result).toMatchObject({ok:false,code:"SNAPSHOT_RPC_SCOPE_MISMATCH"});
   expect(await facade({ok:true,conversations:[handover]})
     .readWorkspaceSnapshot(ctx,{} as never)).toMatchObject({ok:true,value:{conversations:[{id:cid}]}});
+ });
+ it("never converts malformed saved conversation handover or version into trusted staff state",async()=>{
+  for(const patch of [
+    {handoverActive:"false"},{handoverActive:"true"},
+    {handoverActive:null},{handoverActive:0},{handoverActive:undefined},
+    {version:"2"},{version:null},{version:undefined},
+    {version:-1},{version:1.5},
+    {channel:"SMS"},{channel:undefined},
+  ]) {
+    const snapshot=await facade({ok:true,conversations:[{...handover,...patch}]})
+      .readWorkspaceSnapshot(ctx,{} as never);
+    expect(snapshot,JSON.stringify(patch))
+      .toMatchObject({ok:false,code:"SNAPSHOT_RPC_ERROR_MALFORMED"});
+  }
+  for(const patch of [
+    {handoverActive:"false"},{handoverActive:null},
+    {version:"2"},{version:undefined},{channel:"SMS"},
+  ]) {
+    const inbound=await facade({ok:true,state:"APPLIED",conversation:{...handover,...patch}})
+      .applyInboundMessage({
+        workspaceId:ctx.workspaceId,channel:"EMAIL",provider:"EMAIL",providerAccountId:"acct",
+        providerMessageId:"mail-1",sender:"customer@example.com",body:"hi",
+        receivedAt:"2026-10-16T08:00:00Z",
+      } as never);
+    expect(inbound.ok,JSON.stringify(patch)).toBe(false);
+  }
+  const valid=await facade({ok:true,conversations:[handover]})
+    .readWorkspaceSnapshot(ctx,{} as never);
+  expect(valid).toMatchObject({ok:true,value:{conversations:[{handoverActive:true,version:2}]}});
+ });
+ it("rejects malformed persisted message records instead of inventing epoch or staff sender",async()=>{
+  for(const patch of [
+    {id:undefined},{workspaceId:undefined},{conversationId:undefined},
+    {createdAt:undefined},{createdAt:"not-a-date"},
+    {createdAt:"1970-01-01"}, {createdAt:"2026-10-16T08:00:00"},
+    {direction:undefined},{direction:"UNKNOWN"},
+    {senderKind:undefined},{senderKind:"GUEST"},
+    {deliveryState:"MAGIC"},
+  ]) {
+    const result=await facade({ok:true,messages:[{...message,...patch}]})
+      .readWorkspaceSnapshot(ctx,{} as never);
+    expect(result,JSON.stringify(patch)).toMatchObject({
+      ok:false,code:"SNAPSHOT_RPC_ERROR_MALFORMED",
+    });
+  }
+  const valid=await facade({ok:true,messages:[message]})
+    .readWorkspaceSnapshot(ctx,{} as never);
+  expect(valid).toMatchObject({ok:true,value:{messages:[{
+    id:message.id,workspaceId:ctx.workspaceId,createdAt:message.createdAt,
+    direction:"OUTBOUND",senderKind:"STAFF",
+  }]}});
  });
  it("sanitizes error codes and raw SQL exceptions across all conversation commands",async()=>{
   const token="Bearer live-secret customer@example.com";

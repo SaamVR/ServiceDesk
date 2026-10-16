@@ -47,10 +47,12 @@ function fakeClient(calls: string[]) {
       const payload = args.p_event as Record<string, string>;
       return { data: { ok: true, state: "APPLIED", conversation: {
         id: "conv-1", workspaceId: payload.workspaceId, channel: "WHATSAPP",
+        version: 1, handoverActive: false,
       }, message: {
         id: "msg-1", workspaceId: payload.workspaceId, conversationId: "conv-1",
         direction: "INBOUND", senderKind: "CUSTOMER",
         providerMessageId: payload.providerMessageId,
+        createdAt: "2026-10-16T10:00:00.000Z",
       } }, error: null };
     },
   } as unknown as SupabaseRpcClient;

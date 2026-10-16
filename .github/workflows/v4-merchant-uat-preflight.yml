@@ -1,0 +1,26 @@
+name: ServiceDesk V4 merchant acceptance preflight contract
+on:
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - "scripts/release/v4-merchant-uat-preflight.mjs"
+      - "scripts/release/tests/v4-merchant-uat-preflight-check.mjs"
+      - ".github/workflows/v4-merchant-uat-preflight.yml"
+permissions:
+  contents: read
+jobs:
+  read-only-preflight:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2 }
+      - name: Syntax validate offline preflight
+        run: |
+          node --check scripts/release/v4-merchant-uat-preflight.mjs
+          node --check scripts/release/tests/v4-merchant-uat-preflight-check.mjs
+      - name: Test fail-closed merchant acceptance readiness contract
+        run: node --test scripts/release/tests/v4-merchant-uat-preflight-check.mjs

@@ -18,9 +18,10 @@ const event: InboundMessageEvent = {
 const success = {
   ok: true,
   state: "APPLIED",
-  conversation: { id: "conv-a", workspaceId: "ws-a", channel: "WHATSAPP", version: 1 },
+  conversation: { id: "conv-a", workspaceId: "ws-a", channel: "WHATSAPP", version: 1, handoverActive: false },
   message: { id: "message-a", workspaceId: "ws-a", conversationId: "conv-a",
-    direction: "INBOUND", senderKind: "CUSTOMER", providerMessageId: "wamid-1" },
+    direction: "INBOUND", senderKind: "CUSTOMER", providerMessageId: "wamid-1",
+    createdAt: "2026-10-11T01:00:00.000Z" },
 };
 
 function facade(response: Record<string, unknown>) {
@@ -74,8 +75,16 @@ describe("trusted conversation RPC tenant-bound receipt", () => {
     ];
     for (const override of cases) {
       const { facade: methods } = facade({ ...success, ...override });
+      const conversation = override.conversation as Record<string, unknown> | undefined;
+      const brokenMessage=override.message as Record<string,unknown> | undefined;
+      const malformed = (conversation && (
+        !Number.isSafeInteger(conversation.version) ||
+        (conversation.version as number) < 0 ||
+        typeof conversation.id !== "string")) ||
+        (brokenMessage && typeof brokenMessage.id !== "string");
       await expect(methods.applyInboundMessage(event)).resolves.toMatchObject({
-        ok: false, code: "INBOUND_RPC_SCOPE_MISMATCH",
+        ok: false, code: malformed
+          ? "INBOUND_RPC_ERROR_MALFORMED" : "INBOUND_RPC_SCOPE_MISMATCH",
       });
     }
   });

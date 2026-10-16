@@ -6,6 +6,8 @@ import type {
   MessageDTO,
   QualityCaseDTO,
   RecurrenceRuleDTO,
+  RequestDTO,
+  VisitDTO,
   Result,
   VisitChecklistItemDTO,
   VisitEvidenceDTO,
@@ -69,32 +71,136 @@ function rows(value: unknown): RpcRow[] {
 
 function conversationFromRpc(row: RpcRow): ConversationDTO {
   const src = asRow(row.conversation) ?? row;
+  const id = field(src, "id") ?? field(src, "conversationId", "conversation_id");
+  const workspaceId = field(src, "workspaceId", "workspace_id");
+  const channel = field(src, "channel");
+  const handoverActive = field(src, "handoverActive", "handover_active");
+  const version = field(src, "version") ?? field(src, "conversationVersion", "conversation_version");
+  // A missing saved field is not a false handover or version zero. In
+  // particular Boolean("false") is true: coercing persisted evidence can
+  // silently misroute a customer conversation to a staff member.
+  if (typeof id !== "string" || !id ||
+      typeof workspaceId !== "string" || !workspaceId ||
+      !["WEB", "WHATSAPP", "EMAIL"].includes(String(channel)) ||
+      typeof handoverActive !== "boolean" ||
+      typeof version !== "number" || !Number.isSafeInteger(version) || version < 0) {
+    throw new Error("Malformed persisted conversation identity, handover or version");
+  }
   return {
-    id: String(field(src, "id") ?? field(src, "conversationId", "conversation_id")),
-    workspaceId: String(field(src, "workspaceId", "workspace_id")),
+    id, workspaceId,
     requestId: maybeString(field(src, "requestId", "request_id")),
     customerId: maybeString(field(src, "customerId", "customer_id")),
-    channel: String(field(src, "channel") ?? "WHATSAPP") as ConversationDTO["channel"],
+    channel: channel as ConversationDTO["channel"],
     assignedUserId: maybeString(field(src, "assignedUserId", "assigned_user_id")),
-    handoverActive: Boolean(field(src, "handoverActive", "handover_active")),
-    version: Number(field(src, "version") ?? field(src, "conversationVersion", "conversation_version") ?? 0),
+    handoverActive, version,
     lastMessageAt: maybeString(field(src, "lastMessageAt", "last_message_at")),
   };
 }
 
 function messageFromRpc(row: RpcRow): MessageDTO {
   const src = asRow(row.message) ?? row;
+  const id = field(src, "id") ?? field(src, "messageId", "message_id");
+  const workspaceId = field(src, "workspaceId", "workspace_id");
+  const conversationId = field(src, "conversationId", "conversation_id");
+  const direction = field(src, "direction");
+  const senderKind = field(src, "senderKind", "sender_kind");
+  const createdAt = field(src, "createdAt", "created_at");
+  const deliveryState = field(src, "deliveryState", "delivery_state");
+  // A malformed saved message is NOT an outbound staff message dated 1970.
+  // The installed inbound, reply and workspace-snapshot RPCs all project
+  // these literal persisted fields; reject omissions rather than fabricating
+  // a timestamp, direction, sender, or storage identity.
+  if (typeof id !== "string" || !id ||
+      typeof workspaceId !== "string" || !workspaceId ||
+      typeof conversationId !== "string" || !conversationId ||
+      !["INBOUND", "OUTBOUND", "INTERNAL"].includes(String(direction)) ||
+      !["CUSTOMER", "STAFF", "AI", "SYSTEM"].includes(String(senderKind)) ||
+      typeof createdAt !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(createdAt) ||
+      !Number.isFinite(Date.parse(createdAt)) ||
+      (deliveryState != null &&
+        !["QUEUED", "RUNNING", "PROVIDER_ACCEPTED", "DELIVERED", "READ", "FAILED", "SUPPRESSED"]
+          .includes(String(deliveryState)))) {
+    throw new Error("Malformed persisted message identity, actor, delivery state or timestamp");
+  }
   return {
-    id: String(field(src, "id") ?? field(src, "messageId", "message_id")),
-    workspaceId: String(field(src, "workspaceId", "workspace_id")),
-    conversationId: String(field(src, "conversationId", "conversation_id")),
-    direction: String(field(src, "direction") ?? "OUTBOUND") as MessageDTO["direction"],
-    senderKind: String(field(src, "senderKind", "sender_kind") ?? "STAFF") as MessageDTO["senderKind"],
+    id, workspaceId, conversationId,
+    direction: direction as MessageDTO["direction"],
+    senderKind: senderKind as MessageDTO["senderKind"],
     providerMessageId: maybeString(field(src, "providerMessageId", "provider_message_id")),
     body: maybeString(field(src, "body")),
     mediaReference: field(src, "mediaReference", "media_reference") as MessageDTO["mediaReference"],
-    deliveryState: field(src, "deliveryState", "delivery_state") as MessageDTO["deliveryState"],
-    createdAt: String(field(src, "createdAt", "created_at") ?? new Date(0).toISOString()),
+    deliveryState: deliveryState == null ? undefined : deliveryState as MessageDTO["deliveryState"],
+    createdAt,
+  };
+}
+
+// Installed servicedesk_read_workspace_snapshot projects actual request and
+// visit rows. Never replace them with []: that conceals real, persisted work.
+function savedString(row: RpcRow, key: string, snake?: string): string {
+  const value = field(row, key, snake);
+  if (typeof value !== "string" || !value.trim())
+    throw new Error("Malformed saved snapshot identity or status");
+  return value;
+}
+function savedCount(row: RpcRow, key: string, snake?: string): number {
+  const value = field(row, key, snake);
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0)
+    throw new Error("Malformed saved snapshot count or version");
+  return value;
+}
+function savedTimestamp(row: RpcRow, key: string, snake?: string): string {
+  const value = savedString(row, key, snake);
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) || !Number.isFinite(Date.parse(value)))
+    throw new Error("Malformed saved snapshot timestamp");
+  return value;
+}
+function savedOptionalString(row: RpcRow, key: string, snake?: string): string | undefined {
+  const value = field(row, key, snake);
+  if (value == null) return undefined;
+  return savedString(row, key, snake);
+}
+function savedOptionalTimestamp(row: RpcRow, key: string, snake?: string): string | undefined {
+  return field(row, key, snake) == null ? undefined : savedTimestamp(row, key, snake);
+}
+function savedOptionalCount(row: RpcRow, key: string, snake?: string): number | undefined {
+  return field(row, key, snake) == null ? undefined : savedCount(row, key, snake);
+}
+function requestFromRpc(row: RpcRow): RequestDTO {
+  const status = savedString(row, "status");
+  if (!["NEW","COLLECTING","READY","NEEDS_REVIEW","QUOTED","BOOKED","LOST","CLOSED"].includes(status))
+    throw new Error("Malformed saved request status");
+  return {
+    id: savedString(row,"id"),
+    workspaceId: savedString(row,"workspaceId","workspace_id"),
+    customerId: savedOptionalString(row,"customerId","customer_id"),
+    propertyId: savedOptionalString(row,"propertyId","property_id"),
+    serviceCode: savedOptionalString(row,"serviceCode","service_code"),
+    status: status as RequestDTO["status"],
+    bedrooms: savedOptionalCount(row,"bedrooms"),
+    bathrooms: savedOptionalCount(row,"bathrooms"),
+    requestedStartAt: savedOptionalTimestamp(row,"requestedStartAt","requested_start_at"),
+    version: savedCount(row,"version"),
+    createdAt: savedTimestamp(row,"createdAt","created_at"),
+    updatedAt: savedTimestamp(row,"updatedAt","updated_at"),
+  };
+}
+function visitFromRpc(row: RpcRow): VisitDTO {
+  const status = savedString(row,"status");
+  if (!["AWAITING_PAYMENT","CONFIRMED","ASSIGNED","EN_ROUTE","IN_PROGRESS",
+        "PENDING_REVIEW","COMPLETED","CANCELLED","PAYMENT_REVIEW"].includes(status))
+    throw new Error("Malformed saved visit status");
+  return {
+    id: savedString(row,"id"),
+    workspaceId: savedString(row,"workspaceId","workspace_id"),
+    requestId: savedString(row,"requestId","request_id"),
+    quoteId: savedString(row,"quoteId","quote_id"),
+    crewId: savedOptionalString(row,"crewId","crew_id"),
+    status: status as VisitDTO["status"],
+    startAt: savedTimestamp(row,"startAt","start_at"),
+    serviceMinutes: savedCount(row,"serviceMinutes","service_minutes"),
+    bufferMinutes: savedCount(row,"bufferMinutes","buffer_minutes"),
+    version: savedCount(row,"version"),
   };
 }
 
@@ -342,17 +448,22 @@ export function createPostgresConversationFacadeMethods(
         // A corrupt RPC array or an invalid item is not an empty queue.
         // Older/partial SQL snapshots may omit a collection, but a present
         // collection must be losslessly projectable before any staff use.
-        const keys = ["invoices","conversations","messages","recurrenceRules",
-          "visitEvidence","visitChecklistItems","attentionItems","qualityCases"] as const;
+        const keys = ["requests","quotes","visits","invoices","conversations",
+          "messages","recurrenceRules","visitEvidence","visitChecklistItems",
+          "attentionItems","qualityCases"] as const;
         if (keys.some(key =>
           row[key] !== undefined && (!Array.isArray(row[key]) ||
           (row[key] as unknown[]).some(item => !asRow(item))))) {
           throw new Error("Malformed workspace snapshot collection");
         }
+        if (Array.isArray(row.quotes) && row.quotes.length > 0)
+          throw new Error("Unsupported quote snapshot projection");
         return {
-        requests: [],
+        requests: rows(row.requests).map(requestFromRpc),
+        // Current installed SQL deliberately returns no direct quote rows;
+        // nonempty future quote payloads must not be mislabeled an empty queue.
         quotes: [],
-        visits: [],
+        visits: rows(row.visits).map(visitFromRpc),
         invoices: rows(row.invoices).map(invoiceFromRpc),
         conversations: rows(row.conversations).map(conversationFromRpc),
         messages: rows(row.messages).map(messageFromRpc),
@@ -367,8 +478,9 @@ export function createPostgresConversationFacadeMethods(
       const snapshot=parsed.value;
       // Reject foreign-tenant rows even if a broken server-side RPC returned
       // them. Do not silently collapse data into a seemingly valid snapshot.
-      const collections=[snapshot.invoices,snapshot.conversations,snapshot.messages,
-        snapshot.recurrenceRules,snapshot.visitEvidence,snapshot.visitChecklistItems,
+      const collections=[snapshot.requests,snapshot.visits,snapshot.invoices,
+        snapshot.conversations,snapshot.messages,snapshot.recurrenceRules,
+        snapshot.visitEvidence,snapshot.visitChecklistItems,
         snapshot.attentionItems,snapshot.qualityCases];
       if (collections.some(list => list.some(item => item.workspaceId !== ctx.workspaceId))) {
         return {ok:false,code:"SNAPSHOT_RPC_SCOPE_MISMATCH",
