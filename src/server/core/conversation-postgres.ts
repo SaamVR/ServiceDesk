@@ -6,6 +6,8 @@ import type {
   MessageDTO,
   QualityCaseDTO,
   RecurrenceRuleDTO,
+  RequestDTO,
+  VisitDTO,
   Result,
   VisitChecklistItemDTO,
   VisitEvidenceDTO,
@@ -130,6 +132,75 @@ function messageFromRpc(row: RpcRow): MessageDTO {
     mediaReference: field(src, "mediaReference", "media_reference") as MessageDTO["mediaReference"],
     deliveryState: deliveryState == null ? undefined : deliveryState as MessageDTO["deliveryState"],
     createdAt,
+  };
+}
+
+// Installed servicedesk_read_workspace_snapshot projects actual request and
+// visit rows. Never replace them with []: that conceals real, persisted work.
+function savedString(row: RpcRow, key: string, snake?: string): string {
+  const value = field(row, key, snake);
+  if (typeof value !== "string" || !value.trim())
+    throw new Error("Malformed saved snapshot identity or status");
+  return value;
+}
+function savedCount(row: RpcRow, key: string, snake?: string): number {
+  const value = field(row, key, snake);
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0)
+    throw new Error("Malformed saved snapshot count or version");
+  return value;
+}
+function savedTimestamp(row: RpcRow, key: string, snake?: string): string {
+  const value = savedString(row, key, snake);
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) || !Number.isFinite(Date.parse(value)))
+    throw new Error("Malformed saved snapshot timestamp");
+  return value;
+}
+function savedOptionalString(row: RpcRow, key: string, snake?: string): string | undefined {
+  const value = field(row, key, snake);
+  if (value == null) return undefined;
+  return savedString(row, key, snake);
+}
+function savedOptionalTimestamp(row: RpcRow, key: string, snake?: string): string | undefined {
+  return field(row, key, snake) == null ? undefined : savedTimestamp(row, key, snake);
+}
+function savedOptionalCount(row: RpcRow, key: string, snake?: string): number | undefined {
+  return field(row, key, snake) == null ? undefined : savedCount(row, key, snake);
+}
+function requestFromRpc(row: RpcRow): RequestDTO {
+  const status = savedString(row, "status");
+  if (!["NEW","COLLECTING","READY","NEEDS_REVIEW","QUOTED","BOOKED","LOST","CLOSED"].includes(status))
+    throw new Error("Malformed saved request status");
+  return {
+    id: savedString(row,"id"),
+    workspaceId: savedString(row,"workspaceId","workspace_id"),
+    customerId: savedOptionalString(row,"customerId","customer_id"),
+    propertyId: savedOptionalString(row,"propertyId","property_id"),
+    serviceCode: savedOptionalString(row,"serviceCode","service_code"),
+    status: status as RequestDTO["status"],
+    bedrooms: savedOptionalCount(row,"bedrooms"),
+    bathrooms: savedOptionalCount(row,"bathrooms"),
+    requestedStartAt: savedOptionalTimestamp(row,"requestedStartAt","requested_start_at"),
+    version: savedCount(row,"version"),
+    createdAt: savedTimestamp(row,"createdAt","created_at"),
+    updatedAt: savedTimestamp(row,"updatedAt","updated_at"),
+  };
+}
+function visitFromRpc(row: RpcRow): VisitDTO {
+  const status = savedString(row,"status");
+  if (!["AWAITING_PAYMENT","CONFIRMED","ASSIGNED","EN_ROUTE","IN_PROGRESS",
+        "PENDING_REVIEW","COMPLETED","CANCELLED","PAYMENT_REVIEW"].includes(status))
+    throw new Error("Malformed saved visit status");
+  return {
+    id: savedString(row,"id"),
+    workspaceId: savedString(row,"workspaceId","workspace_id"),
+    requestId: savedString(row,"requestId","request_id"),
+    quoteId: savedString(row,"quoteId","quote_id"),
+    crewId: savedOptionalString(row,"crewId","crew_id"),
+    status: status as VisitDTO["status"],
+    startAt: savedTimestamp(row,"startAt","start_at"),
+    serviceMinutes: savedCount(row,"serviceMinutes","service_minutes"),
+    bufferMinutes: savedCount(row,"bufferMinutes","buffer_minutes"),
+    version: savedCount(row,"version"),
   };
 }
 
@@ -377,17 +448,22 @@ export function createPostgresConversationFacadeMethods(
         // A corrupt RPC array or an invalid item is not an empty queue.
         // Older/partial SQL snapshots may omit a collection, but a present
         // collection must be losslessly projectable before any staff use.
-        const keys = ["invoices","conversations","messages","recurrenceRules",
-          "visitEvidence","visitChecklistItems","attentionItems","qualityCases"] as const;
+        const keys = ["requests","quotes","visits","invoices","conversations",
+          "messages","recurrenceRules","visitEvidence","visitChecklistItems",
+          "attentionItems","qualityCases"] as const;
         if (keys.some(key =>
           row[key] !== undefined && (!Array.isArray(row[key]) ||
           (row[key] as unknown[]).some(item => !asRow(item))))) {
           throw new Error("Malformed workspace snapshot collection");
         }
+        if (Array.isArray(row.quotes) && row.quotes.length > 0)
+          throw new Error("Unsupported quote snapshot projection");
         return {
-        requests: [],
+        requests: rows(row.requests).map(requestFromRpc),
+        // Current installed SQL deliberately returns no direct quote rows;
+        // nonempty future quote payloads must not be mislabeled an empty queue.
         quotes: [],
-        visits: [],
+        visits: rows(row.visits).map(visitFromRpc),
         invoices: rows(row.invoices).map(invoiceFromRpc),
         conversations: rows(row.conversations).map(conversationFromRpc),
         messages: rows(row.messages).map(messageFromRpc),
@@ -402,8 +478,9 @@ export function createPostgresConversationFacadeMethods(
       const snapshot=parsed.value;
       // Reject foreign-tenant rows even if a broken server-side RPC returned
       // them. Do not silently collapse data into a seemingly valid snapshot.
-      const collections=[snapshot.invoices,snapshot.conversations,snapshot.messages,
-        snapshot.recurrenceRules,snapshot.visitEvidence,snapshot.visitChecklistItems,
+      const collections=[snapshot.requests,snapshot.visits,snapshot.invoices,
+        snapshot.conversations,snapshot.messages,snapshot.recurrenceRules,
+        snapshot.visitEvidence,snapshot.visitChecklistItems,
         snapshot.attentionItems,snapshot.qualityCases];
       if (collections.some(list => list.some(item => item.workspaceId !== ctx.workspaceId))) {
         return {ok:false,code:"SNAPSHOT_RPC_SCOPE_MISMATCH",
