@@ -88,7 +88,7 @@ export function summarizeVerifiedOutstandingInvoices(
   invoices: readonly StaffCollectibleLedger[],
 ): OutstandingInvoiceSummary & { needsLedgerReview: number } {
   const candidates=invoices.filter(item => isCollectibleInvoice({
-    status:String(item.status), currency:String(item.currency), balanceMinor:Number(item.balanceMinor),
+    status:String(item.status), balanceMinor:Number(item.balanceMinor),
   }));
   const verified=candidates.filter(isVerifiedStaffCollectibleInvoice);
   const needsLedgerReview=candidates.length-verified.length;
