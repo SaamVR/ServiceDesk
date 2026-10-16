@@ -62,6 +62,7 @@ import { AiRequestBrief } from "./AiRequestBrief";
 import { CleaningRequestNextSteps } from "./CleaningRequestNextSteps";
 import { AiQuoteReview } from "./AiQuoteReview";
 import { StaffQuoteChecklist } from "./StaffQuoteChecklist";
+import { buildStaffQuoteChecklist } from "./staff-quote-checklist";
 import { AiOperationsStatus } from "./AiOperationsStatus";
 import { OwnerQuoteAcceptedAutomationControl } from "./OwnerQuoteAcceptedAutomationControl";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
@@ -1507,7 +1508,14 @@ function QuotesView({
     return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." action={{ label: "Review service requests", href: buildStaffModuleHref(workspaceSlug, "requests") }} />;
   }
 
-  const { currentQuoteByRequest, orderedQuotes, readyToSend, awaitingCustomer, sentNeedsExpiryReview, approvedNeedsExpiryReview, quoteClockUnverified } = buildQuotePipeline(data.quotes, data.loadedAt);
+  const { currentQuoteByRequest, orderedQuotes, awaitingCustomer, sentNeedsExpiryReview, approvedNeedsExpiryReview, quoteClockUnverified } = buildQuotePipeline(data.quotes, data.loadedAt);
+  // Keep the headline readiness count consistent with the actual saved
+  // financial preflight and the selected-quote send action. An APPROVED
+  // status and unexpired timestamp alone cannot verify customer charges.
+  const verifiedForSend = (quote: typeof data.quotes[number]) =>
+    quote.status === "APPROVED" &&
+    buildStaffQuoteChecklist(quote, data.loadedAt).readyForHumanReview;
+  const readyToSend = [...currentQuoteByRequest.values()].filter(verifiedForSend).length;
   const search = normalizeDirectoryQuery(searchQuery);
   const requestById = new Map(data.requests.map((request) => [request.id, request]));
   const customerById = new Map(data.customers.map((customer) => [customer.id, customer]));
@@ -1528,9 +1536,7 @@ function QuotesView({
   const selectedQuoteIsCurrent = currentQuote?.id === selectedQuote.id;
   const selectedQuoteNeedsExpiryReview = needsSentQuoteExpiryReview(selectedQuote, data.loadedAt);
   const selectedQuoteCanSend = isCurrentApprovedQuote(selectedQuote, currentQuoteByRequest)
-    && Boolean(selectedQuote.lineItems?.length)
-    && Number.isFinite(Date.parse(selectedQuote.validUntil ?? ""))
-    && Date.parse(selectedQuote.validUntil ?? "") > Date.parse(data.loadedAt);
+    && verifiedForSend(selectedQuote);
   const selectedQuoteRequest = requestById.get(selectedQuote.requestId);
   const selectedQuoteCustomer = customerById.get(selectedQuoteRequest?.customerId ?? "");
   const selectedQuoteProperty = data.properties.find((property) => property.id === selectedQuoteRequest?.propertyId);
