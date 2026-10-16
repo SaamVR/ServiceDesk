@@ -44,6 +44,20 @@ describe("R6 verified payment RPC requires financial and tenant truth",()=>{
     expect(result.ok,JSON.stringify(attempt)).toBe(false);
   }
  });
+ it("never binds a provider callback to a different invoice or quote within the same tenant",async()=>{
+   const payload={ok:true,state:"APPLIED",invoice,visit};
+   const correct={...event,invoiceId:invoice.id};
+   expect(await build(payload).applyVerifiedPayment(correct))
+     .toMatchObject({ok:true,value:{state:"APPLIED",invoice:{id:invoice.id}}});
+   for(const mismatched of [
+     {...event,invoiceId:"77777777-7777-4777-8777-777777777777"},
+     {...event,quoteId:"88888888-8888-4888-8888-888888888888"},
+     {...event,invoiceId:invoice.id,quoteId:"99999999-9999-4999-8999-999999999999"},
+   ]) {
+     expect(await build(payload).applyVerifiedPayment(mismatched),
+       JSON.stringify(mismatched)).toMatchObject({ok:false,code:"PAYMENT_RPC_SCOPE_MISMATCH"});
+   }
+ });
  it("does not leak raw SQL/provider secrets on thrown, rejected or malformed RPC",async()=>{
   const token="Bearer private-key user@example.com";
   for(const response of [

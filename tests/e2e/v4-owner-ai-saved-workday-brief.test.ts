@@ -1,7 +1,7 @@
 import {readFileSync} from "node:fs";
 import {join} from "node:path";
 import {describe,expect,it} from "vitest";
-import {deriveOwnerOperationsBriefFacts,generateOwnerOperationsBrief} from "../../src/server/ai/owner-operations-brief";
+import {deriveOwnerOperationsBriefFacts,generateOwnerOperationsBrief,validateOwnerOperationsBriefGrounding} from "../../src/server/ai/owner-operations-brief";
 
 const workspaceId="11111111-1111-4111-8111-111111111111";
 const actorId="22222222-2222-4222-8222-222222222222";
@@ -25,6 +25,7 @@ function deps(persisted=()=>snapshot,receive:(p:string)=>void=()=>{}) {
   return {
     resolveActor:async()=>authorized(),
     loadSnapshot:async()=>({ok:true,value:persisted()} as never),
+    now:()=>Date.parse("2026-10-16T12:14:00.000Z"),
     readConfig:()=>({ok:true,value:{
       apiBaseUrl:"https://api.openai.com/v1",apiKey:"mock-only",
       model:"test-model",now:()=>new Date().toISOString(),
@@ -65,6 +66,67 @@ describe("real authorized AI daily owner operations brief",()=>{
       reads++;return reads===1?snapshot:{...snapshot,requests:[]};
     }));
     expect(stale).toMatchObject({ok:false,code:"OWNER_BRIEF_STALE_SNAPSHOT"});
+  });
+  it("refuses invented exact counts, false completion claims and empty-queue priorities",()=>{
+    const base=deriveOwnerOperationsBriefFacts(snapshot as never)!;
+    for(const ungrounded of [
+      "Review 14 unassigned visits before the shift.",
+      "Check two overdue invoices and send an update.",
+      "All invoices are settled. Review the financial report.",
+      "No quotes require attention; check the calendar.",
+      "We have resolved the customer issues; check the new queue.",
+      "Review critical attention items tomorrow.",
+    ]) {
+      // The last category exists in this fixture and remains permitted,
+      // while hallucinated numeric and completed-action claims are blocked.
+      const expected=ungrounded==="Review critical attention items tomorrow.";
+      expect(Boolean(validateOwnerOperationsBriefGrounding(ungrounded,base)),ungrounded)
+        .toBe(expected);
+    }
+    const empty={...base,unassignedActiveVisits:0,quoteValidityNeedsReview:0,
+      waitingOnCustomerQuotes:0,invoiceLedgersNeedingReview:0,openRequests:0,
+      unresolvedCriticalAttentions:0,collectibleInvoices:0};
+    for(const copy of [
+      "Review unassigned visits.","Inspect expired quotes.","Review open requests.",
+      "Inspect critical attention items.","Check outstanding invoices.",
+      "Inspect invoice ledger issues.","Follow up on quotes awaiting customers.",
+    ]) expect(validateOwnerOperationsBriefGrounding(copy,empty),copy).toBeUndefined();
+    expect(validateOwnerOperationsBriefGrounding(
+      "Check the authoritative workspace queues before making changes.",empty))
+      .toBe("Check the authoritative workspace queues before making changes.");
+  });
+  it("rejects an ungrounded AI output after saving verified counts rather than surfacing it",async()=>{
+    const config=deps() as unknown as Record<string, unknown>;
+    const result=await generateOwnerOperationsBrief("ctg",{
+      ...config,
+      callModel:async()=>({ok:true,value:{replyDraft:
+        "Review 12 expired quotes and zero unassigned visits.",
+        requestedToolCalls:[],citations:[]}}),
+    } as never);
+    expect(result).toMatchObject({ok:false,code:"OWNER_BRIEF_OUTPUT_UNSAFE"});
+  });
+  it("requires recent source evidence before and after model latency, even for identical counts",async()=>{
+    const base=deps() as unknown as Record<string, unknown>;
+    const stale=await generateOwnerOperationsBrief("ctg",{
+      ...base,now:()=>Date.parse("2026-10-16T13:00:01Z"),
+    } as never);
+    expect(stale).toMatchObject({ok:false,code:"OWNER_BRIEF_STALE_SNAPSHOT"});
+    const future=await generateOwnerOperationsBrief("ctg",{
+      ...base,now:()=>Date.parse("2026-10-16T11:54:00Z"),
+    } as never);
+    expect(future).toMatchObject({ok:false,code:"OWNER_BRIEF_STALE_SNAPSHOT"});
+    let clockCalls=0;
+    const changedDuringModel=await generateOwnerOperationsBrief("ctg",{
+      ...base,
+      now:()=>++clockCalls===1
+        ? Date.parse("2026-10-16T12:14:00Z")
+        : Date.parse("2026-10-16T12:40:01Z"),
+    } as never);
+    expect(changedDuringModel)
+      .toMatchObject({ok:false,code:"OWNER_BRIEF_STALE_SNAPSHOT"});
+    expect(await generateOwnerOperationsBrief("ctg",{
+      ...base,now:()=>Number.NaN,
+    } as never)).toMatchObject({ok:false,code:"OWNER_BRIEF_STALE_SNAPSHOT"});
   });
   it("requires deliberate owner UI and never sends or charges",()=>{
     const view=readFileSync(join(process.cwd(),"src/features/operations/StaffOverviewDashboard.tsx"),"utf8");

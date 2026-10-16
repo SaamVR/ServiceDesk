@@ -37,7 +37,7 @@ function asResult<T>(
   // SQL diagnostics, customer identifiers or secrets: never echo them.
   if (error) return { ok: false, code: safeCode(error.code),
     message: "Conversation database operation could not be completed." };
-  if (!data || typeof data !== "object" || Array.isArray(data) || data.ok === false) {
+  if (!data || typeof data !== "object" || Array.isArray(data) || data.ok !== true) {
     return { ok: false, code: safeCode(data?.code),
       message: "Conversation command was rejected by the database RPC." };
   }
@@ -245,9 +245,17 @@ export function createPostgresConversationFacadeMethods(
       }
       if (!conversation.id || conversation.id === "undefined" ||
           conversation.workspaceId !== event.workspaceId ||
+          conversation.channel !== event.channel ||
+          !Number.isSafeInteger(conversation.version) || conversation.version < 0 ||
+          // SQL receipts are untrusted until bound back to the exact inbound
+          // customer source. A missing provider id, outbound/AI sender, or
+          // cross-channel conversation cannot certify a committed inbound.
           (message && (message.workspaceId !== event.workspaceId ||
             message.conversationId !== conversation.id ||
-            (message.providerMessageId && message.providerMessageId !== event.providerMessageId)))) {
+            message.direction !== "INBOUND" ||
+            message.senderKind !== "CUSTOMER" ||
+            message.id === "undefined" ||
+            message.providerMessageId !== event.providerMessageId))) {
         return { ok: false, code: "INBOUND_RPC_SCOPE_MISMATCH",
           message: "Conversation RPC returned an invalid tenant or message identity." };
       }

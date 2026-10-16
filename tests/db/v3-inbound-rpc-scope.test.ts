@@ -47,7 +47,9 @@ describe("trusted conversation RPC tenant-bound receipt", () => {
 
   it("preserves the separate email inbound command", async () => {
     const { facade: methods, calls } = facade({
-      ...success, state: "DUPLICATE", message: undefined,
+      ...success, state: "DUPLICATE",
+      conversation: { ...success.conversation, channel: "EMAIL" },
+      message: undefined,
     });
     const result = await methods.applyInboundMessage({ ...event, channel: "EMAIL" });
     expect(result).toMatchObject({ ok: true, value: { state: "DUPLICATE" } });
@@ -60,6 +62,14 @@ describe("trusted conversation RPC tenant-bound receipt", () => {
       { message: { ...success.message, workspaceId: "foreign-workspace" } },
       { message: { ...success.message, conversationId: "foreign-conversation" } },
       { message: { ...success.message, providerMessageId: "different-provider-message" } },
+      { message: { ...success.message, providerMessageId: undefined } },
+      { message: { ...success.message, direction: "OUTBOUND" } },
+      { message: { ...success.message, senderKind: "AI" } },
+      { message: { ...success.message, senderKind: "STAFF" } },
+      { message: { ...success.message, id: undefined } },
+      { conversation: { ...success.conversation, channel: "EMAIL" } },
+      { conversation: { ...success.conversation, version: -1 } },
+      { conversation: { ...success.conversation, version: 2.5 } },
       { conversation: { ...success.conversation, id: undefined } },
     ];
     for (const override of cases) {
