@@ -132,8 +132,16 @@ export async function loadOperationalQuoteRateCard(
     .select("rate_card_id,starts_at,ends_at")
     .eq("workspace_id", workspaceId)
     .eq("branch_id", request.data.branch_id)
-    .eq("active", true).limit(10);
+    .eq("active", true).limit(101);
   if (books.error || !books.data) return fail("QUOTE_RATE_BOOK_UNAVAILABLE", "Branch pricing could not be verified.");
+  // A LIMIT 10 can silently hide a second currently effective book behind
+  // historical intervals, causing the first card to be treated as unique.
+  // Inspect a larger bounded history; on reaching the cap, fail closed
+  // because any omitted record could also be effective at this timestamp.
+  if (books.data.length >= 101) {
+    return fail("QUOTE_RATE_BOOK_HISTORY_UNVERIFIED",
+      "Branch pricing history exceeds the verified read window. Review the saved price-book intervals.");
+  }
   const active = books.data.filter(book => {
     const start = book.starts_at == null ? Number.NEGATIVE_INFINITY : Date.parse(book.starts_at);
     const end = book.ends_at == null ? Number.POSITIVE_INFINITY : Date.parse(book.ends_at);
