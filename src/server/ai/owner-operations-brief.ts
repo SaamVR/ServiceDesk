@@ -113,6 +113,9 @@ export function validateOwnerOperationsBriefGrounding(
   const draft=validateRequestBriefDraft(value);
   if (!draft) return undefined;
   if (/[0-9]/.test(draft) ||
+      // Word-based numbers also assert exact queue totals not present in
+      // the safe model output contract, e.g. "two overdue invoices".
+      /\b(?:one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand)\b/i.test(draft) ||
       /\b(?:zero|none|every|all|no)\s+(?:open\s+|pending\s+|unassigned\s+|unpaid\s+|critical\s+)?(?:requests?|quotes?|invoices?|visits?|attentions?)\b/i.test(draft) ||
       /\b(?:we|i|you|our team|the team|staff)\s+(?:have\s+)?(?:resolved|completed|cleared|delivered|contacted|processed|settled)\b/i.test(draft)) {
     return undefined;
