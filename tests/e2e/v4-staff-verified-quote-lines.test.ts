@@ -29,8 +29,11 @@ describe("owner/dispatcher quote disclosure and send readiness", () => {
     const ui = readFileSync(join(process.cwd(), "src/features/operations/OperationalProductRoute.tsx"),"utf8");
     expect(ui).toContain('aria-label="Verified saved quote charges"');
     expect(ui).toContain("formatMinorMoney(item.amountMinor, selectedQuote.currency)");
-    expect(ui).toContain("Boolean(selectedQuote.lineItems?.length)");
-    expect(ui).toContain('Date.parse(selectedQuote.validUntil ?? "") > Date.parse(data.loadedAt)');
+    // Actual financial preflight is stricter than the previous mere existence
+    // of lineItems and a future validity date.
+    expect(ui).toContain("buildStaffQuoteChecklist(quote, data.loadedAt).readyForHumanReview");
+    expect(ui).toContain("&& verifiedForSend(selectedQuote)");
+    expect(ui).toContain("isCurrentApprovedQuote(selectedQuote, currentQuoteByRequest)");
     expect(ui).toContain("Do not send this quote");
     expect(ui).toContain('selectedQuote.status === "APPROVED" ? (');
   });
