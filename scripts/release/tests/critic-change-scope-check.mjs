@@ -42,6 +42,31 @@ test("recognizes backend persistence independent of visual frontend review", () 
     "Backend financial / persisted commands",
   ]);
 });
+test("combines HTTP authentication checks with durable workflow/provider risk", () => {
+  const paths=[
+    "src/server/api-handlers/reviewed-inbox-reply-http.ts",
+    "src/app/api/internal/inbox/reply/route.ts",
+    "src/server/workflows/owner-request-automation.ts",
+    "src/server/providers/whatsapp.ts",
+  ];
+  const report=classifyCriticScope(paths);
+  assert.equal(report.paths,4);
+  assert.deepEqual(report.categories.map(x=>x.name),[
+    "Authenticated HTTP / webhook trust boundaries",
+    "External providers / automation",
+    "Authenticated UX / business journeys",
+  ]);
+  const summary=renderCriticScopeReport(report);
+  assert.match(summary,/origin and session checks/);
+  assert.match(summary,/lease\/retry\/recovery/);
+  assert.doesNotMatch(summary,/UAT PASS/);
+});
+test("rejects path traversal, absolute paths, CR and backslashes before scoping", () => {
+  for (const malformed of [
+    "..\\unsafe", "/abs/path.ts", "src/server/../other.ts",
+    "src\\server\\core.ts", "src/server/./core/a.ts", "src/server/a\rfile.ts",
+  ]) assert.throws(()=>classifyCriticScope([malformed]),/Malformed/);
+});
 test("does not classify documentation-only changes as business acceptance", () => {
   const report = classifyCriticScope(["docs/control-tower/critic/review.md"]);
   assert.equal(report.categories.length, 0);
