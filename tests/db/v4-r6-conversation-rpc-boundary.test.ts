@@ -29,8 +29,8 @@ describe("R6 conversation commands fail closed on untrusted RPC output",()=>{
     {id:"wrong"},{workspaceId:"wrong"},{version:1.5},{version:-1}
   ]) expect(await facade({ok:true,...handover,...patch})
     .setConversationHandover(ctx,cid,handoverInput,meta))
-      .toMatchObject({ok:false,code: !Number.isSafeInteger(patch.version) ||
-        (typeof patch.version === "number" && patch.version < 0)
+      .toMatchObject({ok:false,code: typeof patch.version === "number" &&
+        (!Number.isSafeInteger(patch.version) || patch.version < 0)
         ? "HANDOVER_RPC_ERROR_MALFORMED" : "HANDOVER_RPC_SCOPE_MISMATCH"});
   for (const patch of [
     {workspaceId:"foreign"},{conversationId:"foreign"},
