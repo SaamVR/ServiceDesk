@@ -1,0 +1,89 @@
+{
+  "protocolVersion": 1,
+  "reviewId": "SERVICEDESK-V4-R6-2026-10-16",
+  "sourceSha": "7c826383c61c1a68c7701b2b937e4cb0695c5abf",
+  "deployedSha": "5b876a7a806b5b63eca8e1b9396a3a7509240ec6",
+  "verdict": "BLOCKED",
+  "commercialReady": false,
+  "dimensions": {
+    "implementation": {
+      "status": "PASS",
+      "proofMode": "SOURCE_ONLY",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/pull/480"
+      ]
+    },
+    "technical": {
+      "status": "PASS",
+      "proofMode": "CI_EXECUTED",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/actions/runs/38908381771",
+        "https://github.com/SaamVR/ServiceDesk/actions/runs/38908381902"
+      ]
+    },
+    "integration": {
+      "status": "PASS",
+      "proofMode": "SOURCE_ONLY",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/commit/7c826383c61c1a68c7701b2b937e4cb0695c5abf",
+        "https://github.com/SaamVR/ServiceDesk/pull/480"
+      ]
+    },
+    "deployed": {
+      "status": "PARTIAL",
+      "proofMode": "DEPLOYMENT_METADATA",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/pull/480"
+      ]
+    },
+    "persistence": {
+      "status": "BLOCKED",
+      "proofMode": "READ_ONLY_AGGREGATES",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/issues/191#issuecomment-6217339310"
+      ]
+    },
+    "userExperience": {
+      "status": "BLOCKED",
+      "proofMode": "NOT_EXECUTED",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/issues/142"
+      ]
+    },
+    "aiAutomation": {
+      "status": "BLOCKED",
+      "proofMode": "SOURCE_ONLY",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/issues/145"
+      ]
+    },
+    "security": {
+      "status": "PARTIAL",
+      "proofMode": "READ_ONLY_CATALOG",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/issues/153#issuecomment-6217340016"
+      ]
+    },
+    "reliability": {
+      "status": "PARTIAL",
+      "proofMode": "DISPOSABLE_PG17",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/actions/runs/38908381902",
+        "https://github.com/SaamVR/ServiceDesk/issues/199"
+      ]
+    },
+    "businessEffectiveness": {
+      "status": "BLOCKED",
+      "proofMode": "NO_AUTHENTICATED_UAT",
+      "evidence": [
+        "https://github.com/SaamVR/ServiceDesk/issues/191#issuecomment-6217339310"
+      ]
+    }
+  },
+  "openCorrections": [
+    "Render LIVE SHA predates R6 integrated review SHA; exact deployed source identity still missing.",
+    "No verified merchant catalog prices or real persisted quote, invoice, workflow execution, and attention rows.",
+    "Real two-owner authenticated RLS not complete; caller-scoped default-branch RPC must be audited.",
+    "No authorized live model or provider send evidence; source gates are not operational acceptance."
+  ]
+}
