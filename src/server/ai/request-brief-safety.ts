@@ -37,6 +37,7 @@ export function validateRequestBriefDraft(value: unknown): string | undefined {
   // authorization. Indirect instructions ("ask staff to email clients") are
   // still unverified outreach even when the model never says "we sent".
   if (/\b(?:ask|tell|instruct|have|remind|direct|prompt|get)\s+(?:(?:the|our|your)\s+)?(?:staff|team|dispatcher|agent|assistant)\s+to\s+(?:contact|call|email|text|message|notify|send|reach\s+out\s+to|follow\s+up\s+with)\b/i.test(draft) ||
-      /\b(?:send|email|text|notify|message|contact|call|reach\s+out\s+to|follow\s+up\s+with)\s+(?:(?:a|an|the)\s+)?(?:reminder|update|notice|notification|message|email|text)\s+(?:to|for)\s+(?:(?:the|our)\s+)?(?:customers?|clients?|leads?|prospects?|guests?|contacts?)\b/i.test(draft)) return undefined;
+      /\b(?:send|email|text|notify|message|contact|call|reach\s+out\s+to|follow\s+up\s+with)\s+(?:(?:a|an|the)\s+)?(?:reminder|update|notice|notification|message|email|text)\s+(?:to|for)\s+(?:(?:the|our)\s+)?(?:customers?|clients?|leads?|prospects?|guests?|contacts?)\b/i.test(draft) ||
+      /\b(?:email|text|notify|message|contact|call|phone)\s+(?:(?:the|our)\s+)?(?:customers?|clients?|leads?|prospects?|guests?|contacts?)\b/i.test(draft)) return undefined;
   return draft;
 }
