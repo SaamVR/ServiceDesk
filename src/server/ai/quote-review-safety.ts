@@ -24,6 +24,11 @@ export function validateStaffQuoteReviewDraft(value: unknown): string | undefine
   if (/\b(?:the\s+)?(?:customer|client)\s+(?:has\s+|already\s+)?(?:approved|accepted|confirmed|booked|paid|received)\b/i.test(draft)) return undefined;
   if (/\b(?:whats?app|e-?mail|message|notification)\s+(?:was|is|has\s+been)\s+(?:sent|delivered|received|confirmed)\b/i.test(draft)) return undefined;
   if (/\b(?:payment|deposit|balance|invoice|refund)\s+(?:was|is|has\s+been)\s+(?:paid|charged|settled|processed|refunded|received)\b/i.test(draft)) return undefined;
+  // A staff-facing quality suggestion cannot certify a completed business
+  // action just by changing the grammatical subject. "We already sent it"
+  // or "our team approved" is as ungrounded as "the quote was sent".
+  if (/\b(?:we|i|you|staff|our\s+team)\s+(?:(?:have|has|had)\s+)?(?:already\s+)?(?:sent|delivered|approved|accepted|booked|scheduled|charged|refunded|contacted|paid)\b/i.test(draft)) return undefined;
+  if (/\b(?:the\s+|your\s+)?(?:quote|offer|invoice|message|job)\s+(?:was|is|has\s+been)\s+(?:sent|delivered|approved|accepted|processed|confirmed|scheduled|booked|settled)\b/i.test(draft)) return undefined;
   // Invisible bidi controls can reverse quoted evidence/charges or spoof the
   // order of fields while still passing ordinary printable-text checks.
   if (/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(draft)) return undefined;
