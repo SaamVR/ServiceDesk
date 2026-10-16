@@ -255,7 +255,7 @@ export function createPostgresConversationFacadeMethods(
             message.direction !== "INBOUND" ||
             message.senderKind !== "CUSTOMER" ||
             message.id === "undefined" ||
-            message.providerMessageId !== event.providerMessageId)))) {
+            message.providerMessageId !== event.providerMessageId))) {
         return { ok: false, code: "INBOUND_RPC_SCOPE_MISMATCH",
           message: "Conversation RPC returned an invalid tenant or message identity." };
       }
