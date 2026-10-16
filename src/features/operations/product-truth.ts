@@ -98,7 +98,7 @@ export function summarizeVerifiedOutstandingInvoices(
   };
   const sum=verified.reduce((acc,item)=>acc+(item.balanceMinor as number),0);
   if(!Number.isSafeInteger(sum))return {
-    count:verified.length,multipleCurrencies:false,needsLedgerReview:needsLedgerReview+verified.length,
+    count:0,multipleCurrencies:false,needsLedgerReview:needsLedgerReview+verified.length,
   };
   return {count:verified.length,multipleCurrencies:false,
     currency:currencies[0],totalMinor:sum,needsLedgerReview};
