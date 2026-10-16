@@ -370,7 +370,9 @@ export function StaffOverviewDashboard({
             <div>
               <p className={styles.cardEyebrow}>Today</p>
               <h2 id="today-heading">Today&apos;s field plan</h2>
-              <p>{todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` : "No active visits are scheduled for today."}</p>
+              <p>{!todayKey ? "Today's schedule cannot be verified until the timezone or snapshot clock is corrected." :
+                todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` :
+                "No active visits are scheduled for today."}</p>
             </div>
             <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "schedule")}>Open dispatch →</Link>
           </div>
