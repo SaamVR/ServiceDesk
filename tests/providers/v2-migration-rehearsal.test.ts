@@ -15,7 +15,8 @@ describe("V2 migration rehearsal readiness", () => {
   it("fingerprints the exact ordered repository migration inventory", () => {
     const plan = buildMigrationRehearsalPlan({ buildSha, migrationFiles });
     expect(plan.migrationFiles).toEqual([...migrationFiles].sort((a, b) => a.localeCompare(b)));
-    expect(plan.migrationHead).toBe("0063_v4_quote_accept_internal_source_journal.sql");
+    expect(plan.migrationHead).toBe("0064_v4_owner_cleaning_pricing_revision.sql");
+    expect(plan.migrationFiles).toContain("0064_v4_owner_cleaning_pricing_revision.sql");
     expect(plan.migrationFiles).toContain("0062_v4_branch_trigger_rowtype_guard.sql");
     expect(plan.migrationFiles).toContain("0063_v4_quote_accept_internal_source_journal.sql");
     expect(plan.planFingerprint).toMatch(/^[a-f0-9]{64}$/);

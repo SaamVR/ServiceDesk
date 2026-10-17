@@ -62,12 +62,14 @@ export function OwnerCleaningPricingSetupForm({
   );
   const setupId = randomUUID();
   return (
-    <section id={repairTarget ? "owner-pricing-revision-" + repairTarget.branch.id : "owner-first-run-pricing"}
+    <section id={repairTarget ? "owner-pricing-revision-" + repairTarget.branch.id : undefined}
       aria-label={repairTarget ? "Owner cleaning pricing revision" : "First-run owner cleaning pricing"} style={{
       border: "1px solid #d1e8df", borderRadius: 14, scrollMarginTop: 112,
       padding: 20, background: "#fff",
       display: "grid", gap: 16, marginTop: 16,
     }}>
+      {!repairTarget ? <span id="owner-first-run-pricing" aria-label="First-run owner cleaning pricing"
+        style={{ scrollMarginTop: 112, display: "block" }} /> : null}
       <header>
         <h4 style={{ margin: "0 0 7px", color: "#174a43" }}>
           {repairTarget ? "Replace existing branch pricing" : "Activate real cleaning services and prices"}
@@ -75,7 +77,7 @@ export function OwnerCleaningPricingSetupForm({
         <p style={{ margin: 0, fontSize: ".85rem", lineHeight: 1.6 }}>
           {repairTarget
             ? "Owner-confirmed full replacement. Re-enter every rate and duration; no guessed values or model prices are used. The old rate card remains for historical quotes. This action does not contact customers or charge payments."
-            : "Owner-only initial setup. Enter actual USD prices: sandbox and suggested prices are never activated. A saved rate card is permanent and first-run setup cannot overwrite an existing branch price book. Nothing is sent to customers or charged."}
+            : "Owner-only initial setup. Enter your business’s actual USD prices; no sandbox, sample or suggested prices are activated. First-run setup cannot overwrite an existing branch price book. Nothing is sent or charged."}
           {repairTarget ? " Existing workspace-wide service names stay unchanged; edit those separately in the catalog before changing prices." : null}
         </p>
       </header>
