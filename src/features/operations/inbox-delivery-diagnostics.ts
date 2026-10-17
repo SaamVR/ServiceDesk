@@ -36,6 +36,15 @@ const validReasons = new Set(["PROVIDER_FAILURE", "SUPPRESSED_BY_POLICY", "STALE
 const validCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 200;
 
+// Server-generated triage clocks are UTC ISO instants. Accept an explicit
+// numeric offset for interoperable receipts but never a locale-dependent
+// date-only or unzoned string that could falsely establish delivery health.
+function validGeneratedAt(value: unknown): value is string {
+  return typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
+    Number.isFinite(Date.parse(value));
+}
+
 /** Never render server-inconsistent delivery health as operational success. */
 function consistentDeliveryHealth(
   state: DeliveryTriageState,
@@ -60,7 +69,7 @@ function consistentDeliveryHealth(
 export function parseInboxDeliveryDiagnostics(value: unknown): InboxDeliveryDiagnosticsSnapshot | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
-  if (typeof record.generatedAt !== "string" || !Number.isFinite(Date.parse(record.generatedAt)) ||
+  if (!validGeneratedAt(record.generatedAt) ||
       typeof record.truncated !== "boolean" || !validCount(record.scannedOutboundMessages) ||
       !record.counts || typeof record.counts !== "object" || Array.isArray(record.counts) ||
       !Array.isArray(record.items) || record.items.length > 200) return undefined;
