@@ -258,6 +258,9 @@ export async function generateOwnerOperationsBrief(
     fresh=await loader(workspaceSlug);
   } catch { return error("OWNER_BRIEF_REVALIDATION_UNAVAILABLE"); }
   if (!fresh.ok || fresh.value.workspace.id !== workspaceId ||
+      // The second row snapshot is a new untrusted authorization read. The
+      // workspace record matching is insufficient when the actor scope moved.
+      fresh.value.actor.workspaceId !== workspaceId ||
       fresh.value.actor.userId !== userId || fresh.value.actor.role !== "OWNER") {
     return error("OWNER_BRIEF_ACCESS_REVOKED");
   }
