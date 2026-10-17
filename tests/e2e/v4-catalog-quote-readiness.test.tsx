@@ -24,6 +24,30 @@ describe("First-run quote readiness", () => {
     }))).toBe("");
   });
 
+  it("shows a real warning for active unrelated services and clears it only for a supported active cleaning service", () => {
+    const unrelated = {
+      id:"svc-window", code:"WINDOWS", name:"Window cleaning",
+      active:true, requiresReview:false, updatedAt:"2026-10-17",
+    };
+    const warning = renderToStaticMarkup(createElement(CatalogReadinessBanner, {
+      workspaceSlug:"fictional-cleaning",
+      serviceCatalog:[unrelated],
+    }));
+    expect(warning).toContain("no active cleaning service");
+    expect(warning).toContain("Unrelated active services do not establish cleaning quote readiness");
+    expect(warning).toContain("No sample price or provider status is being invented");
+    const disabled = renderToStaticMarkup(createElement(CatalogReadinessBanner, {
+      workspaceSlug:"fictional-cleaning",
+      serviceCatalog:[unrelated, { ...unrelated, id:"svc-deep", code:"DEEP", active:false }],
+    }));
+    expect(disabled).toContain("no active cleaning service");
+    const configured = renderToStaticMarkup(createElement(CatalogReadinessBanner, {
+      workspaceSlug:"fictional-cleaning",
+      serviceCatalog:[unrelated, { ...unrelated, id:"svc-deep", code:"DEEP" }],
+    }));
+    expect(configured).toBe("");
+  });
+
   it("exposes saved catalog readiness in both Today and Requests without altering pricing authority", () => {
     const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
     const today = read("src/features/operations/StaffOverviewDashboard.tsx");

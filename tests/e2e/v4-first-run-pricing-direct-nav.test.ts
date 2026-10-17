@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { availableFirstRunUsdBranches } from "../../src/features/operations/owner-pricing-readiness";
+import { availableFirstRunUsdBranches, countQuoteableCleaningServices } from "../../src/features/operations/owner-pricing-readiness";
 import type { OperationalBranchScope } from "../../src/features/operations/operational-product-runtime";
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
@@ -65,6 +65,24 @@ describe("V4 owner-first-run real USD pricing action navigation", () => {
     expect(availableFirstRunUsdBranches(selected, {
       state: "VERIFIED", activeBranchIds: [],
     }).map(item => item.id)).toEqual(["usd-one"]);
+  });
+
+  it("requires an actual supported active cleaning service for readiness", () => {
+    const unrelated = [{ code: "WINDOWS", active: true }, { code: "CARPET", active: true }];
+    expect(countQuoteableCleaningServices(unrelated)).toBe(0);
+    expect(countQuoteableCleaningServices([{ code: "STANDARD", active: false }, ...unrelated])).toBe(0);
+    expect(countQuoteableCleaningServices([{ code: "STANDARD", active: true }, ...unrelated])).toBe(1);
+    expect(countQuoteableCleaningServices([
+      {code:"STANDARD",active:true}, {code:"DEEP",active:true},
+      {code:"MOVE_OUT",active:true},{code:"WINDOWS",active:true},
+    ])).toBe(3);
+    expect(countQuoteableCleaningServices()).toBe(0);
+    const banner = read("src/features/operations/CatalogReadinessBanner.tsx");
+    const onboarding = read("src/features/onboarding/onboarding-commercial-readiness.ts");
+    expect(banner).toContain("countQuoteableCleaningServices(serviceCatalog) === 0");
+    expect(banner).toContain("Unrelated active services do not establish cleaning quote readiness");
+    expect(onboarding).toContain("countQuoteableCleaningServices(input.catalog)");
+    expect(banner).not.toContain("serviceCatalog.some(item => item.active)");
   });
 
   it("directs quote readiness banners to real rates and retains safe generic fallback", () => {
