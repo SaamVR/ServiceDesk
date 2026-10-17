@@ -12,6 +12,6 @@ expect(src).toContain("if (pending.signal.aborted) return;");
     expect(src).toContain('setError("cancelled")');
     expect(src).toContain("Cancel suggestion");
     expect(src).toContain("No reply was approved or queued.");
-    expect(src).toContain("if (!pending.signal.aborted) setBusy");
+    expect(src).toContain("if (controller.current === pending && !pending.signal.aborted)");
   });
 });
