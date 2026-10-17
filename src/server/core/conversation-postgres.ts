@@ -104,7 +104,9 @@ function messageFromRpc(row: RpcRow): MessageDTO {
   const conversationId = field(src, "conversationId", "conversation_id");
   const direction = field(src, "direction");
   const senderKind = field(src, "senderKind", "sender_kind");
-  const createdAt = field(src, "createdAt", "created_at");
+  // Route messages through the same strict zoned persisted-clock contract
+  // as requests, visits, recurrence and audit records.
+  const createdAt = savedTimestamp(src, "createdAt", "created_at");
   const deliveryState = field(src, "deliveryState", "delivery_state");
   // A malformed saved message is NOT an outbound staff message dated 1970.
   // The installed inbound, reply and workspace-snapshot RPCs all project
@@ -115,9 +117,6 @@ function messageFromRpc(row: RpcRow): MessageDTO {
       typeof conversationId !== "string" || !conversationId ||
       !["INBOUND", "OUTBOUND", "INTERNAL"].includes(String(direction)) ||
       !["CUSTOMER", "STAFF", "AI", "SYSTEM"].includes(String(senderKind)) ||
-      typeof createdAt !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(createdAt) ||
-      !Number.isFinite(Date.parse(createdAt)) ||
       (deliveryState != null &&
         !["QUEUED", "RUNNING", "PROVIDER_ACCEPTED", "DELIVERED", "READ", "FAILED", "SUPPRESSED"]
           .includes(String(deliveryState)))) {
@@ -151,7 +150,28 @@ function savedCount(row: RpcRow, key: string, snake?: string): number {
 }
 function savedTimestamp(row: RpcRow, key: string, snake?: string): string {
   const value = savedString(row, key, snake);
-  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) || !Number.isFinite(Date.parse(value)))
+  // An RPC timestamp must carry an actual zoned civil instant. Date.parse()
+  // alone accepts some impossible dates (Feb 30) and normalizes midnight
+  // hour 24; neither proves a trustworthy saved visit/receipt/audit clock.
+  // PostgreSQL timestamptz can carry up to six fractional second digits.
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match) throw new Error("Malformed saved snapshot zoned timestamp");
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  const hour = Number(match[4]), minute = Number(match[5]), second = Number(match[6]);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const monthDays = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const zone = match[7];
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > monthDays[month - 1] ||
+      hour > 23 || minute > 59 || second > 59)
+    throw new Error("Malformed saved snapshot calendar timestamp");
+  if (zone !== "Z") {
+    const offsetHours = Number(zone.slice(1, 3));
+    const offsetMinutes = Number(zone.slice(4, 6));
+    if (offsetHours > 14 || offsetMinutes > 59 ||
+        (offsetHours === 14 && offsetMinutes !== 0))
+      throw new Error("Malformed saved snapshot timezone offset");
+  }
+  if (!Number.isFinite(Date.parse(value)))
     throw new Error("Malformed saved snapshot timestamp");
   return value;
 }
