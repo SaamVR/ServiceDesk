@@ -102,21 +102,23 @@ describe("V4 owner price revision contract", () => {
     if (!parsed.ok) throw new Error(parsed.message);
     const saved = { ok:true,duplicate:false,branchId,priceBookId:newBookId,rateCardId:rateId,
       rateVersion:"owner-cleaning-revision-"+revisionId };
-    const rpc = { rpc: vi.fn(async () => ({ data:saved, error:null })) };
+    const rpc = { rpc: vi.fn(async (_name: string, _args: {p_input:Record<string,unknown>}) => ({ data:saved, error:null })) };
     const good = {
       branch_price_books: [{ id:newBookId, rate_card_id:rateId, branch_id:branchId,active:true }],
       rate_cards: { id:rateId, version:saved.rateVersion, active:true, currency:"USD",
         deposit_percent:25,valid_hours:48,buffer_minutes:30,rules:parsed.value.rules },
       service_catalog: Object.entries(parsed.value.serviceNames).map(([code,name])=>({code,name,active:true})),
     };
-    // Table read of the old book is separate from active-book list.
-    let calls=0;
+    // Distinguish an active-book collection from the targeted historical old-book read.
     const service = { from: (table: string) => {
-      if (table === "branch_price_books") {
-        calls++;
-        return mockQuery(calls === 1 ? good.branch_price_books : {id:oldBookId,active:false});
-      }
-      return mockQuery(good[table as "rate_cards" | "service_catalog"]);
+      if (table !== "branch_price_books") return mockQuery(good[table as "rate_cards" | "service_catalog"]);
+      const query = {
+        select: () => query, eq: () => query, in: () => query,
+        maybeSingle: async () => ({data:{id:oldBookId,active:false},error:null}),
+        then: (resolve: (value: unknown) => unknown) =>
+          Promise.resolve(resolve({data:good.branch_price_books,error:null})),
+      };
+      return query;
     }};
     const outcome = await reviseAuthorizedCleaningPricing("test-cleaning", form(), {
       mode: () => "SERVICE_ROLE", resolveActor: actor("OWNER",branchId,service,rpc),
@@ -127,7 +129,6 @@ describe("V4 owner price revision contract", () => {
     expect(rpc.rpc.mock.calls[0][1].p_input).toMatchObject({
       expectedBookId:oldBookId,expectedBookVersion:7,branchId,workspaceId,actorUserId:actorId,
     });
-    calls=0;
     const badService = {from: (table: string) =>
       mockQuery(table === "branch_price_books" ? [{...good.branch_price_books[0],active:false}] :
         good[table as "rate_cards" | "service_catalog"])};
