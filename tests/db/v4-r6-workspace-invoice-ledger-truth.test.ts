@@ -37,6 +37,20 @@ describe("R6 staff finance workspace snapshot is backed by real monetary totals"
    });
   }
  });
+ it("rejects an invoice without a real persisted identity instead of rendering phantom finance rows",async()=>{
+  for(const patch of [
+    {id:undefined},{id:null},{id:""},{id:43},
+    {workspaceId:undefined},{workspaceId:43},{workspaceId:""},
+    {visitId:[]},{visitId:0},{visitId:""},
+  ]){
+    expect(await snapshot({...invoice,...patch}),JSON.stringify(patch))
+      .toMatchObject({ok:false,code:"SNAPSHOT_RPC_ERROR_MALFORMED"});
+  }
+  expect(await snapshot({...invoice,visitId:null}))
+    .toMatchObject({ok:true,value:{invoices:[{id:invoice.id}]}});
+  expect(await snapshot({...invoice,visitId:"44444444-4444-4444-8444-444444444444"}))
+    .toMatchObject({ok:true,value:{invoices:[{visitId:"44444444-4444-4444-8444-444444444444"}]}});
+ });
  it("rejects a foreign tenant even when money is consistent",async()=>{
   expect(await snapshot({...invoice,workspaceId:"unrelated"}))
     .toMatchObject({ok:false,code:"SNAPSHOT_RPC_SCOPE_MISMATCH"});
