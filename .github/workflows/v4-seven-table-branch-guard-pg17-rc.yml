@@ -10,6 +10,7 @@ on:
       - "supabase/migrations/0062_v4_branch_trigger_rowtype_guard.sql"
       - "scripts/release/v4-connected-schema-readonly.sql"
       - "tests/sql/v4-branch-trigger-pg17-*.sql"
+      - "docs/engineering/security/servicedesk-default-branch-guard-candidate.sql"
       - "tests/db/v4-branch-trigger-rowtype-migration.test.ts"
       - "src/server/core/*branch*"
       - "src/features/operations/operational-product-runtime.ts"
@@ -56,6 +57,12 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-baseline-repro.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0062_v4_branch_trigger_rowtype_guard.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-acceptance.sql
+          # Protect the source-only #153 candidate with *real* disposable
+          # authenticated owner A/B and trigger-compatibility checks.
+          # No connected Supabase schema is modified; source 0063 stays OFF.
+          psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-authz-prep.sql
+          psql -v ON_ERROR_STOP=1 -f docs/engineering/security/servicedesk-default-branch-guard-candidate.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-authz-acceptance.sql
           psql -v ON_ERROR_STOP=1 -f scripts/release/v4-connected-schema-readonly.sql > /tmp/servicedesk-schema-proof.txt
           grep -q '"branchGuard0062Applied": true' /tmp/servicedesk-schema-proof.txt
           grep -q '"branchTriggerBindings": 7' /tmp/servicedesk-schema-proof.txt
