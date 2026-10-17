@@ -23,7 +23,8 @@ as $$
     and (
       -- Service-role calls are internal privileged processes, not customer
       -- sessions. RLS-bypass service credentials must never reach browsers.
-      auth.role() = 'service_role'
+      (auth.role() = 'service_role'
+       and current_setting('role', true) = 'service_role')
       or exists (
         select 1
         from public.memberships m
