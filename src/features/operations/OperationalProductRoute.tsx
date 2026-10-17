@@ -5,7 +5,7 @@ import { setupAuthorizedCleaningPricing } from "@/server/core/owner-cleaning-pri
 import { OwnerCleaningPricingSetupForm } from "./OwnerCleaningPricingSetupForm";
 import { completeOperationalRequestQuoteInputs } from "./request-quote-input-action";
 import { OwnerAutomationActivationChecklist } from "./OwnerAutomationActivationChecklist";
-import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
+import { availableFirstRunUsdBranches, invalidExistingUsdBranches } from "./owner-pricing-readiness";
 import { quotePriceReadiness } from "./request-quote-price-readiness";
 import { queueApprovedInboxReply } from "@/server/core/reviewed-inbox-reply";
 import { runOwnerSavedRequestAutomation } from "@/server/workflows/owner-request-automation";
@@ -3960,8 +3960,13 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
               <OwnerCleaningPricingSetupForm scope={data.branchScope}
                 proof={data.ownerPricingBookProof} action={firstRunCleaningPricingAction} />
             ) : null}
+            {data.actor.role === "OWNER" &&
+              invalidExistingUsdBranches(data.branchScope, data.ownerPricingBookProof).length > 0 ? (
+              <p role="status">Existing active branch pricing could not be verified for real quotes. Review and repair the saved rate card and effective dates; first-run pricing cannot overwrite an active book.</p>
+            ) : null}
             {data.actor.role === "OWNER" && data.ownerPricingBookProof?.state === "VERIFIED" &&
-              availableFirstRunUsdBranches(data.branchScope, data.ownerPricingBookProof).length === 0 ? (
+              availableFirstRunUsdBranches(data.branchScope, data.ownerPricingBookProof).length === 0 &&
+              invalidExistingUsdBranches(data.branchScope, data.ownerPricingBookProof).length === 0 ? (
               <p role="status">No unconfigured USD branches were found. Existing branch prices are not overwritten by first-run setup.</p>
             ) : null}
 
