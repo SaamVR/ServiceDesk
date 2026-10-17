@@ -18,6 +18,8 @@ export function AiStudioWorkspace({
 }: { workspaceSlug: string; data: OperationalStaffSnapshot }) {
   const cfg = readConfiguredAiRuntimeConfig();
   const configured = cfg.ok;
+  // The server decides provider selection; the browser receives no credentials.
+  const codexGatewaySelected = process.env.SERVICEDESK_AI_PROVIDER === "codex_gateway";
   const model = cfg.ok ? cfg.value.model : null;
   const requests = verifiedStudioRecordChoices("Request", data.requests);
   const quotes = verifiedStudioRecordChoices("Quote", data.quotes);
@@ -46,6 +48,10 @@ export function AiStudioWorkspace({
           <span className={configured ? styles.heroReady : styles.heroBlocked}>
             <span aria-hidden="true">●</span> {configured ? "API configuration present" : "API configuration required"}
           </span>
+          <div className={styles.heroMetric}>
+            <small>Server-selected provider</small>
+            <strong>{codexGatewaySelected ? "Private Codex Gateway" : "OpenAI API"}</strong>
+          </div>
           <div className={styles.heroMetric}>
             <small>Server-selected model</small>
             <strong>{model ?? "Not configured"}</strong>
@@ -128,8 +134,21 @@ export function AiStudioWorkspace({
         )}
         {!configured ? (
           <div className={styles.setupNotice} role="status">
-            <strong>Connect a project API key on the server to enable AI.</strong>
-            <p>Set <code>OPENAI_API_KEY</code>, <code>SERVICEDESK_AI_MODEL</code> and <code>SERVICEDESK_AI_ENABLED=true</code> in the authorized deployment secret environment. The personal Codex CLI ChatGPT login is not a ServiceDesk project credential. Do not put keys in browser settings or GitHub files.</p>
+            <strong>{codexGatewaySelected
+              ? "The private Codex Gateway is not enabled for this workspace."
+              : "Connect a project API key on the server to enable AI."}</strong>
+            {codexGatewaySelected ? (
+              <p>The operator must configure a server-only <code>SERVICEDESK_CODEX_GATEWAY_KEY</code>,
+                an approved single <code>SERVICEDESK_CODEX_GATEWAY_TEST_WORKSPACE_ID</code>,
+                a gateway model and both AI and gateway enable flags in an authorized V4
+                deployment. The personal Codex login and gateway secrets must never be
+                entered in this browser. Real model connectivity and commercial usage
+                are not verified by this status.</p>
+            ) : (
+              <p>Set <code>OPENAI_API_KEY</code>, <code>SERVICEDESK_AI_MODEL</code>
+                and <code>SERVICEDESK_AI_ENABLED=true</code> in the authorized deployment
+                secret environment. Do not put keys in browser settings or GitHub files.</p>
+            )}
           </div>
         ) : null}
       </section>
