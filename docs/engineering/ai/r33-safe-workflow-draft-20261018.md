@@ -1,0 +1,5 @@
+# AI Rule Compiler L04 — operator-restricted safe draft compiler
+
+This is a functional server-side **model suggestion compiler**, not an AI provider call or a persisted workflow rule. It turns a tightly allowlisted structured suggestion into one preview-only, owner-review-required internal CREATE_ATTENTION proposal scoped to an already-authorized workspace and branch. One of five real event types can be chosen; optional service-code condition only where that fact is in the existing event catalogue. No ability to send email/WhatsApp, perform SQL, publish, change money, approve a quote or choose customer recipients.
+
+Integration prerequisites: authorized owner resolver must validate membership/branch before passing `OwnerWorkflowDraftScope`; UI compiler form and rule persistence must be wired by L13 coordinator after ongoing UI PRs. NEVER label compiler outputs live; verify actual published rule with current DB source and a successful saved execution before declaring operational automation.
