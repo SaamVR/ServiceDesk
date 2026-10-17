@@ -1,3 +1,5 @@
+import { isVerifiedStaffCollectibleInvoice, type StaffCollectibleLedger } from "./staff-invoice-collection-readiness";
+
 /** Read-only invoice queue filters. Never infer settlement from a zero balance. */
 export const invoiceQueueOptions = [
   { key: "all", label: "All invoices" },
@@ -16,8 +18,22 @@ export function normalizeInvoiceQueue(input?: string | null): InvoiceQueue {
  * positive. The payment backend remains authoritative for all mutations.
  */
 export function isCollectibleInvoice(invoice: Pick<InvoiceCollectionRecord, "status" | "balanceMinor">): boolean {
-  return (invoice.status === "ISSUED" || invoice.status === "PARTIALLY_PAID")
-    && Number.isFinite(invoice.balanceMinor) && invoice.balanceMinor > 0;
+  // The invoice ledger represents exact integer minor units. A decimal or
+  // unsafe IEEE-754 balance is not a collectible amount, even if finite.
+  if (!((invoice.status === "ISSUED" || invoice.status === "PARTIALLY_PAID")
+    && Number.isSafeInteger(invoice.balanceMinor) && invoice.balanceMinor > 0)) return false;
+  // Production invoice records include an authoritative ledger. Check it
+  // before showing "open" or "to collect", not only on the payment button.
+  // Legacy queue-only rows intentionally contain status + balance alone.
+  const row = invoice as Partial<StaffCollectibleLedger>;
+  if (["totalMinor", "allocatedMinor", "refundedMinor"]
+      .some(key => Object.prototype.hasOwnProperty.call(row, key)))
+    return isVerifiedStaffCollectibleInvoice({
+      status: invoice.status, balanceMinor: invoice.balanceMinor,
+      currency: row.currency, totalMinor: row.totalMinor,
+      allocatedMinor: row.allocatedMinor, refundedMinor: row.refundedMinor,
+    });
+  return true;
 }
 export function invoiceQueueOf(invoice:InvoiceCollectionRecord):Exclude<InvoiceQueue,"all"> {
   if (invoice.status === "VOID") return "void";
@@ -49,8 +65,10 @@ export function orderCustomerCollectionInvoices<T extends InvoiceCollectionRecor
     if (group) return group;
     const currency = left.currency.localeCompare(right.currency);
     if (currency) return currency;
-    const leftMinor = Number.isFinite(left.balanceMinor) ? left.balanceMinor : 0;
-    const rightMinor = Number.isFinite(right.balanceMinor) ? right.balanceMinor : 0;
+    // Do not sort a fabricated fractional or unsafe currency value ahead
+    // of any authoritative invoice within the same currency.
+    const leftMinor = Number.isSafeInteger(left.balanceMinor) && left.balanceMinor >= 0 ? left.balanceMinor : 0;
+    const rightMinor = Number.isSafeInteger(right.balanceMinor) && right.balanceMinor >= 0 ? right.balanceMinor : 0;
     return rightMinor - leftMinor || left.id.localeCompare(right.id);
   });
 }
