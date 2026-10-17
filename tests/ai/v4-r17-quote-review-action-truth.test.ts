@@ -8,7 +8,7 @@ describe("R17 AI staff quote review no operational completion hallucinations",()
    "The cleaning team has already completed the service.",
    "Your appointment is scheduled.",
    "The customer's visit has been confirmed.",
-   "The customer requested the 9 AM appointment.",
+   "The customer requested the appointment.",
    "Our team will email the confirmation.",
    "Staff are visiting the property.",
    "The crew has already arrived.",

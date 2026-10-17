@@ -37,10 +37,10 @@ export function validateStaffQuoteReviewDraft(value: unknown): string | undefine
   if (/\b(?:the\s+|your\s+)?(?:quote|offer|invoice|message|job)\s+(?:was|is|has\s+been)\s+(?:sent|delivered|approved|accepted|processed|confirmed|scheduled|booked|settled)\b/i.test(draft)) return undefined;
   // No visit ledger, crew schedule or delivery receipt was included in the
   // model context. A plausible future or past tense still fabricates action.
-  if (/\\b(?:our\\s+)?(?:crew|cleaners?|technicians?|staff|team)\\s+(?:(?:will|shall|would|can)\\s+|(?:has|have)\\s+(?:already\\s+)?|(?:is|are)\\s+(?:already\\s+)?)(?:arriv(?:e|ed|ing)|visit(?:ed|ing)?|start(?:ed|ing)?|finish(?:ed|ing)?|complet(?:e|ed|ing))\\b/i.test(draft)) return undefined;
-  if (/\\b(?:your|the|customer(?:'s)?|client(?:'s)?)\\s+(?:visit|appointment|cleaning|service)\\s+(?:is|has\\s+been|will\\s+be)\\s+(?:scheduled|completed|finished|started|booked|confirmed)\\b/i.test(draft)) return undefined;
-  if (/\\b(?:customer|client)\\s+(?:requested|chose|selected|agreed\\s+to)\\s+(?:the|a|an)\\s+(?:visit|date|time|appointment|slot)\\b/i.test(draft)) return undefined;
-  if (/\\b(?:we|our\\s+team|staff|the\\s+crew)\\s+(?:will|are\\s+going\\s+to)\\s+(?:call|message|email|contact|visit|arrive|send|dispatch)\\b/i.test(draft)) return undefined;
+  if (/\b(?:our\s+)?(?:crew|cleaners?|technicians?|staff|team)\s+(?:(?:will|shall|would|can)\s+|(?:has|have)\s+(?:already\s+)?|(?:is|are)\s+(?:already\s+)?)(?:arriv(?:e|ed|ing)|visit(?:ed|ing)?|start(?:ed|ing)?|finish(?:ed|ing)?|complet(?:e|ed|ing))\b/i.test(draft)) return undefined;
+  if (/\b(?:your|the|customer(?:'s)?|client(?:'s)?)\s+(?:visit|appointment|cleaning|service)\s+(?:is|has\s+been|will\s+be)\s+(?:scheduled|completed|finished|started|booked|confirmed)\b/i.test(draft)) return undefined;
+  if (/\b(?:customer|client)\s+(?:requested|chose|selected|agreed\s+to)\s+(?:the|a|an)\s+(?:visit|date|time|appointment|slot)\b/i.test(draft)) return undefined;
+  if (/\b(?:we|our\s+team|staff|the\s+crew)\s+(?:will|are\s+going\s+to)\s+(?:call|message|email|contact|visit|arrive|send|dispatch)\b/i.test(draft)) return undefined;
   // Invisible bidi controls can reverse quoted evidence/charges or spoof the
   // order of fields while still passing ordinary printable-text checks.
   if (/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(draft)) return undefined;
