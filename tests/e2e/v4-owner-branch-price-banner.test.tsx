@@ -64,7 +64,7 @@ describe("V4 owner-visible branch pricing readiness", () => {
     });
     expect(html).toContain("Saved branch pricing needs correction");
     expect(html).toContain("North cleaning");
-    expect(html).toContain("first-run setup cannot overwrite");
+    expect(html).toContain("First-run setup cannot overwrite");
     expect(html).toContain("/app/east-office/settings");
     expect(html).not.toContain("#owner-first-run-pricing");
   });
