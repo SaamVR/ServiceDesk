@@ -83,6 +83,13 @@ function ScopedQuoteReview({
         : "AI review could not be completed. Verify the saved quote manually; no customer action was authorized.";
     } finally {
       clearTimeout(timeout);
+      // A fully buffered success may settle after a timeout abort. Never
+      // surface a quote review from a request that is no longer authorized.
+      if (controller.signal.aborted) {
+        result = undefined;
+        if (timedOut) message =
+          "AI quote review exceeded 20 seconds. The browser stopped waiting; provider-side cancellation is not confirmed.";
+      }
       // A cancelled, changed-quote or changed-workspace request can never
       // hydrate the current panel with obsolete or cross-scope AI output.
       if (activeRequest.current === controller) {
