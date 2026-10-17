@@ -45,7 +45,7 @@ describe("SONIC AI-B saved-source owner priority cards",()=>{
   });
   it("critic: a seven-element array masquerading as seven named queue buckets is not valid evidence",()=>{
     const forgedArray=Array(7).fill(1);
-    expect(ownerPriorityActions(forgedArray as typeof empty)).toBeNull();
+    expect(ownerPriorityActions(forgedArray as unknown as typeof empty)).toBeNull();
     const forgedPrototype=Object.assign(Object.create({hiddenContact:"private"}),{
       ...empty,openRequests:3,
     });
