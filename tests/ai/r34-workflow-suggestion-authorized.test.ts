@@ -58,6 +58,18 @@ describe("R34 owner-only AI workflow draft generation",()=>{
     expect(JSON.stringify(r)).not.toMatch(/sendProviderMessage|Bearer|customer contact/i);
   }
  });
+ it("critic: rejects forged empty arrays and primitive model output schemas",async()=>{
+   for(const forgedOutput of [[], "", 0, true, Object.create(null)]){
+      const x=fixture();
+      const original=x.deps.callModel;
+      x.deps.callModel=(async()=>({ok:true,value:{
+       output:forgedOutput,replyDraft:JSON.stringify({eventType:"QUOTE_ACCEPTED",severity:"WARNING"}),
+       requestedToolCalls:[],citations:[],
+      }})) as typeof original;
+      const result=await suggestAuthorizedOwnerWorkflow(input,x.deps);
+      expect(result).toMatchObject({ok:false,code:"AI_RULE_MODEL_OUTPUT_UNSAFE"});
+   }
+ });
  it("refuses customer records, amounts and private tokens in owner intent before any inference",async()=>{
   for(const instruction of ["Email client at private@example.test",
     "Pay $150 for this service","approve refund 1234","hi",
