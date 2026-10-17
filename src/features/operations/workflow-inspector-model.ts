@@ -102,7 +102,32 @@ export function summarizeWorkflowActivity(runs: readonly InspectedWorkflow[]) {
   };
 }
 
+/** Categorize persisted outcomes without inventing a required user action.
+ * Processing is informational; only a failed run or an action explicitly
+ * marked APPROVAL_REQUIRED belongs in the human intervention queue.
+ */
+export type WorkflowInterventionKind = "failure" | "approval" | "processing";
+
+export function classifyWorkflowIntervention(run: InspectedWorkflow):
+  WorkflowInterventionKind | undefined {
+  if (run.failedCount > 0 || run.state === "PARTIAL_FAILED") return "failure";
+  if (run.approvalCount > 0) return "approval";
+  if (run.pendingCount > 0 || run.state === "ACTIONS_PENDING") return "processing";
+  return undefined;
+}
+
 export function isWorkflowAttentionRequired(run: InspectedWorkflow) {
-  return run.state === "PARTIAL_FAILED" || run.failedCount > 0 ||
-    run.pendingCount > 0 || run.state === "ACTIONS_PENDING";
+  const kind = classifyWorkflowIntervention(run);
+  return kind === "failure" || kind === "approval";
+}
+
+export function buildWorkflowInterventionQueue(runs: readonly InspectedWorkflow[]) {
+  const order = { failure: 0, approval: 1 } as const;
+  return runs.flatMap(run => {
+    const kind = classifyWorkflowIntervention(run);
+    return kind === "failure" || kind === "approval"
+      ? [{ run, kind }] : [];
+  }).sort((a, b) => order[a.kind] - order[b.kind] ||
+    b.run.createdAt.localeCompare(a.run.createdAt) ||
+    a.run.id.localeCompare(b.run.id));
 }
