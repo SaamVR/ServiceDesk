@@ -22,7 +22,8 @@ const book = {
 };
 const service = { id: svcId, active: true, code: "STANDARD" };
 const given = { books: [book], cards: [card], services: [service], now };
-const check = (patch: { books?: Record<string, unknown>[]; cards?: Record<string, unknown>[];\n  services?: Record<string, unknown>[]; now?: number } = {}) =>
+const check = (patch: { books?: Record<string, unknown>[]; cards?: Record<string, unknown>[];
+  services?: Record<string, unknown>[]; now?: number } = {}) =>
   verifiedPricedOwnerBranchIds({ ...given, ...patch });
 
 describe("owner dashboard saved pricing agrees with the server quote source", () => {
