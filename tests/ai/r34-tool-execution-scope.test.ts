@@ -34,6 +34,14 @@ describe("SONIC R34 L17 AI tool proposals require exact authorized resource memb
   expect(r.rejected).toMatchObject([{name:"unknown",reason:"UNKNOWN_TOOL"}]);
   expect(JSON.stringify(r)).not.toMatch(/Bearer|private\.customer/);
  });
+ it("critic: bounded tool arrays and nested foreign resource IDs must not be accepted",()=>{
+  const massive=Array.from({length:1000},()=>({name:"getServiceCatalog",arguments:{}}));
+  const oversized=planAiToolOrchestration({scope:scoped,requestedToolCalls:massive});
+  expect(oversized.accepted).toHaveLength(0);
+  expect(oversized.rejected).toMatchObject([{reason:"SCHEMA_VIOLATION"}]);
+  const nested=plan(scoped,{payload:{customerId:"customer-foreign"}},"getBusinessMetrics");
+  expect(nested.rejected).toMatchObject([{reason:"RESOURCE_OUT_OF_SCOPE"}]);
+ });
  it("never executes with null scope",()=>{
   const r=planAiToolOrchestration({scope:null as unknown as typeof scoped,
     requestedToolCalls:[{name:"getServiceCatalog",arguments:{}}]});
