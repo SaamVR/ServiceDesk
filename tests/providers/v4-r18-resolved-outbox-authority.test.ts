@@ -27,10 +27,14 @@ describe("R18 recovered outbox authority and safety", () => {
     for (const job of [null, undefined, [], false, {}, 7]) {
       expect(check(job)).toMatchObject({ ok: false, code: "OUTBOX_INTENT_IDENTITY_INVALID" });
     }
-    for (const recipient of [null, undefined, [], {}, 2, false, "recipient-a", " "]) {
+    for (const recipient of [null, undefined, [], 2, false, "recipient-a", " "]) {
       expect(check({ ...valid, recipient }), JSON.stringify(recipient))
         .toMatchObject({ ok: false, code: "OUTBOX_INTENT_RECIPIENT_MISSING" });
     }
+    // A present recipient object without required contact/consent fields is
+    // INVALID, not absent; both are terminal and prevent provider dispatch.
+    expect(check({ ...valid, recipient: {} }))
+      .toMatchObject({ ok: false, code: "OUTBOX_INTENT_RECIPIENT_INVALID" });
   });
 
   it("rejects claimed tenant substitution, replay identity and unsupported intents", () => {
