@@ -15,6 +15,21 @@ describe("Studio OS timezone-correct daily dispatch", () => {
     expect(newYork("2026-03-08T04:30:00Z")).toBe("2026-03-07");
     expect(newYork("2026-03-08T07:30:00Z")).toBe("2026-03-08");
   });
+  it("treats invalid saved timezone and clock as unknown rather than a clear workday",()=>{
+    for(const timezone of ["Not/A_Timezone","Mars/Olympus_Mons","", "   ", "UTC\u0000",
+      undefined as unknown as string, null as unknown as string]) {
+      const key=createLocalDayKey(timezone);
+      expect(key("2026-10-17T09:00:00Z"),timezone).toBeUndefined();
+    }
+    const today=readFileSync(join(process.cwd(),
+      "src/features/operations/StaffOverviewDashboard.tsx"),"utf8");
+    expect(today).toContain('value={todayKey ? todayVisits.length : "—"}');
+    expect(today).toContain("Timezone or snapshot clock unavailable");
+    expect(today).toContain('title="Schedule unavailable"');
+    expect(today).toContain("Today's schedule cannot be verified");
+    expect(today).toContain('title="Schedule is clear"');
+    expect(today).toContain("todayKey");
+  });
   it("never matches an invalid visit date to an invalid snapshot date", () => {
     const key = createLocalDayKey("UTC");
     expect(key("not-a-date")).toBeUndefined();

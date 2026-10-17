@@ -1508,7 +1508,7 @@ function QuotesView({
     return <EmptyState title="No quotes yet" detail="Calculated and saved quotes will appear here." action={{ label: "Review service requests", href: buildStaffModuleHref(workspaceSlug, "requests") }} />;
   }
 
-  const { currentQuoteByRequest, orderedQuotes, awaitingCustomer, sentNeedsExpiryReview, approvedNeedsExpiryReview, quoteClockUnverified } = buildQuotePipeline(data.quotes, data.loadedAt);
+  const { currentQuoteByRequest, orderedQuotes, awaitingCustomer, sentNeedsExpiryReview, approvedNeedsExpiryReview, quoteVersionConflicts, quoteClockUnverified } = buildQuotePipeline(data.quotes, data.loadedAt);
   // Keep the headline readiness count consistent with the actual saved
   // financial preflight and the selected-quote send action. An APPROVED
   // status and unexpired timestamp alone cannot verify customer charges.
@@ -1547,8 +1547,9 @@ function QuotesView({
         <div>
           <p className={styles.salesEyebrow}>Quote workspace</p>
           <h2>Quote pipeline</h2>
-          <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} currently sent (delivery unverified) · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review</p>
+          <p>{orderedQuotes.length} total · {readyToSend} ready to send · {awaitingCustomer} currently sent (delivery unverified) · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review · {quoteVersionConflicts} version conflicts</p>
           {quoteClockUnverified ? <p role="alert">The quote snapshot time is unverified. Refresh this workspace before relying on send-readiness or expiry counts.</p> : null}
+          {quoteVersionConflicts ? <p role="alert">Multiple current quotes share the highest saved version for {quoteVersionConflicts} requests. Sending is blocked for those requests until staff reconcile the records.</p> : null}
         </div>
         <a className="app-button-secondary" href={buildStaffModuleHref(workspaceSlug, "requests")}>Open requests</a>
       </header>

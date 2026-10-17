@@ -3,10 +3,21 @@
  * Construct an Intl formatter once per rendered snapshot, not per visit.
  */
 export function createLocalDayKey(timeZone: string): (timestamp: string) => string | undefined {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric", month: "2-digit", day: "2-digit",
-  });
+  // A missing runtime timezone must not silently fall back to the CI
+  // runner's or server's local timezone and misclassify today's visits.
+  if (typeof timeZone !== "string" || !timeZone.trim())
+    return () => undefined;
+  let formatter: Intl.DateTimeFormat;
+  try {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric", month: "2-digit", day: "2-digit",
+    });
+  } catch {
+    // A malformed persisted business timezone is not an empty workday.
+    // Signal uncertainty to the dashboard instead of crashing during SSR.
+    return () => undefined;
+  }
   return (timestamp) => {
     const date = new Date(timestamp);
     if (Number.isNaN(date.getTime())) return undefined;

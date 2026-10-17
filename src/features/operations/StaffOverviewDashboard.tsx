@@ -201,6 +201,7 @@ export function StaffOverviewDashboard({
   // An expired/invalid APPROVED quote also requires staff intervention, not
   // a send action. Today's worklist must agree with the Quotes workspace.
   const approvedNeedsExpiryReview = quoteQueue.approvedNeedsExpiryReview;
+  const quoteVersionConflicts = quoteQueue.quoteVersionConflicts;
   // The reply queue is derived from stored external-message direction, not a fake unread badge.
   // Older server test fixtures can omit these optional records without implying zero replies.
   const replyTriage = snapshot.conversations && snapshot.messages
@@ -278,7 +279,7 @@ export function StaffOverviewDashboard({
             ? `${unassignedToday} visit${unassignedToday === 1 ? "" : "s"} still need a crew.`
             : todayVisits.length
               ? "Today's visits have crew coverage."
-              : "No visits are scheduled for today."}
+              : todayKey ? "No visits are scheduled for today." : "Today's schedule cannot be verified until the workspace timezone and snapshot clock are corrected."}
           {waitingReplies ? " " + waitingReplies + " customer conversation" + (waitingReplies === 1 ? "" : "s") + " awaiting reply." : ""}
         </p>
         <Link href={briefingLink}>
@@ -306,9 +307,10 @@ export function StaffOverviewDashboard({
         <KpiCard
           label="Today's jobs"
           href={buildStaffModuleHref(workspace, "schedule") + (unassignedToday ? "?queue=unassigned" : "")}
-          value={todayVisits.length}
-          detail={unassignedToday ? `${unassignedToday} need crew` : `${inProgressToday} underway`}
-          emphasis={unassignedToday ? "warning" : "default"}
+          value={todayKey ? todayVisits.length : "—"}
+          detail={!todayKey ? "Timezone or snapshot clock unavailable" :
+            unassignedToday ? `${unassignedToday} need crew` : `${inProgressToday} underway`}
+          emphasis={!todayKey || unassignedToday ? "warning" : "default"}
         />
         <KpiCard
           label="Needs attention"
@@ -320,11 +322,11 @@ export function StaffOverviewDashboard({
         <KpiCard
           label="Waiting pipeline"
           href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
-          value={waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview}
+          value={waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}
           detail={`${waitingRequests.length} requests · ${waitingQuoteCount} awaiting customer` +
             (sentNeedsExpiryReview + approvedNeedsExpiryReview
               ? ` · ${sentNeedsExpiryReview + approvedNeedsExpiryReview} need quote validity review`
-              : "")}
+              : "") + (quoteVersionConflicts ? ` · ${quoteVersionConflicts} quote version conflicts` : "")}
         />
         <KpiCard
           label="Outstanding"
@@ -369,7 +371,9 @@ export function StaffOverviewDashboard({
             <div>
               <p className={styles.cardEyebrow}>Today</p>
               <h2 id="today-heading">Today&apos;s field plan</h2>
-              <p>{todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` : "No active visits are scheduled for today."}</p>
+              <p>{!todayKey ? "Today's schedule cannot be verified until the timezone or snapshot clock is corrected." :
+                todayVisits.length ? `${todayVisits.length} active service visit${todayVisits.length === 1 ? "" : "s"} in the current workday.` :
+                "No active visits are scheduled for today."}</p>
             </div>
             <Link className={styles.textLink} href={buildStaffModuleHref(workspace, "schedule")}>Open dispatch →</Link>
           </div>
@@ -380,7 +384,9 @@ export function StaffOverviewDashboard({
               ))}
             </div>
           ) : (
-            <EmptyBlock title="Schedule is clear" description="New confirmed visits will appear here automatically." />
+            todayKey
+              ? <EmptyBlock title="Schedule is clear" description="New confirmed visits will appear here automatically." />
+              : <EmptyBlock title="Schedule unavailable" description="Check the workspace timezone and snapshot time in Settings before relying on today's dispatch counts." />
           )}
         </section>
 
@@ -403,8 +409,8 @@ export function StaffOverviewDashboard({
             </Link>
             <Link href={buildStaffModuleHref(workspace, "quotes")} className={styles.pipelineItem}>
               <span>Quotes needing follow-up</span>
-              <strong>{waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview}</strong>
-              <small>{waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review</small>
+              <strong>{waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}</strong>
+              <small>{waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review · {quoteVersionConflicts} version conflicts</small>
             </Link>
             <Link href={buildStaffModuleHref(workspace, "invoices")} className={styles.pipelineItem}>
               <span>Customer invoices to collect</span>

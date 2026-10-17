@@ -62,8 +62,8 @@ describe("V4 approved quote pipeline enforces live expiry for staff readiness",(
   const today=readFileSync(join(process.cwd(),
     "src/features/operations/StaffOverviewDashboard.tsx"),"utf8");
   expect(today).toContain('<span>Quotes needing follow-up</span>');
-  expect(today).toContain('<strong>{waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview}</strong>');
-  expect(today).toContain('{waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review');
+  expect(today).toContain('<strong>{waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}</strong>');
+  expect(today).toContain('{waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review · {quoteVersionConflicts} version conflicts');
   expect(today).toContain('href={buildStaffModuleHref(workspace, "quotes")} className={styles.pipelineItem}');
   expect(today).not.toContain('<span>Quotes with customer</span>');
  });

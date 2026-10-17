@@ -226,9 +226,9 @@ function invoiceFromRpc(row: RpcRow): InvoiceDTO {
     throw new Error("Malformed workspace invoice monetary evidence");
   }
   return {
-    id: String(field(row, "id")),
-    workspaceId: String(field(row, "workspaceId", "workspace_id")),
-    visitId: maybeString(field(row, "visitId", "visit_id")),
+    id: savedString(row, "id"),
+    workspaceId: savedString(row, "workspaceId", "workspace_id"),
+    visitId: savedOptionalString(row, "visitId", "visit_id"),
     status: status as InvoiceDTO["status"], currency: currency as InvoiceDTO["currency"],
     totalMinor: totalMinor as number, allocatedMinor: allocatedMinor as number,
     refundedMinor: refundedMinor as number, balanceMinor: balanceMinor as number,
