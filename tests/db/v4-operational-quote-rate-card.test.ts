@@ -101,6 +101,11 @@ describe("V4 real tenant quote pricing", () => {
       .toMatchObject({ ok: false, code: "QUOTE_RATE_CARD_INVALID" });
     expect(parsePersistedQuoteRateCard({ ...rate, rules: { ...rate.rules, deep: { baseMinor: -100 } } }))
       .toMatchObject({ ok: false });
+    for (const rule of ["standard", "deep", "moveOut"] as const) {
+      expect(parsePersistedQuoteRateCard({ ...rate, rules: {
+        ...rate.rules, [rule]: { ...rate.rules[rule], baseMinor: 0 },
+      } })).toMatchObject({ ok: false, code: "QUOTE_RATE_CARD_INVALID" });
+    }
     expect(parsePersistedQuoteRateCard({ ...rate, currency: "USD; DROP" }))
       .toMatchObject({ ok: false });
   });

@@ -119,7 +119,7 @@ export async function setupAuthorizedCleaningPricing(
   const [catalog, rate, book] = await Promise.all([
     service.from("service_catalog").select("code,active,name")
       .eq("workspace_id", workspace.id).in("code", ["STANDARD","DEEP","MOVE_OUT"]),
-    service.from("rate_cards").select("id,version,active,rules,currency")
+    service.from("rate_cards").select("id,version,active,rules,currency,deposit_percent,valid_hours,buffer_minutes")
       .eq("workspace_id", workspace.id).eq("id", saved.rateCardId).maybeSingle(),
     service.from("branch_price_books").select("id,rate_card_id,branch_id,active")
       .eq("workspace_id", workspace.id).eq("branch_id", branch.id)
@@ -138,6 +138,9 @@ export async function setupAuthorizedCleaningPricing(
       rate.error || rate.data?.id !== saved.rateCardId ||
       rate.data?.active !== true || rate.data?.version !== saved.rateVersion ||
       rate.data?.currency?.trim() !== "USD" ||
+      rate.data?.deposit_percent !== payload.depositPercent ||
+      rate.data?.valid_hours !== payload.validHours ||
+      rate.data?.buffer_minutes !== payload.bufferMinutes ||
       canonicalJson(rate.data?.rules) !== canonicalJson(payload.rules) ||
       book.error || book.data?.id !== saved.priceBookId ||
       book.data?.rate_card_id !== saved.rateCardId ||

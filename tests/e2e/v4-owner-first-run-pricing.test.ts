@@ -35,7 +35,7 @@ function form() {
   for (const [name,value] of Object.entries(values)) data.set(name,value);
   return data;
 }
-function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS"; missingProof?: boolean; disabledBranch?: boolean; readbackThrows?: boolean; rpcThrows?: boolean }={}) {
+function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS"; missingProof?: boolean; disabledBranch?: boolean; readbackThrows?: boolean; rpcThrows?: boolean; wrongDeposit?: boolean; wrongValidity?: boolean; wrongBuffer?: boolean }={}) {
   const parsed = parseOwnerCleaningPricingSetup(form());
   if (!parsed.ok) throw new Error(parsed.message);
   const savedRules = parsed.value.rules;
@@ -48,6 +48,9 @@ function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS
     rate_cards: options.missingProof ? [] : [{
       id:rateCardId, workspace_id:workspaceId,version:"owner-cleaning-"+setupId,
       active:true,currency:"USD",rules:savedRules,
+      deposit_percent:options.wrongDeposit?10:parsed.value.depositPercent,
+      valid_hours:options.wrongValidity?72:parsed.value.validHours,
+      buffer_minutes:options.wrongBuffer?60:parsed.value.bufferMinutes,
     }],
     branch_price_books: [{
       id:priceBookId,workspace_id:workspaceId,branch_id:branchId,
@@ -148,6 +151,16 @@ describe("V4 first-run owner cleaning price configuration",()=>{
     wrongName.set("nameStandard","Owner renamed standard clean");
     expect(await setupAuthorizedCleaningPricing("fictional-qa",wrongName,h.deps))
       .toMatchObject({ok:false,code:"PRICING_SETUP_READBACK_UNVERIFIED"});
+  });
+
+  it("fails closed when any persisted financial or scheduling setting disagrees with the owner form",async()=>{
+    for (const cfg of [{wrongDeposit:true},{wrongValidity:true},{wrongBuffer:true}]) {
+      const h=harness(cfg);
+      const result=await setupAuthorizedCleaningPricing("fictional-qa",form(),h.deps);
+      expect(result,JSON.stringify(cfg)).toMatchObject({ok:false,code:"PRICING_SETUP_READBACK_UNVERIFIED"});
+      expect(h.rpc.rpc).toHaveBeenCalledOnce();
+      expect(h.seen).toContain("rate_cards");
+    }
   });
 
   it("never reports saved pricing when a DB-acknowledged row is missing on readback",async()=>{
