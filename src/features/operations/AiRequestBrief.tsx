@@ -5,6 +5,10 @@ import { parseSavedAiRequestBrief, type SavedAiRequestBrief } from "./ai-request
 import { describeAiRequestBriefFailure } from "./ai-request-brief-failure";
 import styles from "./AiRequestBrief.module.css";
 
+// The private gateway may use its full 60s server-side model budget after
+// measured 25s inference. Leave 15s for network/proxy overhead; a browser
+// abort cannot certify upstream cancellation or zero usage cost.
+const REQUEST_BRIEF_WAIT_LIMIT_MS = 75_000;
 type Brief = SavedAiRequestBrief;
 
 export function AiRequestBrief({
@@ -44,7 +48,7 @@ export function AiRequestBrief({
     const timeout = setTimeout(() => {
       timedOut = true;
       request.abort();
-    }, 20_000);
+    }, REQUEST_BRIEF_WAIT_LIMIT_MS);
     const submittedScope = scopeKey;
     setStatus({ scopeKey: submittedScope, busy: true });
     let verifiedBrief: Brief | undefined;
@@ -93,6 +97,13 @@ export function AiRequestBrief({
       }
     } finally {
       clearTimeout(timeout);
+      // A buffered JSON response may resolve after the timer aborts. Never
+      // show that stale draft as a valid AI result after a timed-out request.
+      if (request.signal.aborted) {
+        verifiedBrief = undefined;
+        if (timedOut) message =
+          "The AI request exceeded 75 seconds. The browser stopped waiting; provider-side cancellation is not confirmed. Saved customer data was not changed by this briefing.";
+      }
       if (pendingRequest.current === request) pendingRequest.current = null;
       if (!request.signal.aborted || timedOut) {
         setStatus(previous => previous?.scopeKey === submittedScope
@@ -105,13 +116,13 @@ export function AiRequestBrief({
   function cancelBrief() {
     const pending = pendingRequest.current;
     if (!pending || !busy) return;
-    // Abort the real HTTP request, not just the visual spinner. The server
-    // propagates the request abort to its bounded model transport.
+    // Abort the browser HTTP request and ask the server to propagate it.
+    // Do not promise that the upstream provider stopped or incurred no cost.
     pending.abort();
     pendingRequest.current = null;
     setStatus(previous => previous?.scopeKey === scopeKey
       ? { scopeKey, busy: false,
-          error: "AI briefing cancelled. Saved requests, quotes and customer records are unchanged." }
+          error: "Stopped waiting for AI briefing. Provider-side cancellation is not confirmed. Saved requests, quotes and customer records are unchanged." }
       : previous);
   }
 
