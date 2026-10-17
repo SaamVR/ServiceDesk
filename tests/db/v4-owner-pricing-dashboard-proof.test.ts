@@ -21,16 +21,16 @@ const book = {
   starts_at: null, ends_at: null,
 };
 const service = { id: svcId, active: true, code: "STANDARD" };
-const given = { books: [book], cards: [card], services: [service], now };
+const given = { books: [book], cards: [card], services: [service],\n  branches: [{ id: branch, currency: "USD" }], now };
 const check = (patch: { books?: Record<string, unknown>[]; cards?: Record<string, unknown>[];
-  services?: Record<string, unknown>[]; now?: number } = {}) =>
+  services?: Record<string, unknown>[];\n  branches?: Array<{ id: unknown; currency: unknown }>; now?: number } = {}) =>
   verifiedPricedOwnerBranchIds({ ...given, ...patch });
 
 describe("owner dashboard saved pricing agrees with the server quote source", () => {
   it("labels a branch only after reading a complete active USD owner card with a supported service", () => {
     expect(check()).toEqual([branch]);
     expect(check({ services: [] })).toEqual([]);
-    expect(check({ services: [{ ...service, active: false }] })).toEqual([]);
+    expect(check({ services: [{ ...service, active: false }] })).toEqual([]);\n    expect(check({ branches: [] })).toEqual([]);\n    expect(check({ branches: [{ id: branch, currency: "GBP" }] })).toEqual([]);\n    expect(check({ branches: [{ id: branch, currency: " USD" }] })).toEqual([]);\n    expect(check({ branches: [{ id: svcId, currency: "USD" }] })).toEqual([]);
   });
 
   it("rejects active price books pointing to missing, synthetic, partial, or invalid real price cards", () => {
