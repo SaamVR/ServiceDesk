@@ -72,3 +72,20 @@
 @media(prefers-reduced-motion: reduce) { .studio * { scroll-behavior: auto; } }
 
 @media(max-width: 650px) { .searchRow { grid-template-columns: 1fr; align-items: start; } }
+
+
+.scopeNotice {
+  margin: 0;
+  padding: 12px 14px;
+  color: #3f6454;
+  font-size: 12px;
+  line-height: 1.65;
+  border: 1px solid #cfe4d7;
+  border-radius: 9px;
+  background: #f4faf6;
+}
+.scopeNotice a {
+  font-weight: 750;
+  color: #126e55;
+  text-underline-offset: 3px;
+}
