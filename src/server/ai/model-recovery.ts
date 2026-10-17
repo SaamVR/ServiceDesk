@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { classifyProviderRecovery, type ProviderRecoveryDecision, type ProviderRecoveryEvent } from "../integrations/recovery/policy";
 
 export interface AiModelFailureRecoveryInput {
@@ -9,6 +10,24 @@ export interface AiModelFailureRecoveryInput {
   occurredAt: string;
 }
 
+function civilValidZonedRecoveryAt(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if (!m) return false;
+  const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);
+  const hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
+  if (year<1000 || year>9999 || month<1 || month>12 ||
+      day<1 || day>31 || hour>23 || minute>59 || second>59) return false;
+  const civil=new Date(Date.UTC(year,month-1,day));
+  if (civil.getUTCFullYear()!==year ||
+      civil.getUTCMonth()+1!==month || civil.getUTCDate()!==day) return false;
+  if (m[8]!=="Z"){
+    const tzH=Number(m[10]),tzM=Number(m[11]);
+    if (tzH>14 || tzM>59 || (tzH===14 && tzM!==0)) return false;
+  }
+  return Number.isFinite(Date.parse(value));
+}
+
 function statusFor(code: string): ProviderRecoveryEvent["status"] {
   if (code === "AI_MODEL_CONFIGURATION_BLOCKED") return "CONFIGURATION_BLOCKED";
   if (code === "AI_MODEL_INVALID_RESPONSE" || code === "AI_OUTPUT_INVALID") return "PERMANENT_FAILURE";
@@ -17,6 +36,27 @@ function statusFor(code: string): ProviderRecoveryEvent["status"] {
 }
 
 export function classifyAiModelFailureForRecovery(input: AiModelFailureRecoveryInput): ProviderRecoveryDecision {
+  // A recovery receipt can reach logs and operator queues. Never preserve a
+  // raw conversation or tenant identifier (potentially a customer address,
+  // prompt fragment, token or provider payload) inside those records.
+  // Invalid clocks/budgets must not throw through a retry worker.
+  const safeId=(value:unknown)=>typeof value==="string" &&
+    /^[A-Za-z0-9:_-]{3,128}$/.test(value);
+  const timeOk=civilValidZonedRecoveryAt(input?.occurredAt);
+  const attemptsOk=Number.isSafeInteger(input?.attempts) &&
+    input.attempts>=0 && input.attempts<=12 &&
+    Number.isSafeInteger(input.maxAttempts) &&
+    input.maxAttempts>=1 && input.maxAttempts<=12 &&
+    input.attempts<input.maxAttempts;
+  if (!input || !safeId(input.workspaceId) || !safeId(input.conversationId) ||
+      !timeOk || !attemptsOk) return {
+    provider:"AI",operation:"CALLBACK_APPLY",action:"OPERATOR_REVIEW",
+    retryable:false,terminal:true,preservesIdempotency:false,
+    mutatesBusinessTruth:false,
+    notes:["AI recovery context is invalid; verify redacted source evidence before retry."],
+  };
+  const evidenceId=createHash("sha256")
+    .update(input.workspaceId+"|"+input.conversationId).digest("hex").slice(0,24);
   const status = statusFor(input.code);
   if (status === "PERMANENT_FAILURE" && (input.code === "AI_MODEL_INVALID_RESPONSE" || input.code === "AI_OUTPUT_INVALID")) {
     return {
@@ -29,7 +69,7 @@ export function classifyAiModelFailureForRecovery(input: AiModelFailureRecoveryI
       mutatesBusinessTruth: false,
       notes: [
         "AI model output failed schema or safety validation; route to human review instead of retrying unsafe output.",
-        `conversation=${input.conversationId}`,
+        `conversationRef=${evidenceId}`,
       ],
     };
   }
@@ -41,7 +81,7 @@ export function classifyAiModelFailureForRecovery(input: AiModelFailureRecoveryI
     attempts: input.attempts,
     maxAttempts: input.maxAttempts,
     occurredAt: input.occurredAt,
-    idempotencyKey: `ai:${input.workspaceId}:${input.conversationId}`,
-    redactedTarget: `conversation:${input.conversationId}`,
+    idempotencyKey: `ai:${evidenceId}`,
+    redactedTarget: `conversationRef:${evidenceId}`,
   });
 }
