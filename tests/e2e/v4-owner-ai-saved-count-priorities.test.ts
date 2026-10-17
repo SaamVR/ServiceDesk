@@ -56,6 +56,32 @@ describe("Owner priorities from authoritative saved queue counts", () => {
       ...ok, facts: { ...empty, openRequests: undefined },
     })).toBeNull();
   });
+  it("copies verified counts so a mutated response object cannot change displayed priorities", () => {
+    const input = {
+      ok: true, model: "approved-test-model",
+      source: "AUTHORIZED_SAVED_WORKSPACE_COUNTS",
+      brief: "Review saved requests.",
+      facts: { ...empty, openRequests: 2 },
+    };
+    const parsed = parseVerifiedOwnerBrief(input);
+    input.facts.openRequests = 99;
+    expect(parsed?.facts.openRequests).toBe(2);
+    expect(buildOwnerPriorityCards(parsed!.facts)[0]).toMatchObject({
+      kind: "open-request", count: 2, module: "requests",
+    });
+  });
+
+  it("shows owner counts only from the existing double-read server result", () => {
+    const action = require("node:fs").readFileSync(
+      require("node:path").join(process.cwd(),
+        "src/features/operations/owner-operations-brief-action.ts"), "utf8") as string;
+    expect(action).toContain("facts:result.value.facts");
+    expect(action).toContain("generateOwnerOperationsBrief(workspaceSlug)");
+    expect(action).not.toContain("result.value.requests");
+    expect(action).not.toContain("result.value.invoices");
+    expect(action).not.toContain("result.value.snapshot");
+  });
+
   it("never permits provider response extras into the verified priority DTO", () => {
     const result = parseVerifiedOwnerBrief({
       ok: true, model: "configured-model",
