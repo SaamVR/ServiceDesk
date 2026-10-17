@@ -25,6 +25,9 @@ jobs:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - name: Verify fail-closed critic Markdown classifier
+        # Old open PR heads may predate this new helper. They run full RC
+        # rather than failing a new docs-only check they do not contain.
+        if: ${{ hashFiles('scripts/release/tests/critic-docs-only-scope-check.mjs') != '' }}
         run: node --test scripts/release/tests/critic-docs-only-scope-check.mjs
       - name: Classify exact PR merge-base diff
         id: critic_docs_scope
@@ -33,6 +36,11 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          if [ ! -f scripts/release/critic-docs-only-scope.mjs ]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            echo "Old PR head lacks classifier: run complete source RC"
+            exit 0
+          fi
           if ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
             echo "Base SHA missing: require full source validation"
