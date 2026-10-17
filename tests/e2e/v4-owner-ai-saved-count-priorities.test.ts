@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildOwnerPriorityCards } from "../../src/features/operations/owner-operations-brief-priorities";
 import { parseVerifiedOwnerBrief } from "../../src/features/operations/owner-operations-brief-proof";
@@ -72,9 +74,8 @@ describe("Owner priorities from authoritative saved queue counts", () => {
   });
 
   it("shows owner counts only from the existing double-read server result", () => {
-    const action = require("node:fs").readFileSync(
-      require("node:path").join(process.cwd(),
-        "src/features/operations/owner-operations-brief-action.ts"), "utf8") as string;
+    const action = readFileSync(join(process.cwd(),
+      "src/features/operations/owner-operations-brief-action.ts"), "utf8");
     expect(action).toContain("facts:result.value.facts");
     expect(action).toContain("generateOwnerOperationsBrief(workspaceSlug)");
     expect(action).not.toContain("result.value.requests");
