@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildWorkflowInspector,
+  buildWorkflowInterventionQueue,
+  classifyWorkflowIntervention,
   isWorkflowAttentionRequired,
   summarizeWorkflowActivity,
 } from "../../src/features/operations/workflow-inspector-model";
@@ -159,6 +161,48 @@ describe("workflow inspector persisted evidence", () => {
       ],
     });
     expect(summarizeWorkflowActivity(runs).measuredDurationMs).toEqual([]);
+  });
+
+  it("does not treat ordinary processing as an operator approval or recovery task", () => {
+    const processing = buildWorkflowInspector({
+      ...snapshot(),
+      workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
+      workflowActionExecutions: [{ ...action, state: "PENDING" }],
+    });
+    expect(classifyWorkflowIntervention(processing[0])).toBe("processing");
+    expect(isWorkflowAttentionRequired(processing[0])).toBe(false);
+    expect(buildWorkflowInterventionQueue(processing)).toEqual([]);
+  });
+
+  it("shows actual APPROVAL_REQUIRED actions as actionable, not automatic execution", () => {
+    const pendingApproval = buildWorkflowInspector({
+      ...snapshot(),
+      workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
+      workflowActionExecutions: [{ ...action, state: "APPROVAL_REQUIRED" }],
+    });
+    const queue = buildWorkflowInterventionQueue(pendingApproval);
+    expect(queue).toHaveLength(1);
+    expect(queue[0].kind).toBe("approval");
+    expect(queue[0].run.approvalCount).toBe(1);
+    expect(isWorkflowAttentionRequired(queue[0].run)).toBe(true);
+  });
+
+  it("prioritizes persisted failures above approval waits without inventing severity scores", () => {
+    const mixed = buildWorkflowInspector({
+      ...snapshot(),
+      workflowExecutions: [
+        live,
+        { ...live, id: "approve-later", createdAt: "2026-10-18T00:00:00Z", state: "ACTIONS_PENDING" },
+      ],
+      workflowActionExecutions: [
+        action,
+        { ...action, id: "approval-action", executionId: "approve-later",
+          state: "APPROVAL_REQUIRED" },
+      ],
+    });
+    const queue = buildWorkflowInterventionQueue(mixed);
+    expect(queue.map(item => item.kind)).toEqual(["failure", "approval"]);
+    expect(queue.map(item => item.run.id)).toEqual(["e1", "approve-later"]);
   });
 
   it("hides executions when the workflow evidence feature is unavailable", () => {
