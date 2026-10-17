@@ -51,6 +51,13 @@ export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
         current.set(action.actionIndex, latestAttempt(current.get(action.actionIndex), action));
       }
       const actions = [...current.values()].sort((a, b) => a.actionIndex - b.actionIndex);
+      // Preserve all validated retry rows for the inspector. Summary metrics
+      // still count only each action index's latest persisted attempt.
+      const attemptHistory = [...matching].sort((a, b) =>
+        a.actionIndex - b.actionIndex ||
+        b.attemptNumber - a.attemptNumber ||
+        b.createdAt.localeCompare(a.createdAt) ||
+        b.id.localeCompare(a.id));
       const rule = versions.get(execution.ruleVersionId);
       const verifiedRule = rule?.ruleId === execution.ruleId &&
         rule.branchId === execution.branchId ? rule : undefined;
@@ -60,6 +67,7 @@ export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
         ruleEvidence: verifiedRule ? "Persisted matching rule version" as const
           : "Rule version unavailable or identity mismatched" as const,
         actions,
+        attemptHistory,
         attemptCount: matching.length,
         failedCount: actions.filter(action => action.state === "FAILED").length,
         approvalCount: actions.filter(action => action.state === "APPROVAL_REQUIRED").length,
