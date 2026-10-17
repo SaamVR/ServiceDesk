@@ -3,6 +3,8 @@ import type { CleaningRequestExtraction } from "./types";
 
 export interface AiModelTransportConfig {
   apiBaseUrl: string;
+  /** Separate, explicitly opted-in single-operator Codex gateway transport. */
+  provider?: "codex_gateway";
   /** Explicitly allow an alternate provider gateway origin in trusted server
    * configuration; omitted in live ServiceDesk's OpenAI-only runtime. */
   approvedGatewayOrigin?: string;
@@ -86,6 +88,9 @@ function explicitlyApprovedGateway(config: AiModelTransportConfig): boolean {
     const trusted = new URL(config.approvedGatewayOrigin);
     // Never let a gateway exception weaken exact OpenAI routing.
     if (endpoint.hostname === "api.openai.com") return false;
+    if (config.provider === "codex_gateway" &&
+        (endpoint.origin !== "https://codex-api.ezcomo.shop" ||
+          trusted.origin !== "https://codex-api.ezcomo.shop")) return false;
     const host = endpoint.hostname.toLowerCase();
     return endpoint.protocol === "https:" && trusted.protocol === "https:" &&
       endpoint.origin === trusted.origin &&
@@ -122,6 +127,17 @@ function modelMessages(input: AiModelCallInput) {
 }
 
 function buildModelBody(config: AiModelTransportConfig, input: AiModelCallInput): string {
+  if (config.provider === "codex_gateway") {
+    // The private gateway accepts Chat Completions, NOT Responses. It ignores
+    // token-budget options; ServiceDesk still bounds input and returned bytes.
+    return JSON.stringify({
+      model: config.model,
+      stream: false,
+      reasoning_effort: "low",
+      workspace: "servicedesk-ai",
+      messages: modelMessages(input),
+    });
+  }
   if (officialResponsesEndpoint(config)) {
     // OpenAI Responses uses "text.format", not the Chat Completions
     // "response_format" field. Metadata values must be short strings, never
@@ -226,6 +242,32 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
     }
   }
 
+  if ((parsed as { object?: unknown }).object === "chat.completion") {
+    const completion = parsed as { choices?: unknown };
+    if (!Array.isArray(completion.choices) || completion.choices.length !== 1) {
+      return {ok:false,code:"AI_MODEL_INVALID_RESPONSE",message:"AI gateway returned multiple or missing responses."};
+    }
+    const choice = completion.choices[0] as {
+      index?: unknown; finish_reason?: unknown;
+      message?: {role?: unknown;content?: unknown;tool_calls?: unknown;function_call?: unknown;refusal?: unknown};
+    } | null;
+    if (!choice || choice.index !== 0 || choice.finish_reason !== "stop" ||
+        choice.message?.role !== "assistant" ||
+        typeof choice.message.content !== "string" ||
+        !choice.message.content.trim() || choice.message.content.length > 262_144 ||
+        choice.message.tool_calls !== undefined ||
+        choice.message.function_call !== undefined ||
+        choice.message.refusal !== undefined) {
+      return {ok:false,code:"AI_MODEL_INVALID_RESPONSE",
+        message:"AI gateway response contained incomplete text or unauthorized actions."};
+    }
+    try { parsed = JSON.parse(choice.message.content); }
+    catch { return {ok:false,code:"AI_MODEL_INVALID_RESPONSE",message:"AI gateway returned invalid structured JSON."}; }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {ok:false,code:"AI_MODEL_INVALID_RESPONSE",message:"AI gateway did not return a structured object."};
+    }
+  }
+
   const output = (parsed as { output?: unknown }).output;
   if (!output || typeof output !== "object" || Array.isArray(output)) {
     return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider response is missing structured output." };
@@ -322,6 +364,11 @@ export async function callAiModel(
   // Enforce this *before* invoking any injected/alternate transport. The
   // protected runtime currently authorizes only OpenAI Responses; an external
   // adapter must never inherit a bearer key through a spoofed HTTPS base URL.
+  if (config.provider === "codex_gateway" &&
+      (config.apiBaseUrl !== "https://codex-api.ezcomo.shop/v1" ||
+        config.approvedGatewayOrigin !== "https://codex-api.ezcomo.shop")) {
+    return {ok:false,code:"AI_MODEL_CONFIGURATION_BLOCKED",message:"Private Codex gateway origin is not approved."};
+  }
   if (!officialResponsesEndpoint(config) && !explicitlyApprovedGateway(config)) {
     return { ok: false, code: "AI_MODEL_CONFIGURATION_BLOCKED",
       message: "Operational model transport requires the exact authorized HTTPS /v1 endpoint." };
@@ -346,7 +393,7 @@ export async function callAiModel(
 
   try {
     const response = await http({
-      url: `${baseUrl(config)}/responses`,
+      url: `${baseUrl(config)}/${config.provider === "codex_gateway" ? "chat/completions" : "responses"}`,
       method: "POST",
       headers: {
         authorization: `Bearer ${config.apiKey}`,
