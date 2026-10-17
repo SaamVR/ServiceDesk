@@ -1,3 +1,4 @@
+import { isSavedStaffQuoteRowVerifiable } from "./saved-quote-row-proof";
 import { verifiedPricedOwnerBranchIds } from "./verified-owner-price-evidence";
 import { matchingQuoteSourceForLiveExecution } from "@/server/workflows/quote-execution-source-evidence";
 import { createHash, randomBytes } from "node:crypto";
@@ -1105,6 +1106,13 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
   const quoteRows = branchId
     ? rawQuoteRows.filter((row) => requestIds.has(String(row.request_id)))
     : rawQuoteRows;
+  // Never fabricate monetary zeroes or an APPROVED quote identity from an
+  // incomplete persisted record. The old numberValue() fallback was designed
+  // for optional UI counters, not authoritative quote money or versions.
+  if (quoteRows.some(row => !isSavedStaffQuoteRowVerifiable(row))) {
+    return { ok: false, kind: "server", message:
+      "Saved quote amounts or identities could not be verified. Refresh the workspace; do not rely on quote send-readiness until records are reconciled." };
+  }
   const quoteIds = new Set(quoteRows.map((row) => String(row.id)));
   // Only persisted quotes from authorized branch-scoped request rows can
   // supply source identity for a saved LIVE workflow execution.
