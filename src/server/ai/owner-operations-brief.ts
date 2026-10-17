@@ -7,6 +7,7 @@ import { callAiModel } from "./model-transport";
 import { createFetchAiModelTransport } from "./fetch-transport";
 import { validateRequestBriefDraft } from "./request-brief-safety";
 import { trustedQuoteInstant } from "@/features/operations/quote-validity-clock";
+import { ownerPriorityActions, type OwnerPriorityAction } from "./owner-priority-actions";
 
 type Resolver = typeof resolveStaffActor;
 type Loader = typeof loadOperationalStaffSnapshot;
@@ -27,6 +28,7 @@ export interface OwnerOperationsBriefResult {
   model: string;
   source: "AUTHORIZED_SAVED_WORKSPACE_COUNTS";
   facts: OwnerOperationsBriefFacts;
+  priorityActions: OwnerPriorityAction[];
   brief: string;
 }
 export interface OwnerOperationsBriefDependencies {
@@ -268,8 +270,11 @@ export async function generateOwnerOperationsBrief(
   if (!latest || !sameFacts(facts,latest) ||
       !isFreshOwnerOperationsSnapshotAt(fresh.value.loadedAt,now()))
     return error("OWNER_BRIEF_STALE_SNAPSHOT");
+  const priorityActions=ownerPriorityActions(latest);
+  if (!priorityActions) return error("OWNER_BRIEF_COUNTS_UNVERIFIED");
   return {ok:true,value:{
     state:"OWNER_AI_ADVISORY_ONLY",model:cfg.value.model,
-    source:"AUTHORIZED_SAVED_WORKSPACE_COUNTS",facts,brief,
+    source:"AUTHORIZED_SAVED_WORKSPACE_COUNTS",facts,
+    priorityActions,brief,
   }};
 }
