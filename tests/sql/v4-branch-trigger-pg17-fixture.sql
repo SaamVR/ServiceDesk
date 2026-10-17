@@ -38,7 +38,7 @@ create table public.recurrence_rules (
 );
 create function public.servicedesk_default_branch(target_workspace uuid)
 returns uuid language sql stable security invoker set search_path = ''
-as $
+as $$
   select b.id from public.workspace_branches b
   where b.workspace_id=target_workspace and b.active=true
   order by b.is_default desc,b.id limit 1
