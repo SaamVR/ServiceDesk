@@ -35,7 +35,7 @@ begin
   if v_workspace is null or v_actor is null or v_role <> 'OWNER'
      or v_branch is null or v_expected_book is null or v_revision is null
      or v_expected_version is null or v_expected_version < 1
-     or v_expected_version > 1000000000 or v_currency <> 'USD'
+     or v_expected_version > 1000000000 or v_currency is distinct from 'USD'
      or jsonb_typeof(v_names) is distinct from 'object'
      or jsonb_typeof(v_rules) is distinct from 'object'
      or (select count(*) from jsonb_object_keys(v_names)) <> 3
