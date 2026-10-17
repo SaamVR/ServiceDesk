@@ -31,6 +31,18 @@ describe("R34 saved quality evidence integrity",()=>{
      expect(view({...q,feedbackScore:score}).feedbackLabel).toBe("Feedback not verified");
    }
  });
+ it("critic: refuses normalized impossible or unzoned quality deadlines",()=>{
+   for(const dueAt of ["2026-02-30T12:00:00Z",
+       "2026-10-18T15:00:00","2026-10-18T15:00:00+15:00","malformed"]){
+     expect(view({...q,dueAt}).deadlineLabel).toBe("Deadline unverified");
+   }
+ });
+ it("critic: fixture-only quality evidence cannot retain an enabled action handler",()=>{
+   const r=view(q,visit,"FIXTURE_UI_ONLY");
+   expect(r.actionAvailability).toMatchObject({
+     enabledActions:[],acceptedActionHandlerSupplied:false,
+   });
+ });
  it("never represents fixture-only previews as eligible review requests",()=>{
    expect(view(q,visit,"FIXTURE_UI_ONLY")).toMatchObject({
      canRequestReview:false,sourceIntegrity:"MATCHED",dataSource:"FIXTURE_UI_ONLY",
