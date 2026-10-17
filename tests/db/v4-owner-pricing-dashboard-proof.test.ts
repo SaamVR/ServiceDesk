@@ -1,38 +1,102 @@
-import { describe,expect,it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { defaultRateCard } from "../../src/domain/quote";
 import { verifiedPricedOwnerBranchIds } from "../../src/features/operations/verified-owner-price-evidence";
-const ws="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const book="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-const service="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
-const good={
-  books:[{branch_id:ws,rate_card_id:book,active:true,starts_at:null,ends_at:null}],
-  cards:[{id:book,active:true,currency:"USD",rules:{standard:{
-    baseMinor:21000,baseMinutes:140,
-  }}}],
-  services:[{id:service,active:true,code:"STANDARD"}],
-  now:Date.parse("2026-10-13T00:00:00Z"),
+
+const branch = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const cardId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const svcId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const now = Date.parse("2026-10-17T08:00:00Z");
+const card = {
+  id: cardId, version: "owner-approved-v20", active: true, currency: "USD",
+  deposit_percent: 25, valid_hours: 48, buffer_minutes: 30,
+  rules: {
+    autoApprovalMaxTotalMinor: defaultRateCard.autoApprovalMaxTotalMinor,
+    standard: defaultRateCard.standard,
+    deep: defaultRateCard.deep,
+    moveOut: defaultRateCard.moveOut,
+  },
 };
-describe("verified price books for owner automation dashboard",()=>{
-  it("shows a branch only with an actual priced and effective linked service",()=>{
-    expect(verifiedPricedOwnerBranchIds(good)).toEqual([ws]);
+const book = {
+  branch_id: branch, rate_card_id: cardId, active: true,
+  starts_at: null, ends_at: null,
+};
+const service = { id: svcId, active: true, code: "STANDARD" };
+const given = { books: [book], cards: [card], services: [service],
+  branches: [{ id: branch, currency: "USD" }], now };
+const check = (patch: { books?: Record<string, unknown>[]; cards?: Record<string, unknown>[];
+  services?: Record<string, unknown>[];
+  branches?: Array<{ id: unknown; currency: unknown }>; now?: number } = {}) =>
+  verifiedPricedOwnerBranchIds({ ...given, ...patch });
+
+describe("owner dashboard saved pricing agrees with the server quote source", () => {
+  it("labels a branch only after reading a complete active USD owner card with a supported service", () => {
+    expect(check()).toEqual([branch]);
+    expect(check({ services: [] })).toEqual([]);
+    expect(check({ services: [{ ...service, active: false }] })).toEqual([]);
+    expect(check({ branches: [] })).toEqual([]);
+    expect(check({ branches: [{ id: branch, currency: "GBP" }] })).toEqual([]);
+    expect(check({ branches: [{ id: branch, currency: " USD" }] })).toEqual([]);
+    expect(check({ branches: [{ id: svcId, currency: "USD" }] })).toEqual([]);
   });
-  it.each([
-    { books:[{...good.books[0],rate_card_id:service}] },
-    { books:[{...good.books[0],active:false}] },
-    { books:[{...good.books[0],starts_at:"2099-01-01T00:00:00Z"}] },
-    { books:[{...good.books[0],ends_at:"2020-01-01T00:00:00Z"}] },
-    { cards:[] },
-    { cards:[{...good.cards[0],active:false}] },
-    { cards:[{...good.cards[0],currency:"GBP"}] },
-    { cards:[{...good.cards[0],rules:{standard:{baseMinor:0,baseMinutes:140}}}] },
-    { cards:[{...good.cards[0],rules:{standard:{baseMinor:21000,baseMinutes:0}}}] },
-    { services:[{...good.services[0],active:false}] },
-    { services:[{...good.services[0],code:"UNPRICED_CUSTOM"}] },
-  ])("never inflates readiness with a false-positive book link (%j)",changes=>{
-    expect(verifiedPricedOwnerBranchIds({...good,...changes})).toEqual([]);
+
+  it("rejects active price books pointing to missing, synthetic, partial, or invalid real price cards", () => {
+    const cardVariants = [
+      { ...card, version: "synthetic-cleaning-v1" },
+      { ...card, version: " owner-approved-v20" },
+      { ...card, active: false },
+      { ...card, currency: " USD" },
+      { ...card, currency: "GBP" },
+      { ...card, deposit_percent: 101 },
+      { ...card, valid_hours: 0 },
+      { ...card, buffer_minutes: 1441 },
+      { ...card, rules: { standard: { baseMinor: 1000, baseMinutes: 60 } } },
+      { ...card, rules: { ...card.rules, moveOut: { ...card.rules.moveOut, ovenMinor: undefined } } },
+      { ...card, rules: { ...card.rules, deep: { ...card.rules.deep, baseMinor: 0 } } },
+      { ...card, rules: { ...card.rules, autoApprovalMaxTotalMinor: "50000" } },
+    ];
+    for (const invalid of cardVariants) {
+      expect(check({ cards: [invalid] }), JSON.stringify(invalid)).toEqual([]);
+    }
+    expect(check({ cards: [] })).toEqual([]);
+    expect(check({ books: [{ ...book, rate_card_id: svcId }] })).toEqual([]);
   });
-  it("deduplicates the branch without losing verified evidence",()=>{
-    expect(verifiedPricedOwnerBranchIds({
-      ...good, books:[good.books[0],{...good.books[0]}],
-    })).toEqual([ws]);
+
+  it("does not hide overlapping active price books or duplicate a branch into false readiness", () => {
+    expect(check({ books: [book, { ...book }] })).toEqual([]);
+    expect(check({ books: [
+      book, { ...book, rate_card_id: svcId },
+    ] })).toEqual([]);
+    // A future valid book does not conflict with exactly one current book.
+    expect(check({ books: [book, { ...book, starts_at: "2030-01-01T00:00:00Z" }] }))
+      .toEqual([branch]);
+    expect(check({ books: [{ ...book, active: false }] })).toEqual([]);
+  });
+
+  it("does not omit corrupt or contradictory active window records from uniqueness checks", () => {
+    for (const invalid of [
+      "2026-02-30T10:00:00Z",
+      "2026-10-17",
+      "2026-10-17T10:00:00",
+      "2026-10-17T10:00:00+15:00",
+      "invalid",
+      undefined,
+      {},
+    ]) {
+      expect(check({ books: [book, { ...book, starts_at: invalid }] }))
+        .toEqual([]);
+    }
+    expect(check({ books: [{ ...book, starts_at: "2026-11-01T00:00:00Z",
+      ends_at: "2026-10-01T00:00:00Z" }] })).toEqual([]);
+    expect(check({ books: [{ ...book, starts_at: "2030-01-01T00:00:00Z" }] }))
+      .toEqual([]);
+    expect(check({ books: [{ ...book, ends_at: "2020-01-01T00:00:00Z" }] }))
+      .toEqual([]);
+    expect(check({ now: Number.NaN })).toEqual([]);
+  });
+
+  it("refuses more than 100 active records for one branch, matching bounded quote authority", () => {
+    expect(check({ books: Array.from({ length: 101 }, (_, i) => ({
+      ...book, starts_at: i ? "2030-01-01T00:00:00Z" : null,
+    })) })).toEqual([]);
   });
 });
