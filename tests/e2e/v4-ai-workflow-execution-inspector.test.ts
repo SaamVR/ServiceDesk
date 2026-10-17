@@ -164,5 +164,6 @@ describe("workflow inspector persisted evidence", () => {
   it("hides executions when the workflow evidence feature is unavailable", () => {
     expect(buildWorkflowInspector({ ...snapshot(), workflowAvailable: false })).toEqual([]);
     expect(buildWorkflowInspector({ workflowAvailable: false })).toEqual([]);
+    expect(buildWorkflowInspector({ ...snapshot(), workflowAvailable: undefined })).toEqual([]);
   });
 });
