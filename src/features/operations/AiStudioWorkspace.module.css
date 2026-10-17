@@ -37,6 +37,11 @@
 .tab,.tabActive { border: 0; border-radius: 8px; cursor: pointer; padding: 11px 15px; color: #56766a; background: transparent; font: inherit; font-size: 13px; font-weight: 760; }
 .tabActive { background: #fff; color: #1b624f; box-shadow: 0 1px 8px #1d53411a; }
 .recordPanel { display: grid; gap: 16px; min-width: 0; }
+.searchRow { display: grid; grid-template-columns: auto minmax(180px,1fr) auto; align-items: center; gap: 10px; }
+.searchRow label { color: #385b4e; font-size: 13px; font-weight: 740; }
+.searchInput { min-width: 0; width: 100%; min-height: 44px; font: inherit; font-size: 13px;
+  border: 1px solid #cbded5; border-radius: 9px; padding: 10px 12px; background: #fff; color: #204a3c; }
+.searchCount,.searchNoMatch { color: #56766a; font-size: 12px; line-height: 1.5; margin: 0; }
 .recordPicker { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .recordPicker label { color: #385b4e; font-size: 13px; font-weight: 740; }
 .select { min-width: min(100%,280px); flex: 1 1 240px; padding: 10px 12px; border: 1px solid #cbded5; border-radius: 9px; color: #204a3c; background: #fff; font: inherit; font-size: 13px; }
@@ -60,8 +65,10 @@
 .setupNotice strong { color: #644b1c; font-size: 13px; }
 .setupNotice p { margin: 6px 0 0; font-size: 12px; line-height: 1.7; }
 .setupNotice code { padding: 1px 3px; border-radius: 3px; background: #faedd2; overflow-wrap: anywhere; }
-.studio a:focus-visible,.studio button:focus-visible,.studio select:focus-visible { outline: 3px solid #4ebca0; outline-offset: 3px; }
+.studio a:focus-visible,.studio button:focus-visible,.studio select:focus-visible,.studio input:focus-visible { outline: 3px solid #4ebca0; outline-offset: 3px; }
 @media(max-width: 1000px) { .cards { grid-template-columns: repeat(2,minmax(0,1fr)); } .ownerGrid { grid-template-columns: 1fr; } }
 @media(max-width: 780px) { .hero { grid-template-columns: 1fr; } .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width: 490px) { .cards,.metrics { grid-template-columns: 1fr; } .hero { padding: 22px; } .recordPicker { display: grid; } .select { width: 100%; } }
 @media(prefers-reduced-motion: reduce) { .studio * { scroll-behavior: auto; } }
+
+@media(max-width: 650px) { .searchRow { grid-template-columns: 1fr; align-items: start; } }
