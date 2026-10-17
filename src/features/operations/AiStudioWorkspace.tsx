@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
-import { AiStudioWorkbench, type StudioSavedRecord } from "./AiStudioWorkbench";
+import { AiStudioWorkbench } from "./AiStudioWorkbench";
+import { verifiedStudioRecordChoices } from "./ai-studio-records";
 import { AiOwnerOperationsBrief } from "./AiOwnerOperationsBrief";
 import { AiOwnerModelProbe } from "./AiOwnerModelProbe";
 import { buildStaffModuleHref } from "./staff-modules";
 import styles from "./AiStudioWorkspace.module.css";
-
-function safeUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
 
 /**
  * Dedicated staff AI Studio. Never serialize the service-role client, API key,
@@ -22,20 +19,8 @@ export function AiStudioWorkspace({
   const cfg = readConfiguredAiRuntimeConfig();
   const configured = cfg.ok;
   const model = cfg.ok ? cfg.value.model : null;
-  const requests: StudioSavedRecord[] = data.requests
-    .filter(item => safeUuid(item.id))
-    .slice(0, 40)
-    .map((item, index) => ({
-      id: item.id,
-      label: `Request ${index + 1} · ${item.status}`,
-    }));
-  const quotes: StudioSavedRecord[] = data.quotes
-    .filter(item => safeUuid(item.id))
-    .slice(0, 40)
-    .map((item, index) => ({
-      id: item.id,
-      label: `Quote ${index + 1} · ${item.status}`,
-    }));
+  const requests = verifiedStudioRecordChoices("Request", data.requests);
+  const quotes = verifiedStudioRecordChoices("Quote", data.quotes);
   const published = (data.workflowRuleVersions ?? [])
     .filter(rule => rule.state === "PUBLISHED").length;
   const executionCount = (data.workflowExecutions ?? [])
