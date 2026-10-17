@@ -70,6 +70,31 @@ describe("real authorized AI daily owner operations brief",()=>{
     expect(deriveOwnerOperationsBriefFacts({...snapshot,quotes:[]} as never))
       .toMatchObject({waitingOnCustomerQuotes:0,quoteValidityNeedsReview:0});
   });
+  it("never turns conflicting highest-version quote records into false empty owner priorities",async()=>{
+    const duplicated=[
+      {id:"quote-A",requestId:"source-request",status:"APPROVED",
+        version:4,validUntil:"2026-10-20T12:00:00Z"},
+      {id:"quote-B",requestId:"source-request",status:"SENT",
+        version:4,validUntil:"2026-10-20T12:00:00Z"},
+    ];
+    expect(deriveOwnerOperationsBriefFacts({...snapshot,quotes:duplicated} as never))
+      .toBeNull();
+    let calledModel=false;
+    const option=deps() as unknown as Record<string,unknown>;
+    const result=await generateOwnerOperationsBrief("ctg",{
+      ...option,
+      loadSnapshot:async()=>({ok:true,value:{...snapshot,quotes:duplicated}}),
+      callModel:async()=>{calledModel=true;throw Error("model must remain uncalled");},
+    } as never);
+    expect(result).toMatchObject({ok:false,code:"OWNER_BRIEF_COUNTS_UNVERIFIED"});
+    expect(calledModel).toBe(false);
+    const latestUnique={...duplicated[0],id:"quote-C",version:5};
+    expect(deriveOwnerOperationsBriefFacts({
+      ...snapshot,quotes:[...duplicated,latestUnique],
+    } as never)).toMatchObject({
+      waitingOnCustomerQuotes:0,quoteValidityNeedsReview:0,
+    });
+  });
   it("calls model only for verified owner and forwards numeric counts, not PII or money",async()=>{
     let prompt="";
     const result=await generateOwnerOperationsBrief("ctg",deps(()=>snapshot,s=>prompt=s));

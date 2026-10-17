@@ -74,7 +74,12 @@ export function deriveOwnerOperationsBriefFacts(
   // Current-request indexing prevents historical/superseded offers from
   // inflating the owner summary.
   const quoteQueue=buildQuotePipeline(snapshot.quotes,snapshot.loadedAt);
-  if (quoteQueue.quoteClockUnverified) return null;
+  // Two records claiming the same latest quote version cannot authorize an
+  // owner priority count. Staff Quotes already blocks sends and shows a manual
+  // reconciliation alert; the AI must not reinterpret that corrupt snapshot
+  // as an empty customer queue and confidently deprioritize quote review.
+  if (quoteQueue.quoteClockUnverified || quoteQueue.quoteVersionConflicts > 0)
+    return null;
   const waitingOnCustomerQuotes=quoteQueue.awaitingCustomer;
   const quoteValidityNeedsReview=
     quoteQueue.sentNeedsExpiryReview+quoteQueue.approvedNeedsExpiryReview;
