@@ -1,0 +1,27 @@
+name: ServiceDesk V4 Codex public gateway HTTP smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/v4-codex-gateway-public-http-smoke.yml"
+      - "scripts/release/v4-codex-gateway-public-http-smoke.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codex-gateway-public-noauth-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-http-no-credentials:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify public HTTPS and gateway authentication boundary (no secrets)
+        run: node scripts/release/v4-codex-gateway-public-http-smoke.mjs
