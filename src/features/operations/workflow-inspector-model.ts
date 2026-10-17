@@ -1,34 +1,100 @@
-import type { OperationalStaffSnapshot } from "./operational-product-runtime";
+import type {
+  OperationalStaffSnapshot,
+  OperationalWorkflowActionExecution,
+  OperationalWorkflowExecution,
+} from "./operational-product-runtime";
 
-/** Read-only interpretation of branch-scoped, persisted workflow records.
- * Never infer provider delivery, AI execution or approval from a rule match.
+/**
+ * Presentation-only projection of authorized, persisted workflow evidence.
+ * No network requests, provider confirmation, financial action or mutation.
  */
-export function buildWorkflowInspector(snapshot: Pick<OperationalStaffSnapshot,
-  "workflowAvailable" | "workflowExecutions" | "workflowActionExecutions" | "workflowRuleVersions">) {
-  const executions = (snapshot.workflowExecutions ?? [])
-    .filter(item => item.mode === "LIVE")
+type WorkflowSnapshot = Pick<OperationalStaffSnapshot,
+  "workflowAvailable" | "workflowExecutions" | "workflowActionExecutions" | "workflowRuleVersions">;
+
+function latestAttempt(
+  current: OperationalWorkflowActionExecution | undefined,
+  candidate: OperationalWorkflowActionExecution,
+): OperationalWorkflowActionExecution {
+  if (!current) return candidate;
+  if (candidate.attemptNumber !== current.attemptNumber) {
+    return candidate.attemptNumber > current.attemptNumber ? candidate : current;
+  }
+  if (candidate.createdAt !== current.createdAt) {
+    return candidate.createdAt > current.createdAt ? candidate : current;
+  }
+  return candidate.id > current.id ? candidate : current;
+}
+
+export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
+  if (snapshot.workflowAvailable === false) return [];
+
+  // An action may only be attached to an execution with the same persisted
+  // execution ID AND branch ID; a rule version must also match both identities.
+  const versions = new Map((snapshot.workflowRuleVersions ?? []).map(version =>
+    [version.id, version] as const));
+  const attempts = new Map<string, OperationalWorkflowActionExecution[]>();
+  for (const action of snapshot.workflowActionExecutions ?? []) {
+    if (!Number.isSafeInteger(action.actionIndex) || action.actionIndex < 0 ||
+        !Number.isSafeInteger(action.attemptNumber) || action.attemptNumber < 1) continue;
+    const bucket = attempts.get(action.executionId) ?? [];
+    bucket.push(action);
+    attempts.set(action.executionId, bucket);
+  }
+
+  return (snapshot.workflowExecutions ?? [])
+    .filter(execution => execution.mode === "LIVE")
+    .map((execution: OperationalWorkflowExecution) => {
+      const matching = (attempts.get(execution.id) ?? [])
+        .filter(action => action.branchId === execution.branchId);
+      const current = new Map<number, OperationalWorkflowActionExecution>();
+      for (const action of matching) {
+        current.set(action.actionIndex, latestAttempt(current.get(action.actionIndex), action));
+      }
+      const actions = [...current.values()].sort((a, b) => a.actionIndex - b.actionIndex);
+      const rule = versions.get(execution.ruleVersionId);
+      const verifiedRule = rule?.ruleId === execution.ruleId &&
+        rule.branchId === execution.branchId ? rule : undefined;
+      return {
+        ...execution,
+        versionNumber: verifiedRule?.versionNumber,
+        ruleEvidence: verifiedRule ? "Persisted matching rule version" as const
+          : "Rule version unavailable or identity mismatched" as const,
+        actions,
+        attemptCount: matching.length,
+        failedCount: actions.filter(action => action.state === "FAILED").length,
+        approvalCount: actions.filter(action => action.state === "APPROVAL_REQUIRED").length,
+        pendingCount: actions.filter(action => ["PENDING", "APPROVAL_REQUIRED", "APPROVED"].includes(action.state)).length,
+        succeededCount: actions.filter(action => action.state === "SUCCEEDED").length,
+        // No AI provider receipt or model-call attribution exists in this snapshot.
+        aiEvidence: "Not recorded in this workflow snapshot" as const,
+      };
+    })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
-  const actions = snapshot.workflowActionExecutions ?? [];
-  const versions = snapshot.workflowRuleVersions ?? [];
-  return executions.map(execution => {
-    const attempts = actions.filter(item => item.executionId === execution.id)
-      .sort((a, b) => a.actionIndex - b.actionIndex ||
-        a.attemptNumber - b.attemptNumber || a.id.localeCompare(b.id));
-    // The highest attempt number (not arrival order) owns current state.
-    const latestByIndex = [...new Set(attempts.map(a => a.actionIndex))].map(index =>
-      attempts.filter(a => a.actionIndex === index)
-        .sort((a, b) => b.attemptNumber - a.attemptNumber || b.createdAt.localeCompare(a.createdAt))[0]);
-    const rule = versions.find(item => item.id === execution.ruleVersionId && item.ruleId === execution.ruleId);
-    return {
-      ...execution,
-      versionNumber: rule?.versionNumber,
-      actions: latestByIndex,
-      attemptCount: attempts.length,
-      failedCount: latestByIndex.filter(a => a.state === "FAILED").length,
-      pendingCount: latestByIndex.filter(a => ["PENDING", "APPROVAL_REQUIRED", "APPROVED"].includes(a.state)).length,
-      // There is no persisted AI-call evidence in this snapshot contract.
-      aiEvidence: "Not recorded in this workflow snapshot" as const,
-      ruleEvidence: rule ? "Persisted rule version" as const : "Rule version unavailable" as const,
-    };
-  });
+}
+
+export type InspectedWorkflow = ReturnType<typeof buildWorkflowInspector>[number];
+
+export function summarizeWorkflowActivity(runs: readonly InspectedWorkflow[]) {
+  return {
+    runs: runs.length,
+    completed: runs.filter(run => run.state === "COMPLETED").length,
+    failed: runs.filter(run => run.state === "PARTIAL_FAILED" || run.failedCount > 0).length,
+    skipped: runs.filter(run => run.state === "SKIPPED").length,
+    waitingForApproval: runs.reduce((count, run) => count + run.approvalCount, 0),
+    pendingActions: runs.reduce((count, run) => count + run.pendingCount, 0),
+    recordedSucceededActions: runs.reduce((count, run) => count + run.succeededCount, 0),
+    // Only count complete timestamp pairs with nonnegative, finite elapsed time.
+    measuredDurationMs: runs.flatMap(run => {
+      if (!run.completedAt) return [];
+      const start = Date.parse(run.createdAt);
+      const end = Date.parse(run.completedAt);
+      return Number.isFinite(start) && Number.isFinite(end) && end >= start
+        ? [end - start] : [];
+    }),
+  };
+}
+
+export function isWorkflowAttentionRequired(run: InspectedWorkflow) {
+  return run.state === "PARTIAL_FAILED" || run.failedCount > 0 ||
+    run.pendingCount > 0 || run.state === "ACTIONS_PENDING";
 }
