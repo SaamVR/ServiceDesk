@@ -28,10 +28,21 @@ export function ownerPriorityActions(
   facts: VerifiedOwnerQueueFacts,
   limit = 5,
 ): OwnerPriorityAction[] | null {
-  if (!facts || !Number.isSafeInteger(limit) || limit < 1 || limit > 7) return null;
+  if (!facts || typeof facts !== "object" || Array.isArray(facts) ||
+      Object.getPrototypeOf(facts) !== Object.prototype ||
+      !Number.isSafeInteger(limit) || limit < 1 || limit > 7) return null;
+  // The seven saved source buckets are named and allowlisted; a list of
+  // seven values, a prototype-injected object or a missing key must never be
+  // mistaken for a verified "zero outstanding work" owner snapshot.
+  const expected = [
+    "openRequests", "waitingOnCustomerQuotes", "quoteValidityNeedsReview",
+    "collectibleInvoices", "invoiceLedgersNeedingReview",
+    "unassignedActiveVisits", "unresolvedCriticalAttentions",
+  ];
+  if (Object.keys(facts).length !== expected.length ||
+      expected.some(key => !Object.hasOwn(facts,key))) return null;
   const values = Object.values(facts);
-  if (values.length !== 7 ||
-      values.some(value => typeof value !== "number" ||
+  if (values.some(value => typeof value !== "number" ||
         !Number.isSafeInteger(value) || value < 0 || value > 5000)) return null;
   const table: Array<[keyof VerifiedOwnerQueueFacts, Omit<OwnerPriorityAction, "count" | "source">]> = [
     ["unresolvedCriticalAttentions", {
