@@ -113,6 +113,47 @@ describe("real persisted prerequisites for owner quote automation opt-in", () =>
     }
   });
 
+
+  it("refuses automated quote follow-up on overlapping or invalid competing active books",async()=>{
+    const valid={workspace_id:ws,branch_id:branch,rate_card_id:rateId,
+      starts_at:null,ends_at:null,active:true};
+    for(const competitor of [
+      {...valid},
+      {...valid,rate_card_id:other},
+      {...valid,starts_at:"2020-01-01T00:00:00Z"},
+      {...valid,starts_at:"2026-02-30T00:00:00Z"},
+      {...valid,starts_at:"2026-10-18T12:00:00"},
+      {...valid,starts_at:"2026-10-18T12:00:00Z",ends_at:"2026-10-18T11:00:00Z"},
+      {...valid,starts_at:"2020-01-01T00:00:00+15:00"},
+    ]) {
+      const f=fixture({branch_price_books:[valid,competitor]});
+      expect(await verifyOwnerQuoteAutomationPrerequisites(f.service,ws))
+        .toMatchObject({ok:false,code:"AUTO_QUOTE_PRICING_MISSING"});
+      expect(f.queried.every(x=>x.filter.workspace_id===ws)).toBe(true);
+    }
+  });
+
+  it("allows one effective book alongside valid expired or future inactive periods",async()=>{
+    const valid={workspace_id:ws,branch_id:branch,rate_card_id:rateId,
+      starts_at:null,ends_at:null,active:true};
+    for(const competitor of [
+      {...valid,starts_at:"2020-01-01T00:00:00Z",ends_at:"2020-01-02T00:00:00Z"},
+      {...valid,starts_at:"2099-01-01T00:00:00+06:00",ends_at:null},
+    ]) {
+      const f=fixture({branch_price_books:[valid,competitor]});
+      expect(await verifyOwnerQuoteAutomationPrerequisites(f.service,ws))
+        .toEqual({ok:true,branchId:branch,ruleId:rule});
+    }
+  });
+
+  it("accepts explicit valid zoned current rate windows without server-local parsing",async()=>{
+    const f=fixture({branch_price_books:[{workspace_id:ws,branch_id:branch,
+      rate_card_id:rateId,active:true,starts_at:"2020-01-01T00:00:00+06:00",
+      ends_at:"2099-01-01T00:00:00Z"}]});
+    expect(await verifyOwnerQuoteAutomationPrerequisites(f.service,ws))
+      .toEqual({ok:true,branchId:branch,ruleId:rule});
+  });
+
   it("requires a positive numeric duration as well as a real base price",async()=>{
     const f=fixture({rate_cards:[{id:rateId,workspace_id:ws,active:true,currency:"USD",
       rules:{standard:{baseMinor:20000,baseMinutes:0}}}]});
