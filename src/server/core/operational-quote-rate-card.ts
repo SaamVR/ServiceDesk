@@ -184,6 +184,7 @@ export async function loadOperationalQuoteRateCard(
     return fail("QUOTE_RATE_BOOK_TIME_INVALID",
       "A saved branch price book has an unverified effective date. Correct pricing before quoting.");
   const active = windows.filter(window =>
+    window.start !== undefined && window.end !== undefined &&
     (window.start === null || window.start <= observedNow) &&
     (window.end === null || window.end > observedNow)
   ).map(window => window.book);
