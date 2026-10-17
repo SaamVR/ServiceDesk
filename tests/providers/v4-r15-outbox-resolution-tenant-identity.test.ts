@@ -1,5 +1,6 @@
 import {describe,it,expect} from "vitest";
 import {validateResolvedOutboxJob} from "../../src/server/integrations/outbox/intent-resolver";
+import {ConnectorOutboxExecutionPort} from "../../src/server/integrations/outbox/execution-adapter";
 import type {ClaimedOutboxEvent} from "../../src/contracts/outbox";
 import type {OutboxJob} from "../../src/server/integrations/types";
 const now="2026-10-17T00:00:00.000Z";
@@ -30,5 +31,18 @@ describe("R15 durable provider-intent resolution authority",()=>{
   expect(check({...valid,payload:[]})).toMatchObject({ok:false,code:"OUTBOX_INTENT_PAYLOAD_INVALID"});
   expect(check({...valid,handoverGuard:{conversationId:"other",expectedConversationVersion:-1,handoverActive:false}}))
    .toMatchObject({ok:false,code:"OUTBOX_INTENT_HANDOVER_INVALID"});
+ });
+ it("proves corrupt resolved consent never dispatches a provider call",async()=>{
+  let sendCount=0;
+  const port=new ConnectorOutboxExecutionPort({
+    resolver:{async resolve(){return {ok:true as const,value:{...valid,
+      recipient:{...valid.recipient,hasOptIn:"true"} as unknown as OutboxJob["recipient"]}};}},
+    dispatchers:{WHATSAPP:{async dispatch(){sendCount++;throw Error("MUST_NOT_SEND");}}},
+    now:()=>now,
+  });
+  const result=await port.execute(evt);
+  expect(result).toMatchObject({ok:true,value:{outcome:"TERMINAL_FAILURE",
+    code:"OUTBOX_INTENT_RECIPIENT_INVALID"}});
+  expect(sendCount).toBe(0);
  });
 });

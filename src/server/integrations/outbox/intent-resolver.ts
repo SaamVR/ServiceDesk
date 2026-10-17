@@ -10,7 +10,7 @@ const purposes=new Set<DeliveryPurpose>(["QUOTE","CONFIRMATION","REMINDER","INVO
   "FEEDBACK","STAFF_ALERT","CUSTOMER_REPLY","CALENDAR_VISIT","VISIT_REMINDER","RETENTION_CAMPAIGN"]);
 const safeIdentity=(v:unknown,max=256):v is string=>typeof v==="string"&&
   v.length>0&&v.length<=max&&v.trim()===v&&
-  !/[\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u206f\\ufeff]/iu.test(v);
+  !/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/iu.test(v);
 const record=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==="object"&&!Array.isArray(v);
 function failure(code:string,message:string):Result<OutboxJob>{return {ok:false,code,message};}
 
