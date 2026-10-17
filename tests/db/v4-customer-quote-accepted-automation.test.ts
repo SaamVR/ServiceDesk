@@ -39,6 +39,7 @@ function fixture(options: {
   attentionWrongResource?: boolean;
   attentionWrongType?: boolean;
   attentionWrongResourceType?: boolean;
+  missingSavedAttention?: boolean;
   externalOnly?: boolean;
   workspaceOptedOut?: boolean;
   deploymentOff?: boolean;
@@ -74,7 +75,8 @@ function fixture(options: {
       workspace_id:workspace,branch_id:branch,execution_id:executionId,
       action_type:"CREATE_ATTENTION",action_index:0,
       state: options.failedAttention ? "FAILED" : pending ? "PENDING" : "SUCCEEDED"}],
-    attention_items:[{id:attentionId,workspace_id:workspace,
+    attention_items:options.missingSavedAttention ? [] : [{
+      id:attentionId,workspace_id:workspace,
       resource_type:options.attentionWrongResourceType?"request":"workflow_execution",
       resource_id:options.attentionWrongResource?request:executionId,
       type:options.attentionWrongType?"CUSTOMER_FOLLOWUP":"WORKFLOW_RULE"}],
@@ -236,6 +238,19 @@ describe("V4 trusted post-accept automation bridge",()=>{
     expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))
       .toMatchObject({ok:false,code:"QUOTE_AUTOMATION_ATTENTION_NOT_COMPLETED"});
     expect(t.executeAttentionAction).not.toHaveBeenCalled();
+  });
+
+  it("critic: does not ACK replay of a succeeded action whose saved attention was deleted or never linked",async()=>{
+    for (const scenario of [
+      {duplicate:true,pending:false,missingSavedAttention:true},
+      {duplicate:true,pending:false,attentionWrongResource:true},
+      {duplicate:true,pending:false,attentionWrongType:true},
+    ]) {
+      const fixtureState=fixture(scenario);
+      expect(await runTrustedAcceptedQuoteInternalAutomation(fixtureState.input,fixtureState.deps))
+        .toMatchObject({ok:false,code:"QUOTE_AUTOMATION_ATTENTION_UNVERIFIED"});
+      expect(fixtureState.executeAttentionAction).not.toHaveBeenCalled();
+    }
   });
 
   it("replays an already completed internal attention action without duplicating it",async()=>{
