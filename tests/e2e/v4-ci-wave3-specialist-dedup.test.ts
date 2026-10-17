@@ -39,6 +39,6 @@ describe("V4 wave 3 preserve specialty tests with one canonical PR full RC", () 
     expect(release).toContain("Real HTTP guest-route release contract (all 13 modules)");
     expect(release).toContain("Real Chrome public responsive proof");
     expect(release).toContain("Real Chrome synthetic operations journey");
-    expect(release).toContain("cancel-in-progress: false");
+    expect(release).toContain("cancel-in-progress: true");
   });
 });
