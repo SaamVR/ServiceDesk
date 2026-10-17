@@ -35,6 +35,21 @@ describe("SONIC R33 L01 redacted durable AI failure recovery",()=>{
      expect(JSON.stringify(r)).not.toMatch(/secret|owner@|private/i);
    }
  });
+ it("critic: rejects impossible civil dates and timezone offsets before retry scheduling",()=>{
+   for(const occurredAt of [
+     "2026-02-30T00:00:00Z",
+     "2026-10-18T25:00:00Z",
+     "2026-10-18T03:61:00Z",
+     "2026-10-18T02:00:00+15:00",
+     "2026-10-18T02:00:00+14:01",
+     "2026-10-18T02:00:00-15:00",
+   ]){
+     const r=classifyAiModelFailureForRecovery({...fixture,occurredAt});
+     expect(r,{occurredAt}).toMatchObject({action:"OPERATOR_REVIEW",
+       retryable:false,terminal:true,preservesIdempotency:false});
+     expect(JSON.stringify(r)).not.toContain("conversation-qa");
+   }
+ });
  it("deduplicates opaque recovery identity across retries without echoing the saved conversation ID",()=>{
    const r=classifyAiModelFailureForRecovery({...fixture,attempts:2});
    const a=classifyAiModelFailureForRecovery(fixture);
