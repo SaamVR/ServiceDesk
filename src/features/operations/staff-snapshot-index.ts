@@ -28,11 +28,34 @@ export function countStaffBy<T>(
  * An older unsuperseded quote must not shadow a newer version because the
  * database happened to return the rows in a different order.
  */
+/** Two non-superseded records with the same highest version cannot both
+ * establish the authoritative current offer. Count conflicts by REQUEST,
+ * never by quote rows. Older-version duplicates do not poison a newer
+ * unambiguous saved offer.
+ */
+export function indexAmbiguousCurrentQuoteRequests<T extends { requestId: string; version: number; status: string }>(
+  quotes: readonly T[],
+): ReadonlySet<string> {
+  const latest = new Map<string, { version: number; count: number }>();
+  for (const quote of quotes) {
+    if (quote.status === "SUPERSEDED") continue;
+    const prev = latest.get(quote.requestId);
+    if (!prev || quote.version > prev.version) {
+      latest.set(quote.requestId, { version: quote.version, count: 1 });
+    } else if (quote.version === prev.version) {
+      prev.count++;
+    }
+  }
+  return new Set([...latest].filter(([, value]) => value.count > 1).map(([id]) => id));
+}
+
 export function indexCurrentQuoteByRequest<T extends { requestId: string; version: number; status: string }>(
   quotes: readonly T[],
 ): Map<string, T> {
   const current = new Map<string, T>();
+  const ambiguous = indexAmbiguousCurrentQuoteRequests(quotes);
   for (const quote of quotes) {
+    if (ambiguous.has(quote.requestId)) continue;
     if (quote.status === "SUPERSEDED") continue;
     const previous = current.get(quote.requestId);
     if (!previous || quote.version > previous.version) current.set(quote.requestId, quote);
