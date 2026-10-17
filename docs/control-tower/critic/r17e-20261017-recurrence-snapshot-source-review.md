@@ -12,7 +12,7 @@ Candidate checks saved required fields, supported frequency/status and IANA-vali
 
 Independent source review found that `RecurrenceRulePreview` has no `onClick` or server action callback even when its parent passes `actionsInjected=true`, yet `buildRecurrenceActionAvailability` returns enabled PAUSE/SKIP controls. This is an inert enabled control, not a real scheduling action. [Product PR #593](https://github.com/SaamVR/ServiceDesk/pull/593) at `1dd11c6db0a575f1369c65af3f6b9a6dacb19ec4` keeps this *preview only* component's controls disabled irrespective of the prop, shows an explicit limitation, and adds React server-rendered positive/negative tests for ACTIVE/PAUSED/COMPLETED/staff/customer and no fabricated VisitDTOs. This cannot substitute for a future real server-command UI. Source/checks are independent of Core #590; do not overwrite either lane.
 
-**Product verdict at this document revision:** **HOLD** until full-source RC finishes at its exact PR SHA. Review merge parity and Critic-integrity checks already PASS. This is a practical UX/read-only correctness fix, not evidence of working pause/resume/skip actions.
+**Product source-only Critic verdict: PASS / operational actions HOLD**. Immutable head `1dd11c6db0a575f1369c65af3f6b9a6dacb19ec4` passed [full-source RC #39017086788](https://github.com/SaamVR/ServiceDesk/actions/runs/39017086788), [review parity #39017087053](https://github.com/SaamVR/ServiceDesk/actions/runs/39017087053) and [Critic integrity #39017086875](https://github.com/SaamVR/ServiceDesk/actions/runs/39017086875). Rendered controls are intentionally disabled, NOT evidence of working pause/resume/skip actions.
 
 ## Installed schema checked read-only (project cpmmgivhlkfbiwzhlcey)
 
@@ -25,6 +25,10 @@ Independent source review found that `RecurrenceRulePreview` has no `onClick` or
 - **Authorization:** unrelated workspace recurrence row must fail with `SNAPSHOT_RPC_SCOPE_MISMATCH`. Note that DB/RLS authorization still needs separately authenticated two-owner QA; a mock RPC cannot prove tenant isolation of installed policies.
 - **Positive practical effect:** staff sees only a saved schedule with complete evidence; unverified projection is unavailable for staff action rather than silently fabricating zero visits. No recurrence materializer, scheduling cron, provider calendar send or customer notification is activated.
 - **Bounded concern:** this source parser validates a persisted SQL projection, not the complete domain recurrence scheduling semantics or timezone offset transitions. Postgres may support civil dates outside four-digit years; they are deliberately not certified by this bounded staff-view parser. Cross-field `max_occurrences >= generated_occurrences` is **not** required by installed SQL constraints and is not invented.
+
+## R17G independent Core command receipt WIP — excluded from integration
+
+A third disjoint Core candidate, `fix/v4-r17g-recurrence-command-receipt-authority-20261017` at `3c03e589ad2dae1c7e082cf429a040b335add1a1`, strengthens `src/server/core/recurrence-postgres.ts` against finite fractional/nonpositive SQL counts and versions, absent `ok:true` confirmations and wrong workspace/request/property/recurrence IDs. Its own negative tests are committed. **A tool safety check blocked PR creation; do not route the same source through another API or hide it inside the accepted R17E/F integration.** This work is IMPLEMENTED on isolated branch only, NOT tested by mandatory PR CI, NOT merged. Preserve the branch for explicit future authorization.
 
 ## Evidence and verdict
 
