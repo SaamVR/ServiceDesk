@@ -50,24 +50,51 @@ function requestFromRpc(value: unknown): RequestDTO {
   };
 }
 
-function quoteFromRpc(value: unknown): QuoteDTO {
+function quoteFromRpc(value: unknown, expectedWorkspaceId: string): QuoteDTO {
   const row = object(value);
+  const text = (camel: string, snake?: string): string => {
+    const saved = field(row, camel, snake);
+    if (typeof saved !== "string" || !saved.trim())
+      throw new Error("Malformed persisted quote identity or status.");
+    return saved;
+  };
+  const amount = (camel: string, snake: string): number => {
+    const saved = field(row, camel, snake);
+    if (typeof saved !== "number" || !Number.isSafeInteger(saved) || saved < 0)
+      throw new Error("Malformed persisted quote monetary or duration evidence.");
+    return saved;
+  };
+  const status = text("status");
+  const currency = text("currency");
+  const validUntil = text("validUntil", "valid_until");
+  if (!["DRAFT", "PENDING_APPROVAL", "APPROVED", "SENT",
+        "ACCEPTED", "DECLINED", "EXPIRED", "SUPERSEDED"].includes(status) ||
+      !/^[A-Z]{3}$/.test(currency) ||
+      !/(?:Z|[+-]\\d{2}:\\d{2})$/i.test(validUntil) ||
+      !Number.isFinite(Date.parse(validUntil)))
+    throw new Error("Malformed persisted quote lifecycle, currency or validity.");
+  const totalMinor = amount("totalMinor", "total_minor");
+  const subtotalMinor = amount("subtotalMinor", "subtotal_minor");
+  const taxMinor = amount("taxMinor", "tax_minor");
+  const depositMinor = amount("depositMinor", "deposit_minor");
+  const balanceMinor = amount("balanceMinor", "balance_minor");
+  const version = amount("version", "version");
+  if (version < 1 || !Number.isSafeInteger(subtotalMinor + taxMinor) ||
+      !Number.isSafeInteger(depositMinor + balanceMinor) ||
+      subtotalMinor + taxMinor !== totalMinor ||
+      depositMinor + balanceMinor !== totalMinor)
+    throw new Error("Malformed persisted quote financial reconciliation.");
+  const workspaceId = text("workspaceId", "workspace_id");
+  if (workspaceId !== expectedWorkspaceId)
+    throw new Error("Quote RPC scope mismatch.");
   return {
-    id: String(field(row, "id")),
-    workspaceId: String(field(row, "workspaceId", "workspace_id")),
-    requestId: String(field(row, "requestId", "request_id")),
-    version: Number(field(row, "version") ?? 0),
-    status: String(field(row, "status")) as QuoteDTO["status"],
-    currency: String(field(row, "currency")),
-    subtotalMinor: Number(field(row, "subtotalMinor", "subtotal_minor") ?? 0),
-    taxMinor: Number(field(row, "taxMinor", "tax_minor") ?? 0),
-    totalMinor: Number(field(row, "totalMinor", "total_minor") ?? 0),
-    depositMinor: Number(field(row, "depositMinor", "deposit_minor") ?? 0),
-    balanceMinor: Number(field(row, "balanceMinor", "balance_minor") ?? 0),
-    durationMinutes: Number(field(row, "durationMinutes", "duration_minutes") ?? 0),
-    bufferMinutes: Number(field(row, "bufferMinutes", "buffer_minutes") ?? 0),
-    rateVersion: String(field(row, "rateVersion", "rate_version")),
-    validUntil: String(field(row, "validUntil", "valid_until")),
+    id: text("id"), workspaceId,
+    requestId: text("requestId", "request_id"),
+    version, status: status as QuoteDTO["status"], currency,
+    subtotalMinor, taxMinor, totalMinor, depositMinor, balanceMinor,
+    durationMinutes: amount("durationMinutes", "duration_minutes"),
+    bufferMinutes: amount("bufferMinutes", "buffer_minutes"),
+    rateVersion: text("rateVersion", "rate_version"), validUntil,
   };
 }
 
@@ -101,12 +128,12 @@ async function readRequest(client: SupabaseRpcClient, ctx: ActorContext, request
 
 async function readQuote(client: SupabaseRpcClient, ctx: ActorContext, quoteId: string): Promise<Result<QuoteDTO>> {
   const { data, error } = await client.rpc<RpcRow>("servicedesk_get_quote", { p_input: { ...actor(ctx), quoteId } });
-  return rpcResult(data, error, "QUOTE_RPC_ERROR", (row) => quoteFromRpc(row.quote));
+  return rpcResult(data, error, "QUOTE_RPC_ERROR", (row) => quoteFromRpc(row.quote, ctx.workspaceId));
 }
 
 async function readLatestQuoteForRequest(client: SupabaseRpcClient, ctx: ActorContext, requestId: string): Promise<Result<QuoteDTO>> {
   const { data, error } = await client.rpc<RpcRow>("servicedesk_get_latest_quote_for_request", { p_input: { ...actor(ctx), requestId } });
-  return rpcResult(data, error, "QUOTE_RPC_ERROR", (row) => quoteFromRpc(row.quote));
+  return rpcResult(data, error, "QUOTE_RPC_ERROR", (row) => quoteFromRpc(row.quote, ctx.workspaceId));
 }
 
 function supportedService(value: string | undefined): value is QuoteServiceCode {
@@ -164,17 +191,17 @@ export function createPostgresRequestQuoteCapacityFacadeMethods(
       const { data, error } = await client.rpc<RpcRow>("servicedesk_persist_quote_snapshot", {
         p_input: { ...actor(ctx), requestId, quoteId: snapshot.id, snapshot },
       });
-      return rpcResult(data, error, "QUOTE_PERSIST_RPC_ERROR", (row) => quoteFromRpc(row.quote));
+      return rpcResult(data, error, "QUOTE_PERSIST_RPC_ERROR", (row) => quoteFromRpc(row.quote, ctx.workspaceId));
     },
 
     async sendQuote(ctx: ActorContext, id: string, meta: CommandMeta): Promise<Result<QuoteDTO>> {
       const { data, error } = await client.rpc<RpcRow>("servicedesk_send_quote", { p_input: { ...actor(ctx), quoteId: id, expectedVersion: meta.expectedVersion, idempotencyKey: meta.idempotencyKey, now: meta.now } });
-      return rpcResult(data, error, "QUOTE_SEND_RPC_ERROR", (row) => quoteFromRpc(row.quote));
+      return rpcResult(data, error, "QUOTE_SEND_RPC_ERROR", (row) => quoteFromRpc(row.quote, ctx.workspaceId));
     },
 
     async acceptQuote(ctx: ActorContext, id: string, meta: CommandMeta): Promise<Result<QuoteDTO>> {
       const { data, error } = await client.rpc<RpcRow>("servicedesk_accept_quote", { p_input: { ...actor(ctx), quoteId: id, expectedVersion: meta.expectedVersion, idempotencyKey: meta.idempotencyKey, now: meta.now } });
-      return rpcResult(data, error, "QUOTE_ACCEPT_RPC_ERROR", (row) => quoteFromRpc(row.quote));
+      return rpcResult(data, error, "QUOTE_ACCEPT_RPC_ERROR", (row) => quoteFromRpc(row.quote, ctx.workspaceId));
     },
 
     async findSlots(ctx: ActorContext, input: FindSlotsInput): Promise<SlotDTO[]> {
