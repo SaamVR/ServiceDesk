@@ -229,6 +229,24 @@ export async function runTrustedAcceptedQuoteInternalAutomation(
       if (requiredIndexes.some(index => !successful.has(index))) {
         return fail("QUOTE_AUTOMATION_ATTENTION_NOT_COMPLETED");
       }
+      // Previously SUCCEEDED action rows may outlive the attention record
+      // after an interrupted or inconsistent earlier run. Historical replay
+      // cannot ACK just because the action state is SUCCEEDED: require saved,
+      // tenant-scoped attention for this exact workflow execution as well.
+      const linked = await service.from("attention_items")
+        .select("id,workspace_id,resource_type,resource_id,type")
+        .eq("workspace_id",workspaceId)
+        .eq("resource_type","workflow_execution")
+        .eq("resource_id",saved.value.executionId)
+        .eq("type","WORKFLOW_RULE").limit(2);
+      if (linked.error || !Array.isArray(linked.data) ||
+          !linked.data.some(row => isUuid(row.id) &&
+            row.workspace_id === workspaceId &&
+            row.resource_type === "workflow_execution" &&
+            row.resource_id === saved.value.executionId &&
+            row.type === "WORKFLOW_RULE")) {
+        return fail("QUOTE_AUTOMATION_ATTENTION_UNVERIFIED");
+      }
     }
   }
   // No eligible PUBLISHED QUOTE_ACCEPTED rule means nothing was evaluated.
