@@ -24,7 +24,8 @@ export type DispatchConflictCode =
   | "CREW_INACTIVE"
   | "OUTSIDE_AVAILABILITY"
   | "SERVICE_CONSTRAINT_MISMATCH"
-  | "SCHEDULE_OVERLAP";
+  | "SCHEDULE_OVERLAP"
+  | "SCHEDULE_UNVERIFIED";
 
 export interface DispatchCandidateRecommendation {
   visitId: string;
@@ -47,6 +48,33 @@ export interface DispatchVisitRecommendation {
   candidates: DispatchCandidateRecommendation[];
   attentionReasons: string[];
   humanApprovalRequired: true;
+}
+
+/** Times and durations are source facts, not inferred availability. Invalid
+ * recovered appointment data must never score as "no schedule overlap". */
+function verifiedZonedInstant(input: unknown): number | null {
+  if (typeof input !== "string") return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|([+-])(\d{2}):(\d{2}))$/.exec(input);
+  if (!match) return null;
+  const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
+  const hour=Number(match[4]),minute=Number(match[5]),second=Number(match[6]);
+  if (year<1000 || month<1 || month>12 || day<1 || day>31 ||
+      hour>23 || minute>59 || second>59) return null;
+  const civil=new Date(Date.UTC(year,month-1,day));
+  if (civil.getUTCFullYear()!==year || civil.getUTCMonth()+1!==month || civil.getUTCDate()!==day) return null;
+  if (match[8]!=="Z") {
+    const tzHours=Number(match[10]),tzMinutes=Number(match[11]);
+    if (tzHours>14 || tzMinutes>59 || (tzHours===14&&tzMinutes!==0)) return null;
+  }
+  const ms=Date.parse(input);
+  return Number.isFinite(ms)?ms:null;
+}
+function validVisitInterval(visit: DispatchVisitSnapshot): boolean {
+  const start=verifiedZonedInstant(visit.startAt);
+  return start!==null &&
+    Number.isSafeInteger(visit.serviceMinutes) && visit.serviceMinutes>0 &&
+    Number.isSafeInteger(visit.bufferMinutes) && visit.bufferMinutes>=0 &&
+    visit.serviceMinutes+visit.bufferMinutes<=24*60;
 }
 
 function interval(visit: DispatchVisitSnapshot) {
@@ -87,13 +115,22 @@ function candidateFor(snapshot: DispatchSnapshot, visit: DispatchVisitSnapshot, 
 
   if (crew.workspaceId !== visit.workspaceId) conflicts.push("CREW_WORKSPACE_MISMATCH");
   if (!crew.active) conflicts.push("CREW_INACTIVE");
+  const sourceSafe=validVisitInterval(visit) &&
+    existing.every(item=>validVisitInterval(item) && item.workspaceId===visit.workspaceId);
+  if (!sourceSafe) conflicts.push("SCHEDULE_UNVERIFIED");
 
-  if (crew.availableFrom && crew.availableTo) {
-    const visitRange = interval(visit);
-    const from = new Date(crew.availableFrom).getTime();
-    const to = new Date(crew.availableTo).getTime();
-    if (visitRange.start < from || visitRange.end > to) conflicts.push("OUTSIDE_AVAILABILITY");
-    else reasons.push("Within crew availability");
+  // A missing availability pair is unknown (not confirmed). A partial or
+  // malformed pair is contradictory stored evidence and cannot authorize crew.
+  if (crew.availableFrom !== undefined || crew.availableTo !== undefined) {
+    const from=verifiedZonedInstant(crew.availableFrom);
+    const to=verifiedZonedInstant(crew.availableTo);
+    if (from===null || to===null || from>=to) {
+      if (!conflicts.includes("SCHEDULE_UNVERIFIED")) conflicts.push("SCHEDULE_UNVERIFIED");
+    } else if (validVisitInterval(visit)) {
+      const visitRange=interval(visit);
+      if (visitRange.start<from || visitRange.end>to) conflicts.push("OUTSIDE_AVAILABILITY");
+      else reasons.push("Within crew availability");
+    }
   }
 
   if (visit.serviceCode && crew.serviceCodes && crew.serviceCodes.length > 0) {
@@ -101,8 +138,12 @@ function candidateFor(snapshot: DispatchSnapshot, visit: DispatchVisitSnapshot, 
     else reasons.push("Service match");
   }
 
-  if (existing.some((assigned) => overlaps(visit, assigned))) conflicts.push("SCHEDULE_OVERLAP");
-  else reasons.push("No schedule overlap");
+  if (sourceSafe) {
+    if (existing.some((assigned) => overlaps(visit, assigned))) conflicts.push("SCHEDULE_OVERLAP");
+    else reasons.push("No schedule overlap");
+  } else {
+    reasons.push("Stored visit timing requires review");
+  }
 
   const workload = workloadMinutes(existing);
   reasons.push("Scheduled workload " + workload + " minutes");
@@ -128,7 +169,9 @@ function candidateFor(snapshot: DispatchSnapshot, visit: DispatchVisitSnapshot, 
 export function buildDispatchRecommendations(snapshot: DispatchSnapshot): DispatchVisitRecommendation[] {
   const unassigned = snapshot.visits
     .filter((visit) => !visit.crewId && !["CANCELLED", "COMPLETED"].includes(visit.status))
-    .sort((a, b) => a.startAt.localeCompare(b.startAt) || a.id.localeCompare(b.id));
+    .sort((a, b) => (typeof a.startAt === "string" ? a.startAt : "")
+      .localeCompare(typeof b.startAt === "string" ? b.startAt : "") ||
+      String(a.id).localeCompare(String(b.id)));
 
   return unassigned.map((visit) => {
     const candidates = snapshot.crews
