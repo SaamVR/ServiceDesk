@@ -41,6 +41,18 @@ describe("Frontend AI Studio keyboard-first authorized record picker", () => {
     expect(forty).toHaveLength(40);
     expect(filterStudioRecordChoices(forty, "Quote")).toHaveLength(40);
   });
+  it("discloses the 40-choice cap instead of implying a complete tenant-wide search",()=>{
+    const client=source();
+    const style=css();
+    expect(client).toContain("choices.length >= 40");
+    expect(client).toContain("Results are not a complete database search");
+    expect(client).toContain("loaded record choices shown");
+    expect(client).toContain('role="note"');
+    expect(client).toContain("Open {mode ===");
+    expect(style).toContain(".scopeNotice");
+    expect(style).toContain(".scopeNotice a");
+  });
+
   it("uses accessible roving tabs, keyboard arrows and unique linked ARIA ids",()=>{
     const client=source();
     expect(client).toContain('role="tablist"');
