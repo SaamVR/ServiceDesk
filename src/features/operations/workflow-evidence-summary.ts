@@ -54,9 +54,11 @@ export function summarizeWorkflowEvidence(input: {
   }
   const current: OperationalWorkflowActionExecution[] = [];
   let ambiguousActionSlots = 0;
+  let historicalActionAttempts = 0;
   for (const rows of groups.values()) {
     const maxAttempt = Math.max(...rows.map(item => item.attemptNumber));
     const latest = rows.filter(item => item.attemptNumber === maxAttempt);
+    historicalActionAttempts += rows.filter(item => item.attemptNumber < maxAttempt).length;
     // Duplicate highest attempts and impossible action-type changes must
     // NEVER be promoted to current operational proof. The bounded source
     // query can also omit the actual latest attempt; this remains a sample.
@@ -83,7 +85,7 @@ export function summarizeWorkflowEvidence(input: {
       item.state === "APPROVED" || item.state === "PENDING").length,
     failedActions: current.filter(item => item.state === "FAILED").length,
     recordedActionAttempts: validAttempts.length,
-    historicalActionAttempts: validAttempts.length - current.length - ambiguousActionSlots,
+    historicalActionAttempts,
     ambiguousActionSlots,
     providerDeliveryVerified: false,
   };
