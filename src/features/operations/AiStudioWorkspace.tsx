@@ -77,7 +77,7 @@ export function AiStudioWorkspace({
           configured={configured} requests={requests} quotes={quotes} />
       </div>
 
-      <WorkflowExecutionInspector snapshot={data} />
+      <WorkflowExecutionInspector snapshot={data} workspaceSlug={workspaceSlug} />
 
       <section className={styles.toolSection} aria-label="AI Studio tools and capabilities">
         <div className={styles.panelTitle}>
