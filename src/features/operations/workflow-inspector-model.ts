@@ -26,7 +26,7 @@ function latestAttempt(
 }
 
 export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
-  if (snapshot.workflowAvailable === false) return [];
+  if (snapshot.workflowAvailable !== true) return [];
 
   // An action may only be attached to an execution with the same persisted
   // execution ID AND branch ID; a rule version must also match both identities.
