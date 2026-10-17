@@ -41,4 +41,28 @@ describe("R20D trusted calendar outbox claim cannot be silently substituted",()=
   expect(await check({...event,payload:{...event.payload,visitId:"other-visit"}}))
    .toMatchObject({ok:false,code:"CALENDAR_OUTBOX_VISIT_MISMATCH"});
  });
+
+  it("rejects corrupted recovery projections before any external calendar dispatch",async()=>{
+    const good = await check(event);
+    expect(good.ok).toBe(true);
+    if(!good.ok)return;
+    const {readCalendarVisitProjection} = await import("../../src/server/integrations/outbox/calendar-visit-intent");
+    const job=good.value;
+    expect(readCalendarVisitProjection(job)).toMatchObject({ok:true});
+    for(const corrupt of [null,[],{},false]){
+      expect(readCalendarVisitProjection({...job,payload:corrupt} as typeof job))
+        .toMatchObject({ok:false,code:"CALENDAR_VISIT_PAYLOAD_INVALID"});
+    }
+    const projected=job.payload.calendarVisit as Record<string,unknown>;
+    for(const altered of [
+      {...projected,visit:{...source.visit,workspaceId:"foreign-workspace"}},
+      {...projected,visit:{...source.visit,id:"other-visit"}},
+      {...projected,visit:{...source.visit,crewId:"other-crew"}},
+      {...projected,providerMappingKey:"fake-mapping"},
+      {...projected,action:"DELETE"},
+    ]){
+      expect(readCalendarVisitProjection({...job,payload:{calendarVisit:altered}}))
+        .toMatchObject({ok:false,code:"CALENDAR_VISIT_PAYLOAD_INVALID"});
+    }
+  });
 });

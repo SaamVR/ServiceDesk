@@ -2,7 +2,7 @@ import type { Result, VisitDTO } from "../../../contracts";
 import type { ClaimedOutboxEvent } from "../../../contracts/outbox";
 import type { OutboxJob } from "../types";
 import type { CalendarCrewBinding } from "../google-calendar/visit-projection-bridge";
-import { buildServiceDeskManagedVisitCalendarProjection, type CalendarVisitProjectionAction, type ServiceDeskManagedVisitCalendarProjection } from "../google-calendar/visit-projection-bridge";
+import { buildServiceDeskManagedVisitCalendarProjection, calendarProviderMappingKey, type CalendarVisitProjectionAction, type ServiceDeskManagedVisitCalendarProjection } from "../google-calendar/visit-projection-bridge";
 
 export interface CalendarVisitAuthoritativeSource {
   eventId: string;
@@ -121,7 +121,8 @@ export async function resolveCalendarVisitOutboxIntent(
 }
 
 export function readCalendarVisitProjection(job: OutboxJob): Result<ServiceDeskManagedVisitCalendarProjection> {
-  const root = isRecord(job.payload.calendarVisit) ? job.payload.calendarVisit : undefined;
+  const root = isRecord(job?.payload) && isRecord(job.payload.calendarVisit)
+    ? job.payload.calendarVisit : undefined;
   if (!root) return { ok: false, code: "CALENDAR_VISIT_PAYLOAD_INVALID", message: "Calendar outbox job must include server-resolved calendarVisit payload." };
   if (job.channel !== "GOOGLE_CALENDAR" || job.purpose !== "CALENDAR_VISIT") {
     return { ok: false, code: "CHANNEL_MISMATCH", message: "Calendar visit projection can only be dispatched through GOOGLE_CALENDAR/CALENDAR_VISIT." };
@@ -129,9 +130,22 @@ export function readCalendarVisitProjection(job: OutboxJob): Result<ServiceDeskM
   if (root.workspaceId !== job.workspaceId || root.idempotencyKey !== job.idempotencyKey) {
     return { ok: false, code: "CALENDAR_VISIT_PAYLOAD_INVALID", message: "Calendar visit payload identity does not match outbox job." };
   }
-  const projection = root as unknown as ServiceDeskManagedVisitCalendarProjection;
-  if (!projection.visit || projection.canMutateBookingTruth !== false) {
-    return { ok: false, code: "CALENDAR_VISIT_PAYLOAD_INVALID", message: "Calendar visit payload must include visit projection and canMutateBookingTruth=false." };
+  // Stored or recovered projections can be corrupted independently of the
+  // original claim. Compare the actual VisitDTO dispatched to the provider,
+  // not only the duplicated top-level labels.
+  const visit = isRecord(root.visit) ? root.visit : null;
+  if (!visit || root.canMutateBookingTruth !== false ||
+      visit.id !== root.visitId || visit.workspaceId !== root.workspaceId ||
+      visit.crewId !== root.crewId || visit.requestId !== root.requestId ||
+      visit.quoteId !== root.quoteId || visit.startAt !== root.startAt ||
+      (root.action !== "UPSERT" && root.action !== "CANCEL") ||
+      root.providerMappingKey !== calendarProviderMappingKey({
+        workspaceId: root.workspaceId as string,
+        crewId: root.crewId as string,
+        visitId: root.visitId as string,
+      })) {
+    return { ok: false, code: "CALENDAR_VISIT_PAYLOAD_INVALID", message: "Calendar visit payload contradicts authoritative visit identity." };
   }
+  const projection = root as unknown as ServiceDeskManagedVisitCalendarProjection;
   return { ok: true, value: projection };
 }
