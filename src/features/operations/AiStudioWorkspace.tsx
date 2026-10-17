@@ -29,6 +29,18 @@ export function AiStudioWorkspace({
   const executionCount = (data.workflowExecutions ?? [])
     .filter(item => item.mode === "LIVE").length;
   const isOwner = data.actor.role === "OWNER";
+  // Passing the entire staff snapshot to a client component would serialize
+  // customers, contacts, messages and financial records unnecessarily.
+  // Only approved operational workflow evidence crosses this boundary.
+  const workflowInspectorSnapshot = {
+    loadedAt: data.loadedAt,
+    workflowAvailable: data.workflowAvailable,
+    workflowExecutions: data.workflowExecutions,
+    workflowActionExecutions: data.workflowActionExecutions,
+    workflowRuleVersions: data.workflowRuleVersions,
+  } satisfies Pick<OperationalStaffSnapshot,
+    "loadedAt" | "workflowAvailable" | "workflowExecutions" |
+    "workflowActionExecutions" | "workflowRuleVersions">;
 
   return (
     <div className={styles.studio} data-testid="operational-ai-studio">
@@ -77,7 +89,7 @@ export function AiStudioWorkspace({
           configured={configured} requests={requests} quotes={quotes} />
       </div>
 
-      <WorkflowExecutionInspector snapshot={data} workspaceSlug={workspaceSlug} />
+      <WorkflowExecutionInspector snapshot={workflowInspectorSnapshot} workspaceSlug={workspaceSlug} />
 
       <section className={styles.toolSection} aria-label="AI Studio tools and capabilities">
         <div className={styles.panelTitle}>
