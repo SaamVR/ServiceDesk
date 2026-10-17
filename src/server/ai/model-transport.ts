@@ -393,10 +393,16 @@ export async function callAiModel(
   const cancelFromCaller = () => controller.abort();
   input.signal?.addEventListener("abort", cancelFromCaller, { once: true });
   if (input.signal?.aborted) controller.abort();
-  const requestedTimeout = config.timeoutMs ?? 10_000;
+  // Directly injected configs also obey the provider-specific maximum:
+  // gateway cold-starts may exceed 30s; the official Responses transport
+  // retains its existing 10s default/30s hard cap. Caller cancellation wins.
+  const gateway = config.provider === "codex_gateway";
+  const fallbackTimeout = gateway ? 45_000 : 10_000;
+  const maximumTimeout = gateway ? 60_000 : 30_000;
+  const requestedTimeout = config.timeoutMs ?? fallbackTimeout;
   const timeoutMs = Number.isFinite(requestedTimeout)
-    ? Math.max(250, Math.min(requestedTimeout, 30_000))
-    : 10_000;
+    ? Math.max(250, Math.min(requestedTimeout, maximumTimeout))
+    : fallbackTimeout;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {

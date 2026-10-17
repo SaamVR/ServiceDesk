@@ -73,9 +73,15 @@ export function readConfiguredAiRuntimeConfig(
     return { ok: false, code: "AI_RUNTIME_OUTPUT_BUDGET_INVALID",
       message: "Operational AI output token ceiling is outside the approved range." };
   }
+  // Measured one-shot Codex synthetic inference required ~25 seconds, so
+  // the OpenAI 10s default is too short for this explicitly opted-in gateway.
+  // Keep the official provider budget unchanged and cap the gateway at 60s;
+  // this is NOT authorization for automatic or multi-tenant model usage.
+  const gateway = provider === "codex_gateway";
   const timeoutRaw = env.SERVICEDESK_AI_TIMEOUT_MS;
-  const parsed = timeoutRaw === undefined ? 10_000 : Number(timeoutRaw);
-  if (!Number.isFinite(parsed) || parsed < 250 || parsed > 30_000) {
+  const parsed = timeoutRaw === undefined ? (gateway ? 45_000 : 10_000) : Number(timeoutRaw);
+  const timeoutMaximum = gateway ? 60_000 : 30_000;
+  if (!Number.isSafeInteger(parsed) || parsed < 250 || parsed > timeoutMaximum) {
     return { ok: false, code: "AI_RUNTIME_TIMEOUT_INVALID",
       message: "Operational AI timeout is outside the bounded range." };
   }

@@ -1,0 +1,7 @@
+# SONIC AI-A: real Codex latency and bounded cancellation
+
+**Source-only:** The operator-approved **synthetic** public Codex request on 2026-10-18 took 25,132ms (HTTP 200, exact structured JSON). The existing server AI default budget (10s) could not have reliably completed that provider call; a maximum 30s leaves a small tail margin.
+
+This lane increases only the opted-in, one-fictional-workspace private `codex_gateway` default to 45,000ms and max to 60,000ms. Official OpenAI remains 10,000ms default and 30,000ms maximum. Exact HTTPS origin, gateway key, workspace ID guard, no provider tools and all kill switches remain. Caller cancellation is separately bounded and immediate; the timer still aborts a slow request and classifies timeout. Five offline tests cover both transports, opt-in, old cap bypass, invalid numbers, caller cancellation and direct-config cap.
+
+**Caveat:** The independent owner diagnostic UI PR #642 currently uses a *20-second client wait*, which can end before this now-valid 45-second server request finishes. This source repair **does not** silently change its controls or imply cancelling upstream model cost. The AI/frontend integrator must explicitly reconcile asynchronous/polling owner diagnostics before claiming deployed reliability. Cold-start/tail latency and provider entitlement are still unverified for real merchant use; Samai personal Codex OAuth remains single fictional test only.
