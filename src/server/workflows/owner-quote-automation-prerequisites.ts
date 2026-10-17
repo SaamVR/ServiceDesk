@@ -41,16 +41,39 @@ function cardHasQuotableService(rules: unknown, serviceCodes: Set<string>): bool
   });
 }
 
-function effectiveNow(start: unknown, end: unknown, now: number): boolean {
+/**
+ * Saved timestamptz evidence MUST include an explicit timezone and a real
+ * calendar date. Date.parse alone normalizes dates such as February 30 and
+ * silently treats unzoned strings according to the host timezone.
+ */
+function effectiveWindow(start: unknown, end: unknown, now: number):
+  { valid: boolean; current: boolean } {
   const bound = (value: unknown): number | null => {
     if (value === null || value === undefined) return null;
     if (typeof value !== "string") return NaN;
-    const parsed = Date.parse(value);
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+    if (!match) return NaN;
+    const [, year, month, day, hour, minute, second, zone] = match;
+    const y=Number(year), m=Number(month), d=Number(day);
+    const clock=[Number(hour), Number(minute), Number(second)];
+    const date=new Date(Date.UTC(y,m-1,d));
+    if (date.getUTCFullYear()!==y || date.getUTCMonth()!==m-1 ||
+        date.getUTCDate()!==d || clock[0]>23 || clock[1]>59 ||
+        clock[2]>59 || y<1000) return NaN;
+    if (zone!=="Z") {
+      const hh=Number(zone.slice(1,3)), mm=Number(zone.slice(4,6));
+      if (hh>14 || mm>59 || hh===14 && mm!==0) return NaN;
+    }
+    const parsed=Date.parse(value);
     return Number.isFinite(parsed) ? parsed : NaN;
   };
-  const begins = bound(start), ends = bound(end);
-  return (begins === null || Number.isFinite(begins) && begins <= now) &&
-    (ends === null || Number.isFinite(ends) && ends > now);
+  const begins=bound(start), ends=bound(end);
+  if (Number.isNaN(begins) || Number.isNaN(ends) ||
+      begins!==null && ends!==null && begins>=ends) {
+    return {valid:false,current:false};
+  }
+  return {valid:true,current:(begins===null || begins<=now) &&
+    (ends===null || ends>now)};
 }
 
 export async function verifyOwnerQuoteAutomationPrerequisites(
@@ -98,12 +121,31 @@ export async function verifyOwnerQuoteAutomationPrerequisites(
       cardHasQuotableService(row.rules, supportedServices),
     ).map(row => [row.id as string, row]));
     const now = Date.now();
-    const pricedBranches = new Set(books.data.filter(row =>
-      uuid(row.branch_id) && uuid(row.rate_card_id) &&
-      row.active === true && usdBranches.has(row.branch_id) &&
-      cards.has(row.rate_card_id) &&
-      effectiveNow(row.starts_at, row.ends_at, now),
-    ).map(row => row.branch_id as string));
+    // A single seemingly valid book does NOT make pricing usable if a second
+    // effective active book exists in the same branch. Owner activation must
+    // fail closed exactly where real quote pricing rejects ambiguous books.
+    const effectiveBooks = new Map<string, { count: number; cardValid: boolean }>();
+    const malformedBranches = new Set<string>();
+    for (const row of books.data) {
+      if (!uuid(row.branch_id) || !usdBranches.has(row.branch_id) ||
+          row.active !== true) continue;
+      const window=effectiveWindow(row.starts_at,row.ends_at,now);
+      if (!window.valid) {
+        malformedBranches.add(row.branch_id);
+        continue;
+      }
+      if (!window.current) continue;
+      const previous=effectiveBooks.get(row.branch_id) ?? {count:0,cardValid:true};
+      effectiveBooks.set(row.branch_id,{
+        count:previous.count+1,
+        cardValid:previous.cardValid &&
+          uuid(row.rate_card_id) && cards.has(row.rate_card_id),
+      });
+    }
+    const pricedBranches=new Set([...effectiveBooks.entries()]
+      .filter(([branchId, proof]) =>
+        !malformedBranches.has(branchId) && proof.count===1 && proof.cardValid)
+      .map(([branchId])=>branchId));
     if (!pricedBranches.size) {
       return { ok: false, code: "AUTO_QUOTE_PRICING_MISSING" };
     }
