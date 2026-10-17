@@ -28,7 +28,7 @@
 
 ## Actual implemented AI Studio surfaces
 
-- `/app/[workspace]/ai-studio` is under an authenticated workspace layout and uses the existing authorized operational snapshot. Staff navigation shows AI Studio on desktop/mobile.
+- `/app/[workspace]/automations/ai-studio` is under an authenticated workspace layout and uses the existing authorized operational snapshot. Staff navigation shows AI Studio on desktop/mobile.
 - Workbench projects **only sanitized UUID + ordinal + bounded status** into browser choices, never customer data. Request and quote tools reuse existing protected server routes and server reauthorization.
 - Owner-only tools: synthetic provider connection probe and operational priorities from already-verified aggregate facts.
 - Inbox reply drafts remain human-reviewed; workflow publishing, external dispatch, customer authorization and payment authority stay separate.
