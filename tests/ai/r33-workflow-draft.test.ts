@@ -45,6 +45,13 @@ describe("SONIC L04 safe AI model-to-automation-draft compiler",()=>{
        .toMatchObject({ok:false,code:"AI_WORKFLOW_OWNER_SCOPE_REQUIRED"});
    }
  });
+ it("critic: reject nonenumerable financial permissions embedded in a plausible model draft",()=>{
+    const hidden=Object.defineProperty({
+      eventType:"QUOTE_ACCEPTED",severity:"WARNING",
+    },"sendProviderMessage",{value:true,enumerable:false});
+    expect(compileModelWorkflowDraft(hidden,scope))
+      .toMatchObject({ok:false,code:"AI_WORKFLOW_DRAFT_INVALID"});
+  });
  it("denies inherited prototypes and accessor traps, does not execute custom values",()=>{
    const inherited=Object.assign(Object.create({toolCalls:[{name:"send"}]}),{
      eventType:"REQUEST_CREATED",severity:"INFO",
