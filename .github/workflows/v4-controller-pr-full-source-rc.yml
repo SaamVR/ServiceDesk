@@ -33,16 +33,16 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          echo "docs_only=false" >> "$GITHUB_OUTPUT"
           if ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
             echo "Base SHA missing: require full source validation"
             exit 0
           fi
           common_base="$(git merge-base "$BASE_SHA" "$EXPECTED_SHA")" || exit 1
           git diff --name-only -z "$common_base" "$EXPECTED_SHA" > "$RUNNER_TEMP/sd-pr-changed-paths.bin"
           decision="$(node scripts/release/critic-docs-only-scope.mjs "$RUNNER_TEMP/sd-pr-changed-paths.bin")"
+          echo "docs_only=$decision" >> "$GITHUB_OUTPUT"
           if [ "$decision" = "true" ]; then
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
             echo "Only approved critic Markdown changed; required source gate still passes, full build remains mandatory on canonical push."
           fi
       - name: Fast-path receipt for critic Markdown-only PR
