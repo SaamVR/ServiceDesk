@@ -77,17 +77,25 @@ const automaticActionTools = new Set<AssistantToolCall["name"]>([
 ]);
 
 function reject(name: string, reason: AiToolOrchestrationRejectReason): RejectedAiToolCall {
-  return { name, reason, canMutateBusinessTruth: false };
+  // Raw model-injected "name" may contain contact data or a bearer token.
+  // Rejected plans are visible in diagnostics, so expose only bounded tool IDs.
+  const safeName=/^[A-Za-z][A-Za-z0-9]{1,64}$/.test(name)?name:"unknown";
+  return { name:safeName, reason, canMutateBusinessTruth:false };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (typeof value !== "object" || value===null || Array.isArray(value) ||
+      ![Object.prototype,null].includes(Object.getPrototypeOf(value))) return false;
+  const descriptors=Object.getOwnPropertyDescriptors(value);
+  return Object.getOwnPropertySymbols(value).length===0 &&
+    Object.getOwnPropertyNames(value).length===Object.keys(value).length &&
+    Object.values(descriptors).every(d=>Object.hasOwn(d,"value"));
 }
 
 function scopedResourceAllowed(scope: AiToolScope, args: Record<string, unknown>): boolean {
   // Invalid types (including null, arrays, numeric IDs and empty strings)
   // must not silently bypass workspace/request/customer scoping.
-  if (typeof scope.workspaceId !== "string" || !scope.workspaceId.trim()) return false;
+  if (!scope || typeof scope.workspaceId !== "string" || !scope.workspaceId.trim()) return false;
   for (const [key, permitted] of [
     ["workspaceId", [scope.workspaceId]],
     ["requestId", scope.allowedRequestIds],
@@ -95,7 +103,9 @@ function scopedResourceAllowed(scope: AiToolScope, args: Record<string, unknown>
   ] as const) {
     if (!Object.prototype.hasOwnProperty.call(args, key)) continue;
     const id = args[key];
-    if (typeof id !== "string" || !id.trim() || (permitted && !permitted.includes(id))) return false;
+    if (typeof id !== "string" || !id.trim() ||
+        (key!=="workspaceId" && !Array.isArray(permitted)) ||
+        (permitted && !permitted.includes(id))) return false;
   }
   return true;
 }
@@ -159,7 +169,7 @@ export function planAiToolOrchestration(input: {
       continue;
     }
 
-    if (input.scope.handoverActive && automaticActionTools.has(name as AssistantToolCall["name"])) {
+    if (input.scope?.handoverActive && automaticActionTools.has(name as AssistantToolCall["name"])) {
       rejected.push(reject(name, "HANDOVER_ACTIVE"));
       continue;
     }

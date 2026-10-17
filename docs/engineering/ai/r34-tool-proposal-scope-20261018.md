@@ -1,0 +1,3 @@
+# L17 R34 — AI model tool proposal resource authorization
+
+AI tool proposals are not actions and only the facade can apply authorized business commands. The existing planner accepted a model-supplied requestId/customerId whenever the trusted scope omitted its allowlist, which is not proof of access. It now requires an explicit matching whitelist for every mentioned saved resource; malformed/prototype/getter/hidden args are rejected; raw model-supplied tool names are redacted before diagnostics. All such proposals retain canMutateBusinessTruth:false and no provider sends/DB writes occur. Tests include authorized, missing allowlist, foreign ID and malicious input. Recheck exact heads and critic negative evidence before integration.
