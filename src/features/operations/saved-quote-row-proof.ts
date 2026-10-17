@@ -8,7 +8,7 @@
  * Snapshot loading fails closed for a malformed row; no quote write/send occurs.
  */
 const quoteStatuses = new Set([
-  "DRAFT","APPROVED","SENT","ACCEPTED","DECLINED","EXPIRED","SUPERSEDED",
+  "DRAFT","PENDING_APPROVAL","APPROVED","SENT","ACCEPTED","DECLINED","EXPIRED","SUPERSEDED",
 ]);
 const minorAndDurationColumns = [
   "subtotal_minor","tax_minor","total_minor","deposit_minor","balance_minor",
