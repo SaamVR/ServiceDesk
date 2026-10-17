@@ -57,7 +57,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
       <span className={styles.snapshot}>Snapshot recorded: <time dateTime={snapshot.loadedAt}>{snapshot.loadedAt}</time></span>
     </header>
 
-    <div className={styles.metrics} aria-label="Saved automation effectiveness metrics">
+    {snapshot.workflowAvailable === true ? <div className={styles.metrics} aria-label="Saved automation effectiveness metrics">
       <div><strong>{summary.runs}</strong><span>Live decisions in loaded snapshot</span></div>
       <div><strong>{summary.recordedSucceededActions}</strong><span>Internally succeeded in loaded actions</span></div>
       <div><strong>{summary.waitingForApproval}</strong><span>Current approvals in loaded actions</span></div>
@@ -65,9 +65,9 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
       <div><strong>{summary.pendingActions}</strong><span>Pending states in loaded actions</span></div>
       <div><strong>{averageDuration === null ? "—" : `${averageDuration}s`}</strong>
         <span>Mean recorded run duration ({summary.measuredDurationMs.length} complete pairs)</span></div>
-    </div>
+    </div> : null}
 
-    {snapshot.workflowAvailable === false
+    {snapshot.workflowAvailable !== true
       ? <p className={styles.notice} role="status">Workflow evidence is unavailable for this authorized snapshot. No activity can be inferred.</p>
       : !runs.length
       ? <p className={styles.notice} role="status">No live executions were returned in the current authorized snapshot.
