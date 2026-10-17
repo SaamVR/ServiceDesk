@@ -791,7 +791,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
     service.from("branch_price_books")
       .select("branch_id,rate_card_id,active,starts_at,ends_at")
       .eq("workspace_id", workspace.id).eq("active", true).limit(201),
-    service.from("rate_cards").select("id,currency,active,rules")
+    service.from("rate_cards").select("id,version,currency,active,deposit_percent,valid_hours,buffer_minutes,rules")
       .eq("workspace_id", workspace.id).eq("active", true).limit(201),
     service.from("service_catalog").select("id,code,active")
       .eq("workspace_id", workspace.id).eq("active", true).limit(201),
