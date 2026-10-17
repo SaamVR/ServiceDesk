@@ -1,0 +1,51 @@
+name: ServiceDesk V4 controlled Codex public synthetic POST
+on:
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - "scripts/release/v4-codex-gateway-authenticated-synthetic.mjs"
+      - "scripts/release/tests/v4-codex-gateway-authenticated-synthetic.test.mjs"
+      - ".github/workflows/v4-codex-gateway-controlled-synthetic.yml"
+  workflow_dispatch:
+    inputs:
+      confirm_synthetic_only:
+        type: boolean
+        required: true
+        description: "I authorize ONE synthetic-only public model POST; no customer data"
+      evaluation_workspace_id:
+        type: string
+        required: true
+        description: "Exact already-approved fictional test workspace UUID"
+permissions:
+  contents: read
+concurrency:
+  group: sd-v4-codex-synthetic-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: node --test scripts/release/tests/v4-codex-gateway-authenticated-synthetic.test.mjs
+  operator-approved-public-model-transaction:
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_synthetic_only == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - name: Require an explicitly allowlisted fictional owner workspace and separate gateway bearer
+        env:
+          SERVICEDESK_CODEX_EVAL_ACK: I_AUTHORIZE_ONE_SYNTHETIC_CODEX_PROBE
+          SERVICEDESK_CODEX_EVAL_WORKSPACE_ID: "${{ inputs.evaluation_workspace_id }}"
+          SERVICEDESK_CODEX_EVAL_ALLOWED_WORKSPACE_ID: "${{ vars.SERVICEDESK_CODEX_EVAL_ALLOWED_WORKSPACE_ID }}"
+          SERVICEDESK_CODEX_EVAL_GATEWAY_KEY: "${{ secrets.SERVICEDESK_CODEX_EVAL_GATEWAY_KEY }}"
+        run: node scripts/release/v4-codex-gateway-authenticated-synthetic.mjs
