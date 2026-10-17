@@ -63,7 +63,7 @@ export function ownerPriorityActions(
     }],
     ["collectibleInvoices", {
       key:"COLLECTIBLE_INVOICE",module:"invoices",priority:"NORMAL",
-      label:"Collectible invoices to review",instruction:"Review verified outstanding balances; do not assume a payment is overdue.",
+      label:"Collectible invoices to review",instruction:"Review saved collectible invoice evidence before any collection decision.",
     }],
     ["waitingOnCustomerQuotes", {
       key:"WAITING_QUOTE",module:"quotes",priority:"NORMAL",
