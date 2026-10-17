@@ -1,5 +1,6 @@
 import {describe,expect,it,vi} from "vitest";
 import {handleAiWorkflowSuggestionPost} from "../../src/server/api-handlers/ai-workflow-suggestion-http";
+import type {AiWorkflowSuggestionResult} from "../../src/server/ai/authorized-workflow-suggestion";
 const branchId="22222222-2222-4222-8222-222222222222";
 const body={workspaceSlug:"fictional-cleaner",branchId,instruction:"When quotes are accepted, create internal review."};
 const make=(payload:unknown=body,origin="https://studio.example.test",method="POST")=>
@@ -7,13 +8,13 @@ const make=(payload:unknown=body,origin="https://studio.example.test",method="PO
   method,headers:{"content-type":"application/json","origin":origin,
    "sec-fetch-site":"same-origin"},body:method==="POST"?JSON.stringify(payload):undefined,
  });
-const draft={state:"DRAFT_REQUIRES_OWNER_REVIEW",source:"UNTRUSTED_MODEL_SUGGESTION_STRICTLY_COMPILED",
+const draft:AiWorkflowSuggestionResult["draft"]={state:"DRAFT_REQUIRES_OWNER_REVIEW",source:"UNTRUSTED_MODEL_SUGGESTION_STRICTLY_COMPILED",
   workspaceId:"workspace-qa",branchId,eventType:"QUOTE_ACCEPTED",conditions:[],
   actions:[{type:"CREATE_ATTENTION",severity:"WARNING",summaryKey:"AI_REVIEW_ACCEPTED_QUOTE"}],
   maxActionsPerEvent:1,published:false,requiresOwnerPublish:true,previewOnly:true,
-  sendsCustomerMessages:false,mutatesFinancialState:false} as const;
-const result={state:"AI_RULE_DRAFT_OWNER_REVIEW_REQUIRED",
- source:"AUTHORIZED_OWNER_AND_SAVED_BRANCH",model:"fictional-no-network",draft,executed:false} as const;
+  sendsCustomerMessages:false,mutatesFinancialState:false};
+const result:AiWorkflowSuggestionResult={state:"AI_RULE_DRAFT_OWNER_REVIEW_REQUIRED",
+ source:"AUTHORIZED_OWNER_AND_SAVED_BRANCH",model:"fictional-no-network",draft,executed:false};
 describe("R34 authorized AI workflow HTTP adapter",()=>{
  it("posts exact bounded payload and returns strictly private no-store owner review draft",async()=>{
   const run=vi.fn(async()=>({ok:true as const,value:result}));
