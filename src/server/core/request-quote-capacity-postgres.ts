@@ -70,7 +70,7 @@ function quoteFromRpc(value: unknown, expectedWorkspaceId: string): QuoteDTO {
   if (!["DRAFT", "PENDING_APPROVAL", "APPROVED", "SENT",
         "ACCEPTED", "DECLINED", "EXPIRED", "SUPERSEDED"].includes(status) ||
       !/^[A-Z]{3}$/.test(currency) ||
-      !/(?:Z|[+-]\\d{2}:\\d{2})$/i.test(validUntil) ||
+      !/(?:Z|[+-]\d{2}:\d{2})$/i.test(validUntil) ||
       !Number.isFinite(Date.parse(validUntil)))
     throw new Error("Malformed persisted quote lifecycle, currency or validity.");
   const totalMinor = amount("totalMinor", "total_minor");
