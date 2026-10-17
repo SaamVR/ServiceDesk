@@ -1,13 +1,12 @@
 import { readVerifiedCustomerQuoteLineItems } from "./customer-quote-line-items";
+import { hasCurrentSavedQuoteExpiry } from "./quote-validity-clock";
 
 /** Staff quote-send precondition. The DB RPC retains final version/status authority. */
 export function assessOperationalQuoteSend(
   quote: Record<string, unknown>, at: string,
 ): { ok: true } | { ok: false; reason: "NOT_APPROVED" | "EXPIRED" | "CHARGES_UNVERIFIED" } {
   if (quote.status !== "APPROVED") return { ok: false, reason: "NOT_APPROVED" };
-  const now = Date.parse(at);
-  const until = typeof quote.valid_until === "string" ? Date.parse(quote.valid_until) : NaN;
-  if (!Number.isFinite(now) || !Number.isFinite(until) || until <= now) {
+  if (!hasCurrentSavedQuoteExpiry(at, quote.valid_until)) {
     return { ok: false, reason: "EXPIRED" };
   }
   const values = [quote.subtotal_minor, quote.tax_minor, quote.total_minor,
