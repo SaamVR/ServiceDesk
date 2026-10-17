@@ -7,28 +7,17 @@ import { AiOwnerOperationsBrief } from "../../src/features/operations/AiOwnerOpe
 import { parseVerifiedOwnerBrief } from "../../src/features/operations/owner-operations-brief-proof";
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
-const sampleFacts = {
-  openRequests: 4,
-  waitingOnCustomerQuotes: 2,
-  quoteValidityNeedsReview: 1,
-  collectibleInvoices: 0,
-  invoiceLedgersNeedingReview: 0,
-  unassignedActiveVisits: 0,
-  unresolvedCriticalAttentions: 0,
-};
 const good = {
   ok: true,
   source: "AUTHORIZED_SAVED_WORKSPACE_COUNTS",
   model: "approved-model",
   brief: "Review the saved requests queue before planning any follow-up.",
-  facts: sampleFacts,
 };
 
 describe("Owner AI saved-workload briefing presentation", () => {
   it("allows only bounded explicitly sourced read-only results", () => {
     expect(parseVerifiedOwnerBrief(good)).toEqual({
       source: good.source, model: good.model, brief: good.brief,
-      facts: sampleFacts,
     });
     expect(parseVerifiedOwnerBrief({ ...good, source: "MODEL_GUESS" })).toBeNull();
     expect(parseVerifiedOwnerBrief({ ...good, ok: false })).toBeNull();
@@ -51,28 +40,7 @@ describe("Owner AI saved-workload briefing presentation", () => {
       quotedRevenue: 123456, paymentsApplied: true,
     })).toEqual({
       source: good.source, model: good.model, brief: good.brief,
-      facts: sampleFacts,
     });
-  });
-
-  it("blocks incomplete, forged or non-integer source queue facts", () => {
-    expect(parseVerifiedOwnerBrief({ ...good, facts: undefined })).toBeNull();
-    expect(parseVerifiedOwnerBrief({ ...good, facts: [] })).toBeNull();
-    expect(parseVerifiedOwnerBrief({
-      ...good, facts: { ...sampleFacts, openRequests: "4" },
-    })).toBeNull();
-    expect(parseVerifiedOwnerBrief({
-      ...good, facts: { ...sampleFacts, openRequests: 2.5 },
-    })).toBeNull();
-    expect(parseVerifiedOwnerBrief({
-      ...good, facts: { ...sampleFacts, openRequests: -1 },
-    })).toBeNull();
-    expect(parseVerifiedOwnerBrief({
-      ...good, facts: { ...sampleFacts, openRequests: 5001 },
-    })).toBeNull();
-    expect(parseVerifiedOwnerBrief({
-      ...good, facts: { ...sampleFacts, customerPhone: "SECRET" },
-    })).toBeNull();
   });
 
   it("cannot expose private data or imply configured AI is connected in the disabled state", () => {

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { requestOwnerOperationsBrief } from "./owner-operations-brief-action";
 import { parseVerifiedOwnerBrief } from "./owner-operations-brief-proof";
-import { buildOwnerPriorityCards } from "./owner-operations-brief-priorities";
 import type { VerifiedOwnerBrief } from "./owner-operations-brief-proof";
 import { buildStaffModuleHref } from "./staff-modules";
 import styles from "./AiOwnerOperationsBrief.module.css";
@@ -54,8 +53,6 @@ function ScopedOwnerBrief({
   // A server action cannot be aborted from this component. Block retries
   // while the original request is still outstanding, even after UI timeout.
   const requestOutstanding = waiting || state?.phase === "stopped";
-  const priorityCards = state?.result
-    ? buildOwnerPriorityCards(state.result.facts) : [];
 
   async function generateBrief() {
     if (!configured || activeRequest.current || requestOutstanding) return;
@@ -156,15 +153,15 @@ function ScopedOwnerBrief({
       </div>
       <p className={styles.model}>Model: {state.result.model}</p>
       <p className={styles.suggestions}>{state.result.brief}</p>
-      <section className={styles.prioritySection}
-        aria-label="Verified saved workload priorities"
-        data-testid="owner-saved-count-priorities">
+      {state.result.priorityActions ? <section className={styles.prioritySection}
+        aria-label="Evidence-backed owner review priorities"
+        data-testid="owner-server-priority-actions">
         <div className={styles.priorityHeader}>
-          <strong>Top saved workload queues</strong>
-          <span>Verified counts · deterministic order</span>
+          <strong>Saved queue priorities</strong>
+          <span>Verified counts · server-ranked review only</span>
         </div>
-        {priorityCards.length > 0 ? <ol className={styles.priorityList}>
-          {priorityCards.map(item => <li key={item.kind}>
+        {state.result.priorityActions.length ? <ol className={styles.priorityList}>
+          {state.result.priorityActions.map(item => <li key={item.key}>
             <span className={styles.priorityCount}>{item.count}</span>
             <div className={styles.priorityBody}>
               <strong>{item.title}</strong>
@@ -174,9 +171,9 @@ function ScopedOwnerBrief({
               </Link>
             </div>
           </li>)}
-        </ol> : <p className={styles.priorityEmpty}>No positive count in these
-          verified workload categories. This does not prove all operations are complete.</p>}
-      </section>
+        </ol> : <p className={styles.priorityEmpty}>No positive verified owner queue
+          categories were returned. This does not prove all work is complete.</p>}
+      </section> : null}
       <p className={styles.disclosure}>This is an ephemeral review, not a saved
         approval or audit receipt. Verify each recommendation in the authoritative
         workspace before assigning work or contacting anyone.</p>

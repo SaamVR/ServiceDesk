@@ -150,56 +150,44 @@
 .prioritySection {
   display: grid;
   gap: 10px;
-  padding: 12px 0 0;
+  padding-top: 12px;
   border-top: 1px solid #c9e5d5;
 }
 .priorityHeader {
   display: flex;
-  align-items: baseline;
   flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
+  gap: 7px;
 }
 .priorityHeader strong { color: #224e3d; font-size: 13px; }
 .priorityHeader span { color: #4f725f; font-size: 11px; }
-.priorityList {
-  display: grid;
-  gap: 8px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
+.priorityList { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
 .priorityList li {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
   min-width: 0;
+  padding: 11px;
   border: 1px solid #d3e7da;
   border-radius: 10px;
   background: #ffffff;
-  padding: 11px;
 }
 .priorityCount {
   display: inline-grid;
   place-items: center;
   min-height: 34px;
-  padding: 4px;
-  background: #e1f1e7;
   border-radius: 8px;
+  background: #e1f1e7;
   color: #165341;
-  font-variant-numeric: tabular-nums;
   font-size: 15px;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 .priorityBody { display: grid; gap: 5px; min-width: 0; }
 .priorityBody strong { font-size: 12px; color: #204936; }
-.priorityBody p {
-  margin: 0;
-  color: #587567;
-  font-size: 11px;
-  line-height: 1.55;
-}
+.priorityBody p { margin: 0; color: #587567; font-size: 11px; line-height: 1.55; }
 .priorityBody a {
   width: fit-content;
   color: #18634e;
@@ -207,9 +195,4 @@
   font-weight: 790;
   text-underline-offset: 3px;
 }
-.priorityEmpty {
-  margin: 0;
-  color: #587567;
-  font-size: 12px;
-  line-height: 1.6;
-}
+.priorityEmpty { margin: 0; color: #587567; font-size: 12px; line-height: 1.6; }
