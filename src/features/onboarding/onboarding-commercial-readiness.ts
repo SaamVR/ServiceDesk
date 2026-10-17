@@ -3,6 +3,7 @@ import type {
 } from "@/features/operations/operational-product-runtime";
 import {
   availableFirstRunUsdBranches,
+  countQuoteableCleaningServices,
   type OwnerPricingBookProof,
 } from "@/features/operations/owner-pricing-readiness";
 
@@ -29,9 +30,7 @@ export function summarizeOwnerCommercialSetup(input: {
   const activeServices = input.catalog?.filter(service => service.active).length ?? 0;
   // Catalog services may include non-cleaning products. Only quote engine
   // service codes can satisfy the cleaning quote onboarding prerequisite.
-  const quoteableCleaningServices = input.catalog?.filter(service =>
-    service.active && ["STANDARD", "DEEP", "MOVE_OUT"].includes(service.code)
-  ).length ?? 0;
+  const quoteableCleaningServices = countQuoteableCleaningServices(input.catalog);
   const common = { activeServices, quoteableCleaningServices };
   if (!input.catalog) {
     return {
