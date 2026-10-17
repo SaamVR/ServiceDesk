@@ -19,12 +19,20 @@ export function verifiedPricedOwnerBranchIds(input: {
   books: RecordData[];
   cards: RecordData[];
   services: RecordData[];
+  branches: Array<{ id: unknown; currency: unknown }>;
   now?: number;
 }): string[] {
   const now = input.now ?? Date.now();
   if (!Number.isFinite(now) ||
       !Array.isArray(input.books) || !Array.isArray(input.cards) ||
-      !Array.isArray(input.services)) return [];
+      !Array.isArray(input.services) || !Array.isArray(input.branches)) return [];
+
+  // The quote engine checks the selected active branch denomination. The
+  // owner runtime passes only authenticated, active branch-scope rows; a
+  // foreign, inactive, or GBP branch must never look quotable with USD rates.
+  const activeUsdBranches = new Set(input.branches.filter(row =>
+    validUuid(row.id) && row.currency === "USD").map(row => String(row.id)));
+  if (activeUsdBranches.size === 0) return [];
 
   // A quote must refer to an active, persisted, supported service; no
   // synthetic rate cards or partial "baseMinor only" pricing qualifies.
@@ -49,6 +57,7 @@ export function verifiedPricedOwnerBranchIds(input: {
   }
   const ready: string[] = [];
   for (const [branchId, books] of byBranch) {
+    if (!activeUsdBranches.has(branchId)) continue;
     // The quote loader refuses >100 active books for a given branch.
     if (books.length > MAX_PRICE_BOOK_SCAN) continue;
     const windows = books.map(book => ({
