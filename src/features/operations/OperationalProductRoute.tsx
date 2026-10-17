@@ -64,6 +64,7 @@ import { AiQuoteReview } from "./AiQuoteReview";
 import { StaffQuoteChecklist } from "./StaffQuoteChecklist";
 import { buildStaffQuoteChecklist } from "./staff-quote-checklist";
 import { AiOperationsStatus } from "./AiOperationsStatus";
+import { AiStudioWorkspace } from "./AiStudioWorkspace";
 import { OwnerQuoteAcceptedAutomationControl } from "./OwnerQuoteAcceptedAutomationControl";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
@@ -4756,6 +4757,8 @@ function renderModule(
       return <InvoicesView data={data} workspaceSlug={workspaceSlug} selectedInvoiceId={selectedInvoiceId} selectedInvoiceQueue={selectedInvoiceQueue} searchQuery={searchQuery} />;
     case "quality":
       return <QualityView data={data} workspaceSlug={workspaceSlug} selectedQualityCaseId={selectedQualityCaseId} selectedQualityQueue={selectedQualityQueue} qualitySearchQuery={qualitySearchQuery} />;
+    case "ai-studio":
+      return <AiStudioWorkspace data={data} workspaceSlug={workspaceSlug} />;
     case "automations":
       return <AutomationsView data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />;
     case "reports":
