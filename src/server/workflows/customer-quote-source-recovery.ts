@@ -146,7 +146,22 @@ export async function runInternalQuoteSourceRecoveryBatch(
               workspaceId, customerId: request.data.customer_id,
               quoteId, service: ports.service, rpc: ports.rpc,
             });
-            if (result.ok && result.value.providerMessagesSent === 0) {
+            // The journal cannot ACK on a bare ok flag, a plausible text
+            // answer, or a zero-provider-send claim. Validate the actual
+            // persisted internal bridge receipt including bounded counters.
+            const receipt = result.ok ? result.value : null;
+            const count = (value: unknown) =>
+              typeof value === "number" && Number.isSafeInteger(value) &&
+              value >= 0 && value <= 1000;
+            const receiptVerified = receipt &&
+              receipt.state === "PERSISTED_INTERNAL_QUOTE_ACCEPTED_AUTOMATION" &&
+              receipt.providerMessagesSent === 0 &&
+              count(receipt.newlyRecordedRuleExecutions) &&
+              count(receipt.reusedRuleExecutions) &&
+              receipt.newlyRecordedRuleExecutions + receipt.reusedRuleExecutions > 0 &&
+              count(receipt.completedAttentionActions) &&
+              count(receipt.approvalRequired);
+            if (result.ok && receiptVerified) {
               outcome = "SUCCEEDED";
             } else if (!result.ok && result.code === "QUOTE_AUTOMATION_WORKSPACE_NOT_OPTED_IN") {
               // An owner disabled the tenant after the event was recorded.
