@@ -54,6 +54,9 @@ export function OwnerCleaningPricingSetupForm({
   const branches = repairTarget
     ? [repairTarget.branch]
     : availableFirstRunUsdBranches(scope, proof);
+  if (repairTarget && !repairTarget.serviceNames) return (
+    <p role="alert">The shared service catalog is incomplete or inactive. Restore all three cleaning services in Settings before revising this branch price book; rates were not changed.</p>
+  );
   if (branches.length === 0) return (
     <p role="status">Create or select an authorized USD cleaning branch before configuring pricing.</p>
   );
@@ -73,6 +76,7 @@ export function OwnerCleaningPricingSetupForm({
           {repairTarget
             ? "Owner-confirmed full replacement. Re-enter every rate and duration; no guessed values or model prices are used. The old rate card remains for historical quotes. This action does not contact customers or charge payments."
             : "Owner-only initial setup. Enter actual USD prices: sandbox and suggested prices are never activated. A saved rate card is permanent and first-run setup cannot overwrite an existing branch price book. Nothing is sent to customers or charged."}
+          {repairTarget ? " Existing workspace-wide service names stay unchanged; edit those separately in the catalog before changing prices." : null}
         </p>
       </header>
       {repairTarget ? (
@@ -127,7 +131,12 @@ export function OwnerCleaningPricingSetupForm({
             <label style={{ display: "grid", gap: 6 }}>
               <span>Customer-facing service name</span>
               <input className="app-input" name={service.nameField} type="text"
-                defaultValue={service.defaultName} minLength={3} maxLength={120} required />
+                defaultValue={repairTarget ? (
+                  service.prefix === "standard" ? repairTarget.serviceNames?.STANDARD :
+                  service.prefix === "deep" ? repairTarget.serviceNames?.DEEP :
+                  repairTarget.serviceNames?.MOVE_OUT
+                ) : service.defaultName}
+                readOnly={Boolean(repairTarget)} minLength={3} maxLength={120} required />
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
               <MoneyField label="Base service price" name={service.prefix + "Base"} />

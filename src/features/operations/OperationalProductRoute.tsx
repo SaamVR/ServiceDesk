@@ -3982,9 +3982,11 @@ async function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSna
             ) : null}
             {data.actor.role === "OWNER" && pricingBooks?.ok ? (
               <div aria-label="Saved branch rate books and revisions">
-                {pricingBooks.value.map(book => (
+                {pricingBooks.value.map(book => book.serviceNames ? (
                   <OwnerCleaningPricingSetupForm key={book.bookId}
                     repairTarget={book} action={reviseCleaningPricingAction} />
+                ) : (
+                  <p key={book.bookId} role="alert">Saved price book for {book.branch.name} cannot be revised yet: restore its workspace-wide cleaning catalog services in Settings first. No prices were changed.</p>
                 ))}
               </div>
             ) : null}

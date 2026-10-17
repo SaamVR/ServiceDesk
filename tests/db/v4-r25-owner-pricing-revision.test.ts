@@ -153,6 +153,8 @@ describe("V4 owner price revision contract", () => {
     expect(sql).toContain("where workspace_id=v_workspace and branch_id=v_branch and active for update");
     expect(sql).toContain("v_old_book.version<>v_expected_version");
     expect(sql).toContain("cleaning_pricing.revised");
+    expect(sql).toContain("PRICING_REVISION_CATALOG_MISMATCH");
+    expect(sql).not.toMatch(/insert into public.service_catalog|update public.service_catalog/);
     expect(sql).toContain("grant execute on function public.servicedesk_revise_owner_cleaning_pricing(jsonb)");
     expect(sql).toMatch(/from public, anon, authenticated/);
     expect(sql).not.toMatch(/http_|net\.http|pg_notify/);

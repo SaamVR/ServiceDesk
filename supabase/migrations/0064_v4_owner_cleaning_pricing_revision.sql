@@ -162,19 +162,19 @@ begin
     return jsonb_build_object('ok',false,'code','PRICING_REVISION_VERSION_CONFLICT');
   end if;
 
-  -- Owner explicitly replaces the whole cleaning configuration. No auto-repair.
-  -- The former rate card remains immutable for already issued quotes.
-  foreach v_code in array array['STANDARD','DEEP','MOVE_OUT'] loop
-    insert into public.service_catalog(workspace_id,code,name,active,requires_review)
-    values (v_workspace,v_code,trim(v_names->>v_code),true,false)
-    on conflict (workspace_id,code) do update
-      set name=excluded.name,active=true,updated_at=now();
-  end loop;
-  select count(*) into v_catalog_count from public.service_catalog
-   where workspace_id=v_workspace and active and code in ('STANDARD','DEEP','MOVE_OUT');
+  -- Service catalog is WORKSPACE-wide. A branch rate revision must not
+  -- silently rename/revive services used by other branches. Owners manage
+  -- names and availability through the separate catalog Settings controls.
+  select count(*) into v_catalog_count from public.service_catalog sc
+   where sc.workspace_id=v_workspace and sc.active
+     and ((sc.code='STANDARD' and sc.name=trim(v_names->>'STANDARD'))
+       or (sc.code='DEEP' and sc.name=trim(v_names->>'DEEP'))
+       or (sc.code='MOVE_OUT' and sc.name=trim(v_names->>'MOVE_OUT')));
   if v_catalog_count<>3 then
-    raise exception 'incomplete catalog'; -- entire function transaction rolls back
+    return jsonb_build_object('ok',false,'code','PRICING_REVISION_CATALOG_MISMATCH');
   end if;
+
+  -- The former rate card remains immutable for already issued quotes.
 
   update public.branch_price_books set active=false,version=version+1,updated_at=now()
    where workspace_id=v_workspace and branch_id=v_branch and id=v_old_book.id

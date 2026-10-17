@@ -31,6 +31,8 @@ export interface OwnerExistingPricingBook {
   endsAt: string | null;
   /** Read-only, untrusted saved rules for the authenticated owner to review. */
   rules: unknown;
+  /** Catalog names are workspace-wide and intentionally immutable here. */
+  serviceNames: { STANDARD: string; DEEP: string; MOVE_OUT: string } | null;
 }
 
 export interface OwnerPricingRevisionProof {
@@ -98,6 +100,24 @@ export async function loadAuthorizedOwnerPricingBooks(
     if (cardRead.error || !Array.isArray(cardRead.data) || cardRead.data.length >= 200) {
       return fail("PRICING_REVISION_EVIDENCE_UNAVAILABLE", "Saved rate-card details could not be verified.");
     }
+    const catalogRead = await service.from("service_catalog")
+      .select("code,name,active").eq("workspace_id", workspace.id)
+      .in("code", ["STANDARD","DEEP","MOVE_OUT"]).limit(10);
+    if (catalogRead.error || !Array.isArray(catalogRead.data)) {
+      return fail("PRICING_REVISION_EVIDENCE_UNAVAILABLE", "Shared service catalog could not be verified.");
+    }
+    const catalogNames = new Map(catalogRead.data
+      .filter(row => row.active === true && typeof row.name === "string")
+      .map(row => [row.code, row.name]));
+    const serviceNames = catalogRead.data.length === 3 &&
+      ["STANDARD","DEEP","MOVE_OUT"].every(code =>
+        typeof catalogNames.get(code) === "string" &&
+        (catalogNames.get(code) as string).length >= 3)
+      ? {
+        STANDARD: catalogNames.get("STANDARD") as string,
+        DEEP: catalogNames.get("DEEP") as string,
+        MOVE_OUT: catalogNames.get("MOVE_OUT") as string,
+      } : null;
     const books: OwnerExistingPricingBook[] = [];
     for (const row of bookRead.data) {
       const branch = allowed.find(item => item.id === row.branch_id);
@@ -119,7 +139,7 @@ export async function loadAuthorizedOwnerPricingBooks(
         bufferMinutes: safeNumber(rate?.buffer_minutes),
         startsAt: typeof row.starts_at === "string" ? row.starts_at : null,
         endsAt: typeof row.ends_at === "string" ? row.ends_at : null,
-        rules: rate?.rules ?? null,
+        rules: rate?.rules ?? null, serviceNames,
       });
     }
     if (new Set(books.map(book => book.branch.id)).size !== books.length) {
