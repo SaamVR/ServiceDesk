@@ -169,7 +169,9 @@ function candidateFor(snapshot: DispatchSnapshot, visit: DispatchVisitSnapshot, 
 export function buildDispatchRecommendations(snapshot: DispatchSnapshot): DispatchVisitRecommendation[] {
   const unassigned = snapshot.visits
     .filter((visit) => !visit.crewId && !["CANCELLED", "COMPLETED"].includes(visit.status))
-    .sort((a, b) => a.startAt.localeCompare(b.startAt) || a.id.localeCompare(b.id));
+    .sort((a, b) => (typeof a.startAt === "string" ? a.startAt : "")
+      .localeCompare(typeof b.startAt === "string" ? b.startAt : "") ||
+      String(a.id).localeCompare(String(b.id)));
 
   return unassigned.map((visit) => {
     const candidates = snapshot.crews
