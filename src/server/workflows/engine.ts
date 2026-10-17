@@ -92,6 +92,36 @@ function stableSnapshot(snapshot: Record<string, WorkflowEventValue>): string {
 export function validateWorkflowEventEnvelope(
   input: WorkflowEventEnvelope,
 ): Result<WorkflowEventEnvelope> {
+  // Persisted events can be reconstructed from malformed/untrusted JSON
+  // after a queue crash. Validation must return a Result, never throw or
+  // fingerprint a forged prototype/infinite numeric event.
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return fail("WORKFLOW_EVENT_INVALID", "Workflow event must be a record.");
+  }
+  if (!input.snapshot || typeof input.snapshot !== "object" ||
+      Array.isArray(input.snapshot) ||
+      ![Object.prototype,null].includes(Object.getPrototypeOf(input.snapshot))) {
+    return fail("WORKFLOW_EVENT_SNAPSHOT_INVALID", "Workflow event snapshot must be a plain record.");
+  }
+  // Reject hidden own properties as well as symbols and accessors. They
+  // otherwise disappear from Object.keys/values and stableSnapshot hashes,
+  // allowing the persisted event's actual content to evade auditing.
+  if (Object.getOwnPropertyNames(input.snapshot).length !==
+        Object.keys(input.snapshot).length ||
+      Object.getOwnPropertySymbols(input.snapshot).length !== 0 ||
+      Object.values(Object.getOwnPropertyDescriptors(input.snapshot)).some(
+        desc => !Object.prototype.hasOwnProperty.call(desc,"value"))) {
+    return fail("WORKFLOW_EVENT_SNAPSHOT_INVALID", "Workflow event snapshot has unsafe fields.");
+  }
+  if (typeof input.workspaceId !== "string" ||
+      !/^[A-Za-z0-9:_-]{3,128}$/.test(input.workspaceId) ||
+      typeof input.branchId !== "string" ||
+      !/^[A-Za-z0-9:_-]{3,128}$/.test(input.branchId) ||
+      (input.parentExecutionId !== undefined &&
+       (typeof input.parentExecutionId !== "string" ||
+        !/^[A-Za-z0-9:_-]{3,128}$/.test(input.parentExecutionId)))) {
+    return fail("WORKFLOW_EVENT_SCOPE_INVALID", "Workflow event source scope is malformed.");
+  }
   if (input.sourceEventId !== undefined &&
       (typeof input.sourceEventId !== "string" ||
        !/^[A-Za-z0-9:_-]{3,128}$/.test(input.sourceEventId))) {
@@ -118,13 +148,18 @@ export function validateWorkflowEventEnvelope(
         item !== null
         && typeof item !== "string"
         && typeof item !== "number"
-        && typeof item !== "boolean")) {
+        && typeof item !== "boolean") ||
+        value.some(item => typeof item === "number" && !Number.isFinite(item) ||
+          typeof item === "string" && item.length > 160)) {
         return fail("WORKFLOW_EVENT_VALUE_INVALID", "Workflow event value is malformed.");
       }
       continue;
     }
     if (value !== null && !["string", "number", "boolean"].includes(typeof value)) {
       return fail("WORKFLOW_EVENT_VALUE_INVALID", "Workflow event value is malformed.");
+    }
+    if (typeof value === "number" && !Number.isFinite(value)) {
+      return fail("WORKFLOW_EVENT_VALUE_INVALID", "Workflow event numeric value is not finite.");
     }
     if (typeof value === "string" && value.length > 160) {
       return fail("WORKFLOW_EVENT_VALUE_INVALID", "Workflow event text exceeds the safe snapshot limit.");
