@@ -84,6 +84,10 @@ export function OwnerCleaningPricingSetupForm({
       {repairTarget ? (
         <div role="status" style={{ border: "1px solid #cfe1dc", borderRadius: 10, padding: 12, background: "#f6fbf9", fontSize: ".82rem" }}>
           <strong>Existing saved branch book</strong>
+          <p style={{ margin: "8px 0 0", fontWeight: 600 }}
+            role={repairTarget.diagnosis.state === "REPAIR_REQUIRED" ? "alert" : "status"}>
+            {repairTarget.diagnosis.message}
+          </p>
           <p style={{ margin: "6px 0 0" }}>
             {repairTarget.branch.name} · book version {repairTarget.bookVersion} · rate {repairTarget.rateVersion ?? "unreadable"} · currency {repairTarget.rateCurrency ?? "unreadable"}
           </p>

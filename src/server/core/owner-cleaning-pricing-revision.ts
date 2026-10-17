@@ -2,6 +2,7 @@ import type { Result } from "../../contracts";
 import { resolveStaffActor, type OperationalBranch } from "@/features/operations/operational-product-runtime";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { parseOwnerCleaningPricingSetup } from "./owner-cleaning-pricing-input";
+import { diagnoseSavedBranchPricing, type SavedBranchPricingDiagnosis } from "@/features/operations/owner-pricing-revision-diagnosis";
 
 type Resolver = typeof resolveStaffActor;
 const uuid = (s: unknown): s is string =>
@@ -33,6 +34,7 @@ export interface OwnerExistingPricingBook {
   rules: unknown;
   /** Catalog names are workspace-wide and intentionally immutable here. */
   serviceNames: { STANDARD: string; DEEP: string; MOVE_OUT: string } | null;
+  diagnosis: SavedBranchPricingDiagnosis;
 }
 
 export interface OwnerPricingRevisionProof {
@@ -94,7 +96,7 @@ export async function loadAuthorizedOwnerPricingBooks(
     }
     if (!bookRead.data.length) return { ok: true, value: [] };
     const cardRead = await service.from("rate_cards")
-      .select("id,workspace_id,version,currency,deposit_percent,valid_hours,buffer_minutes,rules")
+      .select("id,workspace_id,version,currency,active,deposit_percent,valid_hours,buffer_minutes,rules")
       .eq("workspace_id", workspace.id)
       .in("id", bookRead.data.map(book => book.rate_card_id)).limit(200);
     if (cardRead.error || !Array.isArray(cardRead.data) || cardRead.data.length >= 200) {
@@ -140,6 +142,11 @@ export async function loadAuthorizedOwnerPricingBooks(
         startsAt: typeof row.starts_at === "string" ? row.starts_at : null,
         endsAt: typeof row.ends_at === "string" ? row.ends_at : null,
         rules: rate?.rules ?? null, serviceNames,
+        diagnosis: diagnoseSavedBranchPricing({
+          branchCurrency: branch.currency, card: rate ?? null,
+          startsAt: row.starts_at, endsAt: row.ends_at,
+          serviceCatalogComplete: serviceNames !== null,
+        }),
       });
     }
     if (new Set(books.map(book => book.branch.id)).size !== books.length) {
