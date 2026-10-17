@@ -1,0 +1,113 @@
+.panel {
+  display: grid;
+  gap: 15px;
+  min-width: 0;
+  border: 1px solid #cfe5db;
+  border-radius: 16px;
+  padding: clamp(16px, 2vw, 24px);
+  background: linear-gradient(140deg, #ffffff, #f7fcf9);
+  box-shadow: 0 10px 28px rgb(28 93 72 / 5%);
+  color: #234c42;
+}
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.eyebrow {
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #26715a;
+}
+.heading h3 {
+  margin: 0;
+  color: #254b43;
+  font-size: clamp(17px, 1.55vw, 20px);
+  letter-spacing: -.02em;
+}
+.state {
+  color: #27634e;
+  background: #e9f7ef;
+  border: 1px solid #bfddca;
+  padding: 7px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 750;
+}
+.description, .footer {
+  margin: 0;
+  max-width: 75ch;
+  color: #4e6d63;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.action, .cancel {
+  min-height: 46px;
+  padding: 10px 15px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.action {
+  color: #fff;
+  background: #166b5e;
+  border: 1px solid #125e54;
+}
+.action:disabled {
+  cursor: not-allowed;
+  color: #51655d;
+  background: #e5eeea;
+  border-color: #cfdfd6;
+}
+.cancel {
+  background: #fff;
+  color: #285c4a;
+  border: 1px solid #b5d2c5;
+}
+.action:not(:disabled):hover { background: #10594e; }
+.cancel:hover { background: #eaf6ee; }
+.panel button:focus-visible { outline: 3px solid #2f968b; outline-offset: 3px; }
+.notice, .error, .result {
+  min-width: 0;
+  border-radius: 10px;
+  padding: 13px 15px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.notice {
+  color: #72551d;
+  background: #fffbef;
+  border: 1px solid #efe1b8;
+}
+.error {
+  color: #9c3542;
+  background: #fff4f4;
+  border: 1px solid #edcbd0;
+}
+.result {
+  display: grid;
+  gap: 9px;
+  color: #174f3f;
+  background: #eefaf4;
+  border: 1px solid #b8e3d1;
+  overflow-wrap: anywhere;
+}
+.result strong { font-size: 13px; }
+.model { margin: 0; color: #416c59; font-size: 12px; }
+.review { margin: 0; white-space: pre-wrap; color: #244d41; }
+.result small { color: #416c59; font-size: 11px; line-height: 1.5; }
+@media (max-width: 480px) {
+  .actions { display: grid; }
+  .action, .cancel { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel * { scroll-behavior: auto; transition: none !important; }
+}
