@@ -23,9 +23,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function stringField(source: Record<string, unknown>, key: string): string | undefined {
+function stringField(source: Record<string, unknown>, key: string): string | null | undefined {
+  // Missing is optional, but a present malformed claim cannot be ignored as
+  // absent before calendar dispatch. Never coerce untrusted provider data.
+  if (!Object.hasOwn(source,key)) return undefined;
   const value = source[key];
-  return typeof value === "string" && value.trim() ? value : undefined;
+  return typeof value === "string" && value.length > 0 && value.length <= 256 &&
+    value.trim() === value && !/[\x00-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(value)
+      ? value : null;
 }
 
 function expectedAction(topic: string): CalendarVisitProjectionAction | undefined {
@@ -78,14 +83,21 @@ export async function resolveCalendarVisitOutboxIntent(
   const action = expectedAction(event.topic);
   if (!action) return { ok: false, code: "UNSUPPORTED_CALENDAR_OUTBOX_TOPIC", message: "Only calendar.visit.upsert and calendar.visit.cancel are supported." };
 
-  const payload = isRecord(event.payload) ? event.payload : {};
+  if (!isRecord(event.payload)) {
+    return { ok: false, code: "CALENDAR_OUTBOX_PAYLOAD_INVALID", message: "Calendar claim payload must be a stored object." };
+  }
+  const payload = event.payload;
   const payloadVisitId = stringField(payload, "visitId");
   const payloadCrewId = stringField(payload, "crewId");
+  if (payloadVisitId === null || payloadCrewId === null) {
+    return { ok: false, code: "CALENDAR_OUTBOX_CLAIM_INVALID", message: "Calendar claimed visit/crew ID is malformed." };
+  }
 
   const loaded = await source.load(event);
   if (!loaded.ok) return loaded;
   const auth = loaded.value;
-  if (auth.eventId !== event.id || auth.workspaceId !== event.workspaceId || auth.action !== action) {
+  if (auth.eventId !== event.id || auth.workspaceId !== event.workspaceId ||
+      auth.action !== action || auth.idempotencyKey !== event.idempotencyKey) {
     return { ok: false, code: "CALENDAR_OUTBOX_IDENTITY_MISMATCH", message: "Authoritative calendar source did not match claimed outbox event identity." };
   }
   if (payloadVisitId && payloadVisitId !== auth.visit.id) {
