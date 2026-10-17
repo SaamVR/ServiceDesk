@@ -78,7 +78,7 @@ function ScopedStudioWorkbench({
           </select>
           {selected ? (
             <Link href={buildStaffModuleHref(workspaceSlug, mode === "request" ? "requests" : "quotes") +
-              (mode === "request" ? "?requestId=" : "?quoteId=") + encodeURIComponent(selected.id)}
+              (mode === "request" ? "?request=" : "?quote=") + encodeURIComponent(selected.id)}
               className={styles.contextLink}>Review source record →</Link>
           ) : null}
         </div>
