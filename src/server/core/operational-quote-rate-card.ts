@@ -128,12 +128,19 @@ export async function loadOperationalQuoteRateCard(
     return fail("QUOTE_RATE_SERVICE_INACTIVE", "An active supported cleaning service is required.");
   }
 
+  // A truncated sample cannot prove uniqueness: another effective price
+  // book might be outside it. Fetch one sentinel beyond the bounded scan.
+  const MAX_PRICE_BOOK_SCAN = 100;
   const books = await db.from("branch_price_books")
     .select("rate_card_id,starts_at,ends_at")
     .eq("workspace_id", workspaceId)
     .eq("branch_id", request.data.branch_id)
-    .eq("active", true).limit(10);
-  if (books.error || !books.data) return fail("QUOTE_RATE_BOOK_UNAVAILABLE", "Branch pricing could not be verified.");
+    .eq("active", true).limit(MAX_PRICE_BOOK_SCAN + 1);
+  if (books.error || !books.data || !Array.isArray(books.data))
+    return fail("QUOTE_RATE_BOOK_UNAVAILABLE", "Branch pricing could not be verified.");
+  if (books.data.length > MAX_PRICE_BOOK_SCAN)
+    return fail("QUOTE_RATE_BOOK_SCAN_INCOMPLETE",
+      "Too many active branch price books to verify pricing. Archive expired records before quoting.");
   const active = books.data.filter(book => {
     const start = book.starts_at == null ? Number.NEGATIVE_INFINITY : Date.parse(book.starts_at);
     const end = book.ends_at == null ? Number.POSITIVE_INFINITY : Date.parse(book.ends_at);
