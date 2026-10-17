@@ -34,7 +34,7 @@ export function CatalogReadinessBanner({
     return (
       <FeedbackBanner
         title="Quoting setup incomplete · no active cleaning service"
-        description="No active Standard, Deep or Move-Out cleaning service was verified in this saved catalog. Unrelated active services do not establish cleaning quote readiness. Customer enquiries may be recorded, but an authorized owner must configure supported services and real branch pricing before issuing quotes."
+        description="No active Standard, Deep or Move-Out cleaning service was verified in this saved catalog. Unrelated active services do not establish cleaning quote readiness. Customer enquiries may be recorded, but an authorized owner must configure supported services and real branch pricing before issuing quotes. No sample price or provider status is being invented."
         tone="warning"
         action={rateSetupLink}
       />
