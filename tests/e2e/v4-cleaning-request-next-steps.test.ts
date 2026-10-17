@@ -67,6 +67,30 @@ test("approved and sent offers require a strictly future persisted validity time
   expect(future.complete).toBe(4);
  }
 });
+test("rejects unzoned saved quote deadlines even when JavaScript would parse them",()=>{
+ for (const status of ["APPROVED","SENT"]) {
+  for (const validUntil of [
+   "2026-10-20T12:00:00", "2026-10-20 12:00:00",
+   "2026-10-20", "2026-10-20T12:00:00+99:00",
+  ]) {
+   const state=cleaningRequestNextSteps({...base,currentQuote:{...verifiedQuote,status,validUntil}});
+   expect(state.complete,status+" "+validUntil).toBe(3);
+   expect(state.steps.find(x=>x.id==="quote")?.state).toBe("ACTION_REQUIRED");
+  }
+  const zoned=cleaningRequestNextSteps({...base,currentQuote:{
+   ...verifiedQuote,status,validUntil:"2026-10-20T15:00:00+03:00",
+  }});
+  expect(zoned.complete).toBe(4);
+ }
+});
+test("rejects ambiguous staff snapshot times before trusting saved offer freshness",()=>{
+ for (const asOf of ["2026-10-16T12:00:00","2026-10-16","not-an-instant"]) {
+  const state=cleaningRequestNextSteps({...base,asOf,currentQuote:verifiedQuote});
+  expect(state.steps.find(x=>x.id==="quote")?.state).toBe("ACTION_REQUIRED");
+ }
+ const zoned=cleaningRequestNextSteps({...base,asOf:"2026-10-16T15:00:00+03:00",currentQuote:verifiedQuote});
+ expect(zoned.complete).toBe(4);
+});
 test("accepted quote stays completed after its offer validity elapsed",()=>{
  const accepted=cleaningRequestNextSteps({...base,currentQuote:{...verifiedQuote,status:"ACCEPTED",validUntil:"2026-10-15T12:00:00Z"}});
  expect(accepted.steps.find(x=>x.id==="quote")?.state).toBe("DONE");
