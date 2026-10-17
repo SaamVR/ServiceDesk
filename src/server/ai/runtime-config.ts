@@ -24,12 +24,12 @@ export function readConfiguredAiRuntimeConfig(
     return {ok:false,code:"AI_RUNTIME_GATEWAY_DISABLED",message:"Private Codex gateway is disabled."};
   }
   const apiKey = (provider === "codex_gateway"
-    ? env.SERVICEDESK_CODEX_GATEWAY_KEY : env.OPENAI_API_KEY ?? "").trim();
+    ? env.SERVICEDESK_CODEX_GATEWAY_KEY : env.OPENAI_API_KEY) ?? "";\n  const normalizedKey = apiKey.trim();
   const model = (env.SERVICEDESK_AI_MODEL ?? "").trim();
   const apiBaseUrl = (env.SERVICEDESK_AI_API_BASE_URL ??
     (provider === "codex_gateway"
       ? "https://codex-api.ezcomo.shop/v1" : "https://api.openai.com/v1")).trim();
-  if (!apiKey || !/^[A-Za-z0-9._:-]{2,100}$/.test(model)) {
+  if (!normalizedKey || !/^[A-Za-z0-9._:-]{2,100}$/.test(model)) {
     return { ok: false, code: "AI_RUNTIME_CONFIGURATION_INCOMPLETE",
       message: "Operational AI server credentials or model selection are incomplete." };
   }
