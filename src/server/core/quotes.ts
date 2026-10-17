@@ -74,6 +74,28 @@ export async function sendQuoteByIdWithRepository(
   return sendQuoteSnapshot(repository, quote, meta);
 }
 
+// This legacy repository seam still accepts quote status transitions. A Date
+// comparison with NaN evaluates false, which used to ACCEPT an invalid or
+// unzoned expiry. Validate real calendar days and explicit offsets first.
+function trustedAcceptanceInstant(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  const hour = Number(match[4]), minute = Number(match[5]), second = Number(match[6]);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (year < 1 || month < 1 || month > 12 || day < 1 ||
+      day > days[month - 1] || hour > 23 || minute > 59 || second > 59) return null;
+  const zone = match[7];
+  if (zone !== "Z") {
+    const h = Number(zone.slice(1,3)), m = Number(zone.slice(4,6));
+    if (h > 14 || m > 59 || (h === 14 && m !== 0)) return null;
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export async function acceptQuoteByIdWithRepository(
   repository: QuoteRepository,
   quoteId: string,
@@ -90,7 +112,9 @@ export async function acceptQuoteByIdWithRepository(
     return { ok: false, code: "QUOTE_NOT_SENT", message: "Only a sent quote can be accepted." };
   }
 
-  if (new Date(meta.now).getTime() > new Date(quote.validUntil).getTime()) {
+  const nowInstant = trustedAcceptanceInstant(meta.now);
+  const expiryInstant = trustedAcceptanceInstant(quote.validUntil);
+  if (nowInstant === null || expiryInstant === null || expiryInstant <= nowInstant) {
     return { ok: false, code: "QUOTE_EXPIRED", message: "Quote validity window has expired." };
   }
 
