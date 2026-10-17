@@ -1,7 +1,7 @@
 import {describe,expect,it} from "vitest";
-import {planAiToolOrchestration} from "../../src/server/ai/tool-orchestration";
+import {planAiToolOrchestration, type AiToolScope} from "../../src/server/ai/tool-orchestration";
 const scoped={workspaceId:"workspace-a",allowedRequestIds:["req-1"],allowedCustomerIds:["customer-1"]};
-const plan=(scope:typeof scoped,args:unknown,tool="calculateQuote")=>
+const plan=(scope:AiToolScope,args:unknown,tool="calculateQuote")=>
  planAiToolOrchestration({scope,requestedToolCalls:[{name:tool,arguments:args}]});
 describe("SONIC R34 L17 AI tool proposals require exact authorized resource membership",()=>{
  it("preserves already-authorized facade-only tool proposals",()=>{
