@@ -30,6 +30,11 @@ describe("R12 owner brief unsourced relative-calendar safety",()=>{
       "Inspect critical attention items at noon.",
       "Review invoices later this week.",
       "Inspect quotes tomorrow morning.",
+      "Review overdue invoices before taking action.",
+      "Check late requests against the saved queue.",
+      "Inspect past-due visits.",
+      "Review delinquent invoices.",
+      "Check overdue critical attention items.",
     ]) {
       expect(validateOwnerOperationsBriefGrounding(claim,facts),claim).toBeUndefined();
     }
