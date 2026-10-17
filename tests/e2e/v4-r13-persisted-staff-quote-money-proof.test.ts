@@ -17,6 +17,8 @@ describe("R13 staff persisted quote proof prevents fictional zero-value offers",
       subtotal_minor:0,tax_minor:0,total_minor:0,
       deposit_minor:0,balance_minor:0,duration_minutes:0,buffer_minutes:0})).toBe(true);
     expect(isSavedStaffQuoteRowVerifiable({...quote,status:"SENT"})).toBe(true);
+    // PostgreSQL quote_status enum also contains this human-approval state.
+    expect(isSavedStaffQuoteRowVerifiable({...quote,status:"PENDING_APPROVAL"})).toBe(true);
   });
   it("refuses missing, mistyped, unsafe and negative persisted money/version data",()=>{
     for(const patch of [
