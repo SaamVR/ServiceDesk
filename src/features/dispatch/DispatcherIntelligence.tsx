@@ -17,6 +17,7 @@ const conflictLabel: Record<DispatchConflictCode, string> = {
   OUTSIDE_AVAILABILITY: "Outside availability",
   SERVICE_CONSTRAINT_MISMATCH: "Service mismatch",
   SCHEDULE_OVERLAP: "Schedule overlap",
+  SCHEDULE_UNVERIFIED: "Saved scheduling evidence unverified",
 };
 
 function confidenceTone(confidence: DispatchCandidateRecommendation["confidence"]) {
