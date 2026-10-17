@@ -89,6 +89,10 @@ describe("R18 recovered outbox authority and safety", () => {
       [{freeformText: []}, "OUTBOX_INTENT_FREEFORM_INVALID"],
       [{freeformText: "   "}, "OUTBOX_INTENT_FREEFORM_INVALID"],
       [{freeformText: "Message\u202e reversed"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "Message\u200b hidden"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "Message\u200f reverse"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "Message\u2060 join"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "Message\ufeff invisible"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
       [{freeformText: "x".repeat(4097)}, "OUTBOX_INTENT_FREEFORM_INVALID"],
     ] as const) {
       const forged = { ...valid, ...patch } as unknown as OutboxJob;

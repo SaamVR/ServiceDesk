@@ -70,7 +70,7 @@ export function validateResolvedOutboxJob(event: ClaimedOutboxEvent, job: Outbox
   if (job.freeformText !== undefined &&
       (typeof job.freeformText !== "string" ||
        job.freeformText.trim().length === 0 || job.freeformText.length > 4096 ||
-       /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/u.test(job.freeformText))) {
+       /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(job.freeformText))) {
     return failure("OUTBOX_INTENT_FREEFORM_INVALID", "Saved freeform message intent is invalid.");
   }
   if (job.handoverGuard !== undefined &&
