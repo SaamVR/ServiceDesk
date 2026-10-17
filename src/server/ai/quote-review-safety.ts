@@ -13,6 +13,12 @@ export function validateStaffQuoteReviewDraft(value: unknown): string | undefine
   // with the ISO currency code before the amount. Neither was in the model
   // prompt: surfacing either would manufacture a merchant-approved price.
   if (/\b(?:USD|EUR|GBP|BDT)\s*\d[\d,.]*/i.test(draft)) return undefined;
+  // A model can bypass word-based currency guards with a bare symbol.
+  // Price, invoice and discount claims cannot be generated from service codes.
+  if (/[\$€£৳]\s*\d[\d,.]*/u.test(draft)) return undefined;
+  if (/\b(?:discount|savings?|off)\s*(?::|=|of\b|is\b|at\b)?\s*\d{1,3}\s*%/i.test(draft) ||
+      /\b\d{1,3}\s*%\s*(?:discount|off|savings?)\b/i.test(draft)) return undefined;
+
   if (/\b\d[\d,.]*\s*(?:dollars?|euros?|pounds?|taka|tk)\b/i.test(draft)) return undefined;
   if (/\b(?:total|deposit|balance|subtotal|tax|discount|rate|cost|price|fee|amount|charge)\s*(?:(?:will|would|should|could)\s+be|equals?|of|around|about|estimated\s+at)\s*\d/i.test(draft)) return undefined;
   if (/\b(?:guarantee(?:d|s)?|promise(?:d|s)?|definitely|certainly)\b/i.test(draft)) return undefined;
