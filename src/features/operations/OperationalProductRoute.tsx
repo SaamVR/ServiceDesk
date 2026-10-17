@@ -2,6 +2,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { setupAuthorizedCleaningPricing } from "@/server/core/owner-cleaning-pricing-setup";
+import { loadAuthorizedOwnerPricingBooks, reviseAuthorizedCleaningPricing } from "@/server/core/owner-cleaning-pricing-revision";
 import { OwnerCleaningPricingSetupForm } from "./OwnerCleaningPricingSetupForm";
 import { completeOperationalRequestQuoteInputs } from "./request-quote-input-action";
 import { OwnerAutomationActivationChecklist } from "./OwnerAutomationActivationChecklist";
@@ -3732,7 +3733,7 @@ function BillingView({ data }: { data: OperationalStaffSnapshot }) {
   );
 }
 
-function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot; workspaceSlug: string }) {
+async function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot; workspaceSlug: string }) {
   const snapshot = data.ownerSettings;
   if (!snapshot) {
     return <EmptyState title="Settings unavailable" detail="Workspace settings are temporarily unavailable." />;
@@ -3744,6 +3745,15 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     const result: OperationalActionResult = setup.ok
       ? { ok: true, message: "Real cleaning services, owner-entered rates and branch pricing are saved and verified. No customer messages were sent." }
       : { ok: false, message: setup.message };
+    actionRedirect(workspaceSlug, "settings", result, "section=services&");
+  }
+
+  async function reviseCleaningPricingAction(formData: FormData) {
+    "use server";
+    const revision = await reviseAuthorizedCleaningPricing(workspaceSlug, formData);
+    const result: OperationalActionResult = revision.ok
+      ? { ok: true, message: "Replacement branch pricing was saved and independently verified. Historical rate cards remain unchanged; no customer messages were sent." }
+      : { ok: false, message: revision.message };
     actionRedirect(workspaceSlug, "settings", result, "section=services&");
   }
 
@@ -3874,6 +3884,9 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
     actionRedirect(workspaceSlug, "settings", result, "section=governance&");
   }
 
+  const pricingBooks = data.actor.role === "OWNER" && data.ownerPricingBookProof?.state === "VERIFIED"
+    ? await loadAuthorizedOwnerPricingBooks(workspaceSlug)
+    : undefined;
   const activeServices = data.serviceCatalog.filter((service) => service.active).length;
   const serviceCatalogGrant = (data.governanceCapabilities ?? []).find((grant) =>
     grant.userId === data.actor.userId
@@ -3962,7 +3975,20 @@ function SettingsView({ data, workspaceSlug }: { data: OperationalStaffSnapshot;
             ) : null}
             {data.actor.role === "OWNER" &&
               invalidExistingUsdBranches(data.branchScope, data.ownerPricingBookProof).length > 0 ? (
-              <p role="status">Existing active branch pricing could not be verified for real quotes. Review and repair the saved rate card and effective dates; first-run pricing cannot overwrite an active book.</p>
+              <p role="status">Some active books cannot support safe quotes. Only an explicit full owner revision can replace one; first-run setup cannot overwrite existing prices. A missing revision command blocks saving rather than silently repairing data.</p>
+            ) : null}
+            {data.actor.role === "OWNER" && pricingBooks && !pricingBooks.ok ? (
+              <p role="alert">Existing saved pricing details are unavailable: {pricingBooks.message} No replacement form is shown.</p>
+            ) : null}
+            {data.actor.role === "OWNER" && pricingBooks?.ok ? (
+              <div aria-label="Saved branch rate books and revisions">
+                {pricingBooks.value.map(book => book.serviceNames ? (
+                  <OwnerCleaningPricingSetupForm key={book.bookId}
+                    repairTarget={book} action={reviseCleaningPricingAction} />
+                ) : (
+                  <p key={book.bookId} role="alert">Saved price book for {book.branch.name} cannot be revised yet: restore its workspace-wide cleaning catalog services in Settings first. No prices were changed.</p>
+                ))}
+              </div>
             ) : null}
             {data.actor.role === "OWNER" && data.ownerPricingBookProof?.state === "VERIFIED" &&
               availableFirstRunUsdBranches(data.branchScope, data.ownerPricingBookProof).length === 0 &&

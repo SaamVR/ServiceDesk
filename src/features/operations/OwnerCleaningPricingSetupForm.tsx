@@ -3,6 +3,7 @@ import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
 import { OwnerCleaningPricingWorksheet } from "./OwnerCleaningPricingWorksheet";
 import { OwnerPricingCompletionGuide } from "./OwnerPricingCompletionGuide";
 import type { OperationalBranchScope } from "./operational-product-runtime";
+import type { OwnerExistingPricingBook } from "@/server/core/owner-cleaning-pricing-revision";
 import { availableFirstRunUsdBranches, type OwnerPricingBookProof } from "./owner-pricing-readiness";
 
 type PriceService = {
@@ -42,42 +43,90 @@ function MinutesField({ label, name }: { label: string; name: string }) {
 export function OwnerCleaningPricingSetupForm({
   scope,
   proof,
+  repairTarget,
   action,
 }: {
   scope?: OperationalBranchScope;
   proof?: OwnerPricingBookProof;
+  repairTarget?: OwnerExistingPricingBook;
   action: (formData: FormData) => Promise<void>;
 }) {
-  const branches = availableFirstRunUsdBranches(scope, proof);
+  const branches = repairTarget
+    ? [repairTarget.branch]
+    : availableFirstRunUsdBranches(scope, proof);
+  if (repairTarget && !repairTarget.serviceNames) return (
+    <p role="alert">The shared service catalog is incomplete or inactive. Restore all three cleaning services in Settings before revising this branch price book; rates were not changed.</p>
+  );
   if (branches.length === 0) return (
     <p role="status">Create or select an authorized USD cleaning branch before configuring pricing.</p>
   );
   const setupId = randomUUID();
   return (
-    <section id="owner-first-run-pricing" aria-label="First-run owner cleaning pricing" style={{
+    <section id={repairTarget ? "owner-pricing-revision-" + repairTarget.branch.id : undefined}
+      aria-label={repairTarget ? "Owner cleaning pricing revision" : "First-run owner cleaning pricing"} style={{
       border: "1px solid #d1e8df", borderRadius: 14, scrollMarginTop: 112,
       padding: 20, background: "#fff",
       display: "grid", gap: 16, marginTop: 16,
     }}>
+      {!repairTarget ? <span id="owner-first-run-pricing" aria-label="First-run owner cleaning pricing"
+        style={{ scrollMarginTop: 112, display: "block" }} /> : null}
       <header>
-        <h4 style={{ margin: "0 0 7px", color: "#174a43" }}>Activate real cleaning services and prices</h4>
+        <h4 style={{ margin: "0 0 7px", color: "#174a43" }}>
+          {repairTarget ? "Replace existing branch pricing" : "Activate real cleaning services and prices"}
+        </h4>
         <p style={{ margin: 0, fontSize: ".85rem", lineHeight: 1.6 }}>
-          Owner-only initial setup. Enter your business’s actual prices in USD; no sandbox,
-          sample or suggested prices are activated. A saved rate card is permanent and
-          first-run setup cannot overwrite an existing branch price book.
-          Nothing is sent to customers or charged.
+          {repairTarget
+            ? "Owner-confirmed full replacement. Re-enter every rate and duration; no guessed values or model prices are used. The old rate card remains for historical quotes. This action does not contact customers or charge payments."
+            : "Owner-only initial setup. Enter your business’s actual USD prices; no sandbox, sample or suggested prices are activated. First-run setup cannot overwrite an existing branch price book. Nothing is sent or charged."}
+          {repairTarget ? " Existing workspace-wide service names stay unchanged; edit those separately in the catalog before changing prices." : null}
         </p>
       </header>
+      {repairTarget ? (
+        <div role="status" style={{ border: "1px solid #cfe1dc", borderRadius: 10, padding: 12, background: "#f6fbf9", fontSize: ".82rem" }}>
+          <strong>Existing saved branch book</strong>
+          <p style={{ margin: "8px 0 0", fontWeight: 600 }}
+            role={repairTarget.diagnosis.state === "REPAIR_REQUIRED" ? "alert" : "status"}>
+            {repairTarget.diagnosis.message}
+          </p>
+          <p style={{ margin: "6px 0 0" }}>
+            {repairTarget.branch.name} · book version {repairTarget.bookVersion} · rate {repairTarget.rateVersion ?? "unreadable"} · currency {repairTarget.rateCurrency ?? "unreadable"}
+          </p>
+          <p style={{ margin: "4px 0 0" }}>
+            Deposit {repairTarget.depositPercent ?? "unreadable"}% · valid {repairTarget.validHours ?? "unreadable"} hours · crew buffer {repairTarget.bufferMinutes ?? "unreadable"} minutes.
+          </p>
+          <p style={{ margin: "4px 0 0" }}>
+            Effective start {repairTarget.startsAt ?? "unbounded"} · end {repairTarget.endsAt ?? "unbounded"}
+          </p>
+          <details style={{ marginTop: 8 }}>
+            <summary>Inspect currently saved rate rules (read-only)</summary>
+            <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: ".74rem" }}>
+              {JSON.stringify(repairTarget.rules, null, 2)?.slice(0, 6000) ?? "Rate rules unavailable"}
+            </pre>
+          </details>
+          <p style={{ margin: "8px 0 0" }}>
+            Your changes replace the active branch price book only after an authorized transaction and readback. If the database revision migration is not installed, saving fails safely.
+          </p>
+        </div>
+      ) : null}
       <form action={action} style={{ display: "grid", gap: 18 }}>
         <input type="hidden" name="setupId" value={setupId} />
         <input type="hidden" name="currency" value="USD" />
+        {repairTarget ? <>
+          <input type="hidden" name="expectedBookId" value={repairTarget.bookId} />
+          <input type="hidden" name="expectedBookVersion" value={repairTarget.bookVersion} />
+        </> : null}
         <label style={{ display: "grid", gap: 6 }}>
           <strong>Cleaning branch</strong>
-          <select className="app-input" name="branchId" required defaultValue={branches[0]?.id}>
-            {branches.map(branch => <option key={branch.id} value={branch.id}>
-              {branch.name} · {branch.code} · USD
-            </option>)}
-          </select>
+          {repairTarget ? <>
+            <span>{repairTarget.branch.name} · {repairTarget.branch.code} · USD</span>
+            <input type="hidden" name="branchId" value={repairTarget.branch.id} />
+          </> : (
+            <select className="app-input" name="branchId" required defaultValue={branches[0]?.id}>
+              {branches.map(branch => <option key={branch.id} value={branch.id}>
+                {branch.name} · {branch.code} · USD
+              </option>)}
+            </select>
+          )}
         </label>
         {services.map(service => (
           <fieldset key={service.prefix} style={{
@@ -88,7 +137,12 @@ export function OwnerCleaningPricingSetupForm({
             <label style={{ display: "grid", gap: 6 }}>
               <span>Customer-facing service name</span>
               <input className="app-input" name={service.nameField} type="text"
-                defaultValue={service.defaultName} minLength={3} maxLength={120} required />
+                defaultValue={repairTarget ? (
+                  service.prefix === "standard" ? repairTarget.serviceNames?.STANDARD :
+                  service.prefix === "deep" ? repairTarget.serviceNames?.DEEP :
+                  repairTarget.serviceNames?.MOVE_OUT
+                ) : service.defaultName}
+                readOnly={Boolean(repairTarget)} minLength={3} maxLength={120} required />
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
               <MoneyField label="Base service price" name={service.prefix + "Base"} />
@@ -119,15 +173,15 @@ export function OwnerCleaningPricingSetupForm({
             <MoneyField label="Max quote eligible for automatic approval" name="autoApprovalMax" />
           </div>
         </fieldset>
-        <OwnerPricingCompletionGuide />
+        {!repairTarget ? <OwnerPricingCompletionGuide /> : null}
         <OwnerCleaningPricingWorksheet />
         <StaffSubmitButton className="app-button-primary" style={{ justifySelf: "start" }}
           pendingLabel="Saving pricing…">
-          Save verified first-run pricing
+          {repairTarget ? "Save full pricing revision" : "Save verified first-run pricing"}
         </StaffSubmitButton>
         <p style={{ fontSize: ".78rem", margin: 0 }}>
-          Pricing activation is transactional and requires a verified owner session, protected backend
-          and deployed database migration. On failure, no successful setup is claimed.
+          Pricing changes require a verified owner session, protected backend and installed database command.
+          On failed or uncertain readback, reload this screen before retrying; no successful save is claimed.
         </p>
       </form>
     </section>

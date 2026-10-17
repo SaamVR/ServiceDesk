@@ -1,0 +1,42 @@
+name: ServiceDesk V4 R25 disposable owner revision PG17
+on:
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - "supabase/migrations/0064_v4_owner_cleaning_pricing_revision.sql"
+      - "tests/sql/v4-r25-owner-pricing-*.sql"
+      - ".github/workflows/v4-r25-owner-pricing-pg17.yml"
+permissions: { contents: read }
+jobs:
+  postgres-17-revision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: disposable-only, POSTGRES_DB: sd_revision_qa }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_revision_qa"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: "${{ github.event.pull_request.head.sha || github.sha }}"
+          persist-credentials: false
+      - name: Exact pinned source
+        env:
+          EXPECTED_SHA: "${{ github.event.pull_request.head.sha || github.sha }}"
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Run real SQL on disposable PG17 only
+        env:
+          PGPASSWORD: disposable-only
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGDATABASE: sd_revision_qa
+        run: |
+          command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+          psql -v ON_ERROR_STOP=1 -f tests/sql/v4-r25-owner-pricing-fixture.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0064_v4_owner_cleaning_pricing_revision.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/v4-r25-owner-pricing-acceptance.sql
