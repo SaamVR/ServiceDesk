@@ -129,7 +129,7 @@ export function AiStudioWorkspace({
         {!configured ? (
           <div className={styles.setupNotice} role="status">
             <strong>Connect a project API key on the server to enable AI.</strong>
-            <p>Set <code>OPENAI_API_KEY</code>, <code>SERVICEDESK_AI_MODEL</code> and <code>SERVICEDESK_AI_ENABLED=true</code> in the authorized deployment's secret environment. The personal Codex CLI ChatGPT login is not a ServiceDesk project credential. Do not put keys in browser settings or GitHub files.</p>
+            <p>Set <code>OPENAI_API_KEY</code>, <code>SERVICEDESK_AI_MODEL</code> and <code>SERVICEDESK_AI_ENABLED=true</code> in the authorized deployment secret environment. The personal Codex CLI ChatGPT login is not a ServiceDesk project credential. Do not put keys in browser settings or GitHub files.</p>
           </div>
         ) : null}
       </section>
