@@ -27,3 +27,14 @@ Connected Supabase `cpmmgivhlkfbiwzhlcey` returned **1 workspace, 1 distinct act
 - Suggested gate sequence: exact PR-head source and focused tests → independent Critic review of failures/negative cases → one nonoverlapping controller integration → **one** final canonical full RC/Chrome and PG17 (where SQL/runtime impact requires), then human UAT/isolated review promotion. Count actual independent merchant proof separately from green simulation.
 
 **Critic decision at authorship:** `REVIEW_PENDING_EXACT_HEAD_CI` for #583/#584/#585; `CONFIGURATION_BLOCKED` for two-owner fictional merchant operations and source-to-Render promotion. Update this record with immutable CI links and SHA only after jobs complete. Never fabricate PASS to satisfy throughput targets.
+
+
+## Exact-head post-correction acceptance addendum — independent Critic receipt
+
+- Core #583 head `003c973b1f51994dae6c8d1022616329494242bf`: [full-source #39015542326](https://github.com/SaamVR/ServiceDesk/actions/runs/39015542326) **PASS**, 591 Vitest files / 2,989 tests; [focused quote #39015542327](https://github.com/SaamVR/ServiceDesk/actions/runs/39015542327) **PASS** with four R17 price-book tests and full pricing regression (11 focused tests). This verifies typed/source/Next production build and mocked DB, not connected owner pricing.
+- AI #584 head `4b007795044e0600fcc77ebfcdd2cb2a1d21938c`: [full-source #39015421837](https://github.com/SaamVR/ServiceDesk/actions/runs/39015421837) **PASS**, 591 Vitest files / 2,988 tests and three new R17 AI contract cases. No live AI model call was made.
+- Product #585 head `4b751e8a1d8f5565df1e7eb9cecbd9422ee6bd5d`: [full-source #39015555589](https://github.com/SaamVR/ServiceDesk/actions/runs/39015555589) **PASS**, 591 Vitest files / 2,987 tests and two R17 staff ledger checks. No actual invoice or payment changed.
+- Each source PR also passed exact-head merge-parity and independent Critic acceptance checks. Failed initial CI from coding errors remains recorded above as **failure**, not retrospectively converted to PASS. Final source verdict: **CONTRACT_TESTED / PASS at individual PR SHAs**, combined controller integration remains **PENDING** until its own exact-head checks.
+- Operational state unchanged: current isolated live Render R13 `3962aa5c84c3aa5f47ad72b62d51ae4382467708`; PostgreSQL migration ends 0062; one owner identity and no pricing/causal UAT chain. **UAT/PROVIDER_VERIFIED/OPERATIONS_VERIFIED HOLD**, #487 and #153 remain open.
+
+**Efficiency action:** the two early TS failures required additional full CI runs. Consolidate source after three green individual lanes in *one* composite controller PR, execute its required full source gate once, and avoid redundant PG17 runs because these changes contain no SQL or worker/runtime migration changes. Do not run a full application build again on this Markdown-only critic addendum.
