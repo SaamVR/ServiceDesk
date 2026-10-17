@@ -11,7 +11,7 @@ import {
 } from "./staff-ai-review-contract";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
-import { boundedStaffRequestSignal } from "./staff-ai-request-signal";
+import { boundedStaffRequestSignal, STAFF_AI_DRAFT_TIMEOUT_MS } from "./staff-ai-request-signal";
 import styles from "./StaffAiReviewComposer.module.css";
 
 /**
@@ -58,7 +58,7 @@ function ScopedStaffAiReviewComposer({
     controller.current?.abort();
     const pending = new AbortController();
     controller.current = pending;
-    const requestSignal = boundedStaffRequestSignal(pending);
+    const requestSignal = boundedStaffRequestSignal(pending, STAFF_AI_DRAFT_TIMEOUT_MS);
     setBusy("drafting");
     setError(undefined);
     setDraft(undefined);
@@ -74,7 +74,7 @@ function ScopedStaffAiReviewComposer({
         body: JSON.stringify({ workspaceSlug, conversationId, messageId: sourceMessageId }),
         signal: requestSignal,
       });
-      if (pending.signal.aborted) return;
+      if (pending.signal.aborted || requestSignal.aborted || controller.current !== pending) return;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
         setError("draft");
         return;
@@ -88,9 +88,13 @@ function ScopedStaffAiReviewComposer({
       setDraft(parsed);
       setBody(parsed.replyDraft);
     } catch {
-      if (!pending.signal.aborted) setError("draft");
+      if (!pending.signal.aborted && controller.current === pending) setError("draft");
     } finally {
-      if (!pending.signal.aborted) setBusy("idle");
+      if (controller.current === pending && !pending.signal.aborted) {
+        if (requestSignal.aborted) setError("draft");
+        setBusy("idle");
+        controller.current = null;
+      }
     }
   }
 
@@ -136,6 +140,7 @@ function ScopedStaffAiReviewComposer({
         }),
         signal: requestSignal,
       });
+      if (requestSignal.aborted || pending.signal.aborted || controller.current !== pending) return;
       if (response.status === 409) {
         setError("stale");
         return;
@@ -145,6 +150,7 @@ function ScopedStaffAiReviewComposer({
         return;
       }
       const parsed = parseReviewedReplyReceipt(await response.json() as unknown, conversationId, sourceMessageId);
+      if (requestSignal.aborted || pending.signal.aborted || controller.current !== pending) return;
       if (!parsed) {
         setError("approval");
         return;
@@ -152,9 +158,15 @@ function ScopedStaffAiReviewComposer({
       setReceipt(parsed);
       setConfirmed(false);
     } catch {
-      if (!pending.signal.aborted) setError("approval");
+      if (!pending.signal.aborted && controller.current === pending) setError("approval");
     } finally {
-      if (!pending.signal.aborted) setBusy("idle");
+      if (controller.current === pending && !pending.signal.aborted) {
+        // Timed-out approval may already have queued a durable reply.
+        // Do not invent a failed send or assign a fresh idempotency key.
+        if (requestSignal.aborted) setError("approval");
+        setBusy("idle");
+        controller.current = null;
+      }
     }
   }
 
@@ -186,7 +198,7 @@ function ScopedStaffAiReviewComposer({
           <p>Suggestion request cancelled in this browser. No reply was approved or queued.</p>
         ) : null}
         {error === "draft" ? (
-          <p>AI drafting is unavailable for this workspace. Continue with the standard staff reply form.</p>
+          <p>AI drafting did not return a verified suggestion. The model may still finish upstream; continue with the standard staff reply form.</p>
         ) : error === "stale" ? (
           <p>The conversation changed or a newer customer message arrived. Reload this conversation before approving another reply.</p>
         ) : error === "approval" ? (
