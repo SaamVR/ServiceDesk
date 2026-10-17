@@ -201,6 +201,7 @@ export function StaffOverviewDashboard({
   // An expired/invalid APPROVED quote also requires staff intervention, not
   // a send action. Today's worklist must agree with the Quotes workspace.
   const approvedNeedsExpiryReview = quoteQueue.approvedNeedsExpiryReview;
+  const quoteVersionConflicts = quoteQueue.quoteVersionConflicts;
   // The reply queue is derived from stored external-message direction, not a fake unread badge.
   // Older server test fixtures can omit these optional records without implying zero replies.
   const replyTriage = snapshot.conversations && snapshot.messages
@@ -321,11 +322,11 @@ export function StaffOverviewDashboard({
         <KpiCard
           label="Waiting pipeline"
           href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
-          value={waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview}
+          value={waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}
           detail={`${waitingRequests.length} requests · ${waitingQuoteCount} awaiting customer` +
             (sentNeedsExpiryReview + approvedNeedsExpiryReview
               ? ` · ${sentNeedsExpiryReview + approvedNeedsExpiryReview} need quote validity review`
-              : "")}
+              : "") + (quoteVersionConflicts ? ` · ${quoteVersionConflicts} quote version conflicts` : "")}
         />
         <KpiCard
           label="Outstanding"
@@ -408,8 +409,8 @@ export function StaffOverviewDashboard({
             </Link>
             <Link href={buildStaffModuleHref(workspace, "quotes")} className={styles.pipelineItem}>
               <span>Quotes needing follow-up</span>
-              <strong>{waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview}</strong>
-              <small>{waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review</small>
+              <strong>{waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}</strong>
+              <small>{waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review · {quoteVersionConflicts} version conflicts</small>
             </Link>
             <Link href={buildStaffModuleHref(workspace, "invoices")} className={styles.pipelineItem}>
               <span>Customer invoices to collect</span>
