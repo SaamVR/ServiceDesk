@@ -13,7 +13,7 @@ const validRule=(v:unknown,ovenRequired=false):boolean=>{
   if(!record(v))return false;
   for(const key of ["baseMinor","baseMinutes","bedroomMinor","bedroomMinutes","bathroomMinor","bathroomMinutes"]){
     const max=key.endsWith("Minutes")?1440:10_000_000;
-    if(!integer(v[key],key==="baseMinutes"?1:0,max))return false;
+    if(!integer(v[key],(key==="baseMinutes"||key==="baseMinor")?1:0,max))return false;
   }
   if((v.ovenMinor===undefined)!==(v.ovenMinutes===undefined))return false;
   if(ovenRequired && (v.ovenMinor===undefined||v.ovenMinutes===undefined))return false;

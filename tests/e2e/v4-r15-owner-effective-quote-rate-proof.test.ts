@@ -26,6 +26,7 @@ describe("Owner pricing evidence agrees with saved quote authority",()=>{
     autoApprovalMaxTotalMinor:50000}},
    {rules:{...card.rules,moveOut:{...card.rules.moveOut,ovenMinutes:undefined}}},
    {rules:{...card.rules,standard:{...card.rules.standard,bedroomMinor:-1}}},
+   {rules:{...card.rules,standard:{...card.rules.standard,baseMinor:0}}},
    {rules:{...card.rules,autoApprovalMaxTotalMinor:"50000"}}];
   for(const change of failures)expect(evidence({cards:[{...card,...change}]})).toEqual([]);
  });
