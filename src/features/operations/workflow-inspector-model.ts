@@ -1,20 +1,20 @@
 import type {
-  OperationalStaffSnapshot,
-  OperationalWorkflowActionExecution,
-  OperationalWorkflowExecution,
-} from "./operational-product-runtime";
+  BrowserWorkflowAction,
+  BrowserWorkflowExecution,
+  WorkflowInspectorClientSnapshot,
+} from "./workflow-inspector-client-snapshot";
 
 /**
  * Presentation-only projection of authorized, persisted workflow evidence.
  * No network requests, provider confirmation, financial action or mutation.
  */
-type WorkflowSnapshot = Pick<OperationalStaffSnapshot,
+type WorkflowSnapshot = Pick<WorkflowInspectorClientSnapshot,
   "workflowAvailable" | "workflowExecutions" | "workflowActionExecutions" | "workflowRuleVersions">;
 
 function latestAttempt(
-  current: OperationalWorkflowActionExecution | undefined,
-  candidate: OperationalWorkflowActionExecution,
-): OperationalWorkflowActionExecution {
+  current: BrowserWorkflowAction | undefined,
+  candidate: BrowserWorkflowAction,
+): BrowserWorkflowAction {
   if (!current) return candidate;
   if (candidate.attemptNumber !== current.attemptNumber) {
     return candidate.attemptNumber > current.attemptNumber ? candidate : current;
@@ -32,7 +32,7 @@ export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
   // execution ID AND branch ID; a rule version must also match both identities.
   const versions = new Map((snapshot.workflowRuleVersions ?? []).map(version =>
     [version.id, version] as const));
-  const attempts = new Map<string, OperationalWorkflowActionExecution[]>();
+  const attempts = new Map<string, BrowserWorkflowAction[]>();
   for (const action of snapshot.workflowActionExecutions ?? []) {
     if (!Number.isSafeInteger(action.actionIndex) || action.actionIndex < 0 ||
         !Number.isSafeInteger(action.attemptNumber) || action.attemptNumber < 1) continue;
@@ -43,10 +43,10 @@ export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
 
   return (snapshot.workflowExecutions ?? [])
     .filter(execution => execution.mode === "LIVE")
-    .map((execution: OperationalWorkflowExecution) => {
+    .map((execution: BrowserWorkflowExecution) => {
       const matching = (attempts.get(execution.id) ?? [])
         .filter(action => action.branchId === execution.branchId);
-      const current = new Map<number, OperationalWorkflowActionExecution>();
+      const current = new Map<number, BrowserWorkflowAction>();
       for (const action of matching) {
         current.set(action.actionIndex, latestAttempt(current.get(action.actionIndex), action));
       }
