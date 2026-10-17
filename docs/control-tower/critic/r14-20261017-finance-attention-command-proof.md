@@ -1,0 +1,27 @@
+# R14 independent Critic and practical feature-quality review
+
+Date: 2026-10-17 Asia/Dhaka. Canonical ServiceDesk V4, baseline `2f7fd56354c2276fc53d7a1278d455c37fa6dac0` exact-head full-source and PG17 both PASS. Critic is an independent **workstream within this same chat**, not a separate human or concurrently running autonomous model.
+
+## Product-quality findings and acceptance gates
+
+| Lane | Previously observable source defect | Bounded patch | Adversarial and positive regression proof | Remaining limitations |
+| --- | --- | --- | --- | --- |
+| Core owner attention / quality [#554](https://github.com/SaamVR/ServiceDesk/pull/554) | Snapshot projector `String(undefined)` fabricates identity and `Number(undefined ?? 0)` fabricates a version; unverified status/severity/dueAt can make staff treat non-existent/closed work as trustworthy. | Require saved identities, source enum states, optional zoned dueAt, valid human-readable review text, 1..5 quality feedback, version > 0 and zoned created/updatedAt; preserve tenant rejection. | Exact registered attention enums from installed DB (`INFO, WARNING, CRITICAL`; `OPEN, ACKNOWLEDGED, RESOLVED`), `quality_cases_feedback_score_check`, `quality_cases_version_check`. Test actual boolean states, unknown/missing identity and status, fractional/unrecognized scoring, malformed timestamps and foreign tenant. | Source RPC shape verified only, not authenticated staff/owner clicks. Does not prove completion of human review or external review requests. |
+| Product staff quotes [#555](https://github.com/SaamVR/ServiceDesk/pull/555) | R13 verified each stored amount's type but could accept mutually inconsistent `(subtotal + tax != total)` or `(deposit + balance != total)` as staff financial evidence. | Require both equations with safe integer sums at snapshot load, matching existing server send-readiness policy. | Positive zero-deposit and zero-tax snapshots; true zero-value drafts; reject conflicting/overflow fields. | Persisted quote source proof is not an invoice/payment settlement receipt and isn't real owner UAT. The existing `customer-quote-line-items` validator still decides displayable line-item authority. |
+| Core request/quote command projection [#556](https://github.com/SaamVR/ServiceDesk/pull/556) | `quoteFromRpc` converted absent numbers/identity to zero/`"undefined"`; accepted wrong tenant workspace and invalid quote validity as successful send/accept/calculate command receipts. | Require nonempty literal ID/workspace/request/rate version, tenant equality, allowed status including PENDING_APPROVAL, currency, absolute zoned validUntil and monetary consistency for returned quote results. | Positive real saved financial equations and zero-deposit, explicit PENDING_APPROVAL; negative missing/noninteger/foreign/invalid clock/inconsistent quote records; malformed RPC must return error, not proof of external delivery. | Command result does not prove a provider received email/WhatsApp; no live send/charge/UAT. Scope enforcement remains API-layer defense in depth over installed SQL auth. |
+
+## Independent efficiency, evidence and governance
+
+1. Separate code branches and source files with no overlapping edits. Three feature PRs each have their own exact-head full-source, independent Critic and review-source parity gate. #556 additionally runs branch currency/real tenant quoting suites. Never claim merge-ready until all mandatory jobs PASSED for the latest PR head.
+2. One core reviewer specifically checked **installed PostgreSQL** enum and quality range/version constraints rather than guessing. This catches false positives and avoids regressions from safety validators accidentally rejecting ordinary saved records.
+3. Fail-closed risk: one malformed saved attention or quote record now makes corresponding read path unavailable instead of inventing 'no attention/no debt/ready to send'. This is appropriate for finance/urgency claims, but operational UX should surface a clear retriable banner and operators should reconcile the source before reattempting.
+4. Per-PR green checks distinguish actual `pnpm check:rc` execution from documented Critic-only fast path under governance issue [#545](https://github.com/SaamVR/ServiceDesk/issues/545). Canonical push must independently prove complete browser/source CI, while PG17 push no longer duplicates the entire source build.
+5. No false 10-minute work claim: workflow runtime is controlled by ChatGPT/product tooling, not by writing 'run longer'. Actual achievements are commits, adversarial tests, exact-head CI, merged commits, live gated deployment (only if separately authorized) and durable Critic observations.
+
+## Real merchant acceptance blocker
+
+Read-only live stage in previous reconciliation had one workspace, no active service/branch price book, one request, zero saved quotes/invoices/workflow receipts. [#487](https://github.com/SaamVR/ServiceDesk/issues/487) requires consented signed-in owner and separate tenant actors, real configured service USD book, persisted request→quote→attention→invoice with explicit external provider testing approvals. Source test fixtures are NOT real merchant UAT.
+
+## Boundary
+
+No prod main or Render promotion, no 0063 SQL migration, no data creation/alteration, no provider outreach, no payments, no paid model invocation, no worker automation or device reauthentication. Reconcile parallel legitimate merges by current canonical SHA before any source integration.
