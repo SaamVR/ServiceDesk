@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { verifiedStudioRecordChoices } from "../../src/features/operations/ai-studio-records";
-import { buildStaffModuleHref, staffModuleConfig, staffNavigationGroups } from "../../src/features/operations/staff-modules";
+import { buildStaffModuleHref, staffModuleConfig } from "../../src/features/operations/staff-modules";
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 const idA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -10,21 +10,20 @@ const idB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 describe("R22 real authenticated AI Studio — source and UI boundaries", () => {
   it("adds a dedicated staff workspace route and a real, discoverable navigation entry", () => {
-    expect(buildStaffModuleHref("cleaning-north", "ai-studio"))
-      .toBe("/app/cleaning-north/ai-studio");
-    expect(buildStaffModuleHref("north & south", "ai-studio"))
-      .toBe("/app/north%20%26%20south/ai-studio");
-    expect(staffModuleConfig["ai-studio"]).toMatchObject({
-      label: "AI Studio", group: "operations",
-    });
-    expect(staffNavigationGroups.find(group => group.label === "Operations")?.modules)
-      .toContain("ai-studio");
-    const page = read("src/app/app/[workspace]/ai-studio/page.tsx");
-    expect(page).toContain('module="ai-studio"');
-    expect(page).toContain("OperationalProductRoute");
-    const operational = read("src/features/operations/OperationalProductRoute.tsx");
-    expect(operational).toContain('case "ai-studio":');
-    expect(operational).toContain("<AiStudioWorkspace");
+    expect(Object.keys(staffModuleConfig)).toHaveLength(13);
+    expect(buildStaffModuleHref("cleaning-north", "automations") + "/ai-studio")
+      .toBe("/app/cleaning-north/automations/ai-studio");
+    expect(buildStaffModuleHref("north & south", "automations") + "/ai-studio")
+      .toBe("/app/north%20%26%20south/automations/ai-studio");
+    const page = read("src/app/app/[workspace]/automations/ai-studio/page.tsx");
+    expect(page).toContain("loadOperationalStaffSnapshot(workspace)");
+    expect(page).toContain("<AiStudioWorkspace");
+    expect(page).toContain("result.ok");
+    const shell = read("src/components/product/StaffAppShell.tsx");
+    expect(shell).toContain('<span>AI Studio</span>');
+    expect(shell).toContain('buildStaffModuleHref(workspace, "automations") + "/ai-studio"');
+    const ops = read("src/features/operations/AiOperationsStatus.tsx");
+    expect(ops).toContain('buildStaffModuleHref(workspaceSlug, "automations") + "/ai-studio"');
     const boundary = read("src/app/app/[workspace]/layout.tsx");
     expect(boundary).toContain("hasAuthenticatedSession()");
   });
