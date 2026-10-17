@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { WorkflowInspectorClientSnapshot } from "./workflow-inspector-client-snapshot";
 import {
   buildWorkflowInspector,
+  buildWorkflowInterventionQueue,
+  classifyWorkflowIntervention,
   isWorkflowAttentionRequired,
   summarizeWorkflowActivity,
 } from "./workflow-inspector-model";
@@ -12,11 +14,12 @@ import { buildStaffModuleHref } from "./staff-modules";
 import styles from "./WorkflowExecutionInspector.module.css";
 
 type Snapshot = WorkflowInspectorClientSnapshot;
-type Filter = "all" | "attention" | "failed" | "completed";
+type Filter = "all" | "attention" | "failed" | "processing" | "completed";
 const filters: ReadonlyArray<{ value: Filter; label: string }> = [
   { value: "all", label: "All recorded" },
-  { value: "attention", label: "Needs attention" },
+  { value: "attention", label: "Human review" },
   { value: "failed", label: "Failures" },
+  { value: "processing", label: "Processing" },
   { value: "completed", label: "Completed" },
 ];
 
@@ -30,6 +33,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
 }) {
   const runs = buildWorkflowInspector(snapshot);
   const summary = summarizeWorkflowActivity(runs);
+  const interventionQueue = buildWorkflowInterventionQueue(runs);
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedId, setSelectedId] = useState("");
   const [visibleCount, setVisibleCount] = useState(20);
@@ -37,6 +41,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
     filter === "all" ||
     (filter === "attention" && isWorkflowAttentionRequired(run)) ||
     (filter === "failed" && (run.state === "PARTIAL_FAILED" || run.failedCount > 0)) ||
+    (filter === "processing" && classifyWorkflowIntervention(run) === "processing") ||
     (filter === "completed" && run.state === "COMPLETED"));
   const visible = matching.slice(0, visibleCount);
   const selected = visible.find(run => run.id === selectedId) ?? visible[0];
@@ -66,6 +71,46 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
       <div><strong>{averageDuration === null ? "—" : `${averageDuration}s`}</strong>
         <span>Mean recorded run duration ({summary.measuredDurationMs.length} complete pairs)</span></div>
     </div> : null}
+
+    {snapshot.workflowAvailable === true && runs.length > 0 ? (
+      <section className={styles.triage} aria-label="Saved workflow intervention queue"
+        data-testid="workflow-intervention-queue">
+        <div className={styles.triageHeader}>
+          <div><p className={styles.eyebrow}>Staff intervention queue</p>
+            <h3>Review failures and explicit approvals</h3>
+            <p className={styles.subtle}>Only persisted failed or APPROVAL_REQUIRED
+              states appear here. Pending processing is not a request to intervene.</p>
+          </div>
+          <span className={styles.state}>{interventionQueue.length} runs for review</span>
+        </div>
+        {!interventionQueue.length
+          ? <p className={styles.notice}>No failed runs or approval-required actions
+            in this loaded snapshot. This is not proof that all workflows succeeded.</p>
+          : <ol className={styles.triageList}>
+              {interventionQueue.slice(0, 6).map(({ run, kind }) =>
+                <li key={run.id}>
+                  <span className={kind === "failure" ? styles.triageFailure : styles.triageApproval}>
+                    {kind === "failure" ? "Recorded failure" : "Human approval required"}
+                  </span>
+                  <strong>{humanize(run.eventType)}</strong>
+                  <small>{kind === "failure"
+                    ? `${run.failedCount} current failed action(s) · ${humanize(run.state)}`
+                    : `${run.approvalCount} action(s) marked APPROVAL_REQUIRED`}</small>
+                  <small>Recorded: <time dateTime={run.createdAt}>{run.createdAt}</time></small>
+                  <button className={styles.triageInspect} type="button"
+                    onClick={() => { setFilter("attention"); setSelectedId(run.id); setVisibleCount(runs.length); }}>
+                    Inspect saved evidence
+                  </button>
+                </li>)}
+            </ol>}
+        <Link href={buildStaffModuleHref(workspaceSlug, "automations")}
+          className={styles.sourceLink}>Open authorized automation controls →</Link>
+        {interventionQueue.length > 6 ? <p className={styles.subtle}>
+          Showing 6 of {interventionQueue.length} intervention runs.
+          Use the Human review filter below for the remaining saved results.
+        </p> : null}
+      </section>
+    ) : null}
 
     {snapshot.workflowAvailable !== true
       ? <p className={styles.notice} role="status">Workflow evidence is unavailable for this authorized snapshot. No activity can be inferred.</p>
