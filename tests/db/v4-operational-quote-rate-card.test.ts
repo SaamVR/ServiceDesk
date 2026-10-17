@@ -23,7 +23,8 @@ const rate = {
 };
 
 function fakeDb(options: { noBook?: boolean; badRates?: boolean; inactiveService?: boolean; otherTenant?: boolean;
-  branchCurrency?: string; cardCurrency?: string; inactiveBranch?: boolean; missingBranch?: boolean; foreignBranch?: boolean } = {}) {
+  branchCurrency?: string; cardCurrency?: string; inactiveBranch?: boolean; missingBranch?: boolean; foreignBranch?: boolean;
+  extraExpiredBooks?: number } = {}) {
   const calls: Array<{ table: string; filters: [string, unknown][] }> = [];
   const tables: Record<string, Record<string, unknown>[]> = {
     requests: [{ id: request, workspace_id: workspace, branch_id: branch, service_id: service }],
@@ -32,7 +33,13 @@ function fakeDb(options: { noBook?: boolean; badRates?: boolean; inactiveService
       currency: options.branchCurrency ?? "USD", active: !options.inactiveBranch,
     }],
     service_catalog: [{ id: service, workspace_id: options.otherTenant ? "foreign-ws" : workspace, active: !options.inactiveService, code: "MOVE_OUT" }],
-    branch_price_books: options.noBook ? [] : [{ workspace_id: workspace, branch_id: branch, rate_card_id: card, active: true, starts_at: null, ends_at: null }],
+    branch_price_books: options.noBook ? [] : [
+      { workspace_id: workspace, branch_id: branch, rate_card_id: card, active: true, starts_at: null, ends_at: null },
+      ...Array.from({length:options.extraExpiredBooks ?? 0}, () => ({
+        workspace_id: workspace, branch_id: branch, rate_card_id: card,
+        active: true, starts_at: "2020-01-01T00:00:00Z", ends_at: "2020-02-01T00:00:00Z",
+      })),
+    ],
     rate_cards: [{ id: card, workspace_id: workspace, ...rate,
       currency: options.cardCurrency ?? rate.currency,
       rules: options.badRates ? { ...rate.rules, standard: { baseMinor: -90 } } : rate.rules }],
@@ -88,6 +95,17 @@ describe("V4 real tenant quote pricing", () => {
       expect(t.calls.find(x => x.table === "workspace_branches")?.filters)
         .toEqual([["workspace_id", workspace], ["id", branch]]);
     }
+  });
+
+  it("proves the complete bounded branch price-book scan, not a truncated ten-row uniqueness guess", async () => {
+    const now=new Date("2026-10-17T10:00:00Z");
+    const withinBound=fakeDb({extraExpiredBooks:99});
+    expect(await loadOperationalQuoteRateCard(withinBound.db,workspace,request,now))
+      .toMatchObject({ok:true,value:{currency:"USD"}});
+    const pastBoundary=fakeDb({extraExpiredBooks:100});
+    expect(await loadOperationalQuoteRateCard(pastBoundary.db,workspace,request,now))
+      .toMatchObject({ok:false,code:"QUOTE_RATE_BOOK_SCAN_INCOMPLETE"});
+    expect(pastBoundary.calls.map(x=>x.table)).not.toContain("rate_cards");
   });
 
   it("accepts a matching active GBP branch and explicitly GBP-denominated card without converting or inventing FX", async () => {
