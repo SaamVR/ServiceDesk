@@ -25,7 +25,7 @@ describe("V4 owner-visible branch pricing readiness", () => {
   it("does not call a workspace quotable just because its service catalog has one active item", () => {
     const html = markup({
       workspaceSlug: "east-office", serviceCatalog: savedActiveCatalog,
-      branchScope: scope, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-one"] },
+      branchScope: scope, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-one"], existingBookBranchIds: ["branch-one"] },
     });
     expect(html).toContain("Quoting setup incomplete");
     expect(html).toContain("South cleaning");
@@ -37,7 +37,7 @@ describe("V4 owner-visible branch pricing readiness", () => {
   it("shows the exact eligible missing USD count, not unconfigured GBP branches", () => {
     const html = markup({
       workspaceSlug: "east-office", serviceCatalog: savedActiveCatalog,
-      branchScope: scope, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: [] },
+      branchScope: scope, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: [], existingBookBranchIds: [] },
     });
     expect(html).toContain("2 USD branches");
     expect(html).not.toContain("3 USD branches");
@@ -47,18 +47,32 @@ describe("V4 owner-visible branch pricing readiness", () => {
     const selectedScope: OperationalBranchScope = { ...scope, mode: "BRANCH", selectedBranchId: "branch-one" };
     expect(markup({
       workspaceSlug: "east-office", serviceCatalog: savedActiveCatalog,
-      branchScope: selectedScope, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-one"] },
+      branchScope: selectedScope, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-one"], existingBookBranchIds: ["branch-one"] },
     })).toBe("");
     expect(markup({
       workspaceSlug: "east-office", serviceCatalog: savedActiveCatalog,
-      branchScope: selectedScope, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-two"] },
+      branchScope: selectedScope, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-two"], existingBookBranchIds: ["branch-two"] },
     })).toContain("North cleaning");
   });
 
-  it("fails closed when owner price-book evidence is unavailable", () => {
+  it("shows repair guidance rather than a dead first-run CTA for configured-but-invalid pricing", () => {
+    const html=markup({
+      workspaceSlug:"east-office",serviceCatalog:savedActiveCatalog,
+      branchScope:scope,
+      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:[],
+        existingBookBranchIds:["branch-one"]},
+    });
+    expect(html).toContain("Saved branch pricing needs correction");
+    expect(html).toContain("North cleaning");
+    expect(html).toContain("first-run setup cannot overwrite");
+    expect(html).toContain("/app/east-office/settings");
+    expect(html).not.toContain("#owner-first-run-pricing");
+  });
+
+    it("fails closed when owner price-book evidence is unavailable", () => {
     const unknown = markup({
       workspaceSlug: "east-office", serviceCatalog: savedActiveCatalog,
-      branchScope: scope, ownerPricingBookProof: { state: "UNAVAILABLE", activeBranchIds: [] },
+      branchScope: scope, ownerPricingBookProof: { state: "UNAVAILABLE", activeBranchIds: [], existingBookBranchIds: [] },
     });
     expect(unknown).toContain("readiness could not be verified");
     expect(unknown).toContain("not proof that real customer quotes are ready");
