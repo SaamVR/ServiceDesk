@@ -8,7 +8,10 @@ import {
 } from "./ai-quote-review-response";
 import styles from "./AiQuoteReview.module.css";
 
-const REVIEW_TIMEOUT_MS = 20_000;
+// Server Codex gateway timeout may reach 60s on the single approved test
+// workspace. Keep browser wait above that maximum; abort is not proof of
+// provider cancellation or zero cost.
+const REVIEW_TIMEOUT_MS = 75_000;
 
 type Status = {
   scopeKey: string;
@@ -79,7 +82,7 @@ function ScopedQuoteReview({
       }
     } catch {
       message = timedOut
-        ? "AI quote review exceeded 20 seconds. The browser stopped waiting; provider-side cancellation is not confirmed."
+        ? "AI quote review exceeded 75 seconds. The browser stopped waiting; provider-side cancellation is not confirmed."
         : "AI review could not be completed. Verify the saved quote manually; no customer action was authorized.";
     } finally {
       clearTimeout(timeout);
@@ -88,7 +91,7 @@ function ScopedQuoteReview({
       if (controller.signal.aborted) {
         result = undefined;
         if (timedOut) message =
-          "AI quote review exceeded 20 seconds. The browser stopped waiting; provider-side cancellation is not confirmed.";
+          "AI quote review exceeded 75 seconds. The browser stopped waiting; provider-side cancellation is not confirmed.";
       }
       // A cancelled, changed-quote or changed-workspace request can never
       // hydrate the current panel with obsolete or cross-scope AI output.

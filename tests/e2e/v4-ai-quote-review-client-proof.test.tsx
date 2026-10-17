@@ -69,7 +69,8 @@ describe("Quote reviewer browser proof boundary", () => {
 
   it("limits time and prevents stale scope and canceled replies from rendering", () => {
     const source = read("src/features/operations/AiQuoteReview.tsx");
-    expect(source).toContain("REVIEW_TIMEOUT_MS = 20_000");
+    expect(source).toContain("REVIEW_TIMEOUT_MS = 75_000");
+    expect(75_000).toBeGreaterThan(60_000); // server gateway cap + overhead
     expect(source).toContain("scopeKey = workspaceSlug +");
     expect(source).toContain("quoteId +");
     expect(source).toContain("status?.scopeKey === scopeKey ? status : undefined");
