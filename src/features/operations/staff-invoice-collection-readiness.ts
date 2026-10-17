@@ -15,8 +15,7 @@ export function isVerifiedStaffCollectibleInvoice(f: StaffCollectibleLedger): bo
   if (!f || typeof f !== "object" ||
       (f.status !== "ISSUED" && f.status !== "PARTIALLY_PAID")) return false;
   const amounts=[f.totalMinor,f.allocatedMinor,f.refundedMinor,f.balanceMinor];
-  return
-    typeof f.currency==="string" && /^[A-Z]{3}$/.test(f.currency) &&
+  return typeof f.currency==="string" && /^[A-Z]{3}$/.test(f.currency) &&
     amounts.every(n=>typeof n==="number" && Number.isSafeInteger(n) && n>=0) &&
     (f.totalMinor as number)>0 && (f.balanceMinor as number)>0 &&
     (f.allocatedMinor as number)>=(f.refundedMinor as number) &&
