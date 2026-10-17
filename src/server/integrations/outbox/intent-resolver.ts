@@ -60,6 +60,19 @@ export function validateResolvedOutboxJob(event: ClaimedOutboxEvent, job: Outbox
   if (!record(job.payload)) {
     return failure("OUTBOX_INTENT_PAYLOAD_INVALID", "Resolved outbox payload is not structured.");
   }
+  // Persisted delivery intents are runtime data, not trusted TypeScript.
+  // Never give a provider an object-coerced template or freeform message.
+  if (job.templateKey !== undefined &&
+      (typeof job.templateKey !== "string" ||
+       !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(job.templateKey))) {
+    return failure("OUTBOX_INTENT_TEMPLATE_INVALID", "Saved delivery template identifier is invalid.");
+  }
+  if (job.freeformText !== undefined &&
+      (typeof job.freeformText !== "string" ||
+       job.freeformText.trim().length === 0 || job.freeformText.length > 4096 ||
+       /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(job.freeformText))) {
+    return failure("OUTBOX_INTENT_FREEFORM_INVALID", "Saved freeform message intent is invalid.");
+  }
   if (job.handoverGuard !== undefined &&
       (!record(job.handoverGuard) || !identity(job.handoverGuard.conversationId) ||
        !Number.isSafeInteger(job.handoverGuard.expectedConversationVersion) ||
