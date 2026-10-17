@@ -56,6 +56,8 @@ describe("Frontend AI Studio keyboard-first authorized record picker", () => {
     expect(client).toContain("requestTabRef");
     expect(client).toContain("quoteTabRef");
     expect(client).toContain("activateTab(next)");
+    expect(client).toContain('htmlFor={tabsId + "-record-select"}');
+    expect(client).toContain('id={tabsId + "-record-select"}');
   });
   it("preserves selected scope when filtering without auto-requesting a model or disclosing secrets",()=>{
     const client=source();
