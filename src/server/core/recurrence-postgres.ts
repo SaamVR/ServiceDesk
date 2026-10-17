@@ -34,11 +34,6 @@ function requireNumber(row: RpcRow, key: string): number {
   return value;
 }
 
-function optionalNumber(row: RpcRow, key: string): number | undefined {
-  const value = row[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
 function asRule(value: unknown): RecurrenceRuleDTO {
   if (!isRow(value)) throw new Error("Malformed recurrence RPC payload: rule");
   const status = requireString(value, "status");
