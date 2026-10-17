@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { OperationalStaffSnapshot } from "./operational-product-runtime";
+import type { WorkflowInspectorClientSnapshot } from "./workflow-inspector-client-snapshot";
 import {
   buildWorkflowInspector,
   isWorkflowAttentionRequired,
@@ -11,9 +11,7 @@ import {
 import { buildStaffModuleHref } from "./staff-modules";
 import styles from "./WorkflowExecutionInspector.module.css";
 
-type Snapshot = Pick<OperationalStaffSnapshot,
-  "loadedAt" | "workflowAvailable" | "workflowExecutions" |
-  "workflowActionExecutions" | "workflowRuleVersions">;
+type Snapshot = WorkflowInspectorClientSnapshot;
 type Filter = "all" | "attention" | "failed" | "completed";
 const filters: ReadonlyArray<{ value: Filter; label: string }> = [
   { value: "all", label: "All recorded" },
