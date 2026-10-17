@@ -257,30 +257,37 @@ function recurrenceRuleFromRpc(row: RpcRow): RecurrenceRuleDTO {
 }
 
 function visitEvidenceFromRpc(row: RpcRow): VisitEvidenceDTO {
+  // Evidence is a saved audit artifact. String(undefined) produces a fake
+  // actor/visit and an invalid clock must not be treated as a real capture.
   return {
-    id: String(field(row, "id")),
-    workspaceId: String(field(row, "workspaceId", "workspace_id")),
-    visitId: String(field(row, "visitId", "visit_id")),
-    kind: String(field(row, "kind")) as VisitEvidenceDTO["kind"],
+    id: savedString(row, "id"),
+    workspaceId: savedString(row, "workspaceId", "workspace_id"),
+    visitId: savedString(row, "visitId", "visit_id"),
+    kind: savedString(row, "kind") as VisitEvidenceDTO["kind"],
     mediaReference: field(row, "mediaReference", "media_reference") as VisitEvidenceDTO["mediaReference"],
     text: maybeString(field(row, "text")),
-    capturedAt: String(field(row, "capturedAt", "captured_at")),
-    submittedByUserId: String(field(row, "submittedByUserId", "submitted_by_user_id")),
-    createdAt: String(field(row, "createdAt", "created_at")),
+    capturedAt: savedTimestamp(row, "capturedAt", "captured_at"),
+    submittedByUserId: savedString(row, "submittedByUserId", "submitted_by_user_id"),
+    createdAt: savedTimestamp(row, "createdAt", "created_at"),
   };
 }
 
 function checklistItemFromRpc(row: RpcRow): VisitChecklistItemDTO {
+  // Boolean("false") is true, and Boolean(undefined) is false. Neither can
+  // establish whether staff actually completed persisted visit checklist work.
+  const completed = field(row, "completed");
+  if (typeof completed !== "boolean")
+    throw new Error("Malformed saved visit checklist completion evidence");
   return {
-    id: String(field(row, "id")),
-    workspaceId: String(field(row, "workspaceId", "workspace_id")),
-    visitId: String(field(row, "visitId", "visit_id")),
-    itemKey: String(field(row, "itemKey", "item_key")),
-    completed: Boolean(field(row, "completed")),
+    id: savedString(row, "id"),
+    workspaceId: savedString(row, "workspaceId", "workspace_id"),
+    visitId: savedString(row, "visitId", "visit_id"),
+    itemKey: savedString(row, "itemKey", "item_key"),
+    completed,
     note: maybeString(field(row, "note")),
-    updatedByUserId: String(field(row, "updatedByUserId", "updated_by_user_id")),
-    updatedAt: String(field(row, "updatedAt", "updated_at")),
-    version: Number(field(row, "version") ?? 0),
+    updatedByUserId: savedString(row, "updatedByUserId", "updated_by_user_id"),
+    updatedAt: savedTimestamp(row, "updatedAt", "updated_at"),
+    version: savedCount(row, "version"),
   };
 }
 
