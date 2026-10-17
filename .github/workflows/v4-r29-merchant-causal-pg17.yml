@@ -1,0 +1,47 @@
+name: R29 independent merchant causal-readback PostgreSQL17 critic proof
+on:
+  pull_request:
+    branches:
+      - core/v4-r29-exact-merchant-evidence-chain-20261018
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+    paths:
+      - "scripts/release/v4-merchant-exact-quote-chain-readonly.sql"
+      - "tests/sql/v4-r29-exact-merchant-causal-fixture.sql"
+      - "scripts/release/tests/v4-r29-exact-merchant-causal-pg17.sh"
+      - ".github/workflows/v4-r29-merchant-causal-pg17.yml"
+permissions:
+  contents: read
+concurrency:
+  group: r29-merchant-causal-critic-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  actual-disposable-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: fictional-disposable-merchant-qa
+          POSTGRES_DB: fictional_merchant_probe
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fictional_merchant_probe"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      PGPASSWORD: fictional-disposable-merchant-qa
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: fictional_merchant_probe
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Prepare fictional two-workspace fixture
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-r29-exact-merchant-causal-fixture.sql
+      - name: Independent critic positive and adversarial evidence
+        run: bash scripts/release/tests/v4-r29-exact-merchant-causal-pg17.sh
