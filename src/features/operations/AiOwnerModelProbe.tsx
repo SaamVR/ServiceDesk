@@ -77,6 +77,13 @@ export function AiOwnerModelProbe({
         : "The model could not be reached or the response was invalid. No customer action was authorized.";
     } finally {
       clearTimeout(timeout);
+      // A buffered JSON response can still resolve after AbortController
+      // fires. A timed-out/aborted call must never become a success receipt.
+      if (controller.signal.aborted) {
+        verified = undefined;
+        if (didTimeout) failure =
+          "The model test exceeded 20 seconds. This browser stopped waiting; provider-side completion is not verified.";
+      }
       // Cancellation, unmount or tenant changes must not restore old results.
       if (activeRequest.current === controller) {
         activeRequest.current = null;
