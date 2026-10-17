@@ -6,6 +6,7 @@ import { readConfiguredAiRuntimeConfig } from "./runtime-config";
 import { callAiModel } from "./model-transport";
 import { createFetchAiModelTransport } from "./fetch-transport";
 import { validateRequestBriefDraft } from "./request-brief-safety";
+import { trustedQuoteInstant } from "@/features/operations/quote-validity-clock";
 
 type Resolver = typeof resolveStaffActor;
 type Loader = typeof loadOperationalStaffSnapshot;
@@ -44,9 +45,11 @@ const error = (code: string): Result<never> => ({
 
 const MAX_SOURCE_AGE_MS = 30 * 60 * 1000;
 const MAX_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
-function freshSnapshotAt(loadedAt: unknown, now: number): boolean {
-  const timestamp = typeof loadedAt === "string" ? Date.parse(loadedAt) : NaN;
-  return Number.isFinite(now) && Number.isFinite(timestamp) &&
+export function isFreshOwnerOperationsSnapshotAt(loadedAt: unknown, now: number): boolean {
+  // Authenticated queue snapshots must carry a civil-valid zoned source
+  // timestamp. Date.parse accepts host-local strings and invalid UTC offsets.
+  const timestamp = trustedQuoteInstant(loadedAt);
+  return Number.isFinite(now) && timestamp !== null &&
     timestamp >= now - MAX_SOURCE_AGE_MS &&
     timestamp <= now + MAX_FUTURE_CLOCK_SKEW_MS;
 }
@@ -67,7 +70,7 @@ export function deriveOwnerOperationsBriefFacts(
   const arrays=[snapshot.requests,snapshot.quotes,snapshot.invoices,
     snapshot.visits,snapshot.attentionItems];
   if (arrays.some(x => !Array.isArray(x) || x.length > 5000) ||
-      !Number.isFinite(Date.parse(snapshot.loadedAt))) return null;
+      trustedQuoteInstant(snapshot.loadedAt) === null) return null;
   // Use the same persisted-source, snapshot-clock-aware queue as the staff
   // Quotes workspace. Otherwise an expired APPROVED offer shows "review
   // required" in staff UX but silently disappears from owner AI priorities.
@@ -213,7 +216,7 @@ export async function generateOwnerOperationsBrief(
   const facts=deriveOwnerOperationsBriefFacts(saved.value);
   if (!facts) return error("OWNER_BRIEF_COUNTS_UNVERIFIED");
   const now=deps.now ?? Date.now;
-  if (!freshSnapshotAt(saved.value.loadedAt,now()))
+  if (!isFreshOwnerOperationsSnapshotAt(saved.value.loadedAt,now()))
     return error("OWNER_BRIEF_STALE_SNAPSHOT");
   let cfg: ReturnType<ConfigReader>;
   try { cfg=(deps.readConfig ?? readConfiguredAiRuntimeConfig)(); }
@@ -260,7 +263,7 @@ export async function generateOwnerOperationsBrief(
   }
   const latest=deriveOwnerOperationsBriefFacts(fresh.value);
   if (!latest || !sameFacts(facts,latest) ||
-      !freshSnapshotAt(fresh.value.loadedAt,now()))
+      !isFreshOwnerOperationsSnapshotAt(fresh.value.loadedAt,now()))
     return error("OWNER_BRIEF_STALE_SNAPSHOT");
   return {ok:true,value:{
     state:"OWNER_AI_ADVISORY_ONLY",model:cfg.value.model,
