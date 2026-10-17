@@ -52,6 +52,20 @@ function validAcceptedReceipt(value: Record<string, unknown>, committedAt: strin
     accepted <= allowedWallClock && captured <= allowedWallClock;
 }
 
+// Direct dispatch is an authorization boundary even if a resolver normally
+// checked the saved job earlier. A lease recovery or custom worker can call it
+// without that resolver; do not turn object-coerced IDs or invalid intent
+// enums into a provider invocation.
+const committedIdentity = (value: unknown, max = 256): value is string =>
+  typeof value === "string" && value.length > 0 && value.length <= max &&
+  value.trim() === value &&
+  !/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(value);
+const dispatchChannels = new Set<string>(["WHATSAPP", "EMAIL", "WEBHOOK", "GOOGLE_CALENDAR"]);
+const dispatchPurposes = new Set<string>([
+  "QUOTE", "CONFIRMATION", "REMINDER", "INVOICE", "FEEDBACK", "STAFF_ALERT",
+  "CUSTOMER_REPLY", "CALENDAR_VISIT", "VISIT_REMINDER", "RETENTION_CAMPAIGN",
+]);
+
 export type DispatchRouterTable = Partial<Record<DeliveryChannel, CommittedOutboxDispatcher>>;
 
 export interface DispatchCommittedOutboxJobInput extends Omit<CommittedOutboxDispatchInput, "expectedChannel"> {
@@ -70,11 +84,13 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
   // whose attempt/timestamps are corrupt.
   const job = input?.job;
   if (!job || typeof job !== "object" || Array.isArray(job) ||
-      typeof job.id !== "string" || job.id.length === 0 ||
-      typeof job.workspaceId !== "string" || job.workspaceId.length === 0 ||
-      typeof job.idempotencyKey !== "string" || job.idempotencyKey.length === 0 ||
-      typeof job.channel !== "string" || job.channel.length === 0 ||
-      typeof job.purpose !== "string" || job.purpose.length === 0 ||
+      !committedIdentity(job.id) ||
+      !committedIdentity(job.workspaceId) ||
+      !committedIdentity(job.idempotencyKey) ||
+      !dispatchChannels.has(job.channel) ||
+      !dispatchPurposes.has(job.purpose) ||
+      !input.dispatchers || typeof input.dispatchers !== "object" ||
+      Array.isArray(input.dispatchers) ||
       !job.recipient || typeof job.recipient !== "object" ||
       Array.isArray(job.recipient) ||
       typeof job.recipient.optedOut !== "boolean" ||
@@ -92,8 +108,7 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
       (job.handoverGuard !== undefined &&
         (!job.handoverGuard || typeof job.handoverGuard !== "object" ||
          Array.isArray(job.handoverGuard) ||
-         typeof job.handoverGuard.conversationId !== "string" ||
-         job.handoverGuard.conversationId.trim().length === 0 ||
+         !committedIdentity(job.handoverGuard.conversationId) ||
          !Number.isSafeInteger(job.handoverGuard.expectedConversationVersion) ||
          job.handoverGuard.expectedConversationVersion < 0 ||
          typeof job.handoverGuard.handoverActive !== "boolean"))) {
