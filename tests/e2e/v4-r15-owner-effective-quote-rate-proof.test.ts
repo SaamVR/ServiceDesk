@@ -37,5 +37,7 @@ describe("Owner pricing evidence agrees with saved quote authority",()=>{
   for(const bad of ["not a time",{},true])
     expect(evidence({books:[{...book,starts_at:bad}]})).toEqual([]);
   expect(evidence({books:[{...book,ends_at:"2026-10-17T00:00:00Z"}]})).toEqual([]);
+  expect(evidence({books:[book,{...book,rate_card_id:"dddddddd-dddd-4ddd-8ddd-dddddddddddd",starts_at:"2026-02-30T01:00:00Z"}]})).toEqual([]);
+  expect(evidence({books:[{...book,starts_at:"2026-10-16"}]})).toEqual([]);
  });
 });

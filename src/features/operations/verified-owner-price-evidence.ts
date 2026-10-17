@@ -30,13 +30,31 @@ const completeUsdCard=(card:RecordData):boolean=>{
   return integer(rules.autoApprovalMaxTotalMinor,0,100_000_000)&&
     validRule(rules.standard)&&validRule(rules.deep)&&validRule(rules.moveOut,true);
 };
-const effective=(book:RecordData, now:number):boolean=>{
-  const on=(value:unknown):number|null=>value==null?null:
-    typeof value==="string"&&value.length>0?Date.parse(value):NaN;
-  const start=on(book.starts_at),end=on(book.ends_at);
-  return (start===null||(Number.isFinite(start)&&start<=now))&&
-    (end===null||(Number.isFinite(end)&&end>now));
+// Align with the server's PostgreSQL timestamptz requirement. Date.parse
+// alone accepts local/date-only and silently normalizes February 30.
+const instant=(value:unknown):number|null=>{
+  if(typeof value!=="string")return null;
+  const m=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d{1,6}))?(Z|[+-]\\d{2}:\\d{2})$/.exec(value);
+  if(!m)return null;
+  const [y,mo,d,h,mi,sec]=m.slice(1,7).map(Number);
+  if(y<1||mo<1||mo>12||d<1||h>23||mi>59||sec>59||
+     d>new Date(Date.UTC(y,mo,0)).getUTCDate())return null;
+  const zone=m[8];
+  if(zone!=="Z"){
+    const zh=Number(zone.slice(1,3)),zm=Number(zone.slice(4,6));
+    if(zh>14||zm>59||(zh===14&&zm!==0))return null;
+  }
+  const result=Date.parse(value);
+  return Number.isFinite(result)?result:null;
 };
+const times=(book:RecordData):[number,number]|null=>{
+  const start=book.starts_at==null?Number.NEGATIVE_INFINITY:instant(book.starts_at);
+  const end=book.ends_at==null?Number.POSITIVE_INFINITY:instant(book.ends_at);
+  if(start===null||end===null)return null;
+  return [start,end];
+};
+const effective=(period:[number,number],now:number)=>
+  period[0]<=now && period[1]>now && period[0]<period[1];
 
 export function verifiedPricedOwnerBranchIds(input:{
   books:RecordData[];cards:RecordData[];services:RecordData[];now?:number;
@@ -54,12 +72,15 @@ export function verifiedPricedOwnerBranchIds(input:{
   // Server quote calculation rejects ambiguous overlapping effective books.
   // Count EVERY effective active book, not merely the individually valid ones.
   const byBranch=new Map<string,RecordData[]>();
+  const invalidBranches=new Set<string>();
   for(const book of input.books){
-    if(!record(book)||!uuid(book.branch_id)||book.active!==true||!effective(book,now))continue;
-    const id=book.branch_id;
+    if(!record(book)||!uuid(book.branch_id)||book.active!==true)continue;
+    const id=book.branch_id,period=times(book);
+    if(!period){invalidBranches.add(id);continue;}
+    if(!effective(period,now))continue;
     byBranch.set(id,[...(byBranch.get(id)??[]),book]);
   }
-  return [...byBranch].filter(([,rows])=>rows.length===1 &&
+  return [...byBranch].filter(([id,rows])=>!invalidBranches.has(id) && rows.length===1 &&
     uuid(rows[0].rate_card_id)&&validCards.has(rows[0].rate_card_id as string))
     .map(([id])=>id);
 }
