@@ -100,7 +100,8 @@ export async function setupAuthorizedCleaningPricing(
   const saved = response.data as Record<string, unknown>;
   if (saved.ok !== true || !uuid(saved.rateCardId) || !uuid(saved.priceBookId) ||
       saved.branchId !== parsed.value.branchId ||
-      typeof saved.rateVersion !== "string") {
+      saved.rateVersion !== "owner-cleaning-" + payload.setupId ||
+      (saved.duplicate !== true && saved.duplicate !== false)) {
     const code = typeof saved.code === "string" ? saved.code : "";
     if (code === "PRICING_SETUP_ALREADY_CONFIGURED") {
       return fail(code, "This branch already has pricing. Review its existing rate card; first-run setup cannot overwrite it.");
@@ -137,7 +138,7 @@ export async function setupAuthorizedCleaningPricing(
       !actual.has("STANDARD") || !actual.has("DEEP") || !actual.has("MOVE_OUT") ||
       rate.error || rate.data?.id !== saved.rateCardId ||
       rate.data?.active !== true || rate.data?.version !== saved.rateVersion ||
-      rate.data?.currency?.trim() !== "USD" ||
+      rate.data?.currency !== payload.currency ||
       rate.data?.deposit_percent !== payload.depositPercent ||
       rate.data?.valid_hours !== payload.validHours ||
       rate.data?.buffer_minutes !== payload.bufferMinutes ||
