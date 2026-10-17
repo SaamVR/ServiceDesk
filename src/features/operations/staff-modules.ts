@@ -9,6 +9,7 @@ export type StaffModule =
   | "invoices"
   | "quality"
   | "automations"
+  | "ai-studio"
   | "reports"
   | "settings"
   | "billing";
@@ -24,6 +25,7 @@ export type StaffPrimarySurface =
   | "invoice-ledger"
   | "quality-review"
   | "recovery-actions"
+  | "ai-studio"
   | "reports"
   | "owner-settings"
   | "platform-billing";
@@ -102,11 +104,18 @@ export const staffModuleConfig: Record<
     primarySurface: "quality-review",
   },
   automations: {
-    label: "AI & Automation",
+    label: "Automation Studio",
     group: "operations",
     eyebrow: "AI-assisted operations",
     description: "Generate staff-reviewed intake briefs, assess model readiness, and build controlled event-driven workflows.",
     primarySurface: "recovery-actions",
+  },
+  "ai-studio": {
+    label: "AI Studio",
+    group: "operations",
+    eyebrow: "Staff copilot workspace",
+    description: "Generate human-reviewed intelligence from saved requests and quotes; test model readiness and open governed AI workflows.",
+    primarySurface: "ai-studio",
   },
   reports: {
     label: "Reports",
@@ -150,7 +159,7 @@ export const staffNavigationGroups: Array<{
   },
   {
     label: "Operations",
-    modules: ["quality", "automations", "reports"],
+    modules: ["quality", "ai-studio", "automations", "reports"],
   },
   {
     label: "Settings",
