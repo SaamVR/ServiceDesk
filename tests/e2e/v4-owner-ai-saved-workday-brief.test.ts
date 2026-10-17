@@ -101,12 +101,14 @@ describe("real authorized AI daily owner operations brief",()=>{
       "We have resolved the customer issues; check the new queue.",
       "Review critical attention items tomorrow.",
     ]) {
-      // The last category exists in this fixture and remains permitted,
-      // while hallucinated numeric and completed-action claims are blocked.
-      const expected=ungrounded==="Review critical attention items tomorrow.";
-      expect(Boolean(validateOwnerOperationsBriefGrounding(ungrounded,base)),ungrounded)
-        .toBe(expected);
+      // A positive saved attention count does not supply a due date,
+      // appointment, or tomorrow-specific evidence to the model.
+      expect(validateOwnerOperationsBriefGrounding(ungrounded,base),ungrounded)
+        .toBeUndefined();
     }
+    expect(validateOwnerOperationsBriefGrounding(
+      "Review critical attention items and inspect the saved priority queue.",base))
+      .toBe("Review critical attention items and inspect the saved priority queue.");
     const empty={...base,unassignedActiveVisits:0,quoteValidityNeedsReview:0,
       waitingOnCustomerQuotes:0,invoiceLedgersNeedingReview:0,openRequests:0,
       unresolvedCriticalAttentions:0,collectibleInvoices:0};
