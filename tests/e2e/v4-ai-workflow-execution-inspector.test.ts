@@ -51,8 +51,27 @@ describe("workflow inspector persisted evidence", () => {
       ],
     });
     expect(runs[0].attemptCount).toBe(2);
+    expect(runs[0].attemptHistory.map(attempt => attempt.id)).toEqual(["a2", "a1"]);
     expect(runs[0].actions).toHaveLength(1);
     expect(runs[0].actions[0].state).toBe("SUCCEEDED");
+    expect(runs[0].failedCount).toBe(0);
+    expect(summarizeWorkflowActivity(runs).recordedSucceededActions).toBe(1);
+  });
+
+  it("retains historical failed attempts without treating them as current failure", () => {
+    const runs = buildWorkflowInspector({
+      ...snapshot(),
+      workflowActionExecutions: [
+        { ...action, id: "retry-3", attemptNumber: 3, state: "SUCCEEDED" },
+        { ...action, id: "retry-2", attemptNumber: 2, state: "FAILED" },
+        { ...action, id: "retry-1", attemptNumber: 1, state: "FAILED" },
+        { ...action, id: "foreign", branchId: "b2", attemptNumber: 9, state: "SUCCEEDED" },
+      ],
+    });
+    expect(runs[0].attemptHistory.map(row => row.id))
+      .toEqual(["retry-3", "retry-2", "retry-1"]);
+    expect(runs[0].attemptCount).toBe(3);
+    expect(runs[0].actions[0].id).toBe("retry-3");
     expect(runs[0].failedCount).toBe(0);
     expect(summarizeWorkflowActivity(runs).recordedSucceededActions).toBe(1);
   });
