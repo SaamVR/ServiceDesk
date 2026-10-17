@@ -113,6 +113,13 @@ export function validateOwnerOperationsBriefGrounding(
 ): string | undefined {
   const draft=validateRequestBriefDraft(value);
   if (!draft) return undefined;
+  // The count-only source contains no due dates, timezone or appointment
+  // commitments. Never turn a positive queue count into a scheduled deadline.
+  // This intentionally permits "before assigning staff" (a workflow order),
+  // but not invented calendar promises such as "by Friday" or "tomorrow".
+  if (/\b(?:today|tonight|tomorrow|yesterday|(?:mon|tues|wednes|thurs|fri|satur|sun)day|(?:this|next)\s+(?:morning|afternoon|evening|night|week|month|weekend)|(?:by|before|after)\s+(?:the\s+)?(?:end\s+of\s+(?:the\s+)?(?:day|week|month)|noon|midnight|lunch)|(?:first\s+thing|later)\s+(?:today|tomorrow))\b/i.test(draft)) {
+    return undefined;
+  }
   if (/[0-9]/.test(draft) ||
       // Word-based numbers also assert exact queue totals not present in
       // the safe model output contract, e.g. "two overdue invoices".
