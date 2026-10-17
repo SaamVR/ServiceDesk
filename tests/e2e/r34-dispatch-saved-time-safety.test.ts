@@ -45,6 +45,11 @@ describe("R34 dispatch automatic advice must refuse unsafe saved schedule",()=>{
    expect(c?.conflicts).toContain("SCHEDULE_UNVERIFIED");
    expect(c?.reasons).not.toContain("No schedule overlap");
  });
+ it("critic: malformed recovered visit date cannot crash full dispatch recommendation",()=>{
+   const corrupted={...base.visits[0]!,startAt:null as unknown as string};
+   expect(()=>candidate({...base,visits:[corrupted]})).not.toThrow();
+   expect(candidate({...base,visits:[corrupted]})?.conflicts).toContain("SCHEDULE_UNVERIFIED");
+ });
  it("keeps overlap conflict and exact tenant constraint for known appointment times",()=>{
    const assigned={...base.visits[0]!,id:"visit-b",crewId:"crew-a",status:"ASSIGNED" as const,
      startAt:"2026-10-18T11:30:00.000Z"};
