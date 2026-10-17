@@ -15,11 +15,16 @@ export function RecurrenceRulePreview({
   rule,
   materializedVisits = [],
   audience,
-  actionsInjected = false,
+
   actionState,
   sourceLabel = "SERVER_SNAPSHOT",
 }: RecurrenceRulePreviewProps) {
-  const view = buildRecurrenceRuleView({ rule, materializedVisits, audience, actionsInjected, actionState });
+  // This component is a read-only preview, not a command transport. Even if
+  // a parent supplies actionsInjected, there is no server action callback here:
+  // never render an enabled button that silently does nothing on click.
+  const view = buildRecurrenceRuleView({
+    rule, materializedVisits, audience, actionsInjected: false, actionState,
+  });
 
   return (
     <section className="plain-card" aria-label="Recurrence rule server boundary preview">
@@ -37,13 +42,14 @@ export function RecurrenceRulePreview({
         <div><dt>Local start</dt><dd>{view.localStartTimeLabel}</dd></div>
       </dl>
 
+      <p>Preview only: these recurrence controls cannot submit or change a saved schedule.</p>
       <div className="action-row" aria-label="Recurrence actions">
         {view.actionAvailability.controls.map((control) => (
           <button
             className="button-secondary"
             type="button"
-            disabled={!control.enabled}
-            aria-disabled={!control.enabled}
+            disabled
+            aria-disabled="true"
             title={control.disabledReason ?? "Server action required; UI mutates only after authoritative success."}
             key={control.action}
           >
