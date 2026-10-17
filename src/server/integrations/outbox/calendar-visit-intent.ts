@@ -134,7 +134,12 @@ export function readCalendarVisitProjection(job: OutboxJob): Result<ServiceDeskM
   // original claim. Compare the actual VisitDTO dispatched to the provider,
   // not only the duplicated top-level labels.
   const visit = isRecord(root.visit) ? root.visit : null;
-  if (!visit || root.canMutateBookingTruth !== false ||
+  const ids=[root.workspaceId,root.visitId,root.crewId,root.requestId,
+    root.quoteId,root.calendarId,root.idempotencyKey,visit?.id,
+    visit?.workspaceId,visit?.crewId,visit?.requestId,visit?.quoteId];
+  if (!ids.every(id=>typeof id==="string" && id.length>0 && id.length<=256 &&
+       id.trim()===id && !/[\x00-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(id)) ||
+      !visit || root.canMutateBookingTruth !== false ||
       visit.id !== root.visitId || visit.workspaceId !== root.workspaceId ||
       visit.crewId !== root.crewId || visit.requestId !== root.requestId ||
       visit.quoteId !== root.quoteId || visit.startAt !== root.startAt ||

@@ -59,6 +59,8 @@ describe("R20D trusted calendar outbox claim cannot be silently substituted",()=
       {...projected,visit:{...source.visit,id:"other-visit"}},
       {...projected,visit:{...source.visit,crewId:"other-crew"}},
       {...projected,providerMappingKey:"fake-mapping"},
+      {...projected,workspaceId:{toString(){throw Error("UNTRUSTED_CALENDAR_ID_COERCION");}}},
+      {...projected,visit:{...source.visit,id:{toString(){throw Error("UNTRUSTED_VISIT_ID_COERCION");}}}},
       {...projected,action:"DELETE"},
     ]){
       expect(readCalendarVisitProjection({...job,payload:{calendarVisit:altered}}))
