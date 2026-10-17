@@ -32,7 +32,7 @@ export function validateResolvedOutboxJob(event:ClaimedOutboxEvent,job:OutboxJob
   if(job.idempotencyKey!==event.idempotencyKey)return failure("OUTBOX_INTENT_IDEMPOTENCY_MISMATCH","Resolved outbox job idempotency key does not match the claimed event idempotency key.");
   if(!channels.has(job.channel))return failure("OUTBOX_INTENT_CHANNEL_INVALID","Resolved outbox job channel is unsupported.");
   if(!purposes.has(job.purpose))return failure("OUTBOX_INTENT_PURPOSE_INVALID","Resolved outbox job purpose is unsupported.");
-  if(!record(job.recipient) || typeof job.recipient.recipientRef!=="string" ||
+  if(record(job.recipient) && typeof job.recipient.recipientRef==="string" &&
      job.recipient.recipientRef.trim().length===0)
     return failure("OUTBOX_INTENT_RECIPIENT_MISSING","Resolved outbox job is missing a nonblank recipient reference.");
   if(!safeIdentity(job.recipient.recipientRef)||

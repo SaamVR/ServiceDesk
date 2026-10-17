@@ -21,7 +21,7 @@ describe("R15 durable provider-intent resolution authority",()=>{
   expect(check({...valid,workspaceId:"workspace-r15-b"})).toMatchObject({ok:false,code:"OUTBOX_INTENT_WORKSPACE_MISMATCH"});
   expect(check({...valid,idempotencyKey:"foreign"})).toMatchObject({ok:false,code:"OUTBOX_INTENT_IDEMPOTENCY_MISMATCH"});
   for(const bad of ["  recipient","recipient\nsecret","",{},true,"a".repeat(257)])
-   expect(check({...valid,recipient:{...valid.recipient,recipientRef:bad}})).toMatchObject({ok:false,code:"OUTBOX_INTENT_RECIPIENT_INVALID"});
+   expect(check({...valid,recipient:{...valid.recipient,recipientRef:bad}})).toMatchObject({ok:false,code:bad===""?"OUTBOX_INTENT_RECIPIENT_MISSING":"OUTBOX_INTENT_RECIPIENT_INVALID"});
  });
  it("never trusts unsupported channel, purpose, consent or handover data",()=>{
   expect(check({...valid,channel:"PAYMENT"})).toMatchObject({ok:false,code:"OUTBOX_INTENT_CHANNEL_INVALID"});
