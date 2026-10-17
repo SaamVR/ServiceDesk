@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateWorkflowEventEnvelope, evaluateWorkflowRule } from "../../src/server/workflows/engine";
-import type { WorkflowEventEnvelope, WorkflowRuleVersionDTO } from "../../src/server/workflows/engine";
+import type { WorkflowEventEnvelope } from "../../src/server/workflows/engine";
+import type { WorkflowRuleVersionDTO } from "../../src/contracts";
 
 const event:WorkflowEventEnvelope={workspaceId:"workspace-1",branchId:"branch-1",eventType:"REQUEST_CREATED",
   sourceEventId:"source-123",recursionDepth:0,snapshot:{"request.serviceCode":"STANDARD"}};
