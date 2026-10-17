@@ -10,12 +10,15 @@ const source = () => readFileSync(join(process.cwd(), "src/features/operations/A
 const css = () => readFileSync(join(process.cwd(), "src/features/operations/AiStudioWorkspace.module.css"), "utf8");
 
 describe("Frontend AI Studio keyboard-first authorized record picker", () => {
-  const choices = verifiedStudioRecordChoices("Request", [
+  // Named fixture avoids excess-property rejection while deliberately testing
+  // that private source fields are never serialized into browser choices.
+  const rawRecords = [
     {id: uuidA, status:"NEW", customerName:"Private Customer", totalMinor:120000},
     {id: uuidB, status:"PENDING_APPROVAL", phone:"secret phone"},
     {id: uuidC, status:"NEW", address:"secret address"},
     {id:"unsafe<script>",status:"NEW"},
-  ]);
+  ];
+  const choices = verifiedStudioRecordChoices("Request", rawRecords);
   it("searches within authorized short record labels and UUIDs, without including private notes",()=>{
     expect(filterStudioRecordChoices(choices, "pending approval")).toEqual([choices[1]]);
     expect(filterStudioRecordChoices(choices, "  REQUEST 3 ")).toEqual([choices[2]]);
