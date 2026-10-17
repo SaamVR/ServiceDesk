@@ -67,7 +67,10 @@ export function compileModelWorkflowDraft(
   }
   const raw=value as Record<string,unknown>;
   const allowed=["eventType","serviceCode","severity"];
-  if (Object.keys(raw).some(key=>!allowed.includes(key)) ||
+  // A hidden own key is still a model-supplied permission attempt, even
+  // if Object.keys would hide it from the reviewed draft provenance.
+  if (Object.getOwnPropertyNames(raw).length !== Object.keys(raw).length ||
+      Object.keys(raw).some(key=>!allowed.includes(key)) ||
       Object.getOwnPropertySymbols(raw).length ||
       Object.values(Object.getOwnPropertyDescriptors(raw)).some(d=>!Object.hasOwn(d,"value")) ||
       !supported.includes(raw.eventType as WorkflowEventType) ||
