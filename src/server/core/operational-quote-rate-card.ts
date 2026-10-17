@@ -18,7 +18,7 @@ function parseRule(value: unknown): ServiceRateRule | null {
   if (!row) return null;
   for (const key of ["baseMinor", "baseMinutes", "bedroomMinor", "bedroomMinutes", "bathroomMinor", "bathroomMinutes"]) {
     const max = key.endsWith("Minutes") ? 1440 : 10_000_000;
-    if (!integer(row[key], key === "baseMinutes" ? 1 : 0, max)) return null;
+    if (!integer(row[key], key === "baseMinutes" || key === "baseMinor" ? 1 : 0, max)) return null;
   }
   // An incomplete add-on cannot be turned into a free price or zero-minute
   // operation by the quote calculator's optional-field fallbacks.
