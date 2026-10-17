@@ -44,6 +44,14 @@ export function readConfiguredAiRuntimeConfig(
     return {ok:false,code:"AI_RUNTIME_MODEL_INVALID",
       message:"The private Codex gateway model alias is not approved."};
   }
+  // A single explicit test workspace is mandatory: one personal Codex login
+  // must never become a hidden shared multi-tenant production provider.
+  const testWorkspaceId=(env.SERVICEDESK_CODEX_GATEWAY_TEST_WORKSPACE_ID ?? "").trim();
+  if (provider === "codex_gateway" &&
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(testWorkspaceId)) {
+    return {ok:false,code:"AI_RUNTIME_GATEWAY_WORKSPACE_REQUIRED",
+      message:"Private gateway requires one explicitly authorized fictional test workspace."};
+  }
   let url: URL;
   try { url = new URL(apiBaseUrl); } catch {
     return { ok: false, code: "AI_RUNTIME_ORIGIN_INVALID",
@@ -76,7 +84,8 @@ export function readConfiguredAiRuntimeConfig(
       ? "https://codex-api.ezcomo.shop/v1" : "https://api.openai.com/v1",
     ...(provider === "codex_gateway"
       ? {provider:"codex_gateway" as const,
-        approvedGatewayOrigin:"https://codex-api.ezcomo.shop"} : {}),
+        approvedGatewayOrigin:"https://codex-api.ezcomo.shop",
+        gatewayAllowedWorkspaceId:testWorkspaceId} : {}),
     apiKey,
     model,
     timeoutMs: parsed,
