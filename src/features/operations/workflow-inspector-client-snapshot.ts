@@ -26,8 +26,17 @@ export interface WorkflowInspectorClientSnapshot {
   workflowRuleVersions?: BrowserWorkflowRule[];
 }
 
+// A generic [A-Z_]+ pattern is not sufficient: secret-like values such as
+// PRIVATE_API_TOKEN would pass it. Only known operator-safe machine codes may
+// cross into an authenticated browser, not provider text or arbitrary codes.
+const PUBLIC_WORKFLOW_ERROR_CODES = new Set([
+  "WORKFLOW_EXTERNAL_SEND_CONFIGURATION_BLOCKED",
+  "WORKFLOW_ACTION_RESULT_RPC_ERROR",
+  "RATE_LIMITED",
+]);
+
 function safeErrorCode(value: string | undefined) {
-  return typeof value === "string" && /^[A-Z][A-Z0-9_]{0,79}$/.test(value)
+  return typeof value === "string" && PUBLIC_WORKFLOW_ERROR_CODES.has(value)
     ? value : undefined;
 }
 
@@ -41,7 +50,10 @@ export function selectWorkflowInspectorClientSnapshot(
 ): WorkflowInspectorClientSnapshot {
   // A read failure or unavailable workflow feature must not serialize stale
   // or partial evidence. Callers cannot equate that situation with zero runs.
-  if (snapshot.workflowAvailable !== true) {
+  if (snapshot.workflowAvailable !== true ||
+      !Array.isArray(snapshot.workflowExecutions) ||
+      !Array.isArray(snapshot.workflowActionExecutions) ||
+      !Array.isArray(snapshot.workflowRuleVersions)) {
     return { loadedAt: snapshot.loadedAt, workflowAvailable: false };
   }
   return {

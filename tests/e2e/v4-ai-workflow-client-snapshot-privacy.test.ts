@@ -74,6 +74,50 @@ describe("AI workflow inspector server-client privacy boundary", () => {
     expect(output.workflowActionExecutions?.[0].errorCode).toBe("RATE_LIMITED");
   });
 
+  it("never treats upper-case secret-like error text as a safe browser error code", () => {
+    for (const payload of [
+      "API_KEY_SK_LIVE_SECRET",
+      "PRIVATE_CREDENTIAL_TOKEN",
+      "OPENAI_API_KEY",
+      "AUTHORIZATION_BEARER_SECRET",
+      "WORKFLOW_EXTERNAL_SEND_CONFIGURATION_BLOCKED_EXTRA",
+      "SOMETHING_UNKNOWN",
+    ]) {
+      const output = selectWorkflowInspectorClientSnapshot({
+        ...rawSnapshot(),
+        workflowActionExecutions: [{
+          ...rawSnapshot().workflowActionExecutions![0], errorCode: payload,
+        }],
+      });
+      expect(output.workflowActionExecutions?.[0].errorCode).toBeUndefined();
+      expect(JSON.stringify(output)).not.toContain(payload);
+    }
+    const approved = selectWorkflowInspectorClientSnapshot({
+      ...rawSnapshot(),
+      workflowActionExecutions: [{
+        ...rawSnapshot().workflowActionExecutions![0],
+        errorCode: "WORKFLOW_EXTERNAL_SEND_CONFIGURATION_BLOCKED",
+      }],
+    });
+    expect(approved.workflowActionExecutions?.[0].errorCode)
+      .toBe("WORKFLOW_EXTERNAL_SEND_CONFIGURATION_BLOCKED");
+  });
+
+  it("does not show zero-workflow KPIs when only some tables were read", () => {
+    for (const missing of [
+      { workflowExecutions: undefined },
+      { workflowActionExecutions: undefined },
+      { workflowRuleVersions: undefined },
+    ]) {
+      const output = selectWorkflowInspectorClientSnapshot({
+        ...rawSnapshot(), workflowAvailable: true, ...missing,
+      });
+      expect(output).toEqual({
+        loadedAt: "2026-10-18T00:00:00Z", workflowAvailable: false,
+      });
+    }
+  });
+
   it("keeps optional missing workflow arrays missing instead of fabricating events", () => {
     const output = selectWorkflowInspectorClientSnapshot({
       ...rawSnapshot(), workflowAvailable: false,
