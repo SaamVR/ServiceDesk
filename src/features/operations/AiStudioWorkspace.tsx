@@ -3,6 +3,7 @@ import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { AiStudioWorkbench } from "./AiStudioWorkbench";
 import { WorkflowExecutionInspector } from "./WorkflowExecutionInspector";
+import { selectWorkflowInspectorClientSnapshot } from "./workflow-inspector-client-snapshot";
 import { verifiedStudioRecordChoices } from "./ai-studio-records";
 import { AiOwnerOperationsBrief } from "./AiOwnerOperationsBrief";
 import { AiOwnerModelProbe } from "./AiOwnerModelProbe";
@@ -29,18 +30,9 @@ export function AiStudioWorkspace({
   const executionCount = (data.workflowExecutions ?? [])
     .filter(item => item.mode === "LIVE").length;
   const isOwner = data.actor.role === "OWNER";
-  // Passing the entire staff snapshot to a client component would serialize
-  // customers, contacts, messages and financial records unnecessarily.
-  // Only approved operational workflow evidence crosses this boundary.
-  const workflowInspectorSnapshot = {
-    loadedAt: data.loadedAt,
-    workflowAvailable: data.workflowAvailable,
-    workflowExecutions: data.workflowExecutions,
-    workflowActionExecutions: data.workflowActionExecutions,
-    workflowRuleVersions: data.workflowRuleVersions,
-  } satisfies Pick<OperationalStaffSnapshot,
-    "loadedAt" | "workflowAvailable" | "workflowExecutions" |
-    "workflowActionExecutions" | "workflowRuleVersions">;
+  // Never send the full operational snapshot (contacts, messages, money)
+  // into the browser. Project the exact read-only workflow evidence instead.
+  const workflowInspectorSnapshot = selectWorkflowInspectorClientSnapshot(data);
 
   return (
     <div className={styles.studio} data-testid="operational-ai-studio">
