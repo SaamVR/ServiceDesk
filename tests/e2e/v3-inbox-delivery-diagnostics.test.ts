@@ -56,6 +56,23 @@ describe("read-only authorized delivery diagnostics", () => {
     ] })).toBeUndefined();
   });
 
+  it("requires explicit zoned source time before presenting delivery health", () => {
+    for (const generatedAt of [
+      "2026-10-11", "2026-10-11T11:00:00",
+      "2026-10-11 11:00:00", "2026-10-11T11:00:00+99:00",
+    ]) {
+      expect(parseInboxDeliveryDiagnostics({...valid(),generatedAt})).toBeUndefined();
+    }
+    for (const generatedAt of [
+      "2026-10-11T11:00:00Z",
+      "2026-10-11T14:00:00+03:00",
+      "2026-10-11T11:00:00.000000Z",
+    ]) {
+      expect(parseInboxDeliveryDiagnostics({...valid(),generatedAt})?.counts)
+        .toEqual({ok:1,pending:1,review:1});
+    }
+  });
+
   it("does not mark failed, suppressed or unknown delivery as healthy", () => {
     const first = valid().items[0];
     for (const altered of [
