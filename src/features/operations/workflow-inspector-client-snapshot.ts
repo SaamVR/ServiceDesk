@@ -39,6 +39,11 @@ function safeErrorCode(value: string | undefined) {
 export function selectWorkflowInspectorClientSnapshot(
   snapshot: OperationalStaffSnapshot,
 ): WorkflowInspectorClientSnapshot {
+  // A read failure or unavailable workflow feature must not serialize stale
+  // or partial evidence. Callers cannot equate that situation with zero runs.
+  if (snapshot.workflowAvailable !== true) {
+    return { loadedAt: snapshot.loadedAt, workflowAvailable: false };
+  }
   return {
     loadedAt: snapshot.loadedAt,
     workflowAvailable: snapshot.workflowAvailable,
