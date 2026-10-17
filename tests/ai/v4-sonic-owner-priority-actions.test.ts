@@ -43,6 +43,14 @@ describe("SONIC AI-B saved-source owner priority cards",()=>{
     expect(ownerPriorityActions({ ...empty,openRequests:10},0)).toBeNull();
     expect(ownerPriorityActions({...empty,openRequests:10},8)).toBeNull();
   });
+  it("critic: a seven-element array masquerading as seven named queue buckets is not valid evidence",()=>{
+    const forgedArray=Array(7).fill(1);
+    expect(ownerPriorityActions(forgedArray as typeof empty)).toBeNull();
+    const forgedPrototype=Object.assign(Object.create({hiddenContact:"private"}),{
+      ...empty,openRequests:3,
+    });
+    expect(ownerPriorityActions(forgedPrototype as typeof empty)).toBeNull();
+  });
   it("cannot accept missing or additional data fields pretending to be authorized queue facts",()=>{
     expect(ownerPriorityActions({openRequests:2} as typeof empty)).toBeNull();
     expect(ownerPriorityActions({...empty,customerEmail:"private@example.test"} as typeof empty))
