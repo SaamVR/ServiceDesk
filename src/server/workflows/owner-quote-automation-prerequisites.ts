@@ -51,7 +51,7 @@ function effectiveWindow(start: unknown, end: unknown, now: number):
   const bound = (value: unknown): number | null => {
     if (value === null || value === undefined) return null;
     if (typeof value !== "string") return NaN;
-    const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$/.exec(value);
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/.exec(value);
     if (!match) return NaN;
     const [, year, month, day, hour, minute, second, zone] = match;
     const y=Number(year), m=Number(month), d=Number(day);
