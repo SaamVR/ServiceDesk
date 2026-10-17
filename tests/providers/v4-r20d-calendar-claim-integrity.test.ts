@@ -32,7 +32,7 @@ describe("R20D trusted calendar outbox claim cannot be silently substituted",()=
  it("rejects nonobject claims and mismatched durable source replay keys",async()=>{
   for(const payload of [null,[],false]){
    const p=port();
-   expect(await resolveCalendarVisitOutboxIntent({...event,payload} as ClaimedOutboxEvent,p))
+   expect(await resolveCalendarVisitOutboxIntent({...event,payload} as unknown as ClaimedOutboxEvent,p))
     .toMatchObject({ok:false,code:"CALENDAR_OUTBOX_PAYLOAD_INVALID"});
    expect(p.load).not.toHaveBeenCalled();
   }
