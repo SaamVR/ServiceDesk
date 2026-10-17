@@ -35,3 +35,12 @@
 - Avoid 4 full RC + PG17 copies when one integrated exact SHA suffices. Critic docs-only PR uses [lightweight acceptance workflow](https://github.com/SaamVR/ServiceDesk/blob/a758a87827b7be02e363d0e61eee1f8c9eb0014e/.github/workflows/v4-critic-acceptance.yml) and must not trigger heavyweight build. No invented runtime duration or repeated idle coordination.
 
 **Critic decision now:** all R20 lanes remain **IMPLEMENTED, not yet CONTRACT_TESTED**; no acceptance/promotion. Release **CONFIGURATION_BLOCKED**. This review does not claim it has independently executed a browser or queried customer-identifying data.
+
+## Critic follow-up — actual R20 combined test receipts
+
+- Newer canonical development moved **forward-only** beyond pinned authoring base, first to `013959c5b657dc5ce576201d2fab9665bd9eba17`, then `25bdf65dac8c5d0f11dfc9ddfdb6212a5e82f168`. R20A/B/C/D source and test paths did not overlap the first intervening source changes, as checked before a scoped candidate was created. Never reset or overwrite these newer changes.
+- Isolated scoped candidate `e61236464ee649fcaa47669517063696b14507a2` at base `013959c5...`, [focused run #39019773513](https://github.com/SaamVR/ServiceDesk/actions/runs/39019773513): **8 test files / 35 tests PASS**, **full TypeScript typecheck FAIL** at `tests/providers/v4-r20d-calendar-claim-integrity.test.ts:35` (TS2352 invalid direct cast for malformed event payload). Thus the candidate was **NOT ACCEPTED** despite green tests.
+- Critic requested a source test-only repair on R20D lane `21c1ae6ba19372fbea281667cf9a9aa58554359e` and the candidate `70611c469f71c9f91d4bdbd9d3f8bb2a20d89a9d`. The corrected malformed payload uses `as unknown as ClaimedOutboxEvent`, preserving the runtime negative assertion. [New focused check #39019913008](https://github.com/SaamVR/ServiceDesk/actions/runs/39019913008) requires inspection at exact SHA before acceptance.
+- Full R20 source RC and dedicated PG17 are *not* needlessly duplicated on each source PR. Production-like R13 Render remains isolated. The newer canonical PG17 source run [#39019797940](https://github.com/SaamVR/ServiceDesk/actions/runs/39019797940) was successful at `25bdf65...` during this review; full source RC requires independent inspection.
+
+**Critic verdict remains HOLD / REVIEW until** the exact `70611c...` candidate passes focused and TypeScript checks, its clean integration is reconciled with the **newest** canonical HEAD, and exact canonical full RC + PG17 have genuinely run. A green 35-test subtotal does not erase a failed TypeScript gate.
