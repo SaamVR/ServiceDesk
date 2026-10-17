@@ -80,6 +80,7 @@ function StaffNavigation({ workspace, mobile = false }: { workspace: string; mob
 
   function moduleIsActive(module: StaffModule): boolean {
     const href = buildStaffModuleHref(workspace, module);
+    if (module === "automations" && pathname.startsWith(`${href}/ai-studio`)) return false;
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
@@ -117,6 +118,18 @@ function StaffNavigation({ workspace, mobile = false }: { workspace: string; mob
         <div className={`app-nav-group ${styles.navGroup}`} key={group.label}>
           <p className={`app-nav-label ${styles.navGroupLabel}`}>{group.label}</p>
           {group.modules.map(linkFor)}
+          {group.label === "Workday" ? (
+            <Link className={`app-nav-link ${styles.navLink}`}
+              aria-current={pathname.startsWith(buildStaffModuleHref(workspace, "automations") + "/ai-studio") ? "page" : undefined}
+              href={buildStaffModuleHref(workspace, "automations") + "/ai-studio"}>
+              <svg className="app-nav-icon" viewBox="0 0 20 20" fill="none"
+                stroke="currentColor" strokeWidth="1.7"
+                strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 2.5 11.8 8.2 17.5 10l-5.7 1.8L10 17.5l-1.8-5.7L2.5 10l5.7-1.8z" />
+              </svg>
+              <span>AI Studio</span>
+            </Link>
+          ) : null}
         </div>
       ))}
     </nav>
@@ -204,7 +217,8 @@ export function StaffAppShell({
     const href = buildStaffModuleHref(workspace, module);
     return pathname === href || pathname.startsWith(`${href}/`);
   }) ?? "overview";
-  const pageLabel = staffModuleConfig[currentModule].label;
+  const pageLabel = pathname.startsWith(buildStaffModuleHref(workspace, "automations") + "/ai-studio")
+    ? "AI Studio" : staffModuleConfig[currentModule].label;
   const workspaceName = workspaceDisplayName(workspace);
 
   return (
