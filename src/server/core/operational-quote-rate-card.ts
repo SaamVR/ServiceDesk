@@ -18,7 +18,7 @@ function parseRule(value: unknown): ServiceRateRule | null {
   if (!row) return null;
   for (const key of ["baseMinor", "baseMinutes", "bedroomMinor", "bedroomMinutes", "bathroomMinor", "bathroomMinutes"]) {
     const max = key.endsWith("Minutes") ? 1440 : 10_000_000;
-    if (!integer(row[key], key === "baseMinutes" ? 1 : 0, max)) return null;
+    if (!integer(row[key], key === "baseMinutes" || key === "baseMinor" ? 1 : 0, max)) return null;
   }
   // An incomplete add-on cannot be turned into a free price or zero-minute
   // operation by the quote calculator's optional-field fallbacks.
@@ -84,19 +84,17 @@ function asId(value: unknown): value is string {
  * workspace-bound active rate card. No synthetic fallback, no arbitrary
  * browser pricing input, no cross-tenant defaults.
  */
-/** PostgreSQL timestamptz evidence, never browser-style local/date-only strings.
- * A corrupt effective period must not activate a real customer rate card.
- * Supports Postgres offset and up to six fractional seconds.
- */
+/** Strict PostgreSQL timestamptz evidence; malformed local/date-only strings
+ * must never silently become a usable real customer quote price period. */
 export function persistedPriceBookInstant(value: unknown): number | null {
   if (typeof value !== "string") return null;
-  const m=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d{1,6}))?(Z|[+-]\\d{2}:\\d{2})$/.exec(value);
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/.exec(value);
   if (!m) return null;
   const [year,month,day,hour,minute,second]=m.slice(1,7).map(Number);
   if (year<1 || month<1 || month>12 || day<1 || hour>23 || minute>59 || second>59 ||
       day>new Date(Date.UTC(year,month,0)).getUTCDate()) return null;
   const zone=m[8];
-  if(zone!=="Z"){
+  if(zone!=="Z") {
     const oh=Number(zone.slice(1,3)),om=Number(zone.slice(4,6));
     if(oh>14 || om>59 || (oh===14 && om!==0)) return null;
   }
@@ -154,14 +152,12 @@ export async function loadOperationalQuoteRateCard(
     .eq("branch_id", request.data.branch_id)
     .eq("active", true).limit(10);
   if (books.error || !books.data) return fail("QUOTE_RATE_BOOK_UNAVAILABLE", "Branch pricing could not be verified.");
-  // Date.parse accepts date-only strings and normalizes impossible dates;
-  // neither is a trustworthy persisted rate-card effectiveness receipt.
-  // An ambiguous row cannot silently disappear and leave another book
-  // "uniquely active" when database data is corrupt. Require staff repair.
+  // Corrupt active book timestamps must block authorization, not disappear
+  // from a uniqueness check leaving another book spuriously eligible.
   if (!Number.isFinite(now.getTime()) || books.data.some(book =>
-      (book.starts_at != null && persistedPriceBookInstant(book.starts_at) === null) ||
-      (book.ends_at != null && persistedPriceBookInstant(book.ends_at) === null))) {
-    return fail("QUOTE_RATE_BOOK_UNAVAILABLE", "Branch price-book time evidence needs review.");
+    (book.starts_at != null && persistedPriceBookInstant(book.starts_at) === null) ||
+    (book.ends_at != null && persistedPriceBookInstant(book.ends_at) === null))) {
+    return fail("QUOTE_RATE_BOOK_UNAVAILABLE","Branch price-book time evidence needs review.");
   }
   const active = books.data.filter(book => {
     const start = book.starts_at == null ? Number.NEGATIVE_INFINITY : persistedPriceBookInstant(book.starts_at)!;

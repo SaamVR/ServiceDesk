@@ -128,7 +128,8 @@ export function validateOwnerOperationsBriefGrounding(
   if (/\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i.test(draft)) return undefined;
   // A positive invoice/request/visit count is not proof of lateness,
   // delinquency or a missed deadline. Quote expiry is separately verified.
-  if (/\b(?:overdue|late|past[- ]due|delinquent)\s+(?:(?:critical|owner|active|open|unassigned)\s+)*(?:invoices?|requests?|visits?|attentions?)\b/i.test(draft)) return undefined;
+  if (/\b(?:overdue|late|past[- ]due|delinquent)\s+(?:(?:critical|owner|active|open|unassigned)\s+)*(?:invoices?|requests?|visits?|attentions?)\b/i.test(draft) ||
+      /\b(?:invoices?|requests?|visits?|attentions?)\s+(?:that\s+)?(?:are|is|were|was|has\s+been|have\s+been)\s+(?:overdue|late|past[- ]due|delinquent)\b/i.test(draft)) return undefined;
   if (/[0-9]/.test(draft) ||
       // Word-based numbers also assert exact queue totals not present in
       // the safe model output contract, e.g. "two overdue invoices".
