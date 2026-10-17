@@ -52,8 +52,10 @@ describe("V4 saved real request lifecycle handoff", () => {
   });
   it("does not choose among multiple competing job or invoice records", () => {
     const out=build({visits:[job,{...job,id:"job-b"}],invoices:[invoice,{...invoice,id:"invoice-b"}]});
-    expect(out.steps[2]).toMatchObject({status:"REVIEW_REQUIRED",recordId:undefined});
-    expect(out.steps[3]).toMatchObject({status:"REVIEW_REQUIRED",recordId:undefined});
+    expect(out.steps[2].status).toBe("REVIEW_REQUIRED");
+    expect(out.steps[2].recordId).toBeUndefined();
+    expect(out.steps[3].status).toBe("REVIEW_REQUIRED");
+    expect(out.steps[3].recordId).toBeUndefined();
   });
   it("distinguishes a paid saved ledger status from external settlement", () => {
     const out=build({invoices:[{...invoice,status:"PAID"}]});
