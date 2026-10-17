@@ -56,8 +56,11 @@ export function assessSavedVisitQuality(input:FieldQaEvidenceInput):FieldQaAsses
         !validId(item.id) || evidenceIds.has(item.id) ||
         !allKinds.has(item.kind) ||
         (photoKinds.has(item.kind) && (!item.mediaReference ||
+          typeof item.mediaReference.storageProvider!=="string" ||
+          !item.mediaReference.storageProvider.trim() ||
+          item.mediaReference.storageProvider.length>128 ||
           typeof item.mediaReference.objectRef!=="string" ||
-          item.mediaReference.objectRef.length<3 ||
+          item.mediaReference.objectRef.trim().length<3 ||
           item.mediaReference.objectRef.length>512))) {
       return {ok:false,code:"QA_SOURCE_INVALID"};
     }
