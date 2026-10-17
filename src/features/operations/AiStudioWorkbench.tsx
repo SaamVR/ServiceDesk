@@ -98,7 +98,7 @@ function ScopedStudioWorkbench({
             placeholder="Search record label or ID"
             onChange={event => setRecordSearch(event.target.value)} />
           <span role="status" aria-live="polite" className={styles.searchCount}>
-            {matches.length} of {choices.length} authorized records shown
+            {matches.length} of {choices.length} loaded record choices shown
           </span>
         </div>
         <div className={styles.recordPicker}>
@@ -120,6 +120,16 @@ function ScopedStudioWorkbench({
               className={styles.contextLink}>Review source record →</Link>
           ) : null}
         </div>
+        {choices.length >= 40 ? (
+          <p role="note" className={styles.scopeNotice}>
+            Search is limited to the 40 saved {mode === "request" ? "requests" : "quotes"}
+            supplied in this authorized view. Results are not a complete database search.{" "}
+            <Link href={buildStaffModuleHref(workspaceSlug,
+              mode === "request" ? "requests" : "quotes")}>
+              Open {mode === "request" ? "Requests" : "Quotes"} to find other records →
+            </Link>
+          </p>
+        ) : null}
         {choices.length > 0 && matches.length === 0 ? (
           <p className={styles.searchNoMatch} role="status">
             No authorized records match this search. Clear the search to see available records.
