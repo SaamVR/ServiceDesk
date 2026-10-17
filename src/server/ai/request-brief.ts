@@ -198,6 +198,57 @@ export async function generateAuthorizedRequestBrief(
     return fail("AI_BRIEF_OUTPUT_INVALID", "AI produced unverified contact, date, price or action text; use the saved request instead.");
   }
 
+  // A real inference can take longer than 30 seconds. The first authorized
+  // row and actor do not remain authoritative across that gap: staff rights
+  // can be revoked or a saved request moved to a different service/branch.
+  // Recheck the same actor, branch entitlement and every model-supplied fact
+  // BEFORE exposing a stale draft. No writes or provider sends occur here.
+  let current: Awaited<ReturnType<ActorResolver>>;
+  try { current = await (deps.resolveActor ?? resolveStaffActor)(input.workspaceSlug); }
+  catch { return fail("AI_BRIEF_REVALIDATION_UNAVAILABLE", "Staff access could not be reverified."); }
+  if (!current.ok || current.value.workspace.id !== workspace.id ||
+      current.value.workspace.slug !== input.workspaceSlug ||
+      current.value.actor.userId !== actor.userId ||
+      current.value.actor.workspaceId !== workspace.id ||
+      current.value.actor.role !== actor.role ||
+      !["OWNER", "DISPATCHER"].includes(current.value.actor.role) ||
+      (actor.role === "DISPATCHER" &&
+       (current.value.branchScope.mode !== "BRANCH" ||
+        current.value.branchScope.selectedBranchId !== row.branch_id ||
+        current.value.branchScope.selectedBranchId !== branchScope.selectedBranchId))) {
+    return fail("AI_BRIEF_ACCESS_REVOKED", "Staff access or branch scope changed during AI generation.");
+  }
+  const latest = await (async () => {
+    try {
+      return await current.value.service.from("requests")
+        .select("id,workspace_id,branch_id,service_id,bedrooms,bathrooms,status")
+        .eq("id", input.requestId)
+        .eq("workspace_id", workspace.id).maybeSingle();
+    } catch { return null; }
+  })();
+  if (!latest || latest.error || !latest.data ||
+      latest.data.id !== row.id || latest.data.workspace_id !== workspace.id ||
+      latest.data.branch_id !== row.branch_id ||
+      latest.data.service_id !== row.service_id ||
+      latest.data.bedrooms !== row.bedrooms ||
+      latest.data.bathrooms !== row.bathrooms ||
+      latest.data.status !== row.status) {
+    return fail("AI_BRIEF_SOURCE_CHANGED", "Saved request facts changed during AI generation.");
+  }
+  if (row.service_id != null) {
+    let catalog: {data:{code:unknown}|null;error:unknown}|null=null;
+    try {
+      catalog=await current.value.service.from("service_catalog")
+        .select("code").eq("id",row.service_id)
+        .eq("workspace_id",workspace.id).maybeSingle();
+    } catch {return fail("AI_BRIEF_REVALIDATION_UNAVAILABLE", "Service catalogue revalidation failed.");}
+    if (!catalog || catalog.error || !catalog.data ||
+        codeValue(catalog.data.code) !== serviceCode) {
+      return fail("AI_BRIEF_SOURCE_CHANGED", "Saved request service catalogue changed.");
+    }
+  }
+  if (deps.signal?.aborted) return fail("AI_BRIEF_CANCELLED", "Staff cancelled the AI briefing request.");
+
   return { ok: true, value: {
     state: "AI_DRAFT_REQUIRES_REVIEW",
     requestId: input.requestId,
