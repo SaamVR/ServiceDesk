@@ -61,6 +61,7 @@ import { InboxDeliveryDiagnostics } from "./InboxDeliveryDiagnostics";
 import { StaffAiReviewComposer } from "./StaffAiReviewComposer";
 import { AiRequestBrief } from "./AiRequestBrief";
 import { CleaningRequestNextSteps } from "./CleaningRequestNextSteps";
+import { SavedRequestLifecycleEvidence } from "./SavedRequestLifecycleEvidence";
 import { AiQuoteReview } from "./AiQuoteReview";
 import { StaffQuoteChecklist } from "./StaffQuoteChecklist";
 import { buildStaffQuoteChecklist } from "./staff-quote-checklist";
@@ -1212,6 +1213,9 @@ function RequestsView({
               currentQuote: selectedRequestQuote,
               requestedStartAt: selectedRequest.requestedStartAt,
             }} />
+
+            <SavedRequestLifecycleEvidence
+              request={selectedRequest} data={data} workspaceSlug={workspaceSlug} />
 
             <AiRequestBrief
               key={selectedRequest.id}
