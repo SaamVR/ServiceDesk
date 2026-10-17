@@ -31,6 +31,8 @@ jobs:
       - name: Parse private RLS proof program without connecting
         run: |
           node --check scripts/release/v4-private-rls-proof.mjs
+          node --check scripts/release/v4-default-branch-rpc-boundary.mjs
+          node --test scripts/release/tests/v4-default-branch-rpc-boundary.test.mjs
           node --check scripts/release/v4-operational-rls-positive-negative.mjs
           node --test scripts/release/v4-operational-rls-positive-negative.test.mjs
           node --check scripts/release/v4-automation-rls-positive-negative.mjs

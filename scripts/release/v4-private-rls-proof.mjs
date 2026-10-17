@@ -10,6 +10,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { requireDistinctConfirmedOwnerSessions, verifyTwoTenantOperationalRls } from "./v4-operational-rls-positive-negative.mjs";
 import { verifyTwoTenantAutomationRls } from "./v4-automation-rls-positive-negative.mjs";
+import { verifyTwoOwnerDefaultBranchRpcBoundary } from "./v4-default-branch-rpc-boundary.mjs";
 
 const projectHost = "cpmmgivhlkfbiwzhlcey.supabase.co";
 const env = process.env;
@@ -71,6 +72,11 @@ async function main() {
     const a = await getOwnWorkspace(dbs[0], accounts[0]);
     const b = await getOwnWorkspace(dbs[1], accounts[1]);
     requireDistinctConfirmedOwnerSessions(a, b, fail);
+    // P0 / #153: table RLS cannot detect a SECURITY DEFINER RPC metadata leak.
+    // Fail the REAL owner proof until both own branches exist and direct foreign
+    // RPC calls return null or explicit permission denied in both directions.
+    await verifyTwoOwnerDefaultBranchRpcBoundary(a,b,fail);
+    console.log("REAL_AUTH_DEFAULT_BRANCH_RPC_TWO_OWNER_BOUNDARY_PASS: two real own branch positives, both foreign direct RPC denials; no business workflow acceptance claimed");
     await verifyIsolation(a,b);
     await verifyIsolation(b,a);
     if (env.V4_QA_REQUIRE_OPERATIONAL_EVIDENCE === "1") {
