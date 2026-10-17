@@ -50,6 +50,17 @@ describe("SONIC R33 L07 actual saved visit QA evidence plan",()=>{
    ]) expect(assessSavedVisitQuality({...input(),...extra}))
      .toMatchObject({ok:false,code:"QA_SOURCE_INVALID"});
  });
+ it("critic: a whitespace-only or invalid provider photo reference is not saved quality evidence",()=>{
+   for(const mediaReference of [
+     {storageProvider:"trusted",objectRef:"   "},
+     {storageProvider:"   ",objectRef:"some-object"},
+     {storageProvider:"trusted",objectRef:"x".repeat(513)},
+   ]){
+     expect(assessSavedVisitQuality({...input(),evidence:[
+       {...evidence("photo-1","BEFORE_PHOTO"),mediaReference},
+     ]})).toMatchObject({ok:false,code:"QA_SOURCE_INVALID"});
+   }
+ });
  it("does not disclose crew/private media location in the public proposal",()=>{
    const r=assessSavedVisitQuality(input());
    expect(JSON.stringify(r)).not.toContain("private-object-key");
