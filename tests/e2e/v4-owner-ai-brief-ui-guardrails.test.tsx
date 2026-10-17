@@ -94,6 +94,21 @@ describe("Owner AI saved-workload briefing presentation", () => {
     expect(ui).not.toContain("style={{");
   });
 
+  it("maintains accessible contrast for small queue guidance text", () => {
+    const css = read("src/features/operations/AiOwnerOperationsBrief.module.css");
+    const lum = (hex: string) => {
+      const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+      const lin = rgb.map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+      return lin[0] * .2126 + lin[1] * .7152 + lin[2] * .0722;
+    };
+    const contrast = (a: string, b: string) => {
+      const l1 = lum(a), l2 = lum(b);
+      return (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05);
+    };
+    expect(contrast("#587567", "#ffffff")).toBeGreaterThanOrEqual(4.5);
+    expect(css).toContain("color: #587567");
+  });
+
   it("uses responsive, keyboard-visible controls and advisory-only state", () => {
     const ui = read("src/features/operations/AiOwnerOperationsBrief.tsx");
     const css = read("src/features/operations/AiOwnerOperationsBrief.module.css");

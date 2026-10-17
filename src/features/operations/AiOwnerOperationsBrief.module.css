@@ -119,7 +119,7 @@
   padding-top: 15px;
 }
 .queues strong { color: #295542; font-size: 12px; }
-.queues p { margin: 4px 0 0; font-size: 11px; color: #648072; }
+.queues p { margin: 4px 0 0; font-size: 11px; color: #587567; }
 .queueLinks { display: flex; flex-wrap: wrap; gap: 7px; }
 .queueLinks a {
   display: inline-flex;
