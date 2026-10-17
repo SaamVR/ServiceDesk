@@ -26,7 +26,7 @@ export function isCollectibleInvoice(invoice: Pick<InvoiceCollectionRecord, "sta
   // before showing "open" or "to collect", not only on the payment button.
   // Legacy queue-only rows intentionally contain status + balance alone.
   const row = invoice as Partial<StaffCollectibleLedger>;
-  if (["currency", "totalMinor", "allocatedMinor", "refundedMinor"]
+  if (["totalMinor", "allocatedMinor", "refundedMinor"]
       .some(key => Object.prototype.hasOwnProperty.call(row, key)))
     return isVerifiedStaffCollectibleInvoice({
       status: invoice.status, balanceMinor: invoice.balanceMinor,
