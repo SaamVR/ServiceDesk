@@ -2,8 +2,10 @@
 
 import {useEffect,useRef,useState} from "react";
 import {requestOwnerOperationsBrief} from "./owner-operations-brief-action";
+import type {OwnerPriorityAction} from "@/server/ai/owner-priority-actions";
 
-type UiState={busy:boolean;brief?:string;model?:string;error?:string};
+type UiState={busy:boolean;brief?:string;model?:string;
+  priorityActions?:OwnerPriorityAction[];error?:string};
 
 /** A deliberate owner-only request; the server rechecks owner membership,
  * persisted source and model configuration before returning suggestions.
@@ -28,7 +30,8 @@ function OwnerBriefForWorkspace({
       const result=await requestOwnerOperationsBrief(workspaceSlug);
       if(sequence.current!==id)return;
       setState(result.ok
-        ? {busy:false,brief:result.brief,model:result.model}
+        ? {busy:false,brief:result.brief,model:result.model,
+            priorityActions:result.priorityActions}
         : {busy:false,error:result.message});
     } catch {
       if(sequence.current!==id)return;
@@ -56,6 +59,25 @@ function OwnerBriefForWorkspace({
     {state.brief?<div role="status" aria-live="polite">
       <p style={{margin:"0 0 6px",fontWeight:650}}>Model suggestion · {state.model}</p>
       <p style={{whiteSpace:"pre-wrap",margin:0}}>{state.brief}</p>
+      {state.priorityActions && state.priorityActions.length>0 ? (
+        <section aria-label="Evidence-backed owner review priorities"
+          style={{marginBlock:10}}>
+          <strong>Saved queue priorities · verified counts, not AI-generated tasks</strong>
+          <ol style={{display:"grid",gap:8,paddingLeft:20,marginBlock:8}}>
+            {state.priorityActions.map(item=>(
+              <li key={item.key}>
+                <a href={`/app/${encodeURIComponent(workspaceSlug)}/${item.module}`}
+                  style={{fontWeight:650,color:"#18564a"}}>
+                  {item.label} ({item.count})
+                </a>
+                <div style={{fontSize:".81rem",lineHeight:1.5}}>{item.instruction}</div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : state.priorityActions ? (
+        <p role="status">No positive-count priority buckets were verified in the saved snapshot.</p>
+      ):null}
       <small>Verify each recommendation in the saved workspace. AI did not approve, send or execute anything.</small>
     </div>:null}
   </section>;
