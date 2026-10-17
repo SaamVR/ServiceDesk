@@ -1,4 +1,4 @@
-import { indexCurrentQuoteByRequest } from "./staff-snapshot-index";
+import { indexAmbiguousCurrentQuoteRequests, indexCurrentQuoteByRequest } from "./staff-snapshot-index";
 
 export interface QuotePipelineRecord {
   id: string;
@@ -37,6 +37,7 @@ export function buildQuotePipeline<T extends QuotePipelineRecord>(
   quotes: readonly T[], snapshotAt?: string,
 ) {
   const currentQuoteByRequest = indexCurrentQuoteByRequest(quotes);
+  const ambiguousCurrentQuoteRequests = indexAmbiguousCurrentQuoteRequests(quotes);
   const statusPriority: Record<string, number> = {
     APPROVED: 0, SENT: 1, ACCEPTED: 2, DRAFT: 3,
     EXPIRED: 4, DECLINED: 5, SUPERSEDED: 6,
@@ -54,6 +55,9 @@ export function buildQuotePipeline<T extends QuotePipelineRecord>(
   return {
     currentQuoteByRequest,
     orderedQuotes,
+    // These requests must be manually reconciled before any quote is treated
+    // as current/approved/sent, even when both rows look unexpired.
+    quoteVersionConflicts: ambiguousCurrentQuoteRequests.size,
     awaitingCustomer: currentQuotes.filter(quote =>
       quote.status === "SENT" &&
       (snapshotAt === undefined || (clockValid && !needsSentQuoteExpiryReview(quote, snapshotAt)))).length,
