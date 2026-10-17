@@ -29,3 +29,15 @@ export function verifiedStudioRecordChoices(
   }
   return selections;
 }
+
+/** Filter only the already-authorized, capped record labels and IDs.
+ * Never fetch or broaden the browser's source scope from search text.
+ */
+export function filterStudioRecordChoices(
+  records: readonly StudioRecordChoice[], query: string,
+): StudioRecordChoice[] {
+  const needle = query.slice(0, 80).trim().toLocaleLowerCase("en");
+  if (!needle) return [...records];
+  return records.filter(item => item.label.toLocaleLowerCase("en").includes(needle) ||
+    item.id.toLocaleLowerCase("en").includes(needle));
+}
