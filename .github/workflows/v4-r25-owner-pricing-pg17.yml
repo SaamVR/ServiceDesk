@@ -15,15 +15,18 @@ jobs:
       postgres:
         image: postgres:17
         env: { POSTGRES_PASSWORD: disposable-only, POSTGRES_DB: sd_revision_qa }
-        ports: [5432:5432]
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres -d sd_revision_qa"
           --health-interval 5s --health-timeout 5s --health-retries 12
     steps:
       - uses: actions/checkout@v4
-        with: { ref: ${{ github.event.pull_request.head.sha || github.sha }, persist-credentials: false }
+        with:
+          ref: "${{ github.event.pull_request.head.sha || github.sha }}"
+          persist-credentials: false
       - name: Exact pinned source
-        env: { EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha } }
+        env:
+          EXPECTED_SHA: "${{ github.event.pull_request.head.sha || github.sha }}"
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - name: Run real SQL on disposable PG17 only
         env:
