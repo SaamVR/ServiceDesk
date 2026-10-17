@@ -11,6 +11,8 @@ on:
       - "scripts/release/v4-connected-schema-readonly.sql"
       - "tests/sql/v4-branch-trigger-pg17-*.sql"
       - "docs/engineering/security/servicedesk-default-branch-guard-candidate.sql"
+      - "supabase/migrations/0065_v4_default_branch_membership_authority.sql"
+      - "tests/db/v4-default-branch-security-migration.test.ts"
       - "tests/db/v4-branch-trigger-rowtype-migration.test.ts"
       - "src/server/core/*branch*"
       - "src/features/operations/operational-product-runtime.ts"
@@ -61,7 +63,7 @@ jobs:
           # authenticated owner A/B and trigger-compatibility checks.
           # No connected Supabase schema is modified; source 0063 stays OFF.
           psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-authz-prep.sql
-          psql -v ON_ERROR_STOP=1 -f docs/engineering/security/servicedesk-default-branch-guard-candidate.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0065_v4_default_branch_membership_authority.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/v4-branch-trigger-pg17-authz-acceptance.sql
           psql -v ON_ERROR_STOP=1 -f scripts/release/v4-connected-schema-readonly.sql > /tmp/servicedesk-schema-proof.txt
           grep -q '"branchGuard0062Applied": true' /tmp/servicedesk-schema-proof.txt
@@ -79,7 +81,7 @@ jobs:
       - name: Locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Focused rowtype regression
-        run: pnpm exec vitest run tests/db/v4-branch-trigger-rowtype-migration.test.ts
+        run: pnpm exec vitest run tests/db/v4-branch-trigger-rowtype-migration.test.ts tests/db/v4-default-branch-security-migration.test.ts
       - name: Full release source check on owned branch push only
         if: github.event_name == 'push'
         run: pnpm check:rc
