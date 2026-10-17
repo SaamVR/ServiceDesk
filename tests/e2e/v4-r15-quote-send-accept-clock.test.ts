@@ -38,7 +38,28 @@ describe("R15 staff send/customer accept quote clock authority",()=>{
     expect(verifyCustomerQuoteForAcceptance({...base,status:"SENT",valid_until:malformed},now))
       .toEqual({ok:false,code:"QUOTE_EXPIRED"});
   }
-  expect(trustedQuoteInstant("2026-10-17T10:00:00")).toBeNull();
+  // Business quote decisions require a possible explicit timezone offset,
+  // including microsecond PostgreSQL timestamp serialization.
+  for (const malformedOffset of [
+    "2026-10-18T10:00:00+14:01",
+    "2026-10-18T10:00:00-14:30",
+    "2026-10-18T10:00:00+15:00",
+    "2026-10-18T10:00:00-19:00",
+    "2026-10-18T10:00:00+00:60",
+    "0000-10-18T10:00:00Z",
+  ]) {
+    expect(trustedQuoteInstant(malformedOffset), malformedOffset).toBeNull();
+    expect(assessOperationalQuoteSend({...base,valid_until:malformedOffset},now))
+      .toEqual({ok:false,reason:"EXPIRED"});
+    expect(verifyCustomerQuoteForAcceptance({...base,status:"SENT",valid_until:malformedOffset},now))
+      .toEqual({ok:false,code:"QUOTE_EXPIRED"});
+  }
+  for (const validOffset of [
+    "2026-10-18T10:00:00.123456+14:00",
+    "2026-10-18T10:00:00.123456-14:00",
+    "2026-10-18T10:00:00.123456+05:45",
+  ]) expect(trustedQuoteInstant(validOffset),validOffset).not.toBeNull();
+    expect(trustedQuoteInstant("2026-10-17T10:00:00")).toBeNull();
   expect(assessOperationalQuoteSend(base,"2026-10-17T10:00:00"))
     .toEqual({ok:false,reason:"EXPIRED"});
  });
