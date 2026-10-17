@@ -1,3 +1,5 @@
+import { isVerifiedStaffCollectibleInvoice, type StaffCollectibleLedger } from "./staff-invoice-collection-readiness";
+
 /** Read-only invoice queue filters. Never infer settlement from a zero balance. */
 export const invoiceQueueOptions = [
   { key: "all", label: "All invoices" },
@@ -18,8 +20,20 @@ export function normalizeInvoiceQueue(input?: string | null): InvoiceQueue {
 export function isCollectibleInvoice(invoice: Pick<InvoiceCollectionRecord, "status" | "balanceMinor">): boolean {
   // The invoice ledger represents exact integer minor units. A decimal or
   // unsafe IEEE-754 balance is not a collectible amount, even if finite.
-  return (invoice.status === "ISSUED" || invoice.status === "PARTIALLY_PAID")
-    && Number.isSafeInteger(invoice.balanceMinor) && invoice.balanceMinor > 0;
+  if (!((invoice.status === "ISSUED" || invoice.status === "PARTIALLY_PAID")
+    && Number.isSafeInteger(invoice.balanceMinor) && invoice.balanceMinor > 0)) return false;
+  // Production invoice records include an authoritative ledger. Check it
+  // before showing "open" or "to collect", not only on the payment button.
+  // Legacy queue-only rows intentionally contain status + balance alone.
+  const row = invoice as Partial<StaffCollectibleLedger>;
+  if (["currency", "totalMinor", "allocatedMinor", "refundedMinor"]
+      .some(key => Object.prototype.hasOwnProperty.call(row, key)))
+    return isVerifiedStaffCollectibleInvoice({
+      status: invoice.status, balanceMinor: invoice.balanceMinor,
+      currency: row.currency, totalMinor: row.totalMinor,
+      allocatedMinor: row.allocatedMinor, refundedMinor: row.refundedMinor,
+    });
+  return true;
 }
 export function invoiceQueueOf(invoice:InvoiceCollectionRecord):Exclude<InvoiceQueue,"all"> {
   if (invoice.status === "VOID") return "void";
