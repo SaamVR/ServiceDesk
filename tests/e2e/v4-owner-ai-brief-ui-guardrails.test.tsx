@@ -12,12 +12,14 @@ const good = {
   source: "AUTHORIZED_SAVED_WORKSPACE_COUNTS",
   model: "approved-model",
   brief: "Review the saved requests queue before planning any follow-up.",
+  priorityActions: [],
 };
 
 describe("Owner AI saved-workload briefing presentation", () => {
   it("allows only bounded explicitly sourced read-only results", () => {
     expect(parseVerifiedOwnerBrief(good)).toEqual({
       source: good.source, model: good.model, brief: good.brief,
+      priorityActions: [],
     });
     expect(parseVerifiedOwnerBrief({ ...good, source: "MODEL_GUESS" })).toBeNull();
     expect(parseVerifiedOwnerBrief({ ...good, ok: false })).toBeNull();
@@ -40,6 +42,7 @@ describe("Owner AI saved-workload briefing presentation", () => {
       quotedRevenue: 123456, paymentsApplied: true,
     })).toEqual({
       source: good.source, model: good.model, brief: good.brief,
+      priorityActions: [],
     });
   });
 

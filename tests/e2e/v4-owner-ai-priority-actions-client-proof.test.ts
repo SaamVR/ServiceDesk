@@ -24,10 +24,10 @@ const allowed = [
 ];
 
 describe("Owner UI consumes server-ranked verified priority actions without re-ranking", () => {
-  it("keeps backward compatible advisory source when old action lacks priorities", () => {
-    expect(parseVerifiedOwnerBrief(base)).toEqual({
-      source: base.source, model: base.model, brief: base.brief,
-    });
+  it("fails closed when canonical source omits its required priority array", () => {
+    expect(parseVerifiedOwnerBrief(base)).toBeNull();
+    expect(parseVerifiedOwnerBrief({ ...base, priorityActions: undefined })).toBeNull();
+    expect(parseVerifiedOwnerBrief({ ...base, priorityActions: null })).toBeNull();
   });
   it("accepts up to five exact known source/action/route contracts", () => {
     const result = parseVerifiedOwnerBrief({ ...base, priorityActions: allowed });

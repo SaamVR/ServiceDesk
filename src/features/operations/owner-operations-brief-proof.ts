@@ -17,8 +17,8 @@ export interface VerifiedOwnerBrief {
   source: "AUTHORIZED_SAVED_WORKSPACE_COUNTS";
   model: string;
   brief: string;
-  /** Missing on older action contracts; returned by canonical AI-B. */
-  priorityActions?: VerifiedOwnerPriorityAction[];
+  /** Canonical SONIC AI-B always returns a source-verified priority array. */
+  priorityActions: VerifiedOwnerPriorityAction[];
 }
 
 // UI labels and routes are fixed local constants. Arbitrary backend/model
@@ -82,15 +82,14 @@ export function parseVerifiedOwnerBrief(value: unknown): VerifiedOwnerBrief | nu
       record.brief.length > 900 ||
       /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(record.brief)) return null;
 
-  // A missing priority array is valid on the older isolated source branch.
-  // Once canonical AI-B is integrated, an invalid supplied array fails closed.
-  const priorityActions = record.priorityActions === undefined
-    ? undefined : parseVerifiedOwnerPriorityActions(record.priorityActions);
+  // SONIC AI-B server action ALWAYS returns the bounded priority array.
+  // Missing evidence must not masquerade as an empty verified work queue.
+  const priorityActions = parseVerifiedOwnerPriorityActions(record.priorityActions);
   if (priorityActions === null) return null;
   return {
     source: "AUTHORIZED_SAVED_WORKSPACE_COUNTS",
     model: record.model,
     brief: record.brief,
-    ...(priorityActions === undefined ? {} : { priorityActions }),
+    priorityActions,
   };
 }
