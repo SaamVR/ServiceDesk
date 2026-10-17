@@ -1,3 +1,4 @@
+import { trustedQuoteInstant } from "./quote-validity-clock";
 /**
  * Defense-in-depth for rendering the authenticated, read-only delivery
  * metadata endpoint. This module never handles message bodies, recipients,
@@ -40,22 +41,9 @@ const validCount = (value: unknown): value is number =>
 // numeric offset for interoperable receipts but never a locale-dependent
 // date-only or unzoned string that could falsely establish delivery health.
 function validGeneratedAt(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.exec(value);
-  if (!match) return false;
-  const [, yearText, monthText, dayText, hourText, minuteText, secondText] = match;
-  const year = Number(yearText);
-  const month = Number(monthText);
-  const day = Number(dayText);
-  const hour = Number(hourText);
-  const minute = Number(minuteText);
-  const second = Number(secondText);
-  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  // Date.parse normalizes some impossible calendar days. That cannot serve
-  // as trustworthy persisted clock evidence.
-  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1] &&
-    hour <= 23 && minute <= 59 && second <= 59 && Number.isFinite(Date.parse(value));
+  // Reuse the same civil-valid explicit-zone contract as customer quote
+  // validity: a false delivery status clock must never look trustworthy.
+  return typeof value === "string" && trustedQuoteInstant(value) !== null;
 }
 
 /** Never render server-inconsistent delivery health as operational success. */
@@ -91,6 +79,9 @@ export function parseInboxDeliveryDiagnostics(value: unknown): InboxDeliveryDiag
       counts.ok + counts.pending + counts.review !== record.scannedOutboundMessages ||
       record.items.length !== record.scannedOutboundMessages) return undefined;
   const items: DeliveryDiagnostic[] = [];
+  // Duplicate evidence rows are not distinct messages; accepting them can
+  // fabricate healthy delivery counts from a single provider receipt.
+  const seenMessageIds = new Set<string>();
   let ok = 0;
   let pending = 0;
   let review = 0;
@@ -108,6 +99,8 @@ export function parseInboxDeliveryDiagnostics(value: unknown): InboxDeliveryDiag
           item.reason as DeliveryTriageReason | undefined)) {
       return undefined;
     }
+    if (seenMessageIds.has(item.messageId as string)) return undefined;
+    seenMessageIds.add(item.messageId as string);
     if (item.health === "OK") ok++;
     if (item.health === "PENDING") pending++;
     if (item.health === "NEEDS_REVIEW") review++;
