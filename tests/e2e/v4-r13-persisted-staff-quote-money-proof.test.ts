@@ -34,6 +34,21 @@ describe("R13 staff persisted quote proof prevents fictional zero-value offers",
     ]) expect(isSavedStaffQuoteRowVerifiable({...quote,...patch}),JSON.stringify(patch))
       .toBe(false);
   });
+  it("rejects typed but contradictory saved price, tax, deposit and balance claims",()=>{
+    // Previously each column was individually safe but the staff summary
+    // could still show unbalanced APPROVED/SENT quote money as reliable.
+    for(const patch of [
+      {subtotal_minor:4900},{tax_minor:499},{total_minor:5499},
+      {deposit_minor:1099},{balance_minor:4399},
+      {subtotal_minor:Number.MAX_SAFE_INTEGER,tax_minor:500},
+      {deposit_minor:Number.MAX_SAFE_INTEGER,balance_minor:4400},
+    ]) expect(isSavedStaffQuoteRowVerifiable({...quote,...patch}),JSON.stringify(patch))
+      .toBe(false);
+    expect(isSavedStaffQuoteRowVerifiable({...quote,
+      deposit_minor:0,balance_minor:5500})).toBe(true);
+    expect(isSavedStaffQuoteRowVerifiable({...quote,
+      tax_minor:0,total_minor:5000,deposit_minor:5000,balance_minor:0})).toBe(true);
+  });
   it("gates staff snapshot before verified quote can be treated as ready to send",()=>{
     const runtime=readFileSync(join(process.cwd(),
       "src/features/operations/operational-product-runtime.ts"),"utf8");
