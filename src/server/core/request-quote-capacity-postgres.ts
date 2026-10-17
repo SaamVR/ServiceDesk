@@ -98,14 +98,30 @@ function quoteFromRpc(value: unknown, expectedWorkspaceId: string): QuoteDTO {
   };
 }
 
+function requirePersistedText(row: RpcRow, camel: string, snake?: string): string {
+  const value = field(row, camel, snake);
+  if (typeof value !== "string" || !value.trim())
+    throw new Error("Malformed capacity or hold source identity.");
+  return value;
+}
+function requirePersistedInstant(row: RpcRow, camel: string, snake?: string): string {
+  const value = requirePersistedText(row, camel, snake);
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ||
+      !Number.isFinite(Date.parse(value)))
+    throw new Error("Malformed capacity or hold expiry timestamp.");
+  return value;
+}
 function slotFromRpc(value: unknown, quote: QuoteDTO): SlotDTO {
   const row = object(value);
+  const workspaceId = requirePersistedText(row,"workspaceId","workspace_id");
+  const startAt = requirePersistedInstant(row,"startAt","starts_at");
+  const endAt = requirePersistedInstant(row,"endAt","ends_at");
+  if (workspaceId !== quote.workspaceId || Date.parse(endAt) <= Date.parse(startAt))
+    throw new Error("Malformed capacity slot workspace or interval.");
   return {
-    id: String(field(row, "id")),
-    workspaceId: String(field(row, "workspaceId", "workspace_id")),
-    crewId: String(field(row, "crewId", "crew_id")),
-    startAt: String(field(row, "startAt", "starts_at")),
-    endAt: String(field(row, "endAt", "ends_at")),
+    id: requirePersistedText(row,"id"), workspaceId,
+    crewId: requirePersistedText(row,"crewId","crew_id"),
+    startAt, endAt,
     serviceMinutes: quote.durationMinutes,
     bufferMinutes: quote.bufferMinutes,
     availabilityFresh: true,
@@ -208,15 +224,24 @@ export function createPostgresRequestQuoteCapacityFacadeMethods(
       const quote = await readLatestQuoteForRequest(client, ctx, input.requestId);
       if (quote.ok === false) return [];
       const { data, error } = await client.rpc<RpcRow>("servicedesk_find_capacity_slots", { p_input: { ...actor(ctx), ...input } });
-      if (error || !data || data.ok === false || !Array.isArray(data.slots)) return [];
-      return data.slots.map((slot) => slotFromRpc(slot, quote.value));
+      if (error || !data || data.ok === false || !Array.isArray(data.slots) ||
+          quote.value.requestId !== input.requestId) return [];
+      // A corrupt slot source must not turn into a convincing available slot.
+      // Preserve the current facade's [] failure contract instead of throwing.
+      try { return data.slots.map((slot) => slotFromRpc(slot, quote.value)); }
+      catch { return []; }
     },
 
     async holdSlot(ctx: ActorContext, slotId: string, quoteId: string, meta: CommandMeta): Promise<Result<{ holdId: string; expiresAt: string }>> {
       const { data, error } = await client.rpc<RpcRow>("servicedesk_hold_slot", { p_input: { ...actor(ctx), slotId, quoteId, idempotencyKey: meta.idempotencyKey, now: meta.now } });
       return rpcResult(data, error, "HOLD_SLOT_RPC_ERROR", (row) => {
         const hold = object(row.hold);
-        return { holdId: String(field(hold, "id")), expiresAt: String(field(hold, "expiresAt", "expires_at")) };
+        const holdId = requirePersistedText(hold, "id");
+        const expiresAt = requirePersistedInstant(hold, "expiresAt", "expires_at");
+        if (!Number.isFinite(Date.parse(meta.now)) ||
+            Date.parse(expiresAt) <= Date.parse(meta.now))
+          throw new Error("Persisted hold expiry is not in the future.");
+        return { holdId, expiresAt };
       });
     },
   };
