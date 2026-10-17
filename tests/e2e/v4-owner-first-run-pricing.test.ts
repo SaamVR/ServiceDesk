@@ -35,7 +35,7 @@ function form() {
   for (const [name,value] of Object.entries(values)) data.set(name,value);
   return data;
 }
-function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS"; missingProof?: boolean; disabledBranch?: boolean; readbackThrows?: boolean; rpcThrows?: boolean; wrongDeposit?: boolean; wrongValidity?: boolean; wrongBuffer?: boolean }={}) {
+function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS"; missingProof?: boolean; disabledBranch?: boolean; readbackThrows?: boolean; rpcThrows?: boolean; wrongDeposit?: boolean; wrongValidity?: boolean; wrongBuffer?: boolean; wrongCurrency?: boolean; wrongRpcVersion?: boolean; wrongRpcDuplicate?: boolean }={}) {
   const parsed = parseOwnerCleaningPricingSetup(form());
   if (!parsed.ok) throw new Error(parsed.message);
   const savedRules = parsed.value.rules;
@@ -47,7 +47,7 @@ function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS
     })),
     rate_cards: options.missingProof ? [] : [{
       id:rateCardId, workspace_id:workspaceId,version:"owner-cleaning-"+setupId,
-      active:true,currency:"USD",rules:savedRules,
+      active:true,currency:options.wrongCurrency?" USD":"USD",rules:savedRules,
       deposit_percent:options.wrongDeposit?10:parsed.value.depositPercent,
       valid_hours:options.wrongValidity?72:parsed.value.validHours,
       buffer_minutes:options.wrongBuffer?60:parsed.value.bufferMinutes,
@@ -89,8 +89,8 @@ function harness(options: { role?: string; mode?: "SERVICE_ROLE"|"QA_SESSION_RLS
     expect(payload.p_input.setupId).toBe(setupId);
     if (options.rpcThrows) throw new Error("unknown-committed-rpc-result");
     return {data:{
-      ok:true,duplicate:false,rateCardId,priceBookId,branchId,
-      rateVersion:"owner-cleaning-"+setupId,
+      ok:true,duplicate:options.wrongRpcDuplicate?"false":false,rateCardId,priceBookId,branchId,
+      rateVersion:options.wrongRpcVersion?"owner-cleaning-unrelated": "owner-cleaning-"+setupId,
     },error:null};
   })};
   const resolveActor=vi.fn(async()=>({ok:true as const,value:{
@@ -160,6 +160,23 @@ describe("V4 first-run owner cleaning price configuration",()=>{
       expect(result,JSON.stringify(cfg)).toMatchObject({ok:false,code:"PRICING_SETUP_READBACK_UNVERIFIED"});
       expect(h.rpc.rpc).toHaveBeenCalledOnce();
       expect(h.seen).toContain("rate_cards");
+    }
+  });
+
+  it("refuses padded persisted denomination instead of normalizing into apparent verified USD pricing",async()=>{
+    const h=harness({wrongCurrency:true});
+    const result=await setupAuthorizedCleaningPricing("fictional-qa",form(),h.deps);
+    expect(result).toMatchObject({ok:false,code:"PRICING_SETUP_READBACK_UNVERIFIED"});
+    expect(h.rpc.rpc).toHaveBeenCalledOnce();
+  });
+
+  it("refuses forged success receipts whose rateVersion is unrelated to the submitted setup ID",async()=>{
+    for(const cfg of [{wrongRpcVersion:true},{wrongRpcDuplicate:true}]) {
+      const h=harness(cfg);
+      const result=await setupAuthorizedCleaningPricing("fictional-qa",form(),h.deps);
+      expect(result,JSON.stringify(cfg)).toMatchObject({ok:false,code:"PRICING_SETUP_WRITE_REJECTED"});
+      expect(h.rpc.rpc).toHaveBeenCalledOnce();
+      expect(h.seen).toHaveLength(0);
     }
   });
 
