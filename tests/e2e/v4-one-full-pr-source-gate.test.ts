@@ -32,6 +32,6 @@ describe("V4 canonical PR full-source release gate", () => {
     expect(mergedGate).toContain("Real HTTP guest-route release contract (all 13 modules)");
     expect(mergedGate).toContain("Real Chrome public responsive proof");
     expect(mergedGate).toContain("Real Chrome synthetic operations journey");
-    expect(mergedGate).toContain("cancel-in-progress: false");
+    expect(mergedGate).toContain("cancel-in-progress: true");
   });
 });

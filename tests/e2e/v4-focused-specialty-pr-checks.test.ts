@@ -46,7 +46,7 @@ describe("V4 CI focused specialty with one complete PR release gate", () => {
 
   it("leaves post-merge authentication and public/synthetic Chrome release checks intact", () => {
     const full = read("v4-reconciled-full-rc.yml");
-    expect(full).toContain("cancel-in-progress: false");
+    expect(full).toContain("cancel-in-progress: true");
     expect(full).toContain("Real HTTP guest-route release contract (all 13 modules)");
     expect(full).toContain("Real Chrome public responsive proof");
     expect(full).toContain("Real Chrome synthetic operations journey");

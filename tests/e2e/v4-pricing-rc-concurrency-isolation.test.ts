@@ -29,12 +29,13 @@ describe("V4 non-colliding release checks", () => {
     expect(controller).toContain("Real Chrome synthetic operations journey");
   });
 
-  it("preserves per-PR cancellation for stale attempts of the same specialized workflow only", () => {
+  it("preserves per-workflow cancellation without colliding pricing and controller checks", () => {
     for (const source of [sqlGuard, ownerBook]) {
       expect(source).toContain("cancel-in-progress: true");
       expect(source).toContain("github.event.pull_request.number || github.ref");
       expect(source).toContain("pull_request:");
     }
-    expect(controller).toContain("cancel-in-progress: false");
+    expect(controller).toContain("cancel-in-progress: true");
+    expect(getConcurrencyGroup(controller)).toContain("servicedesk-v4-reconciled-rc-");
   });
 });
