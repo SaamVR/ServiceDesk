@@ -136,7 +136,7 @@ export function AiOwnerModelProbe({
         <p role="status" className={`${styles.message} ${styles.success}`}>
           Model response confirmed for this session: <strong>{result.model}</strong> ·{" "}
           <time dateTime={result.checkedAt}>{result.checkedAt}</time>.
-          <span className={styles.secondary}>This is one ephemeral connection check,
+          <span className={styles.secondary}>This is an ephemeral connection test,
             not a durable AI execution or customer-delivery receipt.</span>
         </p>
       ) : null}
