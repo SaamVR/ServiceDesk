@@ -1,0 +1,3 @@
+# Independent CRITIC L14 — hidden own-property event veto
+
+Adversarial reviewer challenge against L08 event envelope candidate: a recovered snapshot can hold a nonenumerable own property that would be **ignored** by Object.keys/values and stableSnapshot fingerprint despite being an unapproved customer/PII field. The evaluator must not silently certify sanitized output that differs from recovered source content; reject events unless own-property *names* equal enumerable allowlisted keys. Also check symbol hidden fields. This independent test is red on the original candidate until producer addresses it. Test does not grant provider or business permissions.

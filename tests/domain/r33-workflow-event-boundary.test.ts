@@ -39,6 +39,14 @@ describe("R33 Core event ingester must fail closed under malformed recovered JSO
     });
     refuse({...event,snapshot},"WORKFLOW_EVENT_SNAPSHOT_INVALID");
   });
+  it("critic: nonenumerable private source data cannot bypass event snapshot allowlist",()=>{
+    const snapshot=Object.defineProperty({"request.serviceCode":"STANDARD"},
+      "customer.privateNotes",{value:"PRIVATE_NOTES",enumerable:false});
+    refuse({...event,snapshot},"WORKFLOW_EVENT_SNAPSHOT_INVALID");
+    const symbol=Symbol("hidden");
+    const symbolic={"request.serviceCode":"STANDARD",[symbol]:"PRIVATE"};
+    refuse({...event,snapshot:symbolic},"WORKFLOW_EVENT_SNAPSHOT_INVALID");
+  });
   it("retains valid source identity and same fingerprint on equivalent persisted events",()=>{
     const version={
       id:"version-1",workspaceId:"workspace-1",branchId:"branch-1",ruleId:"rule-1",
