@@ -24,11 +24,17 @@ describe("V4 approved quote pipeline enforces live expiry for staff readiness",(
   for(const validUntil of [undefined,"", "invalid", "2026-10-16T11:59:59Z", now]) {
    expect(needsApprovedQuoteExpiryReview({id:"test",requestId:"r",version:1,status:"APPROVED",validUntil},now)).toBe(true);
   }
+  for(const validUntil of [
+    "2026-10-16T12:00:01", "2026-10-16 12:00:01",
+    "2026-10-16", "2026-10-16T12:00:01+99:00",
+  ]) expect(needsApprovedQuoteExpiryReview({...quotes[0],validUntil},now)).toBe(true);
+  expect(needsApprovedQuoteExpiryReview(quotes[0],"2026-10-16T12:00:00")).toBe(true);
+  expect(needsApprovedQuoteExpiryReview({...quotes[0],validUntil:"2026-10-16T15:00:01+03:00"},now)).toBe(false);
   expect(needsApprovedQuoteExpiryReview(quotes[0],now)).toBe(false);
   expect(needsApprovedQuoteExpiryReview(quotes[4],now)).toBe(false);
  });
  it("never presents ready or customer-waiting quotes on a corrupt snapshot clock",()=>{
-  for(const invalidClock of ["not-an-instant", "", "  "]) {
+  for(const invalidClock of ["not-an-instant", "", "  ", "2026-10-16T12:00:00", "2026-10-16"]) {
     const summary=buildQuotePipeline(quotes,invalidClock);
     expect(summary.readyToSend, invalidClock).toBe(0);
     expect(summary.awaitingCustomer, invalidClock).toBe(0);
