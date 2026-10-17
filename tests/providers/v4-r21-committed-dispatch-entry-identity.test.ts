@@ -4,9 +4,9 @@ import type {OutboxJob} from "../../src/server/integrations/types";
 const job:OutboxJob={
  id:"outbox-21",workspaceId:"ws-21",channel:"WHATSAPP",purpose:"QUOTE",
  recipient:{recipientRef:"contact-21",consentRequired:true,hasOptIn:true,optedOut:false},
- createdAt:"2026-10-17T12:00:00.000Z",idempotencyKey:"delivery-r21-1",payload:{},
+ createdAt:"2026-10-04T12:00:00.000Z",idempotencyKey:"delivery-r21-1",payload:{},
 };
-const args={committedAt:"2026-10-17T12:00:01.000Z",attempt:1};
+const args={committedAt:"2026-10-04T12:00:01.000Z",attempt:1};
 describe("R21 committed outbox direct-entry defense",()=>{
  it("rejects corrupt claimed identities and unsupported intent before a provider call",async()=>{
    let sends=0;
