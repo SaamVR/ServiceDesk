@@ -26,6 +26,9 @@ describe("SONIC workflow retry and false-outcome evidence review", () => {
     expect(strip).toContain("1,000");
     expect(strip).toContain("2,000 before branch filtering");
     expect(status).toContain("source capped before branch filtering");
+    expect(status).toContain("conflicting action slot(s) need operator review");
+    expect(strip).toContain("evidence.failedActions + evidence.externalApprovalRequired +");
+    expect(strip).toContain("Review failed, ambiguous and approval-required items");
   });
   it("counts the latest successful retry, not the preceding failed attempt", () => {
     const result = summarizeWorkflowEvidence({

@@ -13,7 +13,8 @@ export function WorkflowEvidenceStrip({executions,actions}: {
     workflowExecutions: executions,
     workflowActionExecutions: actions,
   });
-  const issues = evidence.failedActions + evidence.externalApprovalRequired;
+  const issues = evidence.failedActions + evidence.externalApprovalRequired +
+    evidence.ambiguousActionSlots;
   return (
     <section className={styles.panel} aria-labelledby="workflow-evidence-title">
       <header className={styles.header}>
@@ -46,7 +47,7 @@ export function WorkflowEvidenceStrip({executions,actions}: {
           ? "No live workflow execution records exist in this authorized branch scope yet. A draft or simulated preview is not a live event."
           : `${evidence.matchedLiveExecutions} live decisions matched published rules. ${evidence.previewExecutions} additional preview decisions are excluded from live totals.`}
         {" "}
-        <strong>{issues ? "Review failed and approval-required items before any outbound action." :
+        <strong>{issues ? "Review failed, ambiguous and approval-required items before any outbound action." :
           "Zero issues here does not establish external delivery."}</strong>
         {" "}Provider sends, email delivery, WhatsApp delivery, checkout and model inference require separate controlled receipts.
         {" "}This is a loaded snapshot, not exhaustive history: source reads cap workflow executions at 1,000

@@ -61,6 +61,7 @@ export function AiOperationsStatus({
           <div><strong>{evidence.externalApprovalRequired}</strong><span>External actions requiring approval</span></div>
           <div><strong>{evidence.failedActions}</strong><span>Current failed action slots</span></div>
           <p>Authorized, loaded latest-action states · historical retries and ambiguous slots excluded · source capped before branch filtering · no provider delivery verified.
+            {evidence.ambiguousActionSlots > 0 ? ` ${evidence.ambiguousActionSlots} conflicting action slot(s) need operator review.` : ""}
             <Link href={buildStaffModuleHref(workspaceSlug, "automations")}> Review execution evidence →</Link>
           </p>
         </div>
