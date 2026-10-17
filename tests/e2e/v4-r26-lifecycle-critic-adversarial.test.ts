@@ -6,7 +6,7 @@ const req={id:"00000000-0000-4000-8000-000000000001",version:3,serviceLabel:"Sta
 const base={id:"00000000-0000-4000-8000-000000000002",requestId:req.id,version:2,status:"SENT",currency:"USD",
   totalMinor:10000,depositMinor:0,balanceMinor:10000,durationMinutes:60,bufferMinutes:15} as OperationalQuote;
 const visit={id:"00000000-0000-4000-8000-000000000003",requestId:req.id,quoteId:base.id,status:"COMPLETED"} as OperationalVisit;
-const invoice={id:"00000000-0000-4000-8000-000000000004",quoteId:base.id,status:"PAID"} as OperationalInvoice;
+const invoice={id:"00000000-0000-4000-8000-000000000004",quoteId:base.id,status:"PAID"} as unknown as OperationalInvoice;
 const run=(quotes:OperationalQuote[], visits:OperationalVisit[], invoices:OperationalInvoice[])=>
   summarizeSavedRequestLifecycle({request:req,quotes,visits,invoices});
 
