@@ -52,18 +52,19 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
       <div>
         <p className={styles.eyebrow}>Automation command center</p>
         <h2>Workflow activity &amp; action evidence</h2>
-        <p className={styles.subtle}>Snapshot of authorized saved operations, not real-time monitoring.
-          Preview executions and fabricated delivery confirmations are excluded.</p>
+        <p className={styles.subtle}>Recent authorized snapshot, not real-time monitoring or complete historical reporting.
+          The source loads at most 1,000 workflow executions and 2,000 action-attempt rows
+          before branch scoping. Preview runs and inferred delivery claims are excluded.</p>
       </div>
       <span className={styles.snapshot}>Snapshot recorded: <time dateTime={snapshot.loadedAt}>{snapshot.loadedAt}</time></span>
     </header>
 
     <div className={styles.metrics} aria-label="Saved automation effectiveness metrics">
-      <div><strong>{summary.runs}</strong><span>Live decisions recorded</span></div>
-      <div><strong>{summary.recordedSucceededActions}</strong><span>Actions marked succeeded internally</span></div>
-      <div><strong>{summary.waitingForApproval}</strong><span>Current owner approvals required</span></div>
-      <div><strong>{summary.failed}</strong><span>Runs with recorded failures</span></div>
-      <div><strong>{summary.pendingActions}</strong><span>Current pending action states</span></div>
+      <div><strong>{summary.runs}</strong><span>Live decisions in loaded snapshot</span></div>
+      <div><strong>{summary.recordedSucceededActions}</strong><span>Internally succeeded in loaded actions</span></div>
+      <div><strong>{summary.waitingForApproval}</strong><span>Current approvals in loaded actions</span></div>
+      <div><strong>{summary.failed}</strong><span>Loaded runs with recorded failures</span></div>
+      <div><strong>{summary.pendingActions}</strong><span>Pending states in loaded actions</span></div>
       <div><strong>{averageDuration === null ? "—" : `${averageDuration}s`}</strong>
         <span>Mean recorded run duration ({summary.measuredDurationMs.length} complete pairs)</span></div>
     </div>
@@ -71,7 +72,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
     {snapshot.workflowAvailable === false
       ? <p className={styles.notice} role="status">Workflow evidence is unavailable for this authorized snapshot. No activity can be inferred.</p>
       : !runs.length
-      ? <p className={styles.notice} role="status">No recorded live executions are available here.
+      ? <p className={styles.notice} role="status">No live executions were returned in the current authorized snapshot.
         Publish an authorized automation and trigger it through ordinary business operations to generate real evidence.</p>
       : <>
         <nav className={styles.filters} aria-label="Filter workflow executions">
