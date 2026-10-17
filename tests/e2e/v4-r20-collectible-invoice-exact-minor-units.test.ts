@@ -36,6 +36,27 @@ describe("R20B staff invoice collection queue exact saved money authority", () =
     ]);
   });
 
+  it("keeps unbalanced saved invoice ledgers out of the actionable and open count", () => {
+    const verified = {
+      id: "verified-ledger", status: "ISSUED", currency: "USD",
+      totalMinor: 12000, allocatedMinor: 2000, refundedMinor: 0, balanceMinor: 10000,
+    };
+    const inconsistent = { ...verified, id: "inconsistent", balanceMinor: 9999 };
+    const fractional = { ...verified, id: "fractional", allocatedMinor: 1.5 };
+    const missing = { ...verified, id: "missing", refundedMinor: undefined };
+    expect(isCollectibleInvoice(verified)).toBe(true);
+    for (const row of [inconsistent, fractional, missing]) {
+      expect(isCollectibleInvoice(row), row.id).toBe(false);
+      expect(invoiceQueueOf(row)).toBe("other");
+    }
+    const rows = [verified, inconsistent, fractional, missing];
+    expect(invoiceQueueCounts(rows)).toEqual({all:4,open:1,paid:0,void:0,other:3});
+    expect(filterInvoiceQueue(rows,"open").map(r=>r.id)).toEqual(["verified-ledger"]);
+    // Lightweight projections still classify literal integer balances, but
+    // real complete invoices must reconcile their entire saved ledger.
+    expect(isCollectibleInvoice({status:"ISSUED", balanceMinor:10})).toBe(true);
+  });
+
   it("does not compare priority across distinct currencies or mutate source records", () => {
     const rows = [
       {id:"usd",currency:"USD",status:"ISSUED",balanceMinor:100},
