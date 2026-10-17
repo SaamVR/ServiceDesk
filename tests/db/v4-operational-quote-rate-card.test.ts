@@ -223,4 +223,28 @@ describe("V4 real tenant quote pricing", () => {
     }
   });
 
+  it("rejects padded, control-bearing and synthetic-alias rate versions before pricing", () => {
+    for (const version of ["synthetic-cleaning-v1 ", " synthetic-cleaning-v1",
+      "owner-approved\nversion", "owner-approved\u202e", "owner-approved\t",
+      " x", "x ", ""]) {
+      expect(parsePersistedQuoteRateCard({ ...rate, version }))
+        .toMatchObject({ ok: false, code: "QUOTE_RATE_CARD_INVALID" });
+    }
+    expect(parsePersistedQuoteRateCard({ ...rate, version: "owner-pricing-v19" }))
+      .toMatchObject({ ok: true, value: { version: "owner-pricing-v19" } });
+    for (const currency of [" USD", "USD ", "uSD", "US\nD", "USD\u202e"]) {
+      expect(parsePersistedQuoteRateCard({ ...rate, currency }))
+        .toMatchObject({ ok: false, code: "QUOTE_RATE_CARD_INVALID" });
+    }
+  });
+
+  it("never silently trims a persisted branch denomination to authorize quoting", async () => {
+    for (const currency of [" USD", "USD ", "USD\t"]) {
+      const f = fakeDb({ branchCurrency: currency });
+      expect(await loadOperationalQuoteRateCard(f.db, workspace, request))
+        .toMatchObject({ ok: false, code: "QUOTE_RATE_BRANCH_CURRENCY_INVALID" });
+      expect(f.calls.map(x => x.table)).not.toContain("rate_cards");
+    }
+  });
+
 });

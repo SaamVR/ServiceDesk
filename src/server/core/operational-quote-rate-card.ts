@@ -43,10 +43,14 @@ export function parsePersistedQuoteRateCard(input: unknown): Result<RateCard> {
   const row = record(input);
   if (!row || row.active !== true || typeof row.version !== "string" ||
       row.version.length < 1 || row.version.length > 80 ||
+      row.version.trim() !== row.version ||
+      /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(row.version) ||
       row.version === "synthetic-cleaning-v1") {
     return fail("QUOTE_RATE_CARD_INVALID", "A real active owner rate card is required.");
   }
-  const currency = typeof row.currency === "string" ? row.currency.trim() : "";
+  // A saved currency code is a priced-denomination authority, not a
+  // display label. Never silently trim or normalize a mismatched row.
+  const currency = typeof row.currency === "string" ? row.currency : "";
   const rules = record(row.rules);
   if (!/^[A-Z]{3}$/.test(currency) ||
       !integer(row.deposit_percent, 0, 100) ||
@@ -142,7 +146,7 @@ export async function loadOperationalQuoteRateCard(
     return fail("QUOTE_RATE_BRANCH_INACTIVE", "The cleaning branch is not active.");
   }
   const branchCurrency = typeof branch.data.currency === "string"
-    ? branch.data.currency.trim() : "";
+    ? branch.data.currency : "";
   if (!/^[A-Z]{3}$/.test(branchCurrency)) {
     return fail("QUOTE_RATE_BRANCH_CURRENCY_INVALID", "The branch currency is invalid.");
   }
