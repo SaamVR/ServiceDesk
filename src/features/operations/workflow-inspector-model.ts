@@ -14,7 +14,6 @@ export function buildWorkflowInspector(snapshot: Pick<OperationalStaffSnapshot,
     const attempts = actions.filter(item => item.executionId === execution.id)
       .sort((a, b) => a.actionIndex - b.actionIndex ||
         a.attemptNumber - b.attemptNumber || a.id.localeCompare(b.id));
-    const latest = [...new Map(attempts.map(a => [a.actionIndex, a])).values()];
     // The highest attempt number (not arrival order) owns current state.
     const latestByIndex = [...new Set(attempts.map(a => a.actionIndex))].map(index =>
       attempts.filter(a => a.actionIndex === index)
