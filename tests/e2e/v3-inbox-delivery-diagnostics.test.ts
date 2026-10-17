@@ -60,6 +60,8 @@ describe("read-only authorized delivery diagnostics", () => {
     for (const generatedAt of [
       "2026-10-11", "2026-10-11T11:00:00",
       "2026-10-11 11:00:00", "2026-10-11T11:00:00+99:00",
+      "2026-02-30T11:00:00Z", "2026-04-31T11:00:00Z",
+      "2026-10-11T24:00:00Z", "2025-02-29T11:00:00Z",
     ]) {
       expect(parseInboxDeliveryDiagnostics({...valid(),generatedAt})).toBeUndefined();
     }
@@ -67,6 +69,7 @@ describe("read-only authorized delivery diagnostics", () => {
       "2026-10-11T11:00:00Z",
       "2026-10-11T14:00:00+03:00",
       "2026-10-11T11:00:00.000000Z",
+      "2024-02-29T11:00:00Z",
     ]) {
       expect(parseInboxDeliveryDiagnostics({...valid(),generatedAt})?.counts)
         .toEqual({ok:1,pending:1,review:1});
