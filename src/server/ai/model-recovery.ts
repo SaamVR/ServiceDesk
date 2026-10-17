@@ -10,6 +10,24 @@ export interface AiModelFailureRecoveryInput {
   occurredAt: string;
 }
 
+function civilValidZonedRecoveryAt(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if (!m) return false;
+  const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);
+  const hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
+  if (year<1000 || year>9999 || month<1 || month>12 ||
+      day<1 || day>31 || hour>23 || minute>59 || second>59) return false;
+  const civil=new Date(Date.UTC(year,month-1,day));
+  if (civil.getUTCFullYear()!==year ||
+      civil.getUTCMonth()+1!==month || civil.getUTCDate()!==day) return false;
+  if (m[8]!=="Z"){
+    const tzH=Number(m[10]),tzM=Number(m[11]);
+    if (tzH>14 || tzM>59 || (tzH===14 && tzM!==0)) return false;
+  }
+  return Number.isFinite(Date.parse(value));
+}
+
 function statusFor(code: string): ProviderRecoveryEvent["status"] {
   if (code === "AI_MODEL_CONFIGURATION_BLOCKED") return "CONFIGURATION_BLOCKED";
   if (code === "AI_MODEL_INVALID_RESPONSE" || code === "AI_OUTPUT_INVALID") return "PERMANENT_FAILURE";
@@ -24,9 +42,7 @@ export function classifyAiModelFailureForRecovery(input: AiModelFailureRecoveryI
   // Invalid clocks/budgets must not throw through a retry worker.
   const safeId=(value:unknown)=>typeof value==="string" &&
     /^[A-Za-z0-9:_-]{3,128}$/.test(value);
-  const timeOk=typeof input?.occurredAt==="string" &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(input.occurredAt) &&
-    Number.isFinite(Date.parse(input.occurredAt));
+  const timeOk=civilValidZonedRecoveryAt(input?.occurredAt);
   const attemptsOk=Number.isSafeInteger(input?.attempts) &&
     input.attempts>=0 && input.attempts<=12 &&
     Number.isSafeInteger(input.maxAttempts) &&
