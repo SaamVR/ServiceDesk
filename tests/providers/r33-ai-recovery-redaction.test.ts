@@ -45,7 +45,7 @@ describe("SONIC R33 L01 redacted durable AI failure recovery",()=>{
      "2026-10-18T02:00:00-15:00",
    ]){
      const r=classifyAiModelFailureForRecovery({...fixture,occurredAt});
-     expect(r,{occurredAt}).toMatchObject({action:"OPERATOR_REVIEW",
+     expect(r,occurredAt).toMatchObject({action:"OPERATOR_REVIEW",
        retryable:false,terminal:true,preservesIdempotency:false});
      expect(JSON.stringify(r)).not.toContain("conversation-qa");
    }
