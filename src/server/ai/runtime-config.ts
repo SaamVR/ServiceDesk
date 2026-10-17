@@ -24,7 +24,8 @@ export function readConfiguredAiRuntimeConfig(
     return {ok:false,code:"AI_RUNTIME_GATEWAY_DISABLED",message:"Private Codex gateway is disabled."};
   }
   const apiKey = (provider === "codex_gateway"
-    ? env.SERVICEDESK_CODEX_GATEWAY_KEY : env.OPENAI_API_KEY) ?? "";\n  const normalizedKey = apiKey.trim();
+    ? env.SERVICEDESK_CODEX_GATEWAY_KEY : env.OPENAI_API_KEY) ?? "";
+  const normalizedKey = apiKey.trim();
   const model = (env.SERVICEDESK_AI_MODEL ?? "").trim();
   const apiBaseUrl = (env.SERVICEDESK_AI_API_BASE_URL ??
     (provider === "codex_gateway"
