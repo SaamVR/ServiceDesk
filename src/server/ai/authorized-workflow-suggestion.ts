@@ -110,8 +110,14 @@ export async function suggestAuthorizedOwnerWorkflow(
   }catch{return blocked("AI_RULE_MODEL_UNAVAILABLE");}
   if(deps.signal?.aborted)return blocked("AI_RULE_CANCELLED");
   if(!result.ok)return blocked("AI_RULE_MODEL_UNAVAILABLE");
-  if(!result.value.output ||
-      Object.keys(result.value.output).length>0 ||
+  // The only permitted non-workflow extraction is an exact empty JSON
+  // object. Arrays, primitives, inherited and hidden model fields are not
+  // proof of a valid structured AI response.
+  const extraction:unknown=result.value.output;
+  if(!extraction || typeof extraction!=="object" ||
+      Array.isArray(extraction) ||
+      Object.getPrototypeOf(extraction)!==Object.prototype ||
+      Reflect.ownKeys(extraction).length!==0 ||
       !Array.isArray(result.value.requestedToolCalls) ||
       result.value.requestedToolCalls.length>0 ||
       !Array.isArray(result.value.citations) ||
