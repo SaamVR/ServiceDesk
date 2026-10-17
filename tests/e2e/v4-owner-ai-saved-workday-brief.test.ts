@@ -101,11 +101,10 @@ describe("real authorized AI daily owner operations brief",()=>{
       "We have resolved the customer issues; check the new queue.",
       "Review critical attention items tomorrow.",
     ]) {
-      // The last category exists in this fixture and remains permitted,
-      // while hallucinated numeric and completed-action claims are blocked.
-      const expected=ungrounded==="Review critical attention items tomorrow.";
-      expect(Boolean(validateOwnerOperationsBriefGrounding(ungrounded,base)),ungrounded)
-        .toBe(expected);
+      // Queue counts have no scheduling commitments, even when the
+      // critical-attention bucket itself is nonempty.
+      expect(validateOwnerOperationsBriefGrounding(ungrounded,base),ungrounded)
+        .toBeUndefined();
     }
     const empty={...base,unassignedActiveVisits:0,quoteValidityNeedsReview:0,
       waitingOnCustomerQuotes:0,invoiceLedgersNeedingReview:0,openRequests:0,
@@ -119,6 +118,31 @@ describe("real authorized AI daily owner operations brief",()=>{
       "Check the authoritative workspace queues before making changes.",empty))
       .toBe("Check the authoritative workspace queues before making changes.");
   });
+  it("does not invent calendar deadlines from count-only owner evidence",()=>{
+    const facts=deriveOwnerOperationsBriefFacts(snapshot as never)!;
+    for(const copy of [
+      "Review critical attention items tomorrow.",
+      "Check unassigned visits this afternoon.",
+      "Prioritize open requests before Friday.",
+      "Review invoices by end of day.",
+      "Inspect outstanding invoices next week.",
+      "Review quotes Monday.",
+      "Review critical attention items first thing tomorrow.",
+      "Check unassigned visits before lunch.",
+      "Check quotes tonight.",
+    ]) {
+      expect(validateOwnerOperationsBriefGrounding(copy,facts),copy).toBeUndefined();
+    }
+    for(const copy of [
+      "Review critical attention items.",
+      "Review unassigned visits before assigning staff.",
+      "Check saved quotes before making changes.",
+      "Inspect owner queues in Settings.",
+    ]) {
+      expect(validateOwnerOperationsBriefGrounding(copy,facts),copy).toBe(copy);
+    }
+  });
+
   it("rejects an ungrounded AI output after saving verified counts rather than surfacing it",async()=>{
     const config=deps() as unknown as Record<string, unknown>;
     const result=await generateOwnerOperationsBrief("ctg",{
