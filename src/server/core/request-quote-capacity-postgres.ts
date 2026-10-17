@@ -32,21 +32,51 @@ function maybeString(value: unknown): string | undefined {
   return value === null || value === undefined ? undefined : String(value);
 }
 
-function requestFromRpc(value: unknown): RequestDTO {
+function requestFromRpc(value: unknown, expectedWorkspaceId: string): RequestDTO {
   const row = object(value);
+  const required = (key: string, snake?: string): string => {
+    const saved = field(row, key, snake);
+    if (typeof saved !== "string" || !saved.trim())
+      throw new Error("Malformed persisted request identity or status.");
+    return saved;
+  };
+  const optional = (key: string, snake?: string): string | undefined => {
+    const saved = field(row, key, snake);
+    if (saved == null) return undefined;
+    return required(key, snake);
+  };
+  const integer = (key: string, requiredValue = false): number | undefined => {
+    const saved = field(row, key);
+    if (saved == null && !requiredValue) return undefined;
+    if (typeof saved !== "number" || !Number.isSafeInteger(saved) || saved < 0 ||
+        (requiredValue && saved < 1))
+      throw new Error("Malformed persisted request version or room count.");
+    return saved;
+  };
+  const timestamp = (saved: string): string => {
+    if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(saved) ||
+        !Number.isFinite(Date.parse(saved)))
+      throw new Error("Malformed persisted request timestamp.");
+    return saved;
+  };
+  const workspaceId = required("workspaceId", "workspace_id");
+  const status = required("status");
+  if (workspaceId !== expectedWorkspaceId ||
+      !["NEW","COLLECTING","READY","NEEDS_REVIEW",
+        "QUOTED","BOOKED","LOST","CLOSED"].includes(status))
+    throw new Error("Malformed request state or tenant scope.");
+  const requestedStartAt = optional("requestedStartAt", "requested_start_at");
   return {
-    id: String(field(row, "id")),
-    workspaceId: String(field(row, "workspaceId", "workspace_id")),
-    customerId: maybeString(field(row, "customerId", "customer_id")),
-    propertyId: maybeString(field(row, "propertyId", "property_id")),
-    serviceCode: maybeString(field(row, "serviceCode", "service_code")),
-    status: String(field(row, "status")) as RequestDTO["status"],
-    bedrooms: typeof field(row, "bedrooms") === "number" ? Number(field(row, "bedrooms")) : undefined,
-    bathrooms: typeof field(row, "bathrooms") === "number" ? Number(field(row, "bathrooms")) : undefined,
-    requestedStartAt: maybeString(field(row, "requestedStartAt", "requested_start_at")),
-    version: Number(field(row, "version") ?? 0),
-    createdAt: String(field(row, "createdAt", "created_at")),
-    updatedAt: String(field(row, "updatedAt", "updated_at")),
+    id: required("id"), workspaceId,
+    customerId: optional("customerId", "customer_id"),
+    propertyId: optional("propertyId", "property_id"),
+    serviceCode: optional("serviceCode", "service_code"),
+    status: status as RequestDTO["status"],
+    bedrooms: integer("bedrooms"), bathrooms: integer("bathrooms"),
+    requestedStartAt: requestedStartAt ? timestamp(requestedStartAt) : undefined,
+    version: integer("version", true) as number,
+    createdAt: timestamp(required("createdAt", "created_at")),
+    updatedAt: timestamp(required("updatedAt", "updated_at")),
   };
 }
 
@@ -139,7 +169,7 @@ function actor(ctx: ActorContext): RpcRow {
 
 async function readRequest(client: SupabaseRpcClient, ctx: ActorContext, requestId: string): Promise<Result<RequestDTO>> {
   const { data, error } = await client.rpc<RpcRow>("servicedesk_get_request", { p_input: { ...actor(ctx), requestId } });
-  return rpcResult(data, error, "REQUEST_RPC_ERROR", (row) => requestFromRpc(row.request));
+  return rpcResult(data, error, "REQUEST_RPC_ERROR", (row) => requestFromRpc(row.request, ctx.workspaceId));
 }
 
 async function readQuote(client: SupabaseRpcClient, ctx: ActorContext, quoteId: string): Promise<Result<QuoteDTO>> {
@@ -170,14 +200,14 @@ export function createPostgresRequestQuoteCapacityFacadeMethods(
       const { data, error } = await client.rpc<RpcRow>("servicedesk_create_request", {
         p_input: { ...actor(ctx), ...input, visitorSessionId: ctx.role === "VISITOR" ? ctx.visitorSessionId : undefined, idempotencyKey: meta.idempotencyKey, now: meta.now },
       });
-      return rpcResult(data, error, "REQUEST_CREATE_RPC_ERROR", (row) => requestFromRpc(row.request));
+      return rpcResult(data, error, "REQUEST_CREATE_RPC_ERROR", (row) => requestFromRpc(row.request, ctx.workspaceId));
     },
 
     async updateRequest(ctx: ActorContext, id: string, patch: Partial<RequestDTO>, meta: CommandMeta): Promise<Result<RequestDTO>> {
       const { data, error } = await client.rpc<RpcRow>("servicedesk_update_request", {
         p_input: { ...actor(ctx), requestId: id, ...patch, idempotencyKey: meta.idempotencyKey, expectedVersion: meta.expectedVersion, now: meta.now },
       });
-      return rpcResult(data, error, "REQUEST_UPDATE_RPC_ERROR", (row) => requestFromRpc(row.request));
+      return rpcResult(data, error, "REQUEST_UPDATE_RPC_ERROR", (row) => requestFromRpc(row.request, ctx.workspaceId));
     },
 
     async calculateQuote(ctx: ActorContext, requestId: string): Promise<Result<QuoteDTO>> {
