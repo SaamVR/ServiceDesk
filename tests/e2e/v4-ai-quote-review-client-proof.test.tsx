@@ -76,6 +76,9 @@ describe("Quote reviewer browser proof boundary", () => {
     expect(source).toContain("previous?.scopeKey === submittedScope");
     expect(source).toContain("activeRequest.current === controller");
     expect(source).toContain("controller.abort()");
+    expect(source).toContain("if (controller.signal.aborted)");
+    expect(source).toContain("result = undefined;");
+    expect(source).toContain("if (timedOut) message =");
     expect(source).toContain("parseAuthorizedQuoteReview(payload, expectedQuoteId)");
     expect(source).toContain('credentials: "same-origin"');
     expect(source).toContain('cache: "no-store"');
