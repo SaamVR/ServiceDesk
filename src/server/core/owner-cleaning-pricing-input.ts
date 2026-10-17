@@ -73,7 +73,24 @@ function serviceRule(form: FormData, prefix: string, withOven: boolean): PriceRu
   }
   return result;
 }
+const PRICING_SETUP_FIELDS = [
+  "setupId", "branchId", "currency", "nameStandard", "nameDeep", "nameMoveOut",
+  "depositPercent", "validHours", "bufferMinutes", "autoApprovalMax",
+  ...["standard","deep","moveOut"].flatMap(prefix => [
+    prefix + "Base", prefix + "BaseMinutes", prefix + "Bedroom", prefix + "BedroomMinutes",
+    prefix + "Bathroom", prefix + "BathroomMinutes",
+  ]),
+  "moveOutOven", "moveOutOvenMinutes",
+];
+
 export function parseOwnerCleaningPricingSetup(form: FormData): Result<OwnerCleaningPricingSetup> {
+  // FormData.get() returns the first value. A duplicate field—even an
+  // identical duplicate—is ambiguous customer pricing authority, not a
+  // harmless formatting difference. Refuse it before constructing any rates.
+  if (!form || typeof form.getAll !== "function" ||
+      PRICING_SETUP_FIELDS.some(field => form.getAll(field).length !== 1)) {
+    return fail("Pricing form is incomplete or contains conflicting values. Reload and try again.");
+  }
   const setupId = str(form, "setupId");
   const branchId = str(form, "branchId");
   const currency = str(form, "currency");
@@ -85,7 +102,7 @@ export function parseOwnerCleaningPricingSetup(form: FormData): Result<OwnerClea
     DEEP: str(form, "nameDeep"),
     MOVE_OUT: str(form, "nameMoveOut"),
   };
-  if (Object.values(names).some(name => name.length < 3 || name.length > 120 || /[\x00-\x1f\x7f]/.test(name))) {
+  if (Object.values(names).some(name => name.length < 3 || name.length > 120 || /[\x00-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(name))) {
     return fail("Enter a valid cleaning service name for each service.");
   }
   const depositPercent = whole(form, "depositPercent", 0, 100);
