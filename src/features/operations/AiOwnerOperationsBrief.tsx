@@ -8,7 +8,9 @@ import type { VerifiedOwnerBrief } from "./owner-operations-brief-proof";
 import { buildStaffModuleHref } from "./staff-modules";
 import styles from "./AiOwnerOperationsBrief.module.css";
 
-const OWNER_BRIEF_WAIT_LIMIT_MS = 20_000;
+// Server-approved Codex gateway can run for up to 60s. A 75s UI wait avoids
+// dropping otherwise valid owner advisories and is NOT a server-action abort.
+const OWNER_BRIEF_WAIT_LIMIT_MS = 75_000;
 type Display = {
   scopeKey: string;
   phase: "waiting" | "stopped" | "ready" | "error";
@@ -62,7 +64,7 @@ function ScopedOwnerBrief({
       setDisplay({
         scopeKey: submittedScope,
         phase: "stopped",
-        error: "This briefing is taking longer than 20 seconds. The display stopped waiting, but the server model request may still be processing. Another request is blocked until it finishes.",
+        error: "This briefing is taking longer than 75 seconds. The display stopped waiting, but the server model request may still be processing. Another request is blocked until it finishes.",
       });
     }, OWNER_BRIEF_WAIT_LIMIT_MS);
     activeRequest.current = { id, timeout };

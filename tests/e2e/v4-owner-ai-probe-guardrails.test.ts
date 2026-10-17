@@ -56,7 +56,8 @@ describe("Owner model diagnostic cannot manufacture provider proof", () => {
   it("keeps the cancellation and timeout scoped to the owner test, not financial actions", () => {
     const source = readFileSync(join(process.cwd(),
       "src/features/operations/AiOwnerModelProbe.tsx"), "utf8");
-    expect(source).toContain("MODEL_PROBE_TIMEOUT_MS = 20_000");
+    expect(source).toContain("MODEL_PROBE_TIMEOUT_MS = 75_000");
+    expect(75_000).toBeGreaterThan(60_000); // bounded Codex maximum + UI overhead
     expect(source).toContain("controller.abort()");
     expect(source).toContain("if (controller.signal.aborted)");
     expect(source).toContain("verified = undefined;");

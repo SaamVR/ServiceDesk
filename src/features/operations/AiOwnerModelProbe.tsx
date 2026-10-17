@@ -8,7 +8,9 @@ import {
 } from "./ai-owner-model-probe-result";
 import styles from "./AiOwnerModelProbe.module.css";
 
-const MODEL_PROBE_TIMEOUT_MS = 20_000;
+// Server-side private gateway may use up to 60s after measured 25s inference.
+// Allow 15s for HTTP/proxy overhead; UI abort is not provider cancellation.
+const MODEL_PROBE_TIMEOUT_MS = 75_000;
 
 /**
  * Owner-only, synthetic model diagnostic. A successful response proves only
@@ -73,7 +75,7 @@ export function AiOwnerModelProbe({
       }
     } catch {
       failure = didTimeout
-        ? "The model test exceeded 20 seconds. This browser stopped waiting; provider-side completion is not verified."
+        ? "The model test exceeded 75 seconds. This browser stopped waiting; provider-side completion is not verified."
         : "The model could not be reached or the response was invalid. No customer action was authorized.";
     } finally {
       clearTimeout(timeout);
@@ -82,7 +84,7 @@ export function AiOwnerModelProbe({
       if (controller.signal.aborted) {
         verified = undefined;
         if (didTimeout) failure =
-          "The model test exceeded 20 seconds. This browser stopped waiting; provider-side completion is not verified.";
+          "The model test exceeded 75 seconds. This browser stopped waiting; provider-side completion is not verified.";
       }
       // Cancellation, unmount or tenant changes must not restore old results.
       if (activeRequest.current === controller) {

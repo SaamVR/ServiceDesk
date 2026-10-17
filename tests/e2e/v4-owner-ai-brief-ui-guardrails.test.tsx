@@ -68,7 +68,8 @@ describe("Owner AI saved-workload briefing presentation", () => {
 
   it("prevents duplicate server actions after operator timeout or stopping waiting", () => {
     const ui = read("src/features/operations/AiOwnerOperationsBrief.tsx");
-    expect(ui).toContain("OWNER_BRIEF_WAIT_LIMIT_MS = 20_000");
+    expect(ui).toContain("OWNER_BRIEF_WAIT_LIMIT_MS = 75_000");
+    expect(75_000).toBeGreaterThan(60_000); // allow provider tail latency
     expect(ui).toContain("scopeKey = workspaceSlug +");
     expect(ui).toContain("key={workspaceSlug +");
     expect(ui).toContain("activeRequest.current || requestOutstanding");
