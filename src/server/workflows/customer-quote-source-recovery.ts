@@ -95,12 +95,22 @@ export async function runInternalQuoteSourceRecoveryBatch(
     let errorCode = "QUOTE_SOURCE_RECOVERY_UNVERIFIED";
     try {
       const quote = await ports.service.from("quotes")
-        .select("id,workspace_id,request_id,status")
+        .select("id,workspace_id,request_id,status,accepted_at,superseded_by")
         .eq("workspace_id", workspaceId).eq("id", quoteId).maybeSingle();
-      if (quote.error || quote.data?.status !== "ACCEPTED" ||
-          !isUuid(quote.data?.request_id) ||
-          quote.data?.workspace_id !== workspaceId ||
-          quote.data?.id !== quoteId) {
+      if (quote.error || !quote.data ||
+          quote.data.status !== "ACCEPTED" ||
+          !isUuid(quote.data.request_id) ||
+          quote.data.workspace_id !== workspaceId ||
+          quote.data.id !== quoteId ||
+          typeof quote.data.accepted_at !== "string" ||
+          !Number.isFinite(Date.parse(quote.data.accepted_at))) {
+        errorCode = "QUOTE_SOURCE_ACCEPTED_FACT_UNVERIFIED";
+      } else if (isUuid(quote.data.superseded_by)) {
+        // A formerly accepted quote has since been replaced. Its durable
+        // journal receipt must be terminally skipped, not retried into a
+        // new internal workflow or mistaken for a completed automation.
+        outcome = "SKIPPED";
+      } else if (quote.data.superseded_by !== null) {
         errorCode = "QUOTE_SOURCE_ACCEPTED_FACT_UNVERIFIED";
       } else {
         const request = await ports.service.from("requests")
@@ -118,14 +128,15 @@ export async function runInternalQuoteSourceRecoveryBatch(
           // This reduces stale-worker races; DB-side idempotency remains the
           // final guard if the lease expires after this read.
           const liveLease = await ports.service.from("workflow_source_events")
-            .select("id,workspace_id,quote_id,state,locked_by,locked_until,attempts")
+            .select("id,workspace_id,quote_id,event_type,state,locked_by,locked_until,attempts")
             .eq("workspace_id",workspaceId).eq("id",id).maybeSingle();
           const live = liveLease.data;
           const currentUntil = typeof live?.locked_until === "string"
             ? Date.parse(live.locked_until) : NaN;
           if (liveLease.error || !live ||
               live.id !== id || live.workspace_id !== workspaceId ||
-              live.quote_id !== quoteId || live.state !== "PROCESSING" ||
+              live.quote_id !== quoteId || live.event_type !== "QUOTE_ACCEPTED" ||
+              live.state !== "PROCESSING" ||
               live.locked_by !== ports.workerId ||
               live.attempts !== row.attempts ||
               !Number.isFinite(currentUntil) || currentUntil <= Date.now()) {

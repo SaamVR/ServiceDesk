@@ -23,6 +23,8 @@ const claimed={
 function harness(options:{
   entries?:unknown[];
   quoteStatus?:string;
+  acceptedAt?: string | null;
+  supersededBy?: string | null;
   foreignRequest?:boolean;
   bridgeFails?:boolean;
   optedOut?:boolean;
@@ -34,7 +36,10 @@ function harness(options:{
   leaseAfterClaim?:Partial<typeof claimed>;
 }={}){
   const rows={
-    quotes:[{id:quote,workspace_id:workspace,request_id:request,status:options.quoteStatus??"ACCEPTED"}],
+    quotes:[{id:quote,workspace_id:workspace,request_id:request,
+      status:options.quoteStatus??"ACCEPTED",
+      accepted_at:options.acceptedAt===undefined ? "2026-10-17T12:00:00.000Z" : options.acceptedAt,
+      superseded_by:options.supersededBy===undefined ? null : options.supersededBy}],
     requests:[{id:request,workspace_id:options.foreignRequest?"other-tenant":workspace,customer_id:customer}],
     workflow_source_events:[{...claimed,...options.leaseAfterClaim}],
   };
@@ -111,6 +116,7 @@ describe("V4 trusted internal quote source recovery worker",()=>{
       {leaseAfterClaim:{state:"RETRY_PENDING"}},
       {leaseAfterClaim:{attempts:2}},
       {leaseAfterClaim:{quote_id:"aaaaaaaa-ffff-4fff-8fff-aaaaaaaaaaaa"}},
+      {leaseAfterClaim:{event_type:"REQUEST_CREATED" as "QUOTE_ACCEPTED"}},
       {leaseReadError:true},
     ];
     for(const options of cases){
@@ -124,6 +130,24 @@ describe("V4 trusted internal quote source recovery worker",()=>{
       });
     }
   });
+  it("terminally skips a genuinely superseded accepted quote without invoking rules",async()=>{
+    const h=harness({supersededBy:"99999999-9999-4999-8999-999999999999"});
+    expect(await run(h)).toMatchObject({state:"BATCH_PROCESSED",
+      claimed:1,completed:0,retryPending:0,skipped:1,providerMessagesSent:0});
+    expect(h.bridge).not.toHaveBeenCalled();
+    expect(h.events[1]).toMatchObject({fn:"servicedesk_complete_quote_source_event",
+      args:{p_outcome:"SKIPPED",p_error_code:null}});
+  });
+  it("never treats missing acceptance milestone or malformed supersession as a valid quote source",async()=>{
+    for(const options of [{acceptedAt:null},{acceptedAt:"invalid"},
+      {supersededBy:"malformed"}]){
+      const h=harness(options);
+      expect(await run(h)).toMatchObject({claimed:1,completed:0,retryPending:1});
+      expect(h.bridge).not.toHaveBeenCalled();
+      expect(h.events[1].args.p_error_code).toBe("QUOTE_SOURCE_ACCEPTED_FACT_UNVERIFIED");
+    }
+  });
+
   it("marks a later owner opt-out SKIPPED, never auto-sends or retries",async()=>{
     const h=harness({optedOut:true});
     expect(await run(h)).toMatchObject({claimed:1,skipped:1,completed:0,retryPending:0});
