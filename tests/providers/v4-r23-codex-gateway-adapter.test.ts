@@ -12,7 +12,7 @@ const gatewayReply=(payload:unknown=output,overrides:Record<string,unknown>={})=
     finish_reason:"stop"}],...overrides,
 });
 const input={
-  workspaceId:"fictional-tenant",conversationId:"synthetic-connection-probe",
+  workspaceId:"11111111-1111-4111-8111-111111111111",conversationId:"synthetic-connection-probe",
   promptVersion:"v4-r23-codex",userText:"Reply with a verified JSON checklist.",
 };
 const env={
@@ -20,6 +20,7 @@ const env={
   SERVICEDESK_CODEX_GATEWAY_ENABLED:"true",
   SERVICEDESK_CODEX_GATEWAY_KEY:"fictional-key-never-sent",
   SERVICEDESK_AI_MODEL:"codex",
+  SERVICEDESK_CODEX_GATEWAY_TEST_WORKSPACE_ID:"11111111-1111-4111-8111-111111111111",
 };
 
 describe("R23 operator-controlled Codex Gateway configuration",()=>{
@@ -34,6 +35,8 @@ describe("R23 operator-controlled Codex Gateway configuration",()=>{
       .toMatchObject({ok:false,code:"AI_RUNTIME_PROVIDER_INVALID"});
     expect(readConfiguredAiRuntimeConfig({...env,SERVICEDESK_AI_MODEL:"unknown-model"}))
       .toMatchObject({ok:false,code:"AI_RUNTIME_MODEL_INVALID"});
+    expect(readConfiguredAiRuntimeConfig({...env,SERVICEDESK_CODEX_GATEWAY_TEST_WORKSPACE_ID:undefined}))
+      .toMatchObject({ok:false,code:"AI_RUNTIME_GATEWAY_WORKSPACE_REQUIRED"});
   });
 
   it("requires exactly the user-authorized HTTPS host without query, userinfo, ports or downgrade",()=>{
@@ -41,6 +44,7 @@ describe("R23 operator-controlled Codex Gateway configuration",()=>{
     expect(valid).toMatchObject({ok:true,value:{
       apiBaseUrl:origin+"/v1",approvedGatewayOrigin:origin,
       provider:"codex_gateway",model:"codex",
+      gatewayAllowedWorkspaceId:input.workspaceId,
       apiKey:env.SERVICEDESK_CODEX_GATEWAY_KEY,
     }});
     for(const bad of [
@@ -89,7 +93,7 @@ describe("R23 bounded Chat Completions adapter with no new business-side effects
       expect(data.messages).toHaveLength(2);
       expect(data.messages[0].role).toBe("system");
       expect(data.messages[1].content).toBe(input.userText);
-      expect(request.body).not.toContain("fictional-tenant");
+      expect(request.body).not.toContain(input.workspaceId);
       expect(request.body).not.toContain("synthetic-connection-probe");
       return {status:200,body:gatewayReply()};
     });
@@ -144,6 +148,8 @@ describe("R23 bounded Chat Completions adapter with no new business-side effects
     const signal=new AbortController();signal.abort();
     expect(await callAiModel(config.value,{...input,signal:signal.signal},called))
       .toMatchObject({ok:false,code:"AI_MODEL_CANCELLED"});
+    expect(await callAiModel(config.value,{...input,workspaceId:"22222222-2222-4222-8222-222222222222"},called))
+      .toMatchObject({ok:false,code:"AI_MODEL_WORKSPACE_BLOCKED"});
     expect(called).not.toHaveBeenCalled();
   });
 
