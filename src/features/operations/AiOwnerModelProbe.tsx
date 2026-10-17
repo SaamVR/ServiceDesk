@@ -21,18 +21,19 @@ export function AiOwnerModelProbe({
   configured: boolean;
 }) {
   const activeRequest = useRef<AbortController | null>(null);
+  const scopeKey = workspaceSlug + "\\0" + (configured ? "configured" : "disabled");
   useEffect(() => () => {
     activeRequest.current?.abort();
     activeRequest.current = null;
-  }, [workspaceSlug]);
+  }, [scopeKey]);
 
   const [status, setStatus] = useState<{
-    workspace: string;
+    scopeKey: string;
     busy: boolean;
     result?: VerifiedOwnerModelProbe;
     error?: string;
   }>();
-  const scoped = status?.workspace === workspaceSlug ? status : undefined;
+  const scoped = status?.scopeKey === scopeKey ? status : undefined;
   const busy = scoped?.busy ?? false;
   const result = scoped?.result;
   const error = scoped?.error;
@@ -40,9 +41,10 @@ export function AiOwnerModelProbe({
   async function check() {
     if (!configured || busy || activeRequest.current) return;
     const requestedWorkspace = workspaceSlug;
+    const submittedScope = scopeKey;
     const controller = new AbortController();
     activeRequest.current = controller;
-    setStatus({ workspace: requestedWorkspace, busy: true });
+    setStatus({ scopeKey: submittedScope, busy: true });
     let didTimeout = false;
     const timeout = setTimeout(() => {
       didTimeout = true;
@@ -78,8 +80,8 @@ export function AiOwnerModelProbe({
       // Cancellation, unmount or tenant changes must not restore old results.
       if (activeRequest.current === controller) {
         activeRequest.current = null;
-        setStatus(previous => previous?.workspace === requestedWorkspace && previous.busy
-          ? { workspace: requestedWorkspace, busy: false, result: verified, error: failure }
+        setStatus(previous => previous?.scopeKey === submittedScope && previous.busy
+          ? { scopeKey: submittedScope, busy: false, result: verified, error: failure }
           : previous);
       }
     }
@@ -90,8 +92,8 @@ export function AiOwnerModelProbe({
     const request = activeRequest.current;
     activeRequest.current = null;
     request.abort();
-    setStatus(previous => previous?.workspace === workspaceSlug
-      ? { workspace: workspaceSlug, busy: false,
+    setStatus(previous => previous?.scopeKey === scopeKey
+      ? { scopeKey, busy: false,
           error: "Stopped waiting for the model test. Browser cancellation is not proof of provider-side cancellation." }
       : previous);
   }
