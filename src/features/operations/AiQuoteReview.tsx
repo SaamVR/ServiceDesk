@@ -1,11 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  describeQuoteReviewHttpFailure,
+  parseAuthorizedQuoteReview,
+  type VerifiedStaffQuoteReview,
+} from "./ai-quote-review-response";
+import styles from "./AiQuoteReview.module.css";
 
+const REVIEW_TIMEOUT_MS = 20_000;
 
-type State = { busy: boolean; review?: string; model?: string; error?: string };
+type Status = {
+  scopeKey: string;
+  busy: boolean;
+  review?: VerifiedStaffQuoteReview;
+  error?: string;
+};
 
-/** Explicit staff action. Never posts quotes, accepts payments or sends messages. */
+/** Explicit staff action. No quote mutation, payment or outbound delivery. */
 export function AiQuoteReview({
   workspaceSlug, quoteId, configured,
 }: { workspaceSlug: string; quoteId: string; configured: boolean }) {
@@ -16,84 +28,118 @@ export function AiQuoteReview({
 function ScopedQuoteReview({
   workspaceSlug, quoteId, configured,
 }: { workspaceSlug: string; quoteId: string; configured: boolean }) {
-  const [state, setState] = useState<State>({ busy: false });
-  const requestSequence = useRef(0);
+  const scopeKey = workspaceSlug + "\\0" + quoteId + "\\0" +
+    (configured ? "configured" : "disabled");
+  const [status, setStatus] = useState<Status>();
+  const scoped = status?.scopeKey === scopeKey ? status : undefined;
+  const busy = scoped?.busy ?? false;
+  const review = scoped?.review;
+  const error = scoped?.error;
   const activeRequest = useRef<AbortController | null>(null);
 
   useEffect(() => () => {
-    requestSequence.current += 1;
     activeRequest.current?.abort();
-  }, []);
+    activeRequest.current = null;
+  }, [scopeKey]);
 
   async function generate() {
-    if (!configured || state.busy) return;
-    const id = ++requestSequence.current;
+    if (!configured || busy || activeRequest.current) return;
+    const submittedScope = scopeKey;
+    const expectedQuoteId = quoteId;
     const controller = new AbortController();
     activeRequest.current = controller;
-    setState({ busy: true });
+    setStatus({ scopeKey: submittedScope, busy: true });
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, REVIEW_TIMEOUT_MS);
+
+    let result: VerifiedStaffQuoteReview | undefined;
+    let message: string | undefined;
     try {
       const response = await fetch("/api/internal/ai/quote-review", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", accept: "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ workspaceSlug, quoteId }),
+        cache: "no-store",
+        body: JSON.stringify({ workspaceSlug, quoteId: expectedQuoteId }),
         signal: controller.signal,
       });
-      if (requestSequence.current !== id || controller.signal.aborted) return;
-      const result: unknown = await response.json();
-      if (requestSequence.current !== id || controller.signal.aborted) return;
-      if (response.ok && result && typeof result === "object" &&
-          "state" in result && result.state === "AI_STAFF_REVIEW_ONLY" &&
-          "review" in result && typeof result.review === "string" &&
-          "model" in result && typeof result.model === "string") {
-        setState({ busy: false, review: result.review, model: result.model });
+      if (!response.ok) {
+        message = describeQuoteReviewHttpFailure(response.status);
+      } else if (!response.headers.get("content-type")?.toLowerCase().includes("application/json")) {
+        message = "The AI reviewer returned an invalid response type. Use the saved quote instead.";
       } else {
-        setState({ busy: false, error: "AI review was unavailable. Check model configuration and your access to this saved quote; no message was sent." });
+        const payload: unknown = await response.json();
+        result = parseAuthorizedQuoteReview(payload, expectedQuoteId) ?? undefined;
+        if (!result) {
+          message = "The AI response could not be tied to this saved quote. Refresh the quote; no business action was taken.";
+        }
       }
     } catch {
-      if (requestSequence.current !== id || controller.signal.aborted) return;
-      setState({ busy: false, error: "AI review could not be completed. Use the verified saved quote instead." });
+      message = timedOut
+        ? "AI quote review exceeded 20 seconds. The browser stopped waiting; provider-side cancellation is not confirmed."
+        : "AI review could not be completed. Verify the saved quote manually; no customer action was authorized.";
     } finally {
-      if (requestSequence.current === id) activeRequest.current = null;
+      clearTimeout(timeout);
+      // A cancelled, changed-quote or changed-workspace request can never
+      // hydrate the current panel with obsolete or cross-scope AI output.
+      if (activeRequest.current === controller) {
+        activeRequest.current = null;
+        setStatus(previous => previous?.scopeKey === submittedScope && previous.busy
+          ? { scopeKey: submittedScope, busy: false, review: result, error: message }
+          : previous);
+      }
     }
   }
 
   function cancelReview() {
-    if (!state.busy) return;
-    requestSequence.current += 1;
-    activeRequest.current?.abort();
+    if (!busy || !activeRequest.current) return;
+    const request = activeRequest.current;
     activeRequest.current = null;
-    setState({ busy: false, error: "Cancellation was requested. A paid provider request may still be processing; no quote or customer action was changed." });
+    request.abort();
+    setStatus(previous => previous?.scopeKey === scopeKey
+      ? { scopeKey, busy: false,
+          error: "Stopped waiting for AI quote review. A provider call may still finish or incur usage; no quote or customer action was authorized." }
+      : previous);
   }
 
-  return <section aria-label="Staff AI quote review"
-    style={{ marginTop: 12, border: "1px solid #cfe2df", background: "#f5faf8",
-      borderRadius: 12, padding: 16, display: "grid", gap: 10 }}>
-    <strong>AI quote checklist · staff review only</strong>
-    <p style={{ margin: 0, fontSize: ".85rem", lineHeight: 1.5 }}>
-      AI receives only the verified saved service codes and durations—not prices,
+  return <section className={styles.panel} aria-label="Staff AI quote review"
+    data-testid="staff-saved-quote-ai-review">
+    <div className={styles.heading}>
+      <div>
+        <p className={styles.eyebrow}>AI / manual approval</p>
+        <h3>Quote safety checklist</h3>
+      </div>
+      <span className={styles.state}>{configured ? "Review-only model" : "Setup required"}</span>
+    </div>
+    <p className={styles.description}>
+      AI receives only verified saved service codes and durations—not prices,
       contact details, addresses or customer notes. It cannot approve, send or change this quote.
     </p>
-    <button type="button" disabled={!configured || state.busy} onClick={generate}
-      aria-busy={state.busy}
-      style={{ justifySelf: "start", border: 0, borderRadius: 8,
-        color: "#fff", background: "#18564a", padding: "9px 14px",
-        cursor: configured && !state.busy ? "pointer" : "not-allowed" }}>
-      {state.busy ? "Checking saved quote…" : "Generate AI review checks"}
-    </button>
-    {state.busy ? (
-      <button type="button" onClick={cancelReview}
-        style={{ justifySelf: "start", border: "1px solid #b2cbc6", borderRadius: 8,
-          background: "white", color: "#194b43", padding: "9px 14px" }}>
-        Cancel pending review display
+    <div className={styles.actions}>
+      <button className={styles.action} type="button" onClick={generate}
+        disabled={!configured || busy} aria-busy={busy}>
+        {busy ? "Reviewing saved quote…" : "Generate AI review checks"}
       </button>
-    ) : null}
-    {!configured ? <p role="status">AI requires explicit server enablement and a configured real model.</p> : null}
-    {state.error ? <p role="alert">{state.error}</p> : null}
-    {state.review ? <div role="status" aria-live="polite">
-      <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Unverified model suggestion · {state.model}</p>
-      <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{state.review}</p>
-      <small>Staff must verify these suggestions against the saved quote; they are not pricing or delivery proof.</small>
+      {busy ? <button type="button" className={styles.cancel} onClick={cancelReview}>
+        Stop waiting
+      </button> : null}
+    </div>
+    {!configured ? <p role="status" className={styles.notice}>
+      AI requires explicit server enablement and an authorized model.
+      Manual quoting remains available.
+    </p> : null}
+    {error ? <p role="alert" className={styles.error}>{error}</p> : null}
+    {review ? <div role="status" aria-live="polite" className={styles.result}>
+      <strong>Unverified model suggestion · staff approval required</strong>
+      <p className={styles.model}>Model: {review.model}</p>
+      <p className={styles.review}>{review.review}</p>
+      <small>Match suggestions against the saved quote before taking any authorized action.
+        No payment, message or provider delivery is proven here.</small>
     </div> : null}
+    <p className={styles.footer}>Results are advisory, not pricing authority. A response for a different
+      quote, invalid source or obsolete workspace is never displayed.</p>
   </section>;
 }
