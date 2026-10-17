@@ -62,6 +62,8 @@ describe("read-only authorized delivery diagnostics", () => {
       "2026-10-11 11:00:00", "2026-10-11T11:00:00+99:00",
       "2026-02-30T11:00:00Z", "2026-04-31T11:00:00Z",
       "2026-10-11T24:00:00Z", "2025-02-29T11:00:00Z",
+      "2026-10-11T11:00:00+14:01", "2026-10-11T11:00:00-14:30",
+      "2026-10-11T11:00:00+00:60", "0000-10-11T11:00:00Z",
     ]) {
       expect(parseInboxDeliveryDiagnostics({...valid(),generatedAt})).toBeUndefined();
     }
@@ -70,10 +72,19 @@ describe("read-only authorized delivery diagnostics", () => {
       "2026-10-11T14:00:00+03:00",
       "2026-10-11T11:00:00.000000Z",
       "2024-02-29T11:00:00Z",
+      "2026-10-11T16:45:00+05:45", "2026-10-11T11:00:00+14:00",
     ]) {
       expect(parseInboxDeliveryDiagnostics({...valid(),generatedAt})?.counts)
         .toEqual({ok:1,pending:1,review:1});
     }
+  });
+
+  it("rejects duplicated message evidence even when totals reconcile", () => {
+    const first = valid().items[0];
+    const duplicated = valid().items.map((item,index) =>
+      index === 1 ? { ...item, messageId: first.messageId } : item);
+    expect(parseInboxDeliveryDiagnostics({ ...valid(), items: duplicated }))
+      .toBeUndefined();
   });
 
   it("does not mark failed, suppressed or unknown delivery as healthy", () => {

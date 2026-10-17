@@ -77,6 +77,42 @@ describe("R18 recovered outbox authority and safety", () => {
     }
   });
 
+
+  it("rejects object-forged templates and freeform text before provider dispatch", async () => {
+    const poison = { toString() { throw Error("MUST_NOT_COERCE_PROVIDER_PAYLOAD"); } };
+    for (const [patch,code] of [
+      [{templateKey: poison}, "OUTBOX_INTENT_TEMPLATE_INVALID"],
+      [{templateKey: " quote"}, "OUTBOX_INTENT_TEMPLATE_INVALID"],
+      [{templateKey: "quote\u202e"}, "OUTBOX_INTENT_TEMPLATE_INVALID"],
+      [{templateKey: "x".repeat(129)}, "OUTBOX_INTENT_TEMPLATE_INVALID"],
+      [{freeformText: poison}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: []}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "   "}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "Message\u202e reversed"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "Message\u200b hidden"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "Message\u200f reverse"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "Message\u2060 join"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "Message\ufeff invisible"}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+      [{freeformText: "x".repeat(4097)}, "OUTBOX_INTENT_FREEFORM_INVALID"],
+    ] as const) {
+      const forged = { ...valid, ...patch } as unknown as OutboxJob;
+      expect(check(forged)).toMatchObject({ ok: false, code });
+      let sends = 0;
+      const port = new ConnectorOutboxExecutionPort({
+        now: () => at,
+        resolver: { async resolve() { return {ok:true as const,value:forged}; } },
+        dispatchers: { WHATSAPP: { async dispatch() { sends++; throw Error("PROVIDER_MUST_NOT_BE_CALLED"); } } },
+      });
+      await expect(port.execute(claim)).resolves.toMatchObject({
+        ok: true, value: { outcome: "TERMINAL_FAILURE", failedAt: at },
+      });
+      expect(sends).toBe(0);
+    }
+    expect(check({ ...valid, templateKey: "cleaning.quote-v1",
+      freeformText: "Please review the quote.\nReply with questions." }))
+      .toMatchObject({ok:true});
+  });
+
   it("terminally rejects corrupt resolved recipients without invoking a provider", async () => {
     for (const recipient of [undefined, null, [], { recipientRef: "r", optedOut: false }]) {
       let sends = 0;
