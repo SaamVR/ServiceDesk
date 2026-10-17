@@ -7,7 +7,7 @@ const quote = {id:"quote-a",requestId:request.id,version:2,status:"ACCEPTED",cur
   balanceMinor:7500,durationMinutes:90,bufferMinutes:20} as OperationalQuote;
 const job = {id:"job-a",requestId:request.id,quoteId:quote.id,status:"IN_PROGRESS", workspaceId:"workspace-a",
   startAt:"2026-10-18T10:00:00Z",serviceMinutes:90,bufferMinutes:20,version:1} as OperationalVisit;
-const invoice = {id:"invoice-a",quoteId:quote.id,status:"OPEN",currency:"USD"} as OperationalInvoice;
+const invoice = {id:"invoice-a",quoteId:quote.id,status:"OPEN",currency:"USD"} as unknown as OperationalInvoice;
 const build=(patch: {quotes?:OperationalQuote[];visits?:OperationalVisit[];invoices?:OperationalInvoice[]}={}) =>
   summarizeSavedRequestLifecycle({request,quotes:patch.quotes??[quote],visits:patch.visits??[job],invoices:patch.invoices??[invoice]});
 

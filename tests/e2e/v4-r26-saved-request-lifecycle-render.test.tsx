@@ -6,7 +6,7 @@ import type { OperationalRequest, OperationalQuote, OperationalInvoice, Operatio
 const req = {id:"request-one",status:"READY",version:2,serviceLabel:"Deep cleaning"} as OperationalRequest;
 const offer = {id:"quote-one",requestId:"request-one",version:1,status:"ACCEPTED"} as OperationalQuote;
 const visit = {id:"visit-one",requestId:"request-one",quoteId:"quote-one",status:"IN_PROGRESS"} as OperationalVisit;
-const invoice = {id:"invoice-one",quoteId:"quote-one",status:"OPEN"} as OperationalInvoice;
+const invoice = {id:"invoice-one",quoteId:"quote-one",status:"OPEN"} as unknown as OperationalInvoice;
 
 function html(data: { quotes: OperationalQuote[];visits:OperationalVisit[];invoices:OperationalInvoice[] }) {
   return renderToStaticMarkup(<SavedRequestLifecycleEvidence
