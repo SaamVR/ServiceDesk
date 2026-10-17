@@ -34,7 +34,7 @@ const completeUsdCard=(card:RecordData):boolean=>{
 // alone accepts local/date-only and silently normalizes February 30.
 const instant=(value:unknown):number|null=>{
   if(typeof value!=="string")return null;
-  const m=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d{1,6}))?(Z|[+-]\\d{2}:\\d{2})$/.exec(value);
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/.exec(value);
   if(!m)return null;
   const [y,mo,d,h,mi,sec]=m.slice(1,7).map(Number);
   if(y<1||mo<1||mo>12||d<1||h>23||mi>59||sec>59||
