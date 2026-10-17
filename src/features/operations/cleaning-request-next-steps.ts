@@ -1,4 +1,5 @@
 import { readVerifiedCustomerQuoteLineItems, type CustomerQuoteLineItem } from "./customer-quote-line-items";
+import { trustedQuoteInstant } from "./quote-validity-clock";
 
 /** Deterministic next steps derived from the currently authorized saved request.
  * This does not persist AI guesses, mutate quotes, or imply provider delivery. */
@@ -58,13 +59,13 @@ export function cleaningRequestNextSteps(input: CleaningRequestNextStepsInput): 
   // An approved/sent quote is no longer staff-actionable after its validity
   // deadline. An absent/invalid timestamp cannot be treated as a fresh offer.
   // ACCEPTED is final: expiry of an already accepted quote does not undo it.
-  const asOf = input.asOf === undefined ? Date.now() : Date.parse(input.asOf);
+  // Native Date.parse accepts unzoned local times. Request staff must use
+  // the same persisted offer-clock contract as Quote SEND/ACCEPT and Today.
+  const asOf = input.asOf === undefined ? Date.now() : trustedQuoteInstant(input.asOf);
+  const validUntil = trustedQuoteInstant(quote?.validUntil);
   const expiryReviewRequired = Boolean(confirmedQuote && quote &&
     ["APPROVED", "SENT"].includes(quote.status) &&
-    (!Number.isFinite(asOf) ||
-      typeof quote.validUntil !== "string" ||
-      !Number.isFinite(Date.parse(quote.validUntil)) ||
-      Date.parse(quote.validUntil) <= asOf));
+    (asOf === null || validUntil === null || validUntil <= asOf));
   const steps: CleaningRequestStep[] = [
     {id:"service",label:"Choose an active cleaning service",
       state:input.serviceActive?"DONE":"ACTION_REQUIRED",
