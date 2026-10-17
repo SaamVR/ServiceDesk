@@ -58,6 +58,9 @@ describe("Owner model diagnostic cannot manufacture provider proof", () => {
       "src/features/operations/AiOwnerModelProbe.tsx"), "utf8");
     expect(source).toContain("MODEL_PROBE_TIMEOUT_MS = 20_000");
     expect(source).toContain("controller.abort()");
+    expect(source).toContain("if (controller.signal.aborted)");
+    expect(source).toContain("verified = undefined;");
+    expect(source).toContain("if (didTimeout) failure =");
     expect(source).toContain("activeRequest.current === controller");
     expect(source).toContain('credentials: "same-origin"');
     expect(source).toContain('"/api/internal/ai/connection-test"');
