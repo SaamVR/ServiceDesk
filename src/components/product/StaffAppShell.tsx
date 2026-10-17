@@ -16,7 +16,7 @@ const navGroups: ReadonlyArray<{
 }> = [
   { label: "Workday", modules: ["overview", "inbox", "automations", "schedule", "jobs"] },
   { label: "Customer work", modules: ["requests", "quotes", "customers", "invoices"] },
-  { label: "More tools", modules: ["ai-studio", "quality", "reports", "billing", "settings"], collapsible: true },
+  { label: "More tools", modules: ["quality", "reports", "billing", "settings"], collapsible: true },
 ];
 
 function NavIcon({ module }: { module: StaffModule }) {
@@ -52,8 +52,6 @@ function NavIcon({ module }: { module: StaffModule }) {
       return <svg {...common}><circle cx="10" cy="10" r="6.5"/><path d="m7 10 2 2 4-4"/></svg>;
     case "automations":
       return <svg {...common}><path d="M4.5 8a6 6 0 0 1 10.2-2.2L16 7M15.5 12a6 6 0 0 1-10.2 2.2L4 13"/><path d="M16 4.5V7h-2.5M4 15.5V13h2.5"/></svg>;
-    case "ai-studio":
-      return <svg {...common}><path d="M10 2.5 11.8 8.2 17.5 10l-5.7 1.8L10 17.5l-1.8-5.7L2.5 10l5.7-1.8z"/><path d="m15.5 3 .65 1.85L18 5.5l-1.85.65L15.5 8l-.65-1.85L13 5.5l1.85-.65z"/></svg>;
     case "reports":
       return <svg {...common}><path d="M4 16V9h3v7M8.5 16V5.5h3V16M13 16v-4.5h3V16M3 16.5h14"/></svg>;
     case "billing":
@@ -82,6 +80,7 @@ function StaffNavigation({ workspace, mobile = false }: { workspace: string; mob
 
   function moduleIsActive(module: StaffModule): boolean {
     const href = buildStaffModuleHref(workspace, module);
+    if (module === "automations" && pathname.startsWith(`${href}/ai-studio`)) return false;
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
@@ -119,6 +118,18 @@ function StaffNavigation({ workspace, mobile = false }: { workspace: string; mob
         <div className={`app-nav-group ${styles.navGroup}`} key={group.label}>
           <p className={`app-nav-label ${styles.navGroupLabel}`}>{group.label}</p>
           {group.modules.map(linkFor)}
+          {group.label === "Workday" ? (
+            <Link className={`app-nav-link ${styles.navLink}`}
+              aria-current={pathname.startsWith(buildStaffModuleHref(workspace, "automations") + "/ai-studio") ? "page" : undefined}
+              href={buildStaffModuleHref(workspace, "automations") + "/ai-studio"}>
+              <svg className="app-nav-icon" viewBox="0 0 20 20" fill="none"
+                stroke="currentColor" strokeWidth="1.7"
+                strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 2.5 11.8 8.2 17.5 10l-5.7 1.8L10 17.5l-1.8-5.7L2.5 10l5.7-1.8z" />
+              </svg>
+              <span>AI Studio</span>
+            </Link>
+          ) : null}
         </div>
       ))}
     </nav>
@@ -206,7 +217,8 @@ export function StaffAppShell({
     const href = buildStaffModuleHref(workspace, module);
     return pathname === href || pathname.startsWith(`${href}/`);
   }) ?? "overview";
-  const pageLabel = staffModuleConfig[currentModule].label;
+  const pageLabel = pathname.startsWith(buildStaffModuleHref(workspace, "automations") + "/ai-studio")
+    ? "AI Studio" : staffModuleConfig[currentModule].label;
   const workspaceName = workspaceDisplayName(workspace);
 
   return (
