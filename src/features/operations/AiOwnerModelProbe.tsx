@@ -111,8 +111,8 @@ export function AiOwnerModelProbe({
       </div>
       <p className={styles.description}>
         Run one bounded synthetic check of the configured AI model. No customer messages
-        are sent and no business records change. This does not verify WhatsApp, email,
-        quote approvals or automated provider delivery.
+        are sent and no business records change. This does not verify WhatsApp, email or automation delivery.
+        Quote approvals are independently authorized.
       </p>
       <div className={styles.actions}>
         <button type="button" className={styles.action} disabled={!configured || busy}
