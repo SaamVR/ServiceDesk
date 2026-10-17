@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { buildStaffModuleHref } from "./staff-modules";
 import type { OperationalBranchScope, OperationalServiceCatalogItem } from "./operational-product-runtime";
-import { availableFirstRunUsdBranches, type OwnerPricingBookProof } from "./owner-pricing-readiness";
+import { availableFirstRunUsdBranches, countQuoteableCleaningServices, type OwnerPricingBookProof } from "./owner-pricing-readiness";
 
 /**
  * Read-only owner commercial readiness. Active services alone cannot establish
@@ -30,11 +30,11 @@ export function CatalogReadinessBanner({
     href={settingsHref + "#owner-first-run-pricing"}>Enter actual branch rates</Link>
     : settingsLink;
 
-  if (!serviceCatalog.some(item => item.active)) {
+  if (countQuoteableCleaningServices(serviceCatalog) === 0) {
     return (
       <FeedbackBanner
         title="Quoting setup incomplete · no active cleaning service"
-        description="This workspace has no active service in its saved catalog. Customer enquiries can be recorded, but a priced quote cannot be treated as operationally ready until an authorized owner configures services and pricing. No sample price or provider status is being invented."
+        description="No active Standard, Deep or Move-Out cleaning service was verified in this saved catalog. Unrelated active services do not establish cleaning quote readiness. Customer enquiries may be recorded, but an authorized owner must configure supported services and real branch pricing before issuing quotes."
         tone="warning"
         action={rateSetupLink}
       />
