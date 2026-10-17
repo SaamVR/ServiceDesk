@@ -1,4 +1,5 @@
 import { indexAmbiguousCurrentQuoteRequests, indexCurrentQuoteByRequest } from "./staff-snapshot-index";
+import { trustedQuoteInstant } from "./quote-validity-clock";
 
 export interface QuotePipelineRecord {
   id: string;
@@ -11,19 +12,14 @@ export interface QuotePipelineRecord {
 /** A SENT database status does not establish that the customer can still
  * accept the quote. Invalid or elapsed deadlines require staff review, not
  * a fabricated response or an automatic status mutation. */
-// Date.parse accepts unzoned local times. Those can make an expired quote
-// appear safe to send on one device while another sees it as overdue.
-// Require an explicit saved timezone/offset for all operational quote clocks.
-function parseZonedQuoteInstant(value: unknown): number {
-  if (typeof value !== "string" ||
-      !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$/.test(value)) return NaN;
-  return Date.parse(value);
-}
+/** An unzoned/invalid saved expiry or snapshot clock cannot prove a
+ * sendable or customer-waiting quote, regardless of local browser timezone.
+ * Reuse the exact send/accept clock contract introduced in R15D.
+ */
 function quoteValidityUnverified(quote: QuotePipelineRecord, snapshotAt: string): boolean {
-  const now = parseZonedQuoteInstant(snapshotAt);
-  const expires = parseZonedQuoteInstant(quote.validUntil);
-  // Missing/malformed clock evidence is not permission to send/accept.
-  return !Number.isFinite(now) || !Number.isFinite(expires) || expires <= now;
+  const now = trustedQuoteInstant(snapshotAt);
+  const expires = trustedQuoteInstant(quote.validUntil);
+  return now === null || expires === null || expires <= now;
 }
 
 export function needsSentQuoteExpiryReview(quote: QuotePipelineRecord, snapshotAt: string): boolean {
@@ -57,7 +53,7 @@ export function buildQuotePipeline<T extends QuotePipelineRecord>(
       || left.id.localeCompare(right.id);
   });
   const currentQuotes = [...currentQuoteByRequest.values()];
-  const clockValid = snapshotAt === undefined || Number.isFinite(parseZonedQuoteInstant(snapshotAt));
+  const clockValid = snapshotAt === undefined || trustedQuoteInstant(snapshotAt) !== null;
   return {
     currentQuoteByRequest,
     orderedQuotes,
