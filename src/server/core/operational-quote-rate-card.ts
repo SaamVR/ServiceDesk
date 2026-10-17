@@ -79,6 +79,34 @@ function asId(value: unknown): value is string {
     /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
 }
 
+/** Supabase timestamps must describe a real calendar instant with a timezone.
+ * Date.parse alone silently normalizes impossible dates in some runtimes.
+ * null means an intentionally open SQL endpoint; undefined means corrupt data.
+ */
+export function parsePriceBookWindowInstant(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== "string") return undefined;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match) return undefined;
+  const [,yearText,monthText,dayText,hourText,minuteText,secondText,fraction,zone] = match;
+  const year = Number(yearText), month = Number(monthText), day = Number(dayText);
+  const hour = Number(hourText), minute = Number(minuteText), second = Number(secondText);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const monthDays = [31,leap ? 29 : 28,31,30,31,30,31,31,30,31,30,31];
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > monthDays[month-1] ||
+      hour > 23 || minute > 59 || second > 59) return undefined;
+  if (zone !== "Z") {
+    const offsetHours = Number(zone.slice(1,3));
+    const offsetMinutes = Number(zone.slice(4,6));
+    if (offsetHours > 14 || offsetMinutes > 59 ||
+        (offsetHours === 14 && offsetMinutes !== 0)) return undefined;
+  }
+  const milliseconds = fraction ? "." + fraction.padEnd(3,"0").slice(0,3) : "";
+  const normalized = value.slice(0,19) + milliseconds + zone;
+  const timestamp = Date.parse(normalized);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+}
+
 /**
  * Resolve pricing from the persisted request's actual branch price book and
  * workspace-bound active rate card. No synthetic fallback, no arbitrary
@@ -141,14 +169,25 @@ export async function loadOperationalQuoteRateCard(
   if (books.data.length > MAX_PRICE_BOOK_SCAN)
     return fail("QUOTE_RATE_BOOK_SCAN_INCOMPLETE",
       "Too many active branch price books to verify pricing. Archive expired records before quoting.");
-  const active = books.data.filter(book => {
-    const start = book.starts_at == null ? Number.NEGATIVE_INFINITY : Date.parse(book.starts_at);
-    const end = book.ends_at == null ? Number.POSITIVE_INFINITY : Date.parse(book.ends_at);
-    return Number.isFinite(start) || start === Number.NEGATIVE_INFINITY
-      ? (Number.isFinite(end) || end === Number.POSITIVE_INFINITY) &&
-        start <= now.getTime() && end > now.getTime()
-      : false;
-  });
+  // An invalid or contradictory effective window cannot be silently dropped:
+  // doing so could authorize an unrelated "only active" price book.
+  const observedNow = now instanceof Date ? now.getTime() : NaN;
+  if (!Number.isFinite(observedNow))
+    return fail("QUOTE_RATE_CLOCK_INVALID", "Pricing verification requires a valid server clock.");
+  const windows = books.data.map(book => ({
+    book,
+    start: parsePriceBookWindowInstant(book.starts_at),
+    end: parsePriceBookWindowInstant(book.ends_at),
+  }));
+  if (windows.some(window => window.start === undefined || window.end === undefined ||
+      (window.start !== null && window.end !== null && window.start >= window.end)))
+    return fail("QUOTE_RATE_BOOK_TIME_INVALID",
+      "A saved branch price book has an unverified effective date. Correct pricing before quoting.");
+  const active = windows.filter(window =>
+    window.start !== undefined && window.end !== undefined &&
+    (window.start === null || window.start <= observedNow) &&
+    (window.end === null || window.end > observedNow)
+  ).map(window => window.book);
   if (active.length !== 1 || !asId(active[0].rate_card_id)) {
     return fail("QUOTE_RATE_BOOK_NOT_CONFIGURED", "Exactly one current branch price book is required.");
   }
