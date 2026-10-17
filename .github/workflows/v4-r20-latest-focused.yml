@@ -1,0 +1,43 @@
+name: ServiceDesk V4 R20 candidate — focused real source checks
+on:
+  push:
+    branches:
+      - feat/sd-v4-r20-latest-canonical-focused-20261017
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-v4-r20-focused-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  r20-practical-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Immutable checkout and dependency install
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          pnpm install --frozen-lockfile
+      - name: Four substantive lanes with existing regression contracts
+        run: |
+          pnpm exec vitest run \
+            tests/db/v4-r20a-pricing-form-ambiguity.test.ts \
+            tests/e2e/v4-owner-first-run-pricing.test.ts \
+            tests/providers/v4-r20b-whatsapp-chronology.test.ts \
+            tests/providers/e05-whatsapp-timestamp-normalization.test.ts \
+            tests/e2e/v4-r20c-invoice-preflight-input.test.ts \
+            tests/e2e/v4-customer-invoice-checkout-readiness.test.ts \
+            tests/providers/v4-r20d-calendar-claim-integrity.test.ts \
+            tests/providers/e06-calendar-outbox-dispatcher.test.ts
+      - name: Full TypeScript source typecheck
+        run: pnpm typecheck
