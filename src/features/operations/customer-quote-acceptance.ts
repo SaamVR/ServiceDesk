@@ -1,4 +1,5 @@
 import { readVerifiedCustomerQuoteLineItems } from "./customer-quote-line-items";
+import { hasCurrentSavedQuoteExpiry } from "./quote-validity-clock";
 
 /**
  * A customer must never accept a monetary quote if the saved breakdown is
@@ -11,9 +12,7 @@ export function verifyCustomerQuoteForAcceptance(
 ): { ok: true } | { ok: false; code: "QUOTE_NOT_SENT" | "QUOTE_EXPIRED" | "QUOTE_TOTAL_UNVERIFIED" | "QUOTE_BREAKDOWN_UNVERIFIED" } {
   if (row.status !== "SENT") return { ok: false, code: "QUOTE_NOT_SENT" };
 
-  const nowMs = Date.parse(now);
-  const expiryMs = typeof row.valid_until === "string" ? Date.parse(row.valid_until) : NaN;
-  if (!Number.isFinite(nowMs) || !Number.isFinite(expiryMs) || expiryMs <= nowMs) {
+  if (!hasCurrentSavedQuoteExpiry(now, row.valid_until)) {
     return { ok: false, code: "QUOTE_EXPIRED" };
   }
   const amounts = [row.subtotal_minor, row.tax_minor, row.total_minor,
