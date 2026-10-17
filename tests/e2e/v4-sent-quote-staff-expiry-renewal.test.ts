@@ -26,6 +26,9 @@ describe("staff quote workspace refuses stale SENT handoff",()=>{
     ];
     expect(needsSentQuoteExpiryReview(quotes[0],now)).toBe(false);
     expect(needsSentQuoteExpiryReview(quotes[1],now)).toBe(true);
+    expect(needsSentQuoteExpiryReview({...quotes[0],validUntil:"2026-10-17T12:00:00"}, "2026-10-16T12:00:00")).toBe(true);
+    expect(needsSentQuoteExpiryReview({...quotes[0],validUntil:"2026-10-17T12:00:00"}, "invalid")).toBe(true);
+    expect(needsSentQuoteExpiryReview({...quotes[0],validUntil:"2026-10-17T12:00:00+00:00"},now)).toBe(false);
     expect(buildQuotePipeline(quotes,now)).toMatchObject({awaitingCustomer:1,sentNeedsExpiryReview:1});
     expect(view).toContain("Delivery verification");
   });
