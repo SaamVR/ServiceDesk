@@ -9,9 +9,12 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Any superseded controller/review commit cannot count as current release proof.
+# Cancel only older runs in the same branch group; the newest SHA must still
+# execute the entire source, Chrome and synthetic release sequence.
 concurrency:
   group: servicedesk-v4-reconciled-rc-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   exact-head-rc:
     runs-on: ubuntu-latest
