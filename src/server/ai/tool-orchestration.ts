@@ -77,27 +77,52 @@ const automaticActionTools = new Set<AssistantToolCall["name"]>([
 ]);
 
 function reject(name: string, reason: AiToolOrchestrationRejectReason): RejectedAiToolCall {
-  return { name, reason, canMutateBusinessTruth: false };
+  // Raw model-injected "name" may contain contact data or a bearer token.
+  // Rejected plans are visible in diagnostics, so expose only bounded tool IDs.
+  const safeName=/^[A-Za-z][A-Za-z0-9]{1,64}$/.test(name)?name:"unknown";
+  return { name:safeName, reason, canMutateBusinessTruth:false };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (typeof value !== "object" || value===null || Array.isArray(value) ||
+      ![Object.prototype,null].includes(Object.getPrototypeOf(value))) return false;
+  const descriptors=Object.getOwnPropertyDescriptors(value);
+  return Object.getOwnPropertySymbols(value).length===0 &&
+    Object.getOwnPropertyNames(value).length===Object.keys(value).length &&
+    Object.values(descriptors).every(d=>Object.hasOwn(d,"value"));
 }
 
 function scopedResourceAllowed(scope: AiToolScope, args: Record<string, unknown>): boolean {
-  // Invalid types (including null, arrays, numeric IDs and empty strings)
-  // must not silently bypass workspace/request/customer scoping.
-  if (typeof scope.workspaceId !== "string" || !scope.workspaceId.trim()) return false;
-  for (const [key, permitted] of [
-    ["workspaceId", [scope.workspaceId]],
-    ["requestId", scope.allowedRequestIds],
-    ["customerId", scope.allowedCustomerIds],
-  ] as const) {
-    if (!Object.prototype.hasOwnProperty.call(args, key)) continue;
-    const id = args[key];
-    if (typeof id !== "string" || !id.trim() || (permitted && !permitted.includes(id))) return false;
-  }
-  return true;
+  if (!scope || typeof scope.workspaceId!=="string" ||
+      !scope.workspaceId.trim()) return false;
+  const bindings: Record<string, readonly string[]|undefined>={
+    workspaceId:[scope.workspaceId],
+    requestId:scope.allowedRequestIds,
+    customerId:scope.allowedCustomerIds,
+  };
+  // An adversarial model can bury resource identities inside a nested
+  // payload; examine every named identity, not just top-level fields.
+  let budget=64;
+  const scan=(value:unknown,depth:number):boolean=>{
+    if (--budget<0 || depth>4) return false;
+    if (Array.isArray(value)) return value.length<=20 &&
+      value.every(item=>scan(item,depth+1));
+    if (isRecord(value)) {
+      if (Object.keys(value).length>24) return false;
+      return Object.entries(value).every(([key,item])=>{
+        if (Object.hasOwn(bindings,key)) {
+          const allowed=bindings[key];
+          return typeof item==="string" && item.trim().length>0 &&
+            Array.isArray(allowed) && allowed.includes(item);
+        }
+        return scan(item,depth+1);
+      });
+    }
+    return value===null || typeof value==="string" && value.length<=512 ||
+      typeof value==="number" && Number.isFinite(value) ||
+      typeof value==="boolean";
+  };
+  return scan(args,0);
 }
 
 function acceptedTool(name: AssistantToolCall["name"], args: Record<string, unknown>): AcceptedAiToolCall {
@@ -125,7 +150,8 @@ export function planAiToolOrchestration(input: {
   const accepted: AcceptedAiToolCall[] = [];
   const rejected: RejectedAiToolCall[] = [];
 
-  if (!Array.isArray(input.requestedToolCalls)) {
+  if (!Array.isArray(input.requestedToolCalls) ||
+      input.requestedToolCalls.length>24) {
     return {
       accepted,
       rejected: [reject("unknown", "SCHEMA_VIOLATION")],
@@ -159,7 +185,7 @@ export function planAiToolOrchestration(input: {
       continue;
     }
 
-    if (input.scope.handoverActive && automaticActionTools.has(name as AssistantToolCall["name"])) {
+    if (input.scope?.handoverActive && automaticActionTools.has(name as AssistantToolCall["name"])) {
       rejected.push(reject(name, "HANDOVER_ACTIVE"));
       continue;
     }
