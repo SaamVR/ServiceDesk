@@ -49,6 +49,15 @@ function asRule(value: unknown): RecurrenceRuleDTO {
   if (frequency !== "WEEKLY" && frequency !== "FORTNIGHTLY" && frequency !== "MONTHLY") {
     throw new Error(`Malformed recurrence RPC payload: frequency=${frequency}`);
   }
+  const generatedOccurrences = requireNumber(value, "generatedOccurrences");
+  const version = requireNumber(value, "version");
+  const maxOccurrences = value.maxOccurrences == null ? undefined : requireNumber(value, "maxOccurrences");
+  if (!Number.isSafeInteger(generatedOccurrences) || generatedOccurrences < 0 ||
+      !Number.isSafeInteger(version) || version < 1 ||
+      (maxOccurrences !== undefined &&
+        (!Number.isSafeInteger(maxOccurrences) || maxOccurrences < 1))) {
+    throw new Error("Malformed recurrence RPC saved count or version");
+  }
   return {
     id: requireString(value, "id"),
     workspaceId: requireString(value, "workspaceId"),
@@ -59,11 +68,11 @@ function asRule(value: unknown): RecurrenceRuleDTO {
     localStartTime: requireString(value, "localStartTime"),
     startsOn: requireString(value, "startsOn"),
     endsOn: optionalString(value, "endsOn"),
-    maxOccurrences: optionalNumber(value, "maxOccurrences"),
-    generatedOccurrences: requireNumber(value, "generatedOccurrences"),
+    maxOccurrences,
+    generatedOccurrences,
     status,
     nextOccurrenceOn: optionalString(value, "nextOccurrenceOn"),
-    version: requireNumber(value, "version"),
+    version,
     createdAt: requireString(value, "createdAt"),
     updatedAt: requireString(value, "updatedAt"),
   };
@@ -85,6 +94,9 @@ function fromRuleRpc(data: RpcRow | null, error: { message: string; code?: strin
   if (error) return fail(error.code ?? fallbackCode, error.message);
   if (!data) return fail(`${fallbackCode}_EMPTY`, "Recurrence RPC returned no payload.");
   if (data.ok === false) return fail(String(data.code ?? fallbackCode), "Recurrence RPC rejected the command.");
+  // An absent/forged success indicator cannot certify committed scheduling work.
+  if (data.ok !== true) return fail(`${fallbackCode}_MALFORMED`,
+    "Recurrence RPC did not confirm a successful saved rule.");
   try {
     return { ok: true, value: asRule(data.rule) };
   } catch (err) {
@@ -98,14 +110,26 @@ export function createPostgresRecurrenceFacadeMethods(client: SupabaseRpcClient)
       const { data, error } = await client.rpc<RpcRow>("servicedesk_create_recurrence_rule", {
         p_input: inputFrom(ctx, input as unknown as RpcRow, meta),
       });
-      return fromRuleRpc(data, error, "RECURRENCE_CREATE_RPC_ERROR");
+      const parsed = fromRuleRpc(data, error, "RECURRENCE_CREATE_RPC_ERROR");
+      if (!parsed.ok) return parsed;
+      if (parsed.value.workspaceId !== ctx.workspaceId ||
+          parsed.value.requestId !== input.requestId ||
+          parsed.value.propertyId !== input.propertyId)
+        return fail("RECURRENCE_CREATE_RPC_SCOPE_MISMATCH",
+          "Saved recurrence rule does not match the authorized request, property or workspace.");
+      return parsed;
     },
 
     async applyRecurrenceRuleAction(ctx: ActorContext, id: string, action: RecurrenceRuleAction, meta: CommandMeta): Promise<Result<RecurrenceRuleDTO>> {
       const { data, error } = await client.rpc<RpcRow>("servicedesk_apply_recurrence_rule_action", {
         p_input: inputFrom(ctx, { ruleId: id, action }, meta),
       });
-      return fromRuleRpc(data, error, "RECURRENCE_ACTION_RPC_ERROR");
+      const parsed = fromRuleRpc(data, error, "RECURRENCE_ACTION_RPC_ERROR");
+      if (!parsed.ok) return parsed;
+      if (parsed.value.workspaceId !== ctx.workspaceId || parsed.value.id !== id)
+        return fail("RECURRENCE_ACTION_RPC_SCOPE_MISMATCH",
+          "Saved recurrence rule identity does not match the authorized action.");
+      return parsed;
     },
   };
 }
