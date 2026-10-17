@@ -76,9 +76,13 @@ export async function runTrustedAcceptedQuoteInternalAutomation(
   }
 
   const quote = await service.from("quotes")
-    .select("id,request_id,status,currency,service_code")
+    .select("id,request_id,status,currency,service_code,accepted_at,superseded_by")
     .eq("id", quoteId).eq("workspace_id", workspaceId).maybeSingle();
-  if (quote.error || !quote.data || quote.data.status !== "ACCEPTED" ||
+  if (quote.error || !quote.data || quote.data.id !== quoteId ||
+      quote.data.status !== "ACCEPTED" ||
+      quote.data.superseded_by !== null ||
+      typeof quote.data.accepted_at !== "string" ||
+      !Number.isFinite(Date.parse(quote.data.accepted_at)) ||
       !isUuid(quote.data.request_id)) return fail("QUOTE_AUTOMATION_QUOTE_UNVERIFIED");
 
   const request = await service.from("requests")

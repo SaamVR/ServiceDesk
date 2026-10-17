@@ -22,6 +22,9 @@ const executionId = "44444444-4444-4444-8444-444444444444";
 function fixture(options: {
   customerId?: string;
   sourceStatus?: string;
+  supersededBy?: string | null;
+  acceptedAt?: string | null;
+  missingQuote?: boolean;
   foreignWorkspace?: boolean;
   inactiveBranch?: boolean;
   mismatchCurrency?: boolean;
@@ -42,8 +45,11 @@ function fixture(options: {
     workspace_feature_flags: options.workspaceOptedOut ? [] : [{
       workspace_id: workspace, feature_key: "AUTO_INTERNAL_QUOTE_ACCEPTED", enabled: true,
     }],
-    quotes:[{id:quote,workspace_id:options.foreignWorkspace?"other-tenant":workspace,
-      request_id:request,status:options.sourceStatus??"ACCEPTED",currency:"USD",service_code:"MOVE_OUT"}],
+    quotes:options.missingQuote ? [] : [{id:quote,workspace_id:options.foreignWorkspace?"other-tenant":workspace,
+      request_id:request,status:options.sourceStatus??"ACCEPTED",currency:"USD",
+      service_code:"MOVE_OUT",accepted_at:options.acceptedAt===undefined
+        ? "2026-10-17T12:00:00.000Z" : options.acceptedAt,
+      superseded_by:options.supersededBy===undefined ? null : options.supersededBy}],
     requests:[{id:request,workspace_id:workspace,branch_id:branch,
       customer_id:options.customerId??customer,service_id:serviceId}],
     workspace_branches:[{id:branch,workspace_id:workspace,code:"MAIN",
@@ -126,6 +132,8 @@ describe("V4 trusted post-accept automation bridge",()=>{
     for(const options of [
       {foreignWorkspace:true}, {sourceStatus:"SENT"}, {customerId:"other-customer"},
       {inactiveBranch:true}, {mismatchCurrency:true}, {mismatchService:true},
+      {supersededBy:"99999999-9999-4999-8999-999999999999"},
+      {acceptedAt:null}, {acceptedAt:"not-a-timestamp"}, {missingQuote:true},
     ]) {
       const t=fixture(options);
       const result=await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps);
@@ -134,6 +142,21 @@ describe("V4 trusted post-accept automation bridge",()=>{
       expect(t.executeAttentionAction).not.toHaveBeenCalled();
     }
   });
+  it("never records a historical superseded acceptance or an uncommitted accepted_at as a fresh event",async()=>{
+    for (const scenario of [
+      {supersededBy:"99999999-9999-4999-8999-999999999999"},
+      {acceptedAt:null},
+      {acceptedAt:""},
+      {acceptedAt:"invalid"},
+    ]) {
+      const t=fixture(scenario);
+      expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))
+        .toMatchObject({ok:false,code:"QUOTE_AUTOMATION_QUOTE_UNVERIFIED"});
+      expect(t.evaluateAndRecord).not.toHaveBeenCalled();
+      expect(t.executeAttentionAction).not.toHaveBeenCalled();
+    }
+  });
+
   it("prevents internal writes when deployment is disabled, even for an opted-in tenant",async()=>{
     const t=fixture({deploymentOff:true});
     const result=await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps);
