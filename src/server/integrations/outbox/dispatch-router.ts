@@ -3,15 +3,20 @@ import { hasRecipientSuppression, type DeliveryChannel } from "../types";
 import { classifyProviderFailure } from "./failure-policy";
 import { dispatchOutcomeBase, type CommittedOutboxDispatcher, type CommittedOutboxDispatchInput, type CommittedOutboxDispatchOutcome } from "./dispatch-port";
 
-function validUtcTime(value: unknown): boolean {
-  if (typeof value !== "string") return false;
-  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?Z$/.exec(value);
-  if (!match) return false;
+/** PostgreSQL timestamptz can serialize microseconds. Preserve all six
+ * digits for ordering; Date.parse alone truncates below one millisecond and
+ * can silently normalize impossible civil dates.
+ */
+function utcMicros(value: unknown): bigint | null {
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?Z$/.exec(value);
+  if (!match) return null;
   const parsed = new Date(value);
-  // JavaScript can normalize impossible dates such as February 30 to March 2.
-  // Compare the canonical UTC instant to the original calendar components.
-  const canonical = match[1] + "." + (match[2] ?? "").padEnd(3, "0") + "Z";
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === canonical;
+  if (!Number.isFinite(parsed.getTime())) return null;
+  const fraction = (match[2] ?? "").padEnd(6, "0");
+  const canonical = match[1] + "." + fraction.slice(0, 3) + "Z";
+  if (parsed.toISOString() !== canonical) return null;
+  return BigInt(parsed.getTime()) * 1000n + BigInt(fraction.slice(3, 6));
 }
 
 /** Provider 2xx is not delivery, but even its acceptance receipt must be
@@ -22,30 +27,29 @@ function validAcceptedReceipt(value: Record<string, unknown>, committedAt: strin
   const mode = value.providerMode;
   const evidence = value.evidence;
   if (typeof id !== "string" || !/^[\x21-\x7e]{1,512}$/.test(id) ||
-      !validUtcTime(value.acceptedAt) ||
       !["FIXTURE", "SANDBOX", "LIVE"].includes(String(mode)) ||
       !evidence || typeof evidence !== "object" || Array.isArray(evidence)) return false;
   const details = evidence as Record<string, unknown>;
-  // The adapter response cannot move payment-independent delivery history
-  // backwards before the durable outbox claim or before provider acceptance.
-  // We compare parsed instants only after strict UTC calendar validation.
-  const accepted = Date.parse(value.acceptedAt as string);
-  const captured = Date.parse(details.capturedAt as string);
-  const claimed = Date.parse(committedAt);
+  // Parse all values with civil-day validation before comparing them. A
+  // provider acceptance even 1 microsecond older than a claim is not proof.
+  const accepted = utcMicros(value.acceptedAt);
+  const captured = utcMicros(details.capturedAt);
+  const claimed = utcMicros(committedAt);
+  if (accepted === null || captured === null || claimed === null) return false;
   // A contract test receipt must never masquerade as LIVE delivery evidence.
   // Provider acceptance and redacted capture must remain within a bounded
   // claim window, rather than fabricating timestamps days or years ahead.
   const liveVerified = mode !== "LIVE" || details.verification === "PROVIDER_VERIFIED";
-  const maxProofAgeMs = 24 * 60 * 60 * 1000;
+  const maxProofAgeMicros = 24n * 60n * 60n * 1_000_000n;
+  const allowedWallClock = BigInt(Date.now() + 5 * 60 * 1000) * 1000n;
   return details.mode === mode && details.provider === value.channel &&
     ["CONTRACT_TESTED", "PROVIDER_VERIFIED"].includes(String(details.verification)) &&
-    liveVerified && validUtcTime(details.capturedAt) && validUtcTime(committedAt) &&
+    liveVerified &&
     accepted >= claimed && captured >= accepted &&
-    captured - claimed <= maxProofAgeMs &&
+    captured - claimed <= maxProofAgeMicros &&
     // Provider clocks can drift briefly; dates from tomorrow cannot prove
     // a receipt was accepted by an external service today.
-    accepted <= Date.now() + 5 * 60 * 1000 &&
-    captured <= Date.now() + 5 * 60 * 1000;
+    accepted <= allowedWallClock && captured <= allowedWallClock;
 }
 
 export type DispatchRouterTable = Partial<Record<DeliveryChannel, CommittedOutboxDispatcher>>;
@@ -102,13 +106,14 @@ export async function dispatchCommittedOutboxJob(input: DispatchCommittedOutboxJ
   // The outbox claim is the only authority for invoking an external provider.
   // Refuse corrupt attempts and timestamps BEFORE opt-in or dispatcher selection.
   // Otherwise malformed persisted jobs could still consume provider sends.
-  if (!input.job || !Number.isSafeInteger(input.attempt) ||
+  const claimTime = utcMicros(input.committedAt);
+  const createdTime = utcMicros(input.job.createdAt);
+  const futureBoundary = BigInt(Date.now() + 5 * 60 * 1000) * 1000n;
+  if (!Number.isSafeInteger(input.attempt) ||
       input.attempt < 1 || input.attempt > 1_000_000 ||
-      !validUtcTime(input.committedAt) ||
-      !validUtcTime(input.job.createdAt) ||
-      Date.parse(input.committedAt) < Date.parse(input.job.createdAt) ||
-      Date.parse(input.committedAt) > Date.now() + 5 * 60 * 1000 ||
-      Date.parse(input.job.createdAt) > Date.now() + 5 * 60 * 1000) {
+      claimTime === null || createdTime === null ||
+      claimTime < createdTime ||
+      claimTime > futureBoundary || createdTime > futureBoundary) {
     return failure(input, "OUTBOX_COMMIT_CLAIM_INVALID",
       "Committed outbox attempt or chronological claim evidence is invalid.");
   }
