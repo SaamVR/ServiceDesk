@@ -36,6 +36,28 @@ const validReasons = new Set(["PROVIDER_FAILURE", "SUPPRESSED_BY_POLICY", "STALE
 const validCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 200;
 
+// Server-generated triage clocks are UTC ISO instants. Accept an explicit
+// numeric offset for interoperable receipts but never a locale-dependent
+// date-only or unzoned string that could falsely establish delivery health.
+function validGeneratedAt(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  // Date.parse normalizes some impossible calendar days. That cannot serve
+  // as trustworthy persisted clock evidence.
+  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1] &&
+    hour <= 23 && minute <= 59 && second <= 59 && Number.isFinite(Date.parse(value));
+}
+
 /** Never render server-inconsistent delivery health as operational success. */
 function consistentDeliveryHealth(
   state: DeliveryTriageState,
@@ -60,7 +82,7 @@ function consistentDeliveryHealth(
 export function parseInboxDeliveryDiagnostics(value: unknown): InboxDeliveryDiagnosticsSnapshot | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
-  if (typeof record.generatedAt !== "string" || !Number.isFinite(Date.parse(record.generatedAt)) ||
+  if (!validGeneratedAt(record.generatedAt) ||
       typeof record.truncated !== "boolean" || !validCount(record.scannedOutboundMessages) ||
       !record.counts || typeof record.counts !== "object" || Array.isArray(record.counts) ||
       !Array.isArray(record.items) || record.items.length > 200) return undefined;

@@ -11,6 +11,8 @@ describe("R15 staff send/customer accept quote clock authority",()=>{
  it("accepts explicit UTC and offset instants for business decisions",()=>{
   expect(hasCurrentSavedQuoteExpiry(now,base.valid_until)).toBe(true);
   expect(hasCurrentSavedQuoteExpiry(now,"2026-10-18T12:00:00+02:00")).toBe(true);
+  expect(trustedQuoteInstant("2024-02-29T10:00:00.123456Z")).not.toBeNull();
+  expect(trustedQuoteInstant("2026-10-18T12:00:00.123456+02:00")).not.toBeNull();
   expect(assessOperationalQuoteSend(base,now)).toEqual({ok:true});
   expect(verifyCustomerQuoteForAcceptance({...base,status:"SENT"},now)).toEqual({ok:true});
  });
@@ -23,6 +25,18 @@ describe("R15 staff send/customer accept quote clock authority",()=>{
      .toEqual({ok:false,reason:"EXPIRED"});
    expect(verifyCustomerQuoteForAcceptance({...base,status:"SENT",valid_until:invalid},now))
      .toEqual({ok:false,code:"QUOTE_EXPIRED"});
+  }
+  for(const malformed of [
+    "2026-02-30T10:00:00Z", "2025-02-29T10:00:00Z",
+    "2026-04-31T10:00:00Z", "2026-10-18T24:00:00Z",
+    "2026-10-18T10:60:00Z", "2026-10-18T10:00:60Z",
+    "2026-00-01T10:00:00Z", "2026-13-01T10:00:00Z",
+  ]) {
+    expect(trustedQuoteInstant(malformed), malformed).toBeNull();
+    expect(assessOperationalQuoteSend({...base,valid_until:malformed},now))
+      .toEqual({ok:false,reason:"EXPIRED"});
+    expect(verifyCustomerQuoteForAcceptance({...base,status:"SENT",valid_until:malformed},now))
+      .toEqual({ok:false,code:"QUOTE_EXPIRED"});
   }
   expect(trustedQuoteInstant("2026-10-17T10:00:00")).toBeNull();
   expect(assessOperationalQuoteSend(base,"2026-10-17T10:00:00"))
