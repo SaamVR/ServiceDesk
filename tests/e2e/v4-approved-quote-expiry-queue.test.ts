@@ -48,7 +48,7 @@ describe("V4 approved quote pipeline enforces live expiry for staff readiness",(
   // The headline and detailed text must both include approved and sent
   // invalidity; previous Today showed fewer tasks than the Quotes workspace.
   expect(today).toContain("const approvedNeedsExpiryReview = quoteQueue.approvedNeedsExpiryReview");
-  expect(today).toContain("waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview");
+  expect(today).toContain("waitingRequests.length + quotesReadyToSend + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview");
   expect(today).toContain("sentNeedsExpiryReview + approvedNeedsExpiryReview");
   expect(today).toContain("need quote validity review");
  });
@@ -62,8 +62,8 @@ describe("V4 approved quote pipeline enforces live expiry for staff readiness",(
   const today=readFileSync(join(process.cwd(),
     "src/features/operations/StaffOverviewDashboard.tsx"),"utf8");
   expect(today).toContain('<span>Quotes needing follow-up</span>');
-  expect(today).toContain('<strong>{waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}</strong>');
-  expect(today).toContain('{waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review · {quoteVersionConflicts} version conflicts');
+  expect(today).toContain('<strong>{quotesReadyToSend + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}</strong>');
+  expect(today).toContain('{quotesReadyToSend} approved for staff send · {waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review · {quoteVersionConflicts} version conflicts');
   expect(today).toContain('href={buildStaffModuleHref(workspace, "quotes")} className={styles.pipelineItem}');
   expect(today).not.toContain('<span>Quotes with customer</span>');
  });

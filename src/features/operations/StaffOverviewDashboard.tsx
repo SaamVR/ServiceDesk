@@ -197,6 +197,9 @@ export function StaffOverviewDashboard({
   const waitingRequests = snapshot.requests.filter((request) => ["NEW", "COLLECTING", "READY", "NEEDS_REVIEW"].includes(request.status));
   const quoteQueue = buildQuotePipeline(snapshot.quotes, snapshot.loadedAt);
   const waitingQuoteCount = quoteQueue.awaitingCustomer;
+  // Approved, unexpired saved offers still need a real staff send action.
+  // Excluding them hides the most actionable quote task from Today's workday.
+  const quotesReadyToSend = quoteQueue.readyToSend;
   const sentNeedsExpiryReview = quoteQueue.sentNeedsExpiryReview;
   // An expired/invalid APPROVED quote also requires staff intervention, not
   // a send action. Today's worklist must agree with the Quotes workspace.
@@ -322,8 +325,8 @@ export function StaffOverviewDashboard({
         <KpiCard
           label="Waiting pipeline"
           href={buildStaffModuleHref(workspace, waitingRequests.length ? "requests" : "quotes")}
-          value={waitingRequests.length + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}
-          detail={`${waitingRequests.length} requests · ${waitingQuoteCount} awaiting customer` +
+          value={waitingRequests.length + quotesReadyToSend + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}
+          detail={`${waitingRequests.length} requests · ${quotesReadyToSend} ready for staff send · ${waitingQuoteCount} awaiting customer` +
             (sentNeedsExpiryReview + approvedNeedsExpiryReview
               ? ` · ${sentNeedsExpiryReview + approvedNeedsExpiryReview} need quote validity review`
               : "") + (quoteVersionConflicts ? ` · ${quoteVersionConflicts} quote version conflicts` : "")}
@@ -409,8 +412,8 @@ export function StaffOverviewDashboard({
             </Link>
             <Link href={buildStaffModuleHref(workspace, "quotes")} className={styles.pipelineItem}>
               <span>Quotes needing follow-up</span>
-              <strong>{waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}</strong>
-              <small>{waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review · {quoteVersionConflicts} version conflicts</small>
+              <strong>{quotesReadyToSend + waitingQuoteCount + sentNeedsExpiryReview + approvedNeedsExpiryReview + quoteVersionConflicts}</strong>
+              <small>{quotesReadyToSend} approved for staff send · {waitingQuoteCount} awaiting customer · {sentNeedsExpiryReview + approvedNeedsExpiryReview} need validity review · {quoteVersionConflicts} version conflicts</small>
             </Link>
             <Link href={buildStaffModuleHref(workspace, "invoices")} className={styles.pipelineItem}>
               <span>Customer invoices to collect</span>
