@@ -810,6 +810,7 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
             books: ownerPriceReads[0].data,
             cards: ownerPriceReads[1].data,
             services: ownerPriceReads[2].data,
+            branches: branchScope.branches,
           }) };
 
   const tableReads = await Promise.all([
