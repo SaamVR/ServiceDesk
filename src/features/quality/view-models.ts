@@ -1,6 +1,7 @@
 import type { AttentionItemDTO, QualityCaseDTO, VisitDTO } from "@/contracts";
 import type { ProductActionState } from "@/features/operations/action-state";
 import type { QualityCaseAction } from "@/server/core/facade";
+import { trustedQuoteInstant } from "@/features/operations/quote-validity-clock";
 
 export interface QualityActionAvailability { enabledActions: QualityCaseAction[]; actionLabels?: Partial<Record<QualityCaseAction, string>>; disabledReason?: string; pendingAction?: QualityCaseAction; actionState?: ProductActionState; acceptedActionHandlerSupplied?: boolean; }
 export interface QualityCaseViewInput { qualityCase: QualityCaseDTO; visit: VisitDTO; attentionItems: readonly AttentionItemDTO[]; sourceLabel: "SERVER_SNAPSHOT" | "FIXTURE_UI_ONLY"; actionAvailability?: QualityActionAvailability; }
@@ -9,11 +10,11 @@ export interface QualityCaseView { caseId: string; visitId: string; visitStatus:
 const defaultQualityActions: QualityActionAvailability = { enabledActions: [], acceptedActionHandlerSupplied: false, disabledReason: "Quality actions require an injected accepted server command." };
 function reviewRequestLabel(caseState: QualityCaseDTO["state"], reviewState: QualityCaseDTO["reviewRequestState"]) { if (caseState !== "RESOLVED") return "Resolve quality case before requesting a review"; if (reviewState === "REQUESTED") return "Review request already queued by the server"; if (reviewState === "ELIGIBLE") return "Optional review request available after server authorization"; return "Review request not eligible"; }
 function resolutionLabel(qualityCase: QualityCaseDTO) { if (qualityCase.state === "RESOLVED") return qualityCase.resolutionNote ? `Resolved · ${qualityCase.resolutionNote}` : "Resolved"; if (qualityCase.state === "IN_REVIEW") return "In review · owner action required"; return "Open · resolution required"; }
-function formatDeadline(dueAt?: string) { return dueAt ? new Date(dueAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }) : "No deadline"; }
+function formatDeadline(dueAt?: string) { if (!dueAt) return "No deadline"; const at=trustedQuoteInstant(dueAt); return at===null ? "Deadline unverified" : new Date(at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }); }
 export function buildQualityCaseView(input: QualityCaseViewInput): QualityCaseView {
   const q=input.qualityCase;
   const matched=q.workspaceId===input.visit.workspaceId && q.visitId===input.visit.id;
-  const actionAvailability=matched
+  const actionAvailability=matched && input.sourceLabel==="SERVER_SNAPSHOT"
     ? {...defaultQualityActions,...input.actionAvailability,
        enabledActions:input.actionAvailability?.enabledActions ?? defaultQualityActions.enabledActions,
        acceptedActionHandlerSupplied:input.actionAvailability?.acceptedActionHandlerSupplied ?? false}
