@@ -32,6 +32,8 @@ describe("SONIC interactive internal workflow starter discovery",()=>{
     expect(route).toContain("<AutomationPlaybookBrowser selectedId={playbook?.id} />");
     expect(browser).toContain('href={"?template=" + encodeURIComponent(item.id)}');
     expect(browser).toContain("automationPlaybookCategories.map(category");
+    expect(browser).toContain("choices.length < automationPlaybooks.length");
+    expect(browser).toContain('selected?.category ?? "Intake"');
     expect(browser).toContain('aria-live="polite"');
     expect(browser).toContain('type="search"');
     expect(browser).toContain('aria-current={item.id === selectedId ? "page" : undefined}');

@@ -80,8 +80,9 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
       const matches = choices.filter(item => item.category === category);
       if (!matches.length) return null;
       return <details className={styles.group} key={category}
-        open={Boolean(search || severity !== "Any" || category ===
-          (selected?.category ?? (category === "Intake" ? "Intake" : "")))}>
+        open={Boolean(search || severity !== "Any" ||
+          choices.length < automationPlaybooks.length ||
+          category === (selected?.category ?? "Intake"))}>
         <summary>{category} <span>{matches.length} matching drafts</span></summary>
         <nav className={styles.cards} aria-label={category + " automation recipes"}>
           {matches.map((item: AutomationPlaybook) => <a key={item.id}
