@@ -63,3 +63,19 @@
 @media (prefers-reduced-motion: reduce) {
   .refresh, .reviewLink { transition: none; }
 }
+
+.stop, .more {
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--app-border-strong, #a9c6c9);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--app-accent, #0b746d);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 720;
+  cursor: pointer;
+}
+.stop:hover, .more:hover { background: #e3f5f0; }
+.stop:focus-visible, .more:focus-visible { outline: 3px solid #18877b; outline-offset: 3px; }
+.more { justify-self: start; }

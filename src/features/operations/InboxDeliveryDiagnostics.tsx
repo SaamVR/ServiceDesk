@@ -27,20 +27,24 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
   const [snapshot, setSnapshot] = useState<InboxDeliveryDiagnosticsSnapshot>();
   const [state, setState] = useState<"idle" | "loading" | "ready" | "unavailable">("idle");
   const requestController = useRef<AbortController | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
 
   useEffect(() => () => {
     requestController.current?.abort();
+    requestController.current = null;
   }, []);
 
   async function load() {
-    if (state === "loading") return;
-    requestController.current?.abort();
+    if (requestController.current) return;
     const controller = new AbortController();
     requestController.current = controller;
     let timedOut = false;
     const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
     setState("loading");
     setSnapshot(undefined);
+    setExpanded(false);
+    setCancelled(false);
     try {
       const params = new URLSearchParams({ workspaceSlug });
       const response = await fetch("/api/internal/inbox/delivery?" + params, {
@@ -50,7 +54,7 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
         headers: { Accept: "application/json" },
         signal: controller.signal,
       });
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || requestController.current !== controller) return;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
         setState("unavailable");
         return;
@@ -64,14 +68,31 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
       setSnapshot(result);
       setState("ready");
     } catch {
-      if (!controller.signal.aborted || timedOut) setState("unavailable");
+      if (requestController.current === controller && !controller.signal.aborted) {
+        setState("unavailable");
+      }
     } finally {
       clearTimeout(timeout);
-      if (requestController.current === controller) requestController.current = null;
+      // Read-only HTTP cancellation may settle late. Only the active request
+      // may affect UI, and timing out cannot leave the spinner stuck forever.
+      if (requestController.current === controller) {
+        requestController.current = null;
+        if (timedOut) setState("unavailable");
+      }
     }
   }
 
-  const needsReview = snapshot?.items.filter((item) => item.health === "NEEDS_REVIEW").slice(0, 8) ?? [];
+  function stopCheck() {
+    if (state !== "loading" || !requestController.current) return;
+    const old = requestController.current;
+    requestController.current = null;
+    old.abort();
+    setState("idle");
+    setCancelled(true);
+  }
+
+  const allNeedsReview = snapshot?.items.filter(item => item.health === "NEEDS_REVIEW") ?? [];
+  const needsReview = expanded ? allNeedsReview : allNeedsReview.slice(0, 8);
   const inboxHref = buildStaffModuleHref(workspaceSlug, "inbox");
   return (
     <section className={styles.panel} aria-label="Outbound delivery diagnostics">
@@ -89,10 +110,17 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
         >
           {state === "loading" ? "Checking…" : state === "ready" ? "Refresh" : "Check status"}
         </button>
+        {state === "loading" ? (
+          <button type="button" className={styles.stop} onClick={stopCheck}>
+            Stop check
+          </button>
+        ) : null}
       </div>
       <div aria-live="polite" aria-atomic="true" className={styles.feedback}>
         {state === "idle" ? (
-          <p>Check the latest recorded delivery outcomes. No messages will be sent.</p>
+          <p>{cancelled
+            ? "Stopped this read-only check. Delivery was not changed; recheck the saved inbox if a result remains uncertain."
+            : "Check saved delivery outcomes on demand. No messages will be sent."}</p>
         ) : state === "loading" ? (
           <p>Reading authorized delivery records…</p>
         ) : state === "unavailable" ? (
@@ -108,6 +136,8 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
               {snapshot.scannedOutboundMessages} authorized outbound records sampled
               {snapshot.truncated ? " · sample incomplete" : ""}
               . Confirmed includes delivered/read evidence only.
+              {" "}Snapshot captured <time dateTime={snapshot.generatedAt}>{snapshot.generatedAt}</time>.
+              This sample is not a live delivery feed.
             </p>
             {needsReview.length ? (
               <div className={styles.items}>
@@ -130,8 +160,16 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
                     </li>
                   ))}
                 </ul>
+                {allNeedsReview.length > 8 ? (
+                  <button type="button" className={styles.more}
+                    onClick={() => setExpanded(value => !value)}
+                    aria-expanded={expanded}>
+                    {expanded ? "Show fewer review records" :
+                      `Show all ${allNeedsReview.length} sample review records`}
+                  </button>
+                ) : null}
                 {snapshot.counts.review > needsReview.length ? (
-                  <p className={styles.sample}>Showing the first {needsReview.length} of {snapshot.counts.review} review items in this sample.</p>
+                  <p className={styles.sample}>Showing {needsReview.length} of {snapshot.counts.review} review records in this authorized sample.</p>
                 ) : null}
               </div>
             ) : (
