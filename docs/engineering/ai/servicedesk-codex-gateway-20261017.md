@@ -16,6 +16,7 @@ Set values only in a **V4 deployment secret store**, not GitHub, frontend code o
 SERVICEDESK_AI_ENABLED=false
 SERVICEDESK_AI_PROVIDER=codex_gateway
 SERVICEDESK_CODEX_GATEWAY_ENABLED=false
+SERVICEDESK_CODEX_GATEWAY_TEST_WORKSPACE_ID=<exact authorized fictional workspace UUID>
 SERVICEDESK_AI_MODEL=codex
 SERVICEDESK_AI_API_BASE_URL=https://codex-api.ezcomo.shop/v1
 SERVICEDESK_CODEX_GATEWAY_KEY=<set privately on V4 server; NEVER paste into chat, logs or Git>
@@ -23,7 +24,7 @@ SERVICEDESK_AI_TIMEOUT_MS=30000
 SERVICEDESK_AI_MAX_OUTPUT_TOKENS=1536
 ```
 
-Keep **both** enable flags false until an authorized provider test. Both flags must be true for model requests. The gateway-specific key does not replace `OPENAI_API_KEY` and cannot be loaded from a Codex OAuth token on the server. The provider selection and exact origin are server-side only; any invalid, spoofed, downgraded or credentialed URL fails before an HTTP call.
+Only one explicitly configured test workspace UUID is authorized for this provider; any other workspace is rejected before HTTP dispatch. This prevents the shared personal Codex login from accidentally serving all SaaS tenants. Keep **both** enable flags false until an authorized provider test. Both flags must be true for model requests. The gateway-specific key does not replace `OPENAI_API_KEY` and cannot be loaded from a Codex OAuth token on the server. The provider selection and exact origin are server-side only; any invalid, spoofed, downgraded or credentialed URL fails before an HTTP call.
 
 The gateway implements model alias `codex` (Codex CLI model controlled by its gateway map); select only aliases in the verified source allowlist. Do not treat this adapter's `max_output_tokens` as a gateway-enforced token cap: the current gateway ignores that field, while ServiceDesk continues to cap input/HTTP response bytes and hard timeouts. A 30-second deadline may be insufficient for a cold Codex CLI run; any timeout is a failed model request, not success.
 
