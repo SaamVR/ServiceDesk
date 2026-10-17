@@ -104,7 +104,7 @@ export const staffModuleConfig: Record<
     primarySurface: "quality-review",
   },
   automations: {
-    label: "Automation Studio",
+    label: "AI & Automation",
     group: "operations",
     eyebrow: "AI-assisted operations",
     description: "Generate staff-reviewed intake briefs, assess model readiness, and build controlled event-driven workflows.",
