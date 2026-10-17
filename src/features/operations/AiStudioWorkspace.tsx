@@ -2,6 +2,7 @@ import Link from "next/link";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { AiStudioWorkbench } from "./AiStudioWorkbench";
+import { WorkflowExecutionInspector } from "./WorkflowExecutionInspector";
 import { verifiedStudioRecordChoices } from "./ai-studio-records";
 import { AiOwnerOperationsBrief } from "./AiOwnerOperationsBrief";
 import { AiOwnerModelProbe } from "./AiOwnerModelProbe";
@@ -75,6 +76,8 @@ export function AiStudioWorkspace({
         <AiStudioWorkbench key={workspaceSlug} workspaceSlug={workspaceSlug}
           configured={configured} requests={requests} quotes={quotes} />
       </div>
+
+      <WorkflowExecutionInspector snapshot={data} />
 
       <section className={styles.toolSection} aria-label="AI Studio tools and capabilities">
         <div className={styles.panelTitle}>
