@@ -79,7 +79,33 @@ export function explainOwnerMetric(
     };
   }
 
+  // Owner metric summaries are not model-made numbers. Validate the
+  // provenance and bounded numeric source at the moment it is explained.
+  // Fail closed instead of narrating NaN, negative outstanding balances,
+  // string coercions, invented metrics or reversed report windows.
+  const iso = (v: unknown): v is string =>
+    typeof v === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v) &&
+    Number.isFinite(Date.parse(v)) &&
+    new Date(Date.parse(v)).toISOString() === v;
+  if (!snapshot || snapshot.source !== "CORE_METRICS" ||
+      !iso(snapshot.from) || !iso(snapshot.to) ||
+      Date.parse(snapshot.from) > Date.parse(snapshot.to) ||
+      Date.parse(snapshot.to) - Date.parse(snapshot.from) > 366*24*60*60*1000 ||
+      !snapshot.metrics || typeof snapshot.metrics !== "object" ||
+      Array.isArray(snapshot.metrics) ||
+      Object.getPrototypeOf(snapshot.metrics) !== Object.prototype ||
+      Object.keys(snapshot.metrics).some(key => !isOwnerMetricName(key))) {
+    return {ok:false,code:"OWNER_METRIC_SOURCE_UNVERIFIED",
+      message:"Authoritative scoped metric evidence is unavailable or malformed."};
+  }
   const value = snapshot.metrics[requestedMetric];
+  if (value !== undefined &&
+      (typeof value !== "number" || !Number.isSafeInteger(value) ||
+       value < 0)) {
+    return {ok:false,code:"OWNER_METRIC_VALUE_UNVERIFIED",
+      message:"Verified owner metric requires a bounded non-negative integer."};
+  }
   if (value === undefined) {
     return {
       ok: false,
