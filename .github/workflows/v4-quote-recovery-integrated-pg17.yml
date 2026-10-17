@@ -119,6 +119,8 @@ jobs:
           cache: pnpm
       - name: Frozen package installation
         run: pnpm install --frozen-lockfile
+      - name: Verify PG17 and canonical source gate split
+        run: node --test scripts/release/tests/v4-pg17-canonical-dedup-check.mjs
       - name: Private worker authorization and internal replay regressions
         run: |
           pnpm exec vitest run tests/e2e/v4-quote-source-protected-worker-http.test.ts tests/db/v4-quote-accepted-source-recovery.test.ts tests/db/v4-customer-quote-accepted-automation.test.ts
