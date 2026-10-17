@@ -14,8 +14,10 @@ const live:OperationalWorkflowExecution={
 const preview:OperationalWorkflowExecution={...live,id:"preview-1",mode:"PREVIEW",state:"PREVIEWED"};
 const action=(executionId:string,state:OperationalWorkflowActionExecution["state"],
   actionType:OperationalWorkflowActionExecution["actionType"]):OperationalWorkflowActionExecution=>({
-  id:executionId+"-"+state+"-"+actionType,branchId:"branch-a",executionId,actionIndex:0,
-  attemptNumber:1,actionType,state,createdAt:"2026-10-12T00:01:00Z",
+  id:executionId+"-"+state+"-"+actionType,branchId:"branch-a",executionId,
+  attemptNumber:1,actionIndex:actionType === "CREATE_ATTENTION" ? 0 :
+    actionType === "SEND_WHATSAPP_TEMPLATE" ? 1 : 2,
+  actionType,state,createdAt:"2026-10-12T00:01:00Z",
 });
 
 describe("V4 operator proof of persisted workflow activity",()=>{

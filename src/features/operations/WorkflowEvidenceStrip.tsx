@@ -37,7 +37,7 @@ export function WorkflowEvidenceStrip({executions,actions}: {
           <strong className={styles.value}>{evidence.externalApprovalRequired}</strong>
         </div>
         <div className={`${styles.metric} ${evidence.failedActions ? styles.danger : ""}`}>
-          <span className={styles.label}>Failed action records</span>
+          <span className={styles.label}>Current failed action slots</span>
           <strong className={styles.value}>{evidence.failedActions}</strong>
         </div>
       </div>
@@ -49,6 +49,12 @@ export function WorkflowEvidenceStrip({executions,actions}: {
         <strong>{issues ? "Review failed and approval-required items before any outbound action." :
           "Zero issues here does not establish external delivery."}</strong>
         {" "}Provider sends, email delivery, WhatsApp delivery, checkout and model inference require separate controlled receipts.
+        {evidence.historicalActionAttempts > 0
+          ? ` ${evidence.historicalActionAttempts} historical retry attempt(s) excluded from current action totals.`
+          : null}
+        {evidence.ambiguousActionSlots > 0
+          ? ` ${evidence.ambiguousActionSlots} conflicting action slot(s) require saved-row inspection; their results are not counted.`
+          : null}
         {evidence.internalAttentionPending > 0
           ? ` ${evidence.internalAttentionPending} internal attention action(s) remain pending.`
           : null}
