@@ -45,25 +45,34 @@ describe("V4 owner-first-run real USD pricing action navigation", () => {
   it("avoids dead anchors when pricing proof is unavailable, configured or not in USD", () => {
     expect(availableFirstRunUsdBranches(scope)).toEqual([]);
     expect(availableFirstRunUsdBranches(scope, {
-      state: "UNAVAILABLE", activeBranchIds: [],
+      state: "UNAVAILABLE", activeBranchIds: [], existingBookBranchIds: [],
     })).toEqual([]);
     expect(availableFirstRunUsdBranches(scope, {
-      state: "VERIFIED", activeBranchIds: ["usd-one", "usd-two"],
+      state: "VERIFIED", activeBranchIds: ["usd-one", "usd-two"], existingBookBranchIds: ["usd-one", "usd-two"],
     })).toEqual([]);
     expect(availableFirstRunUsdBranches(scope, {
-      state: "VERIFIED", activeBranchIds: ["usd-one"],
+      state: "VERIFIED", activeBranchIds: ["usd-one"], existingBookBranchIds: ["usd-one"],
     }).map(item => item.id)).toEqual(["usd-two"]);
   });
 
-  it("never offers a first-run target for another branch outside the selected scope", () => {
+  it("never deep-links first-run setup for an existing but unquotable active price book", () => {
+    expect(availableFirstRunUsdBranches(scope, {
+      state:"VERIFIED",activeBranchIds:[],existingBookBranchIds:["usd-one"],
+    }).map(item=>item.id)).toEqual(["usd-two"]);
+    expect(availableFirstRunUsdBranches(scope, {
+      state:"VERIFIED",activeBranchIds:[],existingBookBranchIds:["usd-one","usd-two"],
+    })).toEqual([]);
+  });
+
+    it("never offers a first-run target for another branch outside the selected scope", () => {
     const selected: OperationalBranchScope = {
       ...scope, mode: "BRANCH", selectedBranchId: "usd-one",
     };
     expect(availableFirstRunUsdBranches(selected, {
-      state: "VERIFIED", activeBranchIds: ["usd-one"],
+      state: "VERIFIED", activeBranchIds: ["usd-one"], existingBookBranchIds: ["usd-one"],
     })).toEqual([]);
     expect(availableFirstRunUsdBranches(selected, {
-      state: "VERIFIED", activeBranchIds: [],
+      state: "VERIFIED", activeBranchIds: [], existingBookBranchIds: [],
     }).map(item => item.id)).toEqual(["usd-one"]);
   });
 
