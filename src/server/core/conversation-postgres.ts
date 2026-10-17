@@ -321,6 +321,8 @@ function qualityCaseFromRpc(row: RpcRow): QualityCaseDTO {
   if (feedback != null && (typeof feedback !== "number" ||
       !Number.isSafeInteger(feedback) || feedback < 1 || feedback > 5))
     throw new Error("Malformed saved quality feedback score");
+  const version = savedCount(row, "version");
+  if (version < 1) throw new Error("Malformed saved quality version");
   return {
     id: savedString(row, "id"),
     workspaceId: savedString(row, "workspaceId", "workspace_id"),
@@ -332,7 +334,7 @@ function qualityCaseFromRpc(row: RpcRow): QualityCaseDTO {
     dueAt: savedOptionalTimestamp(row, "dueAt", "due_at"),
     resolutionNote: savedOptionalString(row, "resolutionNote", "resolution_note"),
     reviewRequestState: reviewRequestState as QualityCaseDTO["reviewRequestState"],
-    version: savedCount(row, "version"),
+    version,
     createdAt: savedTimestamp(row, "createdAt", "created_at"),
     updatedAt: savedTimestamp(row, "updatedAt", "updated_at"),
   };
