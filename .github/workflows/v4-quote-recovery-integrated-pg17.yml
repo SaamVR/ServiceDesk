@@ -119,8 +119,23 @@ jobs:
           cache: pnpm
       - name: Frozen package installation
         run: pnpm install --frozen-lockfile
+      - name: Verify PG17 and canonical source gate split
+        run: node --test scripts/release/tests/v4-pg17-canonical-dedup-check.mjs
       - name: Private worker authorization and internal replay regressions
         run: |
           pnpm exec vitest run tests/e2e/v4-quote-source-protected-worker-http.test.ts tests/db/v4-quote-accepted-source-recovery.test.ts tests/db/v4-customer-quote-accepted-automation.test.ts
+      - name: Confirm separate canonical full-source authority
+        # Only the canonical *push* already has a distinct exact-SHA source,
+        # Chrome and synthetic RC workflow. Keep the PG17 SQL and private
+        # worker regressions; never claim PG17 success is source RC success.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/servicedesk-v4-reconciled-qa-shell-20261012'
+        run: |
+          test -f .github/workflows/v4-reconciled-full-rc.yml
+          grep -Fq 'feat/servicedesk-v4-reconciled-qa-shell-20261012' .github/workflows/v4-reconciled-full-rc.yml
+          grep -Fq 'pnpm check:rc' .github/workflows/v4-reconciled-full-rc.yml
+          echo "Canonical source/Chrome RC remains a distinct mandatory exact-head workflow."
       - name: Full application TypeScript, tests, lint and production build
+        # The canonical push runs this identical step in its own full source
+        # workflow. Retain complete validation for recovery branches and PRs.
+        if: github.event_name != 'push' || github.ref != 'refs/heads/feat/servicedesk-v4-reconciled-qa-shell-20261012'
         run: pnpm check:rc
