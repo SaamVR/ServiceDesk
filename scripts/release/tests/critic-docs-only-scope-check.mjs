@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { decodeNulPaths, isOnlyCriticMarkdown } from "../critic-docs-only-scope.mjs";
 
 test("allows strictly isolated critic Markdown documentation PRs", () => {
@@ -45,4 +46,13 @@ test("malformed or empty git NUL stream forces full source validation", () => {
   }
   assert.equal(isOnlyCriticMarkdown(null), false);
   assert.equal(isOnlyCriticMarkdown(undefined), false);
+});
+
+test("required PR job is never filtered away and source renames cannot hide behind Markdown",()=>{
+  const workflow = readFileSync(".github/workflows/v4-controller-pr-full-source-rc.yml", "utf8");
+  assert.match(workflow, /pull_request:/);
+  assert.match(workflow, /exact-head-full-source-rc:/);
+  assert.match(workflow, /git diff --no-renames --name-only -z/);
+  assert.doesNotMatch(workflow, /paths-ignore:/);
+  assert.match(workflow, /if: steps\.critic_docs_scope\.outputs\.docs_only != 'true'/);
 });
