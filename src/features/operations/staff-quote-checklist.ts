@@ -29,7 +29,9 @@ export function buildStaffQuoteChecklist(
     quote.depositMinor, quote.balanceMinor, quote.durationMinutes];
   const numbersSafe = values.every(n => typeof n === "number" &&
     Number.isSafeInteger(n) && n >= 0);
-  const chargeMath = numbersSafe &&
+  const chargeMath = numbersSafe && quote.totalMinor > 0 &&
+    quote.durationMinutes > 0 &&
+    Number.isSafeInteger((quote.subtotalMinor as number) + (quote.taxMinor as number)) &&
     (quote.subtotalMinor as number) + (quote.taxMinor as number) === quote.totalMinor &&
     quote.depositMinor + quote.balanceMinor === quote.totalMinor;
   const lines = chargeMath && Array.isArray(quote.lineItems)
@@ -39,8 +41,13 @@ export function buildStaffQuoteChecklist(
       quote.taxMinor as number, quote.totalMinor,
     ) : null;
   const verified = !!lines && /^[A-Z]{3}$/.test(quote.currency);
-  const now = Date.parse(nowIso);
-  const expiry = quote.validUntil ? Date.parse(quote.validUntil) : NaN;
+  // Without explicit timezone, Date.parse assumes the runtime's local zone.
+  // Staff should not approve a quote whose persisted expiry can shift by host.
+  const zoned = (value: unknown): value is string =>
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value);
+  const now = zoned(nowIso) ? Date.parse(nowIso) : NaN;
+  const expiry = zoned(quote.validUntil) ? Date.parse(quote.validUntil) : NaN;
   const fresh = Number.isFinite(now) && Number.isFinite(expiry) && expiry > now;
   const internalStatus = ["APPROVED", "SENT"].includes(quote.status);
 
