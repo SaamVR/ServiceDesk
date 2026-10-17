@@ -5,6 +5,8 @@ export interface AiModelTransportConfig {
   apiBaseUrl: string;
   /** Separate, explicitly opted-in single-operator Codex gateway transport. */
   provider?: "codex_gateway";
+  /** A SINGLE explicitly authorized fictional workspace, not all SaaS tenants. */
+  gatewayAllowedWorkspaceId?: string;
   /** Explicitly allow an alternate provider gateway origin in trusted server
    * configuration; omitted in live ServiceDesk's OpenAI-only runtime. */
   approvedGatewayOrigin?: string;
@@ -374,6 +376,12 @@ export async function callAiModel(
       message: "Operational model transport requires the exact authorized HTTPS /v1 endpoint." };
   }
 
+  if (config.provider === "codex_gateway" &&
+      (!config.gatewayAllowedWorkspaceId ||
+        input.workspaceId !== config.gatewayAllowedWorkspaceId)) {
+    return {ok:false,code:"AI_MODEL_WORKSPACE_BLOCKED",
+      message:"Private Codex gateway is restricted to the approved test workspace."};
+  }
   // Stop obsolete model calls when an authenticated HTTP client navigates
   // away or disconnects. The existing bounded provider timeout remains the
   // independent upper limit. Cancellation is not provider delivery proof.
