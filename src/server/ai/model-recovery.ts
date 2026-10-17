@@ -25,7 +25,7 @@ export function classifyAiModelFailureForRecovery(input: AiModelFailureRecoveryI
   const safeId=(value:unknown)=>typeof value==="string" &&
     /^[A-Za-z0-9:_-]{3,128}$/.test(value);
   const timeOk=typeof input?.occurredAt==="string" &&
-    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$/.test(input.occurredAt) &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(input.occurredAt) &&
     Number.isFinite(Date.parse(input.occurredAt));
   const attemptsOk=Number.isSafeInteger(input?.attempts) &&
     input.attempts>=0 && input.attempts<=12 &&
