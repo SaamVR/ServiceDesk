@@ -235,24 +235,66 @@ function invoiceFromRpc(row: RpcRow): InvoiceDTO {
   };
 }
 
+/** SQL DATE is a civil date, not a JavaScript-normalizable instant. */
+function savedRecurrenceDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) throw new Error("Malformed saved recurrence date");
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > days[month - 1])
+    throw new Error("Malformed saved recurrence calendar date");
+  return value;
+}
+
 function recurrenceRuleFromRpc(row: RpcRow): RecurrenceRuleDTO {
+  const frequency = savedString(row, "frequency");
+  const status = savedString(row, "status");
+  if (!["WEEKLY", "FORTNIGHTLY", "MONTHLY"].includes(frequency) ||
+      !["ACTIVE", "PAUSED", "COMPLETED"].includes(status))
+    throw new Error("Malformed saved recurrence frequency or status");
+
+  const timezone = savedString(row, "timezone");
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+  } catch {
+    throw new Error("Malformed saved recurrence IANA timezone");
+  }
+  const localStartTime = savedString(row, "localStartTime", "local_start_time");
+  // PostgreSQL TIME can be HH:MM, HH:MM:SS or HH:MM:SS.microseconds.
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,6})?)?$/.test(localStartTime))
+    throw new Error("Malformed saved recurrence local time");
+
+  const startsOn = savedRecurrenceDate(savedString(row, "startsOn", "starts_on"));
+  const endsOnRaw = savedOptionalString(row, "endsOn", "ends_on");
+  const nextOccurrenceRaw = savedOptionalString(row, "nextOccurrenceOn", "next_occurrence_on");
+  const endsOn = endsOnRaw === undefined ? undefined : savedRecurrenceDate(endsOnRaw);
+  const nextOccurrenceOn = nextOccurrenceRaw === undefined ? undefined : savedRecurrenceDate(nextOccurrenceRaw);
+  if (endsOn !== undefined && endsOn < startsOn)
+    throw new Error("Malformed saved recurrence date range");
+
+  // SQL: generated_occurrences >= 0, version > 0, max_occurrences > 0 when set.
+  // A missing number cannot be substituted with a plausible zero.
+  const generatedOccurrences = savedCount(row, "generatedOccurrences", "generated_occurrences");
+  const version = savedCount(row, "version");
+  const maxOccurrences = savedOptionalCount(row, "maxOccurrences", "max_occurrences");
+  if (version < 1 || (maxOccurrences !== undefined && maxOccurrences < 1))
+    throw new Error("Malformed saved recurrence version or occurrence limit");
+
   return {
-    id: String(field(row, "id")),
-    workspaceId: String(field(row, "workspaceId", "workspace_id")),
-    requestId: String(field(row, "requestId", "request_id")),
-    propertyId: String(field(row, "propertyId", "property_id")),
-    frequency: String(field(row, "frequency")) as RecurrenceRuleDTO["frequency"],
-    timezone: String(field(row, "timezone")),
-    localStartTime: String(field(row, "localStartTime", "local_start_time")),
-    startsOn: String(field(row, "startsOn", "starts_on")),
-    endsOn: maybeString(field(row, "endsOn", "ends_on")),
-    maxOccurrences: maybeNumber(field(row, "maxOccurrences", "max_occurrences")),
-    generatedOccurrences: Number(field(row, "generatedOccurrences", "generated_occurrences") ?? 0),
-    status: String(field(row, "status")) as RecurrenceRuleDTO["status"],
-    nextOccurrenceOn: maybeString(field(row, "nextOccurrenceOn", "next_occurrence_on")),
-    version: Number(field(row, "version") ?? 0),
-    createdAt: String(field(row, "createdAt", "created_at")),
-    updatedAt: String(field(row, "updatedAt", "updated_at")),
+    id: savedString(row, "id"),
+    workspaceId: savedString(row, "workspaceId", "workspace_id"),
+    requestId: savedString(row, "requestId", "request_id"),
+    propertyId: savedString(row, "propertyId", "property_id"),
+    frequency: frequency as RecurrenceRuleDTO["frequency"],
+    timezone, localStartTime, startsOn, endsOn, maxOccurrences,
+    generatedOccurrences,
+    status: status as RecurrenceRuleDTO["status"],
+    nextOccurrenceOn, version,
+    createdAt: savedTimestamp(row, "createdAt", "created_at"),
+    updatedAt: savedTimestamp(row, "updatedAt", "updated_at"),
   };
 }
 
