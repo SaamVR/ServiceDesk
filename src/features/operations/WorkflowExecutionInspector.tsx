@@ -43,8 +43,13 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
     (filter === "failed" && (run.state === "PARTIAL_FAILED" || run.failedCount > 0)) ||
     (filter === "processing" && classifyWorkflowIntervention(run) === "processing") ||
     (filter === "completed" && run.state === "COMPLETED"));
-  const visible = matching.slice(0, visibleCount);
-  const selected = visible.find(run => run.id === selectedId) ?? visible[0];
+  const firstPage = matching.slice(0, visibleCount);
+  // The intervention queue can select an older persisted run. Pin that one
+  // in the list without rendering all 1,000 loaded runs just to make it visible.
+  const selectedFromAll = matching.find(run => run.id === selectedId);
+  const visible = selectedFromAll && !firstPage.some(run => run.id === selectedFromAll.id)
+    ? [selectedFromAll, ...firstPage] : firstPage;
+  const selected = selectedFromAll ?? visible[0];
   const averageDuration = summary.measuredDurationMs.length
     ? Math.round(summary.measuredDurationMs.reduce((a, b) => a + b, 0) / summary.measuredDurationMs.length / 1000)
     : null;
@@ -98,7 +103,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
                     : `${run.approvalCount} action(s) marked APPROVAL_REQUIRED`}</small>
                   <small>Recorded: <time dateTime={run.createdAt}>{run.createdAt}</time></small>
                   <button className={styles.triageInspect} type="button"
-                    onClick={() => { setFilter("attention"); setSelectedId(run.id); setVisibleCount(runs.length); }}>
+                    onClick={() => { setFilter("attention"); setSelectedId(run.id); setVisibleCount(20); }}>
                     Inspect saved evidence
                   </button>
                 </li>)}
