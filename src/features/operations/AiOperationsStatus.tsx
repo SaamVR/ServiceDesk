@@ -29,6 +29,7 @@ export function AiOperationsStatus({
           <p className={styles.kicker}>AI & automation workspace</p>
           <h2>Turn enquiries into reviewed next steps</h2>
           <p>Generate staff-only intake briefs, review AI replies, and configure event-driven workflows—without hidden customer sends or payments.</p>
+          <Link href={buildStaffModuleHref(workspaceSlug, "ai-studio")} style={{ color: "#18735e", fontWeight: 800, fontSize: 13 }}>Open AI Studio →</Link>
         </div>
         <span className={ready ? styles.configured : styles.unconfigured}>
           {ready ? "AI configured · provider proof pending" : "AI not enabled"}
