@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { buildStaffModuleHref } from "./staff-modules";
 import type { OperationalBranchScope, OperationalServiceCatalogItem } from "./operational-product-runtime";
-import { availableFirstRunUsdBranches, countQuoteableCleaningServices, type OwnerPricingBookProof } from "./owner-pricing-readiness";
+import { availableFirstRunUsdBranches, invalidExistingUsdBranches, countQuoteableCleaningServices, type OwnerPricingBookProof } from "./owner-pricing-readiness";
 
 /**
  * Read-only owner commercial readiness. Active services alone cannot establish
@@ -49,6 +49,20 @@ export function CatalogReadinessBanner({
       <FeedbackBanner
         title="Branch pricing readiness could not be verified"
         description="The saved branch price books could not be checked from this owner session. This is not proof that real customer quotes are ready. Refresh and verify pricing in Settings before quoting."
+        tone="warning"
+        action={settingsLink}
+      />
+    );
+  }
+
+  const invalidSaved = invalidExistingUsdBranches(branchScope, ownerPricingBookProof);
+  if (invalidSaved.length > 0) {
+    return (
+      <FeedbackBanner
+        title="Saved branch pricing needs correction"
+        description={invalidSaved.length === 1
+          ? `The USD branch “${invalidSaved[0].name}” already has an active saved price book, but its current rates cannot be verified for an actual quote. First-run setup cannot overwrite it. Review the existing rates and effective dates in Settings before issuing customer quotes.`
+          : `${invalidSaved.length} USD branches have existing active price books that cannot be verified for actual customer quotes. First-run setup cannot overwrite these records; review saved rates and effective dates in Settings.`}
         tone="warning"
         action={settingsLink}
       />

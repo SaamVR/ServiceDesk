@@ -9,7 +9,7 @@ const branch = {
   timezone: "America/New_York",isDefault: true,
 };
 const input = {
-  serviceCatalog: [], ownerPricingBookProof: {state:"VERIFIED",activeBranchIds:[]},
+  serviceCatalog: [], ownerPricingBookProof: {state:"VERIFIED",activeBranchIds:[],existingBookBranchIds:[]},
   branchScope: { mode: "BRANCH",selectedBranchId:"branch-a",branches:[branch] },
   workflowAvailable:true,workflowRules:[],workflowRuleVersions:[],
   workflowExecutions:[],workflowActionExecutions:[],
@@ -28,12 +28,12 @@ describe("Owner automation activation checklist direct first-run pricing entry",
     expect(html).toContain("Open Automation Studio");
   });
   it("does not deep-link to a nonexistent form when all available branches are priced",()=>{
-    const html=view({...input,ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:["branch-a"]}});
+    const html=view({...input,ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:["branch-a"],existingBookBranchIds:["branch-a"]}});
     expect(html).toContain('href="/app/qa-cleaning/settings"');
     expect(html).not.toContain("#owner-first-run-pricing");
   });
   it("does not claim a pricing entry route when branch authorization proof is unavailable",()=>{
-    const html=view({...input,ownerPricingBookProof:{state:"UNAVAILABLE",activeBranchIds:[]}});
+    const html=view({...input,ownerPricingBookProof:{state:"UNAVAILABLE",activeBranchIds:[],existingBookBranchIds:[]}});
     expect(html).toContain("Open Settings");
     expect(html).not.toContain("#owner-first-run-pricing");
   });

@@ -15,7 +15,7 @@ describe("V4 first-run real automation checklist in owner onboarding",()=>{
         id:"branch-a",code:"US-A",name:"New York",currency:"USD",
         timezone:"America/New_York",isDefault:true,
       }]},
-      ownerPricingBookProof:{state:"VERIFIED" as const,activeBranchIds:[]},
+      ownerPricingBookProof:{state:"VERIFIED" as const,activeBranchIds:[],existingBookBranchIds:[]},
       workflowAvailable:true,
       workflowRules:[],workflowRuleVersions:[],
       workflowExecutions:[],workflowActionExecutions:[],

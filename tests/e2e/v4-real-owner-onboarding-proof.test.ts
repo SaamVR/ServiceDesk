@@ -21,39 +21,49 @@ const scope: OperationalBranchScope = {
 
 describe("V4 real owner first-run operational readiness", () => {
   it("requires an active saved catalog service, not a decorative legacy settings label", () => {
-    expect(summarizeOwnerCommercialSetup({ catalog: [], scope, proof: { state: "VERIFIED", activeBranchIds: [] } }))
+    expect(summarizeOwnerCommercialSetup({ catalog: [], scope, proof: { state: "VERIFIED", activeBranchIds: [], existingBookBranchIds: [] } }))
       .toMatchObject({ state: "NEEDS_SERVICE", activeServices: 0 });
     expect(summarizeOwnerCommercialSetup({ catalog: [{ ...service, active: false }], scope,
-      proof: { state: "VERIFIED", activeBranchIds: ["branch-a"] } }))
+      proof: { state: "VERIFIED", activeBranchIds: ["branch-a"], existingBookBranchIds: ["branch-a"] } }))
       .toMatchObject({ state: "NEEDS_SERVICE", activeServices: 0 });
-    expect(summarizeOwnerCommercialSetup({ scope, proof: { state: "VERIFIED", activeBranchIds: [] } }))
+    expect(summarizeOwnerCommercialSetup({ scope, proof: { state: "VERIFIED", activeBranchIds: [], existingBookBranchIds: [] } }))
       .toMatchObject({ state: "UNVERIFIED", activeServices: 0 });
   });
 
   it("does not call unrelated active catalog items cleaning-quote ready", () => {
     const carpet = { ...service, code: "WINDOWS", name: "Window cleaning" };
     const evidence = summarizeOwnerCommercialSetup({ catalog: [carpet], scope,
-      proof: { state: "VERIFIED", activeBranchIds: ["branch-a", "branch-b"] } });
+      proof: { state: "VERIFIED", activeBranchIds: ["branch-a", "branch-b"], existingBookBranchIds: ["branch-a", "branch-b"] } });
     expect(evidence).toMatchObject({
       state: "NEEDS_SERVICE", activeServices: 1, quoteableCleaningServices: 0,
     });
     expect(evidence.detail).toContain("Standard, Deep or Move-Out");
     const mixed = summarizeOwnerCommercialSetup({ catalog: [carpet, service], scope,
-      proof: { state: "VERIFIED", activeBranchIds: ["branch-a", "branch-b"] } });
+      proof: { state: "VERIFIED", activeBranchIds: ["branch-a", "branch-b"], existingBookBranchIds: ["branch-a", "branch-b"] } });
     expect(mixed).toMatchObject({
       state: "VERIFIED", activeServices: 2, quoteableCleaningServices: 1,
     });
   });
 
-  it("fails closed when the branch book proof cannot be read", () => {
+  it("does not classify an unquotable but active existing book as first-run missing or verified", () => {
+    const input={catalog:[service],scope,proof:{
+      state:"VERIFIED" as const,activeBranchIds:[],
+      existingBookBranchIds:["branch-a","branch-b"],
+    }};
+    const result=summarizeOwnerCommercialSetup(input);
+    expect(result).toMatchObject({state:"UNVERIFIED",missingPriceBookBranches:0});
+    expect(result.detail).toContain("cannot overwrite");
+  });
+
+    it("fails closed when the branch book proof cannot be read", () => {
     expect(summarizeOwnerCommercialSetup({ catalog: [service], scope }))
       .toMatchObject({ state: "UNVERIFIED", eligibleUsdBranches: 0 });
     expect(summarizeOwnerCommercialSetup({ catalog: [service], scope,
-      proof: { state: "UNAVAILABLE", activeBranchIds: [] } })).toMatchObject({ state: "UNVERIFIED" });
+      proof: { state: "UNAVAILABLE", activeBranchIds: [], existingBookBranchIds: [] } })).toMatchObject({ state: "UNVERIFIED" });
   });
 
   it("distinguishes partly configured USD branches from verified books", () => {
-    const proof = { state: "VERIFIED" as const, activeBranchIds: ["branch-a"] };
+    const proof = { state: "VERIFIED" as const, activeBranchIds: ["branch-a"], existingBookBranchIds: ["branch-a"] };
     const result = summarizeOwnerCommercialSetup({ catalog: [service], scope, proof });
     expect(result).toMatchObject({
       state: "NEEDS_PRICE_BOOK", activeServices: 1, eligibleUsdBranches: 2,
@@ -61,7 +71,7 @@ describe("V4 real owner first-run operational readiness", () => {
     });
     expect(result.detail).toContain("South");
     const all = summarizeOwnerCommercialSetup({ catalog: [service], scope,
-      proof: { state: "VERIFIED", activeBranchIds: ["branch-a", "branch-b"] } });
+      proof: { state: "VERIFIED", activeBranchIds: ["branch-a", "branch-b"], existingBookBranchIds: ["branch-a", "branch-b"] } });
     expect(all).toMatchObject({ state: "VERIFIED", eligibleUsdBranches: 2, missingPriceBookBranches: 0 });
     expect(all.detail).toContain("Individual quotes still require validated services");
   });
@@ -69,12 +79,12 @@ describe("V4 real owner first-run operational readiness", () => {
   it("never claims unsupported or unauthorized branch currencies are ready", () => {
     const selected: OperationalBranchScope = { ...scope, mode: "BRANCH", selectedBranchId: "branch-b" };
     const result = summarizeOwnerCommercialSetup({ catalog: [service], scope: selected,
-      proof: { state: "VERIFIED", activeBranchIds: ["branch-a"] } });
+      proof: { state: "VERIFIED", activeBranchIds: ["branch-a"], existingBookBranchIds: ["branch-a"] } });
     expect(result).toMatchObject({ state: "NEEDS_PRICE_BOOK", missingPriceBookBranches: 1,
       eligibleUsdBranches: 1 });
     const gbOnly: OperationalBranchScope = { ...scope, mode: "BRANCH", selectedBranchId: "branch-uk" };
     expect(summarizeOwnerCommercialSetup({ catalog: [service], scope: gbOnly,
-      proof: { state: "VERIFIED", activeBranchIds: ["branch-uk"] } }))
+      proof: { state: "VERIFIED", activeBranchIds: ["branch-uk"], existingBookBranchIds: ["branch-uk"] } }))
       .toMatchObject({ state: "UNSUPPORTED_CURRENCY", eligibleUsdBranches: 0 });
   });
 
