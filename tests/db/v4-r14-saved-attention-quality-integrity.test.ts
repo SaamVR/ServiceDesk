@@ -30,7 +30,7 @@ describe("R14 saved attention and quality-case evidence integrity",()=>{
   expect(await snap({attentionItems:[{...attention,status:"ACKNOWLEDGED",
     ownerUserId:null,dueAt:null}],qualityCases:[{...quality,state:"RESOLVED",
     feedbackScore:null,ownerUserId:null,dueAt:null,resolutionNote:null,
-    version:0,reviewRequestState:"NOT_ELIGIBLE"}]}))
+    version:1,reviewRequestState:"NOT_ELIGIBLE"}]}))
     .toMatchObject({ok:true});
  });
  it("does not silently render invented attention severity, status or due dates",async()=>{
@@ -49,7 +49,7 @@ describe("R14 saved attention and quality-case evidence integrity",()=>{
     {summary:undefined},{reviewRequestState:undefined},
     {reviewRequestState:"SENT"},{feedbackScore:"5"},{feedbackScore:0},
     {feedbackScore:5.5},{feedbackScore:6},{feedbackScore:Number.NaN},
-    {version:undefined},{version:null},{version:"0"},{version:-1},
+    {version:undefined},{version:null},{version:"0"},{version:0},{version:-1},
     {updatedAt:"garbage"},{createdAt:"2026-10-16T12:00:00"},
     {dueAt:"tomorrow"},{ownerUserId:42},
   ]) expect(await snap({qualityCases:[{...quality,...patch}]}),
