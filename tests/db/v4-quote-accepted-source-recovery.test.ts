@@ -33,6 +33,8 @@ function harness(options:{
   throwBridge?:boolean;
   claimError?:boolean;
   leaseReadError?:boolean;
+  bogusReceiptState?: boolean;
+  bogusReceiptCounters?: boolean;
   leaseAfterClaim?:Partial<typeof claimed>;
 }={}){
   const rows={
@@ -77,8 +79,11 @@ function harness(options:{
     if(options.throwBridge)throw Error("simulated crash");
     if(options.optedOut)return {ok:false as const,code:"QUOTE_AUTOMATION_WORKSPACE_NOT_OPTED_IN",message:"off"};
     if(options.bridgeFails)return {ok:false as const,code:"QUOTE_AUTOMATION_RULES_UNAVAILABLE",message:"fail"};
-    return {ok:true as const,value:{state:"PERSISTED_INTERNAL_QUOTE_ACCEPTED_AUTOMATION",
-      newlyRecordedRuleExecutions:1,reusedRuleExecutions:0,completedAttentionActions:1,
+    return {ok:true as const,value:{
+      state:options.bogusReceiptState ? "MODEL_SUGGESTION_ONLY" :
+        "PERSISTED_INTERNAL_QUOTE_ACCEPTED_AUTOMATION",
+      newlyRecordedRuleExecutions:options.bogusReceiptCounters ? -1 : 1,
+      reusedRuleExecutions:0,completedAttentionActions:1,
       approvalRequired:1,providerMessagesSent:0 as const}};
   });
   const deps={enabled:()=>true,bridge} as unknown as InternalSourceWorkerDependencies;
@@ -173,6 +178,20 @@ describe("V4 trusted internal quote source recovery worker",()=>{
       expect(h.events[1].args.p_outcome).toBe("FAILED");
     }
   });
+  it("critic: refuses to ACK a synthetic success with no trusted persisted bridge receipt",async()=>{
+    for (const options of [{bogusReceiptState:true},{bogusReceiptCounters:true}]) {
+      const h=harness(options);
+      const outcome=await run(h);
+      expect(outcome).toMatchObject({
+        claimed:1,completed:0,retryPending:1,providerMessagesSent:0,
+      });
+      expect(h.events[1].args).toMatchObject({
+        p_outcome:"FAILED",p_error_code:"QUOTE_SOURCE_PROVIDER_RESULT_INVALID",
+      });
+      expect(h.bridge).toHaveBeenCalledOnce();
+    }
+  });
+
   it("is honest about claim, transient crash and completion failure",async()=>{
     const claim=harness({claimError:true});
     expect(await run(claim)).toMatchObject({state:"CLAIM_UNVERIFIED",claimed:0});
