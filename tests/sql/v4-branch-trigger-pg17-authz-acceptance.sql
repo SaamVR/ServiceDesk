@@ -100,6 +100,22 @@ end
 $missing_identity$;
 rollback;
 
+-- An attacker-controlled claim alone must not be enough to impersonate the
+-- privileged SQL role. Real PostgREST role switch must match the service JWT.
+begin;
+set local role authenticated;
+set local request.jwt.claim.role='service_role';
+set local request.jwt.claim.sub='aaaaaaaa-0000-4000-8000-000000000001';
+do $forged_role$
+begin
+  if public.servicedesk_default_branch(
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') is not null then
+    raise exception 'Forged service_role JWT claim bypassed database role';
+  end if;
+end
+$forged_role$;
+rollback;
+
 begin;
 set local role service_role;
 set local request.jwt.claim.role='service_role';
