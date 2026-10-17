@@ -118,6 +118,9 @@ export function validateOwnerOperationsBriefGrounding(
   // even though no saved appointment, timezone or dueAt reached the model.
   // Disallow relative-calendar/deadline advice, not generic manual inspection.
   if (/\b(?:today|tomorrow|yesterday|tonight|this\s+(?:morning|afternoon|evening|week|month)|next\s+(?:morning|afternoon|evening|week|month)|later\s+(?:today|tomorrow|this\s+week)|before\s+(?:lunch|dinner|noon|midnight|the\s+end\s+of\s+(?:the\s+)?day|close\s+of\s+business)|by\s+(?:eod|cob|noon|midnight|end\s+of\s+(?:the\s+)?day)|within\s+(?:an?\s+)?(?:hour|day|week)|at\s+(?:noon|midnight))\b/i.test(draft)) return undefined;
+  // A positive invoice/request/visit count is not proof of lateness,
+  // delinquency or a missed deadline. Quote expiry is separately verified.
+  if (/\b(?:overdue|late|past[- ]due|delinquent)\s+(?:invoices?|requests?|visits?|attentions?)\b/i.test(draft)) return undefined;
   if (/[0-9]/.test(draft) ||
       // Word-based numbers also assert exact queue totals not present in
       // the safe model output contract, e.g. "two overdue invoices".
