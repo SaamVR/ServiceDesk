@@ -408,7 +408,7 @@ export interface OperationalStaffSnapshot {
   qualityCases: OperationalQualityCase[];
   recurrenceRules: OperationalRecurrence[];
   serviceCatalog: OperationalServiceCatalogItem[];
-  ownerPricingBookProof?: { state: "VERIFIED" | "UNAVAILABLE"; activeBranchIds: string[] };
+  ownerPricingBookProof?: { state: "VERIFIED" | "UNAVAILABLE"; activeBranchIds: string[]; existingBookBranchIds?: string[] };
   workflowAvailable?: boolean;
   workflowRules?: OperationalWorkflowRule[];
   workflowRuleVersions?: OperationalWorkflowRuleVersion[];
@@ -804,8 +804,14 @@ export async function loadOperationalStaffSnapshot(workspaceSlug: string): Promi
       !Array.isArray(ownerPriceReads[0].data) ||
       !Array.isArray(ownerPriceReads[1].data) ||
       !Array.isArray(ownerPriceReads[2].data)
-      ? { state: "UNAVAILABLE" as const, activeBranchIds: [] }
+      ? { state: "UNAVAILABLE" as const, activeBranchIds: [], existingBookBranchIds: [] }
       : { state: "VERIFIED" as const,
+          // A configured-but-corrupt active book must block the first-run RPC,
+          // even when no valid quote rate can be proven for this branch.
+          existingBookBranchIds: [...new Set(ownerPriceReads[0].data
+            .map(book => String(book.branch_id ?? ""))
+            .filter(id => branchScope.branches.some(branch =>
+              branch.id === id && branch.currency === "USD")))],
           activeBranchIds: verifiedPricedOwnerBranchIds({
             books: ownerPriceReads[0].data,
             cards: ownerPriceReads[1].data,
