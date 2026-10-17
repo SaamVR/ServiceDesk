@@ -102,10 +102,10 @@ function ScopedStudioWorkbench({
           </span>
         </div>
         <div className={styles.recordPicker}>
-          <label htmlFor="studio-record-select">
+          <label htmlFor={tabsId + "-record-select"}>
             {mode === "request" ? "Saved service request" : "Saved customer quote"}
           </label>
-          <select id="studio-record-select" className={styles.select}
+          <select id={tabsId + "-record-select"} className={styles.select}
             value={selected?.id ?? ""}
             onChange={event => mode === "request"
               ? setRequestId(event.target.value) : setQuoteId(event.target.value)}>
