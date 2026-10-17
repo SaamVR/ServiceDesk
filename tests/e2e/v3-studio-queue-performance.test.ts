@@ -8,7 +8,7 @@ describe("operational queue lookup performance", () => {
     const rows = [{ id: "same", title: "first" }, { id: "same", title: "second" }];
     expect(indexStaffById(rows).get("same")?.title).toBe("first");
   });
-  it("selects the newest unsuperseded quote regardless of database row order", () => {
+  it("rejects tied newest versions regardless of row order, but accepts a later unique version", () => {
     const quotes = [
       { requestId: "r1", version: 2, status: "APPROVED", id: "old" },
       { requestId: "r2", version: 1, status: "SENT", id: "r2" },
@@ -16,10 +16,14 @@ describe("operational queue lookup performance", () => {
       { requestId: "r1", version: 3, status: "DRAFT", id: "latest" },
       { requestId: "r1", version: 3, status: "DRAFT", id: "duplicate" },
     ];
-    expect(indexCurrentQuoteByRequest(quotes).get("r1")?.id).toBe("latest");
-    expect(indexCurrentQuoteByRequest([...quotes].reverse()).get("r1")?.version).toBe(3);
+    // Two unsuperseded same-highest versions provide no authoritative
+    // current offer; previous first-row selection depended on SQL row order.
+    expect(indexCurrentQuoteByRequest(quotes).has("r1")).toBe(false);
+    expect(indexCurrentQuoteByRequest([...quotes].reverse()).has("r1")).toBe(false);
     expect(indexCurrentQuoteByRequest(quotes).get("r2")?.id).toBe("r2");
-    expect(indexCurrentQuoteByRequest(quotes).size).toBe(2);
+    expect(indexCurrentQuoteByRequest(quotes).size).toBe(1);
+    const newer={requestId:"r1",version:4,status:"APPROVED",id:"unique-newer"};
+    expect(indexCurrentQuoteByRequest([...quotes,newer]).get("r1")?.id).toBe("unique-newer");
     expect(indexCurrentQuoteByRequest([{ requestId: "r3", version: 1, status: "SUPERSEDED" }]).size).toBe(0);
   });
 
