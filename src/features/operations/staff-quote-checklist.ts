@@ -1,4 +1,5 @@
 import { readVerifiedCustomerQuoteLineItems, type CustomerQuoteLineItem } from "./customer-quote-line-items";
+import { trustedQuoteInstant } from "./quote-validity-clock";
 
 export interface StaffQuoteChecklistFacts {
   status: string;
@@ -41,14 +42,12 @@ export function buildStaffQuoteChecklist(
       quote.taxMinor as number, quote.totalMinor,
     ) : null;
   const verified = !!lines && /^[A-Z]{3}$/.test(quote.currency);
-  // Without explicit timezone, Date.parse assumes the runtime's local zone.
-  // Staff should not approve a quote whose persisted expiry can shift by host.
-  const zoned = (value: unknown): value is string =>
-    typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value);
-  const now = zoned(nowIso) ? Date.parse(nowIso) : NaN;
-  const expiry = zoned(quote.validUntil) ? Date.parse(quote.validUntil) : NaN;
-  const fresh = Number.isFinite(now) && Number.isFinite(expiry) && expiry > now;
+  // Match SEND and customer ACCEPT: a syntactically zoned but impossible
+  // civil date, invalid UTC offset or exact expiry cannot justify staff PASS.
+  // Also accept valid PostgreSQL microsecond timestamps.
+  const now = trustedQuoteInstant(nowIso);
+  const expiry = trustedQuoteInstant(quote.validUntil);
+  const fresh = now !== null && expiry !== null && expiry > now;
   const internalStatus = ["APPROVED", "SENT"].includes(quote.status);
 
   const items: StaffQuoteChecklistItem[] = [
