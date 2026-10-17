@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { summarizeWorkflowEvidence } from "../../src/features/operations/workflow-evidence-summary";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type {
   OperationalWorkflowExecution, OperationalWorkflowActionExecution,
 } from "../../src/features/operations/operational-product-runtime";
@@ -18,6 +20,13 @@ const attempt = (id: string, attemptNumber: number,
   });
 
 describe("SONIC workflow retry and false-outcome evidence review", () => {
+  it("discloses snapshot caps rather than claiming all historical attempts", () => {
+    const strip = readFileSync(join(process.cwd(), "src/features/operations/WorkflowEvidenceStrip.tsx"),"utf8");
+    const status = readFileSync(join(process.cwd(), "src/features/operations/AiOperationsStatus.tsx"),"utf8");
+    expect(strip).toContain("1,000");
+    expect(strip).toContain("2,000 before branch filtering");
+    expect(status).toContain("source capped before branch filtering");
+  });
   it("counts the latest successful retry, not the preceding failed attempt", () => {
     const result = summarizeWorkflowEvidence({
       workflowExecutions: [live],
@@ -30,6 +39,7 @@ describe("SONIC workflow retry and false-outcome evidence review", () => {
     expect(result.recordedActionAttempts).toBe(2);
     expect(result.historicalActionAttempts).toBe(1);
     expect(result.providerDeliveryVerified).toBe(false);
+    expect(result.historicalActionAttempts).toBe(1);
   });
   it("does not count older successes after a current failed attempt", () => {
     const result = summarizeWorkflowEvidence({

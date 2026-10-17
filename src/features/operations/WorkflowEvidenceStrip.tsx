@@ -49,6 +49,8 @@ export function WorkflowEvidenceStrip({executions,actions}: {
         <strong>{issues ? "Review failed and approval-required items before any outbound action." :
           "Zero issues here does not establish external delivery."}</strong>
         {" "}Provider sends, email delivery, WhatsApp delivery, checkout and model inference require separate controlled receipts.
+        {" "}This is a loaded snapshot, not exhaustive history: source reads cap workflow executions at 1,000
+        and action attempts at 2,000 before branch filtering.
         {evidence.historicalActionAttempts > 0
           ? ` ${evidence.historicalActionAttempts} historical retry attempt(s) excluded from current action totals.`
           : null}
