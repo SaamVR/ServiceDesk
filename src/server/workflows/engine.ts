@@ -103,7 +103,12 @@ export function validateWorkflowEventEnvelope(
       ![Object.prototype,null].includes(Object.getPrototypeOf(input.snapshot))) {
     return fail("WORKFLOW_EVENT_SNAPSHOT_INVALID", "Workflow event snapshot must be a plain record.");
   }
-  if (Object.getOwnPropertySymbols(input.snapshot).length !== 0 ||
+  // Reject hidden own properties as well as symbols and accessors. They
+  // otherwise disappear from Object.keys/values and stableSnapshot hashes,
+  // allowing the persisted event's actual content to evade auditing.
+  if (Object.getOwnPropertyNames(input.snapshot).length !==
+        Object.keys(input.snapshot).length ||
+      Object.getOwnPropertySymbols(input.snapshot).length !== 0 ||
       Object.values(Object.getOwnPropertyDescriptors(input.snapshot)).some(
         desc => !Object.prototype.hasOwnProperty.call(desc,"value"))) {
     return fail("WORKFLOW_EVENT_SNAPSHOT_INVALID", "Workflow event snapshot has unsafe fields.");
