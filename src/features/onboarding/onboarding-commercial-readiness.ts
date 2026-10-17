@@ -3,6 +3,7 @@ import type {
 } from "@/features/operations/operational-product-runtime";
 import {
   availableFirstRunUsdBranches,
+  invalidExistingUsdBranches,
   countQuoteableCleaningServices,
   type OwnerPricingBookProof,
 } from "@/features/operations/owner-pricing-readiness";
@@ -62,6 +63,25 @@ export function summarizeOwnerCommercialSetup(input: {
       ...common, state: "UNSUPPORTED_CURRENCY", eligibleUsdBranches: 0,
       missingPriceBookBranches: 0,
       detail: "No USD branch is available in this owner view. The first-run USD setup cannot verify these branches.",
+    };
+  }
+  // An active but invalid existing book blocks SQL first-run setup. Do not
+  // misclassify it as a missing book or mark commercial pricing VERIFIED.
+  const invalidSaved = invalidExistingUsdBranches(input.scope, input.proof);
+  if (invalidSaved.length) {
+    return {
+      ...common, state: "UNVERIFIED", eligibleUsdBranches: eligible.length,
+      missingPriceBookBranches: 0,
+      detail: invalidSaved.length === 1
+        ? `“${invalidSaved[0].name}” has existing active pricing, but no verified rate card can be used for a real quote. Review the saved book and effective dates in Settings; first-run setup cannot overwrite it.`
+        : `${invalidSaved.length} USD branches have existing price books that cannot be verified for quotes. Review and repair their saved pricing in Settings; first-run setup cannot overwrite them.`,
+    };
+  }
+  if (!Array.isArray(input.proof.existingBookBranchIds)) {
+    return {
+      ...common, state: "UNVERIFIED", eligibleUsdBranches: eligible.length,
+      missingPriceBookBranches: 0,
+      detail: "Existing active branch pricing records could not be distinguished from missing ones. Refresh the owner Settings before using first-run setup.",
     };
   }
   const missing = availableFirstRunUsdBranches(input.scope, input.proof);
