@@ -104,7 +104,9 @@ function messageFromRpc(row: RpcRow): MessageDTO {
   const conversationId = field(src, "conversationId", "conversation_id");
   const direction = field(src, "direction");
   const senderKind = field(src, "senderKind", "sender_kind");
-  const createdAt = field(src, "createdAt", "created_at");
+  // Route messages through the same strict zoned persisted-clock contract
+  // as requests, visits, recurrence and audit records.
+  const createdAt = savedTimestamp(src, "createdAt", "created_at");
   const deliveryState = field(src, "deliveryState", "delivery_state");
   // A malformed saved message is NOT an outbound staff message dated 1970.
   // The installed inbound, reply and workspace-snapshot RPCs all project
@@ -115,9 +117,6 @@ function messageFromRpc(row: RpcRow): MessageDTO {
       typeof conversationId !== "string" || !conversationId ||
       !["INBOUND", "OUTBOUND", "INTERNAL"].includes(String(direction)) ||
       !["CUSTOMER", "STAFF", "AI", "SYSTEM"].includes(String(senderKind)) ||
-      typeof createdAt !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(createdAt) ||
-      !Number.isFinite(Date.parse(createdAt)) ||
       (deliveryState != null &&
         !["QUEUED", "RUNNING", "PROVIDER_ACCEPTED", "DELIVERED", "READ", "FAILED", "SUPPRESSED"]
           .includes(String(deliveryState)))) {
