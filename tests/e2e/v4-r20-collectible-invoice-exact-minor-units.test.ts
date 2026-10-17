@@ -55,6 +55,10 @@ describe("R20B staff invoice collection queue exact saved money authority", () =
     // Lightweight projections still classify literal integer balances, but
     // real complete invoices must reconcile their entire saved ledger.
     expect(isCollectibleInvoice({status:"ISSUED", balanceMinor:10})).toBe(true);
+    expect(isCollectibleInvoice({status:"ISSUED", balanceMinor:10, currency:"USD"} as never)).toBe(true);
+    expect(isCollectibleInvoice({
+      status:"ISSUED", balanceMinor:10, currency:"USD", totalMinor:undefined,
+    } as never)).toBe(false);
   });
 
   it("does not compare priority across distinct currencies or mutate source records", () => {
