@@ -218,13 +218,14 @@ export async function generateAuthorizedRequestBrief(
         current.value.branchScope.selectedBranchId !== branchScope.selectedBranchId))) {
     return fail("AI_BRIEF_ACCESS_REVOKED", "Staff access or branch scope changed during AI generation.");
   }
-  let latest: typeof request = null;
-  try {
-    latest = await current.value.service.from("requests")
-      .select("id,workspace_id,branch_id,service_id,bedrooms,bathrooms,status")
-      .eq("id", input.requestId)
-      .eq("workspace_id", workspace.id).maybeSingle();
-  } catch { return fail("AI_BRIEF_REVALIDATION_UNAVAILABLE", "Saved request revalidation failed."); }
+  const latest = await (async () => {
+    try {
+      return await current.value.service.from("requests")
+        .select("id,workspace_id,branch_id,service_id,bedrooms,bathrooms,status")
+        .eq("id", input.requestId)
+        .eq("workspace_id", workspace.id).maybeSingle();
+    } catch { return null; }
+  })();
   if (!latest || latest.error || !latest.data ||
       latest.data.id !== row.id || latest.data.workspace_id !== workspace.id ||
       latest.data.branch_id !== row.branch_id ||
