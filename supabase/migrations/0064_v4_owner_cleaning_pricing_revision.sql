@@ -76,7 +76,7 @@ begin
     v_rule := v_rules->v_code;
     if jsonb_typeof(v_rule) is distinct from 'object'
        or (select count(*) from jsonb_object_keys(v_rule)) <>
-          case when v_code='moveOut' then 8 else 6 end
+          (case when v_code='moveOut' then 8 else 6 end)
     then
       return jsonb_build_object('ok',false,'code','PRICING_REVISION_RULES_INVALID');
     end if;
