@@ -190,9 +190,15 @@ export async function runTrustedAcceptedQuoteInternalAutomation(
         return fail("QUOTE_AUTOMATION_ATTENTION_NOT_SAVED");
       }
       const persisted = await service.from("attention_items")
-        .select("id").eq("id",applied.value.attentionItemId)
+        .select("id,resource_type,resource_id,type")
+        .eq("id",applied.value.attentionItemId)
         .eq("workspace_id",workspaceId).maybeSingle();
-      if (persisted.error || persisted.data?.id !== applied.value.attentionItemId) {
+      if (persisted.error || persisted.data?.id !== applied.value.attentionItemId ||
+          persisted.data.resource_type !== "workflow_execution" ||
+          persisted.data.resource_id !== saved.value.executionId ||
+          persisted.data.type !== "WORKFLOW_RULE") {
+        // A saved record in the same tenant is not proof that THIS workflow
+        // action created the correct linked attention. Reject unrelated rows.
         return fail("QUOTE_AUTOMATION_ATTENTION_UNVERIFIED");
       }
       completedAttentionActions++;

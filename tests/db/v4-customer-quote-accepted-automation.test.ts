@@ -36,6 +36,9 @@ function fixture(options: {
   pending?: boolean;
   failedAttention?: boolean;
   missingAttention?: boolean;
+  attentionWrongResource?: boolean;
+  attentionWrongType?: boolean;
+  attentionWrongResourceType?: boolean;
   externalOnly?: boolean;
   workspaceOptedOut?: boolean;
   deploymentOff?: boolean;
@@ -71,7 +74,10 @@ function fixture(options: {
       workspace_id:workspace,branch_id:branch,execution_id:executionId,
       action_type:"CREATE_ATTENTION",action_index:0,
       state: options.failedAttention ? "FAILED" : pending ? "PENDING" : "SUCCEEDED"}],
-    attention_items:[{id:attentionId,workspace_id:workspace}],
+    attention_items:[{id:attentionId,workspace_id:workspace,
+      resource_type:options.attentionWrongResourceType?"request":"workflow_execution",
+      resource_id:options.attentionWrongResource?request:executionId,
+      type:options.attentionWrongType?"CUSTOMER_FOLLOWUP":"WORKFLOW_RULE"}],
   };
   const seen: Array<{table:string; filters:[string,unknown][]}> = [];
   const service = {from(table:string) {
@@ -196,6 +202,20 @@ describe("V4 trusted post-accept automation bridge",()=>{
       expect(t.executeAttentionAction).not.toHaveBeenCalled();
     }
   });
+  it("rejects a returned same-workspace attention ID unless it belongs to this exact execution and workflow rule",async()=>{
+    for(const options of [
+      {attentionWrongResource:true},
+      {attentionWrongType:true},
+      {attentionWrongResourceType:true},
+    ]) {
+      const t=fixture(options);
+      expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))
+        .toMatchObject({ok:false,code:"QUOTE_AUTOMATION_ATTENTION_UNVERIFIED"});
+      expect(t.evaluateAndRecord).toHaveBeenCalledOnce();
+      expect(t.executeAttentionAction).toHaveBeenCalledOnce();
+    }
+  });
+
   it("deduplicates a prior accepted quote event and does not duplicate completed attention",async()=>{
     const t=fixture({duplicate:true,pending:false});
     expect(await runTrustedAcceptedQuoteInternalAutomation(t.input,t.deps))
