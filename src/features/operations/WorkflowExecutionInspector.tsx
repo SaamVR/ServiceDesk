@@ -146,6 +146,25 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
                 {action.replayOfActionExecutionId ? <span>Replay of saved attempt: {action.replayOfActionExecutionId}</span> : null}
               </li>)}
             </ol> : <p className={styles.notice}>No persisted action attempts. A matched rule does not prove execution.</p>}
+            {selected.attemptHistory.length > 0 ? (
+              <details className={styles.history}>
+                <summary>Inspect all {selected.attemptHistory.length} persisted action attempts</summary>
+                <p className={styles.subtle}>History is limited to rows returned in this saved snapshot.
+                  An earlier failed attempt remains visible even when a later replay succeeds.</p>
+                <ol className={styles.actions}>
+                  {selected.attemptHistory.map(attempt => <li key={attempt.id}>
+                    <strong>{humanize(attempt.actionType)} — {humanize(attempt.state)}</strong>
+                    <span>Action {attempt.actionIndex + 1} · Attempt {attempt.attemptNumber}
+                      {selected.actions.some(latest => latest.id === attempt.id) ? " · current" : " · historical"}</span>
+                    <span>Recorded: {attempt.createdAt}</span>
+                    {attempt.errorCode ? <span>Failure code: {attempt.errorCode}</span> : null}
+                    {attempt.approvedAt ? <span>Approval at: {attempt.approvedAt}</span> : null}
+                    {attempt.completedAt ? <span>Completed at: {attempt.completedAt}</span> : null}
+                    {attempt.replayOfActionExecutionId ? <span>Replay source: {attempt.replayOfActionExecutionId}</span> : null}
+                  </li>)}
+                </ol>
+              </details>
+            ) : null}
             <p className={styles.subtle}>Recorded SUCCEEDED means the internal action state only.
               External email/WhatsApp delivery, AI response and downstream customer outcome
               require separate provider evidence. Recovery must use authorized operational controls.</p>
