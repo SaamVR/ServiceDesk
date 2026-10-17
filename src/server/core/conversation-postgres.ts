@@ -292,35 +292,49 @@ function checklistItemFromRpc(row: RpcRow): VisitChecklistItemDTO {
 }
 
 function attentionItemFromRpc(row: RpcRow): AttentionItemDTO {
+  const severity = savedString(row, "severity");
+  const status = savedString(row, "status");
+  if (!["INFO", "WARNING", "CRITICAL"].includes(severity) ||
+      !["OPEN", "ACKNOWLEDGED", "RESOLVED"].includes(status))
+    throw new Error("Malformed saved attention severity or status");
   return {
-    id: String(field(row, "id")),
-    workspaceId: String(field(row, "workspaceId", "workspace_id")),
-    type: String(field(row, "type")),
-    severity: String(field(row, "severity")) as AttentionItemDTO["severity"],
-    status: String(field(row, "status")) as AttentionItemDTO["status"],
-    resourceType: String(field(row, "resourceType", "resource_type")),
-    resourceId: String(field(row, "resourceId", "resource_id")),
-    ownerUserId: maybeString(field(row, "ownerUserId", "owner_user_id")),
-    dueAt: maybeString(field(row, "dueAt", "due_at")),
-    summary: String(field(row, "summary")),
+    id: savedString(row, "id"),
+    workspaceId: savedString(row, "workspaceId", "workspace_id"),
+    type: savedString(row, "type"),
+    severity: severity as AttentionItemDTO["severity"],
+    status: status as AttentionItemDTO["status"],
+    resourceType: savedString(row, "resourceType", "resource_type"),
+    resourceId: savedString(row, "resourceId", "resource_id"),
+    ownerUserId: savedOptionalString(row, "ownerUserId", "owner_user_id"),
+    dueAt: savedOptionalTimestamp(row, "dueAt", "due_at"),
+    summary: savedString(row, "summary"),
   };
 }
 
 function qualityCaseFromRpc(row: RpcRow): QualityCaseDTO {
+  const state = savedString(row, "state");
+  const reviewRequestState = savedString(row, "reviewRequestState", "review_request_state");
+  if (!["OPEN", "IN_REVIEW", "RESOLVED"].includes(state) ||
+      !["NOT_ELIGIBLE", "ELIGIBLE", "REQUESTED"].includes(reviewRequestState))
+    throw new Error("Malformed saved quality or review state");
+  const feedback = field(row, "feedbackScore", "feedback_score");
+  if (feedback != null && (typeof feedback !== "number" ||
+      !Number.isSafeInteger(feedback) || feedback < 1 || feedback > 5))
+    throw new Error("Malformed saved quality feedback score");
   return {
-    id: String(field(row, "id")),
-    workspaceId: String(field(row, "workspaceId", "workspace_id")),
-    visitId: String(field(row, "visitId", "visit_id")),
-    state: String(field(row, "state")) as QualityCaseDTO["state"],
-    feedbackScore: maybeNumber(field(row, "feedbackScore", "feedback_score")),
-    summary: String(field(row, "summary")),
-    ownerUserId: maybeString(field(row, "ownerUserId", "owner_user_id")),
-    dueAt: maybeString(field(row, "dueAt", "due_at")),
-    resolutionNote: maybeString(field(row, "resolutionNote", "resolution_note")),
-    reviewRequestState: String(field(row, "reviewRequestState", "review_request_state")) as QualityCaseDTO["reviewRequestState"],
-    version: Number(field(row, "version") ?? 0),
-    createdAt: String(field(row, "createdAt", "created_at")),
-    updatedAt: String(field(row, "updatedAt", "updated_at")),
+    id: savedString(row, "id"),
+    workspaceId: savedString(row, "workspaceId", "workspace_id"),
+    visitId: savedString(row, "visitId", "visit_id"),
+    state: state as QualityCaseDTO["state"],
+    feedbackScore: feedback == null ? undefined : feedback,
+    summary: savedString(row, "summary"),
+    ownerUserId: savedOptionalString(row, "ownerUserId", "owner_user_id"),
+    dueAt: savedOptionalTimestamp(row, "dueAt", "due_at"),
+    resolutionNote: savedOptionalString(row, "resolutionNote", "resolution_note"),
+    reviewRequestState: reviewRequestState as QualityCaseDTO["reviewRequestState"],
+    version: savedCount(row, "version"),
+    createdAt: savedTimestamp(row, "createdAt", "created_at"),
+    updatedAt: savedTimestamp(row, "updatedAt", "updated_at"),
   };
 }
 
