@@ -26,9 +26,16 @@ export function createFetchAiModelTransport(
     } catch {
       throw new Error("AI_MODEL_HTTP_URL_INVALID");
     }
-    if (url.protocol !== "https:" || url.hostname !== "api.openai.com" ||
-        url.port || url.pathname !== "/v1/responses" ||
-        url.username || url.password || url.hash || url.search) {
+    // The only permitted non-OpenAI transport is the explicitly reviewed,
+    // HTTPS samai Codex Chat Completions gateway. Never accept arbitrary hosts,
+    // userinfo, ports, query strings or HTTP->HTTPS redirects with credentials.
+    const permitted =
+      (url.origin === "https://api.openai.com" &&
+        url.pathname === "/v1/responses") ||
+      (url.origin === "https://codex-api.ezcomo.shop" &&
+        url.pathname === "/v1/chat/completions");
+    if (!permitted || url.port || url.username || url.password ||
+        url.hash || url.search) {
       throw new Error("AI_MODEL_HTTP_URL_INVALID");
     }
 
