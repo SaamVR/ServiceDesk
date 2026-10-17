@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  describeOwnerModelProbeFailure,
+  parseOwnerModelProbe,
+  type VerifiedOwnerModelProbe,
+} from "./ai-owner-model-probe-result";
 import styles from "./AiOwnerModelProbe.module.css";
 
-interface ProbeResult {
-  state: "PROVIDER_RESPONDED_TO_CONTROLLED_PROBE";
-  model: string;
-  checkedAt: string;
-  source: "REAL_MODEL_RESPONSE_NOT_A_PROVIDER_DELIVERY";
-  durableReceipt: false;
-}
+const MODEL_PROBE_TIMEOUT_MS = 20_000;
 
-/** Explicit owner click; a successful test verifies only this one model call. */
+/**
+ * Owner-only, synthetic model diagnostic. A successful response proves only
+ * one bounded request; it never proves automation, delivery or business action.
+ */
 export function AiOwnerModelProbe({
   workspaceSlug, configured,
 }: {
@@ -19,60 +21,79 @@ export function AiOwnerModelProbe({
   configured: boolean;
 }) {
   const activeRequest = useRef<AbortController | null>(null);
-  // Leaving this workspace cancels a pending diagnostic instead of letting
-  // the browser continue an obsolete potentially billable provider call.
   useEffect(() => () => {
     activeRequest.current?.abort();
     activeRequest.current = null;
   }, [workspaceSlug]);
-  // A model probe proves only a single owner-controlled request.
-  // Never display another workspace's response after client-side navigation.
+
   const [status, setStatus] = useState<{
-    workspace: string; busy: boolean; result?: ProbeResult; error?: boolean;
+    workspace: string;
+    busy: boolean;
+    result?: VerifiedOwnerModelProbe;
+    error?: string;
   }>();
   const scoped = status?.workspace === workspaceSlug ? status : undefined;
   const busy = scoped?.busy ?? false;
   const result = scoped?.result;
-  const error = scoped?.error ?? false;
+  const error = scoped?.error;
 
   async function check() {
-    if (!configured || busy) return;
-    const submittedWorkspace = workspaceSlug;
+    if (!configured || busy || activeRequest.current) return;
+    const requestedWorkspace = workspaceSlug;
     const controller = new AbortController();
-    activeRequest.current?.abort();
     activeRequest.current = controller;
-    setStatus({ workspace: submittedWorkspace, busy: true });
-    let verified: ProbeResult | undefined;
-    let failed = false;
+    setStatus({ workspace: requestedWorkspace, busy: true });
+    let didTimeout = false;
+    const timeout = setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, MODEL_PROBE_TIMEOUT_MS);
+
+    let verified: VerifiedOwnerModelProbe | undefined;
+    let failure: string | undefined;
     try {
       const response = await fetch("/api/internal/ai/connection-test", {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
         signal: controller.signal,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ workspaceSlug }),
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ workspaceSlug: requestedWorkspace }),
       });
-      const data: unknown = await response.json();
-      if (!response.ok || !data || typeof data !== "object") throw Error("PROBE_FAILED");
-      const candidate = data as ProbeResult;
-      if (candidate.state !== "PROVIDER_RESPONDED_TO_CONTROLLED_PROBE" ||
-          candidate.source !== "REAL_MODEL_RESPONSE_NOT_A_PROVIDER_DELIVERY" ||
-          candidate.durableReceipt !== false ||
-          typeof candidate.model !== "string" || !candidate.model.trim() ||
-          typeof candidate.checkedAt !== "string" ||
-          !Number.isFinite(Date.parse(candidate.checkedAt))) {
-        throw Error("INVALID_PROBE");
+      if (!response.ok) {
+        failure = describeOwnerModelProbeFailure(response.status);
+      } else if (!response.headers.get("content-type")?.toLowerCase().includes("application/json")) {
+        failure = "The AI endpoint did not return a verifiable JSON diagnostic response.";
+      } else {
+        const payload: unknown = await response.json();
+        verified = parseOwnerModelProbe(payload) ?? undefined;
+        if (!verified) failure = "The AI endpoint returned an invalid or incomplete diagnostic receipt.";
       }
-      verified = candidate;
     } catch {
-      failed = true;
+      failure = didTimeout
+        ? "The model test exceeded 20 seconds. This browser stopped waiting; provider-side completion is not verified."
+        : "The model could not be reached or the response was invalid. No customer action was authorized.";
     } finally {
-      if (activeRequest.current === controller) activeRequest.current = null;
-      setStatus(previous => previous?.workspace === submittedWorkspace
-        ? { workspace: submittedWorkspace, busy: false, result: verified, error: failed }
-        : previous);
+      clearTimeout(timeout);
+      // Cancellation, unmount or tenant changes must not restore old results.
+      if (activeRequest.current === controller) {
+        activeRequest.current = null;
+        setStatus(previous => previous?.workspace === requestedWorkspace && previous.busy
+          ? { workspace: requestedWorkspace, busy: false, result: verified, error: failure }
+          : previous);
+      }
     }
+  }
+
+  function cancel() {
+    if (!busy || !activeRequest.current) return;
+    const request = activeRequest.current;
+    activeRequest.current = null;
+    request.abort();
+    setStatus(previous => previous?.workspace === workspaceSlug
+      ? { workspace: workspaceSlug, busy: false,
+          error: "Stopped waiting for the model test. Browser cancellation is not proof of provider-side cancellation." }
+      : previous);
   }
 
   return (
@@ -87,31 +108,34 @@ export function AiOwnerModelProbe({
         </span>
       </div>
       <p className={styles.description}>
-        Run one synthetic, non-customer check of the configured AI model. No customer messages are sent,
-        no business records change, and this does not verify WhatsApp, email or automation delivery.
+        Run one bounded synthetic check of the configured AI model. No customer messages
+        are sent and no business records change. This does not verify WhatsApp, email,
+        quote approvals or automated provider delivery.
       </p>
-      <button type="button" className={styles.action} disabled={!configured || busy}
-        onClick={check} aria-busy={busy}>
-        {busy ? "Testing model…" : "Test AI model connection"}
-      </button>
+      <div className={styles.actions}>
+        <button type="button" className={styles.action} disabled={!configured || busy}
+          onClick={check} aria-busy={busy}>
+          {busy ? "Testing model connection…" : "Test AI model connection"}
+        </button>
+        {busy ? <button type="button" className={styles.cancel} onClick={cancel}>
+          Stop waiting
+        </button> : null}
+      </div>
       {!configured ? (
         <p role="status" className={`${styles.message} ${styles.note}`}>
-          AI is not enabled for this workspace environment. Configure the server-only model and
-          API key before attempting an owner-initiated test.
+          AI is not enabled for this workspace environment. Configure the private model
+          and API key on the server before attempting an owner-initiated test.
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className={`${styles.message} ${styles.error}`}>
-          The model did not return a verified response. Check protected server configuration
-          and provider authorization; no request or customer record was changed.
-        </p>
+        <p role="alert" className={`${styles.message} ${styles.error}`}>{error}</p>
       ) : null}
       {result ? (
         <p role="status" className={`${styles.message} ${styles.success}`}>
           Model response confirmed for this session: <strong>{result.model}</strong> ·{" "}
           <time dateTime={result.checkedAt}>{result.checkedAt}</time>.
-          <span className={styles.secondary}>This is an ephemeral connection test, not a durable
-            provider delivery or workflow-execution receipt.</span>
+          <span className={styles.secondary}>This is one ephemeral connection check,
+            not a durable AI execution or customer-delivery receipt.</span>
         </p>
       ) : null}
     </section>
