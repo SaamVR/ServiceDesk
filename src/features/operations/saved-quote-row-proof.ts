@@ -22,7 +22,18 @@ export function isSavedStaffQuoteRowVerifiable(row: Record<string,unknown>): boo
       typeof row.currency !== "string" || !/^[A-Z]{3}$/.test(row.currency) ||
       typeof row.version !== "number" || !Number.isSafeInteger(row.version) ||
       row.version < 1) return false;
-  return minorAndDurationColumns.every(column =>
+  if (!minorAndDurationColumns.every(column =>
     typeof row[column] === "number" && Number.isSafeInteger(row[column]) &&
-    (row[column] as number) >= 0);
+    (row[column] as number) >= 0)) return false;
+  // A correctly typed but contradictory quote is not a verified monetary
+  // snapshot. Enforce the same saved financial equations already required by
+  // the server's quote-send guard, including for Today/owner aggregates.
+  const subtotal = row.subtotal_minor as number;
+  const tax = row.tax_minor as number;
+  const total = row.total_minor as number;
+  const deposit = row.deposit_minor as number;
+  const balance = row.balance_minor as number;
+  return Number.isSafeInteger(subtotal + tax) &&
+    Number.isSafeInteger(deposit + balance) &&
+    subtotal + tax === total && deposit + balance === total;
 }
