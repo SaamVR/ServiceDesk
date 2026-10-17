@@ -85,10 +85,25 @@ describe("AI workflow inspector server-client privacy boundary", () => {
     expect(output.workflowRuleVersions).toBeUndefined();
   });
 
+  it("fails closed on unavailable or missing workflow-read evidence", () => {
+    for (const availability of [undefined, false]) {
+      const output = selectWorkflowInspectorClientSnapshot({
+        ...rawSnapshot(), workflowAvailable: availability,
+      });
+      expect(output).toEqual({
+        loadedAt: "2026-10-18T00:00:00Z", workflowAvailable: false,
+      });
+      expect(JSON.stringify(output)).not.toContain("SECRET TEMPLATE BODY");
+    }
+  });
+
   it("only passes the projected DTO into the client component", () => {
     const source = read("src/features/operations/AiStudioWorkspace.tsx");
     expect(source).toContain("selectWorkflowInspectorClientSnapshot(data)");
     expect(source).toContain("snapshot={workflowInspectorSnapshot}");
     expect(source).not.toContain("<WorkflowExecutionInspector snapshot={data}");
+    const inspector = read("src/features/operations/WorkflowExecutionInspector.tsx");
+    expect(inspector).toContain("snapshot.workflowAvailable === true ? <div");
+    expect(inspector).toContain("snapshot.workflowAvailable !== true");
   });
 });
