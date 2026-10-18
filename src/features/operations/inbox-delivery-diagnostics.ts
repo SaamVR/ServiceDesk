@@ -155,6 +155,23 @@ export function selectDeliveryReviewItems(items:readonly DeliveryDiagnostic[],
       rank[a.reason??"STATUS_MISSING"]-rank[b.reason??"STATUS_MISSING"] ||
       b.ageMinutes-a.ageMinutes || a.messageId.localeCompare(b.messageId));
 }
+/** A noisy thread can contribute many failed messages and hide other
+ * customers from the initial 8-row investigation view. Collapse only for
+ * presentation and always choose the highest-severity first record from the
+ * already sorted list. All original saved-message counts remain unchanged.
+ */
+export function distinctDeliveryReviewConversations(
+  sortedItems: readonly DeliveryDiagnostic[],
+): DeliveryDiagnostic[] {
+  const seen = new Set<string>();
+  return sortedItems.filter(item => {
+    if (item.health !== "NEEDS_REVIEW" || seen.has(item.conversationId))
+      return false;
+    seen.add(item.conversationId);
+    return true;
+  });
+}
+
 export const deliveryReviewReasonOptions:readonly {value:DeliveryReviewReasonFilter;label:string}[]=[
   {value:"ALL",label:"All review reasons"},
   {value:"PROVIDER_FAILURE",label:"Provider failed"},

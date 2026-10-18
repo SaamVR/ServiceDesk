@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseInboxDeliveryDiagnostics, selectDeliveryReviewItems, deliveryReviewReasonOptions } from "../../src/features/operations/inbox-delivery-diagnostics";
+import { parseInboxDeliveryDiagnostics, selectDeliveryReviewItems, deliveryReviewReasonOptions,
+  distinctDeliveryReviewConversations } from "../../src/features/operations/inbox-delivery-diagnostics";
 
 const read = (p:string) => readFileSync(join(process.cwd(),p),"utf8");
 const source = read("src/features/operations/InboxDeliveryDiagnostics.tsx");
@@ -33,7 +34,10 @@ describe("SONIC read-only inbox delivery diagnostics lifecycle",()=>{
   });
   it("discloses sampled timestamp/truncation and expandable review-only records",()=>{
     expect(source).toContain('allNeedsReview = snapshot?.items.filter(item => item.health === "NEEDS_REVIEW")');
-    expect(source).toContain('matchingNeedsReview.slice(0, 8)');
+    expect(source).toContain('displayedReviewSource.slice(0, 8)');
+    expect(source).toContain("Show the highest-priority issue per conversation");
+    expect(source).toContain("All original delivery counts remain unchanged.");
+    expect(css).toContain(".conversationToggle input:focus-visible");
     expect(source).toContain('Show all');
     expect(source).toContain("Filter authorized delivery problems");
     expect(source).toContain("No review record matches");
@@ -64,6 +68,29 @@ describe("SONIC read-only inbox delivery diagnostics lifecycle",()=>{
     expect(selectDeliveryReviewItems(items,"ALL","UNKNOWN" as never)).toEqual([]);
     expect(deliveryReviewReasonOptions.length).toBe(7);
     expect(items[0].messageId).toBe("m1");
+  });
+  it("collapses noisy conversations only in UI while keeping highest-risk saved issue",()=>{
+    const input=[
+      {messageId:"old",conversationId:"thread-a",channel:"EMAIL" as const,
+        health:"NEEDS_REVIEW" as const,deliveryState:"QUEUED" as const,
+        reason:"STALE_PENDING" as const,ageMinutes:180},
+      {messageId:"failed",conversationId:"thread-a",channel:"EMAIL" as const,
+        health:"NEEDS_REVIEW" as const,deliveryState:"FAILED" as const,
+        reason:"PROVIDER_FAILURE" as const,ageMinutes:5},
+      {messageId:"other",conversationId:"thread-b",channel:"WHATSAPP" as const,
+        health:"NEEDS_REVIEW" as const,deliveryState:"SUPPRESSED" as const,
+        reason:"SUPPRESSED_BY_POLICY" as const,ageMinutes:15},
+      {messageId:"done",conversationId:"thread-c",channel:"EMAIL" as const,
+        health:"OK" as const,deliveryState:"READ" as const,ageMinutes:3},
+    ];
+    const sorted=selectDeliveryReviewItems(input,"ALL","ALL");
+    expect(sorted.map(x=>x.messageId)).toEqual(["failed","other","old"]);
+    const collapsed=distinctDeliveryReviewConversations(sorted);
+    expect(collapsed.map(x=>x.messageId)).toEqual(["failed","other"]);
+    expect(sorted).toHaveLength(3);
+    expect(input).toHaveLength(4);
+    expect(distinctDeliveryReviewConversations(input).map(x=>x.messageId))
+      .toEqual(["old","other"]);
   });
   it("rejects forged delivered status without consistent saved source metadata",()=>{
     const broken={generatedAt:"2026-10-18T00:00:00Z",truncated:false,

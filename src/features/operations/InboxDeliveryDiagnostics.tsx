@@ -8,6 +8,7 @@ import { inboxQueueHref } from "./inbox-triage";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import {
   deliveryReviewLabel, deliveryReviewReasonOptions, selectDeliveryReviewItems,
+  distinctDeliveryReviewConversations,
   summarizeDeliveryReviewReasons,
   parseInboxDeliveryDiagnostics,
   type DeliveryReviewChannelFilter, type DeliveryReviewReasonFilter,
@@ -33,6 +34,7 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
   const [cancelled, setCancelled] = useState(false);
   const [channelFilter,setChannelFilter] = useState<DeliveryReviewChannelFilter>("ALL");
   const [reasonFilter,setReasonFilter] = useState<DeliveryReviewReasonFilter>("ALL");
+  const [onePerConversation,setOnePerConversation] = useState(false);
 
   useEffect(() => () => {
     requestController.current?.abort();
@@ -108,7 +110,9 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
   const allNeedsReview = snapshot?.items.filter(item => item.health === "NEEDS_REVIEW") ?? [];
   const matchingNeedsReview = selectDeliveryReviewItems(allNeedsReview,channelFilter,reasonFilter);
   const priorityReasons = summarizeDeliveryReviewReasons(allNeedsReview,channelFilter);
-  const needsReview = expanded ? matchingNeedsReview : matchingNeedsReview.slice(0, 8);
+  const groupedNeedsReview = distinctDeliveryReviewConversations(matchingNeedsReview);
+  const displayedReviewSource = onePerConversation ? groupedNeedsReview : matchingNeedsReview;
+  const needsReview = expanded ? displayedReviewSource : displayedReviewSource.slice(0, 8);
   const inboxHref = buildStaffModuleHref(workspaceSlug, "inbox");
   return (
     <section className={styles.panel} aria-label="Outbound delivery diagnostics">
@@ -194,6 +198,19 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
                     <span>{reason.label}</span>
                   </button>)}
                 </div> : null}
+                <label className={styles.conversationToggle}>
+                  <input type="checkbox" checked={onePerConversation}
+                    onChange={event=>{setOnePerConversation(event.target.checked);
+                      setExpanded(false);}} />
+                  <span>Show the highest-priority issue per conversation
+                    ({groupedNeedsReview.length} affected conversation(s))</span>
+                </label>
+                {onePerConversation ? <p className={styles.sample} role="note">
+                  {matchingNeedsReview.length - groupedNeedsReview.length} additional
+                  sampled message issue(s) are hidden only in this view.
+                  Turn grouping off to inspect every matching saved message.
+                  All original delivery counts remain unchanged.
+                </p> : null}
                 <p className={styles.sample} role="status">
                   {matchingNeedsReview.length} matching review record(s) from
                   {allNeedsReview.length} sampled review items. Filters only
@@ -220,16 +237,16 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
                   No review record matches the selected channel and reason.
                   Clear filters to inspect other saved source issues.
                 </p>}
-                {matchingNeedsReview.length > 8 ? (
+                {displayedReviewSource.length > 8 ? (
                   <button type="button" className={styles.more}
                     onClick={() => setExpanded(value => !value)}
                     aria-expanded={expanded}>
                     {expanded ? "Show fewer review records" :
-                      `Show all ${matchingNeedsReview.length} matching review records`}
+                      `Show all ${displayedReviewSource.length} matching review records`}
                   </button>
                 ) : null}
-                {matchingNeedsReview.length > needsReview.length ? (
-                  <p className={styles.sample}>Showing {needsReview.length} of {matchingNeedsReview.length} matching review records in this authorized sample.</p>
+                {displayedReviewSource.length > needsReview.length ? (
+                  <p className={styles.sample}>Showing {needsReview.length} of {displayedReviewSource.length} displayed review records in this authorized sample.</p>
                 ) : null}
               </div>
             ) : (

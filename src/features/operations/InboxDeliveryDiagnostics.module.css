@@ -93,3 +93,9 @@
 .reasonSummary button span{overflow-wrap:anywhere;}
 .reasonSummary button:focus-visible{outline:3px solid #18877b;outline-offset:3px;}
 @media(max-width:390px){.reasonSummary button{flex:1 1 100%;}}
+
+.conversationToggle{display:flex;align-items:center;gap:9px;min-height:44px;padding:8px 10px;
+  border:1px solid #c7e0d6;border-radius:9px;background:#f5fbf8;color:#2d5c4d;
+  font-size:12px;line-height:1.55;font-weight:670;}
+.conversationToggle input{width:19px;height:19px;flex:0 0 19px;accent-color:#176d59;}
+.conversationToggle input:focus-visible{outline:3px solid #18877b;outline-offset:3px;}
