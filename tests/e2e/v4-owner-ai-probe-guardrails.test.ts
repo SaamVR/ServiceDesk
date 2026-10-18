@@ -80,8 +80,8 @@ describe("Owner model diagnostic cannot manufacture provider proof", () => {
     expect(source).toContain('"/api/internal/ai/connection-test"');
     expect(source).toContain("Browser cancellation is not proof");
     expect(source).toContain("Browser HTTP round trip:");
-    expect(source).toContain("requestStartedAt = Date.now()");
-    expect(source).toContain("Math.max(0,Date.now()-requestStartedAt)");
+    expect(source).toContain("requestStartedAt = performance.now()");
+    expect(source).toContain("Math.max(0,performance.now()-requestStartedAt)");
     expect(source).toContain("isolated provider inference latency");
     expect(source).toContain("response parsing time—not");
     expect(source).toContain("roundTripMs: verified ?");

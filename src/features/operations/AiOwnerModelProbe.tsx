@@ -61,7 +61,7 @@ function ScopedAiOwnerModelProbe({
     const requestedWorkspace = workspaceSlug;
     const submittedScope = scopeKey;
     const controller = new AbortController();
-    const requestStartedAt = Date.now();
+    const requestStartedAt = performance.now();
     activeRequest.current = controller;
     setStatus({ scopeKey: submittedScope, busy: true });
     let didTimeout = false;
@@ -117,7 +117,7 @@ function ScopedAiOwnerModelProbe({
         activeRequest.current = null;
         setStatus(previous => previous?.scopeKey === submittedScope && previous.busy
           ? { scopeKey: submittedScope, busy: false, result: verified,
-              roundTripMs: verified ? Math.max(0,Date.now()-requestStartedAt) : undefined,
+              roundTripMs: verified ? Math.max(0,performance.now()-requestStartedAt) : undefined,
               error: failure }
           : previous);
       }
