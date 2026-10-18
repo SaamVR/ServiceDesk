@@ -53,6 +53,7 @@ function ScopedStaffAiReviewComposer({
   const [body, setBody] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [sensitiveConfirmed, setSensitiveConfirmed] = useState(false);
+  const [retryVerified, setRetryVerified] = useState(false);
   const [busy, setBusy] = useState<"idle" | "drafting" | "approving">("idle");
   const [error, setError] = useState<StaffAiReviewError>();
   const [receipt, setReceipt] = useState<ApprovedReplyReceipt>();
@@ -83,6 +84,7 @@ function ScopedStaffAiReviewComposer({
     setBody("");
     setConfirmed(false);
     setSensitiveConfirmed(false);
+    setRetryVerified(false);
     idempotencyKey.current = null;
     try {
       const response = await fetch("/api/internal/ai/draft", {
@@ -128,6 +130,7 @@ function ScopedStaffAiReviewComposer({
     setBody("");
     setConfirmed(false);
     setSensitiveConfirmed(false);
+    setRetryVerified(false);
     setError("cancelled");
     // Cancelling the browser request does not certify that provider billing stopped.
   }
@@ -143,7 +146,8 @@ function ScopedStaffAiReviewComposer({
         !confirmed || unsafeFormatting ||
         (needsSensitiveReview && !sensitiveConfirmed) ||
         !reviewedBody || reviewedBody.length > 4_000 ||
-        receipt || error === "stale") return;
+        receipt || error === "stale" ||
+        (error === "approval" && !retryVerified)) return;
     const pending = new AbortController();
     controller.current = pending;
     const requestSignal = boundedStaffRequestSignal(pending);
@@ -158,6 +162,7 @@ function ScopedStaffAiReviewComposer({
     requestSignal.addEventListener("abort", onApprovalDeadline, { once: true });
     setBusy("approving");
     setError(undefined);
+    setRetryVerified(false);
     // Preserve this key across uncertain network retries. An edit starts a
     // new approval intent, never silently reuses a key for another body.
     idempotencyKey.current ??= crypto.randomUUID().replaceAll("-", "");
@@ -194,6 +199,7 @@ function ScopedStaffAiReviewComposer({
       }
       setReceipt(parsed);
       setConfirmed(false);
+      setRetryVerified(false);
     } catch {
       if (!pending.signal.aborted && controller.current === pending) setError("approval");
     } finally {
@@ -214,7 +220,8 @@ function ScopedStaffAiReviewComposer({
     body.trim().length > 0 && body.trim().length <= 4_000 &&
     confirmed && !unsafeFormatting &&
     (!needsSensitiveReview || sensitiveConfirmed) &&
-    busy === "idle" && !receipt && error !== "stale");
+    busy === "idle" && !receipt && error !== "stale" &&
+    (error !== "approval" || retryVerified));
 
   return (
     <section className={styles.panel} aria-label="AI-assisted human reply review">
@@ -256,6 +263,13 @@ function ScopedStaffAiReviewComposer({
             </Link>
           </p>
         ) : null}
+        {error === "approval" && draft && !receipt ? <label className={styles.confirm}>
+          <input type="checkbox" checked={retryVerified} disabled={busy !== "idle"}
+            onChange={event=>setRetryVerified(event.target.checked)} />
+          <span>I inspected the saved Inbox history and found no equivalent
+            queued reply. Retry only the exact, unchanged message with the
+            preserved idempotency key.</span>
+        </label> : null}
         {receipt ? (
           <div className={styles.receipt}>
             <strong>{receipt.state === "EXISTING_REPLY" ? "Previously approved reply found" : "Staff-reviewed reply queued"}</strong>
@@ -279,13 +293,15 @@ function ScopedStaffAiReviewComposer({
               maxLength={4000}
               rows={5}
               onChange={(event) => {
+                if (error === "approval") return;
                 setBody(event.target.value);
                 setConfirmed(false);
                 setSensitiveConfirmed(false);
                 setError(staffAiReviewErrorAfterEdit);
                 idempotencyKey.current = null;
               }}
-              disabled={busy !== "idle" || draft.handoverRequired}
+              disabled={busy !== "idle" || draft.handoverRequired ||
+                error === "approval"}
             />
             <p className={styles.limit}>{body.length}/4000 characters · generated suggestions are not verified facts</p>
             {unsafeFormatting ? <p className={styles.warning} role="alert">

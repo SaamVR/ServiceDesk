@@ -37,6 +37,9 @@ describe("Sonic staff AI draft versus durable reply approval deadlines", () => {
   it("shows uncertain approval as pending verification, not a failed/customer-delivered send", () => {
     expect(source).toContain("Timed-out approval may already have queued a durable reply");
     expect(source).toContain("Check the saved conversation before trying again");
+    expect(source).toContain('error === "approval" && !retryVerified');
+    expect(source).toContain('idempotencyKey.current ??= crypto.randomUUID()');
+    expect(source).toContain("I inspected the saved Inbox history");
     expect(source).toContain("Queue acceptance is not customer delivery confirmation.");
     expect(source).not.toContain("provider request cancelled successfully");
   });

@@ -65,6 +65,13 @@ describe("V3 staff-only reviewed AI reply path", () => {
     expect(ui).toContain("setError(staffAiReviewErrorAfterEdit)");
     expect(ui).toContain('error !== "stale"');
     expect(ui).toContain("Reload this conversation before approving another reply.");
+    expect(ui).toContain('error === "approval" && !retryVerified');
+    expect(ui).toContain("if (error === \"approval\") return;");
+    expect(ui).toContain('error === "approval"}');
+    expect(ui).toContain("checked={retryVerified}");
+    expect(ui).toContain("setRetryVerified(false)");
+    expect(ui).toContain("the preserved idempotency key");
+    expect(ui).toContain("I inspected the saved Inbox history");
   });
 
   it("does not mistake a durable queue receipt for delivered customer confirmation", () => {
