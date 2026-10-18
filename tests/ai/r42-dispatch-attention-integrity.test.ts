@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {prepareDispatchAiReview} from "../../src/server/ai/dispatch-review";
+import {prepareDispatchAiReview,type DispatchAiReviewInput} from "../../src/server/ai/dispatch-review";
 const workspaceId="workspace-1",actor={workspaceId,role:"OWNER" as const};
 const visit={id:"visit-1",workspaceId,requestId:"request-1",quoteId:"quote-1",
  status:"CONFIRMED" as const,startAt:"2026-10-19T10:00:00.000Z",
@@ -10,8 +10,8 @@ const crew={id:"crew-1",workspaceId,active:true,
 const attention={id:"attention-1",workspaceId,type:"WORKFLOW_RULE",
  severity:"WARNING",status:"OPEN",resourceType:"visit",resourceId:"visit-1",
  summary:"Owner review before dispatch"};
-const source=()=>({actor,workspaceId,snapshot:{visits:[visit],crews:[crew],
- attentionItems:[attention]}});
+const source=():DispatchAiReviewInput=>({actor,workspaceId,snapshot:{visits:[visit],crews:[crew],
+ attentionItems:[attention as any]}});
 describe("SONIC R42 L06 dispatch evidence completeness",()=>{
  it("suggests a candidate but never confirms crew assignment or customer contact",()=>{
   expect(prepareDispatchAiReview(source())).toMatchObject({ok:true,value:{
