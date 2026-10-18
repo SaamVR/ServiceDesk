@@ -1,4 +1,5 @@
 import type { ClaimedOutboxEvent, OutboxExecutionOutcome, Result } from "../../contracts";
+import { trustedQuoteInstant } from "../../features/operations/quote-validity-clock";
 
 export type OutboxPersistenceDecision =
   | { action: "markSent"; eventId: string; completedAt: string; providerReference?: string }
@@ -14,9 +15,11 @@ export interface OutboxRetryPolicyInput {
   maxDelaySeconds?: number;
 }
 
-function parseTime(iso: string): number | undefined {
-  const time = new Date(iso).getTime();
-  return Number.isFinite(time) ? time : undefined;
+function parseTime(iso: unknown): number | undefined {
+  // Provider clocks must be civil-valid and explicit about their timezone.
+  // A normalizing Date.parse is insufficient to certify SENT or schedule
+  // a retry from an otherwise nonexistent day.
+  return trustedQuoteInstant(iso) ?? undefined;
 }
 
 function addSeconds(iso: string, seconds: number): string {
@@ -29,6 +32,12 @@ function validatePolicy(input: OutboxRetryPolicyInput): Result<{
   baseDelaySeconds: number;
   maxDelaySeconds: number;
 }> {
+  if (!input || !input.event || !input.outcome ||
+      typeof input.event.id !== "string" ||
+      !/^[A-Za-z0-9:_-]{3,128}$/.test(input.event.id)) {
+    return {ok:false,code:"OUTBOX_EVENT_INVALID",
+      message:"Claimed outbox event identity and outcome are required."};
+  }
   const baseDelaySeconds = input.baseDelaySeconds ?? 60;
   const maxDelaySeconds = input.maxDelaySeconds ?? 3_600;
   if (!Number.isInteger(input.event.attempt) || input.event.attempt < 1) {
