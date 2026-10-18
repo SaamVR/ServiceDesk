@@ -1,0 +1,3 @@
+# R42 Independent CRITIC — forged backlog and lost branch authority
+
+A model-proposal consumer must not trust only the string `DOUBLE_CHECKED_SAVED_WORKSPACE_COUNTS` and arbitrary priority cards. A stale/forged card could claim 5,000 critical cases while the actual saved facts contain one, causing misleading suggested automation. Critic requires exact reconstruction of owner priorities from seven source counts before compiling future rules. In addition, a database failure during saved branch verification must return a safe failure Result rather than an unhandled exception. Tests remain separate branch/PR until the producer fixes and both pass. No deployment authorization.
