@@ -22,7 +22,8 @@ export function planSavedRequestReviewChecks(
      Reflect.ownKeys(facts).length!==4 ||
      !["serviceCode","bedrooms","bathrooms","status"].every(key=>Object.hasOwn(facts,key)) ||
      Object.values(Object.getOwnPropertyDescriptors(facts)).some(d=>!Object.hasOwn(d,"value")) ||
-     typeof facts.serviceCode!=="string" || !code.test(facts.serviceCode) ||
+     typeof facts.serviceCode!=="string" ||
+     (facts.serviceCode!=="not recorded" && !code.test(facts.serviceCode)) ||
      typeof facts.status!=="string" || !code.test(facts.status) ||
      [facts.bedrooms,facts.bathrooms].some(value=>
        value!==null && !(typeof value==="number" &&
