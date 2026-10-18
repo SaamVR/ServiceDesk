@@ -21,3 +21,7 @@
 .receipt strong { color: #1a5544; font-size: .83rem; }
 @media (max-width: 420px) { .panel { padding: 12px; } .secondary { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .primary,.secondary { transition: none; } }
+
+.historyLink{display:inline-flex;align-items:center;min-height:36px;margin-inline-start:4px;color:var(--app-accent,#0b746d);font-weight:800;text-decoration:underline;text-underline-offset:3px;}
+.historyLink:focus-visible{outline:3px solid #18877b;outline-offset:3px;}
+@media(max-width:420px){.historyLink{margin-inline-start:0;}}

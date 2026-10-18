@@ -107,6 +107,12 @@ describe("V3 staff-only reviewed AI reply path", () => {
     expect(ui).toContain("expectedVersion,");
     expect(ui).toContain("draft.handoverRequired");
     expect(ui).toContain("Queue acceptance is not customer delivery confirmation.");
+    expect(ui).toContain('buildStaffModuleHref(workspaceSlug, "inbox")');
+    expect(ui).toContain('inboxQueueHref("all", conversationId)');
+    expect(ui).toContain('href={historyHref}');
+    expect(ui).toContain("Verify saved conversation in Inbox");
+    expect(ui).toContain("Find current saved conversation in Inbox");
+    expect(css).toContain(".historyLink:focus-visible");
     expect(ui).toContain('method: "POST"');
     expect(ui).toContain('credentials: "same-origin"');
     expect(route).toContain('process.env.SERVICEDESK_AI_ENABLED === "true"');

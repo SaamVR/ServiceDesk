@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
+import { buildStaffModuleHref } from "./staff-modules";
+import { inboxQueueHref } from "./inbox-triage";
 import {
   parseReviewedAiDraft,
   parseReviewedReplyReceipt,
@@ -205,6 +208,8 @@ function ScopedStaffAiReviewComposer({
     }
   }
 
+  const historyHref = buildStaffModuleHref(workspaceSlug, "inbox") +
+    inboxQueueHref("all", conversationId);
   const canApprove = Boolean(draft && !draft.handoverRequired &&
     body.trim().length > 0 && body.trim().length <= 4_000 &&
     confirmed && !unsafeFormatting &&
@@ -237,15 +242,27 @@ function ScopedStaffAiReviewComposer({
         {error === "draft" ? (
           <p>AI drafting did not return a verified suggestion. The model may still finish upstream; continue with the standard staff reply form.</p>
         ) : error === "stale" ? (
-          <p>The conversation changed or a newer customer message arrived. Reload this conversation before approving another reply.</p>
+          <p>The conversation changed or a newer customer message arrived.
+            Reload before approving again.{" "}
+            <Link href={historyHref} className={styles.historyLink}>
+              Find current saved conversation in Inbox →
+            </Link>
+          </p>
         ) : error === "approval" ? (
-          <p>Approval could not be confirmed. Check the saved conversation before trying again; the same approval key will be reused.</p>
+          <p>Approval could not be confirmed. Check the saved conversation before trying again;
+            the same approval key will be reused.{" "}
+            <Link href={historyHref} className={styles.historyLink}>
+              Verify saved conversation in Inbox →
+            </Link>
+          </p>
         ) : null}
         {receipt ? (
           <div className={styles.receipt}>
             <strong>{receipt.state === "EXISTING_REPLY" ? "Previously approved reply found" : "Staff-reviewed reply queued"}</strong>
             <p>{presentOutboundDelivery(receipt.deliveryState).label}. Queue acceptance is not customer delivery confirmation.</p>
-            <p>Return to the message history to verify the stored provider status.</p>
+            <p><Link href={historyHref} className={styles.historyLink}>
+              Verify saved provider status in Inbox →
+            </Link></p>
           </div>
         ) : draft ? (
           <>
