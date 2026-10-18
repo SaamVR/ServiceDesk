@@ -189,9 +189,11 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
               placeholder="When a quote is accepted create an internal dispatch review task."/>
           </label>
         </div>
-        <p className={styles.helper}>No customer details, contact addresses,
-          prices, amounts, URLs, secrets or numeric identifiers are accepted
-          in this intent. The model may only suggest one internal attention action.</p>
+        <p className={styles.helper}>Use generic workflow intentions only:
+          never enter customer names, private service notes or secrets. The
+          form blocks common contacts, numbers, prices and link formats but
+          cannot reliably recognize every private name or sensitive phrase.
+          The model may only suggest one internal attention action.</p>
         <div className={styles.actions}>
           <button type="button" onClick={suggest} className={styles.primary}
             disabled={!canGenerate} aria-busy={busy}>
