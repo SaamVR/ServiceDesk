@@ -1,0 +1,3 @@
+# SONIC R35 / L17 — owner context uses verified metrics and bounded status evidence
+
+Owner AI context originally copied provider callback freeform notes after best-effort regex redaction and copied numeric source fields without rechecking their authority. This lane calls the existing owner metric authority for each included bucket, requires exact civil UTC range and actor, and replaces provider freeform summaries with static templates derived from allowlisted provider + verification enums. No contacts, untrusted provider text, bearer strings, hallucinated paid/verified claims or customer identifiers reach the model context. Context remains read-only; no model invoked, provider sent or business state changed. Actual signed-in owner use remains a separate acceptance gate.
