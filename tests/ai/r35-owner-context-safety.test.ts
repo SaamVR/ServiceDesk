@@ -37,7 +37,7 @@ describe("SONIC R35 owner AI trusted context and no freeform provider PII",()=>{
       expect(r).toMatchObject({ok:false,code:"OWNER_CONTEXT_METRICS_UNVERIFIED"});
     }
     expect(buildOwnerAssistantContext({...basic,metrics:{...metrics,
-      metrics:{FORECASTED_REVENUE:5000} as typeof metrics.metrics}}))
+      metrics:{FORECASTED_REVENUE:5000} as unknown as typeof metrics.metrics}}))
       .toMatchObject({ok:false,code:"OWNER_CONTEXT_METRICS_UNVERIFIED"});
   });
   it("refuses invalid source windows, stale shape and forged provider verification",()=>{
