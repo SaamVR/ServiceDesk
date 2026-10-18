@@ -140,9 +140,9 @@ function ScopedAiOwnerModelProbe({
       <label className={styles.consent}>
         <input type="checkbox" checked={operatorApproved} disabled={!configured || busy}
           onChange={event=>setApprovedScope(event.target.checked ? scopeKey : null)} />
-        <span>I authorize one synthetic call to the configured model. It can
-          consume tokens or incur provider usage; it is not a provider-delivery
-          or AI automation acceptance test.</span>
+        <span>I authorize one synthetic call to the configured model.
+          It can consume tokens or incur provider usage; it is not a
+          provider-delivery or AI automation acceptance test.</span>
       </label>
       <div className={styles.actions}>
         <button type="button" className={styles.action} disabled={!configured || !operatorApproved || busy}
