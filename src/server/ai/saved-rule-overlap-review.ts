@@ -59,7 +59,8 @@ function saved(v:unknown,ws:string,branch:string):v is WorkflowRuleVersionDTO {
    ["type","severity","summaryKey"].every(k=>Object.hasOwn(a,k))&&
    a.type==="CREATE_ATTENTION"&&
    ["INFO","WARNING","CRITICAL"].includes(String(a.severity))&&
-   typeof a.summaryKey==="string"&&/^[A-Z0-9_]{3,128}$/.test(a.summaryKey));
+   // Exactly the published SQL 0055 validator's 3–80-character key set.
+   typeof a.summaryKey==="string"&&/^[A-Z0-9][A-Z0-9_:-]{2,79}$/.test(a.summaryKey));
 }
 function candidate(v:unknown,ws:string,branch:string):v is ProposedOwnerWorkflowDraft{
  if(!plain(v)||v.workspaceId!==ws||v.branchId!==branch||
