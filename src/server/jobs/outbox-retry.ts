@@ -34,7 +34,7 @@ function validatePolicy(input: OutboxRetryPolicyInput): Result<{
 }> {
   if (!input || !input.event || !input.outcome ||
       typeof input.event.id !== "string" ||
-      !/^[A-Za-z0-9:_-]{3,128}$/.test(input.event.id)) {
+      !/^[A-Za-z0-9:_-]{1,128}$/.test(input.event.id)) {
     return {ok:false,code:"OUTBOX_EVENT_INVALID",
       message:"Claimed outbox event identity and outcome are required."};
   }
