@@ -43,6 +43,18 @@ describe("SONIC R42 L06 dispatch evidence completeness",()=>{
     .toMatchObject({ok:false,code:"DISPATCH_REVIEW_SOURCE_UNVERIFIED"});
   }
  });
+ it("critic: sparse and hidden crew skill arrays cannot authorize a confident assignment",()=>{
+   const sparse=["STANDARD",,"DEEP"];
+   const hidden=Object.defineProperty(["STANDARD"],"privateRole",{
+     value:"unverified",enumerable:false,
+   });
+   for(const serviceCodes of [sparse,hidden]){
+     const input={...source(),snapshot:{...source().snapshot,
+       crews:[{...crew,serviceCodes}]}};
+     expect(prepareDispatchAiReview(input as any))
+       .toMatchObject({ok:false,code:"DISPATCH_REVIEW_SOURCE_UNVERIFIED"});
+   }
+ });
  it("denies actor tenant drift and disallowed staff roles",()=>{
    expect(prepareDispatchAiReview({...source(),actor:{...actor,role:"CREW"}}))
      .toMatchObject({ok:false,code:"DISPATCH_REVIEW_ROLE_REQUIRED"});
