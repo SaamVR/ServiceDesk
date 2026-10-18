@@ -1,0 +1,5 @@
+# R43 L28 — signed-in owner / saved published-rule overlap integration
+
+Adds read-only persisted access to the `workflow_rule_versions` Supabase table using the existing staff authorization resolver and branch membership check. Loads only PUBLISHED exact workspace+branch rows, in stable order, with limit+one (201) to reject incomplete result pages. Compares the candidate drafts against actual returned rule versions using L26's restrictive internal-action overlap review. A second authenticated owner, branch and saved-version read must match exactly before results can be displayed; revocation or rule version churn fails closed.
+
+Limitations: feature does **not** compare ACTIVE status in parent `workflow_rules` and reports all PUBLISHED versions as possibly relevant. The persisted-page completeness proof is for one scoped read at one point in time only, not a cross-database serializable snapshot. No frontend integration, mutation, provider messages or live rule activation. Two-owner real DB UAT remains required.
