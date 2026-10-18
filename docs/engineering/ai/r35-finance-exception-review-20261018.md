@@ -1,0 +1,3 @@
+# SONIC L16 — Finance AI evidence-backed exception queue
+
+Produces owner-reviewed invoice anomalies and collection *review proposals* from authoritative saved InvoiceDTO ledger facts using the existing staff collection reconciliation contract. It detects mismatched allocated/refunded/balance totals, collectible issued/partially paid invoices, and suspicious void remainders; PAID is not a provider receipt. Scope/duplicate/currency/amount checks are fail closed. The output contains no amounts, contact details, message targets, provider proof or automatic collections. This is a pure backend review module—not a deployed AI model inference or automatic financial workflow. Next integration is authenticated finance owner data loading and UI before production acceptance.
