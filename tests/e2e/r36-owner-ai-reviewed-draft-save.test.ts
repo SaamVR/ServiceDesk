@@ -26,6 +26,9 @@ describe("R36 real owner-reviewed AI workflow DRAFT persistence",()=>{
     expect(ui).toContain("saveOwnerReviewedWorkflowDraft({");
     expect(ui).toContain('response.state!=="DRAFT_SAVED_OWNER_PREVIEW_REQUIRED"');
     expect(ui).toContain("setReviewConfirmed(false)");
+    expect(ui).toContain("savePending.current=true");
+    expect(ui).toContain("if(savePending.current || !suggestion");
+    expect(ui).toContain("savePending.current=false");
     expect(ui).toContain("draftSaved");
     expect(ui).toContain("before retrying to avoid duplicate drafts");
     expect(ui).toContain("Open the saved workflow builder");

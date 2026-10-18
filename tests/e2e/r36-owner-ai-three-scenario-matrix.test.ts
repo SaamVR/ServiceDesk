@@ -87,6 +87,10 @@ describe("R36 owner workflow hypothetical three-scenario effectiveness matrix",(
     expect(ui).toContain("Run an individual what-if and review");
     expect(ui).toContain("setPreview(undefined)");
     expect(ui).toContain("setComparison(undefined)");
+    expect(ui).toContain("modelPending.current=true");
+    expect(ui).toContain("if(modelPending.current || !canGenerate");
+    expect(ui).toContain("previewPending.current=true");
+    expect(ui).toContain("previewPending.current=false");
     expect(ui).toContain("!suggestion || !preview || !reviewConfirmed");
     expect(source).toContain("requestOwnerWorkflowWhatIf({...input,sampleServiceCode})");
     expect(source).not.toContain("publishOperationalWorkflowVersion(");

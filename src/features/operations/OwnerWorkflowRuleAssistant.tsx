@@ -46,6 +46,11 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
   const sequence=useRef(0);
   const previewSequence=useRef(0);
   const saveSequence=useRef(0);
+  // State updates are asynchronous: refs prevent rapid duplicate user clicks
+  // from sending multiple paid model calls, read requests or durable drafts.
+  const modelPending=useRef(false);
+  const previewPending=useRef(false);
+  const savePending=useRef(false);
 
   useEffect(()=>()=> {
     activeRequest.current?.abort();
@@ -53,6 +58,9 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     sequence.current+=1;
     previewSequence.current+=1;
     saveSequence.current+=1;
+    modelPending.current=false;
+    previewPending.current=false;
+    savePending.current=false;
   },[]);
 
   function invalidate() {
@@ -61,6 +69,9 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     sequence.current+=1;
     previewSequence.current+=1;
     saveSequence.current+=1;
+    modelPending.current=false;
+    previewPending.current=false;
+    savePending.current=false;
     setReviewConfirmed(false);
     setDraftSaved(false);
     setRuleCode("");
@@ -78,8 +89,9 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     !busy && !previewBusy && !saving;
 
   async function suggest() {
-    if(!canGenerate || !safeIntent) return;
+    if(modelPending.current || !canGenerate || !safeIntent) return;
     invalidate();
+    modelPending.current=true;
     const currentId=++sequence.current;
     const controller=new AbortController();
     activeRequest.current=controller;
@@ -90,6 +102,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
       controller.abort();
       if(activeRequest.current===controller){
         activeRequest.current=null;
+        modelPending.current=false;
         setBusy(false);
         setFeedback("The browser stopped waiting after 75 seconds. Upstream model cancellation or zero usage cost is not confirmed; no rule was saved.");
       }
@@ -126,6 +139,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
       clearTimeout(timer);
       if(activeRequest.current===controller){
         activeRequest.current=null;
+        modelPending.current=false;
         setBusy(false);
       }
     }
@@ -136,13 +150,16 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     const controller=activeRequest.current;
     activeRequest.current=null;
     sequence.current+=1;
+    modelPending.current=false;
     controller.abort();
     setBusy(false);
     setFeedback("Stopped this browser request. The model may still finish upstream; no rule was saved or published from this interface.");
   }
 
   async function runPreview(){
-    if(!suggestion || previewBusy || busy || saving || draftSaved || suggestion.branchId!==branchId)return;
+    if(previewPending.current || !suggestion || previewBusy || busy ||
+       saving || draftSaved || suggestion.branchId!==branchId)return;
+    previewPending.current=true;
     const attempt=++previewSequence.current;
     setPreviewBusy(true);
     setPreview(undefined);
@@ -170,12 +187,14 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
         setFeedback("Synthetic preview unavailable. No saved workflow or customer action changed.");
     }finally{
       if(previewSequence.current===attempt)setPreviewBusy(false);
+      previewPending.current=false;
     }
   }
 
   async function compareSamples(){
-    if(!suggestion?.serviceCode || previewBusy || busy || saving ||
-       draftSaved || suggestion.branchId!==branchId)return;
+    if(previewPending.current || !suggestion?.serviceCode || previewBusy ||
+       busy || saving || draftSaved || suggestion.branchId!==branchId)return;
+    previewPending.current=true;
     const attempt=++previewSequence.current;
     setPreviewBusy(true);
     setReviewConfirmed(false);
@@ -202,14 +221,17 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
         setFeedback("Hypothetical comparisons unavailable. No automation was executed.");
     }finally{
       if(previewSequence.current===attempt)setPreviewBusy(false);
+      previewPending.current=false;
     }
   }
 
   async function saveDraft(){
-    if(!suggestion || !preview || !reviewConfirmed || busy || previewBusy ||
-       saving || draftSaved || suggestion.branchId!==branchId ||
+    if(savePending.current || !suggestion || !preview || !reviewConfirmed ||
+       busy || previewBusy || saving || draftSaved ||
+       suggestion.branchId!==branchId ||
        !/^[A-Z0-9][A-Z0-9_-]{2,63}$/.test(ruleCode) ||
        ruleName.trim().length<5 || ruleName.length>120)return;
+    savePending.current=true;
     const current=++saveSequence.current;
     setSaving(true);
     setFeedback("Saving a reviewed internal-only draft; nothing is being published.");
@@ -232,6 +254,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
         setFeedback("Save result is uncertain. Inspect saved workflow versions before retrying to avoid duplicate drafts.");
     }finally{
       if(saveSequence.current===current)setSaving(false);
+      savePending.current=false;
     }
   }
 
