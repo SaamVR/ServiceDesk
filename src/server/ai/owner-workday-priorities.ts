@@ -60,7 +60,11 @@ export async function loadOwnerWorkdayPriorities(
       saved.value.actor.role!=="OWNER" ||
       !isFreshOwnerOperationsSnapshotAt(saved.value.loadedAt,now()))
     return {ok:false,code:"WORKDAY_SNAPSHOT_UNAVAILABLE"};
-  const facts=deriveOwnerOperationsBriefFacts(saved.value);
+  // Persisted source adapters can fail unexpectedly while projecting a
+  // saved row. A broken/poisoned snapshot must never crash the owner panel.
+  let facts:ReturnType<typeof deriveOwnerOperationsBriefFacts>;
+  try{facts=deriveOwnerOperationsBriefFacts(saved.value);}
+  catch{return {ok:false,code:"WORKDAY_SNAPSHOT_UNAVAILABLE"};}
   if(!facts)return {ok:false,code:"WORKDAY_SNAPSHOT_UNAVAILABLE"};
   if(deps.signal?.aborted)return {ok:false,code:"WORKDAY_CANCELLED"};
   let second:Awaited<ReturnType<Resolver>>;
@@ -78,7 +82,9 @@ export async function loadOwnerWorkdayPriorities(
       latest.value.actor.userId!==userId || latest.value.actor.role!=="OWNER" ||
       !isFreshOwnerOperationsSnapshotAt(latest.value.loadedAt,now()))
     return {ok:false,code:"WORKDAY_SOURCE_CHANGED"};
-  const freshFacts=deriveOwnerOperationsBriefFacts(latest.value);
+  let freshFacts:ReturnType<typeof deriveOwnerOperationsBriefFacts>;
+  try{freshFacts=deriveOwnerOperationsBriefFacts(latest.value);}
+  catch{return {ok:false,code:"WORKDAY_SOURCE_CHANGED"};}
   if(!freshFacts || !sameFacts(facts,freshFacts))
     return {ok:false,code:"WORKDAY_SOURCE_CHANGED"};
   const priorities=ownerPriorityActions(freshFacts,7);
