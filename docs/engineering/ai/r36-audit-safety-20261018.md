@@ -1,0 +1,3 @@
+# R36 L16 — audit privacy and truthful action evidence
+
+Production AI action audits previously redacted only `toolResults[].summary` and copied arbitrary provider/model `evidenceRef`, tool names, blocked reasons, model labels and identifiers through to the owner diagnostics. This lane now constrains all emitted fields to bounded safe identifiers and known reason/action states; summaries redact bearer keys, API keys, emails, phones and URLs. It never stores private reasoning and cannot mutate business truth. Source tests cover normal evidence, injection and fanout. Not proof of external provider delivery.
