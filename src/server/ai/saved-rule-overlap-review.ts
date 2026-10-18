@@ -29,7 +29,10 @@ const plain=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==="object"&&!
   Object.values(Object.getOwnPropertyDescriptors(v)).every(d=>Object.hasOwn(d,"value"));
 const dense=(v:unknown,max:number):v is unknown[]=>Array.isArray(v)&&v.length<max&&
   Reflect.ownKeys(v).length===v.length+1&&
-  Array.from({length:v.length},(_,i)=>i).every(i=>Object.hasOwn(v,i));
+  Array.from({length:v.length},(_,i)=>i).every(i=>{
+    const descriptor=Object.getOwnPropertyDescriptor(v,String(i));
+    return !!descriptor&&Object.hasOwn(descriptor,"value");
+  });
 function exactServiceCondition(conditions:unknown):string|null|undefined {
  if(!dense(conditions,11))return undefined;
  if(conditions.length===0)return null;
