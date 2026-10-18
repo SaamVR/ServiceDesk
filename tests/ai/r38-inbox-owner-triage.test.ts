@@ -58,6 +58,26 @@ describe("SONIC inbox: saved source owner actions rather than AI guessed SLA",()
      .toMatchObject({ok:false,code:"INBOX_SOURCE_INVALID"});
   }
  });
+ it("independent critic: rejects impossible civil timestamps rather than normalizing a saved message",()=>{
+  const r=planOwnerInboxReview({...input(),messages:[
+    msg("customer-1","convo-1","INBOUND","2026-02-30T06:00:00.000Z"),
+  ]});
+  expect(r).toMatchObject({ok:false,code:"INBOX_SOURCE_INVALID"});
+ });
+ it("independent critic: same-instant outbound is NOT authoritative proof of a reply",()=>{
+  const r=planOwnerInboxReview({...input(),messages:[
+    ...input().messages,
+    msg("outbound-1","convo-1","OUTBOUND","2026-10-18T06:00:00.000Z",{deliveryState:"DELIVERED"}),
+  ]});
+  expect(r).toMatchObject({ok:true,value:{candidates:[{reason:"DELIVERY_UNVERIFIED"}]}});
+ });
+ it("independent critic: sparse/corrupt history never throws or produces a false complete inbox",()=>{
+  const sparse=Array(2) as MessageDTO[];
+  sparse[1]=input().messages[0];
+  expect(()=>planOwnerInboxReview({...input(),messages:sparse})).not.toThrow();
+  expect(planOwnerInboxReview({...input(),messages:sparse}))
+    .toMatchObject({ok:false,code:"INBOX_SOURCE_INVALID"});
+ });
  it("double checks a signed-in owner and refuses mid-read message status changes",async()=>{
   let reads=0;
   const stub={...input(),loadedAt:clock,workspace:{id:workspaceId,slug:"qa-owner"},
