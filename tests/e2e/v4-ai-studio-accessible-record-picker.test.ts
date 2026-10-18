@@ -34,10 +34,11 @@ describe("Frontend AI Studio keyboard-first authorized record picker", () => {
     expect(JSON.stringify(choices)).not.toMatch(/Private Customer|secret phone|secret address|120000/);
   });
   it("shows only the first 8 characters of already-authorized source IDs in accessible labels",()=>{
-    const choices=verifiedStudioRecordChoices("Quote",[
+    const untrustedRecords = [
       {id:uuidA,status:"APPROVED",contact:"PRIVATE CONTACT",note:"SECRET CUSTOMER"},
       {id:uuidB,status:"NEW",moneyMinor:120000},
-    ]);
+    ];
+    const choices=verifiedStudioRecordChoices("Quote",untrustedRecords);
     expect(choices[0].label).toContain("ID aaaaaaaa");
     expect(choices[0].label).not.toContain(uuidA);
     expect(choices[0].label).not.toContain("PRIVATE CONTACT");
