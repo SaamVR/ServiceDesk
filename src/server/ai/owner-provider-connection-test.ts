@@ -37,7 +37,7 @@ export async function testAuthorizedAiModelConnection(
   workspaceSlug: string,
   deps: AiConnectionTestDependencies = {},
 ): Promise<Result<AiConnectionProof>> {
-  if (workspaceSlug.length < 3 || workspaceSlug.length > 40 ||
+  if (typeof workspaceSlug !== "string" || workspaceSlug.length < 3 || workspaceSlug.length > 40 ||
       !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(workspaceSlug)) {
     return fail("AI_DIAGNOSTIC_INPUT_INVALID", "Choose a valid workspace.");
   }
@@ -100,7 +100,8 @@ export async function testAuthorizedAiModelConnection(
   }
   if (!response.value.output || typeof response.value.output !== "object" ||
       Array.isArray(response.value.output) ||
-      Object.keys(response.value.output).length !== 0 ||
+      Object.getPrototypeOf(response.value.output)!==Object.prototype ||
+      Reflect.ownKeys(response.value.output).length !== 0 ||
       !Array.isArray(response.value.requestedToolCalls) ||
       response.value.requestedToolCalls.length !== 0 ||
       !Array.isArray(response.value.citations) ||
@@ -108,10 +109,33 @@ export async function testAuthorizedAiModelConnection(
       response.value.replyDraft !== "ServiceDesk model probe acknowledged") {
     return fail("AI_DIAGNOSTIC_RESPONSE_UNVERIFIED", "Model returned an unexpected probe result.");
   }
+  // A slow gateway probe can finish after the owner was removed from this
+  // workspace. Never return a reassuring "connected" badge to a revoked
+  // session. This is a fresh authorization check, not a durable receipt.
+  let after: Awaited<ReturnType<Resolver>>;
+  try { after=await (deps.resolveActor??resolveStaffActor)(workspaceSlug); }
+  catch {return fail("AI_DIAGNOSTIC_REVALIDATION_UNAVAILABLE","Owner authorization could not be rechecked.");}
+  if (!after.ok || after.value.workspace.id!==workspace.id ||
+      after.value.workspace.slug!==workspaceSlug ||
+      after.value.actor.workspaceId!==workspace.id ||
+      after.value.actor.userId!==actor.userId ||
+      after.value.actor.role!=="OWNER") {
+    return fail("AI_DIAGNOSTIC_OWNER_REVOKED","The owner session changed during the model probe.");
+  }
+  if (deps.signal?.aborted) return fail("AI_DIAGNOSTIC_CANCELLED","Owner ended the model probe.");
+  let checkedAt:unknown;
+  try {checkedAt=config.value.now();}catch{
+    return fail("AI_DIAGNOSTIC_CLOCK_UNAVAILABLE","The probe time could not be verified.");
+  }
+  if(typeof checkedAt!=="string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(checkedAt) ||
+     !Number.isFinite(Date.parse(checkedAt)) ||
+     new Date(Date.parse(checkedAt)).toISOString()!==checkedAt) {
+    return fail("AI_DIAGNOSTIC_CLOCK_UNAVAILABLE","The probe time could not be verified.");
+  }
   return { ok: true, value: {
     state: "PROVIDER_RESPONDED_TO_CONTROLLED_PROBE",
     model: config.value.model,
-    checkedAt: config.value.now(),
+    checkedAt,
     source: "REAL_MODEL_RESPONSE_NOT_A_PROVIDER_DELIVERY",
     durableReceipt: false,
   } };
