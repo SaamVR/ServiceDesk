@@ -49,6 +49,17 @@ describe("R35 L21 owner recovery inspector uses genuine source counts only",()=>
     const css=readFileSync(join(process.cwd(),
       "src/features/operations/OwnerQuoteRecoveryQueue.module.css"),"utf8");
     expect(src).toContain("readOwnerQuoteRecoverySummary(workspaceSlug)");
+    expect(src).toContain("<OwnerRecoveryRefreshControl />");
+    const refresh=readFileSync(join(process.cwd(),
+      "src/features/operations/OwnerRecoveryRefreshControl.tsx"),"utf8");
+    expect(refresh).toContain('startTransition(() => router.refresh())');
+    expect(refresh).toContain("Recheck saved counts");
+    expect(refresh).toContain("disabled={pending}");
+    expect(refresh).toContain("aria-busy={pending}");
+    expect(refresh).not.toContain("fetch(");
+    expect(refresh).not.toContain("runOwnerSavedOperationalAutomation(");
+    expect(refresh).not.toContain("retryOperationalWorkflowAction(");
+    expect(css).toContain(".refresh:focus-visible");
     expect(src).toContain('if (proof.state === "OWNER_REQUIRED") return null');
     expect(src).toContain("Inspect authorized workflow evidence");
     expect(src).toContain("evidence of an empty queue");

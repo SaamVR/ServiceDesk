@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { readOwnerQuoteRecoverySummary } from "@/server/workflows/owner-quote-recovery-queue";
 import { buildStaffModuleHref } from "./staff-modules";
+import { OwnerRecoveryRefreshControl } from "./OwnerRecoveryRefreshControl";
 import { isConsistentOwnerRecoveryAggregate, summarizeOwnerRecoveryReview } from "./owner-quote-recovery-guide";
 import styles from "./OwnerQuoteRecoveryQueue.module.css";
 
@@ -35,9 +36,12 @@ export async function OwnerQuoteRecoveryQueue({ workspaceSlug }: { workspaceSlug
           <p>Observe tenant-scoped quote event processing and examine exceptions before
             taking action. This panel cannot activate or retry a worker.</p>
         </div>
-        <span className={styles.source}>
-          {consistent ? "Saved database counts" : "Source unverified"}
-        </span>
+        <div className={styles.sourceTools}>
+          <span className={styles.source}>
+            {consistent ? "Saved database counts" : "Source unverified"}
+          </span>
+          <OwnerRecoveryRefreshControl />
+        </div>
       </header>
       {!consistent ? (
         <div className={styles.unavailable} role="status">
