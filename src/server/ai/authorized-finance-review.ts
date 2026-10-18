@@ -10,7 +10,7 @@ export interface AuthorizedFinanceReviewDependencies {
 export type AuthorizedFinanceReviewResult =
   | {ok:false;code:"FINANCE_INPUT_INVALID"|"FINANCE_OWNER_REQUIRED"|
     "FINANCE_SNAPSHOT_UNAVAILABLE"|"FINANCE_SAVED_STATE_CHANGED"}
-  | {ok:true;value:Extract<FinanceReviewResult,{ok:true}>["value"] &
+  | {ok:true;value:Omit<Extract<FinanceReviewResult,{ok:true}>["value"],"source"> &
      {source:"AUTHORIZED_SAVED_INVOICE_SNAPSHOT"}};
 
 const slugValid=(slug:unknown)=>typeof slug==="string" &&
