@@ -23,8 +23,18 @@ function safeDraft(v:unknown,workspaceId:string,branchId:string):v is ProposedOw
    d.mutatesFinancialState!==false||d.maxActionsPerEvent!==1 ||
    !["REQUEST_CREATED","QUOTE_ACCEPTED","VISIT_COMPLETED","INVOICE_PAID","ATTENTION_OPENED"].includes(String(d.eventType)) ||
    !Array.isArray(d.actions)||d.actions.length!==1||
-   d.actions[0]?.type!=="CREATE_ATTENTION" ||
-   !Array.isArray(d.conditions)||d.conditions.length>1)return false;
+   Reflect.ownKeys(d.actions).length!==d.actions.length+1||
+   !d.actions.every((a:unknown)=>a&&typeof a==="object"&&!Array.isArray(a)&&
+     Object.getPrototypeOf(a)===Object.prototype &&
+     Reflect.ownKeys(a).length===3 &&
+     ["type","severity","summaryKey"].every(k=>Object.hasOwn(a,k)) &&
+     Object.values(Object.getOwnPropertyDescriptors(a)).every(p=>Object.hasOwn(p,"value")) &&
+     (a as Record<string,unknown>).type==="CREATE_ATTENTION" &&
+     ["INFO","WARNING","CRITICAL"].includes(String((a as Record<string,unknown>).severity)) &&
+     typeof (a as Record<string,unknown>).summaryKey==="string" &&
+     /^[A-Z0-9_]{3,128}$/.test((a as Record<string,string>).summaryKey))) ||
+   !Array.isArray(d.conditions)||d.conditions.length>1||
+   Reflect.ownKeys(d.conditions).length!==d.conditions.length+1)return false;
  const keys=["state","source","workspaceId","branchId","eventType","conditions",
    "actions","maxActionsPerEvent","published","requiresOwnerPublish",
    "previewOnly","sendsCustomerMessages","mutatesFinancialState"];
@@ -34,6 +44,7 @@ function safeDraft(v:unknown,workspaceId:string,branchId:string):v is ProposedOw
  return c===undefined || !!c&&typeof c==="object"&&!Array.isArray(c)&&
    Object.getPrototypeOf(c)===Object.prototype &&
    Object.keys(c).length===3&&Reflect.ownKeys(c).length===3&&
+   Object.values(Object.getOwnPropertyDescriptors(c)).every(p=>Object.hasOwn(p,"value"))&&
    c.field==="request.serviceCode"&&c.operator==="EQ"&&
    ["STANDARD","DEEP","MOVE_OUT"].includes(String(c.value)) &&
    d.eventType!=="ATTENTION_OPENED";
