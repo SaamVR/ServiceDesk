@@ -9,7 +9,8 @@ export interface AuthorizedFinanceReviewDependencies {
 }
 export type AuthorizedFinanceReviewResult =
   | {ok:false;code:"FINANCE_INPUT_INVALID"|"FINANCE_OWNER_REQUIRED"|
-    "FINANCE_SNAPSHOT_UNAVAILABLE"|"FINANCE_SAVED_STATE_CHANGED"}
+    "FINANCE_SNAPSHOT_UNAVAILABLE"|"FINANCE_SAVED_STATE_CHANGED"|
+    "FINANCE_SOURCE_INCOMPLETE"}
   | {ok:true;value:Omit<Extract<FinanceReviewResult,{ok:true}>["value"],"source"> &
      {source:"AUTHORIZED_SAVED_INVOICE_SNAPSHOT"}};
 
@@ -50,6 +51,11 @@ export async function loadAuthorizedOwnerFinanceReview(
   if(!identity(first,workspaceSlug))return {ok:false,code:"FINANCE_OWNER_REQUIRED"};
   if(!isFreshOwnerOperationsSnapshotAt(first.value.loadedAt,now()))
     return {ok:false,code:"FINANCE_SNAPSHOT_UNAVAILABLE"};
+  // The operational loader fetches at most 300 saved invoice rows. An
+  // exactly-full page is not proof that there are no more invoices. Never
+  // report an authoritative "all-clear" from truncated financial evidence.
+  if(!Array.isArray(first.value.invoices) || first.value.invoices.length>=300)
+    return {ok:false,code:"FINANCE_SOURCE_INCOMPLETE"};
   const source=planOwnerInvoiceExceptions({
     actor:{workspaceId:first.value.workspace.id,role:"OWNER"},
     workspaceId:first.value.workspace.id,invoices:first.value.invoices,
@@ -61,8 +67,13 @@ export async function loadAuthorizedOwnerFinanceReview(
      second.value.workspace.id!==first.value.workspace.id ||
      second.value.actor.userId!==first.value.actor.userId)
     return {ok:false,code:"FINANCE_OWNER_REQUIRED"};
-  if(!isFreshOwnerOperationsSnapshotAt(second.value.loadedAt,now()) ||
-     ledgerFingerprint(first.value)!==ledgerFingerprint(second.value))
+  if(!Array.isArray(second.value.invoices) || second.value.invoices.length>=300)
+    return {ok:false,code:"FINANCE_SOURCE_INCOMPLETE"};
+  if(!isFreshOwnerOperationsSnapshotAt(second.value.loadedAt,now()))
     return {ok:false,code:"FINANCE_SAVED_STATE_CHANGED"};
+  try {
+    if(ledgerFingerprint(first.value)!==ledgerFingerprint(second.value))
+      return {ok:false,code:"FINANCE_SAVED_STATE_CHANGED"};
+  } catch {return {ok:false,code:"FINANCE_SAVED_STATE_CHANGED"};}
   return {ok:true,value:{...source.value,source:"AUTHORIZED_SAVED_INVOICE_SNAPSHOT"}};
 }
