@@ -16,6 +16,10 @@ export function reviewCustomerReplySafety(value:unknown):CustomerReplySafety {
     /\b(?:we|our team|i|i['’]ve|the team)\s+(?:have\s+|has\s+)?(?:charged|refunded|booked|scheduled|confirmed|paid|sent|issued|dispatched|approved)\b/i,
     /\b(?:your|the)\s+(?:booking|reservation|appointment|visit|quote|invoice|refund|payment|deposit|crew|cleaning team|job)\s+(?:is|was|has been|have been)\s+(?:confirmed|paid|received|processed|approved|sent|scheduled|completed|assigned|dispatched)\b/i,
     /\b(?:payment\s+received|refund\s+(?:processed|issued)|appointment\s+confirmed|reservation\s+confirmed|crew\s+(?:assigned|dispatched)|cleaning team\s+dispatched|quote\s+approved|invoice\s+paid)\b/i,
+    // Third-person commercial completion claims are also unverified model
+    // statements. They cannot be surfaced as delivered/paid/customer consent.
+    /\b(?:the\s+)?(?:customer|client|guest)\s+(?:(?:has|have|had)\s+)?(?:paid|accepted|confirmed|received|approved)\b/i,
+    /\b(?:the\s+)?(?:invoice|booking|quote|payment|refund|visit)\s+(?:(?:has|have)\s+been|was|were|is|are)\s+(?:paid|accepted|confirmed|processed|issued|approved|completed)\b/i,
     /\b(?:ignore\s+(?:all\s+)?previous\s+instructions|developer\s+mode|system\s+prompt)\b/i,
     /\b(?:https?:\/\/|www\.)\S+|[\w.+-]+@[\w.-]+\.[a-z]{2,}\b/i,
     /<\/?(?:script|iframe|form|img|style|a)\b/i,
