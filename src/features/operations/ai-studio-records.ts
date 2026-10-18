@@ -23,7 +23,7 @@ export function verifiedStudioRecordChoices(
     seen.add(row.id);
     selections.push({
       id: row.id,
-      label: `${kind} ${selections.length + 1} · ${status(row.status)}`,
+      label: `${kind} ${selections.length + 1} · ID ${row.id.slice(0, 8)} · ${status(row.status)}`,
     });
     if (selections.length >= 40) break;
   }

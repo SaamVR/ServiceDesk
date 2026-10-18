@@ -23,11 +23,26 @@ describe("Frontend AI Studio keyboard-first authorized record picker", () => {
     expect(filterStudioRecordChoices(choices, "pending approval")).toEqual([choices[1]]);
     expect(filterStudioRecordChoices(choices, "  REQUEST 3 ")).toEqual([choices[2]]);
     expect(filterStudioRecordChoices(choices, uuidA.slice(0,12))).toEqual([choices[0]]);
+    expect(filterStudioRecordChoices(choices, "ID bbbbbbbb")).toEqual([choices[1]]);
     expect(filterStudioRecordChoices(choices, "no such customer")).toEqual([]);
     expect(filterStudioRecordChoices(choices, "private")).toEqual([]);
     expect(filterStudioRecordChoices(choices, "")).toEqual(choices);
     expect(choices).toHaveLength(3);
+    expect(choices[0].label).toContain("ID aaaaaaaa");
+    expect(choices[1].label).toContain("ID bbbbbbbb");
+    expect(choices[2].label).toContain("ID cccccccc");
     expect(JSON.stringify(choices)).not.toMatch(/Private Customer|secret phone|secret address|120000/);
+  });
+  it("shows only the first 8 characters of already-authorized source IDs in accessible labels",()=>{
+    const choices=verifiedStudioRecordChoices("Quote",[
+      {id:uuidA,status:"APPROVED",contact:"PRIVATE CONTACT",note:"SECRET CUSTOMER"},
+      {id:uuidB,status:"NEW",moneyMinor:120000},
+    ]);
+    expect(choices[0].label).toContain("ID aaaaaaaa");
+    expect(choices[0].label).not.toContain(uuidA);
+    expect(choices[0].label).not.toContain("PRIVATE CONTACT");
+    expect(JSON.stringify(choices)).not.toContain("SECRET CUSTOMER");
+    expect(Object.keys(choices[0]).sort()).toEqual(["id","label"]);
   });
   it("does not mutate source selections or broaden the 40-row browser boundary",()=>{
     const before = JSON.stringify(choices);
