@@ -183,7 +183,8 @@ export function guardAiToolCalls(rawCalls: unknown): AssistantToolCall[] {
     if (!plainSafeObject(raw) ||
         Object.keys(raw).some(k=>k!=="name" && k!=="arguments") ||
         typeof raw.name !== "string" || !safeText(raw.name,64) ||
-        (raw.arguments!==undefined && !safeToolArguments(raw.arguments))) {
+        (raw.arguments!==undefined &&
+         (!plainSafeObject(raw.arguments) || !safeToolArguments(raw.arguments)))) {
       return humanReview("AI requested malformed tool call.");
     }
 
