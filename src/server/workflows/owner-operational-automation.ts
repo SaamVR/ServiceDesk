@@ -251,6 +251,7 @@ export async function runOwnerSavedOperationalAutomation(
       .eq("execution_id",result.value.executionId)
       .eq("action_type","CREATE_ATTENTION").eq("state","PENDING").limit(6);
     if (pending.error || !pending.data) return fail("OPERATIONAL_AUTOMATION_ACTION_UNVERIFIED","Pending internal actions could not be read.");
+    const usedAttentionIds=new Set<string>();
     for (const action of pending.data) {
       const applied=await port.executeAttentionAction(workspace.id,String(action.id));
       if (!applied.ok) return fail("OPERATIONAL_AUTOMATION_ATTENTION_FAILED","Internal attention action could not be saved.");
@@ -268,6 +269,9 @@ export async function runOwnerSavedOperationalAutomation(
           proof.data.type !== "WORKFLOW_RULE") {
         return fail("OPERATIONAL_AUTOMATION_ATTENTION_UNVERIFIED","Saved attention is not linked to this exact workflow execution.");
       }
+      if (usedAttentionIds.has(applied.value.attentionItemId))
+        return fail("OPERATIONAL_AUTOMATION_ATTENTION_UNVERIFIED","One saved attention cannot certify two actions.");
+      usedAttentionIds.add(applied.value.attentionItemId);
       completedAttentionActions++;
     }
   }
