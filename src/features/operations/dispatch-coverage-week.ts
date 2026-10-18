@@ -7,6 +7,7 @@ export interface DispatchCoverageDay {
   monthDay: string;
   total: number;
   unassigned: number;
+  unverifiedCrew: number;
   underway: number;
 }
 
@@ -24,12 +25,16 @@ export function isValidCoverageDay(value: unknown): value is string {
     day >= 1 && day <= days[month - 1];
 }
 
-export function buildDispatchCoverageWeek<T extends { startAt?: string; crewId?: string; status: string }>(
+export function buildDispatchCoverageWeek<T extends { startAt?: string; crewId?: string; branchId?: string; status: string }>(
   visits: readonly T[],
   snapshotAt: string,
   timeZone: string,
   startDay?: string,
+  savedCrews?: readonly {id:string;branchId?:string;active:boolean}[],
 ): DispatchCoverageDay[] {
+  // The roster is already tenant/branch-scoped by the authenticated snapshot.
+  // A mere nonempty crew ID does not establish an active, same-branch crew.
+  const crewById = savedCrews ? new Map(savedCrews.map(crew=>[crew.id,crew] as const)) : null;
   // Never show seven fabricated empty days if the source clock or timezone
   // is invalid. Validating timestamp separately avoids Date.parse overflow.
   if (trustedQuoteInstant(snapshotAt) === null) return [];
@@ -52,6 +57,7 @@ export function buildDispatchCoverageWeek<T extends { startAt?: string; crewId?:
       monthDay: new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(date),
       total: 0,
       unassigned: 0,
+      unverifiedCrew: 0,
       underway: 0,
     };
   });
@@ -66,6 +72,12 @@ export function buildDispatchCoverageWeek<T extends { startAt?: string; crewId?:
     if (!date) continue;
     date.total += 1;
     if (!visit.crewId) date.unassigned += 1;
+    else if (crewById) {
+      const crew = crewById.get(visit.crewId);
+      if (!crew || crew.active !== true || !crew.branchId ||
+          !visit.branchId || crew.branchId !== visit.branchId)
+        date.unverifiedCrew += 1;
+    }
     if (visit.status === "EN_ROUTE" || visit.status === "IN_PROGRESS") date.underway += 1;
   }
   return dates;

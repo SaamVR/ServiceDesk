@@ -1736,7 +1736,8 @@ function ScheduleView({
 }) {
   const window = buildScheduleWindow(data.loadedAt, data.workspace.timezone, selectedScheduleFrom);
   const upcoming = filterScheduleWindow(data.visits, data.workspace.timezone, window);
-  const coverageDays = buildDispatchCoverageWeek(upcoming, data.loadedAt, data.workspace.timezone, window.from);
+  const coverageDays = buildDispatchCoverageWeek(upcoming, data.loadedAt,
+    data.workspace.timezone, window.from, data.crews);
   const selectedDay = normalizeCoverageDay(selectedScheduleDay, coverageDays);
   const currentQueue = selectedScheduleQueue === "unassigned" ? "unassigned" : "all";
   const redirectPrefix = scheduleWindowFeedbackPrefix(window, currentQueue)

@@ -44,3 +44,7 @@
  .grid a strong { font-size: 1.44rem; }
 }
 @media(prefers-reduced-motion:reduce) { .grid a { transition: none; } }
+
+.unverified { background: #bc5a41; }
+.meterUnverified { background: #bc5a41; }
+@media(max-width:700px){.legend{flex-wrap:wrap;}}

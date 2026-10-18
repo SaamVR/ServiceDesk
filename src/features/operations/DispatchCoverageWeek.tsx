@@ -30,8 +30,9 @@ export function DispatchCoverageWeek({
           <p>Visit counts from the schedule · {timeZone} · not available capacity</p>
         </div>
         <div className={styles.legend} aria-label="Coverage legend">
-          <span><i className={styles.assigned} aria-hidden="true" /> Assigned</span>
-          <span><i className={styles.unassigned} aria-hidden="true" /> Needs crew</span>
+          <span><i className={styles.assigned} aria-hidden="true" /> Active crew verified</span>
+          <span><i className={styles.unassigned} aria-hidden="true" /> Missing crew ID</span>
+          <span><i className={styles.unverified} aria-hidden="true" /> Crew needs verification</span>
         </div>
       </div>
       <nav className={styles.grid} aria-label="Filter scheduled visits by day">
@@ -47,7 +48,8 @@ export function DispatchCoverageWeek({
         {days.map((day) => (
           <a
             href={scheduleCoverageHref(queue, day.key, from, today)}
-            aria-label={day.weekday + " " + day.monthDay + ": " + day.total + " visits, " + day.unassigned + " unassigned"}
+            aria-label={day.weekday + " " + day.monthDay + ": " + day.total + " visits, " +
+              day.unassigned + " without crew ID, " + day.unverifiedCrew + " crew assignments needing verification"}
             aria-current={selectedDay === day.key ? "date" : undefined}
             key={day.key}
           >
@@ -57,12 +59,16 @@ export function DispatchCoverageWeek({
             <span className={styles.meter} aria-hidden="true">
               {day.total > 0 ? (
                 <>
-                  <i className={styles.meterAssigned} style={{ flexGrow: Math.max(day.total - day.unassigned, 0) }} />
+                  <i className={styles.meterAssigned} style={{
+                    flexGrow: Math.max(day.total - day.unassigned - day.unverifiedCrew, 0) }} />
                   <i className={styles.meterUnassigned} style={{ flexGrow: day.unassigned }} />
+                  <i className={styles.meterUnverified} style={{ flexGrow: day.unverifiedCrew }} />
                 </>
               ) : null}
             </span>
-            {day.unassigned > 0 ? <em>{day.unassigned} need crew</em> : day.total ? <em>{day.underway} underway</em> : <em>No visits</em>}
+            {day.unverifiedCrew > 0 ? <em>{day.unverifiedCrew} verify crew</em> :
+              day.unassigned > 0 ? <em>{day.unassigned} need crew</em> :
+              day.total ? <em>{day.underway} underway</em> : <em>No visits</em>}
           </a>
         ))}
       </nav>
