@@ -37,6 +37,18 @@ describe("SONIC R36 L-A protected AI output and tool proposal completeness",()=>
    expect(calls).toHaveLength(1);
    expect(calls[0]).toMatchObject({name:"requestHumanReview",allowed:true});
  });
+ it("independent critic: reject accessor and sparse model arrays without invoking attacker getters",()=>{
+   const hostile=Array(1);
+   Object.defineProperty(hostile,0,{enumerable:true,get(){throw Error("model getter invoked");}});
+   const sparse=Array(1);
+   for(const entries of [hostile,sparse]){
+     expect(()=>guardAiModelOutput({...basic,corrections:entries})).not.toThrow();
+     expect(guardAiModelOutput({...basic,corrections:entries}))
+       .toMatchObject({ok:false,code:"AI_OUTPUT_INVALID"});
+     expect(()=>guardAiToolCalls(entries)).not.toThrow();
+     expect(guardAiToolCalls(entries)).toMatchObject([{name:"requestHumanReview"}]);
+   }
+ });
  it("routes nested attacker inputs and accessor tool args to human review without execution",()=>{
   const hidden=Object.defineProperty({name:"getServiceCatalog",arguments:{}},"sendProviderMessage",
    {value:true,enumerable:false});
