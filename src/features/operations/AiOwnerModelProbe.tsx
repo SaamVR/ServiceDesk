@@ -44,6 +44,8 @@ function ScopedAiOwnerModelProbe({
     scopeKey: string;
     busy: boolean;
     result?: VerifiedOwnerModelProbe;
+    /** Browser-observed HTTP elapsed time, not provider inference latency. */
+    roundTripMs?: number;
     error?: string;
   }>();
   const scoped = status?.scopeKey === scopeKey ? status : undefined;
@@ -59,6 +61,7 @@ function ScopedAiOwnerModelProbe({
     const requestedWorkspace = workspaceSlug;
     const submittedScope = scopeKey;
     const controller = new AbortController();
+    const requestStartedAt = Date.now();
     activeRequest.current = controller;
     setStatus({ scopeKey: submittedScope, busy: true });
     let didTimeout = false;
@@ -113,7 +116,9 @@ function ScopedAiOwnerModelProbe({
       if (activeRequest.current === controller) {
         activeRequest.current = null;
         setStatus(previous => previous?.scopeKey === submittedScope && previous.busy
-          ? { scopeKey: submittedScope, busy: false, result: verified, error: failure }
+          ? { scopeKey: submittedScope, busy: false, result: verified,
+              roundTripMs: verified ? Math.max(0,Date.now()-requestStartedAt) : undefined,
+              error: failure }
           : previous);
       }
     }
@@ -175,6 +180,12 @@ function ScopedAiOwnerModelProbe({
         <p role="status" className={`${styles.message} ${styles.success}`}>
           Model response confirmed for this session: <strong>{result.model}</strong> ·{" "}
           <time dateTime={result.checkedAt}>{result.checkedAt}</time>.
+          <span className={styles.secondary}>Browser HTTP round trip: {
+            scoped?.roundTripMs === undefined ? "unavailable" :
+              (scoped.roundTripMs / 1_000).toFixed(1) + " seconds"
+          }. This includes network, gateway and response parsing time—not
+            isolated provider inference latency, token usage or an
+            authorization to publish automations.</span>
           <span className={styles.secondary}>This is an ephemeral connection test,
             not a durable AI execution or customer-delivery receipt.</span>
         </p>
