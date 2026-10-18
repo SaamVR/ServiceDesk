@@ -99,3 +99,7 @@
   font-size:12px;line-height:1.55;font-weight:670;}
 .conversationToggle input{width:19px;height:19px;flex:0 0 19px;accent-color:#176d59;}
 .conversationToggle input:focus-visible{outline:3px solid #18877b;outline-offset:3px;}
+
+.clearFilters{justify-self:start;min-height:44px;border:1px solid #bddcd2;border-radius:9px;background:#fff;padding:9px 13px;color:#16624f;font:inherit;font-size:12px;font-weight:750;cursor:pointer;}
+.clearFilters:hover{background:#eaf8ef;}
+.clearFilters:focus-visible{outline:3px solid #178779;outline-offset:3px;}

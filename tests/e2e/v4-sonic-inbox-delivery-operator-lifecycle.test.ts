@@ -39,6 +39,13 @@ describe("SONIC read-only inbox delivery diagnostics lifecycle",()=>{
     expect(source).toContain("All original delivery counts remain unchanged.");
     expect(css).toContain(".conversationToggle input:focus-visible");
     expect(source).toContain('Show all');
+    expect(source).toContain("const resetReviewFilters = () =>");
+    expect(source).toContain('setChannelFilter("ALL")');
+    expect(source).toContain('setReasonFilter("ALL")');
+    expect(source).toContain('setOnePerConversation(false)');
+    expect(source).toContain("Clear delivery review filters");
+    expect(source).toContain("onClick={resetReviewFilters}");
+    expect(css).toContain(".clearFilters:focus-visible");
     expect(source).toContain("Filter authorized delivery problems");
     expect(source).toContain("No review record matches");
     expect(css).toContain(".filters select:focus-visible");

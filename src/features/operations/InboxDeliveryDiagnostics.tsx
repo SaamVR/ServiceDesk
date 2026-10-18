@@ -107,6 +107,13 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
     setCancelled(true);
   }
 
+  const resetReviewFilters = () => {
+    setChannelFilter("ALL");
+    setReasonFilter("ALL");
+    setOnePerConversation(false);
+    setExpanded(false);
+  };
+  const anyReviewFilter = channelFilter !== "ALL" || reasonFilter !== "ALL" || onePerConversation;
   const allNeedsReview = snapshot?.items.filter(item => item.health === "NEEDS_REVIEW") ?? [];
   const matchingNeedsReview = selectDeliveryReviewItems(allNeedsReview,channelFilter,reasonFilter);
   const priorityReasons = summarizeDeliveryReviewReasons(allNeedsReview,channelFilter);
@@ -187,6 +194,10 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
                     </select>
                   </label>
                 </div>
+                {anyReviewFilter ? <button type="button" className={styles.clearFilters}
+                  onClick={resetReviewFilters}>
+                  Clear delivery review filters
+                </button> : null}
                 {priorityReasons.length ? <div className={styles.reasonSummary}
                   aria-label="Saved delivery failure categories in the selected channel">
                   {priorityReasons.map(reason=><button
@@ -235,7 +246,7 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
                   ))}
                 </ul> : <p className={styles.sample}>
                   No review record matches the selected channel and reason.
-                  Clear filters to inspect other saved source issues.
+                  Use Clear delivery review filters to inspect other saved source issues.
                 </p>}
                 {displayedReviewSource.length > 8 ? (
                   <button type="button" className={styles.more}
