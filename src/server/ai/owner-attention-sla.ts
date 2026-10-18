@@ -19,7 +19,7 @@ export interface AttentionSlaSource{
 }
 export interface OwnerAttentionSlaDeps{loadSnapshot?:Loader;now?:()=>number;signal?:AbortSignal}
 const validId=(v:unknown):v is string=>typeof v==="string"&&/^[A-Za-z0-9:_-]{3,128}$/.test(v);
-function dense(source:unknown):source is AttentionItemDTO[]{
+function dense(source:unknown):source is ScopedAttention[]{
   if(!Array.isArray(source)||source.length>=5000 ||
     Reflect.ownKeys(source).length!==source.length+1)return false;
   return source.every((row,i)=>Object.hasOwn(source,i)&&!!row);
@@ -59,7 +59,7 @@ export function planOwnerAttentionSla(input:AttentionSlaSource):OwnerAttentionSl
    const overdueMinutes=Math.floor((time-due)/60_000);
    if(!Number.isSafeInteger(overdueMinutes)||overdueMinutes<0)
      return {ok:false,code:"ATTENTION_SOURCE_UNVERIFIED"};
-   alerts.push({attentionId:a.id,severity:a.severity,dueAt:a.dueAt,status:a.status,
+   alerts.push({attentionId:a.id,severity:a.severity,dueAt:a.dueAt,status:a.status as Alert["status"],
      overdueMinutes,ownerReviewRequired:true});
  }
  const rank={CRITICAL:3,WARNING:2,INFO:1};
