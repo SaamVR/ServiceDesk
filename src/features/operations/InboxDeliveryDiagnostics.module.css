@@ -85,3 +85,11 @@
 .filters select{width:100%;min-height:44px;min-width:0;padding:9px 11px;border:1px solid #b5d4cd;border-radius:8px;background:#fff;color:#234b43;font:inherit;font-size:13px;}
 .filters select:focus-visible{outline:3px solid #18877b;outline-offset:2px;}
 @media(max-width:540px){.filters{grid-template-columns:1fr;}}
+
+.reasonSummary{display:flex;flex-wrap:wrap;gap:8px;min-width:0;}
+.reasonSummary button{display:inline-flex;align-items:center;gap:8px;min-height:44px;max-width:100%;padding:8px 11px;border-radius:9px;border:1px solid #bddad0;background:#f7fbf8;color:#255844;font:inherit;font-size:12px;cursor:pointer;text-align:left;}
+.reasonSummary button[aria-pressed="true"]{background:#e1f3e9;border-color:#2d9171;box-shadow:inset 0 0 0 1px #2d9171;}
+.reasonSummary button strong{font-size:14px;font-variant-numeric:tabular-nums;}
+.reasonSummary button span{overflow-wrap:anywhere;}
+.reasonSummary button:focus-visible{outline:3px solid #18877b;outline-offset:3px;}
+@media(max-width:390px){.reasonSummary button{flex:1 1 100%;}}

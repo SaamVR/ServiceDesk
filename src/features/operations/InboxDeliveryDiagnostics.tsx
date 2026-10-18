@@ -8,6 +8,7 @@ import { inboxQueueHref } from "./inbox-triage";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import {
   deliveryReviewLabel, deliveryReviewReasonOptions, selectDeliveryReviewItems,
+  summarizeDeliveryReviewReasons,
   parseInboxDeliveryDiagnostics,
   type DeliveryReviewChannelFilter, type DeliveryReviewReasonFilter,
   type InboxDeliveryDiagnosticsSnapshot,
@@ -106,6 +107,7 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
 
   const allNeedsReview = snapshot?.items.filter(item => item.health === "NEEDS_REVIEW") ?? [];
   const matchingNeedsReview = selectDeliveryReviewItems(allNeedsReview,channelFilter,reasonFilter);
+  const priorityReasons = summarizeDeliveryReviewReasons(allNeedsReview,channelFilter);
   const needsReview = expanded ? matchingNeedsReview : matchingNeedsReview.slice(0, 8);
   const inboxHref = buildStaffModuleHref(workspaceSlug, "inbox");
   return (
@@ -181,6 +183,17 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
                     </select>
                   </label>
                 </div>
+                {priorityReasons.length ? <div className={styles.reasonSummary}
+                  aria-label="Saved delivery failure categories in the selected channel">
+                  {priorityReasons.map(reason=><button
+                    key={reason.value} type="button"
+                    aria-pressed={reasonFilter===reason.value}
+                    onClick={()=>{setReasonFilter(current=>
+                      current===reason.value?"ALL":reason.value);setExpanded(false);}}>
+                    <strong>{reason.count}</strong>
+                    <span>{reason.label}</span>
+                  </button>)}
+                </div> : null}
                 <p className={styles.sample} role="status">
                   {matchingNeedsReview.length} matching review record(s) from
                   {allNeedsReview.length} sampled review items. Filters only

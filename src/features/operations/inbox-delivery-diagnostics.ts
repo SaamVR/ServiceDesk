@@ -164,3 +164,20 @@ export const deliveryReviewReasonOptions:readonly {value:DeliveryReviewReasonFil
   {value:"STATUS_MISSING",label:"Delivery status missing"},
   {value:"STALE_PENDING",label:"Pending too long"},
 ];
+
+/** Summary pills are derived only from already validated, authorized sample
+ * rows. Totals are sample-local; no live provider metric is inferred.
+ */
+export function summarizeDeliveryReviewReasons(
+  items:readonly DeliveryDiagnostic[],channel:DeliveryReviewChannelFilter,
+):Array<{value:DeliveryTriageReason;label:string;count:number}>{
+  const scoped=selectDeliveryReviewItems(items,channel,"ALL");
+  return deliveryReviewReasonOptions
+    .filter((option):option is {value:DeliveryTriageReason;label:string}=>
+      option.value!=="ALL")
+    .map(option=>({
+      value:option.value,label:option.label,
+      count:scoped.filter(item=>item.reason===option.value).length,
+    }))
+    .filter(entry=>entry.count>0);
+}
