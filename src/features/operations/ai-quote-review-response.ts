@@ -28,7 +28,11 @@ export function containsUnsafeQuoteReviewClaims(input:string):boolean{
     /\b[0-9]+(?:\.[0-9]{1,2})?\s*(?:USD|EUR|GBP|BDT|INR)\b/iu.test(input) ||
     /\+?[0-9][0-9\s().-]{8,}[0-9]/u.test(input) ||
     /<\/?[a-z][^>]*>/iu.test(input) ||
-    /\b(?:api[_ -]?key|bearer\s+[a-z0-9._-]+|password\s*:)/iu.test(input);
+    /\b(?:api[_ -]?key|bearer\s+[a-z0-9._-]+|password\s*:)/iu.test(input) ||
+    // A language model can invent prices WITHOUT any currency symbol. Its
+    // source contains service codes/durations only, never the accepted rates.
+    /\b(?:total(?:\s+(?:cost|price|amount))?|price|charge(?:\s+(?:the\s+)?customer)?|deposit|balance|invoice\s+(?:amount|total))\s*(?::|=|is|of|should\s+be)?\s*\d+(?:[.,]\d+)?\b/iu.test(input) ||
+    /\b(?:send\s+(?:a\s+)?payment|collect\s+(?:a\s+)?payment|payment\s+(?:received|confirmed|completed|approved|collected)|invoice\s+(?:paid|settled)|deposit\s+(?:paid|received))\b/iu.test(input);
 }
 
 export function parseAuthorizedQuoteReview(

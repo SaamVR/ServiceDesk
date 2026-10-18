@@ -57,6 +57,28 @@ describe("Quote reviewer browser proof boundary", () => {
     }, quoteId)).toEqual(valid);
   });
 
+  it("rejects model-invented plain-number prices and payment-success claims",()=>{
+    const unsafe=[
+      "The total is 250.","Total cost 300 after visit.",
+      "Charge customer 175.","Collect payment on arrival.",
+      "Payment received and confirmed.","Invoice paid.",
+      "Deposit 100 before scheduling.","The balance should be 20.",
+      "Price: 150.",
+    ];
+    for (const review of unsafe) {
+      expect(containsUnsafeQuoteReviewClaims(review)).toBe(true);
+      expect(parseAuthorizedQuoteReview({...valid,review},quoteId)).toBeNull();
+    }
+    for (const review of [
+      "Please verify 2 bedrooms, 90 minutes and the service code.",
+      "Review the saved quote duration before approval.",
+      "Recheck the 30 minute buffer, staff must confirm source facts.",
+    ]) {
+      expect(containsUnsafeQuoteReviewClaims(review)).toBe(false);
+      expect(parseAuthorizedQuoteReview({...valid,review},quoteId)?.review).toBe(review);
+    }
+  });
+
   it("refuses unverified model-introduced prices, contact details or external redirects",()=>{
     const risky=[
       "The final amount should be $150.00.",
