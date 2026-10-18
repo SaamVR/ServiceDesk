@@ -127,6 +127,13 @@ describe("Quote reviewer browser proof boundary", () => {
     expect(source).toContain("parseAuthorizedQuoteReview(payload, expectedQuoteId)");
     expect(source).toContain('credentials: "same-origin"');
     expect(source).toContain('cache: "no-store"');
+    expect(source).toContain("const operatorApproved = approvedScope === scopeKey");
+    expect(source).toContain("!operatorApproved || busy || activeRequest.current");
+    expect(source).toContain("setApprovedScope(null)");
+    expect(source).toContain('checked={operatorApproved} disabled={!configured || busy}');
+    expect(source).toContain("I authorize one optional model-generated quote checklist");
+    expect(source).toContain("It may consume provider tokens or incur usage");
+    expect(source).toContain("disabled={!configured || !operatorApproved || busy}");
     expect(source).toContain("provider-side cancellation is not confirmed");
   });
 
@@ -152,6 +159,7 @@ describe("Quote reviewer browser proof boundary", () => {
     expect(source).not.toContain("totalMinor");
     expect(css).toContain("@media (max-width: 480px)");
     expect(css).toContain(":focus-visible");
+    expect(css).toContain(".consent input:focus-visible");
     expect(css).toContain("min-height: 46px");
   });
 });

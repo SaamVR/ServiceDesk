@@ -33,6 +33,10 @@ function ScopedQuoteReview({
 }: { workspaceSlug: string; quoteId: string; configured: boolean }) {
   const scopeKey = workspaceSlug + "\\0" + quoteId + "\\0" +
     (configured ? "configured" : "disabled");
+  // Each optional model review may incur inference usage. Acknowledgement is
+  // scoped to the saved quote and consumed exactly once at invocation.
+  const [approvedScope, setApprovedScope] = useState<string | null>(null);
+  const operatorApproved = approvedScope === scopeKey;
   const [status, setStatus] = useState<Status>();
   const scoped = status?.scopeKey === scopeKey ? status : undefined;
   const busy = scoped?.busy ?? false;
@@ -46,7 +50,8 @@ function ScopedQuoteReview({
   }, [scopeKey]);
 
   async function generate() {
-    if (!configured || busy || activeRequest.current) return;
+    if (!configured || !operatorApproved || busy || activeRequest.current) return;
+    setApprovedScope(null);
     const submittedScope = scopeKey;
     const expectedQuoteId = quoteId;
     const controller = new AbortController();
@@ -139,9 +144,16 @@ function ScopedQuoteReview({
       amounts, contact details or links is rejected. It cannot approve, send or change this quote.
       Model advice still requires source verification.
     </p>
+    <label className={styles.consent}>
+      <input type="checkbox" checked={operatorApproved} disabled={!configured || busy}
+        onChange={event=>setApprovedScope(event.target.checked ? scopeKey : null)} />
+      <span>I authorize one optional model-generated quote checklist.
+        It may consume provider tokens or incur usage. The result cannot
+        approve a quote, change prices, or send customer messages.</span>
+    </label>
     <div className={styles.actions}>
       <button className={styles.action} type="button" onClick={generate}
-        disabled={!configured || busy} aria-busy={busy}>
+        disabled={!configured || !operatorApproved || busy} aria-busy={busy}>
         {busy ? "Reviewing saved quote…" : "Generate AI review checks"}
       </button>
       {busy ? <button type="button" className={styles.cancel} onClick={cancelReview}>

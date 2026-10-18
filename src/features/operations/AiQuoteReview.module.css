@@ -111,3 +111,7 @@
 @media (prefers-reduced-motion: reduce) {
   .panel * { scroll-behavior: auto; transition: none !important; }
 }
+
+.consent{display:flex;align-items:flex-start;gap:10px;max-width:76ch;font-size:12px;line-height:1.65;color:#42695b;}
+.consent input{flex:0 0 19px;width:19px;height:19px;margin:2px 0 0;accent-color:#166b5e;}
+.consent input:focus-visible{outline:3px solid #2f968b;outline-offset:3px;}
