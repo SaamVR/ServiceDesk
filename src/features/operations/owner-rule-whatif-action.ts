@@ -36,7 +36,7 @@ export async function requestOwnerWorkflowWhatIf(input:Hypothesis):
     const {actor,workspace,service}=auth.value;
     if(workspace.slug!==input.workspaceSlug || actor.role!=="OWNER" ||
        actor.workspaceId!==workspace.id || !allowedId.test(workspace.id) ||
-       !allowedId.test(actor.userId)) return blocked();
+       typeof actor.userId!=="string" || !allowedId.test(actor.userId)) return blocked();
     const branch=await service.from("branches")
       .select("id,workspace_id").eq("id",input.branchId)
       .eq("workspace_id",workspace.id).maybeSingle();
