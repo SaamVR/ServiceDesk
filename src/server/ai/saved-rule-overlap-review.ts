@@ -63,7 +63,13 @@ function saved(v:unknown,ws:string,branch:string):v is WorkflowRuleVersionDTO {
    typeof a.summaryKey==="string"&&/^[A-Z0-9][A-Z0-9_:-]{2,79}$/.test(a.summaryKey));
 }
 function candidate(v:unknown,ws:string,branch:string):v is ProposedOwnerWorkflowDraft{
- if(!plain(v)||v.workspaceId!==ws||v.branchId!==branch||
+ const keys=["state","source","workspaceId","branchId","eventType",
+   "conditions","actions","maxActionsPerEvent","published",
+   "requiresOwnerPublish","previewOnly","sendsCustomerMessages",
+   "mutatesFinancialState"];
+ if(!plain(v)||Object.keys(v).length!==keys.length||
+   keys.some(k=>!Object.hasOwn(v,k))||
+   v.workspaceId!==ws||v.branchId!==branch||
    v.state!=="DRAFT_REQUIRES_OWNER_REVIEW"||
    v.source!=="UNTRUSTED_MODEL_SUGGESTION_STRICTLY_COMPILED"||
    v.published!==false||v.previewOnly!==true||
