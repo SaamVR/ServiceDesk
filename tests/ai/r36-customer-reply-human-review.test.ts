@@ -1,7 +1,7 @@
 import {describe,expect,it} from "vitest";
-import {buildGuardedAssistantPlan} from "../../src/server/ai/guarded-orchestrator";
+import {buildGuardedAssistantPlan,type GuardedAssistantPlanInput} from "../../src/server/ai/guarded-orchestrator";
 import {reviewCustomerReplySafety} from "../../src/server/ai/reply-safety";
-const input=(replyDraft:string)=>({
+const input=(replyDraft:string):GuardedAssistantPlanInput=>({
  conversationId:"conv-1",workspaceId:"workspace-1",savedHumanMessageId:"message-1",
  model:"fictional-model",promptVersion:"r36-review",knowledgeResultsUsed:false,
  modelOutput:{output:{serviceCode:"DEEP",riskFlags:[],corrections:[],unsupportedReasons:[]},
