@@ -39,3 +39,7 @@
 .footer small{font-size:11px;color:#527263;line-height:1.65;}
 @media(max-width:600px){.step{grid-template-columns:1fr;}.proposal dl{grid-template-columns:1fr;}.actions,.previewControls{display:grid;}.previewControls label{width:100%;}.primary,.secondary{width:100%;}}
 @media(prefers-reduced-motion:reduce){.panel *{transition:none!important;scroll-behavior:auto;}}
+
+.fields input:not([type="checkbox"]){width:100%;min-width:0;min-height:44px;border:1px solid #a9cbbc;background:#fff;border-radius:9px;padding:9px 11px;font:inherit;font-size:13px;color:#244d3d;}
+.reviewControl{display:flex!important;flex-direction:row;align-items:flex-start;gap:10px;line-height:1.6;}
+.reviewControl input{width:19px;height:19px;flex:0 0 19px;margin-top:2px;}

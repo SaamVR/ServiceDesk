@@ -9,6 +9,7 @@ import {
   type VerifiedOwnerWhatIf, type SuggestedServiceCode,
 } from "./owner-rule-browser-proof";
 import { requestOwnerWorkflowWhatIf } from "./owner-rule-whatif-action";
+import { saveOwnerReviewedWorkflowDraft } from "./owner-rule-save-action";
 import styles from "./OwnerWorkflowRuleAssistant.module.css";
 
 export interface OwnerRuleBranchOption {id:string;name:string}
@@ -30,6 +31,11 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
   const [instruction,setInstruction]=useState(defaultIntent);
   const [busy,setBusy]=useState(false);
   const [previewBusy,setPreviewBusy]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [reviewConfirmed,setReviewConfirmed]=useState(false);
+  const [draftSaved,setDraftSaved]=useState(false);
+  const [ruleCode,setRuleCode]=useState("");
+  const [ruleName,setRuleName]=useState("");
   const [feedback,setFeedback]=useState("");
   const [suggestion,setSuggestion]=useState<VerifiedOwnerRuleSuggestion>();
   const [preview,setPreview]=useState<VerifiedOwnerWhatIf>();
@@ -37,12 +43,14 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
   const activeRequest=useRef<AbortController|null>(null);
   const sequence=useRef(0);
   const previewSequence=useRef(0);
+  const saveSequence=useRef(0);
 
   useEffect(()=>()=> {
     activeRequest.current?.abort();
     activeRequest.current=null;
     sequence.current+=1;
     previewSequence.current+=1;
+    saveSequence.current+=1;
   },[]);
 
   function invalidate() {
@@ -50,6 +58,12 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     activeRequest.current=null;
     sequence.current+=1;
     previewSequence.current+=1;
+    saveSequence.current+=1;
+    setReviewConfirmed(false);
+    setDraftSaved(false);
+    setRuleCode("");
+    setRuleName("");
+    setSaving(false);
     setBusy(false);
     setPreviewBusy(false);
     setSuggestion(undefined);
@@ -58,7 +72,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
   }
   const safeIntent=validateOwnerRuleIntent(instruction);
   const canGenerate=configured && Boolean(safeIntent) && Boolean(branchId) &&
-    !busy && !previewBusy;
+    !busy && !previewBusy && !saving;
 
   async function suggest() {
     if(!canGenerate || !safeIntent) return;
@@ -99,6 +113,8 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
         return;
       }
       setSuggestion(parsed);
+      setRuleCode("AI_" + parsed.eventType + "_REVIEW");
+      setRuleName("AI suggested " + parsed.eventType.replaceAll("_"," ").toLowerCase() + " attention");
       setFeedback("Typed internal-attention draft compiled for owner review. Not saved or published.");
     }catch{
       if(!controller.signal.aborted && activeRequest.current===controller)
@@ -123,10 +139,11 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
   }
 
   async function runPreview(){
-    if(!suggestion || previewBusy || busy || suggestion.branchId!==branchId)return;
+    if(!suggestion || previewBusy || busy || saving || draftSaved || suggestion.branchId!==branchId)return;
     const attempt=++previewSequence.current;
     setPreviewBusy(true);
     setPreview(undefined);
+    setReviewConfirmed(false);
     const candidate={
       eventType:suggestion.eventType,severity:suggestion.severity,
       ...(suggestion.serviceCode?{serviceCode:suggestion.serviceCode}:{}),
@@ -152,6 +169,36 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     }
   }
 
+  async function saveDraft(){
+    if(!suggestion || !preview || !reviewConfirmed || busy || previewBusy ||
+       saving || draftSaved || suggestion.branchId!==branchId ||
+       !/^[A-Z0-9][A-Z0-9_-]{2,63}$/.test(ruleCode) ||
+       ruleName.trim().length<5 || ruleName.length>120)return;
+    const current=++saveSequence.current;
+    setSaving(true);
+    setFeedback("Saving a reviewed internal-only draft; nothing is being published.");
+    try{
+      const candidate={eventType:suggestion.eventType,severity:suggestion.severity,
+        ...(suggestion.serviceCode?{serviceCode:suggestion.serviceCode}:{})};
+      const response=await saveOwnerReviewedWorkflowDraft({
+        workspaceSlug,branchId,candidate,code:ruleCode,name:ruleName.trim(),
+      });
+      if(saveSequence.current!==current)return;
+      if(!response.ok || response.state!=="DRAFT_SAVED_OWNER_PREVIEW_REQUIRED" ||
+         response.published!==false || response.executed!==false){
+        setFeedback("Draft not saved. Verify owner permissions, branch and unique rule code. No rule was published.");
+        return;
+      }
+      setDraftSaved(true);
+      setFeedback("Draft saved in ServiceDesk. Review its saved version and run the separate saved-rule preview before manually publishing.");
+    }catch{
+      if(saveSequence.current===current)
+        setFeedback("Save result is uncertain. Inspect saved workflow versions before retrying to avoid duplicate drafts.");
+    }finally{
+      if(saveSequence.current===current)setSaving(false);
+    }
+  }
+
   const automationsHref=buildStaffModuleHref(workspaceSlug,"automations");
   return <section className={styles.panel}
     aria-label="Owner AI workflow authoring and hypothetical preview"
@@ -174,7 +221,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
         <h4>Owner intent and authorized branch</h4>
         <div className={styles.fields}>
           <label>Saved branch
-            <select value={branchId} disabled={!branches.length || busy || previewBusy}
+            <select value={branchId} disabled={!branches.length || busy || previewBusy || saving}
               onChange={event=>{
                 if(!branches.some(b=>b.id===event.target.value))return;
                 invalidate();setBranchId(event.target.value);
@@ -186,7 +233,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
           <label>Internal workflow idea (10–240 letters and punctuation)
             <textarea value={instruction} maxLength={240} rows={3}
               onChange={event=>{invalidate();setInstruction(event.target.value);}}
-              disabled={busy || previewBusy}
+              disabled={busy || previewBusy || saving}
               placeholder="When a quote is accepted create an internal dispatch review task."/>
           </label>
         </div>
@@ -243,6 +290,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
                 const selected=event.target.value;
                 if(!["NONE","STANDARD","DEEP","MOVE_OUT"].includes(selected))return;
                 previewSequence.current+=1;
+                setReviewConfirmed(false);
                 setPreview(undefined);
                 setPreviewBusy(false);
                 setSampleCode(selected as typeof sampleCode);
@@ -254,7 +302,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
             </select>
           </label>
           <button type="button" className={styles.secondary}
-            disabled={!suggestion || previewBusy || busy} onClick={runPreview}>
+            disabled={!suggestion || previewBusy || busy || saving || draftSaved} onClick={runPreview}>
             {previewBusy?"Evaluating hypothetical event…":"Run synthetic what-if"}
           </button>
         </div>
@@ -272,6 +320,50 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
             delivery confirmation or billing event.</p>
         </div>:<p className={styles.placeholder}>Run an explicit synthetic evaluation
           to see whether the proposed condition would match fictional input.</p>}
+      </div>
+    </div>
+    <div className={styles.step}>
+      <span className={styles.stepNumber}>04</span>
+      <div className={styles.stepContent}>
+        <h4>Persist an owner-reviewed draft · never auto-publish</h4>
+        <p className={styles.helper}>After a hypothetical preview, the owner may
+          explicitly save one internal-attention DRAFT through the existing
+          authorized workflow writer. No publishing, sending or execution occurs.
+          Recheck the saved draft in Workflow builder before publishing manually.</p>
+        <div className={styles.fields}>
+          <label>Unique rule code
+            <input type="text" value={ruleCode} maxLength={64}
+              disabled={!preview || saving || draftSaved}
+              onChange={event=>{setRuleCode(event.target.value.toUpperCase());setReviewConfirmed(false);}}
+              pattern="[A-Z0-9][A-Z0-9_-]{2,63}" required/>
+          </label>
+          <label>Human-reviewed rule name
+            <input type="text" value={ruleName} maxLength={120}
+              disabled={!preview || saving || draftSaved}
+              onChange={event=>{setRuleName(event.target.value);setReviewConfirmed(false);}}
+              required/>
+          </label>
+          <label className={styles.reviewControl}>
+            <input type="checkbox" checked={reviewConfirmed} disabled={!preview || saving || draftSaved}
+              onChange={event=>setReviewConfirmed(event.target.checked)}/>
+            I reviewed the exact compiled rule and understand that saving
+            a draft does not publish or execute an automation.
+          </label>
+        </div>
+        <button type="button" className={styles.primary} onClick={saveDraft}
+          disabled={!preview || !reviewConfirmed || saving || draftSaved ||
+            !/^[A-Z0-9][A-Z0-9_-]{2,63}$/.test(ruleCode) ||
+            ruleName.trim().length<5 || ruleName.length>120}
+          aria-busy={saving}>
+          {saving ? "Saving reviewed draft…" :
+            draftSaved ? "Draft saved — inspect workflow" : "Save reviewed rule DRAFT"}
+        </button>
+        {draftSaved?<p className={styles.proposal} role="status">
+          Saved draft acknowledged by the authorized writer.
+          <Link href={automationsHref}>Open the saved workflow builder →</Link>
+          Run the saved version preview and publish separately if approved.
+          No workflow event or customer delivery was executed.
+        </p>:null}
       </div>
     </div>
     <footer className={styles.footer}>
