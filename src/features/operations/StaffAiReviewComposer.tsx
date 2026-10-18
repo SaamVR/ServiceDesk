@@ -11,6 +11,7 @@ import {
 } from "./staff-ai-review-contract";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
+import { detectStaffReplyRisks, staffReplyRiskLabels } from "./staff-ai-reply-risk";
 import { boundedStaffRequestSignal, STAFF_AI_DRAFT_TIMEOUT_MS } from "./staff-ai-request-signal";
 import styles from "./StaffAiReviewComposer.module.css";
 
@@ -46,6 +47,7 @@ function ScopedStaffAiReviewComposer({
   const replyFieldId = useId();
   const [body, setBody] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [sensitiveConfirmed, setSensitiveConfirmed] = useState(false);
   const [busy, setBusy] = useState<"idle" | "drafting" | "approving">("idle");
   const [error, setError] = useState<StaffAiReviewError>();
   const [receipt, setReceipt] = useState<ApprovedReplyReceipt>();
@@ -75,6 +77,7 @@ function ScopedStaffAiReviewComposer({
     setDraft(undefined);
     setBody("");
     setConfirmed(false);
+    setSensitiveConfirmed(false);
     idempotencyKey.current = null;
     try {
       const response = await fetch("/api/internal/ai/draft", {
@@ -98,6 +101,7 @@ function ScopedStaffAiReviewComposer({
       }
       setDraft(parsed);
       setBody(parsed.replyDraft);
+      setSensitiveConfirmed(false);
     } catch {
       if (!pending.signal.aborted && controller.current === pending) setError("draft");
     } finally {
@@ -118,16 +122,20 @@ function ScopedStaffAiReviewComposer({
     setDraft(undefined);
     setBody("");
     setConfirmed(false);
+    setSensitiveConfirmed(false);
     setError("cancelled");
     // Cancelling the browser request does not certify that provider billing stopped.
   }
 
+  const reviewRisks = detectStaffReplyRisks(body);
+  const needsSensitiveReview = reviewRisks.length > 0;
   async function approve() {
     const reviewedBody = body.trim();
     // Approval is a durable, idempotent command. Never abort a still-running
     // approval and issue a second network command before React sets busy.
     if (busy !== "idle" || controller.current || !draft || draft.handoverRequired ||
-        !confirmed || !reviewedBody || reviewedBody.length > 4_000 ||
+        !confirmed || (needsSensitiveReview && !sensitiveConfirmed) ||
+        !reviewedBody || reviewedBody.length > 4_000 ||
         receipt || error === "stale") return;
     const pending = new AbortController();
     controller.current = pending;
@@ -195,7 +203,8 @@ function ScopedStaffAiReviewComposer({
 
   const canApprove = Boolean(draft && !draft.handoverRequired &&
     body.trim().length > 0 && body.trim().length <= 4_000 &&
-    confirmed && busy === "idle" && !receipt && error !== "stale");
+    confirmed && (!needsSensitiveReview || sensitiveConfirmed) &&
+    busy === "idle" && !receipt && error !== "stale");
 
   return (
     <section className={styles.panel} aria-label="AI-assisted human reply review">
@@ -250,6 +259,7 @@ function ScopedStaffAiReviewComposer({
               onChange={(event) => {
                 setBody(event.target.value);
                 setConfirmed(false);
+                setSensitiveConfirmed(false);
                 setError(staffAiReviewErrorAfterEdit);
                 idempotencyKey.current = null;
               }}
@@ -258,6 +268,22 @@ function ScopedStaffAiReviewComposer({
             <p className={styles.limit}>{body.length}/4000 characters · generated suggestions are not verified facts</p>
             {!draft.handoverRequired ? (
               <>
+                {needsSensitiveReview ? <div className={styles.warning}
+                  role="note" aria-label="Additional sensitive reply review required">
+                  <strong>Additional verification required</strong>
+                  <p>This reply contains possible sensitive commitments or
+                    contact instructions. Heuristic detection may miss risks.
+                    Verify the current saved record and authorized channel.</p>
+                  <ul>{reviewRisks.map(risk=><li key={risk}>
+                    {staffReplyRiskLabels[risk]}</li>)}</ul>
+                  <label className={styles.confirm}>
+                    <input type="checkbox" checked={sensitiveConfirmed}
+                      disabled={busy !== "idle"}
+                      onChange={event=>setSensitiveConfirmed(event.target.checked)} />
+                    <span>I verified these statements against saved records
+                      and approve the exact edited reply.</span>
+                  </label>
+                </div> : null}
                 <label className={styles.confirm}>
                   <input type="checkbox" checked={confirmed} disabled={busy !== "idle"}
                     onChange={(event) => setConfirmed(event.target.checked)} />
