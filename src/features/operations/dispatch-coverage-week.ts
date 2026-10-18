@@ -40,9 +40,12 @@ export function buildDispatchCoverageWeek<T extends { startAt?: string; crewId?:
   if (!isValidCoverageDay(start)) return [];
   const [year, month, day] = start.split("-").map(Number);
   const dates: DispatchCoverageDay[] = Array.from({ length: 7 }, (_, offset) => {
-    // Calendar-day arithmetic in UTC avoids local DST shifts; visit grouping
-    // uses the business timezone, not the reader's browser timezone.
-    const date = new Date(Date.UTC(year, month - 1, day + offset));
+    // Calendar-day arithmetic in UTC avoids local DST shifts. Date.UTC(1..99)
+    // silently interprets these as 1901..1999; setUTCFullYear preserves real
+    // Gregorian year numbers and the requested business day.
+    const date = new Date(0);
+    date.setUTCFullYear(year, month - 1, day + offset);
+    date.setUTCHours(0, 0, 0, 0);
     return {
       key: date.toISOString().slice(0, 10),
       weekday: new Intl.DateTimeFormat("en", { weekday: "short", timeZone: "UTC" }).format(date),
@@ -52,6 +55,9 @@ export function buildDispatchCoverageWeek<T extends { startAt?: string; crewId?:
       underway: 0,
     };
   });
+  // A seven-day window crossing year 9999 would produce ISO expanded years
+  // that do not fit the canonical yyyy-mm-dd URL/filter contract.
+  if (dates.some(item => !isValidCoverageDay(item.key))) return [];
   const byDate = new Map(dates.map((item) => [item.key, item]));
   for (const visit of visits) {
     if (visit.status === "CANCELLED" || !visit.startAt ||

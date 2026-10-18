@@ -43,6 +43,21 @@ describe("R35 genuine business-local dispatch dates", () => {
     expect(days).toHaveLength(7);
     expect(days[0]).toMatchObject({key:"2026-10-18",total:1,unassigned:0});
   });
+  it("preserves years 1 through 99 without Date.UTC's 1900 alias", () => {
+    const days=buildDispatchCoverageWeek([],"2026-10-18T06:00:00Z","UTC","0001-01-01");
+    expect(days).toHaveLength(7);
+    expect(days[0].key).toBe("0001-01-01");
+    expect(days[6].key).toBe("0001-01-07");
+    expect(buildDispatchCoverageWeek([],"2026-10-18T06:00:00Z","UTC","0099-12-27")[0].key)
+      .toBe("0099-12-27");
+  });
+  it("does not emit impossible expanded calendar keys near year 10000", () => {
+    expect(buildDispatchCoverageWeek([],"2026-10-18T06:00:00Z","UTC","9999-12-30"))
+      .toEqual([]);
+    expect(buildDispatchCoverageWeek([],"2026-10-18T06:00:00Z","UTC","9999-12-24"))
+      .toHaveLength(7);
+  });
+
   it("preserves valid filtered selection only for a real civil day", () => {
     expect(scheduleCoverageHref("unassigned","2026-02-28","2026-02-21","2026-02-19"))
       .toBe("?from=2026-02-21&queue=unassigned&day=2026-02-28");
