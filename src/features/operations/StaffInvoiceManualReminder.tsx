@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  verifiedStaffInvoiceReminder,
+  verifiedStaffInvoiceReminder, staffInvoiceReminderScopeKey,
   type StaffInvoiceReminderFacts,
 } from "./staff-invoice-manual-reminder";
 
@@ -12,29 +12,48 @@ import {
 export function StaffInvoiceManualReminder({
   invoice,
 }: { invoice: StaffInvoiceReminderFacts }) {
-  return <ScopedStaffInvoiceManualReminder key={invoice.id} invoice={invoice} />;
+  // Force a clean editing/confirmation state whenever the authoritative
+  // financial facts change, even while the invoice UUID remains unchanged.
+  return <ScopedStaffInvoiceManualReminder key={staffInvoiceReminderScopeKey(invoice)} invoice={invoice} />;
 }
 function ScopedStaffInvoiceManualReminder({ invoice }: { invoice: StaffInvoiceReminderFacts }) {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle"|"copied"|"manual"|"invalid">("idle");
+  const [copying, setCopying] = useState(false);
+  const pending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   async function copy() {
-    const text = typeof window !== "undefined"
-      ? verifiedStaffInvoiceReminder(invoice,window.location.origin) : null;
-    if (!text) {
-      setMessage("");
-      setStatus("invalid");
-      return;
-    }
-    setMessage(text);
+    if (pending.current) return;
+    pending.current = true;
+    setCopying(true);
     try {
+      const text = typeof window !== "undefined"
+        ? verifiedStaffInvoiceReminder(invoice,window.location.origin) : null;
+      if (!text) {
+        setMessage("");
+        setStatus("invalid");
+        return;
+      }
+      setMessage(text);
       if (!window.isSecureContext || !navigator.clipboard?.writeText) {
         setStatus("manual");
         return;
       }
-      await navigator.clipboard.writeText(text);
-      setStatus("copied");
-    } catch { setStatus("manual"); }
+      try {
+        await navigator.clipboard.writeText(text);
+        if (mounted.current) setStatus("copied");
+      } catch {
+        if (mounted.current) setStatus("manual");
+      }
+    } finally {
+      pending.current = false;
+      if (mounted.current) setCopying(false);
+    }
   }
 
   return <section aria-label="Customer invoice manual follow-up"
@@ -44,12 +63,14 @@ function ScopedStaffInvoiceManualReminder({ invoice }: { invoice: StaffInvoiceRe
     <p style={{ margin:0,fontSize:".82rem",lineHeight:1.5 }}>
       Staff must verify the recipient and share this secure sign-in link using
       an approved contact channel. Copying a reminder does not queue or send
-      a message, prove delivery or collect any payment.
+      a message, prove delivery or collect any payment. Balances can change;
+      recheck the saved invoice immediately before using any copied text.
     </p>
-    <button type="button" onClick={copy} style={{ justifySelf:"start",
+    <button type="button" onClick={copy} disabled={copying} aria-busy={copying}
+      style={{ minHeight:44, justifySelf:"start",
       background:"#194f44",color:"#fff",padding:"9px 13px",
       border:0,borderRadius:7,cursor:"pointer" }}>
-      Copy verified invoice reminder
+      {copying ? "Copying verified reminder…" : "Copy verified invoice reminder"}
     </button>
     {message ? <label style={{display:"grid",gap:4,fontSize:".8rem"}}>
       Human-reviewed reminder
