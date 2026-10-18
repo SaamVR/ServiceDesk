@@ -5,6 +5,7 @@ export const qualityQueueOptions = [
   { key: "open", label: "Open" },
   { key: "review", label: "In review" },
   { key: "overdue", label: "Overdue" },
+  { key: "unverified", label: "Timing unverified" },
   { key: "unassigned", label: "Unassigned" },
   { key: "resolved", label: "Resolved" },
 ] as const;
@@ -38,6 +39,19 @@ export function isOverdueQualityCase(item: QualityCaseRecord, snapshotAt?: strin
   const asOf = trustedQuoteInstant(snapshotAt);
   return due !== null && asOf !== null && due < asOf;
 }
+/** Unknown source deadlines are not "safe" or overdue; they need a
+ * separate owner/dispatcher follow-up rather than being silently excluded.
+ * When the snapshot clock itself is untrusted, every unresolved case has
+ * unverified timing until a new authenticated read can be obtained.
+ */
+export function isUnverifiedQualityTiming(
+  item: QualityCaseRecord, snapshotAt?: string,
+): boolean {
+  if (item.state === "RESOLVED") return false;
+  return !item.dueAt || trustedQuoteInstant(item.dueAt) === null ||
+    !snapshotAt || trustedQuoteInstant(snapshotAt) === null;
+}
+
 /** Shared, read-only attention order used by Today and the Quality queue.
  * We do not synthesize deadlines: unknown/invalid due times sort last.
  */
@@ -58,11 +72,12 @@ export function prioritizeQualityFollowUp<T extends QualityCaseRecord>(
 }
 
 export function qualityQueueCount(records: readonly QualityCaseRecord[], snapshotAt?: string): Record<QualityQueue, number> {
-  const count = { all: records.length, open: 0, review: 0, overdue: 0, unassigned: 0, resolved: 0 };
+  const count = { all: records.length, open: 0, review: 0, overdue: 0, unverified: 0, unassigned: 0, resolved: 0 };
   for (const item of records) {
     if (item.state === "OPEN") count.open++;
     if (item.state === "IN_REVIEW") count.review++;
     if (isOverdueQualityCase(item, snapshotAt)) count.overdue++;
+    if (isUnverifiedQualityTiming(item, snapshotAt)) count.unverified++;
     if (!item.ownerUserId && item.state !== "RESOLVED") count.unassigned++;
     if (item.state === "RESOLVED") count.resolved++;
   }
@@ -78,6 +93,7 @@ export function filterQualityQueue<T extends QualityCaseRecord>(
     if (queue === "open" && item.state !== "OPEN") return false;
     if (queue === "review" && item.state !== "IN_REVIEW") return false;
     if (queue === "overdue" && !isOverdueQualityCase(item, snapshotAt)) return false;
+    if (queue === "unverified" && !isUnverifiedQualityTiming(item, snapshotAt)) return false;
     if (queue === "resolved" && item.state !== "RESOLVED") return false;
     if (queue === "unassigned" && (item.ownerUserId || item.state === "RESOLVED")) return false;
     if (terms.length === 0) return true;
