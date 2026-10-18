@@ -33,6 +33,9 @@ export function buildGuardedAssistantPlan(input: GuardedAssistantPlanInput): Res
       Object.getPrototypeOf(input.modelOutput)!==Object.prototype ||
       Object.getOwnPropertySymbols(input.modelOutput).length!==0 ||
       Object.getOwnPropertyNames(input.modelOutput).length!==Object.keys(input.modelOutput).length ||
+      Object.keys(input.modelOutput).some(key=>![
+        "output","replyDraft","requestedToolCalls","citations",
+      ].includes(key)) ||
       Object.values(Object.getOwnPropertyDescriptors(input.modelOutput))
         .some(desc=>!Object.hasOwn(desc,"value"))) {
     return {ok:false,code:"AI_TURN_SCOPE_UNVERIFIED",
