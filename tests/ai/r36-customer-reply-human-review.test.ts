@@ -33,6 +33,19 @@ describe("SONIC R36 AI-C customer reply review",()=>{
    expect(JSON.stringify(r)).not.toContain("attacker.example");
   }
  });
+ it("independent critic: intercepts alternate reservation/refund confirmation grammar",()=>{
+   for(const risky of [
+     "Your reservation has been confirmed.",
+     "I've charged your card and processed the refund.",
+     "Your cleaning team has been dispatched.",
+   ]){
+     const checked=buildGuardedAssistantPlan(input(risky));
+     expect(checked).toMatchObject({ok:true,value:{
+       handoverRequired:true,
+       replyDraft:"A team member will review your service request before any quote or booking is confirmed.",
+     }});
+   }
+ });
  it("disallows bidi, unbounded, HTML and empty model replies",()=>{
   for(const draft of ["","x".repeat(1201),"Hello\u202ereversed",'<script>alert(1)</script>']){
    expect(reviewCustomerReplySafety(draft).safe).toBe(false);
