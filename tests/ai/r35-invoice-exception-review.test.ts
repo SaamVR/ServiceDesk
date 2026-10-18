@@ -45,10 +45,10 @@ describe("SONIC L16 invoice finance agent from authoritative ledger facts",()=>{
   it("flags malformed ledger values rather than attempting a payment or numeric coercion",()=>{
     for(const totalMinor of [-2,NaN,Infinity,2.5,Number.MAX_SAFE_INTEGER+1,"100"]){
       const r=planOwnerInvoiceExceptions({workspaceId,actor,invoices:[
-        inv("x",{totalMinor:totalMinor as number}),
+        inv("invoice-corrupt",{totalMinor:totalMinor as number}),
       ]});
       expect(r).toMatchObject({ok:true,value:{exceptions:[
-        {invoiceId:"x",codes:["LEDGER_TOTALS_RECONCILIATION"]}
+        {invoiceId:"invoice-corrupt",codes:["LEDGER_TOTALS_RECONCILIATION"]}
       ]}});
     }
   });
