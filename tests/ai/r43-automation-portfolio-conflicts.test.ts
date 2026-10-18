@@ -27,6 +27,21 @@ describe("R43 owner automation portfolio overlap risk",()=>{
   expect(r).toMatchObject({ok:true,value:{conflicts:[],reviewedWithoutConflicts:true,
     workflowExecuted:false,financialStateChanged:false}});
  });
+ it("independent critic: nested action must not hide an unapproved provider send or financial authority",()=>{
+   const d=draft("REQUEST_CREATED");
+   const hiddenAction=Object.defineProperty({...d.actions[0]},"sendProviderMessage",{value:true,enumerable:false});
+   const conditionsWithAccessors=[Object.defineProperty({
+     field:"request.serviceCode",operator:"EQ",value:"STANDARD"
+   },"sendProviderMessage",{value:true,enumerable:false})];
+   for(const malformed of [
+     {...d,actions:[hiddenAction]},
+     {...d,actions:[{...d.actions[0],recipient:"CUSTOMER_PRIMARY"}]},
+     {...d,actions:[{type:"CREATE_ATTENTION",severity:"CRITICAL",summaryKey:"X",paymentPaid:true}]},
+     {...d,conditions:conditionsWithAccessors},
+   ])expect(inspectOwnerAutomationPortfolio(inp([malformed]))).toMatchObject({
+      ok:false,code:"PORTFOLIO_SOURCE_INVALID"
+   });
+ });
  it("refuses cross-workspace, nonowner, foreign draft, provider rights and hidden data",()=>{
   const d=draft("REQUEST_CREATED");
   for(const x of [
