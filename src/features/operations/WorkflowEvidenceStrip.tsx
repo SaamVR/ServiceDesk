@@ -56,7 +56,7 @@ export function WorkflowEvidenceStrip({executions,actions}: {
           ? ` ${evidence.historicalActionAttempts} historical retry attempt(s) excluded from current action totals.`
           : null}
         {evidence.ambiguousActionSlots > 0
-          ? ` ${evidence.ambiguousActionSlots} conflicting action slot(s) require saved-row inspection; their results are not counted.`
+          ? ` ${evidence.ambiguousActionSlots} conflicting or inconsistent action slot(s) require saved-row inspection; their results are not counted.`
           : null}
         {evidence.internalAttentionPending > 0
           ? ` ${evidence.internalAttentionPending} internal attention action(s) remain pending.`

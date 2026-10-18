@@ -69,6 +69,22 @@ describe("SONIC workflow retry and false-outcome evidence review", () => {
       expect(result.providerDeliveryVerified).toBe(false);
     }
   });
+  it("flags action records for unmatched or skipped live decisions as inconsistent, not successful", () => {
+    for (const record of [
+      {...live,matched:false,state:"COMPLETED" as const},
+      {...live,matched:true,state:"SKIPPED" as const},
+    ]) {
+      const result=summarizeWorkflowEvidence({
+        workflowExecutions:[record],
+        workflowActionExecutions:[attempt("false-success",1,"SUCCEEDED")],
+      });
+      expect(result.recordedActionAttempts).toBe(1);
+      expect(result.ambiguousActionSlots).toBe(1);
+      expect(result.internalAttentionSucceeded).toBe(0);
+      expect(result.failedActions).toBe(0);
+      expect(result.providerDeliveryVerified).toBe(false);
+    }
+  });
   it("ignores foreign branches and previews even when their receipts say SUCCESS", () => {
     const result = summarizeWorkflowEvidence({
       workflowExecutions: [live, {...live,id:"preview",mode:"PREVIEW"}],

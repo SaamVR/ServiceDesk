@@ -29,12 +29,12 @@ export function summarizeWorkflowEvidence(input: {
 }): WorkflowEvidenceSummary {
   const executions = input.workflowExecutions ?? [];
   const live = executions.filter(item => item.mode === "LIVE");
-  const matchedLiveById = new Map(live.filter(item =>
-    item.matched === true && typeof item.id === "string" &&
+  const liveById = new Map(live.filter(item =>
+    typeof item.id === "string" &&
     typeof item.branchId === "string" && item.branchId.length > 0
   ).map(item => [item.id, item]));
   const validAttempts = (input.workflowActionExecutions ?? []).filter(item => {
-    const parent = matchedLiveById.get(item.executionId);
+    const parent = liveById.get(item.executionId);
     return Boolean(parent && item.branchId === parent.branchId &&
       Number.isSafeInteger(item.actionIndex) && item.actionIndex >= 0 &&
       Number.isSafeInteger(item.attemptNumber) && item.attemptNumber >= 1 &&
@@ -59,6 +59,13 @@ export function summarizeWorkflowEvidence(input: {
     const maxAttempt = Math.max(...rows.map(item => item.attemptNumber));
     const latest = rows.filter(item => item.attemptNumber === maxAttempt);
     historicalActionAttempts += rows.filter(item => item.attemptNumber < maxAttempt).length;
+    // An action row against an unmatched/skipped decision is inconsistent
+    // saved evidence, not proof that the workflow actually succeeded.
+    const parent = liveById.get(rows[0].executionId);
+    if (parent?.matched !== true || parent.state === "SKIPPED") {
+      ambiguousActionSlots++;
+      continue;
+    }
     // Duplicate highest attempts and impossible action-type changes must
     // NEVER be promoted to current operational proof. The bounded source
     // query can also omit the actual latest attempt; this remains a sample.
