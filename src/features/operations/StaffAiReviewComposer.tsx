@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   parseReviewedAiDraft,
   parseReviewedReplyReceipt,
@@ -43,6 +43,7 @@ function ScopedStaffAiReviewComposer({
   expectedVersion,
 }: StaffAiReviewProps) {
   const [draft, setDraft] = useState<ReviewedAiDraft>();
+  const replyFieldId = useId();
   const [body, setBody] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState<"idle" | "drafting" | "approving">("idle");
@@ -80,7 +81,7 @@ function ScopedStaffAiReviewComposer({
         return;
       }
       const parsed = parseReviewedAiDraft(await response.json() as unknown, conversationId, sourceMessageId);
-      if (pending.signal.aborted) return;
+      if (pending.signal.aborted || requestSignal.aborted || controller.current !== pending) return;
       if (!parsed) {
         setError("draft");
         return;
@@ -215,12 +216,12 @@ function ScopedStaffAiReviewComposer({
             {draft.handoverRequired ? (
               <p className={styles.warning}>AI identified a handover requirement. This suggestion cannot be queued here. Use the standard human reply workflow.</p>
             ) : null}
-            <label className={styles.label} htmlFor="ai-reviewed-reply">
+            <label className={styles.label} htmlFor={replyFieldId}>
               Review and edit the proposed reply
             </label>
             <textarea
               className={styles.input}
-              id="ai-reviewed-reply"
+              id={replyFieldId}
               value={body}
               maxLength={4000}
               rows={5}

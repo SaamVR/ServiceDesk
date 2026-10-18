@@ -18,8 +18,12 @@ describe("Sonic staff AI draft versus durable reply approval deadlines", () => {
   });
   it("never publishes buffered model or approval results after abort or supersession", () => {
     expect(source).toContain("requestSignal.aborted || controller.current !== pending");
+    expect(source).toContain("if (pending.signal.aborted || requestSignal.aborted || controller.current !== pending) return;");
     expect(source).toContain("requestSignal.aborted || pending.signal.aborted || controller.current !== pending");
     expect(source).toContain("controller.current = null;");
+    expect(source).toContain("const replyFieldId = useId()");
+    expect(source).toContain("htmlFor={replyFieldId}");
+    expect(source).toContain("id={replyFieldId}");
     expect(source).toContain("parseReviewedReplyReceipt");
     expect(source).toContain("idempotencyKey.current ??= crypto.randomUUID()");
   });
