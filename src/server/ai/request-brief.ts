@@ -17,7 +17,7 @@ export interface RequestBrief {
   model: string;
   briefing: string;
   /** Deterministic missing-fact checks, never an AI-triggered customer send. */
-  reviewChecks: SavedRequestReviewCheck[];
+  reviewChecks?: SavedRequestReviewCheck[];
   source: "AUTHORIZED_SAVED_REQUEST";
 }
 
