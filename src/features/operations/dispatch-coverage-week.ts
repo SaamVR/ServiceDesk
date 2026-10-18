@@ -54,7 +54,8 @@ export function buildDispatchCoverageWeek<T extends { startAt?: string; crewId?:
   });
   const byDate = new Map(dates.map((item) => [item.key, item]));
   for (const visit of visits) {
-    if (visit.status === "CANCELLED" || trustedQuoteInstant(visit.startAt) === null) continue;
+    if (visit.status === "CANCELLED" || !visit.startAt ||
+        trustedQuoteInstant(visit.startAt) === null) continue;
     const date = byDate.get(localDayKey(visit.startAt) ?? "");
     if (!date) continue;
     date.total += 1;
