@@ -22,7 +22,7 @@ describe("R36 real owner-reviewed AI workflow DRAFT persistence",()=>{
   it("requires exact hypothetical preview plus human review before save click",()=>{
     const ui=read("src/features/operations/OwnerWorkflowRuleAssistant.tsx");
     expect(ui).toContain("I reviewed the exact compiled rule");
-    expect(ui).toContain("if(!suggestion || !preview || !reviewConfirmed");
+    expect(ui).toContain("!suggestion || !preview || !reviewConfirmed");
     expect(ui).toContain("saveOwnerReviewedWorkflowDraft({");
     expect(ui).toContain('response.state!=="DRAFT_SAVED_OWNER_PREVIEW_REQUIRED"');
     expect(ui).toContain("setReviewConfirmed(false)");
@@ -33,7 +33,7 @@ describe("R36 real owner-reviewed AI workflow DRAFT persistence",()=>{
     expect(ui).toContain("disabled={!draftWritable || !preview");
     expect(ui).toContain("new paid model request is disabled");
     expect(ui).toContain("at most 24 authorized branches");
-    expect(ui).toContain("if(savePending.current || !suggestion");
+    expect(ui).toContain("!draftWritable || savePending.current || !suggestion");
     expect(ui).toContain("savePending.current=false");
     expect(ui).toContain("draftSaved");
     expect(ui).toContain("before retrying to avoid duplicate drafts");
