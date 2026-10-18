@@ -32,7 +32,8 @@ describe("R35 L21 owner recovery inspector uses genuine source counts only",()=>
     expect(src).toContain("readOwnerQuoteRecoverySummary(workspaceSlug)");
     expect(src).toContain('if (proof.state === "OWNER_REQUIRED") return null');
     expect(src).toContain("Inspect authorized workflow evidence");
-    expect(src).toContain("not evidence of an empty queue");
+    expect(src).toContain("evidence of an empty queue");
+    expect(src).toContain("This is <strong>not</strong>");
     expect(src).toContain("point-in-time read without a persisted timestamp");
     expect(src).not.toContain("runOwnerSavedOperationalAutomation(");
     expect(src).not.toContain("retryOperationalWorkflowAction(");
