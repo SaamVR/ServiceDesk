@@ -39,7 +39,7 @@ describe("R41 AI-D saved scope dispatch assistance (no autonomous assignments)",
  });
  it("rejects overlapping assigned crew and clearly reports inability to confirm a fit",()=>{
    const snapshot=build();
-   snapshot.visits.push({...snapshot.visits[0],id:"visit-2",crewId:"crew-1"});
+   snapshot.visits=[...snapshot.visits,{...snapshot.visits[0],id:"visit-2",crewId:"crew-1"}];
    expect(prepareDispatchAiReview({actor,workspaceId,snapshot}))
      .toMatchObject({ok:true,value:{withVerifiedFit:0,needingManualReview:1,
        proposals:[{blockedReasonCodes:["SCHEDULE_OVERLAP"],confidence:"NONE"}]}});
