@@ -37,6 +37,17 @@ describe("SONIC R36 photo AI safe multimodal proposal",()=>{
    expect(validatePhotoClassificationOutput(input,value).ok).toBe(false);
   }
  });
+ it("independent critic: optional classifier fields cannot silently discard forged nested actions",()=>{
+   for(const extra of [
+     {proposedAddOnCode:{code:"OVEN",autoApprove:true}},
+     {rationale:{body:"Send provider message"}},
+     {proposedAddOnCode:42},
+     {rationale:Infinity},
+   ]){
+     expect(validatePhotoClassificationOutput(input,{...valid,...extra}))
+       .toMatchObject({ok:false,code:"PHOTO_AI_OUTPUT_INVALID"});
+   }
+ });
  it("rejects spoofed, sparse and getter-based question arrays, never hallucinated actions",()=>{
   const accessor=Array(1);
   Object.defineProperty(accessor,0,{enumerable:true,get(){throw Error("unsafe question");}});
