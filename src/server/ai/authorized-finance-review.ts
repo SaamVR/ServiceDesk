@@ -17,10 +17,9 @@ const slugValid=(slug:unknown)=>typeof slug==="string" &&
   slug.length>=3 && slug.length<=40 &&
   /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
 
-function identity(snapshot:unknown, slug:string):snapshot is
+function identity(snapshot:Awaited<ReturnType<Loader>>, slug:string):snapshot is
   Extract<Awaited<ReturnType<Loader>>,{ok:true}> {
-  if(!snapshot || typeof snapshot!=="object" ||
-    !("ok" in snapshot) || snapshot.ok!==true)return false;
+  if(!snapshot.ok)return false;
   const value=snapshot.value;
   return !!value && value.workspace.slug===slug &&
     typeof value.workspace.id==="string" &&
