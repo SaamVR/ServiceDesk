@@ -41,7 +41,7 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
     // A route change must dismiss stale navigation and leave focus in the
     // newly active page rather than trapping it behind a modal.
     dialog.current?.close();
-  }, [pathname]);
+  }, [pathname, workspace]);
 
   const matches = searchStaffDestinations(workspace, query);
   const recordSearches = buildStaffRecordSearches(workspace, query);
@@ -109,7 +109,7 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
         <div ref={results} className={styles.results} onKeyDown={handleResultKeyDown} aria-live="polite" aria-label="Workspace destinations">
           {matches.length ? matches.map(destination => (
             <Link
-              key={destination.module}
+              key={destination.href}
               href={destination.href}
               onClick={close}
               className={styles.result}
