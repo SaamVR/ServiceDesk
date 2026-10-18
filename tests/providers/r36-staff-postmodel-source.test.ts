@@ -82,6 +82,16 @@ describe("SONIC R36 staff AI post-provider saved authority",()=>{
      expect(JSON.stringify(r)).not.toContain("Staff should review");
    }
  });
+ it("independent critic: refuses a switched provider channel or inbound message author",async()=>{
+    const switched=fixture({afterConversation:{...baseConv,channel:"WHATSAPP"}});
+    expect(await executeAuthorizedStaffAiTurn(invocation,switched.data))
+      .toMatchObject({ok:false,code:"AI_STAFF_SOURCE_CHANGED"});
+    const forged=fixture({afterMessage:{...baseMessage,sender_kind:"STAFF",direction:"OUTBOUND"}});
+    expect(await executeAuthorizedStaffAiTurn(invocation,forged.data))
+      .toMatchObject({ok:false,code:"AI_STAFF_SOURCE_CHANGED"});
+    expect(switched.counts().calls).toBe(1);
+    expect(forged.counts().calls).toBe(1);
+  });
  it("refuses a changed inbound message body after the model used the original",async()=>{
    const x=fixture({afterMessage:{...baseMessage,body:"different sensitive message"}});
    expect(await executeAuthorizedStaffAiTurn(invocation,x.data))
