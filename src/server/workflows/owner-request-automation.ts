@@ -206,11 +206,22 @@ export async function runOwnerSavedRequestAutomation(
       if (!applied.ok) {
         return fail("REQUEST_WORKFLOW_ATTENTION_FAILED", "Internal attention action failed; inspect the execution log.");
       }
+      // An arbitrary attention in the same tenant is NOT proof that the
+      // exact workflow action was applied. Verify action identity and the
+      // saved row's execution provenance before claiming completion.
+      if (applied.value.actionExecutionId !== action.id) {
+        return fail("REQUEST_WORKFLOW_ATTENTION_UNVERIFIED", "Attention action identity was not verified.");
+      }
       const proof = await service.from("attention_items")
-        .select("id").eq("id", applied.value.attentionItemId)
+        .select("id,workspace_id,resource_type,resource_id,type")
+        .eq("id", applied.value.attentionItemId)
         .eq("workspace_id", workspace.id).maybeSingle();
-      if (proof.error || proof.data?.id !== applied.value.attentionItemId) {
-        return fail("REQUEST_WORKFLOW_ATTENTION_UNVERIFIED", "Attention was not readable after execution.");
+      if (proof.error || proof.data?.id !== applied.value.attentionItemId ||
+          proof.data.workspace_id !== workspace.id ||
+          proof.data.resource_type !== "workflow_execution" ||
+          proof.data.resource_id !== recorded.value.executionId ||
+          proof.data.type !== "WORKFLOW_RULE") {
+        return fail("REQUEST_WORKFLOW_ATTENTION_UNVERIFIED", "Attention was not linked to this exact workflow execution.");
       }
       completedAttentionActions++;
     }

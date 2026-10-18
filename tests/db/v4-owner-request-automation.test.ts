@@ -10,7 +10,7 @@ const requestId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const actionId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const attentionId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 
-function fixture(options: { role?: string; mode?: "SERVICE_ROLE" | "QA_SESSION_RLS"; missing?: boolean; pending?: boolean; duplicate?: boolean; drift?: boolean } = {}) {
+function fixture(options: { role?: string; mode?: "SERVICE_ROLE" | "QA_SESSION_RLS"; missing?: boolean; pending?: boolean; duplicate?: boolean; drift?: boolean; wrongAttentionLink?: boolean; wrongAttentionType?: boolean; wrongActionReceipt?: boolean } = {}) {
   const visited: string[] = [];
   let pending = options.pending ?? true;
   const tables: Record<string, Record<string, unknown>[]> = {
@@ -22,7 +22,9 @@ function fixture(options: { role?: string; mode?: "SERVICE_ROLE" | "QA_SESSION_R
         { type: "SEND_EMAIL_TEMPLATE", templateKey: "fictional", recipient: "CUSTOMER_PRIMARY" }],
       max_actions_per_event: 3, created_at: "2026-10-12T00:00:00.000Z" }],
     workflow_action_executions: [{ id: actionId, workspace_id: workspaceId, branch_id: branchId, execution_id: "execution-1", action_type: "CREATE_ATTENTION", state: "PENDING" }],
-    attention_items: [{ id: attentionId, workspace_id: workspaceId }],
+    attention_items: [{ id: attentionId, workspace_id: workspaceId,resource_type:"workflow_execution",
+      resource_id:options.wrongAttentionLink?"another-execution":"execution-1",
+      type:options.wrongAttentionType?"CUSTOMER_ISSUE":"WORKFLOW_RULE" }],
     workflow_executions: [{ id: "execution-1", workspace_id: workspaceId, branch_id: branchId,
       rule_version_id: "version-1", event_fingerprint: options.drift ? "stale-original-fingerprint" : "original-event-fingerprint", matched: true }],
   };
@@ -52,7 +54,7 @@ function fixture(options: { role?: string; mode?: "SERVICE_ROLE" | "QA_SESSION_R
   });
   const executeAttentionAction = vi.fn(async () => {
     pending = false;
-    return { ok: true as const, value: { actionExecutionId: actionId, attentionItemId: attentionId } };
+    return { ok: true as const, value: { actionExecutionId: options.wrongActionReceipt?"other-action":actionId, attentionItemId: attentionId } };
   });
   const resolveActor = vi.fn(async () => ({ ok: true as const, value: {
     workspace: { id: workspaceId, slug: "fictional-qa" },
@@ -132,4 +134,12 @@ describe("V4 owner-controlled persisted request automations", () => {
     expect(outcome).toMatchObject({ ok: true, value: { completedAttentionActions: 0 } });
     expect(t.executeAttentionAction).not.toHaveBeenCalled();
   });
+  it("refuses unrelated same-workspace attention and mismatched action receipt even when RPC reports success", async () => {
+    for (const option of [{wrongAttentionLink:true},{wrongAttentionType:true},{wrongActionReceipt:true}]) {
+      const t=fixture(option);
+      expect(await runOwnerSavedRequestAutomation("fictional-qa",requestId,t.deps))
+        .toMatchObject({ok:false,code:"REQUEST_WORKFLOW_ATTENTION_UNVERIFIED"});
+    }
+  });
+
 });
