@@ -1,0 +1,5 @@
+# SONIC R38 C26 — bounded approval/version-aware knowledge retrieval
+
+This is a functional improvement to the existing live `ApprovedKnowledgeIndex` consumed by the staff AI intake runtime. It never admits foreign tenant chunks, unapproved or truthy-string approvals, malformed/hideable metadata, unsupported provenance versions, unsafe control characters or unbounded result fanout. Duplicate document/chunk IDs pick latest approved revision; conflicting content for the same revision is **not** a defensible citation and is excluded. The search remains non-mutating, uses existing deterministic keyword ranking, and returns only short, citation-ready source snippets.
+
+Performance: caps search query to 8192 characters, response to 8 chunks, document text to 4096 characters; no network/model call. This changes retrieval quality and cannot by itself prove provider-grounded answers or signed-in merchant delivery. Production catalog still needs tenant-authorized Supabase query; owner human review remains required.
