@@ -20,6 +20,7 @@ function ScopedStaffInvoiceManualReminder({ invoice }: { invoice: StaffInvoiceRe
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle"|"copied"|"manual"|"invalid">("idle");
   const [copying, setCopying] = useState(false);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const pending = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -28,7 +29,7 @@ function ScopedStaffInvoiceManualReminder({ invoice }: { invoice: StaffInvoiceRe
   }, []);
 
   async function copy() {
-    if (pending.current) return;
+    if (pending.current || !reviewConfirmed) return;
     pending.current = true;
     setCopying(true);
     try {
@@ -66,11 +67,19 @@ function ScopedStaffInvoiceManualReminder({ invoice }: { invoice: StaffInvoiceRe
       a message, prove delivery or collect any payment. Balances can change;
       recheck the saved invoice immediately before using any copied text.
     </p>
-    <button type="button" onClick={copy} disabled={copying} aria-busy={copying}
+    <label style={{display:"flex",alignItems:"flex-start",gap:9,fontSize:".83rem",lineHeight:1.6}}>
+      <input type="checkbox" checked={reviewConfirmed} disabled={copying}
+        onChange={event=>setReviewConfirmed(event.target.checked)}
+        style={{height:20,width:20,flex:"0 0 20px",marginTop:2}} />
+      <span>I verified the saved invoice, accepted quote and current balance,
+        and will independently confirm the correct recipient and authorized
+        contact channel before sharing any copied message.</span>
+    </label>
+    <button type="button" onClick={copy} disabled={copying || !reviewConfirmed} aria-busy={copying}
       style={{ minHeight:44, justifySelf:"start",
       background:"#194f44",color:"#fff",padding:"9px 13px",
       border:0,borderRadius:7,cursor:"pointer" }}>
-      {copying ? "Copying verified reminder…" : "Copy verified invoice reminder"}
+      {copying ? "Copying verified reminder…" : "Copy reviewed invoice reminder"}
     </button>
     {message ? <label style={{display:"grid",gap:4,fontSize:".8rem"}}>
       Human-reviewed reminder
