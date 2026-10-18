@@ -21,6 +21,9 @@ export async function OwnerQuoteRecoveryQueue({ workspaceSlug }: { workspaceSlug
   const proof = await readOwnerQuoteRecoverySummary(workspaceSlug);
   if (proof.state === "OWNER_REQUIRED") return null;
   const consistent = isConsistentOwnerRecoveryAggregate(proof);
+  // Preserve the initial source state independently from the guarded JSX
+  // branch; a malformed AVAILABLE aggregate must show a distinct warning.
+  const inconsistentSaved = proof.state === "AVAILABLE" && !consistent;
   const guidance = summarizeOwnerRecoveryReview(proof);
   const automationHref = buildStaffModuleHref(workspaceSlug, "automations");
   return (
@@ -39,7 +42,7 @@ export async function OwnerQuoteRecoveryQueue({ workspaceSlug }: { workspaceSlug
       {!consistent ? (
         <div className={styles.unavailable} role="status">
           <strong>Recovery queue cannot be verified</strong>
-          <p>{proof.state === "AVAILABLE"
+          <p>{inconsistentSaved
             ? "Independent queue counts conflict with current due or lease totals. Refresh authorized records before taking action."
             : "Queue data is unavailable or migration 0063 is not yet installed."}
             This is <strong>not</strong> evidence of an empty queue or an active worker.</p>
