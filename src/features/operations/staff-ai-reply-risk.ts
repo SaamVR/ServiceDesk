@@ -30,3 +30,13 @@ export function detectStaffReplyRisks(text:unknown):StaffReplyRisk[]{
     risks.push("BOOKING_COMMITMENT");
   return risks;
 }
+
+/** Model output is screened, but a later paste may reintroduce invisible
+ * bidi or control characters. Keep ordinary newlines and tabs for staff.
+ */
+export function hasUnsafeReplyFormatting(value:unknown):boolean{
+  return typeof value==="string" && (
+    /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value) ||
+    /[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(value)
+  );
+}

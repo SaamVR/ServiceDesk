@@ -11,7 +11,9 @@ import {
 } from "./staff-ai-review-contract";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
-import { detectStaffReplyRisks, staffReplyRiskLabels } from "./staff-ai-reply-risk";
+import {
+  detectStaffReplyRisks, hasUnsafeReplyFormatting, staffReplyRiskLabels,
+} from "./staff-ai-reply-risk";
 import { boundedStaffRequestSignal, STAFF_AI_DRAFT_TIMEOUT_MS } from "./staff-ai-request-signal";
 import styles from "./StaffAiReviewComposer.module.css";
 
@@ -127,6 +129,7 @@ function ScopedStaffAiReviewComposer({
     // Cancelling the browser request does not certify that provider billing stopped.
   }
 
+  const unsafeFormatting = hasUnsafeReplyFormatting(body);
   const reviewRisks = detectStaffReplyRisks(body);
   const needsSensitiveReview = reviewRisks.length > 0;
   async function approve() {
@@ -134,7 +137,8 @@ function ScopedStaffAiReviewComposer({
     // Approval is a durable, idempotent command. Never abort a still-running
     // approval and issue a second network command before React sets busy.
     if (busy !== "idle" || controller.current || !draft || draft.handoverRequired ||
-        !confirmed || (needsSensitiveReview && !sensitiveConfirmed) ||
+        !confirmed || unsafeFormatting ||
+        (needsSensitiveReview && !sensitiveConfirmed) ||
         !reviewedBody || reviewedBody.length > 4_000 ||
         receipt || error === "stale") return;
     const pending = new AbortController();
@@ -203,7 +207,8 @@ function ScopedStaffAiReviewComposer({
 
   const canApprove = Boolean(draft && !draft.handoverRequired &&
     body.trim().length > 0 && body.trim().length <= 4_000 &&
-    confirmed && (!needsSensitiveReview || sensitiveConfirmed) &&
+    confirmed && !unsafeFormatting &&
+    (!needsSensitiveReview || sensitiveConfirmed) &&
     busy === "idle" && !receipt && error !== "stale");
 
   return (
@@ -266,6 +271,10 @@ function ScopedStaffAiReviewComposer({
               disabled={busy !== "idle" || draft.handoverRequired}
             />
             <p className={styles.limit}>{body.length}/4000 characters · generated suggestions are not verified facts</p>
+            {unsafeFormatting ? <p className={styles.warning} role="alert">
+              Edited reply contains hidden or unsafe formatting controls.
+              Remove those characters before approving or queueing a response.
+            </p> : null}
             {!draft.handoverRequired ? (
               <>
                 {needsSensitiveReview ? <div className={styles.warning}

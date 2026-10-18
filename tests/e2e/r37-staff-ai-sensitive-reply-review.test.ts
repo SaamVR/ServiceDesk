@@ -2,7 +2,7 @@ import {describe,expect,it} from "vitest";
 import {readFileSync} from "node:fs";
 import {join} from "node:path";
 import {
- detectStaffReplyRisks,staffReplyRiskLabels,
+ detectStaffReplyRisks,staffReplyRiskLabels,hasUnsafeReplyFormatting,
 } from "../../src/features/operations/staff-ai-reply-risk";
 const ui=readFileSync(join(process.cwd(),
  "src/features/operations/StaffAiReviewComposer.tsx"),"utf8");
@@ -35,6 +35,17 @@ describe("R37 deliberate higher-risk AI reply review",()=>{
    expect(JSON.stringify(result)).not.toContain("jane");
    expect(Object.keys(staffReplyRiskLabels)).toHaveLength(4);
    expect(result.every(x=>typeof staffReplyRiskLabels[x]==="string")).toBe(true);
+ });
+ it("blocks edited text-direction spoofing while allowing readable paragraphs",()=>{
+   expect(hasUnsafeReplyFormatting("Hello,\nPlease share your date.\tThanks")).toBe(false);
+   expect(hasUnsafeReplyFormatting("Pay "+String.fromCodePoint(0x202e)+"$500")).toBe(true);
+   expect(hasUnsafeReplyFormatting("Call "+String.fromCodePoint(0x200b)+"this")).toBe(true);
+   expect(hasUnsafeReplyFormatting("Quote "+String.fromCharCode(0)+"complete")).toBe(true);
+   expect(hasUnsafeReplyFormatting(undefined)).toBe(false);
+   expect(ui).toContain("const unsafeFormatting = hasUnsafeReplyFormatting(body)");
+   expect(ui).toContain("!confirmed || unsafeFormatting");
+   expect(ui).toContain("confirmed && !unsafeFormatting");
+   expect(ui).toContain("Remove those characters before approving");
  });
  it("requires TWO independent confirmations for sensitive edited replies",()=>{
    expect(ui).toContain("const reviewRisks = detectStaffReplyRisks(body)");
