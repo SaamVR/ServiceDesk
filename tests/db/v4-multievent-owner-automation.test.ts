@@ -23,6 +23,7 @@ function fixture(eventType: OwnerOperationalEventType,options:{
   role?:string;mode?:"SERVICE_ROLE"|"QA_SESSION_RLS";sourceStatus?:string;
   otherTenant?:boolean;wrongBranch?:boolean;duplicate?:boolean;drift?:boolean;workflowGenerated?:boolean;
   quoteDrift?:boolean;invoiceAmountDrift?:boolean;
+  wrongAttentionLink?:boolean;wrongAttentionType?:boolean;wrongActionReceipt?:boolean;
 }={}) {
   let isPending = true;
   const selectedStatus = options.sourceStatus ??
@@ -61,7 +62,9 @@ function fixture(eventType: OwnerOperationalEventType,options:{
         type:"REQUEST_DELAYED",severity:"CRITICAL",
         resource_type:options.workflowGenerated?"WORKFLOW_EXECUTION":"request",
         resource_id:request},
-      {id:attentionId,workspace_id:workspace},
+      {id:attentionId,workspace_id:workspace,resource_type:"workflow_execution",
+        resource_id:options.wrongAttentionLink?"other-execution":"execution-1",
+        type:options.wrongAttentionType?"CUSTOMER_ISSUE":"WORKFLOW_RULE"},
     ],
   };
   const tableNames:string[]=[];
@@ -89,7 +92,8 @@ function fixture(eventType: OwnerOperationalEventType,options:{
   });
   const executeAttentionAction=vi.fn(async()=>{
     isPending=false;
-    return {ok:true as const,value:{attentionItemId:attentionId,actionExecutionId:actionId}};
+    return {ok:true as const,value:{attentionItemId:attentionId,
+      actionExecutionId:options.wrongActionReceipt?"other-action":actionId}};
   });
   const resolveActor=vi.fn(async()=>({ok:true as const,value:{
     workspace:{id:workspace,slug:"fictional-qa"},
@@ -167,4 +171,14 @@ describe("Owner-run persisted operational milestones",()=>{
       .toMatchObject({ok:false,code:"OPERATIONAL_AUTOMATION_EVENT_DRIFT"});
     expect(changed.executeAttentionAction).not.toHaveBeenCalled();
   });
+  it("rejects forged same-tenant attention provenance and mismatched action receipt in every source milestone",async()=>{
+    for (const row of cases) {
+      for (const option of [{wrongAttentionLink:true},{wrongAttentionType:true},{wrongActionReceipt:true}]) {
+        const t=fixture(row.kind,option);
+        expect(await runOwnerSavedOperationalAutomation("fictional-qa",row.kind,row.id,t.deps))
+          .toMatchObject({ok:false,code:"OPERATIONAL_AUTOMATION_ATTENTION_UNVERIFIED"});
+      }
+    }
+  });
+
 });

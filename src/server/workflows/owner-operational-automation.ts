@@ -254,10 +254,19 @@ export async function runOwnerSavedOperationalAutomation(
     for (const action of pending.data) {
       const applied=await port.executeAttentionAction(workspace.id,String(action.id));
       if (!applied.ok) return fail("OPERATIONAL_AUTOMATION_ATTENTION_FAILED","Internal attention action could not be saved.");
-      const proof=await service.from("attention_items").select("id")
+      // The RPC's returned UUID alone cannot certify execution. Assert its
+      // original action identity and exact causal saved attention linkage.
+      if (applied.value.actionExecutionId !== action.id)
+        return fail("OPERATIONAL_AUTOMATION_ATTENTION_UNVERIFIED","Workflow action receipt does not match.");
+      const proof=await service.from("attention_items")
+        .select("id,workspace_id,resource_type,resource_id,type")
         .eq("id",applied.value.attentionItemId).eq("workspace_id",workspace.id).maybeSingle();
-      if (proof.error || proof.data?.id !== applied.value.attentionItemId) {
-        return fail("OPERATIONAL_AUTOMATION_ATTENTION_UNVERIFIED","Saved attention item could not be read back.");
+      if (proof.error || proof.data?.id !== applied.value.attentionItemId ||
+          proof.data.workspace_id !== workspace.id ||
+          proof.data.resource_type !== "workflow_execution" ||
+          proof.data.resource_id !== result.value.executionId ||
+          proof.data.type !== "WORKFLOW_RULE") {
+        return fail("OPERATIONAL_AUTOMATION_ATTENTION_UNVERIFIED","Saved attention is not linked to this exact workflow execution.");
       }
       completedAttentionActions++;
     }
