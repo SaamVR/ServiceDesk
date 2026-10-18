@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { readOwnerQuoteRecoverySummary } from "@/server/workflows/owner-quote-recovery-queue";
 import { buildStaffModuleHref } from "./staff-modules";
-import { summarizeOwnerRecoveryReview } from "./owner-quote-recovery-guide";
+import { isConsistentOwnerRecoveryAggregate, summarizeOwnerRecoveryReview } from "./owner-quote-recovery-guide";
 import styles from "./OwnerQuoteRecoveryQueue.module.css";
 
 const states = [
@@ -20,6 +20,7 @@ const states = [
 export async function OwnerQuoteRecoveryQueue({ workspaceSlug }: { workspaceSlug: string }) {
   const proof = await readOwnerQuoteRecoverySummary(workspaceSlug);
   if (proof.state === "OWNER_REQUIRED") return null;
+  const consistent = isConsistentOwnerRecoveryAggregate(proof);
   const guidance = summarizeOwnerRecoveryReview(proof);
   const automationHref = buildStaffModuleHref(workspaceSlug, "automations");
   return (
@@ -32,13 +33,15 @@ export async function OwnerQuoteRecoveryQueue({ workspaceSlug }: { workspaceSlug
             taking action. This panel cannot activate or retry a worker.</p>
         </div>
         <span className={styles.source}>
-          {proof.state === "AVAILABLE" ? "Saved database counts" : "Source unavailable"}
+          {consistent ? "Saved database counts" : "Source unverified"}
         </span>
       </header>
-      {proof.state !== "AVAILABLE" ? (
+      {!consistent ? (
         <div className={styles.unavailable} role="status">
           <strong>Recovery queue cannot be verified</strong>
-          <p>Queue data is unavailable or migration 0063 is not yet installed.
+          <p>{proof.state === "AVAILABLE"
+            ? "Independent queue counts conflict with current due or lease totals. Refresh authorized records before taking action."
+            : "Queue data is unavailable or migration 0063 is not yet installed."}
             This is <strong>not</strong> evidence of an empty queue or an active worker.</p>
           <Link href={automationHref}>Review the Automation workspace →</Link>
         </div>

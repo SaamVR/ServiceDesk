@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { summarizeOwnerRecoveryReview } from "../../src/features/operations/owner-quote-recovery-guide";
+import { isConsistentOwnerRecoveryAggregate, summarizeOwnerRecoveryReview } from "../../src/features/operations/owner-quote-recovery-guide";
 
 const available=(counts={PENDING:0,PROCESSING:0,RETRY_PENDING:0,DEAD_LETTER:0,SUCCEEDED:0,SKIPPED:0},
   health={dueNow:0,expiredLeases:0}) => ({
@@ -24,6 +24,25 @@ describe("R35 L21 owner recovery inspector uses genuine source counts only",()=>
     expect(summarizeOwnerRecoveryReview({state:"OWNER_REQUIRED"})).toEqual([]);
     expect(summarizeOwnerRecoveryReview(available())).toEqual([]);
   });
+  it("fails closed when non-atomic recovery count queries return impossible health aggregates",()=>{
+    const valid=available({PENDING:4,PROCESSING:3,RETRY_PENDING:2,
+      DEAD_LETTER:1,SUCCEEDED:2,SKIPPED:0},{dueNow:5,expiredLeases:2});
+    expect(isConsistentOwnerRecoveryAggregate(valid)).toBe(true);
+    const impossible=[
+      available({PENDING:1,PROCESSING:3,RETRY_PENDING:2,
+        DEAD_LETTER:0,SUCCEEDED:0,SKIPPED:0},{dueNow:4,expiredLeases:1}),
+      available({PENDING:1,PROCESSING:3,RETRY_PENDING:2,
+        DEAD_LETTER:0,SUCCEEDED:0,SKIPPED:0},{dueNow:1,expiredLeases:4}),
+      available({PENDING:1,PROCESSING:-1,RETRY_PENDING:2,
+        DEAD_LETTER:0,SUCCEEDED:0,SKIPPED:0},{dueNow:1,expiredLeases:0}),
+      available({PENDING:1,PROCESSING:2,RETRY_PENDING:2,
+        DEAD_LETTER:NaN,SUCCEEDED:0,SKIPPED:0},{dueNow:1,expiredLeases:0}),
+    ];
+    for(const source of impossible){
+      expect(isConsistentOwnerRecoveryAggregate(source)).toBe(false);
+      expect(summarizeOwnerRecoveryReview(source)).toEqual([]);
+    }
+  });
   it("does not leak customer contact or invent a retry action from the server component",()=>{
     const src=readFileSync(join(process.cwd(),
       "src/features/operations/OwnerQuoteRecoveryQueue.tsx"),"utf8");
@@ -35,6 +54,8 @@ describe("R35 L21 owner recovery inspector uses genuine source counts only",()=>
     expect(src).toContain("evidence of an empty queue");
     expect(src).toContain("This is <strong>not</strong>");
     expect(src).toContain("point-in-time read without a persisted timestamp");
+    expect(src).toContain("isConsistentOwnerRecoveryAggregate(proof)");
+    expect(src).toContain("Independent queue counts conflict");
     expect(src).not.toContain("runOwnerSavedOperationalAutomation(");
     expect(src).not.toContain("retryOperationalWorkflowAction(");
     expect(src).not.toContain("fetch(");
