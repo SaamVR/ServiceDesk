@@ -1,0 +1,3 @@
+# SONIC L24 — owner authenticated finance review HTTP
+
+Connects previously verified `loadAuthorizedOwnerFinanceReview` to an internal same-origin POST endpoint. Requires exact one field `workspaceSlug`, bounded JSON, trusted browser Origin/Fetch-Site, no-store responses; actual service double-reads verified owner ledger and identity. No provider access, customer sends, payment state changes or model inference. Tests use injected fictional owner returns with no external connections. The UI remains owned by a separate product lane. Real signed-in staging owner and cross-tenant HTTP acceptance remain release gates.

@@ -1,0 +1,3 @@
+# SONIC R35 L16 — authenticated owner finance review from real saved data
+
+Connects the L16 pure ledger anomaly engine to existing `loadOperationalStaffSnapshot` authenticated server loader. A signed-in OWNER must have the same user/workspace/slug on both reads, fresh loadedAt, and identical exact persisted financial facts. Any role change, invoice correction, unavailable source or tenant drift yields no suggestions. No financial amounts/contacts are returned; no AI inference, outbound messages, refund/charge or automatic job. Next UI product lane can expose this owner-only service as read-only exception triage. Two-faction signed-in UAT and staging migrations remain separate from source tests.
