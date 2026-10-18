@@ -23,7 +23,7 @@ function fixture(eventType: OwnerOperationalEventType,options:{
   role?:string;mode?:"SERVICE_ROLE"|"QA_SESSION_RLS";sourceStatus?:string;
   otherTenant?:boolean;wrongBranch?:boolean;duplicate?:boolean;drift?:boolean;workflowGenerated?:boolean;
   quoteDrift?:boolean;invoiceAmountDrift?:boolean;
-  wrongAttentionLink?:boolean;wrongAttentionType?:boolean;wrongActionReceipt?:boolean;
+  wrongAttentionLink?:boolean;wrongAttentionType?:boolean;wrongActionReceipt?:boolean;duplicateAttentionReuse?:boolean;
 }={}) {
   let isPending = true;
   const selectedStatus = options.sourceStatus ??
@@ -67,6 +67,10 @@ function fixture(eventType: OwnerOperationalEventType,options:{
         type:options.wrongAttentionType?"CUSTOMER_ISSUE":"WORKFLOW_RULE"},
     ],
   };
+  if (options.duplicateAttentionReuse)rows.workflow_action_executions.push({
+    id:"55555555-5555-4555-8555-555555555555",workspace_id:workspace,branch_id:branch,
+    execution_id:"execution-1",action_type:"CREATE_ATTENTION",state:"PENDING",
+  });
   const tableNames:string[]=[];
   const service = { from(table:string) {
     tableNames.push(table);
@@ -90,10 +94,10 @@ function fixture(eventType: OwnerOperationalEventType,options:{
       plan:{matched:true,eventFingerprint:"current-fingerprint",
         actionPlans:[{requiresOwnerApproval:false},{requiresOwnerApproval:true}]}}};
   });
-  const executeAttentionAction=vi.fn(async()=>{
+  const executeAttentionAction=vi.fn(async(_workspaceId:string,selectedActionId:string)=>{
     isPending=false;
     return {ok:true as const,value:{attentionItemId:attentionId,
-      actionExecutionId:options.wrongActionReceipt?"other-action":actionId}};
+      actionExecutionId:options.wrongActionReceipt?"other-action":selectedActionId}};
   });
   const resolveActor=vi.fn(async()=>({ok:true as const,value:{
     workspace:{id:workspace,slug:"fictional-qa"},
@@ -178,6 +182,15 @@ describe("Owner-run persisted operational milestones",()=>{
         expect(await runOwnerSavedOperationalAutomation("fictional-qa",row.kind,row.id,t.deps))
           .toMatchObject({ok:false,code:"OPERATIONAL_AUTOMATION_ATTENTION_UNVERIFIED"});
       }
+    }
+  });
+
+  it("critic follow-up: one linked saved attention cannot prove two separate milestone actions",async()=>{
+    for(const kind of cases){
+      const t=fixture(kind.kind,{duplicateAttentionReuse:true});
+      expect(await runOwnerSavedOperationalAutomation("fictional-qa",kind.kind,kind.id,t.deps))
+        .toMatchObject({ok:false,code:"OPERATIONAL_AUTOMATION_ATTENTION_UNVERIFIED"});
+      expect(t.executeAttentionAction).toHaveBeenCalledTimes(2);
     }
   });
 
