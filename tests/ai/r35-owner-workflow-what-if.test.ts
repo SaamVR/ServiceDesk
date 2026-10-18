@@ -14,7 +14,7 @@ describe("SONIC L18 production-engine-powered AI rule preview (synthetic only)",
    }});
  });
  it("does not match an unknown/mismatched service and never invents live actions",()=>{
-  for(const sample of [{},{serviceCode:"STANDARD"}] as const){
+  for(const sample of [{},{serviceCode:"STANDARD" as const}]){
    expect(previewOwnerWorkflowWhatIf(draft,scope,sample))
      .toMatchObject({ok:true,value:{matched:false,wouldCreateAttention:false}});
   }
