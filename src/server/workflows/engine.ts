@@ -74,7 +74,10 @@ function evaluateCondition(
   if (condition.operator === "EQ") {
     matched = !Array.isArray(actual) && scalarEqual(actual ?? null, condition.value);
   } else if (condition.operator === "NEQ") {
-    matched = Array.isArray(actual) || !scalarEqual(actual ?? null, condition.value);
+    // Rule conditions compare a single authoritative saved scalar.
+    // A malformed multi-valued source must not turn a denied value into
+    // positive NEQ evidence and trigger an automation or provider-approval.
+    matched = !Array.isArray(actual) && !scalarEqual(actual ?? null, condition.value);
   } else if (condition.operator === "IN") {
     const candidates = Array.isArray(condition.value) ? condition.value : [];
     matched = !Array.isArray(actual) && candidates.some((candidate) => scalarEqual(actual ?? null, candidate));
