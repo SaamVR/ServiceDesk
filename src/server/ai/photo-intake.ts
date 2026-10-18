@@ -124,6 +124,12 @@ export function validatePhotoClassificationOutput(
   if(Object.keys(row).some(key=>!permitted.includes(key)))
     return fail("PHOTO_AI_OUTPUT_INVALID",
       "Photo classifier included unsupported fields or proposed effects.");
+  // Optional AI fields are still untrusted content. Never silently coerce
+  // objects containing hidden proposals to undefined and accept the rest.
+  if ((row.proposedAddOnCode!==undefined && typeof row.proposedAddOnCode!=="string") ||
+      (row.rationale!==undefined && typeof row.rationale!=="string")) {
+    return fail("PHOTO_AI_OUTPUT_INVALID", "Photo AI optional fields must be plain text.");
+  }
   const categoryCode = typeof row.categoryCode === "string" ? row.categoryCode : "";
   const proposedAddOnCode = typeof row.proposedAddOnCode === "string" ? row.proposedAddOnCode : undefined;
   const confidenceBasisPoints = row.confidenceBasisPoints;
