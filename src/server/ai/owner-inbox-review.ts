@@ -20,7 +20,7 @@ export type InboxReviewPlan =
      humanReviewRequired:true;outboundMessageQueued:false;aiModelInvoked:false;}};
 
 const id=(v:unknown):v is string=>typeof v==="string"&&/^[A-Za-z0-9:_-]{3,128}$/.test(v);
-function dense(value:unknown,maximum:number):value is unknown[]{
+function dense(value:unknown,maximum:number):boolean{
  if(!Array.isArray(value)||value.length>=maximum||
     Reflect.ownKeys(value).length!==value.length+1)return false;
  for(let i=0;i<value.length;i++){
