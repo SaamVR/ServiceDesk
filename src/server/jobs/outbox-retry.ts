@@ -64,6 +64,16 @@ export function decideOutboxPersistence(input: OutboxRetryPolicyInput): Result<O
   const { outcome } = input;
 
   if (outcome.outcome === "SENT") {
+    // Never persist an arbitrary provider response into a durable SENT
+    // receipt. Opaque WhatsApp/Stripe-style IDs are fine; customer contacts,
+    // URLs, bearer prefixes and unbounded payloads are not provider IDs.
+    if (outcome.providerReference !== undefined &&
+        (typeof outcome.providerReference !== "string" ||
+         !/^[A-Za-z0-9._:+-]{1,256}$/.test(outcome.providerReference) ||
+         /^(?:sk-|rk_|pk_|bearer)/i.test(outcome.providerReference))) {
+      return {ok:false,code:"OUTBOX_PROVIDER_REFERENCE_INVALID",
+        message:"Provider reference must be a bounded opaque identifier."};
+    }
     if (parseTime(outcome.completedAt) === undefined) return { ok: false, code: "OUTBOX_COMPLETED_AT_INVALID", message: "SENT outcome requires a valid completedAt timestamp." };
     return { ok: true, value: { action: "markSent", eventId: input.event.id, completedAt: outcome.completedAt, providerReference: outcome.providerReference } };
   }
