@@ -43,9 +43,9 @@ describe("SONIC R40 finance source has no hidden approval or unreviewed ledger d
    expect(plan(cap)).toMatchObject({ok:false,code:"FINANCE_SOURCE_INVALID"});
  });
  it("rejects arbitrary saved-row properties that can conceal payment authority",()=>{
-   expect(plan([{...inv("invoice-1"),paymentStatus:"VERIFIED"}]))
+   expect(plan([{...inv("invoice-1"),paymentStatus:"VERIFIED"} as unknown as InvoiceDTO]))
      .toMatchObject({ok:false,code:"FINANCE_SOURCE_INVALID"});
-   expect(plan([{...inv("invoice-1"),providerMessageSent:true}]))
+   expect(plan([{...inv("invoice-1"),providerMessageSent:true} as unknown as InvoiceDTO]))
      .toMatchObject({ok:false,code:"FINANCE_SOURCE_INVALID"});
  });
 });
