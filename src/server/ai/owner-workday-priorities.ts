@@ -2,6 +2,7 @@ import {resolveStaffActor,loadOperationalStaffSnapshot} from "@/features/operati
 import {deriveOwnerOperationsBriefFacts,isFreshOwnerOperationsSnapshotAt,
   type OwnerOperationsBriefFacts} from "./owner-operations-brief";
 import {ownerPriorityActions,type OwnerPriorityAction} from "./owner-priority-actions";
+import {planOwnerAttentionSla,type OwnerAttentionSlaResult} from "./owner-attention-sla";
 
 type Resolver=typeof resolveStaffActor;
 type Loader=typeof loadOperationalStaffSnapshot;
@@ -18,6 +19,7 @@ export type OwnerWorkdayResult=
       workspaceId:string;
       facts:OwnerOperationsBriefFacts;
       priorities:OwnerPriorityAction[];
+      attentionSla:Extract<OwnerAttentionSlaResult,{ok:true}>["value"];
       manualReviewRequired:true;
       modelInvoked:false;
       providerMessageSent:false;paymentChanged:false;
@@ -66,6 +68,11 @@ export async function loadOwnerWorkdayPriorities(
   try{facts=deriveOwnerOperationsBriefFacts(saved.value);}
   catch{return {ok:false,code:"WORKDAY_SNAPSHOT_UNAVAILABLE"};}
   if(!facts)return {ok:false,code:"WORKDAY_SNAPSHOT_UNAVAILABLE"};
+  const sourceSla=planOwnerAttentionSla({
+    workspaceId,actor:saved.value.actor,now:saved.value.loadedAt,
+    attentionItems:saved.value.attentionItems,
+  });
+  if(!sourceSla.ok)return {ok:false,code:"WORKDAY_SNAPSHOT_UNAVAILABLE"};
   if(deps.signal?.aborted)return {ok:false,code:"WORKDAY_CANCELLED"};
   let second:Awaited<ReturnType<Resolver>>;
   let latest:Awaited<ReturnType<Loader>>;
@@ -87,13 +94,19 @@ export async function loadOwnerWorkdayPriorities(
   catch{return {ok:false,code:"WORKDAY_SOURCE_CHANGED"};}
   if(!freshFacts || !sameFacts(facts,freshFacts))
     return {ok:false,code:"WORKDAY_SOURCE_CHANGED"};
+  const latestSla=planOwnerAttentionSla({
+    workspaceId,actor:latest.value.actor,now:latest.value.loadedAt,
+    attentionItems:latest.value.attentionItems,
+  });
+  if(!latestSla.ok||JSON.stringify(sourceSla.value)!==JSON.stringify(latestSla.value))
+    return {ok:false,code:"WORKDAY_SOURCE_CHANGED"};
   const priorities=ownerPriorityActions(freshFacts,7);
   if(!priorities)return {ok:false,code:"WORKDAY_SOURCE_CHANGED"};
   if(deps.signal?.aborted)return {ok:false,code:"WORKDAY_CANCELLED"};
   return {ok:true,value:{
     state:"VERIFIED_OWNER_WORKDAY_REVIEW",
     source:"DOUBLE_CHECKED_SAVED_WORKSPACE_COUNTS",
-    workspaceId,facts:freshFacts,priorities,
+    workspaceId,facts:freshFacts,priorities,attentionSla:latestSla.value,
     manualReviewRequired:true,modelInvoked:false,
     providerMessageSent:false,paymentChanged:false,
   }};
