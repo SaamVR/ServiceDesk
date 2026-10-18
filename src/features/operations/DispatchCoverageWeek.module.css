@@ -48,3 +48,5 @@
 .unverified { background: #bc5a41; }
 .meterUnverified { background: #bc5a41; }
 @media(max-width:700px){.legend{flex-wrap:wrap;}}
+
+.grid a em{white-space:normal;overflow-wrap:anywhere;}

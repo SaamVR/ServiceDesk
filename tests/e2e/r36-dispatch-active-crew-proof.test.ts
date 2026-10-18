@@ -49,6 +49,9 @@ describe("R36 verified real crew assignments on dispatch workload calendar",()=>
     expect(component).toContain("Active crew verified");
     expect(component).toContain("Crew needs verification");
     expect(component).toContain("day.unverifiedCrew");
+    expect(component).toContain("missing crew");
+    expect(component).toContain("verify assignment");
+    expect(component).toContain("day.unassigned > 0 && day.unverifiedCrew > 0");
     expect(component).toContain("assignments needing verification");
     expect(styles).toContain(".meterUnverified");
     expect(styles).toContain("@media(max-width:700px)");

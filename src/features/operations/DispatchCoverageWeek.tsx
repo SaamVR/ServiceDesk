@@ -66,9 +66,11 @@ export function DispatchCoverageWeek({
                 </>
               ) : null}
             </span>
-            {day.unverifiedCrew > 0 ? <em>{day.unverifiedCrew} verify crew</em> :
-              day.unassigned > 0 ? <em>{day.unassigned} need crew</em> :
-              day.total ? <em>{day.underway} underway</em> : <em>No visits</em>}
+            {day.unassigned > 0 || day.unverifiedCrew > 0 ? <em>
+              {day.unassigned > 0 ? `${day.unassigned} missing crew` : ""}
+              {day.unassigned > 0 && day.unverifiedCrew > 0 ? " · " : ""}
+              {day.unverifiedCrew > 0 ? `${day.unverifiedCrew} verify assignment` : ""}
+            </em> : day.total ? <em>{day.underway} underway</em> : <em>No visits</em>}
           </a>
         ))}
       </nav>
