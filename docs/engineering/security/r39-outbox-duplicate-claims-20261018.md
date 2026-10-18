@@ -1,0 +1,3 @@
+# R39 CORE-L18 — Durable outbox duplicate claim refusal
+
+The trusted outbox worker calls `claimReady`, then executes each returned claimed event. Before this patch, a malformed SQL/RPC adapter returning the same source ID or same workspace/idempotency key twice in one batch could make the worker process both entries and potentially attempt duplicate external effects. The repository now fails the entire ambiguous claim page closed, validates dense bounded source rows and only allows pending valid persisted event identity before passing data to the existing lease-owner worker gate. It does not alter SQL or provider sends, and does not prove exactly-once delivery across workers; database leases/idempotent provider adapters remain necessary.
