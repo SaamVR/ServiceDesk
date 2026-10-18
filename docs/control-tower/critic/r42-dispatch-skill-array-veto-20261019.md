@@ -1,0 +1,3 @@
+# R42 independent critic — dispatch crew capability provenance
+
+The dispatch scorer uses a crew's saved service-code list as part of a HIGH-confidence recommendation. The review adapter currently checks the list's length and individual codes but Array.some ignores sparse holes, and an array may carry hidden own properties. This can cause a HIGH-confidence recommendation based on incomplete or tampered capability source. This independent critic PR adds deliberately sparse and hidden-property arrays, requires source fail-closed, and is intentionally separate from the producer's source repair. It does not claim calendar booking or crew assignment.
