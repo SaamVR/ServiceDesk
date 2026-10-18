@@ -201,6 +201,9 @@ export async function runOwnerSavedRequestAutomation(
     if (pending.error || !pending.data) {
       return fail("REQUEST_WORKFLOW_ACTION_READ_FAILED", "Pending internal actions could not be verified.");
     }
+    // A saved linked attention is evidence for one action, not permission
+    // to claim several completed effects from the same persisted row.
+    const usedAttentionIds = new Set<string>();
     for (const action of pending.data) {
       const applied = await port.executeAttentionAction(workspace.id, String(action.id));
       if (!applied.ok) {
@@ -223,6 +226,10 @@ export async function runOwnerSavedRequestAutomation(
           proof.data.type !== "WORKFLOW_RULE") {
         return fail("REQUEST_WORKFLOW_ATTENTION_UNVERIFIED", "Attention was not linked to this exact workflow execution.");
       }
+      if (usedAttentionIds.has(applied.value.attentionItemId)) {
+        return fail("REQUEST_WORKFLOW_ATTENTION_UNVERIFIED", "The same attention cannot prove two workflow actions.");
+      }
+      usedAttentionIds.add(applied.value.attentionItemId);
       completedAttentionActions++;
     }
   }
