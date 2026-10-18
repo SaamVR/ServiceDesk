@@ -24,9 +24,11 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<PlaybookCategoryFilter>("All");
   const [severity, setSeverity] = useState<PlaybookSeverityFilter>("Any");
+  const [previewId, setPreviewId] = useState("");
   const prefix = useId();
   const choices = filterAutomationPlaybooks(automationPlaybooks, { search, category, severity });
   const selected = automationPlaybooks.find(item => item.id === selectedId);
+  const preview = automationPlaybooks.find(item => item.id === previewId);
   const reset = () => { setSearch(""); setCategory("All"); setSeverity("Any"); };
   return <section className={styles.panel} aria-label="Cleaning automation starter playbooks"
     data-testid="automation-playbook-finder">
@@ -85,21 +87,51 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
           category === (selected?.category ?? "Intake"))}>
         <summary>{category} <span>{matches.length} matching drafts</span></summary>
         <nav className={styles.cards} aria-label={category + " automation recipes"}>
-          {matches.map((item: AutomationPlaybook) => <a key={item.id}
-            className={item.id === selectedId ? styles.activeCard : styles.card}
-            href={"?template=" + encodeURIComponent(item.id)}
-            aria-current={item.id === selectedId ? "page" : undefined}>
-            <span className={styles.cardTop}>
-              <strong>{item.name}</strong><small>{item.severity}</small>
-            </span>
-            <span>{item.description}</span>
-            <span className={styles.cardFoot}>Event: {item.eventType.replaceAll("_", " ")}
-              <b>{item.id === selectedId ? "Selected for draft" : "Load draft starter →"}</b>
-            </span>
-          </a>)}
+          {matches.map((item: AutomationPlaybook) => <div key={item.id} className={styles.cardWrap}>
+            <a className={item.id === selectedId ? styles.activeCard : styles.card}
+              href={"?template=" + encodeURIComponent(item.id)}
+              aria-current={item.id === selectedId ? "page" : undefined}>
+              <span className={styles.cardTop}>
+                <strong>{item.name}</strong><small>{item.severity}</small>
+              </span>
+              <span>{item.description}</span>
+              <span className={styles.cardFoot}>Event: {item.eventType.replaceAll("_", " ")}
+                <b>{item.id === selectedId ? "Selected for draft" : "Load draft starter →"}</b>
+              </span>
+            </a>
+            <button type="button" className={styles.inspect}
+              aria-expanded={previewId === item.id}
+              aria-controls={prefix + "-exact-starter-review"}
+              onClick={() => setPreviewId(current => current === item.id ? "" : item.id)}>
+              {previewId === item.id ? "Hide exact effect" : "Inspect exact effect"}
+            </button>
+          </div>)}
         </nav>
       </details>;
     })}
+    {preview ? <section className={styles.previewPanel}
+      id={prefix + "-exact-starter-review"} aria-label="Exact starter rule preview">
+      <div className={styles.previewHeading}>
+        <div><strong>{preview.name}</strong><span>Static catalogue definition · not a live run</span></div>
+        <button type="button" className={styles.inspect} onClick={() => setPreviewId("")}>
+          Close exact review
+        </button>
+      </div>
+      <dl>
+        <div><dt>Event trigger</dt><dd>{preview.eventType.replaceAll("_", " ")}</dd></div>
+        <div><dt>Condition</dt><dd>{preview.condition
+          ? `${preview.condition.field} ${preview.condition.operator} ${String(preview.condition.value)}`
+          : "No condition (every matching event type)"}</dd></div>
+        <div><dt>Internal action</dt><dd>CREATE_ATTENTION · {preview.actionDetail}</dd></div>
+        <div><dt>Review severity</dt><dd>{preview.severity}</dd></div>
+      </dl>
+      <p>This describes a possible rule only. Selecting this starter pre-fills
+        the existing owner draft form; it does not generate a persisted event,
+        run an automation, publish a rule or send a customer message.</p>
+      <a href={"?template=" + encodeURIComponent(preview.id)} className={styles.previewLoad}>
+        Load this exact starter into the draft editor →
+      </a>
+    </section> : null}
     <p className={styles.disclaimer}>Only internal CREATE_ATTENTION draft actions are offered.
       Selecting a starter does not save, preview, publish, send an email/WhatsApp
       message, create a customer booking or charge money.</p>

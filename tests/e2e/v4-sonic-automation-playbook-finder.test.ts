@@ -41,6 +41,26 @@ describe("SONIC interactive internal workflow starter discovery",()=>{
     expect(browser).not.toContain("publishOperationalWorkflowVersion(");
     expect(browser).not.toContain("process.env");
     expect(browser).toContain("Selecting a starter does not save, preview, publish");
+    expect(browser).toContain("Inspect exact effect");
+    expect(browser).toContain("Exact starter rule preview");
+    expect(browser).toContain("Static catalogue definition");
+    expect(browser).toContain('aria-expanded={previewId === item.id}');
+    expect(browser).toContain("CREATE_ATTENTION");
+    expect(browser).toContain("No condition (every matching event type)");
+  });
+  it("gives a precise rule explanation without any live event/providership claim",()=>{
+    const src=text("src/features/operations/AutomationPlaybookBrowser.tsx");
+    const css=text("src/features/operations/AutomationPlaybookBrowser.module.css");
+    expect(src).toContain("preview.condition.field");
+    expect(src).toContain("preview.condition.operator");
+    expect(src).toContain("preview.actionDetail");
+    expect(src).toContain("preview.severity");
+    expect(src).toContain("preview.eventType");
+    expect(src).toContain('href={"?template=" + encodeURIComponent(preview.id)}');
+    expect(src).toContain("it does not generate a persisted event");
+    expect(src).not.toContain("fetch(");
+    expect(css).toContain(".previewPanel");
+    expect(css).toContain("@media(max-width:540px)");
   });
   it("provides touch, small-screen, keyboard and reduced-motion affordances",()=>{
     const css=text("src/features/operations/AutomationPlaybookBrowser.module.css");
