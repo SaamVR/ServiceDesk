@@ -119,5 +119,6 @@ describe("R35 owner model workflow suggestion and real synthetic evaluator",()=>
     expect(ui).toContain("75 seconds");
     expect(ui).toContain("never a saved trigger");
     expect(ui).toContain("Publishing always happens separately");
+    expect(ui).toContain("cannot reliably recognize every private name");
   });
 });
