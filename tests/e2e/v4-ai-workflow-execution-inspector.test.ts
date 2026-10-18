@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import {readFileSync} from "node:fs";
+import {join} from "node:path";
 import {
   buildWorkflowInspector,
   buildWorkflowInterventionQueue,
@@ -171,6 +173,33 @@ describe("workflow inspector persisted evidence", () => {
     expect(summary.recordedSucceededActions).toBe(1);
     expect(summary.measuredDurationMs).toEqual([10_000]);
     expect(isWorkflowAttentionRequired(runs[0])).toBe(true);
+  });
+
+  it("does not mark an otherwise completed run clean when current retry evidence conflicts", () => {
+    const runs = buildWorkflowInspector({
+      ...snapshot(),
+      workflowExecutions: [{ ...live, state: "COMPLETED" }],
+      workflowActionExecutions: [
+        { ...action, id: "conflict-a", attemptNumber: 5, state: "SUCCEEDED" },
+        { ...action, id: "conflict-b", attemptNumber: 5, state: "FAILED" },
+      ],
+    });
+    expect(runs[0].ambiguousActionSlots).toBe(1);
+    expect(summarizeWorkflowActivity(runs).completed).toBe(0);
+    const source=readFileSync(join(process.cwd(),"src/features/operations/WorkflowExecutionInspector.tsx"),"utf8");
+    expect(source).toContain('run.ambiguousActionSlots === 0');
+    expect(summarizeWorkflowActivity(runs).recordedSucceededActions).toBe(0);
+  });
+
+  it("rejects unzoned and impossible source timestamps for efficiency metrics", () => {
+    const runs = buildWorkflowInspector({
+      ...snapshot(),
+      workflowExecutions: [
+        { ...live, id:"naive",createdAt:"2026-10-17T00:00:00",completedAt:"2026-10-17T00:00:10Z" },
+        { ...live, id:"impossible",createdAt:"2026-02-30T00:00:00Z",completedAt:"2026-03-01T00:00:00Z" },
+      ],
+    });
+    expect(summarizeWorkflowActivity(runs).measuredDurationMs).toEqual([]);
   });
 
   it("discards invalid or negative elapsed times, never fabricates efficiency savings", () => {

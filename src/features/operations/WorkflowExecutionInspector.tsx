@@ -42,7 +42,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
     (filter === "attention" && isWorkflowAttentionRequired(run)) ||
     (filter === "failed" && (run.state === "PARTIAL_FAILED" || run.failedCount > 0)) ||
     (filter === "processing" && classifyWorkflowIntervention(run) === "processing") ||
-    (filter === "completed" && run.state === "COMPLETED"));
+    (filter === "completed" && run.state === "COMPLETED" && run.ambiguousActionSlots === 0));
   const firstPage = matching.slice(0, visibleCount);
   // The intervention queue can select an older persisted run. Pin that one
   // in the list without rendering all 1,000 loaded runs just to make it visible.

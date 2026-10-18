@@ -1,3 +1,4 @@
+import { trustedQuoteInstant } from "./quote-validity-clock";
 import type {
   BrowserWorkflowAction,
   BrowserWorkflowExecution,
@@ -88,7 +89,7 @@ export type InspectedWorkflow = ReturnType<typeof buildWorkflowInspector>[number
 export function summarizeWorkflowActivity(runs: readonly InspectedWorkflow[]) {
   return {
     runs: runs.length,
-    completed: runs.filter(run => run.state === "COMPLETED").length,
+    completed: runs.filter(run => run.state === "COMPLETED" && run.ambiguousActionSlots === 0).length,
     failed: runs.filter(run => run.state === "PARTIAL_FAILED" || run.failedCount > 0).length,
     skipped: runs.filter(run => run.state === "SKIPPED").length,
     waitingForApproval: runs.reduce((count, run) => count + run.approvalCount, 0),
@@ -98,9 +99,9 @@ export function summarizeWorkflowActivity(runs: readonly InspectedWorkflow[]) {
     // Only count complete timestamp pairs with nonnegative, finite elapsed time.
     measuredDurationMs: runs.flatMap(run => {
       if (!run.completedAt) return [];
-      const start = Date.parse(run.createdAt);
-      const end = Date.parse(run.completedAt);
-      return Number.isFinite(start) && Number.isFinite(end) && end >= start
+      const start = trustedQuoteInstant(run.createdAt);
+      const end = trustedQuoteInstant(run.completedAt);
+      return start !== null && end !== null && end >= start
         ? [end - start] : [];
     }),
   };
