@@ -133,7 +133,8 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     };
     try{
       const raw:unknown=await requestOwnerWorkflowWhatIf({
-        workspaceSlug,branchId,candidate,sampleServiceCode:sampleCode,
+        workspaceSlug,branchId,candidate,
+        sampleServiceCode:suggestion.serviceCode ? sampleCode : "NONE",
       });
       if(previewSequence.current!==attempt)return;
       const evidence=parseOwnerWhatIfResponse(raw,{eventType:suggestion.eventType});
@@ -236,7 +237,8 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
         <h4>What-if evaluation · synthetic only</h4>
         <div className={styles.previewControls}>
           <label>Fictional service condition
-            <select value={sampleCode} disabled={!suggestion || previewBusy}
+            <select value={suggestion?.serviceCode ? sampleCode : "NONE"}
+              disabled={!suggestion?.serviceCode || previewBusy}
               onChange={event=>{
                 const selected=event.target.value;
                 if(!["NONE","STANDARD","DEEP","MOVE_OUT"].includes(selected))return;
@@ -256,6 +258,10 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
             {previewBusy?"Evaluating hypothetical event…":"Run synthetic what-if"}
           </button>
         </div>
+        {suggestion && !suggestion.serviceCode ? <p className={styles.helper} role="note">
+          This proposal has no service condition. The hypothetical service
+          selector is disabled because it cannot change the rule decision.
+        </p> : null}
         {preview?<div className={styles.preview} role="status">
           <strong>{preview.matched
             ? "Synthetic conditions matched" : "Synthetic conditions did not match"}</strong>

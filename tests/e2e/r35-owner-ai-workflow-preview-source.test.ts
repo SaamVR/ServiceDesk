@@ -100,6 +100,9 @@ describe("R35 owner model workflow suggestion and real synthetic evaluator",()=>
     expect(ui).toContain("controller.signal.aborted || activeRequest.current!==controller");
     expect(ui).toContain("Stop waiting");
     expect(ui).toContain("requestOwnerWorkflowWhatIf(");
+    expect(ui).toContain('sampleServiceCode:suggestion.serviceCode ? sampleCode : "NONE"');
+    expect(ui).toContain("disabled={!suggestion?.serviceCode || previewBusy}");
+    expect(ui).toContain("because it cannot change the rule decision.");
     expect(ui).toContain("Synthetic rule-engine preview completed");
     expect(ui).toContain("No draft row, live rule or customer");
     expect(owner).toContain('data.actor?.role');
