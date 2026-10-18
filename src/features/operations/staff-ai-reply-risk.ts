@@ -26,7 +26,9 @@ export function detectStaffReplyRisks(text:unknown):StaffReplyRisk[]{
   if(/[$€£₹৳]/u.test(text) ||
      /\b(?:pay(?:ment)?|deposit|refund|invoice|credit card|bank transfer|charge(?:d)?|price|total cost)\b/iu.test(text))
     risks.push("PAYMENT_CLAIM");
-  if(/\b(?:booked|booking confirmed|appointment confirmed|we guarantee|guaranteed completion|service completed|fully scheduled)\b/iu.test(text))
+  if(/\b(?:booked|booking confirmed|appointment confirmed|we guarantee|guaranteed completion|service completed|fully scheduled)\b/iu.test(text) ||
+     /\b(?:booking|appointment|visit|service|cleaning)\s+(?:is|has\s+been)\s+(?:confirmed|booked|scheduled|completed)\b/iu.test(text) ||
+     /\b(?:we(?:'ve|\s+have)|our\s+team\s+has)\s+(?:scheduled|confirmed|completed)\s+(?:your\s+)?(?:booking|visit|appointment|service|cleaning)\b/iu.test(text))
     risks.push("BOOKING_COMMITMENT");
   return risks;
 }

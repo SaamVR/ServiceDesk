@@ -21,6 +21,11 @@ describe("R37 deliberate higher-risk AI reply review",()=>{
     ["Please pay the deposit today","PAYMENT_CLAIM"],
     ["Your booking confirmed for tomorrow","BOOKING_COMMITMENT"],
     ["We guarantee service completed by Tuesday","BOOKING_COMMITMENT"],
+    ["Your booking is confirmed for next week.","BOOKING_COMMITMENT"],
+    ["Our visit has been scheduled.","BOOKING_COMMITMENT"],
+    ["We have scheduled your appointment.","BOOKING_COMMITMENT"],
+    ["We\'ve completed your cleaning.","BOOKING_COMMITMENT"],
+    ["The service is booked for Friday.","BOOKING_COMMITMENT"],
    ] as const;
    for(const [body,label] of cases)expect(detectStaffReplyRisks(body)).toContain(label);
    const all=detectStaffReplyRisks("Pay $200 at https://outside.test and call us to confirm your booking.");
