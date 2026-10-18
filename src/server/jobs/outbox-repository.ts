@@ -96,7 +96,7 @@ export function createDurableOutboxRepository(gateway: DurableOutboxTableGateway
       // A duplicated source event would be executed twice in one batch
       // before either provider receipt could be reconciled. Reject the
       // entire ambiguous page instead of emitting any claimed job.
-      const rows = result.data ?? [];
+      const rows = result.data;
       if (!Array.isArray(rows) || rows.length > limit ||
           Reflect.ownKeys(rows).length !== rows.length + 1) {
         return {ok:false,code:"OUTBOX_CLAIM_ROWS_INVALID",
@@ -138,6 +138,15 @@ export function createDurableOutboxRepository(gateway: DurableOutboxTableGateway
       const result = await gateway.markSent(eventId, workerId, completedAt, providerReference);
       if (result.error) return repositoryError(result.error);
       if (!result.data) return missingRow();
+      // A successful transport response is not durable delivery proof.
+      // Require the exact claimed event to be persisted as SENT; do not
+      // accept unrelated or still-pending database rows as a receipt.
+      if (result.data.id !== eventId || result.data.status !== "SENT" ||
+          (providerReference !== undefined &&
+           result.data.providerReference !== providerReference)) {
+        return {ok:false,code:"OUTBOX_COMPLETION_RECEIPT_INVALID",
+          message:"Saved provider delivery transition did not match the claimed event."};
+      }
       return { ok: true, value: result.data };
     },
     async markRetry(eventId, workerId, failedAt, nextAttemptAt, nextAttemptCount, errorCode) {
