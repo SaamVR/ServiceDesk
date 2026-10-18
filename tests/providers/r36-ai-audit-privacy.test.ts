@@ -37,6 +37,18 @@ describe("R36 audit rejects untrusted model/provider fields",()=>{
     expect(r.blockedActions).toMatchObject([{name:"unknown",reason:"SCHEMA_VIOLATION"}]);
     expect(r.model).toBe("unverified");
   });
+  it("independent critic: a syntactically valid API key must not be accepted as tool ID or model label",()=>{
+    const result=buildAiActionAuditRecord({...fixture(),
+      model:"sk_live_secret_enoughtoleak",
+      conversationId:"sk_live_secret_enoughtoleak",
+      toolResults:[{toolName:"sk_live_secret_enoughtoleak",outcome:"FAILED",
+        summary:"Only a fictional review result"}],
+      blockedActions:[{name:"sk_live_secret_enoughtoleak",reason:"SCHEMA_VIOLATION"}],
+    });
+    expect(JSON.stringify(result)).not.toContain("sk_live_secret_enoughtoleak");
+    expect(result.toolResults[0].toolName).toBe("unknown");
+    expect(result.blockedActions[0].name).toBe("unknown");
+  });
   it("bounds result fanout and refuses toxic timestamp and provenance strings",()=>{
     const r=buildAiActionAuditRecord({...fixture(),capturedAt:"2026-02-30T03:00:00.000Z",
       toolResults:Array(90).fill({toolName:"tool",outcome:"FAILED",summary:"fail"}),
