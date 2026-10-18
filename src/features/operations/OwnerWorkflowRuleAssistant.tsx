@@ -316,7 +316,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,draftWri
           editor remains available without AI.</p>:null}
         {branches.length >= 24 ? <p className={styles.helper} role="note">
           This picker shows at most 24 authorized branches. Choose a specific
-          branch in the main workspace to review another branch's rules.
+          branch in the main workspace to review rules for another branch.
         </p> : null}
         {draftSaved ? <p className={styles.helper} role="status">
           This reviewed workflow draft is complete. Open the saved workflow
