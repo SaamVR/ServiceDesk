@@ -33,15 +33,21 @@ export async function requestOwnerWorkflowWhatIf(input:Hypothesis):
   try {
     const auth=await resolveStaffActor(input.workspaceSlug);
     if(!auth.ok) return blocked();
-    const {actor,workspace,service}=auth.value;
+    const {actor,workspace,service,branchScope}=auth.value;
     if(workspace.slug!==input.workspaceSlug || actor.role!=="OWNER" ||
        actor.workspaceId!==workspace.id || !allowedId.test(workspace.id) ||
-       typeof actor.userId!=="string" || !allowedId.test(actor.userId)) return blocked();
-    const branch=await service.from("branches")
-      .select("id,workspace_id").eq("id",input.branchId)
-      .eq("workspace_id",workspace.id).maybeSingle();
+       typeof actor.userId!=="string" || !allowedId.test(actor.userId) ||
+       !branchScope.branches.some(b=>b.id===input.branchId) ||
+       (branchScope.mode==="BRANCH" && branchScope.selectedBranchId!==input.branchId))
+      return blocked();
+    // The actual operational branch authority is workspace_branches, not a
+    // generic "branches" table. Recheck active membership at request time.
+    const branch=await service.from("workspace_branches")
+      .select("id,workspace_id,active").eq("id",input.branchId)
+      .eq("workspace_id",workspace.id).eq("active",true).maybeSingle();
     if(branch.error || !branch.data || branch.data.id!==input.branchId ||
-       branch.data.workspace_id!==workspace.id) return blocked();
+       branch.data.workspace_id!==workspace.id || branch.data.active!==true)
+      return blocked();
     const result=previewOwnerWorkflowWhatIf(input.candidate,{
       workspaceId:workspace.id,actorWorkspaceId:workspace.id,
       branchId:input.branchId,role:"OWNER",

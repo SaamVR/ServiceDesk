@@ -92,6 +92,10 @@ describe("R35 owner model workflow suggestion and real synthetic evaluator",()=>
     expect(server).toContain("resolveStaffActor(input.workspaceSlug)");
     expect(server).toContain('actor.role!=="OWNER"');
     expect(server).toContain('.eq("workspace_id",workspace.id)');
+    expect(server).toContain('service.from("workspace_branches")');
+    expect(server).not.toContain('service.from("branches")');
+    expect(server).toContain('.eq("active",true)');
+    expect(server).toContain('branchScope.selectedBranchId!==input.branchId');
     expect(server).toContain('previewOwnerWorkflowWhatIf(input.candidate');
     expect(server).not.toContain(".insert(");
     expect(server).not.toContain(".update(");
