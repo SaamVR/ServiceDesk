@@ -61,6 +61,15 @@ function ScopedStaffAiReviewComposer({
     const pending = new AbortController();
     controller.current = pending;
     const requestSignal = boundedStaffRequestSignal(pending, STAFF_AI_DRAFT_TIMEOUT_MS);
+    // AbortSignal.timeout may fire without fetch()/response.json() settling.
+    // Unlock the screen immediately, and invalidate buffered late model data.
+    const onDraftDeadline = () => {
+      if (pending.signal.aborted || controller.current !== pending) return;
+      controller.current = null;
+      setBusy("idle");
+      setError("draft");
+    };
+    requestSignal.addEventListener("abort", onDraftDeadline, { once: true });
     setBusy("drafting");
     setError(undefined);
     setDraft(undefined);
@@ -92,6 +101,7 @@ function ScopedStaffAiReviewComposer({
     } catch {
       if (!pending.signal.aborted && controller.current === pending) setError("draft");
     } finally {
+      requestSignal.removeEventListener("abort", onDraftDeadline);
       if (controller.current === pending && !pending.signal.aborted) {
         if (requestSignal.aborted) setError("draft");
         setBusy("idle");
@@ -122,6 +132,15 @@ function ScopedStaffAiReviewComposer({
     const pending = new AbortController();
     controller.current = pending;
     const requestSignal = boundedStaffRequestSignal(pending);
+    // A durable command can still be processed upstream after client timeout.
+    // Re-enable manual verification without inventing a failed customer send.
+    const onApprovalDeadline = () => {
+      if (pending.signal.aborted || controller.current !== pending) return;
+      controller.current = null;
+      setBusy("idle");
+      setError("approval");
+    };
+    requestSignal.addEventListener("abort", onApprovalDeadline, { once: true });
     setBusy("approving");
     setError(undefined);
     // Preserve this key across uncertain network retries. An edit starts a
@@ -163,6 +182,7 @@ function ScopedStaffAiReviewComposer({
     } catch {
       if (!pending.signal.aborted && controller.current === pending) setError("approval");
     } finally {
+      requestSignal.removeEventListener("abort", onApprovalDeadline);
       if (controller.current === pending && !pending.signal.aborted) {
         // Timed-out approval may already have queued a durable reply.
         // Do not invent a failed send or assign a fresh idempotency key.

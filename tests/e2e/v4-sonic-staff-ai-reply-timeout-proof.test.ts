@@ -14,6 +14,13 @@ describe("Sonic staff AI draft versus durable reply approval deadlines", () => {
     expect(STAFF_AI_DRAFT_TIMEOUT_MS).toBe(75_000);
     expect(STAFF_AI_REQUEST_TIMEOUT_MS).toBe(20_000);
     expect(source).toContain("boundedStaffRequestSignal(pending, STAFF_AI_DRAFT_TIMEOUT_MS)");
+    expect(source).toContain("requestSignal.addEventListener(\"abort\", onDraftDeadline, { once: true })");
+    expect(source).toContain("requestSignal.removeEventListener(\"abort\", onDraftDeadline)");
+    expect(source).toContain("requestSignal.addEventListener(\"abort\", onApprovalDeadline, { once: true })");
+    expect(source).toContain("requestSignal.removeEventListener(\"abort\", onApprovalDeadline)");
+    expect(source).toContain('controller.current = null;');
+    expect(source).toContain('setError("approval")');
+    expect(source).toContain("without fetch()/response.json() settling");
     expect(source).toContain("const requestSignal = boundedStaffRequestSignal(pending);");
   });
   it("never publishes buffered model or approval results after abort or supersession", () => {
