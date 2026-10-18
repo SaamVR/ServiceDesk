@@ -52,6 +52,8 @@ describe("R35 L13 direct AI Studio command-navigation lane",()=>{
   it("uses unique route identity and closes outdated tenant navigation",()=>{
     expect(source).toContain("key={destination.href}");
     expect(source).toContain("}, [pathname, workspace]);");
+    expect(source).toContain("return <ScopedStaffCommandPalette key={workspace} workspace={workspace} />");
+    expect(source).toContain("function ScopedStaffCommandPalette(");
     expect(source).not.toContain("credentials:"); // no in-dialog data fetch
     expect(source).not.toContain("fetch(");
     expect(source).toContain('aria-current={pathname === destination.href ? "page" : undefined}');
