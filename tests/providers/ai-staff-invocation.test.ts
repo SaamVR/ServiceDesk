@@ -72,7 +72,7 @@ describe("staff authenticated operational AI invocation", () => {
       toolCalls: [{ name: "getServiceCatalog", executionBoundary: "SERVICE_DESK_FACADE_ONLY" }],
     } });
     expect(data.calls().network).toBe(1);
-    expect(data.calls().lookups).toEqual(["conversations", "messages", "messages"]);
+    expect(data.calls().lookups).toEqual(["conversations", "messages", "messages", "conversations", "messages"]);
     expect(JSON.stringify(result)).not.toContain("synthetic-key-only");
   });
 
