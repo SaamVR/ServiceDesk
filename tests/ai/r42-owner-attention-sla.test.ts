@@ -3,7 +3,7 @@ import {planOwnerAttentionSla,loadOwnerAttentionSla,type OwnerAttentionSlaDeps} 
 const ws="workspace-1",owner={workspaceId:ws,role:"OWNER"};
 const now="2026-10-19T09:00:00.000Z";
 const item=(id:string,changes:Record<string,unknown>={})=>({
- id,workspaceId:ws,type:"WORKFLOW_RULE",resourceType:"workflow_execution",resourceId:"exec-1",
+ id:id.length<3?"attention-"+id:id,workspaceId:ws,type:"WORKFLOW_RULE",resourceType:"workflow_execution",resourceId:"exec-1",
  status:"OPEN",severity:"CRITICAL",summary:"Review durable exception",
  dueAt:"2026-10-19T08:00:00.000Z",...changes,
 });
@@ -15,7 +15,7 @@ describe("SONIC R42 L16 verified owner attention SLA",()=>{
    item("d",{dueAt:undefined}),item("e",{severity:"CRITICAL"})
   ] as any});
   expect(r).toMatchObject({ok:true,value:{overdueCount:2,unscheduledCount:1,
-   overdue:[{attentionId:"e",overdueMinutes:60},{attentionId:"a",overdueMinutes:60}],
+   overdue:[{attentionId:"attention-e",overdueMinutes:60},{attentionId:"attention-a",overdueMinutes:60}],
    customerMessaged:false,workflowExecuted:false}});
  });
  it("rejects counterfeit source, time, duplicate and other workspace evidence",()=>{
