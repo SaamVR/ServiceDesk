@@ -100,7 +100,7 @@ function stringArray(value: unknown, field: string): Result<string[]> {
       value.some((item) => !safeText(item,240))) {
     return { ok: false, code: "AI_OUTPUT_INVALID", message: `AI output field ${field} must be a string array.` };
   }
-  return { ok: true, value };
+  return { ok: true, value: value as string[] };
 }
 
 function positiveInt(value: unknown, field: string): Result<number | undefined> {
