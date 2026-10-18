@@ -172,8 +172,7 @@ export async function executeAuthorizedStaffAiTurn(
     if (convNow.error || !cn || cn.id !== c.id ||
         cn.workspace_id !== workspace.id ||
         cn.request_id !== c.request_id || cn.customer_id !== c.customer_id ||
-        cn.channel !== c.channel || cn.handover_active !== c.handover_active ||
-        cn.handover_active !== false) {
+        cn.channel !== c.channel || cn.handover_active !== c.handover_active) {
       return fail("AI_STAFF_SOURCE_CHANGED", "The saved conversation changed while generating the AI draft.");
     }
     if (actor.role === "DISPATCHER") {
