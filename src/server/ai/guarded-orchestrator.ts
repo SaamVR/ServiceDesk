@@ -72,6 +72,19 @@ export function buildGuardedAssistantPlan(input: GuardedAssistantPlanInput): Res
       "PROVIDER_FAILURE","UNSUPPORTED_WORK","UNSUPPORTED_AREA",
     ].includes(flag));
 
+  // A turn that requires human handover must not retain apparently safe
+  // executable-looking tool proposals from the same mixed model response.
+  // The review reason is the only permitted proposal until a staff member
+  // explicitly reauthorizes a fresh, scoped turn.
+  const reviewedToolCalls = handoverRequired
+    ? [{
+        name:"requestHumanReview" as const,
+        arguments:{reason:"MIXED_OR_UNVERIFIED_AI_TURN"},
+        allowed:true,
+        reason:"All model tools were quarantined because this turn needs human review.",
+      }]
+    : toolCalls;
+
   return {
     ok: true,
     value: {
@@ -79,7 +92,7 @@ export function buildGuardedAssistantPlan(input: GuardedAssistantPlanInput): Res
       workspaceId: input.workspaceId,
       savedHumanMessageId: input.savedHumanMessageId,
       extraction: extraction.value,
-      toolCalls,
+      toolCalls: reviewedToolCalls,
       replyDraft: !handoverRequired && evaluatedReply.safe
         ? evaluatedReply.text
         : "A team member will review your service request before any quote or booking is confirmed.",
