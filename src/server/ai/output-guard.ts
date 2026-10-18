@@ -200,7 +200,7 @@ export function guardAiToolCalls(rawCalls: unknown): AssistantToolCall[] {
 
     const name = raw.name as string;
     if (blockedToolNames.has(name) || !allowedTools.has(name as AssistantToolCall["name"])) {
-      return humanReview(`AI requested blocked unsafe tool: ${name}.`);
+      return humanReview("AI requested blocked unsafe tool; untrusted tool name withheld.");
     }
 
     return {
