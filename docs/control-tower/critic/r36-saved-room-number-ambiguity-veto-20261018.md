@@ -1,0 +1,3 @@
+# R36 CRITIC — corrupt saved dimensions vs genuinely missing information
+
+The AI intake feature converts room counts using boundedCount. The old conversion maps NaN, infinity, strings, fractional/negative values to null, which could fool the model into treating **malformed persisted facts** as merely missing and asking an incorrect follow-up. This critic explicitly simulates a tenant-scoped saved request with corrupted bedrooms and requires fail-closed before any paid model invocation. Null alone means missing; malformed data does not. Independent evidence is synthetic and does not establish a real connected request.
