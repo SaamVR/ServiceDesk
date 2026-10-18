@@ -39,6 +39,13 @@ describe("SONIC R37 AI-E audited automation revision diff",()=>{
   expect(reviewAutomationRevision({...input,actor:{workspaceId:"workspace-1",role:"DISPATCHER"}}))
     .toMatchObject({ok:false,code:"AUTOMATION_REVIEW_OWNER_REQUIRED"});
  });
+ it("rejects valid-looking condition borrowed from a different event family",()=>{
+  const forged:WorkflowRuleVersionDTO={...draft,conditions:[
+   {field:"invoice.currency",operator:"EQ",value:"USD"},
+  ]};
+  expect(reviewAutomationRevision({...input,draft:forged}))
+    .toMatchObject({ok:false,code:"AUTOMATION_REVIEW_SOURCE_INVALID"});
+ });
  it("rejects model-generated external actions carrying arbitrary URL, SQL or hidden fields",()=>{
   const bad=Object.defineProperty({type:"SEND_EMAIL_TEMPLATE",
     recipient:"CUSTOMER_PRIMARY",templateKey:"request-received"},
