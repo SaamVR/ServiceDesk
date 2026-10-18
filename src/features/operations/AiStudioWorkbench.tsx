@@ -168,11 +168,11 @@ function ScopedStudioWorkbench({
           </p>
         ) : null}
         {selected && mode === "request" ? (
-          <AiRequestBrief key={workspaceSlug + ":" + selected.id}
+          <AiRequestBrief key={workspaceSlug + ":" + selected.id + ":" + selected.label}
             workspaceSlug={workspaceSlug} requestId={selected.id} configured={configured} />
         ) : null}
         {selected && mode === "quote" ? (
-          <AiQuoteReview key={workspaceSlug + ":" + selected.id}
+          <AiQuoteReview key={workspaceSlug + ":" + selected.id + ":" + selected.label}
             workspaceSlug={workspaceSlug} quoteId={selected.id} configured={configured} />
         ) : null}
         {!selected ? (
@@ -187,6 +187,10 @@ function ScopedStudioWorkbench({
           </div>
         ) : null}
       </div>
+      <p className={styles.boundary}>Review source facts again whenever saved record details change.
+        Visible status changes discard old client-only AI suggestions; edits that preserve
+        the same status still require a fresh authorized backend check.
+      </p>
       <p className={styles.boundary}>No raw customer note, contact, address, invoice amount or API key is passed to this client workbench. AI output remains a draft; it cannot approve a quote, send a message or change a payment.</p>
     </section>
   );

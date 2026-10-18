@@ -119,6 +119,9 @@ describe("Frontend AI Studio keyboard-first authorized record picker", () => {
     expect(client).toContain('aria-live="polite"');
     expect(client).toContain("<AiRequestBrief");
     expect(client).toContain("<AiQuoteReview");
+    expect(client).toContain('key={workspaceSlug + ":" + selected.id + ":" + selected.label}');
+    expect(client).toContain("Visible status changes discard old client-only AI suggestions");
+    expect(client).toContain("same status still require a fresh authorized backend check");
     expect(client).not.toContain("fetch(");
     expect(client).not.toContain("process.env");
     expect(client).not.toContain("autoSubmit");
