@@ -191,8 +191,9 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
             </Link> : null}
 
             {selected.ambiguousActionSlots > 0 ? <p className={styles.notice} role="alert">
-              {selected.ambiguousActionSlots} conflicting action slot(s) are excluded from
-              verified current counts. Inspect saved source attempts with an authorized
+              {selected.ambiguousActionSlots} inconsistent or conflicting action slot(s) are excluded from
+              verified current counts, including action rows attached to unmatched or
+              skipped executions. Inspect saved source attempts with an authorized
               operator before approving, replaying or interpreting outcomes.
             </p> : null}
             <h4>Current action state and attempt history</h4>

@@ -47,7 +47,11 @@ export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
         // Duplicate highest attempts or changed action type can never be
         // promoted to a verified current state by timestamp/ID tie-breaks.
         if (latest.length !== 1 || slot.some(action =>
-          action.actionType !== latest[0].actionType)) {
+          action.actionType !== latest[0].actionType) ||
+          execution.matched !== true || execution.state === "SKIPPED") {
+          // An action on an unmatched or explicitly skipped execution is not
+          // independently corroborated, even if its action row says SUCCEEDED.
+          // Keep saved attempt history but require operator verification.
           ambiguousActionSlots++;
           continue;
         }

@@ -99,6 +99,23 @@ describe("workflow inspector persisted evidence", () => {
     expect(isWorkflowAttentionRequired(runs[0])).toBe(true);
     expect(buildWorkflowInterventionQueue(runs)[0].kind).toBe("ambiguous");
   });
+  it("does not promote success or completed KPIs when an action contradicts an unmatched event", () => {
+    for (const state of ["COMPLETED", "SKIPPED"] as const) {
+      const runs = buildWorkflowInspector({
+        ...snapshot(),
+        workflowExecutions: [{ ...live, matched: false, state }],
+        workflowActionExecutions: [{ ...action, state: "SUCCEEDED" }],
+      });
+      expect(runs[0].actions).toEqual([]);
+      expect(runs[0].attemptHistory).toHaveLength(1);
+      expect(runs[0].ambiguousActionSlots).toBe(1);
+      expect(runs[0].succeededCount).toBe(0);
+      expect(summarizeWorkflowActivity(runs).recordedSucceededActions).toBe(0);
+      expect(summarizeWorkflowActivity(runs).completed).toBe(0);
+      expect(buildWorkflowInterventionQueue(runs)[0].kind).toBe("ambiguous");
+    }
+  });
+
   it("requires one stable action type for the entire retry chain", () => {
     const runs = buildWorkflowInspector({
       ...snapshot(),
