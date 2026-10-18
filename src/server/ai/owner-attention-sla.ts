@@ -1,4 +1,6 @@
-import type {AttentionItemDTO} from "../../contracts";
+import type {OperationalAttention} from "@/features/operations/operational-product-runtime";
+/** Saved OperationalAttention rows inherit tenant scope from the trusted loader. */
+type ScopedAttention=OperationalAttention & {workspaceId?:string};
 import {loadOperationalStaffSnapshot} from "@/features/operations/operational-product-runtime";
 import {isFreshOwnerOperationsSnapshotAt} from "./owner-operations-brief";
 import {trustedQuoteInstant} from "@/features/operations/quote-validity-clock";
@@ -13,7 +15,7 @@ export type OwnerAttentionSlaResult=
    overdue:Alert[];ownerReviewRequired:true;modelInvoked:false;customerMessaged:false;workflowExecuted:false;}};
 export interface AttentionSlaSource{
   workspaceId:string;actor:{workspaceId:string;role:string};now:string;
-  attentionItems:readonly AttentionItemDTO[];
+  attentionItems:readonly ScopedAttention[];
 }
 export interface OwnerAttentionSlaDeps{loadSnapshot?:Loader;now?:()=>number;signal?:AbortSignal}
 const validId=(v:unknown):v is string=>typeof v==="string"&&/^[A-Za-z0-9:_-]{3,128}$/.test(v);
@@ -22,7 +24,7 @@ function dense(source:unknown):source is AttentionItemDTO[]{
     Reflect.ownKeys(source).length!==source.length+1)return false;
   return source.every((row,i)=>Object.hasOwn(source,i)&&!!row);
 }
-function plainRow(x:unknown):x is AttentionItemDTO {
+function plainRow(x:unknown):x is ScopedAttention {
  if(!x||typeof x!=="object"||Array.isArray(x)||Object.getPrototypeOf(x)!==Object.prototype)return false;
  const names=Object.getOwnPropertyNames(x);
  return names.length===Object.keys(x).length&&Object.getOwnPropertySymbols(x).length===0&&
@@ -41,7 +43,7 @@ export function planOwnerAttentionSla(input:AttentionSlaSource):OwnerAttentionSl
  let unscheduled=0;
  for(const a of input.attentionItems){
    if(!plainRow(a)||!validId(a.id)||seen.has(a.id)||
-      a.workspaceId!==input.workspaceId||
+      (a.workspaceId!==undefined&&a.workspaceId!==input.workspaceId)||
       !validId(a.resourceId)||!["OPEN","ACKNOWLEDGED","RESOLVED"].includes(a.status)||
       !["INFO","WARNING","CRITICAL"].includes(a.severity)||
       typeof a.type!=="string"||a.type.length<1||a.type.length>128||
