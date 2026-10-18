@@ -30,7 +30,7 @@ describe("SONIC L20 committed service follow-up review",()=>{
    [{recipient:{...recipient,quietHoursBlocked:true}},"QUIET_HOURS"],
    [{visit:{...visit,status:"PENDING_REVIEW"}},"NOT_COMPLETED"],
   ] as const){
-   const result=planConsentAwareAftercare({...input(),...overrides} as typeof input);
+   const result=planConsentAwareAftercare({...input(),...overrides} as unknown as ReturnType<typeof input>);
    expect(result).toMatchObject({ok:true,value:{eligibleForManualReview:false,reason,automatedSend:false}});
   }
  });
