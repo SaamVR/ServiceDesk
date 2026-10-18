@@ -27,9 +27,19 @@ describe("Owner model diagnostic cannot manufacture provider proof", () => {
 
   it("rejects invalid timestamps and nonstring or control-char model names", () => {
     expect(parseOwnerModelProbe({ ...valid, checkedAt: "not-a-date" })).toBeNull();
+    for(const badTime of [
+      "2026-02-30T00:00:00Z","2026-04-31T12:00:00Z",
+      "2026-10-18T00:00:00","2026-10-18T00:00:00+14:30",
+      "2026-10-18","2026-10-18T24:00:00Z",
+    ]) expect(parseOwnerModelProbe({ ...valid, checkedAt: badTime })).toBeNull();
+    expect(parseOwnerModelProbe({
+      ...valid, checkedAt:"2026-10-18T05:45:00+05:45",
+    })?.checkedAt).toBe("2026-10-18T05:45:00+05:45");
     expect(parseOwnerModelProbe({ ...valid, model: "" })).toBeNull();
     expect(parseOwnerModelProbe({ ...valid, model: { value: "test" } })).toBeNull();
     expect(parseOwnerModelProbe({ ...valid, model: "unsafe\nprovider" })).toBeNull();
+    expect(parseOwnerModelProbe({ ...valid, model: "provider token=SECRET" })).toBeNull();
+    expect(parseOwnerModelProbe({ ...valid, model: "<span>connected</span>" })).toBeNull();
     expect(parseOwnerModelProbe({ ...valid, model: "x".repeat(121) })).toBeNull();
   });
 

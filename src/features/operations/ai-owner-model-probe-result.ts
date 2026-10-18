@@ -1,3 +1,5 @@
+import { trustedQuoteInstant } from "./quote-validity-clock";
+
 /** Accept only the narrow successful synthetic model-probe contract.
  * Never treat configuration presence, arbitrary JSON or HTTP 200 alone as proof.
  */
@@ -15,10 +17,9 @@ export function parseOwnerModelProbe(value: unknown): VerifiedOwnerModelProbe | 
   if (v.state !== "PROVIDER_RESPONDED_TO_CONTROLLED_PROBE" ||
       v.source !== "REAL_MODEL_RESPONSE_NOT_A_PROVIDER_DELIVERY" ||
       v.durableReceipt !== false ||
-      typeof v.model !== "string" || !v.model.trim() ||
-      v.model.length > 120 || /[\r\n\x00-\x1f]/.test(v.model) ||
-      typeof v.checkedAt !== "string" || !v.checkedAt.trim() ||
-      !Number.isFinite(Date.parse(v.checkedAt))) return null;
+      typeof v.model !== "string" ||
+      !/^[A-Za-z0-9._:/-]{1,120}$/.test(v.model) ||
+      trustedQuoteInstant(v.checkedAt) === null) return null;
   // Only known safe fields pass to UI. Discard any untrusted extra payload.
   return {
     state: "PROVIDER_RESPONDED_TO_CONTROLLED_PROBE",
