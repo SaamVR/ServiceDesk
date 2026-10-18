@@ -279,8 +279,7 @@ function ScopedStaffAiReviewComposer({
           <input type="checkbox" checked={retryVerified} disabled={busy !== "idle"}
             onChange={event=>setRetryVerified(event.target.checked)} />
           <span>I inspected the saved Inbox history and found no equivalent
-            queued reply. Retry only the exact, unchanged message with the
-            preserved idempotency key.</span>
+            queued reply. Retry only the exact, unchanged message with the preserved idempotency key.</span>
         </label> : null}
         {receipt ? (
           <div className={styles.receipt}>
