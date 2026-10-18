@@ -7,8 +7,9 @@ import { buildStaffModuleHref } from "./staff-modules";
 import { inboxQueueHref } from "./inbox-triage";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import {
-  deliveryReviewLabel,
+  deliveryReviewLabel, deliveryReviewReasonOptions, selectDeliveryReviewItems,
   parseInboxDeliveryDiagnostics,
+  type DeliveryReviewChannelFilter, type DeliveryReviewReasonFilter,
   type InboxDeliveryDiagnosticsSnapshot,
 } from "./inbox-delivery-diagnostics";
 import styles from "./InboxDeliveryDiagnostics.module.css";
@@ -29,6 +30,8 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
   const requestController = useRef<AbortController | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+  const [channelFilter,setChannelFilter] = useState<DeliveryReviewChannelFilter>("ALL");
+  const [reasonFilter,setReasonFilter] = useState<DeliveryReviewReasonFilter>("ALL");
 
   useEffect(() => () => {
     requestController.current?.abort();
@@ -92,7 +95,8 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
   }
 
   const allNeedsReview = snapshot?.items.filter(item => item.health === "NEEDS_REVIEW") ?? [];
-  const needsReview = expanded ? allNeedsReview : allNeedsReview.slice(0, 8);
+  const matchingNeedsReview = selectDeliveryReviewItems(allNeedsReview,channelFilter,reasonFilter);
+  const needsReview = expanded ? matchingNeedsReview : matchingNeedsReview.slice(0, 8);
   const inboxHref = buildStaffModuleHref(workspaceSlug, "inbox");
   return (
     <section className={styles.panel} aria-label="Outbound delivery diagnostics">
@@ -139,10 +143,40 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
               {" "}Snapshot captured <time dateTime={snapshot.generatedAt}>{snapshot.generatedAt}</time>.
               This sample is not a live delivery feed.
             </p>
-            {needsReview.length ? (
+            {allNeedsReview.length ? (
               <div className={styles.items}>
                 <h4>Needs operator review</h4>
-                <ul>
+                <div className={styles.filters} aria-label="Filter authorized delivery problems">
+                  <label>Channel
+                    <select value={channelFilter} onChange={event=>{
+                      const next=event.target.value;
+                      if(next!=="ALL" && next!=="EMAIL" && next!=="WHATSAPP")return;
+                      setChannelFilter(next);
+                      setExpanded(false);
+                    }}>
+                      <option value="ALL">All channels</option>
+                      <option value="EMAIL">Email only</option>
+                      <option value="WHATSAPP">WhatsApp only</option>
+                    </select>
+                  </label>
+                  <label>Why review?
+                    <select value={reasonFilter} onChange={event=>{
+                      const next=event.target.value;
+                      if(!deliveryReviewReasonOptions.some(opt=>opt.value===next))return;
+                      setReasonFilter(next as DeliveryReviewReasonFilter);
+                      setExpanded(false);
+                    }}>
+                      {deliveryReviewReasonOptions.map(option=>
+                        <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <p className={styles.sample} role="status">
+                  {matchingNeedsReview.length} matching review record(s) from
+                  {allNeedsReview.length} sampled review items. Filters only
+                  change this display; they do not alter delivery evidence.
+                </p>
+                {needsReview.length ? <ul>
                   {needsReview.map((item) => (
                     <li key={item.messageId}>
                       <Link
@@ -159,17 +193,20 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
                       </Link>
                     </li>
                   ))}
-                </ul>
-                {allNeedsReview.length > 8 ? (
+                </ul> : <p className={styles.sample}>
+                  No review record matches the selected channel and reason.
+                  Clear filters to inspect other saved source issues.
+                </p>}
+                {matchingNeedsReview.length > 8 ? (
                   <button type="button" className={styles.more}
                     onClick={() => setExpanded(value => !value)}
                     aria-expanded={expanded}>
                     {expanded ? "Show fewer review records" :
-                      `Show all ${allNeedsReview.length} sample review records`}
+                      `Show all ${matchingNeedsReview.length} matching review records`}
                   </button>
                 ) : null}
-                {snapshot.counts.review > needsReview.length ? (
-                  <p className={styles.sample}>Showing {needsReview.length} of {snapshot.counts.review} review records in this authorized sample.</p>
+                {matchingNeedsReview.length > needsReview.length ? (
+                  <p className={styles.sample}>Showing {needsReview.length} of {matchingNeedsReview.length} matching review records in this authorized sample.</p>
                 ) : null}
               </div>
             ) : (

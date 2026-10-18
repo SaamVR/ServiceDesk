@@ -79,3 +79,9 @@
 .stop:hover, .more:hover { background: #e3f5f0; }
 .stop:focus-visible, .more:focus-visible { outline: 3px solid #18877b; outline-offset: 3px; }
 .more { justify-self: start; }
+
+.filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0;}
+.filters label{display:grid;gap:6px;font-size:12px;font-weight:750;color:#415d58;}
+.filters select{width:100%;min-height:44px;min-width:0;padding:9px 11px;border:1px solid #b5d4cd;border-radius:8px;background:#fff;color:#234b43;font:inherit;font-size:13px;}
+.filters select:focus-visible{outline:3px solid #18877b;outline-offset:2px;}
+@media(max-width:540px){.filters{grid-template-columns:1fr;}}

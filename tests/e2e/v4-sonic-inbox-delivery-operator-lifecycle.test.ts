@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseInboxDeliveryDiagnostics } from "../../src/features/operations/inbox-delivery-diagnostics";
+import { parseInboxDeliveryDiagnostics, selectDeliveryReviewItems, deliveryReviewReasonOptions } from "../../src/features/operations/inbox-delivery-diagnostics";
 
 const read = (p:string) => readFileSync(join(process.cwd(),p),"utf8");
 const source = read("src/features/operations/InboxDeliveryDiagnostics.tsx");
@@ -30,14 +30,37 @@ describe("SONIC read-only inbox delivery diagnostics lifecycle",()=>{
   });
   it("discloses sampled timestamp/truncation and expandable review-only records",()=>{
     expect(source).toContain('allNeedsReview = snapshot?.items.filter(item => item.health === "NEEDS_REVIEW")');
-    expect(source).toContain('allNeedsReview.slice(0, 8)');
+    expect(source).toContain('matchingNeedsReview.slice(0, 8)');
     expect(source).toContain('Show all');
+    expect(source).toContain("Filter authorized delivery problems");
+    expect(source).toContain("No review record matches");
+    expect(css).toContain(".filters select:focus-visible");
     expect(source).toContain('aria-expanded={expanded}');
     expect(source).toContain('dateTime={snapshot.generatedAt}');
     expect(source).toContain('This sample is not a live delivery feed.');
     expect(source).toContain('sample incomplete');
     expect(css).toContain('.stop:focus-visible, .more:focus-visible');
     expect(css).toContain('min-height: 44px');
+  });
+  it("filters sampled review issues by channel and exact reason, without changing source records",()=>{
+    const items=[
+      {messageId:"m1",conversationId:"c1",channel:"EMAIL" as const,
+        health:"NEEDS_REVIEW" as const,deliveryState:"FAILED" as const,reason:"PROVIDER_FAILURE" as const,ageMinutes:20},
+      {messageId:"m2",conversationId:"c2",channel:"WHATSAPP" as const,
+        health:"NEEDS_REVIEW" as const,deliveryState:"QUEUED" as const,reason:"STALE_PENDING" as const,ageMinutes:100},
+      {messageId:"m3",conversationId:"c3",channel:"EMAIL" as const,
+        health:"NEEDS_REVIEW" as const,deliveryState:"FAILED" as const,reason:"PROVIDER_FAILURE" as const,ageMinutes:60},
+      {messageId:"m4",conversationId:"c4",channel:"EMAIL" as const,
+        health:"OK" as const,deliveryState:"DELIVERED" as const,ageMinutes:200},
+    ];
+    expect(selectDeliveryReviewItems(items,"ALL","ALL").map(x=>x.messageId)).toEqual(["m3","m1","m2"]);
+    expect(selectDeliveryReviewItems(items,"EMAIL","PROVIDER_FAILURE").map(x=>x.messageId)).toEqual(["m3","m1"]);
+    expect(selectDeliveryReviewItems(items,"WHATSAPP","STALE_PENDING").map(x=>x.messageId)).toEqual(["m2"]);
+    expect(selectDeliveryReviewItems(items,"WHATSAPP","PROVIDER_FAILURE")).toEqual([]);
+    expect(selectDeliveryReviewItems(items,"FOREIGN" as never,"ALL")).toEqual([]);
+    expect(selectDeliveryReviewItems(items,"ALL","UNKNOWN" as never)).toEqual([]);
+    expect(deliveryReviewReasonOptions.length).toBe(7);
+    expect(items[0].messageId).toBe("m1");
   });
   it("rejects forged delivered status without consistent saved source metadata",()=>{
     const broken={generatedAt:"2026-10-18T00:00:00Z",truncated:false,

@@ -136,3 +136,31 @@ const reasonLabels: Record<DeliveryTriageReason, string> = {
 export function deliveryReviewLabel(reason?: DeliveryTriageReason): string {
   return reason ? reasonLabels[reason] : "Review provider evidence";
 }
+
+
+export type DeliveryReviewChannelFilter="ALL"|"EMAIL"|"WHATSAPP";
+export type DeliveryReviewReasonFilter="ALL"|DeliveryTriageReason;
+/** Read-only prioritization of independently validated saved delivery metadata. */
+export function selectDeliveryReviewItems(items:readonly DeliveryDiagnostic[],
+  channel:DeliveryReviewChannelFilter,reason:DeliveryReviewReasonFilter):DeliveryDiagnostic[]{
+  if(!["ALL","EMAIL","WHATSAPP"].includes(channel) ||
+     !(reason==="ALL"||validReasons.has(reason)))return [];
+  const rank:Record<DeliveryTriageReason,number>={
+    PROVIDER_FAILURE:0,SUPPRESSED_BY_POLICY:1,OUTBOX_REFERENCE_MISSING:2,
+    OUTBOX_RECEIPT_MISSING:3,STATUS_MISSING:4,STALE_PENDING:5,
+  };
+  return items.filter(item=>item.health==="NEEDS_REVIEW" &&
+    (channel==="ALL"||item.channel===channel) &&
+    (reason==="ALL"||item.reason===reason)).sort((a,b)=>
+      rank[a.reason??"STATUS_MISSING"]-rank[b.reason??"STATUS_MISSING"] ||
+      b.ageMinutes-a.ageMinutes || a.messageId.localeCompare(b.messageId));
+}
+export const deliveryReviewReasonOptions:readonly {value:DeliveryReviewReasonFilter;label:string}[]=[
+  {value:"ALL",label:"All review reasons"},
+  {value:"PROVIDER_FAILURE",label:"Provider failed"},
+  {value:"SUPPRESSED_BY_POLICY",label:"Policy suppressed"},
+  {value:"OUTBOX_REFERENCE_MISSING",label:"Outbox reference missing"},
+  {value:"OUTBOX_RECEIPT_MISSING",label:"Acceptance receipt missing"},
+  {value:"STATUS_MISSING",label:"Delivery status missing"},
+  {value:"STALE_PENDING",label:"Pending too long"},
+];
