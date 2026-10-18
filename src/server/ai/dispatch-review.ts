@@ -35,6 +35,17 @@ export type DispatchAiReviewResult =
 const safeId=(v:unknown):v is string=>
   typeof v==="string" && /^[A-Za-z0-9:_-]{3,128}$/.test(v);
 const validClock=(v:unknown)=>trustedQuoteInstant(v)!==null;
+const plainRecord=(v:unknown):v is Record<string,unknown> =>
+ !!v && typeof v==="object" && !Array.isArray(v) &&
+ Object.getPrototypeOf(v)===Object.prototype &&
+ Object.getOwnPropertyNames(v).length===Object.keys(v).length &&
+ Object.getOwnPropertySymbols(v).length===0 &&
+ Object.values(Object.getOwnPropertyDescriptors(v))
+  .every(d=>Object.hasOwn(d,"value"));
+const denseArray=(v:unknown,max:number):v is unknown[]=>
+ Array.isArray(v) && v.length<max &&
+ Reflect.ownKeys(v).length===v.length+1 &&
+ v.every((row,i)=>Object.hasOwn(v,i)&&plainRecord(row));
 const allowedStatus=new Set([
  "AWAITING_PAYMENT","CONFIRMED","ASSIGNED","EN_ROUTE","IN_PROGRESS",
  "PENDING_REVIEW","COMPLETED","CANCELLED","PAYMENT_REVIEW",
@@ -52,10 +63,9 @@ export function prepareDispatchAiReview(input:DispatchAiReviewInput):DispatchAiR
     input.actor.workspaceId!==input.workspaceId)
     return {ok:false,code:"DISPATCH_REVIEW_ROLE_REQUIRED"};
  const data=input.snapshot;
- if(!data || !Array.isArray(data.visits) || data.visits.length>=150 ||
-    !Array.isArray(data.crews) || data.crews.length>=80 ||
-    Reflect.ownKeys(data.visits).length!==data.visits.length+1 ||
-    Reflect.ownKeys(data.crews).length!==data.crews.length+1)
+ if(!data || !denseArray(data.visits,150) ||
+    !denseArray(data.crews,80) ||
+    (data.attentionItems!==undefined && !denseArray(data.attentionItems,5000)))
     return {ok:false,code:"DISPATCH_REVIEW_SOURCE_UNVERIFIED"};
  const visitIds=new Set<string>(),crewIds=new Set<string>();
  for(const visit of data.visits) {
@@ -67,7 +77,10 @@ export function prepareDispatchAiReview(input:DispatchAiReviewInput):DispatchAiR
       !Number.isSafeInteger(visit.bufferMinutes) || visit.bufferMinutes<0 ||
       visit.serviceMinutes+visit.bufferMinutes>1440 ||
       !validClock(visit.startAt) ||
-      (visit.crewId!==undefined && !safeId(visit.crewId)))
+      (visit.crewId!==undefined && !safeId(visit.crewId)) ||
+      (visit.serviceCode!==undefined &&
+       (typeof visit.serviceCode!=="string" ||
+        !/^[A-Z0-9_-]{1,64}$/.test(visit.serviceCode))))
       return {ok:false,code:"DISPATCH_REVIEW_SOURCE_UNVERIFIED"};
    visitIds.add(visit.id);
  }
@@ -87,6 +100,21 @@ export function prepareDispatchAiReview(input:DispatchAiReviewInput):DispatchAiR
  }
  if(data.visits.some(v=>v.crewId!==undefined&&!crewIds.has(v.crewId)))
    return {ok:false,code:"DISPATCH_REVIEW_SOURCE_UNVERIFIED"};
+ // Invalid attention rows must never throw inside the shared dispatch scorer
+ // or quietly produce a misleading source-grounded owner review.
+ const seenAttention=new Set<string>();
+ for(const item of data.attentionItems??[]){
+   if(!item || item.workspaceId!==input.workspaceId ||
+      !safeId(item.id) || seenAttention.has(item.id) ||
+      !safeId(item.resourceId) ||
+      !["INFO","WARNING","CRITICAL"].includes(item.severity) ||
+      !["OPEN","ACKNOWLEDGED","RESOLVED"].includes(item.status) ||
+      typeof item.summary!=="string" || item.summary.length>2000 ||
+      typeof item.type!=="string" || item.type.length<1 ||
+      typeof item.resourceType!=="string" || item.resourceType.length<1)
+     return {ok:false,code:"DISPATCH_REVIEW_SOURCE_UNVERIFIED"};
+   seenAttention.add(item.id);
+ }
  const recommendations=buildDispatchRecommendations(data);
  const proposals=recommendations.map(r=>{
    const high=r.candidates.filter(c=>c.eligible && c.confidence==="HIGH");
