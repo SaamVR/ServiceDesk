@@ -15,19 +15,20 @@ import styles from "./OwnerWorkflowRuleAssistant.module.css";
 
 export interface OwnerRuleBranchOption {id:string;name:string}
 type Props={workspaceSlug:string;workspaceId:string;configured:boolean;
-  branches:readonly OwnerRuleBranchOption[]};
+  draftWritable:boolean;branches:readonly OwnerRuleBranchOption[]};
 const WAIT_LIMIT_MS=75_000;
 const defaultIntent="When a quote is accepted create an internal dispatch review task.";
 
 export function OwnerWorkflowRuleAssistant(props:Props){
   const scope=[props.workspaceSlug,props.workspaceId,String(props.configured),
+    String(props.draftWritable),
     ...props.branches.map(item=>item.id)].join(":");
   return <ScopedOwnerRuleAssistant key={scope} {...props}/>;
 }
 
 /** The selected branch and generated model draft never outlive their owner
  * workspace/scope. Server independently reauthorizes every request and preview. */
-function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches}:Props) {
+function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,draftWritable,branches}:Props) {
   const [branchId,setBranchId]=useState(branches[0]?.id ?? "");
   const [instruction,setInstruction]=useState(defaultIntent);
   const [busy,setBusy]=useState(false);
@@ -226,7 +227,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
   }
 
   async function saveDraft(){
-    if(savePending.current || !suggestion || !preview || !reviewConfirmed ||
+    if(!draftWritable || savePending.current || !suggestion || !preview || !reviewConfirmed ||
        busy || previewBusy || saving || draftSaved ||
        suggestion.branchId!==branchId ||
        !/^[A-Z0-9][A-Z0-9_-]{2,63}$/.test(ruleCode) ||
@@ -421,6 +422,12 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
           explicitly save one internal-attention DRAFT through the existing
           authorized workflow writer. No publishing, sending or execution occurs.
           Recheck the saved draft in Workflow builder before publishing manually.</p>
+        {!draftWritable ? <p className={styles.warning} role="status">
+          The saved workflow draft backend is unavailable for this workspace.
+          You may inspect fictional previews, but cannot save or publish any
+          automation here. Use the owner workflow editor after its protected
+          backend and migration are configured.
+        </p> : null}
         <div className={styles.fields}>
           <label>Unique rule code
             <input type="text" value={ruleCode} maxLength={64}
@@ -442,7 +449,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
           </label>
         </div>
         <button type="button" className={styles.primary} onClick={saveDraft}
-          disabled={!preview || !reviewConfirmed || saving || draftSaved ||
+          disabled={!draftWritable || !preview || !reviewConfirmed || saving || draftSaved ||
             !/^[A-Z0-9][A-Z0-9_-]{2,63}$/.test(ruleCode) ||
             ruleName.trim().length<5 || ruleName.length>120}
           aria-busy={saving}>

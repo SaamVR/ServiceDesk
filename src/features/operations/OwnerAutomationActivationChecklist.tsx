@@ -5,6 +5,7 @@ import { summarizeAutomationActivation } from "./owner-automation-activation";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import styles from "./OwnerAutomationActivationChecklist.module.css";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
+import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { OwnerWorkflowRuleAssistant } from "./OwnerWorkflowRuleAssistant";
 
 /**
@@ -82,7 +83,9 @@ export function OwnerAutomationActivationChecklist({
       {data.actor?.role === "OWNER" ? <OwnerWorkflowRuleAssistant
         workspaceSlug={workspaceSlug} workspaceId={data.workspace.id}
         branches={ownerRuleBranches}
-        configured={readConfiguredAiRuntimeConfig().ok} /> : null}
+        configured={readConfiguredAiRuntimeConfig().ok}
+        draftWritable={data.workflowAvailable === true &&
+          operationalDatabaseMode() === "SERVICE_ROLE"} /> : null}
       <p className={styles.disclosure} role="note">
         {summary.allEvidenceReady
           ? "Exact saved quote-source and linked internal attention are evidenced with the other workspace prerequisites. Independent customer-session UAT, provider delivery and deployment opt-in still require separate checks."

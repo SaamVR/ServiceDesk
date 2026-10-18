@@ -28,6 +28,9 @@ describe("R36 real owner-reviewed AI workflow DRAFT persistence",()=>{
     expect(ui).toContain("setReviewConfirmed(false)");
     expect(ui).toContain("savePending.current=true");
     expect(ui).toContain("!saving && !draftSaved");
+    expect(ui).toContain("!draftWritable || savePending.current");
+    expect(ui).toContain("The saved workflow draft backend is unavailable");
+    expect(ui).toContain("disabled={!draftWritable || !preview");
     expect(ui).toContain("new paid model request is disabled");
     expect(ui).toContain("at most 24 authorized branches");
     expect(ui).toContain("if(savePending.current || !suggestion");
