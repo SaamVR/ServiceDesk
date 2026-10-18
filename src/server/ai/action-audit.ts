@@ -42,14 +42,18 @@ const SAFE_IDENTIFIER=/^[A-Za-z0-9:_-]{1,128}$/;
 const SAFE_LABEL=/^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const SAFE_MODEL=/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,95}$/;
 const SAFE_EVIDENCE=/^[A-Za-z][A-Za-z0-9_-]{1,39}:[A-Za-z0-9:_-]{2,96}$/;
+const SECRET_LIKE=/(?:^|[:_-])(?:sk[-_](?:live|test|proj)?|whsec_|gh[pousr]_|AIza|bearer)[A-Za-z0-9_-]{3,}/i;
 const OUTCOMES=new Set(["PROPOSED","COMPLETED","BLOCKED","FAILED"]);
 const REJECT_REASONS=new Set<AiToolOrchestrationRejectReason>([
   "TOOL_BUDGET_EXCEEDED","BUSINESS_TRUTH_TOOL_BLOCKED","UNKNOWN_TOOL",
   "RESOURCE_OUT_OF_SCOPE","HANDOVER_ACTIVE","SCHEMA_VIOLATION",
 ]);
-const safeId=(v:unknown)=>typeof v==="string" && SAFE_IDENTIFIER.test(v)?v:"redacted-id";
-const safeLabel=(v:unknown)=>typeof v==="string" && SAFE_LABEL.test(v)?v:"unknown";
-const safeModel=(v:unknown)=>typeof v==="string" && SAFE_MODEL.test(v)?v:"unverified";
+const safeId=(v:unknown)=>typeof v==="string" && SAFE_IDENTIFIER.test(v) &&
+  !SECRET_LIKE.test(v)?v:"redacted-id";
+const safeLabel=(v:unknown)=>typeof v==="string" && SAFE_LABEL.test(v) &&
+  !SECRET_LIKE.test(v)?v:"unknown";
+const safeModel=(v:unknown)=>typeof v==="string" && SAFE_MODEL.test(v) &&
+  !SECRET_LIKE.test(v)?v:"unverified";
 function redact(value:unknown):string {
   if(typeof value!=="string")return "No verified tool summary";
   return value.slice(0,1024)
@@ -79,7 +83,7 @@ export function buildAiActionAuditRecord(input: AiActionAuditInput): AiActionAud
     toolResults:tools.map(item=>({
       toolName:safeLabel(item?.toolName),
       outcome:OUTCOMES.has(item?.outcome)?item.outcome:"BLOCKED",
-      ...(typeof item?.evidenceRef==="string" && SAFE_EVIDENCE.test(item.evidenceRef)
+      ...(typeof item?.evidenceRef==="string" && SAFE_EVIDENCE.test(item.evidenceRef) && !SECRET_LIKE.test(item.evidenceRef)
         ? {evidenceRef:item.evidenceRef}:{}),
       summary:redact(item?.summary),
     })),
