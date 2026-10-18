@@ -95,3 +95,9 @@
   font-size:12px;font-weight:800;cursor:pointer;}
 .clearSearch:hover{background:#eef8f1;}
 .clearSearch:focus-visible{outline:3px solid #19876d;outline-offset:2px;}
+
+.clearSelection{min-height:44px;border:1px solid #bcd8c8;border-radius:9px;
+  background:#fff;color:#23624d;font:inherit;font-size:12px;font-weight:750;
+  padding:9px 13px;cursor:pointer;}
+.clearSelection:hover{background:#eef9f2;}
+.clearSelection:focus-visible{outline:3px solid #1c8d77;outline-offset:3px;}

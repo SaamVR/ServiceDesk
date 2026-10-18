@@ -97,6 +97,13 @@ describe("Frontend AI Studio keyboard-first authorized record picker", () => {
     expect(client).toContain("selectedRequest = requests.find");
     expect(client).toContain("selectedQuote = quotes.find");
     expect(client).toContain("visibleChoices = selected");
+    expect(client).toContain('aria-label={"Clear selected " + mode + " record"}');
+    expect(client).toContain("clearSelectedRecord");
+    expect(client).toContain('if (mode === "request") setRequestId("");');
+    expect(client).toContain('else setQuoteId("");');
+    expect(client).toContain("recordSelectRef.current?.focus()");
+    expect(client).toContain("server/provider cancellation is NOT implied");
+    expect(css()).toContain(".clearSelection:focus-visible");
     expect(client).toContain("filterStudioRecordChoices(choices, recordSearch)");
     expect(client).toContain('type="search"');
     expect(client).toContain('autoComplete="off"');

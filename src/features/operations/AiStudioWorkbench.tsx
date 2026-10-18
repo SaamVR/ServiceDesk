@@ -58,6 +58,14 @@ function ScopedStudioWorkbench({
   const selectedRequest = requests.find(item => item.id === requestId);
   const selectedQuote = quotes.find(item => item.id === quoteId);
   const selected = mode === "request" ? selectedRequest : selectedQuote;
+  const clearSelectedRecord = () => {
+    // Unmount the active AI panel so its outstanding request is cancelled
+    // in this browser; server/provider cancellation is NOT implied.
+    if (mode === "request") setRequestId("");
+    else setQuoteId("");
+    setRecordSearch("");
+    recordSelectRef.current?.focus();
+  };
   const choices = mode === "request" ? requests : quotes;
   const matches = filterStudioRecordChoices(choices, recordSearch);
   // Preserve a selected authorized item when staff starts a new search;
@@ -133,6 +141,10 @@ function ScopedStudioWorkbench({
               <option key={item.id} value={item.id}>{item.label}</option>
             ))}
           </select>
+          {selected ? <button type="button" className={styles.clearSelection}
+            onClick={clearSelectedRecord} aria-label={"Clear selected " + mode + " record"}>
+            Clear selected record
+          </button> : null}
           {selected ? (
             <Link href={buildStaffModuleHref(workspaceSlug, mode === "request" ? "requests" : "quotes") +
               (mode === "request" ? "?request=" : "?quote=") + encodeURIComponent(selected.id)}
