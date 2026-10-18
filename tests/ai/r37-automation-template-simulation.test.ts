@@ -37,7 +37,7 @@ describe("SONIC R37 template-matching automation preview",()=>{
    {"request.customerEmail":"secret@example.test"},
    {"invoice.paymentPaid":true},
    {"request.serviceCode":Infinity},
-  ])expect(simulateAutomationCatalog({...base,snapshot}))
+  ])expect(simulateAutomationCatalog({...base,snapshot:snapshot as never}))
       .toMatchObject({ok:false,code:"AUTOMATION_TEMPLATE_INPUT_INVALID"});
  });
  it("reports bounded count and does not invent omitted matches",()=>{
