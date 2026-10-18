@@ -243,7 +243,7 @@ function ScopedStaffAiReviewComposer({
           <p>AI drafting did not return a verified suggestion. The model may still finish upstream; continue with the standard staff reply form.</p>
         ) : error === "stale" ? (
           <p>The conversation changed or a newer customer message arrived.
-            Reload before approving again.{" "}
+            Reload this conversation before approving another reply.{" "}
             <Link href={historyHref} className={styles.historyLink}>
               Find current saved conversation in Inbox →
             </Link>
