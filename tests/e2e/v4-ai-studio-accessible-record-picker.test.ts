@@ -102,6 +102,12 @@ describe("Frontend AI Studio keyboard-first authorized record picker", () => {
     expect(client).toContain('autoComplete="off"');
     expect(client).toContain('aria-label="Clear saved-record search"');
     expect(client).toContain('onClick={() => setRecordSearch("")}');
+    expect(client).toContain('event.key !== "Enter" || matches.length !== 1');
+    expect(client).toContain("if (mode === \"request\") setRequestId(id);");
+    expect(client).toContain("else setQuoteId(id);");
+    expect(client).toContain("recordSelectRef.current?.focus()");
+    expect(client).toContain('aria-describedby={tabsId + "-search-hint"}');
+    expect(client).toContain("Press Enter to select this saved record");
     expect(css()).toContain(".clearSearch:focus-visible");
     expect(client).toContain('aria-live="polite"');
     expect(client).toContain("<AiRequestBrief");

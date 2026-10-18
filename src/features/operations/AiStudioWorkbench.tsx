@@ -37,6 +37,7 @@ function ScopedStudioWorkbench({
   const tabsId = useId();
   const requestTabRef = useRef<HTMLButtonElement>(null);
   const quoteTabRef = useRef<HTMLButtonElement>(null);
+  const recordSelectRef = useRef<HTMLSelectElement>(null);
   const activateTab = (next: "request" | "quote") => {
     setMode(next);
     setRecordSearch("");
@@ -96,13 +97,26 @@ function ScopedStudioWorkbench({
           <input id={tabsId + "-search"} type="search" autoComplete="off"
             className={styles.searchInput} value={recordSearch} maxLength={80}
             placeholder="Search record label or ID"
-            onChange={event => setRecordSearch(event.target.value)} />
+            aria-describedby={tabsId + "-search-hint"}
+            onChange={event => setRecordSearch(event.target.value)}
+            onKeyDown={event => {
+              // No arbitrary IDs: Enter only chooses one already-authorized
+              // result from the current, capped browser-side record list.
+              if (event.key !== "Enter" || matches.length !== 1) return;
+              event.preventDefault();
+              const id = matches[0].id;
+              if (mode === "request") setRequestId(id);
+              else setQuoteId(id);
+              recordSelectRef.current?.focus();
+            }} />
           {recordSearch ? <button type="button" className={styles.clearSearch}
             onClick={() => setRecordSearch("")} aria-label="Clear saved-record search">
             Clear search
           </button> : null}
-          <span role="status" aria-live="polite" className={styles.searchCount}>
+          <span role="status" aria-live="polite" className={styles.searchCount}
+            id={tabsId + "-search-hint"}>
             {matches.length} of {choices.length} loaded record choices shown
+            {matches.length === 1 ? " · Press Enter to select this saved record" : ""}
           </span>
         </div>
         <div className={styles.recordPicker}>
@@ -110,6 +124,7 @@ function ScopedStudioWorkbench({
             {mode === "request" ? "Saved service request" : "Saved customer quote"}
           </label>
           <select id={tabsId + "-record-select"} className={styles.select}
+            ref={recordSelectRef}
             value={selected?.id ?? ""}
             onChange={event => mode === "request"
               ? setRequestId(event.target.value) : setQuoteId(event.target.value)}>
