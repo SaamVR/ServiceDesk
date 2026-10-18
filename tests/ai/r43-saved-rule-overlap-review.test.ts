@@ -89,6 +89,16 @@ describe("R43 AI L26 saved published-rule conflict check",()=>{
    expect(reviewSavedRuleOverlap(input(accessor as WorkflowRuleVersionDTO[])))
      .toMatchObject({ok:false,code:"RULE_INVENTORY_UNVERIFIED"});
  });
+ it("rejects AI proposal envelopes containing unexpected contact or financial authority",()=>{
+   for(const extra of [
+     {customerEmail:"private@example.test"},
+     {paymentPaid:true},
+     {sendProviderMessage:true},
+   ]){
+     expect(reviewSavedRuleOverlap(input([saved()],[{...draft(),...extra}])))
+       .toMatchObject({ok:false,code:"RULE_INVENTORY_UNVERIFIED"});
+   }
+ });
  it("never calls provider, publishes or claims complete database inventory",()=>{
   const r=reviewSavedRuleOverlap(input([], [draft()]));
   expect(r).toMatchObject({ok:true,value:{inspectedPublished:0,
