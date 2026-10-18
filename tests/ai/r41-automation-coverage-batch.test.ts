@@ -1,7 +1,7 @@
 import {describe,expect,it} from "vitest";
-import {previewAutomationCatalogCoverage} from "../../src/server/ai/automation-coverage-batch";
+import {previewAutomationCatalogCoverage, type AutomationCoverageBatch} from "../../src/server/ai/automation-coverage-batch";
 const owner={workspaceId:"workspace-1",role:"OWNER" as const};
-const sample={
+const sample:AutomationCoverageBatch={
  actor:owner,workspaceId:"workspace-1",branchId:"branch-1",
  scenarios:[
   {scenarioId:"scenario-request",eventType:"REQUEST_CREATED" as const,
