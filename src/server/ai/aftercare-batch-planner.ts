@@ -15,6 +15,7 @@ export type AftercareBatchResult =
     source:"PERSISTED_COMPLETION_AND_CONSENT_INPUTS_ONLY";
     workspaceId:string;
     inspectedCount:number;readyCount:number;
+    reviewSuggested:boolean;oldestReadyAt?:string;
     candidates:Array<{visitId:string;sourceEventId:string;visitVersion:number;
       completedAt:string;ownerApprovalRequired:true;customerContactSent:false;}>;
     suppressed:Record<AftercareSuppressionReason,number>;
@@ -22,6 +23,21 @@ export type AftercareBatchResult =
   }};
 
 const safeId=(v:unknown)=>typeof v==="string"&&/^[A-Za-z0-9:_-]{3,128}$/.test(v);
+const exactUtc=(v:unknown):v is string=>
+  typeof v==="string" &&
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v) &&
+  Number.isFinite(Date.parse(v)) &&
+  new Date(Date.parse(v)).toISOString()===v;
+function denseDataArray(value:unknown,max:number):value is unknown[]{
+  if(!Array.isArray(value)||value.length>max ||
+     Reflect.ownKeys(value).length!==value.length+1)return false;
+  for(let i=0;i<value.length;i++){
+    const d=Object.getOwnPropertyDescriptor(value,String(i));
+    if(!d||!Object.hasOwn(d,"value"))return false;
+  }
+  return true;
+}
+
 /** No generic reminder blast: pre-verified completion journals and live
  * recipient policies are supplied by a tenant-authorized service read. This
  * produces internal owner review proposals only, not an outbox dispatch. */
@@ -30,8 +46,7 @@ export function buildOwnerAftercareBatch(input:AftercareBatchInput):AftercareBat
      !input.actor || input.actor.role!=="OWNER" ||
      input.actor.workspaceId!==input.workspaceId)
      return {ok:false,code:"AFTERCARE_BATCH_SCOPE_INVALID"};
-  if(!Array.isArray(input.entries) || input.entries.length>200 ||
-     typeof input.now!=="string")
+  if(!denseDataArray(input.entries,200) || !exactUtc(input.now))
      return {ok:false,code:"AFTERCARE_BATCH_SOURCE_INVALID"};
 
   const visits=new Set<string>(),events=new Set<string>();
@@ -81,6 +96,8 @@ export function buildOwnerAftercareBatch(input:AftercareBatchInput):AftercareBat
     source:"PERSISTED_COMPLETION_AND_CONSENT_INPUTS_ONLY",
     workspaceId:input.workspaceId,inspectedCount:input.entries.length,
     readyCount:candidates.length,candidates,suppressed,
+    reviewSuggested:candidates.length>0,
+    ...(candidates.length>0?{oldestReadyAt:candidates[0].completedAt}:{}),
     anyProviderMessageSent:false,anyPaymentChanged:false,
   }};
 }
