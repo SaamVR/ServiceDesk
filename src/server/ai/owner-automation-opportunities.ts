@@ -1,6 +1,7 @@
 import {resolveStaffActor} from "@/features/operations/operational-product-runtime";
 import {loadOwnerWorkdayPriorities, type OwnerWorkdayResult} from "./owner-workday-priorities";
 import {compileModelWorkflowDraft,type ProposedOwnerWorkflowDraft} from "./workflow-draft-proposal";
+import {ownerPriorityActions} from "./owner-priority-actions";
 
 type Resolver=typeof resolveStaffActor;
 type Workday=typeof loadOwnerWorkdayPriorities;
@@ -49,11 +50,15 @@ export async function suggestOwnerAutomationOpportunities(
  if(deps.signal?.aborted)return {ok:false,code:"OPPORTUNITY_CANCELLED"};
  const resolve=deps.resolveActor??resolveStaffActor;
  const verify=deps.verifyBranch??savedBranch;
+ const verifiedBranch=async(service:Extract<Awaited<ReturnType<Resolver>>,{ok:true}>["value"]["service"],
+   workspaceId:string,branchId:string):Promise<boolean>=>{
+    try{return await verify(service,workspaceId,branchId);}catch{return false;}
+ };
  let first:Awaited<ReturnType<Resolver>>;
  try{first=await resolve(slug);}catch{return {ok:false,code:"OPPORTUNITY_OWNER_REQUIRED"};}
  if(!owner(first,slug))return {ok:false,code:"OPPORTUNITY_OWNER_REQUIRED"};
  const workspaceId=first.value.workspace.id,userId=first.value.actor.userId;
- if(!(await verify(first.value.service,workspaceId,branchId)))
+ if(!(await verifiedBranch(first.value.service,workspaceId,branchId)))
    return {ok:false,code:"OPPORTUNITY_BRANCH_UNVERIFIED"};
  if(deps.signal?.aborted)return {ok:false,code:"OPPORTUNITY_CANCELLED"};
  let workday:Awaited<ReturnType<Workday>>;
@@ -63,6 +68,13 @@ export async function suggestOwnerAutomationOpportunities(
     workday.value.source!=="DOUBLE_CHECKED_SAVED_WORKSPACE_COUNTS"||
     workday.value.workspaceId!==workspaceId||
     !Array.isArray(workday.value.priorities)||workday.value.priorities.length>7)
+   return {ok:false,code:"OPPORTUNITY_WORKDAY_UNAVAILABLE"};
+ // A source label alone cannot authorize model-like recommendations. Check
+ // every displayed category and count against the exact seven persisted
+ // source facts returned by the independently double-checked owner loader.
+ // This also prevents forged "all clear" or inflated exception categories.
+ const trustedCards=ownerPriorityActions(workday.value.facts,7);
+ if(!trustedCards||JSON.stringify(trustedCards)!==JSON.stringify(workday.value.priorities))
    return {ok:false,code:"OPPORTUNITY_WORKDAY_UNAVAILABLE"};
  const pairs=[
   {key:"CRITICAL_ATTENTION" as const,eventType:"ATTENTION_OPENED" as const,
@@ -93,7 +105,7 @@ export async function suggestOwnerAutomationOpportunities(
  try{second=await resolve(slug);}catch{return {ok:false,code:"OPPORTUNITY_AUTH_CHANGED"};}
  if(!owner(second,slug)||second.value.workspace.id!==workspaceId||
     second.value.actor.userId!==userId||
-    !(await verify(second.value.service,workspaceId,branchId)))
+    !(await verifiedBranch(second.value.service,workspaceId,branchId)))
    return {ok:false,code:"OPPORTUNITY_AUTH_CHANGED"};
  if(deps.signal?.aborted)return {ok:false,code:"OPPORTUNITY_CANCELLED"};
  return {ok:true,value:{

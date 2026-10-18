@@ -1,14 +1,16 @@
+import {ownerPriorityActions} from "../../src/server/ai/owner-priority-actions";
 import {describe,expect,it} from "vitest";
 import {suggestOwnerAutomationOpportunities,type OwnerAutomationOpportunityDependencies}
  from "../../src/server/ai/owner-automation-opportunities";
 const ws="11111111-1111-4111-8111-111111111111";
 const branch="22222222-2222-4222-8222-222222222222";
 const slug="qa-cleaning";
-const priorities=[
- {key:"CRITICAL_ATTENTION",count:2,source:"VERIFIED_SAVED_QUEUE_COUNT"},
- {key:"OPEN_REQUEST",count:5,source:"VERIFIED_SAVED_QUEUE_COUNT"},
- {key:"COLLECTIBLE_INVOICE",count:3,source:"VERIFIED_SAVED_QUEUE_COUNT"},
-];
+const facts={
+ openRequests:5,waitingOnCustomerQuotes:0,quoteValidityNeedsReview:0,
+ collectibleInvoices:3,invoiceLedgersNeedingReview:0,unassignedActiveVisits:0,
+ unresolvedCriticalAttentions:2,
+};
+const priorities=ownerPriorityActions(facts,7)!;
 function rig(options:{role?:string;revoked?:boolean;branchValid?:boolean;
   changeSource?:boolean}={}){
  let reads=0,checks=0;
@@ -23,7 +25,7 @@ function rig(options:{role?:string;revoked?:boolean;branchValid?:boolean;
  const loadWorkday=async()=>({ok:true,value:{
    state:"VERIFIED_OWNER_WORKDAY_REVIEW",
    source:options.changeSource?"SYNTHETIC_ONLY":"DOUBLE_CHECKED_SAVED_WORKSPACE_COUNTS",
-   workspaceId:ws,priorities,
+   workspaceId:ws,facts,priorities,
  }});
  const deps={resolveActor,verifyBranch,loadWorkday} as unknown as OwnerAutomationOpportunityDependencies;
  return {deps,reads:()=>reads,checks:()=>checks};
