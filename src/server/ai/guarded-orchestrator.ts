@@ -22,7 +22,7 @@ export function buildGuardedAssistantPlan(input: GuardedAssistantPlanInput): Res
   const safeId=(value:unknown)=>typeof value==="string" &&
     /^[A-Za-z0-9:_-]{3,128}$/.test(value);
   const safeLabel=(value:unknown)=>typeof value==="string" &&
-    value.length>=3 && value.length<=128 &&
+    value.length>=1 && value.length<=128 &&
     /^[A-Za-z0-9._:-]+$/.test(value);
   if (!input || !safeId(input.conversationId) ||
       !safeId(input.workspaceId) || !safeId(input.savedHumanMessageId) ||
