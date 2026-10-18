@@ -13,6 +13,24 @@ export interface VerifiedStaffQuoteReview {
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** A saved quote can contain service codes and durations, never customer
+ * contact or financial facts in the AI reviewer prompt. A model may still
+ * hallucinate such facts in its answer. Do not display fabricated prices,
+ * contacts or redirects as trusted staff advice. This is a defense-in-depth
+ * text gate, NOT semantic proof that all model claims are accurate.
+ */
+export function containsUnsafeQuoteReviewClaims(input:string):boolean{
+  return /[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/iu.test(input) ||
+    /https?:\/\/|www\.|mailto:|tel:/iu.test(input) ||
+    /[\w.+-]+@[\w.-]+\.[a-z]{2,}/iu.test(input) ||
+    /[$€£₹৳]/u.test(input) ||
+    /\b(?:USD|EUR|GBP|BDT|INR)\s*[0-9]/iu.test(input) ||
+    /\b[0-9]+(?:\.[0-9]{1,2})?\s*(?:USD|EUR|GBP|BDT|INR)\b/iu.test(input) ||
+    /\+?[0-9][0-9\s().-]{8,}[0-9]/u.test(input) ||
+    /<\/?[a-z][^>]*>/iu.test(input) ||
+    /\b(?:api[_ -]?key|bearer\s+[a-z0-9._-]+|password\s*:)/iu.test(input);
+}
+
 export function parseAuthorizedQuoteReview(
   value: unknown,
   expectedQuoteId: string,
@@ -24,9 +42,10 @@ export function parseAuthorizedQuoteReview(
       candidate.source !== "VERIFIED_SAVED_QUOTE_CODES_NO_AMOUNTS" ||
       candidate.quoteId !== expectedQuoteId ||
       typeof candidate.model !== "string" || !candidate.model.trim() ||
-      candidate.model.length > 100 || /[\u0000-\u001f\u007f]/.test(candidate.model) ||
+      candidate.model.length > 100 || !/^[A-Za-z0-9._:/-]{1,100}$/.test(candidate.model) ||
       typeof candidate.review !== "string" || !candidate.review.trim() ||
-      candidate.review.length > 900 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(candidate.review)) {
+      candidate.review.length > 900 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(candidate.review) ||
+      containsUnsafeQuoteReviewClaims(candidate.review)) {
     return null;
   }
   // Discard response extras. They are not authorized to become UI content.

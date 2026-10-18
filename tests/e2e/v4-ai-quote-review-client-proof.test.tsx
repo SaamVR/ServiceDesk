@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
   describeQuoteReviewHttpFailure,
-  parseAuthorizedQuoteReview,
+  parseAuthorizedQuoteReview, containsUnsafeQuoteReviewClaims,
 } from "../../src/features/operations/ai-quote-review-response";
 import { AiQuoteReview } from "../../src/features/operations/AiQuoteReview";
 
@@ -57,6 +57,28 @@ describe("Quote reviewer browser proof boundary", () => {
     }, quoteId)).toEqual(valid);
   });
 
+  it("refuses unverified model-introduced prices, contact details or external redirects",()=>{
+    const risky=[
+      "The final amount should be $150.00.",
+      "Bill the customer EUR 300 after arrival.",
+      "Tell them to send payment to myname@example.com",
+      "Open https://payment.example.com/checkout",
+      "Please call +880 1700 222 333",
+      "Use <a href='https://external.test'>this payment link</a>",
+      "Use bearer secret-test-token for access",
+      "The assistant says \u202Edelivery confirmed",
+    ];
+    for(const raw of risky){
+      expect(containsUnsafeQuoteReviewClaims(raw)).toBe(true);
+      expect(parseAuthorizedQuoteReview({...valid,review:raw},quoteId)).toBeNull();
+    }
+    const allowed="Recheck 2 bedrooms, a 90 minute service duration and the saved service code.";
+    expect(containsUnsafeQuoteReviewClaims(allowed)).toBe(false);
+    expect(parseAuthorizedQuoteReview({...valid,review:allowed},quoteId)?.review).toBe(allowed);
+    for(const label of ["<html>", "model\nsecret", "☠unsafe", "  model"]){
+      expect(parseAuthorizedQuoteReview({...valid,model:label},quoteId)).toBeNull();
+    }
+  });
   it("maps known HTTP problems to safe actionable guidance", () => {
     expect(describeQuoteReviewHttpFailure(401)).toContain("access");
     expect(describeQuoteReviewHttpFailure(403)).toContain("access");
