@@ -45,6 +45,14 @@ describe("SONIC R36 L19 persisted source aftercare review batching",()=>{
      [mk(1),{...mk(2),completion:{...mk(2).completion,source:"SYNTHETIC" as never}}],
    ])expect(run(entries)).toMatchObject({ok:false,code:"AFTERCARE_BATCH_SOURCE_INVALID"});
  });
+ it("independent critic: reject hidden or model-injected auto-send instructions on a batch entry",()=>{
+    const forged=Object.defineProperty(mk(1),"autoSendProviderMessage",{
+      value:true,enumerable:false,
+    });
+    expect(run([forged])).toMatchObject({ok:false,code:"AFTERCARE_BATCH_SOURCE_INVALID"});
+    const extra={...mk(2),sendCustomerMessage:true};
+    expect(run([extra])).toMatchObject({ok:false,code:"AFTERCARE_BATCH_SOURCE_INVALID"});
+ });
  it("does not process 201 visits or allow non-owner batch orchestration",()=>{
    expect(run(Array.from({length:201},(_,i)=>mk(i))))
      .toMatchObject({ok:false,code:"AFTERCARE_BATCH_SOURCE_INVALID"});
