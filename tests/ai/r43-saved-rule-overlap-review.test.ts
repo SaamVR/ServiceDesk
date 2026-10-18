@@ -63,6 +63,19 @@ describe("R43 AI L26 saved published-rule conflict check",()=>{
    ])expect(reviewSavedRuleOverlap(input([source as WorkflowRuleVersionDTO])))
      .toMatchObject({ok:false,code:"RULE_INVENTORY_UNVERIFIED"});
  });
+ it("critic: refuse sparse arrays disguised by unrelated own keys and accessor-backed rule lists",()=>{
+   const sparse:any[] = Array(1);
+   (sparse as any).unapprovedRule="foreign";
+   expect(reviewSavedRuleOverlap(input(sparse as WorkflowRuleVersionDTO[])))
+     .toMatchObject({ok:false,code:"RULE_INVENTORY_UNVERIFIED"});
+   const accessor:any[]=[];
+   Object.defineProperty(accessor,"0",{enumerable:true,configurable:true,
+     get(){throw Error("unsafe getter");}});
+   accessor.length=1;
+   expect(()=>reviewSavedRuleOverlap(input(accessor as WorkflowRuleVersionDTO[]))).not.toThrow();
+   expect(reviewSavedRuleOverlap(input(accessor as WorkflowRuleVersionDTO[])))
+     .toMatchObject({ok:false,code:"RULE_INVENTORY_UNVERIFIED"});
+ });
  it("never calls provider, publishes or claims complete database inventory",()=>{
   const r=reviewSavedRuleOverlap(input([], [draft()]));
   expect(r).toMatchObject({ok:true,value:{inspectedPublished:0,

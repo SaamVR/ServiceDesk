@@ -1,0 +1,1 @@
+Independent R43 critic challenges dense trusted list validation: a sparse array can masquerade as correct Reflect.ownKeys length by adding another own key, or carry an accessor-backed element. Never execute an accessor in saved rule inventory, nor treat missing list members as a complete DB source. Fail closed before comparing published versions.
