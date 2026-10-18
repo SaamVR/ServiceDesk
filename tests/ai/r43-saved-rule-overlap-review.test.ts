@@ -49,6 +49,20 @@ describe("R43 AI L26 saved published-rule conflict check",()=>{
   expect(reviewSavedRuleOverlap({...input([saved()]),actor:{workspaceId:"other",role:"OWNER"}}))
     .toMatchObject({ok:false,code:"RULE_INVENTORY_OWNER_REQUIRED"});
  });
+ it("independent critic: reject hidden and unauthorized nested saved actions and condition accessor traps",()=>{
+   const base=saved("DEEP");
+   const hidden=Object.defineProperty({...base.actions[0]},"sendProviderMessage",{value:true,enumerable:false});
+   const condition=Object.defineProperty({
+     field:"request.serviceCode",operator:"EQ",value:"DEEP"
+   },"customerEmail",{value:"private@example.test",enumerable:false});
+   for(const source of [
+     {...base,actions:[hidden]},
+     {...base,actions:[{type:"CREATE_ATTENTION",severity:"WARNING",summaryKey:"SAFE",paid:true}]},
+     {...base,conditions:[condition]},
+     {...base,actions:[{type:"SEND_WHATSAPP_TEMPLATE",templateKey:"unexpected"}]},
+   ])expect(reviewSavedRuleOverlap(input([source as WorkflowRuleVersionDTO])))
+     .toMatchObject({ok:false,code:"RULE_INVENTORY_UNVERIFIED"});
+ });
  it("never calls provider, publishes or claims complete database inventory",()=>{
   const r=reviewSavedRuleOverlap(input([], [draft()]));
   expect(r).toMatchObject({ok:true,value:{inspectedPublished:0,
