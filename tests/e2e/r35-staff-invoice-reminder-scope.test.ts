@@ -37,7 +37,13 @@ describe("R35 L23 verified manual reminder scope and clipboard reliability",()=>
     const src=readFileSync(join(process.cwd(),
       "src/features/operations/StaffInvoiceManualReminder.tsx"),"utf8");
     expect(src).toContain("key={staffInvoiceReminderScopeKey(invoice)}");
-    expect(src).toContain("if (pending.current) return");
+    expect(src).toContain("if (pending.current || !reviewConfirmed) return");
+    expect(src).toContain("disabled={copying || !reviewConfirmed}");
+    expect(src).toContain("checked={reviewConfirmed}");
+    expect(src).toContain("setReviewConfirmed(event.target.checked)");
+    expect(src).toContain("I verified the saved invoice, accepted quote and current balance");
+    expect(src).toContain("independently confirm the correct recipient");
+    expect(src).toContain("Copy reviewed invoice reminder");
     expect(src).toContain("mounted.current");
     expect(src).toContain("disabled={copying}");
     expect(src).toContain("aria-busy={copying}");
