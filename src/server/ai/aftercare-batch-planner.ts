@@ -29,7 +29,9 @@ const exactUtc=(v:unknown):v is string=>
   Number.isFinite(Date.parse(v)) &&
   new Date(Date.parse(v)).toISOString()===v;
 function denseDataArray(value:unknown,max:number):value is unknown[]{
-  if(!Array.isArray(value)||value.length>max ||
+  // A completely filled bounded read is potentially truncated. A source
+  // page at exactly its fetch cap cannot certify a complete owner queue.
+  if(!Array.isArray(value)||value.length>=max ||
      Reflect.ownKeys(value).length!==value.length+1)return false;
   for(let i=0;i<value.length;i++){
     const d=Object.getOwnPropertyDescriptor(value,String(i));

@@ -1,0 +1,3 @@
+# SONIC R39 L19 — aftercare bounded source completeness
+
+The aftercare builder produces a customer-follow-up *review queue*, never outbound messages. Previously a full 200-row source page was accepted even though it might have been truncated exactly at the read cap; the owner could be falsely told every completed visit was considered. This changes the batch boundary to fail closed when a page reaches the 200-row cap, consistent with saved invoice and inbox readback guards. It does not prove a shorter filtered page is globally complete; real authorization and paging must remain part of the caller's API contract. No tenant messaging, provider actions or payments performed.
