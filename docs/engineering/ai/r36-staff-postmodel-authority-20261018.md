@@ -1,0 +1,3 @@
+# R36 L17 — post-provider owner/dispatcher and saved conversation recheck
+
+The staff AI invocation previously returned its draft immediately after a slow provider response. That was not enough if staff access was revoked or a human handover or saved inbound message changed during inference. This source branch adds second actor, branch entitlement, conversation and inbound message checks, rejecting stale responses before returning them. It never sends external messages, charges or changes a customer. Tests use an in-memory fictional adapter and simulated provider envelope, not real customer data. No deployed merchant owner acceptance implied.

@@ -132,7 +132,7 @@ export async function executeAuthorizedStaffAiTurn(
       promptVersion: deps.promptVersion ?? "servicedesk-v3-reviewed-intake",
     });
     if (!runtime.ok) return runtime;
-    return await runtime.value.respond(actor, input.conversationId, {
+    const generated = await runtime.value.respond(actor, input.conversationId, {
       messageId: m.id,
       channel: c.channel,
       text: m.body,
@@ -141,6 +141,68 @@ export async function executeAuthorizedStaffAiTurn(
       customerId: typeof c.customer_id === "string" ? c.customer_id : undefined,
       handoverActive: Boolean(c.handover_active),
     });
+    if (!generated.ok) return generated;
+
+    // Provider generation can take tens of seconds. Do not release a stale
+    // answer after staff revocation, a human handover, moved conversation,
+    // changed inbound message, or dispatcher branch reassignment.
+    let current: Awaited<ReturnType<StaffAiInvocationDependencies["resolveActor"]>>;
+    try { current = await deps.resolveActor(input.workspaceSlug); }
+    catch { return fail("AI_STAFF_REVALIDATION_UNAVAILABLE", "Staff access could not be rechecked."); }
+    if (!current.ok || current.value.workspace.id !== workspace.id ||
+        current.value.workspace.slug !== input.workspaceSlug ||
+        current.value.actor.workspaceId !== workspace.id ||
+        current.value.actor.userId !== actor.userId ||
+        current.value.actor.role !== actor.role ||
+        !["OWNER","DISPATCHER"].includes(current.value.actor.role)) {
+      return fail("AI_STAFF_ACCESS_REVOKED", "Staff access changed while generating the AI draft.");
+    }
+    const nowScope = current.value.branchScope;
+    if (actor.role === "DISPATCHER" &&
+        (nowScope.mode !== "BRANCH" ||
+         nowScope.selectedBranchId !== branchScope.selectedBranchId ||
+         !nowScope.selectedBranchId)) {
+      return fail("AI_STAFF_ACCESS_REVOKED", "Dispatcher branch access changed during AI generation.");
+    }
+    const currentService = current.value.service;
+    const convNow = await currentService.from("conversations")
+      .select("id,workspace_id,request_id,customer_id,channel,handover_active")
+      .eq("workspace_id",workspace.id).eq("id",input.conversationId).maybeSingle();
+    const cn = convNow.data;
+    if (convNow.error || !cn || cn.id !== c.id ||
+        cn.workspace_id !== workspace.id ||
+        cn.request_id !== c.request_id || cn.customer_id !== c.customer_id ||
+        cn.channel !== c.channel || cn.handover_active !== c.handover_active ||
+        cn.handover_active !== false) {
+      return fail("AI_STAFF_SOURCE_CHANGED", "The saved conversation changed while generating the AI draft.");
+    }
+    if (actor.role === "DISPATCHER") {
+      if (typeof cn.request_id !== "string") {
+        return fail("AI_STAFF_ACCESS_REVOKED", "No branch-authorized request remains.");
+      }
+      const linked = await currentService.from("requests")
+        .select("id,workspace_id,branch_id")
+        .eq("workspace_id",workspace.id).eq("id",cn.request_id).maybeSingle();
+      if (linked.error || !linked.data ||
+          linked.data.workspace_id !== workspace.id ||
+          linked.data.branch_id !== nowScope.selectedBranchId) {
+        return fail("AI_STAFF_ACCESS_REVOKED", "Linked request no longer belongs to the assigned branch.");
+      }
+    }
+    const msgNow = await currentService.from("messages")
+      .select("id,workspace_id,conversation_id,direction,sender_kind,body,created_at")
+      .eq("workspace_id",workspace.id)
+      .eq("conversation_id",input.conversationId)
+      .eq("id",input.messageId).maybeSingle();
+    const mn=msgNow.data;
+    if (msgNow.error || !mn || mn.id !== m.id ||
+        mn.workspace_id !== workspace.id ||
+        mn.conversation_id !== m.conversation_id ||
+        mn.direction !== m.direction || mn.sender_kind !== m.sender_kind ||
+        mn.body !== m.body || mn.created_at !== m.created_at) {
+      return fail("AI_STAFF_SOURCE_CHANGED", "The saved customer message changed during AI generation.");
+    }
+    return generated;
   } catch {
     return fail("AI_STAFF_READ_UNAVAILABLE", "Workspace conversation read is temporarily unavailable.");
   }
