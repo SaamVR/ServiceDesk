@@ -58,12 +58,17 @@ function validAction(v:unknown):v is WorkflowActionDTO{
  return false;
 }
 function validVersion(v:unknown):v is WorkflowRuleVersionDTO{
- if(!plain(v) || !id(v.id)||!id(v.ruleId)||!id(v.workspaceId)||!id(v.branchId) ||
+ const keys=new Set(["id","workspaceId","branchId","ruleId","versionNumber",
+   "state","eventType","conditions","actions","maxActionsPerEvent",
+   "basedOnVersionNumber","publishedAt","createdAt"]);
+ if(!plain(v) || Object.keys(v).some(key=>!keys.has(key)) ||
+    !id(v.id)||!id(v.ruleId)||!id(v.workspaceId)||!id(v.branchId) ||
     !Number.isSafeInteger(v.versionNumber) || (v.versionNumber as number)<1 ||
     !["DRAFT","PUBLISHED"].includes(String(v.state)) ||
     !["REQUEST_CREATED","QUOTE_ACCEPTED","VISIT_COMPLETED","INVOICE_PAID","ATTENTION_OPENED"].includes(String(v.eventType)) ||
     !dense(v.conditions,8) || !dense(v.actions,5) || v.actions.length<1 ||
     !v.conditions.every(validCondition)||!v.actions.every(validAction) ||
+    new Set(v.actions.map(a=>JSON.stringify(a))).size!==v.actions.length ||
     !Number.isSafeInteger(v.maxActionsPerEvent) ||
     (v.maxActionsPerEvent as number)<1 ||
     (v.maxActionsPerEvent as number)>5 ||
