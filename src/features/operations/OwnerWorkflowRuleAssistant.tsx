@@ -5,10 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { buildStaffModuleHref } from "./staff-modules";
 import {
   validateOwnerRuleIntent, parseOwnerWorkflowSuggestion,
-  parseOwnerWhatIfResponse, type VerifiedOwnerRuleSuggestion,
+  parseOwnerWhatIfResponse, parseOwnerWhatIfMatrix, type VerifiedOwnerWhatIfMatrix,
+  type VerifiedOwnerRuleSuggestion,
   type VerifiedOwnerWhatIf, type SuggestedServiceCode,
 } from "./owner-rule-browser-proof";
-import { requestOwnerWorkflowWhatIf } from "./owner-rule-whatif-action";
+import { requestOwnerWorkflowWhatIf, requestOwnerWorkflowWhatIfMatrix } from "./owner-rule-whatif-action";
 import { saveOwnerReviewedWorkflowDraft } from "./owner-rule-save-action";
 import styles from "./OwnerWorkflowRuleAssistant.module.css";
 
@@ -39,6 +40,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
   const [feedback,setFeedback]=useState("");
   const [suggestion,setSuggestion]=useState<VerifiedOwnerRuleSuggestion>();
   const [preview,setPreview]=useState<VerifiedOwnerWhatIf>();
+  const [comparison,setComparison]=useState<VerifiedOwnerWhatIfMatrix>();
   const [sampleCode,setSampleCode]=useState<"NONE"|SuggestedServiceCode>("STANDARD");
   const activeRequest=useRef<AbortController|null>(null);
   const sequence=useRef(0);
@@ -68,6 +70,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     setPreviewBusy(false);
     setSuggestion(undefined);
     setPreview(undefined);
+    setComparison(undefined);
     setFeedback("");
   }
   const safeIntent=validateOwnerRuleIntent(instruction);
@@ -143,6 +146,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     const attempt=++previewSequence.current;
     setPreviewBusy(true);
     setPreview(undefined);
+    setComparison(undefined);
     setReviewConfirmed(false);
     const candidate={
       eventType:suggestion.eventType,severity:suggestion.severity,
@@ -164,6 +168,38 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
     }catch{
       if(previewSequence.current===attempt)
         setFeedback("Synthetic preview unavailable. No saved workflow or customer action changed.");
+    }finally{
+      if(previewSequence.current===attempt)setPreviewBusy(false);
+    }
+  }
+
+  async function compareSamples(){
+    if(!suggestion?.serviceCode || previewBusy || busy || saving ||
+       draftSaved || suggestion.branchId!==branchId)return;
+    const attempt=++previewSequence.current;
+    setPreviewBusy(true);
+    setReviewConfirmed(false);
+    setPreview(undefined);
+    setComparison(undefined);
+    setFeedback("Comparing three fictional service scenarios using the protected preview evaluator…");
+    try{
+      const raw:unknown=await requestOwnerWorkflowWhatIfMatrix({
+        workspaceSlug,branchId,candidate:{
+          eventType:suggestion.eventType,severity:suggestion.severity,
+          serviceCode:suggestion.serviceCode,
+        },
+      });
+      if(previewSequence.current!==attempt)return;
+      const result=parseOwnerWhatIfMatrix(raw);
+      if(!result){
+        setFeedback("Synthetic comparison could not be verified. No live rule or event changed.");
+        return;
+      }
+      setComparison(result);
+      setFeedback("Compared three fictional services. Results cannot prove real operational outcomes.");
+    }catch{
+      if(previewSequence.current===attempt)
+        setFeedback("Hypothetical comparisons unavailable. No automation was executed.");
     }finally{
       if(previewSequence.current===attempt)setPreviewBusy(false);
     }
@@ -292,6 +328,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
                 previewSequence.current+=1;
                 setReviewConfirmed(false);
                 setPreview(undefined);
+                setComparison(undefined);
                 setPreviewBusy(false);
                 setSampleCode(selected as typeof sampleCode);
               }}>
@@ -305,11 +342,32 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
             disabled={!suggestion || previewBusy || busy || saving || draftSaved} onClick={runPreview}>
             {previewBusy?"Evaluating hypothetical event…":"Run synthetic what-if"}
           </button>
+          {suggestion?.serviceCode?<button type="button" className={styles.secondary}
+            disabled={previewBusy || busy || saving || draftSaved} onClick={compareSamples}>
+            Compare Standard / Deep / Move-out
+          </button>:null}
         </div>
         {suggestion && !suggestion.serviceCode ? <p className={styles.helper} role="note">
           This proposal has no service condition. The hypothetical service
           selector is disabled because it cannot change the rule decision.
         </p> : null}
+        {comparison?<section className={styles.comparison}
+          aria-label="Fictional service comparison" role="status">
+          <h5>Three hypothetical outcomes · no saved event</h5>
+          <div className={styles.comparisonGrid}>
+            {comparison.results.map(result=><div key={result.serviceCode}>
+              <strong>{result.serviceCode.replaceAll("_"," ")}</strong>
+              <span>{result.matched ?
+                result.wouldCreateAttention ? "Would propose an internal attention" :
+                  "Condition matched; no action proposed" :
+                "Conditions did not match"}</span>
+            </div>)}
+          </div>
+          <p>Each scenario used the authorized read-only rule evaluator.
+            These are not actual customers, bookings, invoices, provider sends
+            or workflow executions. Run an individual what-if and review
+            the exact rule before you can save a draft.</p>
+        </section>:null}
         {preview?<div className={styles.preview} role="status">
           <strong>{preview.matched
             ? "Synthetic conditions matched" : "Synthetic conditions did not match"}</strong>

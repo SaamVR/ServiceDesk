@@ -71,3 +71,36 @@ export async function requestOwnerWorkflowWhatIf(input:Hypothesis):
     };
   }catch{return blocked();}
 }
+
+
+/** Three fictional service comparisons. Delegates to the same owner/branch
+ * guarded read-only evaluator for EACH case; no model call and no saved event.
+ * This intentionally does three authorization reads, not one inferred grant.
+ */
+export async function requestOwnerWorkflowWhatIfMatrix(input:
+  Omit<Hypothesis,"sampleServiceCode">):Promise<
+  |{ok:false;state:"SYNTHETIC_COMPARISON_UNAVAILABLE"}
+  |{ok:true;state:"SYNTHETIC_COMPARISON_ONLY";
+      executed:false;published:false;customerMessaged:false;paymentChanged:false;
+      results:Array<{serviceCode:"STANDARD"|"DEEP"|"MOVE_OUT";
+        matched:boolean;wouldCreateAttention:boolean}>}
+> {
+  const blocked=()=>({ok:false as const,state:"SYNTHETIC_COMPARISON_UNAVAILABLE" as const});
+  if(!input || typeof input!=="object" || typeof input.workspaceSlug!=="string" ||
+     typeof input.branchId!=="string")return blocked();
+  const samples=["STANDARD","DEEP","MOVE_OUT"] as const;
+  try{
+    const results=await Promise.all(samples.map(sampleServiceCode=>
+      requestOwnerWorkflowWhatIf({...input,sampleServiceCode})));
+    if(results.some(result=>!result.ok))return blocked();
+    return {
+      ok:true,state:"SYNTHETIC_COMPARISON_ONLY",
+      executed:false,published:false,customerMessaged:false,paymentChanged:false,
+      results:results.map((item,index)=>({
+        serviceCode:samples[index],
+        matched:item.ok?item.matched:false,
+        wouldCreateAttention:item.ok?item.wouldCreateAttention:false,
+      })),
+    };
+  }catch{return blocked();}
+}

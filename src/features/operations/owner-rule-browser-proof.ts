@@ -133,3 +133,34 @@ export function parseOwnerWhatIfResponse(raw:unknown,expected:{
     customerMessaged:false,paymentChanged:false,ownerPublishStillRequired:true,
   };
 }
+
+
+export type VerifiedOwnerWhatIfMatrix = {
+  state:"SYNTHETIC_COMPARISON_ONLY";
+  results:Array<{serviceCode:SuggestedServiceCode;matched:boolean;wouldCreateAttention:boolean}>;
+  executed:false;published:false;customerMessaged:false;paymentChanged:false;
+};
+/** Untrusted server-action transport still needs strict browser projection.
+ * Three distinct known fictional codes and no additional keys permitted.
+ */
+export function parseOwnerWhatIfMatrix(raw:unknown):VerifiedOwnerWhatIfMatrix|null{
+  if(!plain(raw)||!exact(raw,["ok","state","executed","published",
+    "customerMessaged","paymentChanged","results"])||
+    raw.ok!==true||raw.state!=="SYNTHETIC_COMPARISON_ONLY"||
+    raw.executed!==false||raw.published!==false||
+    raw.customerMessaged!==false||raw.paymentChanged!==false||
+    !Array.isArray(raw.results)||raw.results.length!==3)return null;
+  const codes:readonly SuggestedServiceCode[]=["STANDARD","DEEP","MOVE_OUT"];
+  const results:VerifiedOwnerWhatIfMatrix["results"]=[];
+  for(let i=0;i<codes.length;i++){
+    const item=raw.results[i];
+    if(!plain(item)||!exact(item,["serviceCode","matched","wouldCreateAttention"])||
+       item.serviceCode!==codes[i]||
+       typeof item.matched!=="boolean"||typeof item.wouldCreateAttention!=="boolean"||
+       (item.wouldCreateAttention&&!item.matched))return null;
+    results.push({serviceCode:codes[i],matched:item.matched,
+      wouldCreateAttention:item.wouldCreateAttention});
+  }
+  return {state:"SYNTHETIC_COMPARISON_ONLY",results,
+    executed:false,published:false,customerMessaged:false,paymentChanged:false};
+}
