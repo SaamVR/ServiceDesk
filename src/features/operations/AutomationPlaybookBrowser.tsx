@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import {
   automationPlaybooks, automationPlaybookCategories,
   type AutomationPlaybook,
@@ -25,11 +25,22 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
   const [category, setCategory] = useState<PlaybookCategoryFilter>("All");
   const [severity, setSeverity] = useState<PlaybookSeverityFilter>("Any");
   const [previewId, setPreviewId] = useState("");
+  const previewTrigger = useRef<HTMLButtonElement | null>(null);
   const prefix = useId();
   const choices = filterAutomationPlaybooks(automationPlaybooks, { search, category, severity });
   const selected = automationPlaybooks.find(item => item.id === selectedId);
-  const preview = automationPlaybooks.find(item => item.id === previewId);
-  const reset = () => { setSearch(""); setCategory("All"); setSeverity("Any"); };
+  // Never show an exact-effect panel for a starter no longer visible under
+  // the current filters. Filter changes also reset previewId below.
+  const preview = choices.find(item => item.id === previewId);
+  const reset = () => {
+    setSearch(""); setCategory("All"); setSeverity("Any"); setPreviewId("");
+  };
+  const closePreview = () => {
+    setPreviewId("");
+    // Return focus to the originating action, not an element removed
+    // by React when the review panel collapses.
+    previewTrigger.current?.focus();
+  };
   return <section className={styles.panel} aria-label="Cleaning automation starter playbooks"
     data-testid="automation-playbook-finder">
     <header className={styles.heading}>
@@ -49,12 +60,15 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
       <label htmlFor={prefix + "-search"}>Search starters
         <input id={prefix + "-search"} type="search" autoComplete="off"
           value={search} maxLength={80}
-          onChange={event => setSearch(event.target.value)}
+          onChange={event => { setSearch(event.target.value); setPreviewId(""); }}
           placeholder="Try quote, incident, deep clean…" />
       </label>
       <label htmlFor={prefix + "-category"}>Workflow area
         <select id={prefix + "-category"} value={category}
-          onChange={event => setCategory(event.target.value as PlaybookCategoryFilter)}>
+          onChange={event => {
+            setCategory(event.target.value as PlaybookCategoryFilter);
+            setPreviewId("");
+          }}>
           <option value="All">All categories</option>
           {automationPlaybookCategories.map(category =>
             <option key={category} value={category}>{category}</option>)}
@@ -62,7 +76,10 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
       </label>
       <label htmlFor={prefix + "-severity"}>Review level
         <select id={prefix + "-severity"} value={severity}
-          onChange={event => setSeverity(event.target.value as PlaybookSeverityFilter)}>
+          onChange={event => {
+            setSeverity(event.target.value as PlaybookSeverityFilter);
+            setPreviewId("");
+          }}>
           {severityOptions.map(option =>
             <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
@@ -101,8 +118,11 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
             </a>
             <button type="button" className={styles.inspect}
               aria-expanded={previewId === item.id}
-              aria-controls={prefix + "-exact-starter-review"}
-              onClick={() => setPreviewId(current => current === item.id ? "" : item.id)}>
+              aria-controls={previewId === item.id ? prefix + "-exact-starter-review" : undefined}
+              onClick={event => {
+                previewTrigger.current = event.currentTarget;
+                setPreviewId(current => current === item.id ? "" : item.id);
+              }}>
               {previewId === item.id ? "Hide exact effect" : "Inspect exact effect"}
             </button>
           </div>)}
@@ -113,7 +133,7 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
       id={prefix + "-exact-starter-review"} aria-label="Exact starter rule preview">
       <div className={styles.previewHeading}>
         <div><strong>{preview.name}</strong><span>Static catalogue definition · not a live run</span></div>
-        <button type="button" className={styles.inspect} onClick={() => setPreviewId("")}>
+        <button type="button" className={styles.inspect} onClick={closePreview}>
           Close exact review
         </button>
       </div>

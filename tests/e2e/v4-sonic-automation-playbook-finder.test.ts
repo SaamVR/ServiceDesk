@@ -45,6 +45,13 @@ describe("SONIC interactive internal workflow starter discovery",()=>{
     expect(browser).toContain("Exact starter rule preview");
     expect(browser).toContain("Static catalogue definition");
     expect(browser).toContain('aria-expanded={previewId === item.id}');
+    expect(browser).toContain("const preview = choices.find(item => item.id === previewId)");
+    expect(browser).toContain('setSearch(event.target.value); setPreviewId("")');
+    expect(browser).toContain('setCategory(event.target.value as PlaybookCategoryFilter)');
+    expect(browser).toContain('setSeverity(event.target.value as PlaybookSeverityFilter)');
+    expect(browser).toContain("const closePreview = () =>");
+    expect(browser).toContain("previewTrigger.current?.focus()");
+    expect(browser).toContain("onClick={closePreview}");
     expect(browser).toContain("CREATE_ATTENTION");
     expect(browser).toContain("No condition (every matching event type)");
   });
