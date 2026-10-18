@@ -1,3 +1,4 @@
+import { trustedQuoteInstant } from "./quote-validity-clock";
 /** Quality triage is read-only over the authenticated staff snapshot. */
 export const qualityQueueOptions = [
   { key: "all", label: "All cases" },
@@ -30,9 +31,12 @@ export function qualityFeedbackPrefix(queue: QualityQueue, search: string, caseI
  */
 export function isOverdueQualityCase(item: QualityCaseRecord, snapshotAt?: string): boolean {
   if (item.state === "RESOLVED" || !item.dueAt || !snapshotAt) return false;
-  const due = Date.parse(item.dueAt);
-  const asOf = Date.parse(snapshotAt);
-  return Number.isFinite(due) && Number.isFinite(asOf) && due < asOf;
+  // Date.parse may silently normalize impossible dates (for example Feb 30)
+  // and accept unzoned, browser-local instants. A quality case may be shown
+  // overdue only when BOTH persisted source instants are genuinely trusted.
+  const due = trustedQuoteInstant(item.dueAt);
+  const asOf = trustedQuoteInstant(snapshotAt);
+  return due !== null && asOf !== null && due < asOf;
 }
 /** Shared, read-only attention order used by Today and the Quality queue.
  * We do not synthesize deadlines: unknown/invalid due times sort last.
@@ -43,8 +47,8 @@ export function prioritizeQualityFollowUp<T extends QualityCaseRecord>(
 ): T[] {
   const stateWeight: Record<string, number> = { IN_REVIEW: 0, OPEN: 1, RESOLVED: 2 };
   const deadline = (caseItem: T) => {
-    const parsed = caseItem.dueAt ? Date.parse(caseItem.dueAt) : NaN;
-    return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+    const parsed = trustedQuoteInstant(caseItem.dueAt);
+    return parsed ?? Number.MAX_SAFE_INTEGER;
   };
   return [...records].sort((left, right) =>
     Number(isOverdueQualityCase(right, snapshotAt)) - Number(isOverdueQualityCase(left, snapshotAt))
