@@ -1,0 +1,3 @@
+# R40 C16 authoritative PAID invoice trigger
+
+The existing real owner automation could process an `INVOICE_PAID` event after ledger arithmetic checks. A nonenumerable hidden source field or a getter-backed amount can otherwise be silently excluded from the reviewed invoice facts. This lane allows only plain own selected persisted fields and requires the six financial milestone fields, rejecting prototype, accessor, hidden/symbol, extra provider flags, nonfinite totals and malformed source before any event evaluation. Refund-adjusted settled invoice remains accepted. No Stripe charge, provider send, invoice mark-paid or production DDL occurs.
