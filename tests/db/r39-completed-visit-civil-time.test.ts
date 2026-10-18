@@ -22,6 +22,15 @@ describe("SONIC R39 L16 civil-valid saved VISIT_COMPLETED milestone",()=>{
    expect(isVerifiedCompletedVisit({...row,ends_at:stamp},now),stamp).toBe(false);
   }
  });
+ it("independent critic: rejects accessor-based or inherited recovered visit records without invoking getters",()=>{
+  const accessor=Object.defineProperty({...row},"starts_at",{
+    enumerable:true,get(){throw Error("unsafe persisted-row accessor invoked");}
+  });
+  expect(()=>isVerifiedCompletedVisit(accessor,now)).not.toThrow();
+  expect(isVerifiedCompletedVisit(accessor,now)).toBe(false);
+  const inherited=Object.assign(Object.create({customerSecrets:"hidden"}),row);
+  expect(isVerifiedCompletedVisit(inherited,now)).toBe(false);
+ });
  it("accepts valid zoned PostgreSQL microsecond precision but not nonfinite now",()=>{
   const zoned={...row,starts_at:"2026-10-18T13:00:00.000001+06:00",
    ends_at:"2026-10-18T17:00:00.000001+06:00"};
