@@ -1,0 +1,3 @@
+# R40 independent critic: model envelope hidden business effects
+
+The R40 guarded turn now quarantines mixed tools, but the input model-output envelope is still reconstructed from untrusted provider JSON. Unknown top-level fields such as providerDeliveryConfirmed or hidden paymentApproved must be refused rather than silently discarded while producing an apparently safe answer. Require exact own allowlisted keys: output, replyDraft, requestedToolCalls, citations (permitted optional fields remain optional). Any hidden or additional field is not source truth. Critic tests are intentionally adversarial; they do not exercise a live provider or authorize any effects.

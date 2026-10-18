@@ -129,15 +129,24 @@ export function createConfiguredAiService(deps: ConfiguredAiServiceDependencies)
       });
       if (plannedTools.rejected.length > 0) return fallback("AI_TOOL_SCOPE_REJECTED");
 
+      const handoverRequired=guarded.value.handoverRequired ||
+        plannedTools.requiresHumanReview;
       return {
         ok: true,
         value: {
           ...guarded.value,
-          // Accepted tool plans still require the ServiceDesk facade. Never
-          // execute model requests or change authoritative business state here.
-          toolCalls: plannedTools.accepted,
-          handoverRequired: guarded.value.handoverRequired || plannedTools.requiresHumanReview,
-          handoverReason: (guarded.value.handoverRequired || plannedTools.requiresHumanReview)
+          // The configured service is the final tool boundary. Never
+          // reintroduce accepted model tools after the guarded output
+          // requires human review, including risk flags, unsafe replies or
+          // an explicit requestHumanReview alongside benign proposals.
+          toolCalls: handoverRequired ? [{
+            name:"requestHumanReview",
+            arguments:{reason:"CONFIGURED_AI_HANDOVER_REQUIRED"},
+            allowed:true,
+            reason:"All model actions were withheld pending verified human review.",
+          }] : plannedTools.accepted,
+          handoverRequired,
+          handoverReason: handoverRequired
             ? (guarded.value.handoverReason ?? "AI_REQUESTED_OPERATOR_REVIEW")
             : undefined,
           privateReasoningStored: false,

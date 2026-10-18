@@ -155,4 +155,25 @@ describe("configured AI service real business proposal orchestration", () => {
     expect(JSON.stringify(result)).not.toContain("sensitive-customer-secret");
     expect(calls).toBe(0);
   });
+  it("quarantines valid quote actions when unsafe text or source risk requires human handover", async () => {
+    for (const modelResponse of [
+      response({ replyDraft:"The customer has paid the invoice and accepted the booking." }),
+      response({ output:{ corrections:[],unsupportedReasons:[],
+        riskFlags:["PROMPT_INJECTION"] }}),
+      response({ requestedToolCalls:[
+        { name:"calculateQuote",arguments:{requestId:"request-1"} },
+        { name:"requestHumanReview",arguments:{reason:"customer wants a human"} },
+      ]}),
+    ]) {
+      const {service}=harness(async()=>({status:200,body:modelResponse}));
+      const result=await service.respond(ctx,"conversation-a",input);
+      expect(result).toMatchObject({ok:true,value:{
+        handoverRequired:true,toolCalls:[{name:"requestHumanReview"}],
+        privateReasoningStored:false,
+      }});
+      if(result.ok)expect(result.value.toolCalls).toHaveLength(1);
+      expect(JSON.stringify(result)).not.toContain("markPaymentPaid");
+    }
+  });
+
 });
