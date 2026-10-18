@@ -18,7 +18,7 @@ describe("R36 verified real crew assignments on dispatch workload calendar",()=>
     const visits=[
       visit("active"),visit(undefined),visit("inactive"),visit("other"),
       visit("unknown"),visit("missing-scope"),visit("active","south"),
-      visit("active",undefined),
+      {...visit("active"),branchId:undefined},
       {...visit("unknown"),status:"CANCELLED"},
     ];
     const dates=buildDispatchCoverageWeek(visits,
