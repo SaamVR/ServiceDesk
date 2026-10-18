@@ -48,8 +48,15 @@ function saved(v:unknown,ws:string,branch:string):v is WorkflowRuleVersionDTO {
    !Number.isSafeInteger(v.versionNumber)||Number(v.versionNumber)<1||
    exactServiceCondition(v.conditions)===undefined||
    !dense(v.actions,6)||v.actions.length===0)return false;
+ // External-message versions require a different consent/delivery audit.
+ // This overlap preview only certifies narrowly scoped internal attention
+ // rules, and every nested action must have exactly the same safe shape.
  return v.actions.every(a=>plain(a)&&
-   ["CREATE_ATTENTION","SEND_EMAIL_TEMPLATE","SEND_WHATSAPP_TEMPLATE"].includes(String(a.type)));
+   Object.keys(a).length===3&&
+   ["type","severity","summaryKey"].every(k=>Object.hasOwn(a,k))&&
+   a.type==="CREATE_ATTENTION"&&
+   ["INFO","WARNING","CRITICAL"].includes(String(a.severity))&&
+   typeof a.summaryKey==="string"&&/^[A-Z0-9_]{3,128}$/.test(a.summaryKey));
 }
 function candidate(v:unknown,ws:string,branch:string):v is ProposedOwnerWorkflowDraft{
  if(!plain(v)||v.workspaceId!==ws||v.branchId!==branch||
