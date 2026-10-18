@@ -80,7 +80,7 @@ export async function prepareAuthorizedAutomationStarterBatch(
  const verify=deps.verifyBranch??savedBranch;
  const checkBranch=async(service:Extract<Awaited<ReturnType<Resolver>>,{ok:true}>["value"]["service"],
   wid:string,bid:string)=>{
-  try{return await verify(service,wid,bid);}catch{return false;}
+  try{return (await verify(service,wid,bid))===true;}catch{return false;}
  };
  let first:Awaited<ReturnType<Resolver>>;
  try{first=await resolver(workspaceSlug);}catch{return {ok:false,code:"BATCH_OWNER_REQUIRED"};}
