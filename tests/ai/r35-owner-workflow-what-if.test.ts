@@ -38,7 +38,7 @@ describe("SONIC L18 production-engine-powered AI rule preview (synthetic only)",
   const hidden=Object.defineProperty({serviceCode:"DEEP"},"paymentPaid",{
     value:true,enumerable:false,
   });
-  expect(previewOwnerWorkflowWhatIf(draft,scope,hidden))
+  expect(previewOwnerWorkflowWhatIf(draft,scope,hidden as never))
     .toMatchObject({ok:false,code:"WORKFLOW_WHAT_IF_INVALID"});
   expect(previewOwnerWorkflowWhatIf(draft,scope,{...hidden,paymentPaid:true} as never))
     .toMatchObject({ok:false,code:"WORKFLOW_WHAT_IF_INVALID"});
