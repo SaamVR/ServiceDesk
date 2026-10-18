@@ -127,8 +127,8 @@ function ScopedQuoteReview({
     <p className={styles.description}>
       AI receives only verified saved service codes and durations—not prices,
       contact details, addresses or customer notes. Output containing monetary
-      amounts, contact details or links is rejected. Model advice still requires
-      source verification and cannot approve, send or change this quote.
+      amounts, contact details or links is rejected. It cannot approve, send or change this quote.
+      Model advice still requires source verification.
     </p>
     <div className={styles.actions}>
       <button className={styles.action} type="button" onClick={generate}
