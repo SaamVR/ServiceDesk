@@ -72,12 +72,22 @@ function safeText(value:unknown,limit:number):value is string {
   return typeof value==="string" && value.length<=limit &&
     !/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/iu.test(value);
 }
+function safeDataArray(value:unknown, max:number):value is unknown[] {
+  if(!Array.isArray(value) || value.length>max ||
+      Reflect.ownKeys(value).length!==value.length+1) return false;
+  // Include "length" only; all indexed values must be own data fields.
+  for(let i=0;i<value.length;i++){
+    const d=Object.getOwnPropertyDescriptor(value,String(i));
+    if(!d || !Object.hasOwn(d,"value"))return false;
+  }
+  return true;
+}
 function safeToolArguments(value:unknown,depth=0):boolean {
   if(depth>4)return false;
   if(value===null || typeof value==="boolean")return true;
   if(typeof value==="string")return safeText(value,512);
   if(typeof value==="number")return Number.isFinite(value);
-  if(Array.isArray(value))return value.length<=16 &&
+  if(Array.isArray(value))return safeDataArray(value,16) &&
     value.every(item=>safeToolArguments(item,depth+1));
   return plainSafeObject(value) && Object.keys(value).length<=20 &&
     Object.entries(value).every(([k,v])=>safeText(k,64) &&
@@ -86,7 +96,7 @@ function safeToolArguments(value:unknown,depth=0):boolean {
 
 function stringArray(value: unknown, field: string): Result<string[]> {
   if (value === undefined) return { ok: true, value: [] };
-  if (!Array.isArray(value) || value.length>16 ||
+  if (!safeDataArray(value,16) ||
       value.some((item) => !safeText(item,240))) {
     return { ok: false, code: "AI_OUTPUT_INVALID", message: `AI output field ${field} must be a string array.` };
   }
@@ -174,7 +184,7 @@ function humanReview(reason: string): AssistantToolCall {
 }
 
 export function guardAiToolCalls(rawCalls: unknown): AssistantToolCall[] {
-  if (!Array.isArray(rawCalls)) return [humanReview("AI requested malformed tool call list.")];
+  if (!safeDataArray(rawCalls,24)) return [humanReview("AI requested malformed tool call list.")];
 
   // Silently slicing 9+ model actions hides the overflow. Require a human
   // review for the complete attempt instead of dropping unknown extra work.
