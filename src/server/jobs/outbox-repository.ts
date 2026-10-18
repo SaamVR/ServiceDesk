@@ -92,7 +92,45 @@ export function createDurableOutboxRepository(gateway: DurableOutboxTableGateway
       }
       const result = await gateway.claimReady(workerId, now, leaseSeconds, limit);
       if (result.error) return repositoryError(result.error);
-      return { ok: true, value: (result.data ?? []).map((row) => claimedOutboxEventFromRow(row, workerId)) };
+      // A provider/database adapter is not proof of unique leased events.
+      // A duplicated source event would be executed twice in one batch
+      // before either provider receipt could be reconciled. Reject the
+      // entire ambiguous page instead of emitting any claimed job.
+      const rows = result.data;
+      if (!Array.isArray(rows) || rows.length > limit ||
+          Reflect.ownKeys(rows).length !== rows.length + 1) {
+        return {ok:false,code:"OUTBOX_CLAIM_ROWS_INVALID",
+          message:"Claimed outbox batch has invalid or incomplete source evidence."};
+      }
+      const seenIds = new Set<string>(), seenKeys = new Set<string>();
+      for (let i=0;i<rows.length;i++) {
+        const descriptor=Object.getOwnPropertyDescriptor(rows,String(i));
+        if (!descriptor || !Object.hasOwn(descriptor,"value")) {
+          return {ok:false,code:"OUTBOX_CLAIM_ROWS_INVALID",
+            message:"Claimed outbox batch is not a dense saved row set."};
+        }
+        const row=rows[i];
+        if (!row || typeof row!=="object" || Array.isArray(row) ||
+            ![Object.prototype,null].includes(Object.getPrototypeOf(row)) ||
+            Object.getOwnPropertySymbols(row).length!==0 ||
+            Object.getOwnPropertyNames(row).length!==Object.keys(row).length ||
+            Object.values(Object.getOwnPropertyDescriptors(row)).some(d=>!Object.hasOwn(d,"value")) ||
+            typeof row.id!=="string" || !/^[A-Za-z0-9:_-]{1,128}$/.test(row.id) ||
+            typeof row.workspaceId!=="string" || !/^[A-Za-z0-9:_-]{1,128}$/.test(row.workspaceId) ||
+            typeof row.idempotencyKey!=="string" ||
+            row.idempotencyKey.length<1 || row.idempotencyKey.length>256 ||
+            typeof row.topic!=="string" || row.topic.length<1 || row.topic.length>128 ||
+            row.status!=="PENDING" ||
+            !Number.isSafeInteger(row.attempts) || row.attempts<1 ||
+            seenIds.has(row.id) ||
+            seenKeys.has(row.workspaceId+"|"+row.idempotencyKey)) {
+          return {ok:false,code:"OUTBOX_CLAIM_ROWS_INVALID",
+            message:"Claimed outbox rows are malformed or duplicate a persisted event."};
+        }
+        seenIds.add(row.id);
+        seenKeys.add(row.workspaceId+"|"+row.idempotencyKey);
+      }
+      return { ok: true, value: rows.map((row) => claimedOutboxEventFromRow(row, workerId)) };
     },
     async markSent(eventId, workerId, completedAt, providerReference) {
       const validWorker = validateWorkerId(workerId);
@@ -100,6 +138,15 @@ export function createDurableOutboxRepository(gateway: DurableOutboxTableGateway
       const result = await gateway.markSent(eventId, workerId, completedAt, providerReference);
       if (result.error) return repositoryError(result.error);
       if (!result.data) return missingRow();
+      // A successful transport response is not durable delivery proof.
+      // Require the exact claimed event to be persisted as SENT; do not
+      // accept unrelated or still-pending database rows as a receipt.
+      if (result.data.id !== eventId || result.data.status !== "SENT" ||
+          (providerReference !== undefined &&
+           result.data.providerReference !== providerReference)) {
+        return {ok:false,code:"OUTBOX_COMPLETION_RECEIPT_INVALID",
+          message:"Saved provider delivery transition did not match the claimed event."};
+      }
       return { ok: true, value: result.data };
     },
     async markRetry(eventId, workerId, failedAt, nextAttemptAt, nextAttemptCount, errorCode) {
