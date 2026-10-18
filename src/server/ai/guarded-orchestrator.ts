@@ -29,7 +29,12 @@ export function buildGuardedAssistantPlan(input: GuardedAssistantPlanInput): Res
       !safeLabel(input.model) || !safeLabel(input.promptVersion) ||
       typeof input.knowledgeResultsUsed!=="boolean" ||
       !input.modelOutput || typeof input.modelOutput!=="object" ||
-      Array.isArray(input.modelOutput)) {
+      Array.isArray(input.modelOutput) ||
+      Object.getPrototypeOf(input.modelOutput)!==Object.prototype ||
+      Object.getOwnPropertySymbols(input.modelOutput).length!==0 ||
+      Object.getOwnPropertyNames(input.modelOutput).length!==Object.keys(input.modelOutput).length ||
+      Object.values(Object.getOwnPropertyDescriptors(input.modelOutput))
+        .some(desc=>!Object.hasOwn(desc,"value"))) {
     return {ok:false,code:"AI_TURN_SCOPE_UNVERIFIED",
       message:"A saved, scoped conversation turn is required before model suggestions can be reviewed."};
   }
