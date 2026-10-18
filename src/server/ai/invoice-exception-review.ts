@@ -31,6 +31,22 @@ export type FinanceReviewResult =
 const validId=(v:unknown):v is string=>
   typeof v==="string" && /^[A-Za-z0-9:_-]{3,128}$/.test(v);
 
+function savedInvoiceRecord(value:unknown):boolean {
+  if(!value || typeof value!=="object" || Array.isArray(value) ||
+     Object.getPrototypeOf(value)!==Object.prototype ||
+     Object.getOwnPropertySymbols(value).length!==0 ||
+     Object.getOwnPropertyNames(value).length!==Object.keys(value).length)
+    return false;
+  const descriptors=Object.getOwnPropertyDescriptors(value);
+  // Hidden properties, accessors and prototype data are not trusted saved
+  // ledger source. They can conceal business-relevant facts from UI review.
+  if(Object.values(descriptors).some(desc=>!Object.hasOwn(desc,"value")))
+    return false;
+  const allowed=new Set(["id","workspaceId","visitId","status","currency",
+    "totalMinor","allocatedMinor","refundedMinor","balanceMinor"]);
+  return Object.keys(value).every(key=>allowed.has(key));
+}
+
 /** No model reads raw invoice amounts, and paid-looking statuses are never
  * accepted as Stripe proof. The operator decides every financial action. */
 export function planOwnerInvoiceExceptions(input:FinanceReviewInput):FinanceReviewResult {
@@ -38,7 +54,9 @@ export function planOwnerInvoiceExceptions(input:FinanceReviewInput):FinanceRevi
   if(!actor || actor.workspaceId!==workspaceId ||
       actor.role!=="OWNER" || !validId(workspaceId))
     return {ok:false,code:"FINANCE_SCOPE_INVALID"};
-  if(!Array.isArray(invoices) || invoices.length>500)
+  if(!Array.isArray(invoices) || invoices.length>=500 ||
+     Reflect.ownKeys(invoices).length!==invoices.length+1 ||
+     invoices.some(item=>!savedInvoiceRecord(item)))
     return {ok:false,code:"FINANCE_SOURCE_INVALID"};
   const seen=new Set<string>();
   const exceptions:Extract<FinanceReviewResult,{ok:true}>["value"]["exceptions"]=[];
