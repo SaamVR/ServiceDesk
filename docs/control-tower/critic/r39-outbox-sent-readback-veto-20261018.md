@@ -1,0 +1,3 @@
+# R39 independent critic L14 — trusted durable outbox readback
+
+Duplicate prevention before execution is insufficient if the database completion adapter later returns a successful response for the wrong event or an untransitioned status. A worker could report SENT even though the event was not actually finalized. Require exact returned row identity/status and, if supplied, provider reference; reject absent source arrays returned as a false empty queue. Independent test branch contains these negative cases; producer must change source before merging critic tests. This is not evidence of provider delivery.

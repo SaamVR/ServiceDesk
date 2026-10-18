@@ -42,6 +42,25 @@ describe("SONIC R39 L18 durable outbox claim de-duplication",()=>{
      "provider-pretending-array",
    ]) await expect(run(source)).resolves.toMatchObject({ok:false,code:"OUTBOX_CLAIM_ROWS_INVALID"});
  });
+ it("independent critic: null successful claim data cannot masquerade as verified zero work",async()=>{
+   await expect(run(null)).resolves.toMatchObject({ok:false,code:"OUTBOX_CLAIM_ROWS_INVALID"});
+   await expect(run([])).resolves.toMatchObject({ok:true,value:[]});
+ });
+ it("independent critic: malformed post-send DB receipt cannot certify delivery for another event",async()=>{
+  const gateway={
+   claimReady:async()=>({data:[row],error:null}),
+   markSent:async()=>({data:{...row,id:"another-event",status:"SENT"},error:null}),
+   markRetry:async()=>({data:null,error:null}),
+   markFailed:async()=>({data:null,error:null}),
+   markSuppressed:async()=>({data:null,error:null}),
+  } as DurableOutboxTableGateway;
+  const service=createDurableOutboxRepository(gateway);
+  await expect(service.markSent(row.id,"worker-one","2026-10-18T09:00:01Z","wamid.abc"))
+    .resolves.toMatchObject({ok:false,code:"OUTBOX_COMPLETION_RECEIPT_INVALID"});
+  gateway.markSent=async()=>({data:{...row,status:"PENDING"},error:null});
+  await expect(service.markSent(row.id,"worker-one","2026-10-18T09:00:01Z"))
+    .resolves.toMatchObject({ok:false,code:"OUTBOX_COMPLETION_RECEIPT_INVALID"});
+ });
  it("retains the worker lease mismatch signal instead of forging ownership",async()=>{
    const result=await run([{...row,lockedBy:"worker-two"}]);
    expect(result).toMatchObject({ok:true,value:[{lockedBy:"worker-two"}]});
