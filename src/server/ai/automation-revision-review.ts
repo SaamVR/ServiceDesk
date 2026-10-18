@@ -1,3 +1,4 @@
+import {evaluateWorkflowRule} from "../workflows/engine";
 import type {WorkflowRuleVersionDTO,WorkflowActionDTO,WorkflowConditionDTO} from "../../contracts";
 
 export type AutomationRevisionFlag=
@@ -73,7 +74,14 @@ function validVersion(v:unknown):v is WorkflowRuleVersionDTO{
     (v.maxActionsPerEvent as number)<1 ||
     (v.maxActionsPerEvent as number)>5 ||
     v.actions.length>(v.maxActionsPerEvent as number))return false;
- return true;
+ // A syntactically valid condition from another event family is not a
+ // valid workflow revision. Reuse the production evaluator's event-specific
+ // field allowlist in PREVIEW without any business side effects.
+ const checked=evaluateWorkflowRule(v,{
+   workspaceId:v.workspaceId,branchId:v.branchId,eventType:v.eventType,
+   snapshot:{},recursionDepth:0,
+ },"PREVIEW");
+ return checked.ok;
 }
 const external=(a:readonly WorkflowActionDTO[])=>a.filter(x=>
  x.type==="SEND_EMAIL_TEMPLATE"||x.type==="SEND_WHATSAPP_TEMPLATE").length;
