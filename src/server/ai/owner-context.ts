@@ -24,7 +24,7 @@ export interface OwnerAssistantSafeContext {
 const PROVIDERS = new Set(["WHATSAPP","GOOGLE_CALENDAR","PAYMENT","EMAIL","WEBHOOK","AI"]);
 const VERIFICATIONS = new Set(["CONTRACT_TESTED","PROVIDER_VERIFIED","CONFIGURATION_BLOCKED"]);
 function exactUtc(value:unknown):value is string {
-  if(typeof value!=="string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\\.\d{3}Z$/.test(value))return false;
+  if(typeof value!=="string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value))return false;
   const t=Date.parse(value);
   return Number.isFinite(t) && new Date(t).toISOString()===value;
 }
