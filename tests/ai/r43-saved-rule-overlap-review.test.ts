@@ -28,6 +28,19 @@ describe("R43 AI L26 saved published-rule conflict check",()=>{
     overlaps:[{kind:"CERTAIN_SAME_SERVICE_FILTER"}]
   }});
  });
+ it("accepts SQL-validator-compliant saved attention keys and rejects invalid published shapes",()=>{
+   const published=saved();
+   const acceptable={...published,actions:[{
+     type:"CREATE_ATTENTION" as const,severity:"WARNING" as const,
+     summaryKey:"REVIEW:DEEP-CLEAN"
+   }]};
+   expect(reviewSavedRuleOverlap(input([acceptable]))).toMatchObject({ok:true,value:{overlapCount:1}});
+   const invalid={...published,actions:[{
+     type:"CREATE_ATTENTION" as const,severity:"WARNING" as const,
+     summaryKey:"A".repeat(81)
+   }]};
+   expect(reviewSavedRuleOverlap(input([invalid]))).toMatchObject({ok:false,code:"RULE_INVENTORY_UNVERIFIED"});
+ });
  it("distinguishes provable disjoint service filters and unprovable shadowing",()=>{
   expect(reviewSavedRuleOverlap(input([saved("DEEP")],[draft("STANDARD")]))).toMatchObject({ok:true,value:{
     overlaps:[],noOverlapsInSuppliedInventory:true,completeInventoryNotProven:true
