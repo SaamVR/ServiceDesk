@@ -86,7 +86,7 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
   }
   const safeIntent=validateOwnerRuleIntent(instruction);
   const canGenerate=configured && Boolean(safeIntent) && Boolean(branchId) &&
-    !busy && !previewBusy && !saving;
+    !busy && !previewBusy && !saving && !draftSaved;
 
   async function suggest() {
     if(modelPending.current || !canGenerate || !safeIntent) return;
@@ -304,7 +304,8 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
         <div className={styles.actions}>
           <button type="button" onClick={suggest} className={styles.primary}
             disabled={!canGenerate} aria-busy={busy}>
-            {busy?"Generating strictly typed draft…":"Suggest internal workflow"}
+            {busy?"Generating strictly typed draft…" :
+              draftSaved?"Draft saved — open workflow editor":"Suggest internal workflow"}
           </button>
           {busy?<button type="button" onClick={stopWaiting}
             className={styles.secondary}>Stop waiting</button>:null}
@@ -312,6 +313,15 @@ function ScopedOwnerRuleAssistant({workspaceSlug,workspaceId,configured,branches
         {!configured?<p className={styles.warning} role="status">Only an enabled,
           authorized owner AI runtime can generate a draft. The normal workflow
           editor remains available without AI.</p>:null}
+        {branches.length >= 24 ? <p className={styles.helper} role="note">
+          This picker shows at most 24 authorized branches. Choose a specific
+          branch in the main workspace to review another branch's rules.
+        </p> : null}
+        {draftSaved ? <p className={styles.helper} role="status">
+          This reviewed workflow draft is complete. Open the saved workflow
+          editor to preview or publish; a new paid model request is disabled
+          here to prevent accidental duplicate proposals.
+        </p> : null}
         {configured && !safeIntent?<p className={styles.warning} role="status">
           Use a short, plain-language internal workflow idea without customer or
           pricing details.</p>:null}
