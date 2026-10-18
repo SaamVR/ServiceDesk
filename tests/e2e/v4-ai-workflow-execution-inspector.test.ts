@@ -78,16 +78,37 @@ describe("workflow inspector persisted evidence", () => {
     expect(summarizeWorkflowActivity(runs).recordedSucceededActions).toBe(1);
   });
 
-  it("resolves same-attempt ties deterministically by timestamp then ID", () => {
+  it("fails closed on conflicting latest attempts instead of choosing by timestamp or ID", () => {
     const runs = buildWorkflowInspector({
       ...snapshot(),
+      workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
       workflowActionExecutions: [
         { ...action, id: "aa", attemptNumber: 3, state: "PENDING" },
-        { ...action, id: "ab", attemptNumber: 3, state: "APPROVAL_REQUIRED" },
+        { ...action, id: "ab", attemptNumber: 3, state: "SUCCEEDED" },
       ],
     });
-    expect(runs[0].actions[0].id).toBe("ab");
-    expect(runs[0].approvalCount).toBe(1);
+    expect(runs[0].actions).toEqual([]);
+    expect(runs[0].ambiguousActionSlots).toBe(1);
+    expect(runs[0].attemptHistory).toHaveLength(2);
+    expect(runs[0].succeededCount).toBe(0);
+    expect(summarizeWorkflowActivity(runs).recordedSucceededActions).toBe(0);
+    expect(summarizeWorkflowActivity(runs).ambiguousActionSlots).toBe(1);
+    expect(classifyWorkflowIntervention(runs[0])).toBe("ambiguous");
+    expect(isWorkflowAttentionRequired(runs[0])).toBe(true);
+    expect(buildWorkflowInterventionQueue(runs)[0].kind).toBe("ambiguous");
+  });
+  it("requires one stable action type for the entire retry chain", () => {
+    const runs = buildWorkflowInspector({
+      ...snapshot(),
+      workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
+      workflowActionExecutions: [
+        { ...action, id: "old", attemptNumber: 1, actionType: "SEND_EMAIL_TEMPLATE", state: "FAILED" },
+        { ...action, id: "new", attemptNumber: 2, actionType: "CREATE_ATTENTION", state: "SUCCEEDED" },
+      ],
+    });
+    expect(runs[0].actions).toEqual([]);
+    expect(runs[0].ambiguousActionSlots).toBe(1);
+    expect(runs[0].attemptHistory).toHaveLength(2);
   });
 
   it("rejects actions from a different branch even if their execution IDs collide", () => {

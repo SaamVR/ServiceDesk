@@ -72,6 +72,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
       <div><strong>{summary.recordedSucceededActions}</strong><span>Internally succeeded in loaded actions</span></div>
       <div><strong>{summary.waitingForApproval}</strong><span>Current approvals in loaded actions</span></div>
       <div><strong>{summary.failed}</strong><span>Loaded runs with recorded failures</span></div>
+      <div><strong>{summary.ambiguousActionSlots}</strong><span>Conflicting action slots requiring review</span></div>
       <div><strong>{summary.pendingActions}</strong><span>Pending states in loaded actions</span></div>
       <div><strong>{averageDuration === null ? "—" : `${averageDuration}s`}</strong>
         <span>Mean recorded run duration ({summary.measuredDurationMs.length} complete pairs)</span></div>
@@ -83,8 +84,9 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
         <div className={styles.triageHeader}>
           <div><p className={styles.eyebrow}>Staff intervention queue</p>
             <h3>Review failures and explicit approvals</h3>
-            <p className={styles.subtle}>Only persisted failed or APPROVAL_REQUIRED
-              states appear here. Pending processing is not a request to intervene.</p>
+            <p className={styles.subtle}>Persisted failures, conflicting replay attempts
+              and APPROVAL_REQUIRED actions appear here. Pending processing alone
+              is not a request to intervene.</p>
           </div>
           <span className={styles.state}>{interventionQueue.length} runs for review</span>
         </div>
@@ -94,11 +96,14 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
           : <ol className={styles.triageList}>
               {interventionQueue.slice(0, 6).map(({ run, kind }) =>
                 <li key={run.id}>
-                  <span className={kind === "failure" ? styles.triageFailure : styles.triageApproval}>
-                    {kind === "failure" ? "Recorded failure" : "Human approval required"}
+                  <span className={kind !== "approval" ? styles.triageFailure : styles.triageApproval}>
+                    {kind === "ambiguous" ? "Conflicting retry evidence" :
+                      kind === "failure" ? "Recorded failure" : "Human approval required"}
                   </span>
                   <strong>{humanize(run.eventType)}</strong>
-                  <small>{kind === "failure"
+                  <small>{kind === "ambiguous"
+                    ? `${run.ambiguousActionSlots} action slot(s) have conflicting latest attempts; current outcome is unverified`
+                    : kind === "failure"
                     ? `${run.failedCount} current failed action(s) · ${humanize(run.state)}`
                     : `${run.approvalCount} action(s) marked APPROVAL_REQUIRED`}</small>
                   <small>Recorded: <time dateTime={run.createdAt}>{run.createdAt}</time></small>
@@ -139,7 +144,8 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
               onClick={() => setSelectedId(run.id)} aria-pressed={selected?.id === run.id}>
               <strong>{humanize(run.eventType)}</strong>
               <small>{humanize(run.state)} · <time dateTime={run.createdAt}>{run.createdAt}</time></small>
-              <small>{run.actions.length} current actions · {run.failedCount} failed · {run.pendingCount} pending</small>
+              <small>{run.actions.length} current actions · {run.failedCount} failed · {run.pendingCount} pending
+                {run.ambiguousActionSlots > 0 ? ` · ${run.ambiguousActionSlots} conflicting` : ""}</small>
             </button>)}
             {visible.length < matching.length ? <button type="button" className={styles.more}
               onClick={() => setVisibleCount(current => current + 20)}>
@@ -157,6 +163,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
               <div><dt>Rule identity</dt><dd>{selected.ruleEvidence}</dd></div>
               <div><dt>Condition result</dt><dd>{selected.matched ? "Matched" : "Not matched"}</dd></div>
               <div><dt>Saved action attempts</dt><dd>{selected.attemptCount}</dd></div>
+              <div><dt>Conflicting action slots</dt><dd>{selected.ambiguousActionSlots}</dd></div>
               <div><dt>Completion timestamp</dt><dd>{selected.completedAt ?? "Not recorded"}</dd></div>
             </dl>
 
@@ -183,6 +190,11 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
               Open linked saved quote →
             </Link> : null}
 
+            {selected.ambiguousActionSlots > 0 ? <p className={styles.notice} role="alert">
+              {selected.ambiguousActionSlots} conflicting action slot(s) are excluded from
+              verified current counts. Inspect saved source attempts with an authorized
+              operator before approving, replaying or interpreting outcomes.
+            </p> : null}
             <h4>Current action state and attempt history</h4>
             {selected.actions.length ? <ol className={styles.actions}>
               {selected.actions.map(action => <li key={action.id}>
@@ -203,7 +215,8 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
                   {selected.attemptHistory.map(attempt => <li key={attempt.id}>
                     <strong>{humanize(attempt.actionType)} — {humanize(attempt.state)}</strong>
                     <span>Action {attempt.actionIndex + 1} · Attempt {attempt.attemptNumber}
-                      {selected.actions.some(latest => latest.id === attempt.id) ? " · current" : " · historical"}</span>
+                      {selected.actions.some(latest => latest.id === attempt.id) ? " · current" :
+                        selected.ambiguousActionSlots > 0 ? " · current state unverified or historical" : " · historical"}</span>
                     <span>Recorded: {attempt.createdAt}</span>
                     {attempt.errorCode ? <span>Failure code: {attempt.errorCode}</span> : null}
                     {attempt.approvedAt ? <span>Approval at: {attempt.approvedAt}</span> : null}

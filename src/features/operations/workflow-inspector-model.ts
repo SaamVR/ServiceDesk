@@ -11,20 +11,6 @@ import type {
 type WorkflowSnapshot = Pick<WorkflowInspectorClientSnapshot,
   "workflowAvailable" | "workflowExecutions" | "workflowActionExecutions" | "workflowRuleVersions">;
 
-function latestAttempt(
-  current: BrowserWorkflowAction | undefined,
-  candidate: BrowserWorkflowAction,
-): BrowserWorkflowAction {
-  if (!current) return candidate;
-  if (candidate.attemptNumber !== current.attemptNumber) {
-    return candidate.attemptNumber > current.attemptNumber ? candidate : current;
-  }
-  if (candidate.createdAt !== current.createdAt) {
-    return candidate.createdAt > current.createdAt ? candidate : current;
-  }
-  return candidate.id > current.id ? candidate : current;
-}
-
 export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
   if (snapshot.workflowAvailable !== true) return [];
 
@@ -46,11 +32,27 @@ export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
     .map((execution: BrowserWorkflowExecution) => {
       const matching = (attempts.get(execution.id) ?? [])
         .filter(action => action.branchId === execution.branchId);
-      const current = new Map<number, BrowserWorkflowAction>();
+      const groups = new Map<number, BrowserWorkflowAction[]>();
       for (const action of matching) {
-        current.set(action.actionIndex, latestAttempt(current.get(action.actionIndex), action));
+        const slot = groups.get(action.actionIndex) ?? [];
+        slot.push(action);
+        groups.set(action.actionIndex, slot);
       }
-      const actions = [...current.values()].sort((a, b) => a.actionIndex - b.actionIndex);
+      const actions: BrowserWorkflowAction[] = [];
+      let ambiguousActionSlots = 0;
+      for (const slot of groups.values()) {
+        const lastAttempt = Math.max(...slot.map(action => action.attemptNumber));
+        const latest = slot.filter(action => action.attemptNumber === lastAttempt);
+        // Duplicate highest attempts or changed action type can never be
+        // promoted to a verified current state by timestamp/ID tie-breaks.
+        if (latest.length !== 1 || slot.some(action =>
+          action.actionType !== latest[0].actionType)) {
+          ambiguousActionSlots++;
+          continue;
+        }
+        actions.push(latest[0]);
+      }
+      actions.sort((a, b) => a.actionIndex - b.actionIndex);
       // Preserve all validated retry rows for the inspector. Summary metrics
       // still count only each action index's latest persisted attempt.
       const attemptHistory = [...matching].sort((a, b) =>
@@ -69,6 +71,7 @@ export function buildWorkflowInspector(snapshot: WorkflowSnapshot) {
         actions,
         attemptHistory,
         attemptCount: matching.length,
+        ambiguousActionSlots,
         failedCount: actions.filter(action => action.state === "FAILED").length,
         approvalCount: actions.filter(action => action.state === "APPROVAL_REQUIRED").length,
         pendingCount: actions.filter(action => ["PENDING", "APPROVAL_REQUIRED", "APPROVED"].includes(action.state)).length,
@@ -90,6 +93,7 @@ export function summarizeWorkflowActivity(runs: readonly InspectedWorkflow[]) {
     skipped: runs.filter(run => run.state === "SKIPPED").length,
     waitingForApproval: runs.reduce((count, run) => count + run.approvalCount, 0),
     pendingActions: runs.reduce((count, run) => count + run.pendingCount, 0),
+    ambiguousActionSlots: runs.reduce((count, run) => count + run.ambiguousActionSlots, 0),
     recordedSucceededActions: runs.reduce((count, run) => count + run.succeededCount, 0),
     // Only count complete timestamp pairs with nonnegative, finite elapsed time.
     measuredDurationMs: runs.flatMap(run => {
@@ -106,10 +110,11 @@ export function summarizeWorkflowActivity(runs: readonly InspectedWorkflow[]) {
  * Processing is informational; only a failed run or an action explicitly
  * marked APPROVAL_REQUIRED belongs in the human intervention queue.
  */
-export type WorkflowInterventionKind = "failure" | "approval" | "processing";
+export type WorkflowInterventionKind = "failure" | "ambiguous" | "approval" | "processing";
 
 export function classifyWorkflowIntervention(run: InspectedWorkflow):
   WorkflowInterventionKind | undefined {
+  if (run.ambiguousActionSlots > 0) return "ambiguous";
   if (run.failedCount > 0 || run.state === "PARTIAL_FAILED") return "failure";
   if (run.approvalCount > 0) return "approval";
   if (run.pendingCount > 0 || run.state === "ACTIONS_PENDING") return "processing";
@@ -118,14 +123,14 @@ export function classifyWorkflowIntervention(run: InspectedWorkflow):
 
 export function isWorkflowAttentionRequired(run: InspectedWorkflow) {
   const kind = classifyWorkflowIntervention(run);
-  return kind === "failure" || kind === "approval";
+  return kind === "failure" || kind === "ambiguous" || kind === "approval";
 }
 
 export function buildWorkflowInterventionQueue(runs: readonly InspectedWorkflow[]) {
-  const order = { failure: 0, approval: 1 } as const;
+  const order = { ambiguous: 0, failure: 1, approval: 2 } as const;
   return runs.flatMap(run => {
     const kind = classifyWorkflowIntervention(run);
-    return kind === "failure" || kind === "approval"
+    return kind === "failure" || kind === "ambiguous" || kind === "approval"
       ? [{ run, kind }] : [];
   }).sort((a, b) => order[a.kind] - order[b.kind] ||
     b.run.createdAt.localeCompare(a.run.createdAt) ||
