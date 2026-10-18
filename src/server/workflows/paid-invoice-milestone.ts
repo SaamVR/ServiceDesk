@@ -9,7 +9,9 @@ export function isVerifiedPaidInvoiceMilestone(row: Record<string, unknown>): bo
      return false;
   const fields=["status","currency","total_minor","allocated_minor",
     "refunded_minor","balance_minor"];
-  const allowed=new Set(["id","quote_id",...fields]);
+  // Existing persisted projections can retain workspace_id as an explicit
+  // tenant-scoping field. It is not financial or provider delivery authority.
+  const allowed=new Set(["id","workspace_id","quote_id",...fields]);
   if(fields.some(field=>!Object.hasOwn(row,field)) ||
      Object.keys(row).some(field=>!allowed.has(field)) ||
      Object.values(Object.getOwnPropertyDescriptors(row))
