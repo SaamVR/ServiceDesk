@@ -90,6 +90,8 @@ export function prepareDispatchAiReview(input:DispatchAiReviewInput):DispatchAiR
       (crew.serviceCodes!==undefined &&
         (!Array.isArray(crew.serviceCodes) ||
          crew.serviceCodes.length>20 ||
+         Reflect.ownKeys(crew.serviceCodes).length!==crew.serviceCodes.length+1 ||
+         !crew.serviceCodes.every((_,i)=>Object.hasOwn(crew.serviceCodes!,i)) ||
          crew.serviceCodes.some((code:unknown)=>typeof code!=="string" || !/^[A-Z0-9_-]{1,64}$/.test(code)))) ||
       (crew.availableFrom!==undefined && !validClock(crew.availableFrom)) ||
       (crew.availableTo!==undefined && !validClock(crew.availableTo)) ||
