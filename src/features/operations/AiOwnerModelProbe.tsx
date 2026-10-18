@@ -16,7 +16,16 @@ const MODEL_PROBE_TIMEOUT_MS = 75_000;
  * Owner-only, synthetic model diagnostic. A successful response proves only
  * one bounded request; it never proves automation, delivery or business action.
  */
-export function AiOwnerModelProbe({
+export function AiOwnerModelProbe(props: {
+  workspaceSlug: string;
+  configured: boolean;
+}) {
+  // Scope remount prevents a previous cost acknowledgement from becoming
+  // valid again after switching workspace A -> B -> A.
+  return <ScopedAiOwnerModelProbe key={props.workspaceSlug + ":" + String(props.configured)}
+    {...props} />;
+}
+function ScopedAiOwnerModelProbe({
   workspaceSlug, configured,
 }: {
   workspaceSlug: string;

@@ -81,6 +81,8 @@ describe("Owner model diagnostic cannot manufacture provider proof", () => {
     expect(source).toContain("checked={operatorApproved}");
     expect(source).toContain("disabled={!configured || !operatorApproved || busy}");
     expect(source).toContain("can consume tokens or incur provider usage");
+    expect(source).toContain('return <ScopedAiOwnerModelProbe key={props.workspaceSlug');
+    expect(source).toContain("Scope remount prevents a previous cost acknowledgement");
     expect(source).not.toContain("OPENAI_API_KEY");
     expect(source).not.toContain("SERVICEDESK_CODEX_GATEWAY_KEY");
   });
