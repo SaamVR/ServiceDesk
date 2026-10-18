@@ -89,3 +89,9 @@
   color: #126e55;
   text-underline-offset: 3px;
 }
+
+.clearSearch{min-height:44px;justify-self:start;padding:9px 12px;
+  border:1px solid #b5d8ca;border-radius:8px;background:#fff;color:#1c654f;
+  font-size:12px;font-weight:800;cursor:pointer;}
+.clearSearch:hover{background:#eef8f1;}
+.clearSearch:focus-visible{outline:3px solid #19876d;outline-offset:2px;}

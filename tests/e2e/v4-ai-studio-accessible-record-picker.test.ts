@@ -21,6 +21,11 @@ describe("Frontend AI Studio keyboard-first authorized record picker", () => {
   const choices = verifiedStudioRecordChoices("Request", rawRecords);
   it("searches within authorized short record labels and UUIDs, without including private notes",()=>{
     expect(filterStudioRecordChoices(choices, "pending approval")).toEqual([choices[1]]);
+    expect(filterStudioRecordChoices(choices, "request pending")).toEqual([choices[1]]);
+    expect(filterStudioRecordChoices(choices, "ID bbbbbbbb pending")).toEqual([choices[1]]);
+    expect(filterStudioRecordChoices(choices, "new request")).toEqual([choices[0],choices[2]]);
+    expect(filterStudioRecordChoices(choices, "request customer")).toEqual([]);
+    expect(filterStudioRecordChoices(choices, "request\u202e 3")).toEqual([choices[2]]);
     expect(filterStudioRecordChoices(choices, "  REQUEST 3 ")).toEqual([choices[2]]);
     expect(filterStudioRecordChoices(choices, uuidA.slice(0,12))).toEqual([choices[0]]);
     expect(filterStudioRecordChoices(choices, "ID bbbbbbbb")).toEqual([choices[1]]);
@@ -95,6 +100,9 @@ describe("Frontend AI Studio keyboard-first authorized record picker", () => {
     expect(client).toContain("filterStudioRecordChoices(choices, recordSearch)");
     expect(client).toContain('type="search"');
     expect(client).toContain('autoComplete="off"');
+    expect(client).toContain('aria-label="Clear saved-record search"');
+    expect(client).toContain('onClick={() => setRecordSearch("")}');
+    expect(css()).toContain(".clearSearch:focus-visible");
     expect(client).toContain('aria-live="polite"');
     expect(client).toContain("<AiRequestBrief");
     expect(client).toContain("<AiQuoteReview");

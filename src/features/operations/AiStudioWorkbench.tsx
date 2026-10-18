@@ -97,6 +97,10 @@ function ScopedStudioWorkbench({
             className={styles.searchInput} value={recordSearch} maxLength={80}
             placeholder="Search record label or ID"
             onChange={event => setRecordSearch(event.target.value)} />
+          {recordSearch ? <button type="button" className={styles.clearSearch}
+            onClick={() => setRecordSearch("")} aria-label="Clear saved-record search">
+            Clear search
+          </button> : null}
           <span role="status" aria-live="polite" className={styles.searchCount}>
             {matches.length} of {choices.length} loaded record choices shown
           </span>
