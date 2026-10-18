@@ -42,6 +42,18 @@ describe("SONIC R40 AI mixed-turn quarantine",()=>{
   expect(result).toMatchObject({ok:true,value:{handoverRequired:true,
     toolCalls:[{name:"requestHumanReview"}]}});
  });
+ it("critic: refuses model completion metadata pretending a provider sent a message",()=>{
+   const result=buildGuardedAssistantPlan(output({providerDeliveryConfirmed:true}));
+   expect(result).toMatchObject({ok:false,code:"AI_TURN_SCOPE_UNVERIFIED"});
+ });
+ it("critic: rejects hidden own actions on a seemingly safe model envelope",()=>{
+   const candidate=output({});
+   Object.defineProperty(candidate.modelOutput,"paymentApproved",{
+     value:true,enumerable:false,
+   });
+   expect(buildGuardedAssistantPlan(candidate))
+     .toMatchObject({ok:false,code:"AI_TURN_SCOPE_UNVERIFIED"});
+ });
  it("a clean model request for human handover retains only one review action",()=>{
   const result=buildGuardedAssistantPlan(output({requestedToolCalls:[
     {name:"requestHumanReview",arguments:{reason:"customer-asked"}},
