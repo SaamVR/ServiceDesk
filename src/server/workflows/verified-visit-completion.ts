@@ -12,6 +12,12 @@ export function isVerifiedCompletedVisit(
   nowMs = Date.now(),
 ): boolean {
   if (!row || typeof row !== "object" || Array.isArray(row) ||
+      ![Object.prototype,null].includes(Object.getPrototypeOf(row)) ||
+      Object.getOwnPropertySymbols(row).length !== 0 ||
+      Object.getOwnPropertyNames(row).length !== Object.keys(row).length ||
+      Object.values(Object.getOwnPropertyDescriptors(row)).some(
+        desc => !Object.hasOwn(desc,"value")) ||
+      !["status","starts_at","ends_at"].every(k=>Object.hasOwn(row,k)) ||
       row.status !== "COMPLETED" || !Number.isFinite(nowMs)) return false;
   const start=trustedQuoteInstant(row.starts_at);
   const end=trustedQuoteInstant(row.ends_at);
