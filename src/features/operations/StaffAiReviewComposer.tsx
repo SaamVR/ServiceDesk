@@ -55,8 +55,9 @@ function ScopedStaffAiReviewComposer({
   useEffect(() => () => controller.current?.abort(), []);
 
   async function suggest() {
-    if (busy !== "idle" || receipt) return;
-    controller.current?.abort();
+    // State updates are asynchronous: a second immediate click must NOT
+    // abort and replace an already-issued (potentially billable) model call.
+    if (busy !== "idle" || receipt || controller.current) return;
     const pending = new AbortController();
     controller.current = pending;
     const requestSignal = boundedStaffRequestSignal(pending, STAFF_AI_DRAFT_TIMEOUT_MS);
@@ -113,10 +114,11 @@ function ScopedStaffAiReviewComposer({
 
   async function approve() {
     const reviewedBody = body.trim();
-    if (busy !== "idle" || !draft || draft.handoverRequired ||
+    // Approval is a durable, idempotent command. Never abort a still-running
+    // approval and issue a second network command before React sets busy.
+    if (busy !== "idle" || controller.current || !draft || draft.handoverRequired ||
         !confirmed || !reviewedBody || reviewedBody.length > 4_000 ||
         receipt || error === "stale") return;
-    controller.current?.abort();
     const pending = new AbortController();
     controller.current = pending;
     const requestSignal = boundedStaffRequestSignal(pending);

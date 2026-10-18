@@ -19,6 +19,10 @@ describe("staff AI network request deadline and cancellation", () => {
     expect(ui).toContain("controller.current !== pending");
     expect(ui.match(/signal: requestSignal/g)).toHaveLength(2);
     expect(ui).toContain("idempotencyKey.current ??= crypto.randomUUID()");
+    expect(ui).toContain('if (busy !== "idle" || receipt || controller.current) return;');
+    expect(ui).toContain('if (busy !== "idle" || controller.current || !draft');
+    expect(ui).toContain("Never abort a still-running");
+    expect(ui).toContain("a second immediate click must NOT");
     expect(ui).toContain("Check the saved conversation before trying again");
   });
 
