@@ -110,6 +110,11 @@ describe("V3 staff-only reviewed AI reply path", () => {
     expect(ui).toContain('onClick={approve}');
     expect(ui).toContain("confirmedByStaff: true");
     expect(ui).toContain("idempotencyKey.current ??= crypto.randomUUID()");
+    expect(ui).toContain("sameStaffAiApprovalIntent(approvalIntent.current,currentIntent)");
+    expect(ui).toContain("approvalIntent.current ??= currentIntent");
+    expect(ui).toContain("approvalIntent.current = null");
+    expect(ui).toContain("!idempotencyKey.current");
+    expect(ui).toContain("sourceMessageId, expectedVersion, reviewedBody");
     expect(ui).toContain("sourceMessageId,");
     expect(ui).toContain("expectedVersion,");
     expect(ui).toContain("draft.handoverRequired");

@@ -15,6 +15,9 @@ import {
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
 import {
+  sameStaffAiApprovalIntent, type StaffAiApprovalIntent,
+} from "./staff-ai-approval-intent";
+import {
   detectStaffReplyRisks, hasUnsafeReplyFormatting, staffReplyRiskLabels,
 } from "./staff-ai-reply-risk";
 import { boundedStaffRequestSignal, STAFF_AI_DRAFT_TIMEOUT_MS } from "./staff-ai-request-signal";
@@ -59,6 +62,7 @@ function ScopedStaffAiReviewComposer({
   const [receipt, setReceipt] = useState<ApprovedReplyReceipt>();
   const controller = useRef<AbortController | null>(null);
   const idempotencyKey = useRef<string | null>(null);
+  const approvalIntent = useRef<StaffAiApprovalIntent | null>(null);
 
   useEffect(() => () => controller.current?.abort(), []);
 
@@ -86,6 +90,7 @@ function ScopedStaffAiReviewComposer({
     setSensitiveConfirmed(false);
     setRetryVerified(false);
     idempotencyKey.current = null;
+    approvalIntent.current = null;
     try {
       const response = await fetch("/api/internal/ai/draft", {
         method: "POST",
@@ -148,6 +153,13 @@ function ScopedStaffAiReviewComposer({
         !reviewedBody || reviewedBody.length > 4_000 ||
         receipt || error === "stale" ||
         (error === "approval" && !retryVerified)) return;
+    const currentIntent:StaffAiApprovalIntent = {
+      workspaceSlug, conversationId, sourceMessageId, expectedVersion, reviewedBody,
+    };
+    if (approvalIntent.current &&
+        (!sameStaffAiApprovalIntent(approvalIntent.current,currentIntent) ||
+         !idempotencyKey.current))return;
+    approvalIntent.current ??= currentIntent;
     const pending = new AbortController();
     controller.current = pending;
     const requestSignal = boundedStaffRequestSignal(pending);
@@ -299,6 +311,7 @@ function ScopedStaffAiReviewComposer({
                 setSensitiveConfirmed(false);
                 setError(staffAiReviewErrorAfterEdit);
                 idempotencyKey.current = null;
+                approvalIntent.current = null;
               }}
               disabled={busy !== "idle" || draft.handoverRequired ||
                 error === "approval"}
