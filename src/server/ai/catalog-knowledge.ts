@@ -7,6 +7,35 @@ type CatalogRow = {
   active: unknown; requires_review: unknown; updated_at: unknown;
 };
 
+function trustedCatalogClock(value:unknown):boolean {
+  if(typeof value!=="string")return false;
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if(!m)return false;
+  const [year,month,day,hour,minute,second]=
+    [m[1],m[2],m[3],m[4],m[5],m[6]].map(Number);
+  if(year<1000||year>9999||month<1||month>12||day<1||day>31||
+     hour>23||minute>59||second>59)return false;
+  const civil=new Date(Date.UTC(year,month-1,day));
+  if(civil.getUTCFullYear()!==year||civil.getUTCMonth()+1!==month||
+     civil.getUTCDate()!==day)return false;
+  if(m[8]!=="Z"){
+    const h=Number(m[10]),minutes=Number(m[11]);
+    if(h>14||minutes>59||(h===14&&minutes!==0))return false;
+  }
+  return Number.isFinite(Date.parse(value));
+}
+function safeCatalogRow(value:unknown):value is CatalogRow {
+  if(!value||typeof value!=="object"||Array.isArray(value)||
+     Object.getPrototypeOf(value)!==Object.prototype||
+     Object.getOwnPropertySymbols(value).length>0||
+     Object.getOwnPropertyNames(value).length!==Object.keys(value).length)return false;
+  const allowed=["id","workspace_id","code","name","active","requires_review","updated_at"];
+  return Object.keys(value).length===allowed.length &&
+    allowed.every(key=>Object.hasOwn(value,key)) &&
+    Object.values(Object.getOwnPropertyDescriptors(value))
+      .every(descriptor=>Object.hasOwn(descriptor,"value"));
+}
+
 /**
  * The already-applied service_catalog is authoritative for active services,
  * not for prices or availability. No AI-authored service can be added here.
@@ -32,17 +61,22 @@ export async function loadApprovedCatalogKnowledge(
     }
     const chunks: KnowledgeChunk[] = [];
     const seen = new Set<string>();
-    for (const row of data as CatalogRow[]) {
-      if (!row || row.workspace_id !== workspaceId || row.active !== true ||
+    const seenCodes = new Set<string>();
+    for (const raw of data as unknown[]) {
+      if (!safeCatalogRow(raw))throw new Error("AI_CATALOG_ROW_UNTRUSTED");
+      const row=raw;
+      if (row.workspace_id !== workspaceId || row.active !== true ||
           typeof row.id !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(row.id) ||
           typeof row.code !== "string" || !/^[A-Za-z0-9_-]{1,48}$/.test(row.code) ||
           typeof row.name !== "string" || !row.name.trim() ||
           row.name.length > 160 || typeof row.requires_review !== "boolean" ||
-          typeof row.updated_at !== "string" ||
-          !Number.isFinite(Date.parse(row.updated_at)) || seen.has(row.id)) {
+          !trustedCatalogClock(row.updated_at) || seen.has(row.id) ||
+          seenCodes.has(row.code) ||
+          /[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff<>]/u.test(row.name)) {
         throw new Error("AI_CATALOG_ROW_INVALID");
       }
       seen.add(row.id);
+      seenCodes.add(row.code);
       const name = row.name.trim().replace(/[\r\n\t]/g, " ");
       chunks.push({
         documentId: `service-catalog:${row.id}`,
