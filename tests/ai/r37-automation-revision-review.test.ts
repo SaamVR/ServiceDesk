@@ -46,7 +46,7 @@ describe("SONIC R37 AI-E audited automation revision diff",()=>{
   expect(reviewAutomationRevision({...input,draft:{...draft,actions:[bad as never]}}))
     .toMatchObject({ok:false,code:"AUTOMATION_REVIEW_SOURCE_INVALID"});
   expect(reviewAutomationRevision({...input,draft:{...draft,actions:[{
-    type:"EXECUTE_SQL" as never,sql:"DROP TABLE" as never}]}}))
+    type:"EXECUTE_SQL",sql:"DROP TABLE"} as never]}}))
     .toMatchObject({ok:false,code:"AUTOMATION_REVIEW_SOURCE_INVALID"});
  });
 });
