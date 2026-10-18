@@ -56,6 +56,15 @@ function ScopedQuoteReview({
     const timeout = setTimeout(() => {
       timedOut = true;
       controller.abort();
+      // A suspended fetch/JSON stream may never settle after abort. Release
+      // the operator's wait now; a subsequent late result has lost ownership.
+      if (activeRequest.current === controller) {
+        activeRequest.current = null;
+        setStatus(previous => previous?.scopeKey === submittedScope && previous.busy
+          ? { scopeKey: submittedScope, busy: false,
+              error: "AI quote review exceeded 75 seconds. The browser stopped waiting; provider-side cancellation is not confirmed." }
+          : previous);
+      }
     }, REVIEW_TIMEOUT_MS);
 
     let result: VerifiedStaffQuoteReview | undefined;

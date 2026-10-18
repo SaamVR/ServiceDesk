@@ -14,6 +14,10 @@ describe("quote AI review client cancellation without false transport claims", (
     expect(src).toContain("previous?.scopeKey === submittedScope");
     expect(src).toContain("activeRequest.current?.abort()");
     expect(src).toContain("activeRequest.current === controller");
+    expect(src).toContain("A suspended fetch/JSON stream may never settle after abort");
+    expect(src).toContain("if (activeRequest.current === controller) {");
+    expect(src).toContain("activeRequest.current = null;");
+    expect(src).toContain("previous?.scopeKey === submittedScope && previous.busy");
     expect(src).toContain("parseAuthorizedQuoteReview(payload, expectedQuoteId)");
   });
 
