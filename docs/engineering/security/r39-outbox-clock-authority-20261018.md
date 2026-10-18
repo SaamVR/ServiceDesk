@@ -1,0 +1,3 @@
+# SONIC R39 L17 — truthful outbox provider and retry clocks
+
+Normalizing `Date.parse` previously permitted malformed provider-reported SENT time or retry failure time to be certified by an internal outbox worker. Reuse `trustedQuoteInstant` from the same codebase to allow PostgreSQL ISO zoned (including microseconds) but reject impossible dates and offset spoofing. Ensure missing/invalid source event does not crash batch execution. No extra provider request, outbound send, invoice mutation, or production deployment. Three grouped regression tests cover all four persistence outcomes and retry bounds.
