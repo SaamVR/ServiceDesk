@@ -9,7 +9,7 @@ type CatalogRow = {
 
 function trustedCatalogClock(value:unknown):boolean {
   if(typeof value!=="string")return false;
-  const m=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d{1,6}))?(Z|([+-])(\\d{2}):(\\d{2}))$/.exec(value);
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
   if(!m)return false;
   const [year,month,day,hour,minute,second]=
     [m[1],m[2],m[3],m[4],m[5],m[6]].map(Number);
