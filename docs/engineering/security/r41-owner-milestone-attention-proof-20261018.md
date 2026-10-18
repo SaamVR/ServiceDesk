@@ -1,0 +1,3 @@
+# R41 CORE-B: four milestone workflow action-to-attention causality and adverse tests
+
+Source event owners now refuse false success from any same-workspace attention row or wrong action execution receipt. The persisted attention must match `resource_type=workflow_execution`, exact evaluated `resource_id`, `type=WORKFLOW_RULE`, workspace and returned ID. No new provider sends or charges. Tests exercise injected wrong causal receipt plus legitimate acceptance on existing 1- or 4-event flows. This is source integrity, not deployed merchant acceptance; pending migrations and real tenant staging remain gated.
