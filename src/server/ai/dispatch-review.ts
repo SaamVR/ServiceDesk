@@ -77,7 +77,7 @@ export function prepareDispatchAiReview(input:DispatchAiReviewInput):DispatchAiR
       (crew.serviceCodes!==undefined &&
         (!Array.isArray(crew.serviceCodes) ||
          crew.serviceCodes.length>20 ||
-         crew.serviceCodes.some(code=>typeof code!=="string" || !/^[A-Z0-9_-]{1,64}$/.test(code)))) ||
+         crew.serviceCodes.some((code:unknown)=>typeof code!=="string" || !/^[A-Z0-9_-]{1,64}$/.test(code)))) ||
       (crew.availableFrom!==undefined && !validClock(crew.availableFrom)) ||
       (crew.availableTo!==undefined && !validClock(crew.availableTo)) ||
       (crew.availableFrom!==undefined && crew.availableTo!==undefined &&
