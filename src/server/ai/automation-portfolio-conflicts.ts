@@ -32,7 +32,7 @@ function safeDraft(v:unknown,workspaceId:string,branchId:string):v is ProposedOw
      (a as Record<string,unknown>).type==="CREATE_ATTENTION" &&
      ["INFO","WARNING","CRITICAL"].includes(String((a as Record<string,unknown>).severity)) &&
      typeof (a as Record<string,unknown>).summaryKey==="string" &&
-     /^[A-Z0-9_]{3,128}$/.test((a as Record<string,string>).summaryKey))) ||
+     /^[A-Z0-9_]{3,128}$/.test((a as Record<string,string>).summaryKey)) ||
    !Array.isArray(d.conditions)||d.conditions.length>1||
    Reflect.ownKeys(d.conditions).length!==d.conditions.length+1)return false;
  const keys=["state","source","workspaceId","branchId","eventType","conditions",
