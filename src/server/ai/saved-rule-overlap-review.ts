@@ -68,9 +68,13 @@ function candidate(v:unknown,ws:string,branch:string):v is ProposedOwnerWorkflow
    !events.has(String(v.eventType))||
    exactServiceCondition(v.conditions)===undefined||
    !dense(v.actions,2)||v.actions.length!==1)return false;
- return plain(v.actions[0])&&v.actions[0].type==="CREATE_ATTENTION"&&
-   Object.keys(v.actions[0]).length===3&&
-   ["type","severity","summaryKey"].every(k=>Object.hasOwn(v.actions[0],k));
+ const action=v.actions[0];
+ return plain(action)&&action.type==="CREATE_ATTENTION"&&
+   Object.keys(action).length===3&&
+   ["type","severity","summaryKey"].every(k=>Object.hasOwn(action,k))&&
+   ["INFO","WARNING","CRITICAL"].includes(String(action.severity))&&
+   typeof action.summaryKey==="string"&&
+   /^[A-Z0-9_]{3,128}$/.test(action.summaryKey);
 }
 
 /** Compared against supplied, authoritative saved published rule versions.
