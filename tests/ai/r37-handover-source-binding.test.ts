@@ -1,6 +1,6 @@
 import {describe,expect,it} from "vitest";
-import {buildGuardedAssistantPlan} from "../../src/server/ai/guarded-orchestrator";
-const request={
+import {buildGuardedAssistantPlan, type GuardedAssistantPlanInput} from "../../src/server/ai/guarded-orchestrator";
+const request:GuardedAssistantPlanInput={
  conversationId:"conversation-1",workspaceId:"workspace-1",savedHumanMessageId:"message-1",
  model:"gpt-service-desk",promptVersion:"r37-intake-v1",knowledgeResultsUsed:false,
  modelOutput:{output:{serviceCode:"DEEP",riskFlags:[],corrections:[],unsupportedReasons:[]},
@@ -24,7 +24,7 @@ describe("SONIC R37 guarded assistant priority and real saved-turn scope",()=>{
   if(r.ok)expect(r.value.toolCalls.every(x=>x.name==="requestHumanReview")).toBe(true);
  });
  it("does not show model text if it self-reports cross-customer access or prompt injection",()=>{
-  for(const flag of ["PROMPT_INJECTION","CROSS_CUSTOMER_ACCESS","HUMAN_HANDOVER","PROVIDER_FAILURE"]){
+  for(const flag of ["PROMPT_INJECTION","CROSS_CUSTOMER_ACCESS","HUMAN_HANDOVER","PROVIDER_FAILURE"] as const){
     const r=buildGuardedAssistantPlan({...request,modelOutput:{
       ...request.modelOutput,
       output:{...request.modelOutput.output,riskFlags:[flag]},
@@ -42,7 +42,7 @@ describe("SONIC R37 guarded assistant priority and real saved-turn scope",()=>{
     {...request,modelOutput:null},
     {...request,knowledgeResultsUsed:"yes"},
   ]){
-    const r=buildGuardedAssistantPlan(payload as typeof request);
+    const r=buildGuardedAssistantPlan(payload as unknown as GuardedAssistantPlanInput);
     expect(r).toMatchObject({ok:false,code:"AI_TURN_SCOPE_UNVERIFIED"});
     expect(JSON.stringify(r)).not.toContain("SECRET");
   }
