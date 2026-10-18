@@ -72,6 +72,9 @@ describe("Owner model diagnostic cannot manufacture provider proof", () => {
     expect(source).toContain("if (controller.signal.aborted)");
     expect(source).toContain("verified = undefined;");
     expect(source).toContain("if (didTimeout) failure =");
+    expect(source).toContain("Transport abort alone cannot guarantee a fetch/JSON promise settles");
+    expect(source).toContain("activeRequest.current = null;");
+    expect(source).toContain("previous?.scopeKey === submittedScope && previous.busy");
     expect(source).toContain("activeRequest.current === controller");
     expect(source).toContain('credentials: "same-origin"');
     expect(source).toContain('"/api/internal/ai/connection-test"');

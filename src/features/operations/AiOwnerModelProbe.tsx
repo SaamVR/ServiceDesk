@@ -65,6 +65,15 @@ function ScopedAiOwnerModelProbe({
     const timeout = setTimeout(() => {
       didTimeout = true;
       controller.abort();
+      // Transport abort alone cannot guarantee a fetch/JSON promise settles.
+      // Explicitly close this synthetic owner test at the 75s deadline.
+      if (activeRequest.current === controller) {
+        activeRequest.current = null;
+        setStatus(previous => previous?.scopeKey === submittedScope && previous.busy
+          ? { scopeKey: submittedScope, busy: false,
+              error: "The model test exceeded 75 seconds. This browser stopped waiting; provider-side completion is not verified." }
+          : previous);
+      }
     }, MODEL_PROBE_TIMEOUT_MS);
 
     let verified: VerifiedOwnerModelProbe | undefined;
