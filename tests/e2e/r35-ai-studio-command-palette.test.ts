@@ -37,6 +37,18 @@ describe("R35 L13 direct AI Studio command-navigation lane",()=>{
     expect(link).not.toContain("%E2%80%AE");
     expect(normalizeStaffCommandQuery("  বাংলা   কাজ  ")).toBe("বাংলা কাজ");
   });
+  it("never splits Unicode code points or builds an invalid escaped search URI",()=>{
+    const emoji="😀";
+    const long="a".repeat(99)+emoji+" more";
+    expect(normalizeStaffCommandQuery(long)).toBe("a".repeat(99)+emoji);
+    expect(buildStaffRecordSearches("owner-demo",long)[0].href)
+      .toContain(encodeURIComponent("a".repeat(99)+emoji));
+    expect(normalizeStaffCommandQuery("বাংলা 😀 কাজ")).toBe("বাংলা 😀 কাজ");
+    expect(normalizeStaffCommandQuery("bad\uD800 query")).toBe("bad query");
+    expect(normalizeStaffCommandQuery("bad\uDC00 query")).toBe("bad query");
+    expect(()=>buildStaffRecordSearches("owner-demo","bad\uD800 query")).not.toThrow();
+    expect(normalizeStaffCommandQuery("😀".repeat(110))).toBe("😀".repeat(100));
+  });
   it("uses unique route identity and closes outdated tenant navigation",()=>{
     expect(source).toContain("key={destination.href}");
     expect(source).toContain("}, [pathname, workspace]);");

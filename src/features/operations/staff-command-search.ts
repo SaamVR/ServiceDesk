@@ -18,9 +18,13 @@ export interface StaffCommandDestination {
  * Do not erase real Bangla, Banglish or other visible Unicode search text.
  */
 export function normalizeStaffCommandQuery(raw: string): string {
-  return raw.normalize("NFKC")
+  const safe = raw.normalize("NFKC")
     .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/gu," ")
-    .replace(/\s+/gu," ").trim().slice(0,100);
+    // Malformed standalone UTF-16 surrogates break encodeURIComponent().
+    // Unicode property /u keeps valid emoji surrogate PAIRS intact.
+    .replace(/[\uD800-\uDFFF]/gu,"")
+    .replace(/\s+/gu," ").trim();
+  return Array.from(safe).slice(0,100).join("");
 }
 
 const orderedModules: readonly StaffModule[] = [
