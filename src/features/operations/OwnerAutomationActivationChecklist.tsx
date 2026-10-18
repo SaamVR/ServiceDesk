@@ -32,7 +32,7 @@ export function OwnerAutomationActivationChecklist({
   const allowedBranches = data.branchScope?.mode === "BRANCH"
     ? (data.branchScope.branches ?? []).filter(b => b.id === data.branchScope?.selectedBranchId)
     : data.branchScope?.branches ?? [];
-  const ownerRuleBranches = data.actor.role === "OWNER"
+  const ownerRuleBranches = data.actor?.role === "OWNER"
     ? allowedBranches.filter(b =>
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(b.id))
       .slice(0,24).map(b=>({id:b.id,name:b.name}))
@@ -79,7 +79,7 @@ export function OwnerAutomationActivationChecklist({
           </article>
         ))}
       </div>
-      {data.actor.role === "OWNER" ? <OwnerWorkflowRuleAssistant
+      {data.actor?.role === "OWNER" ? <OwnerWorkflowRuleAssistant
         workspaceSlug={workspaceSlug} workspaceId={data.workspace.id}
         branches={ownerRuleBranches}
         configured={readConfiguredAiRuntimeConfig().ok} /> : null}

@@ -102,7 +102,7 @@ describe("R35 owner model workflow suggestion and real synthetic evaluator",()=>
     expect(ui).toContain("requestOwnerWorkflowWhatIf(");
     expect(ui).toContain("Synthetic rule-engine preview completed");
     expect(ui).toContain("No draft row, live rule or customer");
-    expect(owner).toContain('data.actor.role');
+    expect(owner).toContain('data.actor?.role');
     expect(owner).toContain("ownerRuleBranches");
     expect(owner).toContain("<OwnerWorkflowRuleAssistant");
     expect(ui).not.toContain("sendCustomerMessage(");
