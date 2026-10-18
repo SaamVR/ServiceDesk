@@ -41,7 +41,14 @@ export function buildOwnerAftercareBatch(input:AftercareBatchInput):AftercareBat
   };
   const candidates:Extract<AftercareBatchResult,{ok:true}>["value"]["candidates"]=[];
   for(const entry of input.entries){
-    if(!entry || !entry.visit || !entry.completion ||
+    // Only the expected saved-source triple may authorize a follow-up
+    // review. Hidden or unexpected model/provider action keys are vetoes.
+    if(!entry || typeof entry!=="object" || Array.isArray(entry) ||
+       Object.getPrototypeOf(entry)!==Object.prototype ||
+       Object.keys(entry).length!==3 || Reflect.ownKeys(entry).length!==3 ||
+       !["visit","completion","recipient"].every(key=>Object.hasOwn(entry,key)) ||
+       Object.values(Object.getOwnPropertyDescriptors(entry)).some(d=>!Object.hasOwn(d,"value")) ||
+       !entry.visit || !entry.completion ||
        !safeId(entry.visit.id) || !safeId(entry.completion.eventId) ||
        visits.has(entry.visit.id) || events.has(entry.completion.eventId))
        return {ok:false,code:"AFTERCARE_BATCH_SOURCE_INVALID"};
