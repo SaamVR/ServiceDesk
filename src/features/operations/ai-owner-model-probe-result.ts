@@ -19,6 +19,7 @@ export function parseOwnerModelProbe(value: unknown): VerifiedOwnerModelProbe | 
       v.durableReceipt !== false ||
       typeof v.model !== "string" ||
       !/^[A-Za-z0-9._:/-]{1,120}$/.test(v.model) ||
+      typeof v.checkedAt !== "string" ||
       trustedQuoteInstant(v.checkedAt) === null) return null;
   // Only known safe fields pass to UI. Discard any untrusted extra payload.
   return {
