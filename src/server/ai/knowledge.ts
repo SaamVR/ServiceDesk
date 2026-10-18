@@ -35,6 +35,7 @@ function score(query: Set<string>, text: string): number {
 }
 
 const evidenceId=/^[A-Za-z0-9:_-]{3,128}$/;
+const citationChunkId=/^[A-Za-z0-9:_-]{1,128}$/;
 function usableKnowledgeChunk(value:unknown,workspaceId:string):value is KnowledgeChunk {
   if(!value||typeof value!=="object"||Array.isArray(value)||
      Object.getPrototypeOf(value)!==Object.prototype ||
@@ -44,7 +45,7 @@ function usableKnowledgeChunk(value:unknown,workspaceId:string):value is Knowled
   const c=value as Partial<KnowledgeChunk>;
   return c.workspaceId===workspaceId && c.approved===true &&
     typeof c.documentId==="string" && evidenceId.test(c.documentId) &&
-    typeof c.chunkId==="string" && evidenceId.test(c.chunkId) &&
+    typeof c.chunkId==="string" && citationChunkId.test(c.chunkId) &&
     Number.isSafeInteger(c.version) && (c.version??0)>0 &&
     typeof c.title==="string" && c.title.length>0 && c.title.length<=160 &&
     typeof c.text==="string" && c.text.length>0 && c.text.length<=4096 &&
