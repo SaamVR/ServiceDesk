@@ -20,10 +20,31 @@ export type InboxReviewPlan =
      humanReviewRequired:true;outboundMessageQueued:false;aiModelInvoked:false;}};
 
 const id=(v:unknown):v is string=>typeof v==="string"&&/^[A-Za-z0-9:_-]{3,128}$/.test(v);
+function dense(value:unknown,maximum:number):value is unknown[]{
+ if(!Array.isArray(value)||value.length>=maximum||
+    Reflect.ownKeys(value).length!==value.length+1)return false;
+ for(let i=0;i<value.length;i++){
+   const d=Object.getOwnPropertyDescriptor(value,String(i));
+   if(!d||!Object.hasOwn(d,"value"))return false;
+ }
+ return true;
+}
 function timestamp(v:unknown):v is string{
- if(typeof v!=="string"||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:Z|[+-][0-9]{2}:[0-9]{2})$/.test(v))return false;
- const n=Date.parse(v);
- return Number.isFinite(n) && /^\d{4}-\d{2}-\d{2}T/.test(v);
+ if(typeof v!=="string")return false;
+ const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|([+-])(\d{2}):(\d{2}))$/.exec(v);
+ if(!m)return false;
+ const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);
+ const hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
+ if(year<1000||month<1||month>12||day<1||day>31||
+    hour>23||minute>59||second>59)return false;
+ const civil=new Date(Date.UTC(year,month-1,day));
+ if(civil.getUTCFullYear()!==year||civil.getUTCMonth()+1!==month||
+    civil.getUTCDate()!==day)return false;
+ if(m[8]!=="Z"){
+   const offsetH=Number(m[10]),offsetM=Number(m[11]);
+   if(offsetH>14||offsetM>59||(offsetH===14&&offsetM!==0))return false;
+ }
+ return Number.isFinite(Date.parse(v));
 }
 function exactSavedSnapshot(value:unknown):boolean{
  return !!value&&typeof value==="object"&&!Array.isArray(value)&&
@@ -44,7 +65,8 @@ export function planOwnerInboxReview(input:OwnerInboxReviewInput):InboxReviewPla
  if(!Array.isArray(conversations)||!Array.isArray(messages)||
     conversations.length>=200||messages.length>=1000)
    return {ok:false,code:"INBOX_SOURCE_INCOMPLETE"};
- if(!timestamp(input.now)||conversations.some(x=>!exactSavedSnapshot(x))||
+ if(!dense(conversations,200)||!dense(messages,1000)||
+    !timestamp(input.now)||conversations.some(x=>!exactSavedSnapshot(x))||
     messages.some(x=>!exactSavedSnapshot(x)))
    return {ok:false,code:"INBOX_SOURCE_INVALID"};
  const cMap=new Map<string,ConversationDTO>(),mIds=new Set<string>();
@@ -78,7 +100,9 @@ export function planOwnerInboxReview(input:OwnerInboxReviewInput):InboxReviewPla
    // Delivery state is only authoritative when it is an explicit successful
    // customer-facing receipt; a queued/sent provider attempt is not a reply.
    const after=rows.filter(m=>m.direction==="OUTBOUND"&&Date.parse(m.createdAt)>=Date.parse(lastCustomer.createdAt));
-   const acknowledged=after.some(m=>m.deliveryState==="DELIVERED"||m.deliveryState==="READ");
+   const acknowledged=after.some(m=>
+     Date.parse(m.createdAt)>Date.parse(lastCustomer.createdAt) &&
+     (m.deliveryState==="DELIVERED"||m.deliveryState==="READ"));
    if(acknowledged&&!c.handoverActive)continue;
    const reason:OwnerInboxReason=c.handoverActive?"HUMAN_HANDOVER":
      after.length>0?"DELIVERY_UNVERIFIED":"CUSTOMER_AWAITING_REVIEW";
