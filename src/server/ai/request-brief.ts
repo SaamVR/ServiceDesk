@@ -141,6 +141,14 @@ export async function generateAuthorizedRequestBrief(
     if (!catalog.data) return fail("AI_BRIEF_SERVICE_NOT_FOUND", "Saved request service is unavailable.");
     serviceCode = codeValue(catalog.data.code);
   }
+  // Invalid persisted numeric facts are not missing customer details.
+  // "null" is the only verified absent room count; a coerced string, NaN,
+  // fraction or out-of-range number must stop before paid inference.
+  if ([row.bedrooms,row.bathrooms].some(value=>
+        value!==null && boundedCount(value)===null)) {
+    return fail("AI_BRIEF_SOURCE_UNVERIFIED",
+      "Saved request dimensions are invalid and require staff reconciliation.");
+  }
   const groundedFacts = {
     serviceCode,
     bedrooms: boundedCount(row.bedrooms),
