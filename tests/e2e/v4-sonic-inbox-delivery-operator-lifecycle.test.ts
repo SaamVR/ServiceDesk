@@ -16,6 +16,9 @@ describe("SONIC read-only inbox delivery diagnostics lifecycle",()=>{
     expect(source).toContain("old.abort()");
     expect(source).toContain('setCancelled(true)');
     expect(source).toContain('if (timedOut) setState("unavailable")');
+    expect(source).toContain('setState("unavailable");');
+    expect(source).toContain('if (controller.signal.aborted || requestController.current !== controller) return;');
+    expect(source).toContain('whether fetch() ever settles or reaches finally()');
     expect(source).toContain('clearTimeout(timeout)');
   });
   it("provides deliberate operator cancellation without mutating delivery",()=>{

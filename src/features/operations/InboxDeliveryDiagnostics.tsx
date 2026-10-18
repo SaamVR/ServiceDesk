@@ -43,7 +43,17 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
     const controller = new AbortController();
     requestController.current = controller;
     let timedOut = false;
-    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
+    // Abort can leave a noncompliant transport unresolved. Clear the busy
+    // state at the deadline itself; invalidate all late data independently of
+    // whether fetch() ever settles or reaches finally().
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+      if (requestController.current === controller) {
+        requestController.current = null;
+        setState("unavailable");
+      }
+    }, 15_000);
     setState("loading");
     setSnapshot(undefined);
     setExpanded(false);
@@ -63,7 +73,7 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
         return;
       }
       const result = parseInboxDeliveryDiagnostics(await response.json() as unknown);
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || requestController.current !== controller) return;
       if (!result) {
         setState("unavailable");
         return;
