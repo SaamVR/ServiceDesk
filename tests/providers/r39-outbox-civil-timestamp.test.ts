@@ -32,6 +32,21 @@ describe("SONIC R39 L17 provider outbox civil timestamp and retry boundaries",()
    }
   }
  });
+ it("independent critic: never persists raw contact or unbounded provider references in SENT receipts",()=>{
+  for(const providerReference of [
+    "person@example.test",
+    "https://malicious.example/private",
+    "sk-not-a-provider-reference",
+    "provider-".repeat(100),
+    "provider\nBearer secret",
+  ]){
+    const r=evaluate({outcome:"SENT",completedAt:at,providerReference});
+    expect(r.ok).toBe(false);
+    expect(JSON.stringify(r)).not.toContain(providerReference);
+  }
+  expect(evaluate({outcome:"SENT",completedAt:at,providerReference:"wamid.HBg001:abc-2"}))
+    .toMatchObject({ok:true,value:{action:"markSent",providerReference:"wamid.HBg001:abc-2"}});
+ });
  it("keeps retry schedule bounded and invalid input from crashing the worker",()=>{
   expect(evaluate({outcome:"RETRYABLE_FAILURE",failedAt:at,code:"RATE_LIMIT",retryAfterSeconds:1e18}))
    .toMatchObject({ok:false,code:"OUTBOX_RETRY_SCHEDULE_INVALID"});
