@@ -76,6 +76,11 @@ describe("Owner model diagnostic cannot manufacture provider proof", () => {
     expect(source).toContain('credentials: "same-origin"');
     expect(source).toContain('"/api/internal/ai/connection-test"');
     expect(source).toContain("Browser cancellation is not proof");
+    expect(source).toContain("!operatorApproved || busy || activeRequest.current");
+    expect(source).toContain("setApprovedScope(null)");
+    expect(source).toContain("checked={operatorApproved}");
+    expect(source).toContain("disabled={!configured || !operatorApproved || busy}");
+    expect(source).toContain("can consume tokens or incur provider usage");
     expect(source).not.toContain("OPENAI_API_KEY");
     expect(source).not.toContain("SERVICEDESK_CODEX_GATEWAY_KEY");
   });

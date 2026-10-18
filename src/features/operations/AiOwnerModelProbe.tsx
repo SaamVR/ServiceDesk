@@ -24,6 +24,8 @@ export function AiOwnerModelProbe({
 }) {
   const activeRequest = useRef<AbortController | null>(null);
   const scopeKey = workspaceSlug + "\\0" + (configured ? "configured" : "disabled");
+  const [approvedScope,setApprovedScope] = useState<string|null>(null);
+  const operatorApproved = approvedScope === scopeKey;
   useEffect(() => () => {
     activeRequest.current?.abort();
     activeRequest.current = null;
@@ -41,7 +43,10 @@ export function AiOwnerModelProbe({
   const error = scoped?.error;
 
   async function check() {
-    if (!configured || busy || activeRequest.current) return;
+    // A synthetic model call can incur usage; one explicit acknowledgment
+    // is needed for EACH deliberate owner diagnostic invocation.
+    if (!configured || !operatorApproved || busy || activeRequest.current) return;
+    setApprovedScope(null);
     const requestedWorkspace = workspaceSlug;
     const submittedScope = scopeKey;
     const controller = new AbortController();
@@ -123,8 +128,15 @@ export function AiOwnerModelProbe({
         are sent and no business records change. This does not verify WhatsApp, email or automation delivery.
         Quote approvals are independently authorized.
       </p>
+      <label className={styles.consent}>
+        <input type="checkbox" checked={operatorApproved} disabled={!configured || busy}
+          onChange={event=>setApprovedScope(event.target.checked ? scopeKey : null)} />
+        <span>I authorize one synthetic call to the configured model. It can
+          consume tokens or incur provider usage; it is not a provider-delivery
+          or AI automation acceptance test.</span>
+      </label>
       <div className={styles.actions}>
-        <button type="button" className={styles.action} disabled={!configured || busy}
+        <button type="button" className={styles.action} disabled={!configured || !operatorApproved || busy}
           onClick={check} aria-busy={busy}>
           {busy ? "Testing model connection…" : "Test AI model connection"}
         </button>

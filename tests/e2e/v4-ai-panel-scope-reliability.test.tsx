@@ -56,6 +56,8 @@ describe("V4 AI panels never reuse cross-workspace or cross-request receipts", (
     expect(src).toContain("parseOwnerModelProbe(payload)");
     expect(src).toContain("activeRequest.current?.abort()");
     expect(src).toContain("not a durable");
+    expect(src).toContain("approvedScope === scopeKey");
+    expect(src).toContain("event.target.checked ? scopeKey : null");
   });
 
   it("keeps explicit human-triggered calls and disabled-state communication", () => {
