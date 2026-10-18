@@ -1,0 +1,1 @@
+Independent R43 L29 critic tests the real default Supabase-query path, not an injected array loader: workspace/branch/PUBLISHED predicates, stable order, limit+1 page, two authorization reads and two persisted reads. Refuses sentinel overflow, branch denial and owner revocation. Source-only mocked PostgREST; not live tenant UAT or proof of provider delivery.

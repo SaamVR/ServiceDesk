@@ -1,0 +1,1 @@
+Independent R43 L27 critic challenge: saved published rule inventory must not accept hidden/extra action or condition fields and claim their overlap coverage is reviewed. Reject unapproved provider sends and hidden contacts before deriving any coverage status. This test deliberately forbids unsupported nested shapes, not proof of live DB completeness.
