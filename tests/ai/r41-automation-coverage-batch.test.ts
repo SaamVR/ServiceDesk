@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {previewAutomationCatalogCoverage, type AutomationCoverageBatch} from "../../src/server/ai/automation-coverage-batch";
+import {previewAutomationCatalogCoverage, type AutomationCoverageBatch, type FictionalAutomationScenario} from "../../src/server/ai/automation-coverage-batch";
 const owner={workspaceId:"workspace-1",role:"OWNER" as const};
 const sample:AutomationCoverageBatch={
  actor:owner,workspaceId:"workspace-1",branchId:"branch-1",
@@ -50,6 +50,6 @@ describe("SONIC R41 bulk synthetic automation acceptance matrix",()=>{
     .toMatchObject({ok:false,code:"AUTOMATION_COVERAGE_SOURCE_INVALID"});
   expect(previewAutomationCatalogCoverage({...sample,scenarios:[{
      ...sample.scenarios[0],sourceEventId:"already-saved"
-   }]})).toMatchObject({ok:false,code:"AUTOMATION_COVERAGE_SOURCE_INVALID"});
+   } as unknown as FictionalAutomationScenario]})).toMatchObject({ok:false,code:"AUTOMATION_COVERAGE_SOURCE_INVALID"});
  });
 });
