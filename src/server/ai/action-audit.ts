@@ -31,6 +31,9 @@ export interface AiActionAuditRecord {
   toolResults: AiToolResultSummary[];
   blockedActions: AiBlockedActionSummary[];
   blockedActionCount: number;
+  /** Raw tool outcome COMPLETED is not a persisted transaction receipt. */
+  unverifiedCompletionClaims: number;
+  completionEvidenceVerified: false;
   privateReasoningStored: false;
   canMutateBusinessTruth: false;
 }
@@ -73,6 +76,7 @@ function safeTime(v:unknown):string {
 export function buildAiActionAuditRecord(input: AiActionAuditInput): AiActionAuditRecord {
   const tools=Array.isArray(input?.toolResults)?input.toolResults.slice(0,64):[];
   const blocked=Array.isArray(input?.blockedActions)?input.blockedActions.slice(0,64):[];
+  const unverifiedCompletionClaims=tools.filter(item=>item?.outcome==="COMPLETED").length;
   return {
     workspaceId:safeId(input?.workspaceId),
     conversationId:safeId(input?.conversationId),
@@ -82,10 +86,17 @@ export function buildAiActionAuditRecord(input: AiActionAuditInput): AiActionAud
     capturedAt:safeTime(input?.capturedAt),
     toolResults:tools.map(item=>({
       toolName:safeLabel(item?.toolName),
-      outcome:OUTCOMES.has(item?.outcome)?item.outcome:"BLOCKED",
-      ...(typeof item?.evidenceRef==="string" && SAFE_EVIDENCE.test(item.evidenceRef) && !SECRET_LIKE.test(item.evidenceRef)
+      // This generic projection has not reloaded any authoritative saved
+      // workflow/tool receipt. Model "COMPLETED" is therefore a pending
+      // proposal, never a certificate that an external action happened.
+      outcome:item?.outcome==="COMPLETED"?"PROPOSED" as const:
+        OUTCOMES.has(item?.outcome)?item.outcome:"BLOCKED" as const,
+      ...(item?.outcome!=="COMPLETED" &&
+         typeof item?.evidenceRef==="string" && SAFE_EVIDENCE.test(item.evidenceRef) && !SECRET_LIKE.test(item.evidenceRef)
         ? {evidenceRef:item.evidenceRef}:{}),
-      summary:redact(item?.summary),
+      summary:item?.outcome==="COMPLETED"
+        ? "Unverified completion claim. Inspect saved execution evidence."
+        : redact(item?.summary),
     })),
     blockedActions:blocked.map(item=>({
       name:safeLabel(item?.name),
@@ -93,6 +104,8 @@ export function buildAiActionAuditRecord(input: AiActionAuditInput): AiActionAud
         ? item.reason:"SCHEMA_VIOLATION",
     })),
     blockedActionCount:blocked.length,
+    unverifiedCompletionClaims,
+    completionEvidenceVerified:false,
     privateReasoningStored:false,
     canMutateBusinessTruth:false,
   };
