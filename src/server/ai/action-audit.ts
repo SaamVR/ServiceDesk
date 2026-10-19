@@ -73,9 +73,25 @@ function safeTime(v:unknown):string {
   const at=Date.parse(v);
   return Number.isFinite(at) && new Date(at).toISOString()===v?v:"unverified-time";
 }
+/** Do not execute model/provider getters when preparing an owner audit. */
+function verifiedPlainAuditRow(value: unknown): boolean {
+  try {
+    return !!value && typeof value==="object" && !Array.isArray(value) &&
+      Object.getPrototypeOf(value)===Object.prototype &&
+      Object.getOwnPropertyNames(value).length===Object.keys(value).length &&
+      Object.getOwnPropertySymbols(value).length===0 &&
+      Object.values(Object.getOwnPropertyDescriptors(value))
+        .every(desc=>Object.hasOwn(desc,"value"));
+  } catch { return false; }
+}
 export function buildAiActionAuditRecord(input: AiActionAuditInput): AiActionAuditRecord {
-  const tools=Array.isArray(input?.toolResults)?input.toolResults.slice(0,64):[];
-  const blocked=Array.isArray(input?.blockedActions)?input.blockedActions.slice(0,64):[];
+  const tools=Array.isArray(input?.toolResults)
+    ? input.toolResults.slice(0,64).map(item=>verifiedPlainAuditRow(item)
+      ? item : {toolName:"unknown",outcome:"BLOCKED" as const,
+        summary:"Unverified tool evidence"}) : [];
+  const blocked=Array.isArray(input?.blockedActions)
+    ? input.blockedActions.slice(0,64).map(item=>verifiedPlainAuditRow(item)
+      ? item : {name:"unknown",reason:"SCHEMA_VIOLATION"}) : [];
   const unverifiedCompletionClaims=tools.filter(item=>item?.outcome==="COMPLETED").length;
   return {
     workspaceId:safeId(input?.workspaceId),
