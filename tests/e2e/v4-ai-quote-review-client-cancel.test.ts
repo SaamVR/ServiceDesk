@@ -7,7 +7,8 @@ describe("quote AI review client cancellation without false transport claims", (
     "src/features/operations/AiQuoteReview.tsx"), "utf8");
 
   test("invalidates stale model replies when switching quotes, configuration or unmounting", () => {
-    expect(src).toContain('key={workspaceSlug + ":" + quoteId}');
+    expect(src).toContain("key={aiQuoteReviewScopeKey(props.workspaceSlug,props.quoteId,props.quoteVersion,props.configured)}");
+    expect(src).toContain("quoteVersion");
     expect(src).toContain("scopeKey = workspaceSlug +");
     expect(src).toContain("quoteId +");
     expect(src).toContain("status?.scopeKey === scopeKey ? status : undefined");

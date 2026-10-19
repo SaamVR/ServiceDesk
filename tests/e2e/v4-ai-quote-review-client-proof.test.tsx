@@ -7,7 +7,7 @@ import {
   describeQuoteReviewHttpFailure,
   parseAuthorizedQuoteReview, containsUnsafeQuoteReviewClaims,
 } from "../../src/features/operations/ai-quote-review-response";
-import { AiQuoteReview } from "../../src/features/operations/AiQuoteReview";
+import { AiQuoteReview,aiQuoteReviewScopeKey } from "../../src/features/operations/AiQuoteReview";
 
 const quoteId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const anotherQuoteId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -135,6 +135,22 @@ describe("Quote reviewer browser proof boundary", () => {
     expect(source).toContain("It may consume provider tokens or incur usage");
     expect(source).toContain("disabled={!configured || !operatorApproved || busy}");
     expect(source).toContain("provider-side cancellation is not confirmed");
+  });
+
+  it("invalidates an advisory when the same quote changes saved revision", () => {
+    const old=aiQuoteReviewScopeKey("approved-cleaning",quoteId,3,true);
+    const updated=aiQuoteReviewScopeKey("approved-cleaning",quoteId,4,true);
+    expect(old).not.toBe(updated);
+    expect(old).not.toBe(aiQuoteReviewScopeKey("other-workspace",quoteId,3,true));
+    expect(old).not.toBe(aiQuoteReviewScopeKey("approved-cleaning",quoteId,3,false));
+    const ui=read("src/features/operations/AiQuoteReview.tsx");
+    const route=read("src/features/operations/OperationalProductRoute.tsx");
+    expect(ui).toContain("A new revision clears this");
+    expect(ui).toContain("!versionTrusted || !operatorApproved");
+    expect(route).toContain("quoteVersion={selectedQuote.version}");
+    expect(route).toContain('key={selectedQuote.id + ":" + selectedQuote.version}');
+    expect(aiQuoteReviewScopeKey("a",quoteId,-1,true)).toContain("invalid-version");
+    expect(aiQuoteReviewScopeKey("a",quoteId,NaN,true)).toContain("invalid-version");
   });
 
   it("has a functioning disabled state without a model or raw customer information", () => {

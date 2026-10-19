@@ -1634,8 +1634,10 @@ function QuotesView({
           <StaffQuoteChecklist quote={selectedQuote} loadedAt={data.loadedAt} />
 
           {selectedQuote.lineItems?.length && ["APPROVED", "SENT"].includes(selectedQuote.status) ? (
-            <AiQuoteReview key={selectedQuote.id} workspaceSlug={workspaceSlug}
-              quoteId={selectedQuote.id} configured={readConfiguredAiRuntimeConfig().ok} />
+            <AiQuoteReview key={selectedQuote.id + ":" + selectedQuote.version}
+              workspaceSlug={workspaceSlug} quoteId={selectedQuote.id}
+              quoteVersion={selectedQuote.version}
+              configured={readConfiguredAiRuntimeConfig().ok} />
           ) : null}
 
           <div className={styles.salesDetailGrid}>

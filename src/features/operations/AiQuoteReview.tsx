@@ -21,18 +21,31 @@ type Status = {
 };
 
 /** Explicit staff action. No quote mutation, payment or outbound delivery. */
-export function AiQuoteReview({
-  workspaceSlug, quoteId, configured,
-}: { workspaceSlug: string; quoteId: string; configured: boolean }) {
-  return <ScopedQuoteReview key={workspaceSlug + ":" + quoteId}
-    workspaceSlug={workspaceSlug} quoteId={quoteId} configured={configured} />;
+/** Saved quote revisions can change without changing their UUID. Keep the
+ * advisory's in-memory result, consent and pending network ownership scoped
+ * to that authoritative revision. The model does not receive financial data.
+ */
+export function aiQuoteReviewScopeKey(workspaceSlug:string,quoteId:string,
+  quoteVersion:number|undefined,configured:boolean):string {
+  const revision=quoteVersion===undefined?"legacy-unversioned":
+    Number.isSafeInteger(quoteVersion) && quoteVersion>=0
+      ? String(quoteVersion) : "invalid-version";
+  return [workspaceSlug,quoteId,revision,configured?"configured":"disabled"].join(":");
 }
-
+type AiQuoteReviewProps={
+  workspaceSlug:string;quoteId:string;quoteVersion?:number;configured:boolean;
+};
+export function AiQuoteReview(props:AiQuoteReviewProps) {
+  return <ScopedQuoteReview
+    key={aiQuoteReviewScopeKey(props.workspaceSlug,props.quoteId,props.quoteVersion,props.configured)}
+    {...props} />;
+}
 function ScopedQuoteReview({
-  workspaceSlug, quoteId, configured,
-}: { workspaceSlug: string; quoteId: string; configured: boolean }) {
-  const scopeKey = workspaceSlug + "\\0" + quoteId + "\\0" +
-    (configured ? "configured" : "disabled");
+  workspaceSlug, quoteId, quoteVersion, configured,
+}: AiQuoteReviewProps) {
+  const scopeKey = aiQuoteReviewScopeKey(workspaceSlug,quoteId,quoteVersion,configured);
+  const versionTrusted = quoteVersion===undefined ||
+    (Number.isSafeInteger(quoteVersion) && quoteVersion>=0);
   // Each optional model review may incur inference usage. Acknowledgement is
   // scoped to the saved quote and consumed exactly once at invocation.
   const [approvedScope, setApprovedScope] = useState<string | null>(null);
@@ -50,7 +63,7 @@ function ScopedQuoteReview({
   }, [scopeKey]);
 
   async function generate() {
-    if (!configured || !operatorApproved || busy || activeRequest.current) return;
+    if (!configured || !versionTrusted || !operatorApproved || busy || activeRequest.current) return;
     setApprovedScope(null);
     const submittedScope = scopeKey;
     const expectedQuoteId = quoteId;
@@ -153,7 +166,7 @@ function ScopedQuoteReview({
     </label>
     <div className={styles.actions}>
       <button className={styles.action} type="button" onClick={generate}
-        disabled={!configured || !operatorApproved || busy} aria-busy={busy}>
+        disabled={!configured || !versionTrusted || !operatorApproved || busy} aria-busy={busy}>
         {busy ? "Reviewing saved quote…" : "Generate AI review checks"}
       </button>
       {busy ? <button type="button" className={styles.cancel} onClick={cancelReview}>
