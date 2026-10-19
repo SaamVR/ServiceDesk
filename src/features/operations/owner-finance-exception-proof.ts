@@ -42,14 +42,15 @@ export const ownerFinanceCodeLabels:Readonly<Record<OwnerFinanceCode,string>>={
  PAID_STATUS_LEDGER_CONFLICT:"Paid status conflicts with saved balance",
  VOID_REMAINDER_REVIEW:"Void invoice has outstanding balance",
 };
-export function parseOwnerFinanceExceptions(value:unknown):
+export function parseOwnerFinanceExceptions(value:unknown,expectedWorkspaceId:string):
   VerifiedOwnerFinanceExceptions|null {
  if(!plain(value)||!keys(value,["state","source","workspaceId","inspectedCount",
    "exceptionCount","exceptions","paymentConfirmed","refundAuthorized",
    "providerMessageQueued"])||
    value.state!=="FINANCE_OWNER_MANUAL_REVIEW"||
    value.source!=="AUTHORIZED_SAVED_INVOICE_SNAPSHOT"||
-   !validId(value.workspaceId)||!count(value.inspectedCount)||
+   !validId(expectedWorkspaceId)||!validId(value.workspaceId)||
+   value.workspaceId!==expectedWorkspaceId||!count(value.inspectedCount)||
    !count(value.exceptionCount)||
    value.exceptionCount>value.inspectedCount||
    value.paymentConfirmed!==false||value.refundAuthorized!==false||

@@ -26,16 +26,16 @@ type Display = {
  * server-side model request.
  */
 export function AiOwnerOperationsBrief({
-  workspaceSlug, configured,
-}: { workspaceSlug: string; configured: boolean }) {
-  return <ScopedOwnerBrief key={workspaceSlug + ":" + String(configured)}
-    workspaceSlug={workspaceSlug} configured={configured} />;
+  workspaceSlug, configured, workspaceId,
+}: { workspaceSlug: string; configured: boolean; workspaceId?:string }) {
+  return <ScopedOwnerBrief key={workspaceSlug + ":" + String(configured) + ":" + (workspaceId??"unknown")}
+    workspaceSlug={workspaceSlug} configured={configured} workspaceId={workspaceId} />;
 }
 
 function ScopedOwnerBrief({
-  workspaceSlug, configured,
-}: { workspaceSlug: string; configured: boolean }) {
-  const scopeKey = workspaceSlug + ":" + String(configured);
+  workspaceSlug, configured, workspaceId,
+}: { workspaceSlug: string; configured: boolean; workspaceId?:string }) {
+  const scopeKey = workspaceSlug + ":" + String(configured) + ":" + (workspaceId??"unknown");
   const [display, setDisplay] = useState<Display>();
   const state = display?.scopeKey === scopeKey ? display : undefined;
   const sequence = useRef(0);
@@ -182,7 +182,7 @@ function ScopedOwnerBrief({
         approval or audit receipt. Verify each recommendation in the authoritative
         workspace before assigning work or contacting anyone.</p>
     </div> : null}
-    <OwnerFinanceExceptionReview workspaceSlug={workspaceSlug}/>
+    <OwnerFinanceExceptionReview workspaceSlug={workspaceSlug} workspaceId={workspaceId}/>
     <div className={styles.queues}>
       <div>
         <strong>Verify against authoritative queues</strong>

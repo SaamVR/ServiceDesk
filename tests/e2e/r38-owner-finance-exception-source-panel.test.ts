@@ -15,13 +15,15 @@ const base={state:"FINANCE_OWNER_MANUAL_REVIEW",
 const read=(p:string)=>readFileSync(join(process.cwd(),p),"utf8");
 describe("R38 owner finance source-only exception investigation",()=>{
  it("accepts only two-read source proof and exact status/priority categories",()=>{
-   expect(parseOwnerFinanceExceptions(base)).toEqual(base);
-   expect(parseOwnerFinanceExceptions({...base,source:"MODEL_INFERRED"})).toBeNull();
-   expect(parseOwnerFinanceExceptions({...base,paymentConfirmed:true})).toBeNull();
-   expect(parseOwnerFinanceExceptions({...base,refundAuthorized:true})).toBeNull();
-   expect(parseOwnerFinanceExceptions({...base,providerMessageQueued:true})).toBeNull();
-   expect(parseOwnerFinanceExceptions({...base,exceptionCount:0})).toBeNull();
-   expect(parseOwnerFinanceExceptions({...base,inspectedCount:1})).toBeNull();
+   expect(parseOwnerFinanceExceptions(base,"workspace-a")).toEqual(base);
+   expect(parseOwnerFinanceExceptions(base,"workspace-b")).toBeNull();
+   expect(parseOwnerFinanceExceptions(base,"")).toBeNull();
+   expect(parseOwnerFinanceExceptions({...base,source:"MODEL_INFERRED"},"workspace-a")).toBeNull();
+   expect(parseOwnerFinanceExceptions({...base,paymentConfirmed:true},"workspace-a")).toBeNull();
+   expect(parseOwnerFinanceExceptions({...base,refundAuthorized:true},"workspace-a")).toBeNull();
+   expect(parseOwnerFinanceExceptions({...base,providerMessageQueued:true},"workspace-a")).toBeNull();
+   expect(parseOwnerFinanceExceptions({...base,exceptionCount:0},"workspace-a")).toBeNull();
+   expect(parseOwnerFinanceExceptions({...base,inspectedCount:1},"workspace-a")).toBeNull();
  });
  it("rejects malformed ledger refs, duplicate rows, nonsource amounts and invented success",()=>{
    for(const record of [
@@ -34,25 +36,29 @@ describe("R38 owner finance source-only exception investigation",()=>{
     {...base,apiKey:"DO_NOT_RENDER"},
     {...base,inspectedCount:300},
     {...base,exceptions:[]},
-   ])expect(parseOwnerFinanceExceptions(record)).toBeNull();
+   ])expect(parseOwnerFinanceExceptions(record,"workspace-a")).toBeNull();
  });
  it("distinguishes verified zero from source unavailable and rejects unknown counts",()=>{
    const empty={...base,inspectedCount:0,exceptionCount:0,exceptions:[]};
-   expect(parseOwnerFinanceExceptions(empty)?.exceptionCount).toBe(0);
-   expect(parseOwnerFinanceExceptions({ok:false,code:"FINANCE_SOURCE_INCOMPLETE"})).toBeNull();
-   expect(parseOwnerFinanceExceptions({...base,exceptionCount:-1})).toBeNull();
+   expect(parseOwnerFinanceExceptions(empty,"workspace-a")?.exceptionCount).toBe(0);
+   expect(parseOwnerFinanceExceptions({ok:false,code:"FINANCE_SOURCE_INCOMPLETE"},"workspace-a")).toBeNull();
+   expect(parseOwnerFinanceExceptions({...base,exceptionCount:-1},"workspace-a")).toBeNull();
  });
  it("connects protected owner-only HTTP, correct saved invoice route and fail-closed status",()=>{
    const ui=read("src/features/operations/OwnerFinanceExceptionReview.tsx");
    const parent=read("src/features/operations/AiOwnerOperationsBrief.tsx");
    const css=read("src/features/operations/OwnerFinanceExceptionReview.module.css");
-   expect(parent).toContain("<OwnerFinanceExceptionReview workspaceSlug={workspaceSlug}/>");
+   expect(parent).toContain("<OwnerFinanceExceptionReview workspaceSlug={workspaceSlug} workspaceId={workspaceId}/>");
+   expect(read("src/features/operations/AiStudioWorkspace.tsx"))
+     .toContain("workspaceId={data.workspace.id}");
    expect(ui).toContain('fetch("/api/internal/ai/finance-review"');
    expect(ui).toContain('method:"POST",credentials:"same-origin",cache:"no-store"');
    expect(ui).toContain('body:JSON.stringify({workspaceSlug})');
    expect(ui).toContain('invoiceQueueHref("all","",item.invoiceId)');
    expect(ui).toContain("This is NOT proof that");
    expect(ui).toContain("uses no generative model");
+   expect(ui).toContain("!workspaceId||request.current");
+   expect(ui).toContain("this does not indicate zero exceptions");
    expect(ui).toContain('controller.signal.aborted||request.current!==controller');
    expect(css).toContain("@media(max-width:540px)");
    expect(css).toContain("focus-visible");

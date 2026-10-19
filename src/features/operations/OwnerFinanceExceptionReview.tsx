@@ -11,17 +11,22 @@ import styles from "./OwnerFinanceExceptionReview.module.css";
  * authorizes OWNER and twice verifies current saved financial source.
  * This panel never infers that a payment, refund or external message happened.
  */
-export function OwnerFinanceExceptionReview({workspaceSlug}:{workspaceSlug:string}){
- return <ScopedFinanceReview key={workspaceSlug} workspaceSlug={workspaceSlug}/>;
+export function OwnerFinanceExceptionReview(props:{
+ workspaceSlug:string;workspaceId?:string;
+}){
+ return <ScopedFinanceReview key={props.workspaceSlug+":"+(props.workspaceId??"unknown")}
+   {...props}/>;
 }
-function ScopedFinanceReview({workspaceSlug}:{workspaceSlug:string}){
+function ScopedFinanceReview({workspaceSlug,workspaceId}:{
+ workspaceSlug:string;workspaceId?:string;
+}){
  const [value,setValue]=useState<VerifiedOwnerFinanceExceptions>();
  const [state,setState]=useState<"idle"|"loading"|"available"|"unavailable">("idle");
  const [expanded,setExpanded]=useState(false);
  const request=useRef<AbortController|null>(null);
  useEffect(()=>()=>{request.current?.abort();request.current=null;},[]);
  async function load(){
-   if(request.current)return;
+   if(!workspaceId||request.current)return;
    const controller=new AbortController();
    request.current=controller;
    setState("loading");setValue(undefined);setExpanded(false);
@@ -41,7 +46,7 @@ function ScopedFinanceReview({workspaceSlug}:{workspaceSlug:string}){
      if(!response.ok||!response.headers.get("content-type")?.includes("application/json")){
        setState("unavailable");return;
      }
-     const result=parseOwnerFinanceExceptions(await response.json() as unknown);
+     const result=parseOwnerFinanceExceptions(await response.json() as unknown,workspaceId);
      if(controller.signal.aborted||request.current!==controller)return;
      if(!result){setState("unavailable");return;}
      setValue(result);setState("available");
@@ -64,12 +69,16 @@ function ScopedFinanceReview({workspaceSlug}:{workspaceSlug:string}){
        <p>Inspect authorized ledger inconsistencies and manual collection cases.
          This checks the database twice and uses no generative model.</p></div>
      <button type="button" className={styles.action} onClick={load}
-       disabled={state==="loading"} aria-busy={state==="loading"}>
+       disabled={!workspaceId||state==="loading"} aria-busy={state==="loading"}>
        {state==="loading"?"Checking saved ledger…":
          state==="available"?"Refresh exception review":"Check saved invoice exceptions"}
      </button>
    </div>
-   {state==="idle"?<p className={styles.feedback}>
+   {!workspaceId?<p className={styles.error} role="alert">
+     The authenticated workspace identity is unavailable. Finance source
+     checking remains disabled; this does not indicate zero exceptions.
+   </p>:null}
+   {state==="idle"&&workspaceId?<p className={styles.feedback}>
      Run a manual saved-ledger check. No payment, refund or customer message is triggered.
    </p>:null}
    {state==="loading"?<p className={styles.feedback} role="status">
