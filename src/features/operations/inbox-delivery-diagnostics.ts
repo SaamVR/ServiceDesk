@@ -198,3 +198,35 @@ export function summarizeDeliveryReviewReasons(
     }))
     .filter(entry=>entry.count>0);
 }
+
+/** Human-only source investigation guidance. Never authorize a resend, mutate
+ * consent or present the absence of evidence as a provider receipt. */
+export type DeliveryReviewAction =
+  "PROVIDER_FAILURE_REVIEW"|"CONSENT_POLICY_REVIEW"|"PENDING_OUTBOX_REVIEW"|
+  "SOURCE_STATUS_REVIEW"|"ACCEPTANCE_RECEIPT_REVIEW"|"OUTBOX_LINK_REVIEW";
+export function deliveryReviewAction(reason:DeliveryTriageReason|undefined):{
+  code:DeliveryReviewAction;label:string;instructions:string;
+}{
+  switch(reason){
+    case "PROVIDER_FAILURE":return {code:"PROVIDER_FAILURE_REVIEW",
+      label:"Inspect provider failure",
+      instructions:"Compare the saved provider failure code, outbox attempt and current consent before considering a new human-approved send."};
+    case "SUPPRESSED_BY_POLICY":return {code:"CONSENT_POLICY_REVIEW",
+      label:"Review policy suppression",
+      instructions:"Inspect saved consent, opt-out and quiet-hour rules. Do not resend a policy-suppressed message."};
+    case "STALE_PENDING":return {code:"PENDING_OUTBOX_REVIEW",
+      label:"Inspect pending outbox",
+      instructions:"Review the durable outbox claim, provider acknowledgement and latest retry state. Pending does not prove delivery or permission to retry."};
+    case "STATUS_MISSING":return {code:"SOURCE_STATUS_REVIEW",
+      label:"Reconcile delivery status",
+      instructions:"Inspect the exact authorized saved conversation and provider status records. Missing status is not successful delivery."};
+    case "OUTBOX_RECEIPT_MISSING":return {code:"ACCEPTANCE_RECEIPT_REVIEW",
+      label:"Verify provider acceptance",
+      instructions:"Check the saved outbox and provider acceptance receipt; queued or running states do not prove customer delivery."};
+    case "OUTBOX_REFERENCE_MISSING":return {code:"OUTBOX_LINK_REVIEW",
+      label:"Investigate outbox reference",
+      instructions:"Review the saved message-to-outbox relationship and branch before any manual reconciliation."};
+    default:return {code:"SOURCE_STATUS_REVIEW",label:"Inspect source records",
+      instructions:"Review the authorized Inbox and provider evidence. Do not infer delivery or resend from a missing reason."};
+  }
+}

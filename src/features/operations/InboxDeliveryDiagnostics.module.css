@@ -103,3 +103,8 @@
 .clearFilters{justify-self:start;min-height:44px;border:1px solid #bddcd2;border-radius:9px;background:#fff;padding:9px 13px;color:#16624f;font:inherit;font-size:12px;font-weight:750;cursor:pointer;}
 .clearFilters:hover{background:#eaf8ef;}
 .clearFilters:focus-visible{outline:3px solid #178779;outline-offset:3px;}
+
+.reviewInstructions{display:grid;gap:4px;min-width:0;flex:1 1 220px;color:#265842;}
+.reviewInstructions strong{font-size:12px;line-height:1.45;}
+.reviewInstructions small{font-size:11px;line-height:1.55;color:#4c6e61;white-space:normal;overflow-wrap:anywhere;}
+@media(max-width:620px){.reviewInstructions{flex-basis:100%;}}

@@ -7,7 +7,7 @@ import { buildStaffModuleHref } from "./staff-modules";
 import { inboxQueueHref } from "./inbox-triage";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import {
-  deliveryReviewLabel, deliveryReviewReasonOptions, selectDeliveryReviewItems,
+  deliveryReviewLabel, deliveryReviewAction, deliveryReviewReasonOptions, selectDeliveryReviewItems,
   distinctDeliveryReviewConversations,
   summarizeDeliveryReviewReasons,
   parseInboxDeliveryDiagnostics,
@@ -237,6 +237,10 @@ function ScopedInboxDeliveryDiagnostics({ workspaceSlug }: { workspaceSlug: stri
                         <span>
                           <strong>{deliveryReviewLabel(item.reason)}</strong>
                           <small>{item.channel} · {item.ageMinutes} min since recorded</small>
+                        </span>
+                        <span className={styles.reviewInstructions}>
+                          <strong>{deliveryReviewAction(item.reason).label}</strong>
+                          <small>{deliveryReviewAction(item.reason).instructions}</small>
                         </span>
                         <StatusBadge tone={item.deliveryState === "FAILED" ? "danger" : "warning"}>
                           {presentOutboundDelivery(item.deliveryState).label}
