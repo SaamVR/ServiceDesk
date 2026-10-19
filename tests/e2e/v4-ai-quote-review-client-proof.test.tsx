@@ -148,6 +148,10 @@ describe("Quote reviewer browser proof boundary", () => {
     expect(ui).toContain("A new revision clears this");
     expect(ui).toContain("!versionTrusted || !operatorApproved");
     expect(route).toContain("quoteVersion={selectedQuote.version}");
+    expect(route).toContain("selectedQuote.lineItems?.length && selectedQuoteIsCurrent &&");
+    expect(route).toContain("This is a historical quote version.");
+    expect(route).toContain("Select the");
+    expect(route).toContain("current saved quote to request AI review");
     expect(route).toContain('key={selectedQuote.id + ":" + selectedQuote.version}');
     expect(aiQuoteReviewScopeKey("a",quoteId,-1,true)).toContain("invalid-version");
     expect(aiQuoteReviewScopeKey("a",quoteId,NaN,true)).toContain("invalid-version");
