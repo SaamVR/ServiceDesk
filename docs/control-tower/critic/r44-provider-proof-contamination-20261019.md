@@ -1,0 +1,2 @@
+# Independent critic R44 — model-provider proof contamination
+This critique is separate from AI readiness producer PR #760. A forged `now` clock with customer/token text or a malformed workspace identifier must not be copied into provider readiness receipts or reported as verified. Require a strict redacted calendar and opaque scope check in the producer, then exact-head TypeScript/tests before accepting the parent PR. No actual inference or provider receipt fabricated.
