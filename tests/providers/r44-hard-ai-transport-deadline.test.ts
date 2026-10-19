@@ -17,7 +17,7 @@ describe("R44 AI provider termination even with broken HTTP adapters",()=>{
    const observed:AbortSignal[]=[];
    const result=callAiModel(config,input,async req=>{
      observed.push(req.signal);
-     return new Promise(()=>{}); // intentionally violates AbortSignal
+     return new Promise<never>(()=>{}); // intentionally violates AbortSignal
    });
    await vi.advanceTimersByTimeAsync(499);
    expect(observed[0]?.aborted).toBe(false);
@@ -29,7 +29,7 @@ describe("R44 AI provider termination even with broken HTTP adapters",()=>{
    vi.useFakeTimers();
    const caller=new AbortController();
    const result=callAiModel({...config,timeoutMs:30_000},
-     {...input,signal:caller.signal},async ()=>new Promise(()=>{}));
+     {...input,signal:caller.signal},async ()=>new Promise<never>(()=>{}));
    caller.abort();
    expect(await result).toMatchObject({ok:false,code:"AI_MODEL_CANCELLED"});
  });
@@ -54,7 +54,7 @@ describe("R44 AI provider termination even with broken HTTP adapters",()=>{
       gatewayAllowedWorkspaceId:input.workspaceId,
       apiBaseUrl:"https://codex-api.ezcomo.shop/v1",timeoutMs:60_000,
    };
-   const result=callAiModel(gateway,input,async()=>new Promise(()=>{}));
+   const result=callAiModel(gateway,input,async()=>new Promise<never>(()=>{}));
    await vi.advanceTimersByTimeAsync(60_000);
    expect(await result).toMatchObject({ok:false,code:"AI_MODEL_TIMEOUT"});
  });
