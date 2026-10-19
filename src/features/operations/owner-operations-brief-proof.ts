@@ -71,16 +71,34 @@ export function parseVerifiedOwnerPriorityActions(
   return sanitized;
 }
 
+/** A model may infer private identities or falsely say a business action
+ * happened from aggregate queue counts alone. Restrict display of free-text
+ * claims while retaining the separately verified deterministic action list.
+ * This is defense in depth, not semantic proof of every model assertion.
+ */
+export function containsUnsafeOwnerBriefClaims(input:unknown):boolean{
+  if(typeof input!=="string")return true;
+  return /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(input) ||
+    /(?:https?:\/\/|www\.|mailto:|tel:)/iu.test(input) ||
+    /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/iu.test(input) ||
+    /\+?\d[\d\s().-]{8,}\d/u.test(input) ||
+    /[$€£₹৳]/u.test(input) ||
+    /<\s*\/?\s*[a-z][^>]*>/iu.test(input) ||
+    /\b(?:api[_ -]?key|bearer\s+[a-z0-9._-]+|password\s*:)/iu.test(input) ||
+    /\b(?:payment\s+(?:received|confirmed|completed|approved|collected)|invoice\s+(?:paid|settled)|deposit\s+(?:paid|received)|customer\s+(?:notified|contacted)|message\s+(?:sent|delivered)|booking\s+(?:confirmed|completed)|appointment\s+confirmed|visit\s+(?:completed|confirmed)|refund\s+(?:issued|processed)|automati(?:on|cally)\s+(?:executed|sent|completed))\b/iu.test(input) ||
+    /\b(?:total(?:\s+(?:cost|price|amount))?|charge|deposit|balance|invoice\s+(?:total|amount)|price)\s*(?::|=|is|of|should\s+be)?\s*\d+(?:[.,]\d+)?\b/iu.test(input);
+}
+
 export function parseVerifiedOwnerBrief(value: unknown): VerifiedOwnerBrief | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
   if (record.ok !== true ||
       record.source !== "AUTHORIZED_SAVED_WORKSPACE_COUNTS" ||
       typeof record.model !== "string" || !record.model.trim() ||
-      record.model.length > 100 || /[\u0000-\u001f\u007f]/.test(record.model) ||
+      record.model.length > 100 || !/^[A-Za-z0-9._:/-]{1,100}$/.test(record.model) ||
       typeof record.brief !== "string" || !record.brief.trim() ||
       record.brief.length > 900 ||
-      /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(record.brief)) return null;
+      containsUnsafeOwnerBriefClaims(record.brief)) return null;
 
   // SONIC AI-B server action ALWAYS returns the bounded priority array.
   // Missing evidence must not masquerade as an empty verified work queue.

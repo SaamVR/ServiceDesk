@@ -69,6 +69,30 @@ describe("Owner UI consumes server-ranked verified priority actions without re-r
       expect(parseVerifiedOwnerBrief({ ...base, priorityActions: bad })).toBeNull();
     }
   });
+  it("rejects model assertions of provider delivery, booking and invented financial facts",()=>{
+    const unsafe=[
+      "Payment received and confirmed for this customer.",
+      "Invoice paid and booking confirmed.",
+      "Customer notified, message delivered.",
+      "The refund processed.",
+      "The total cost is 200.",
+      "Charge 350 from the customer.",
+      "Contact admin@example.test for details.",
+      "See https://example.test/internal/owner.",
+      "Use bearer secretsecret to inspect the account.",
+      "Customer phone +8801712345678.",
+      "Please <script>alert(1)</script>.",
+      "The amount is ৳500.",
+      "Review these cases \u202Ewith hidden directions.",
+    ];
+    for(const brief of unsafe)
+      expect(parseVerifiedOwnerBrief({...base,brief,priorityActions:[]})).toBeNull();
+    expect(parseVerifiedOwnerBrief({...base,model:"test\nmodel",priorityActions:[]})).toBeNull();
+    expect(parseVerifiedOwnerBrief({...base,model:"<secret>",priorityActions:[]})).toBeNull();
+    expect(parseVerifiedOwnerBrief({...base,brief:"Review the saved open requests and queue priorities.",priorityActions:[]})?.priorityActions)
+      .toEqual([]);
+  });
+
   it("accepts a verified zero-action array without asserting all work is complete", () => {
     expect(parseVerifiedOwnerPriorityActions([])).toEqual([]);
     expect(parseVerifiedOwnerBrief({ ...base, priorityActions: [] })?.priorityActions)

@@ -153,6 +153,9 @@ function ScopedOwnerBrief({
       </div>
       <p className={styles.model}>Model: {state.result.model}</p>
       <p className={styles.suggestions}>{state.result.brief}</p>
+      <p className={styles.disclosure}>The advisory text was screened for obvious
+        fabricated financial, delivery, booking or contact claims. Automated
+        screening cannot prove every statement; confirm all claims in saved records.</p>
       {state.result.priorityActions ? <section className={styles.prioritySection}
         aria-label="Evidence-backed owner review priorities"
         data-testid="owner-server-priority-actions">
