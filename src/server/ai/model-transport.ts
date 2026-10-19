@@ -404,9 +404,25 @@ export async function callAiModel(
     ? Math.max(250, Math.min(requestedTimeout, maximumTimeout))
     : fallbackTimeout;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  // AbortController alone is only advisory to injected transports. A broken
+  // HTTP adapter may ignore its signal forever or resolve a successful fake
+  // result after the deadline. Race the provider against a local terminal
+  // cancellation barrier so no draft can leak after owner cancellation and
+  // every call terminates within its bounded provider budget.
+  let rejectAborted: ((reason: Error) => void) | undefined;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    rejectAborted = reject;
+  });
+  const onAbort = () => {
+    const reason = new Error("AI provider transport aborted");
+    reason.name = "AbortError";
+    rejectAborted?.(reason);
+  };
+  controller.signal.addEventListener("abort", onAbort, { once: true });
+  if (controller.signal.aborted) onAbort();
 
   try {
-    const response = await http({
+    const response = await Promise.race([http({
       url: `${baseUrl(config)}/${config.provider === "codex_gateway" ? "chat/completions" : "responses"}`,
       method: "POST",
       headers: {
@@ -415,7 +431,14 @@ export async function callAiModel(
       },
       body: buildModelBody(config, input),
       signal: controller.signal,
-    });
+    }), aborted]);
+    // Some provider adapters return a 200 even after their signal aborts.
+    // Never parse or display that stale body as a successful business draft.
+    if (controller.signal.aborted) {
+      return input.signal?.aborted
+        ? {ok:false,code:"AI_MODEL_CANCELLED",message:"The requesting staff session cancelled the model request."}
+        : {ok:false,code:"AI_MODEL_TIMEOUT",message:"AI model provider request timed out."};
+    }
 
     if (input.signal?.aborted) {
       return { ok: false, code: "AI_MODEL_CANCELLED",
@@ -438,6 +461,7 @@ export async function callAiModel(
     return { ok: false, code: "AI_MODEL_NETWORK_FAILURE", message: "AI model provider request failed before a valid response was received." };
   } finally {
     clearTimeout(timeout);
+    controller.signal.removeEventListener("abort", onAbort);
     input.signal?.removeEventListener("abort", cancelFromCaller);
   }
 }
