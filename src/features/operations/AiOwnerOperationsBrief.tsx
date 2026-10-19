@@ -7,6 +7,7 @@ import { parseVerifiedOwnerBrief } from "./owner-operations-brief-proof";
 import type { VerifiedOwnerBrief } from "./owner-operations-brief-proof";
 import { buildStaffModuleHref } from "./staff-modules";
 import styles from "./AiOwnerOperationsBrief.module.css";
+import {OwnerFinanceExceptionReview} from "./OwnerFinanceExceptionReview";
 
 // Server-approved Codex gateway can run for up to 60s. A 75s UI wait avoids
 // dropping otherwise valid owner advisories and is NOT a server-action abort.
@@ -181,6 +182,7 @@ function ScopedOwnerBrief({
         approval or audit receipt. Verify each recommendation in the authoritative
         workspace before assigning work or contacting anyone.</p>
     </div> : null}
+    <OwnerFinanceExceptionReview workspaceSlug={workspaceSlug}/>
     <div className={styles.queues}>
       <div>
         <strong>Verify against authoritative queues</strong>
