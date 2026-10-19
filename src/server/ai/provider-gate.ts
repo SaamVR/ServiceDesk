@@ -30,17 +30,22 @@ export interface AiProviderReadinessSummary {
 
 function missingConfig(input: AiProviderReadinessInput): string[] {
   const missing: string[] = [];
-  if (!input.modelApiKeyConfigured) missing.push("model_api_key");
-  if (!input.approvedKnowledgeIndexConfigured) missing.push("approved_knowledge_index");
-  if (!input.toolAllowlistConfigured) missing.push("tool_allowlist");
+  if (input.modelApiKeyConfigured !== true) missing.push("model_api_key");
+  if (input.approvedKnowledgeIndexConfigured !== true) missing.push("approved_knowledge_index");
+  if (input.toolAllowlistConfigured !== true) missing.push("tool_allowlist");
   return missing;
 }
 
 function pendingProof(input: AiProviderReadinessInput): string[] {
   const pending: string[] = [];
-  if (!input.controlledExtractionObserved) pending.push("controlled_extraction_observation");
-  if (!input.controlledKnowledgeCitationObserved) pending.push("controlled_knowledge_citation_observation");
-  if (!input.handoverRoutingObserved) pending.push("controlled_handover_routing_observation");
+  if (input.controlledExtractionObserved !== true) pending.push("controlled_extraction_observation");
+  if (input.controlledKnowledgeCitationObserved !== true) pending.push("controlled_knowledge_citation_observation");
+  if (input.handoverRoutingObserved !== true) pending.push("controlled_handover_routing_observation");
+  // Configuration flags and caller-asserted observations are not a signed,
+  // provider-issued inference receipt. No such verified receipt is loaded
+  // here; claiming PROVIDER_VERIFIED from three booleans would falsely
+  // promote an untested merchant connector into a functioning AI agent.
+  pending.push("persisted_authenticated_provider_receipt");
   return pending;
 }
 
