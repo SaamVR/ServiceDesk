@@ -115,8 +115,8 @@ describe("Quote reviewer browser proof boundary", () => {
     const source = read("src/features/operations/AiQuoteReview.tsx");
     expect(source).toContain("REVIEW_TIMEOUT_MS = 75_000");
     expect(75_000).toBeGreaterThan(60_000); // server gateway cap + overhead
-    expect(source).toContain("scopeKey = workspaceSlug +");
-    expect(source).toContain("quoteId +");
+    expect(source).toContain("const scopeKey = aiQuoteReviewScopeKey(");
+    expect(source).toContain("workspaceSlug,quoteId,quoteVersion,configured");
     expect(source).toContain("status?.scopeKey === scopeKey ? status : undefined");
     expect(source).toContain("previous?.scopeKey === submittedScope");
     expect(source).toContain("activeRequest.current === controller");
