@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   boundedStaffRequestSignal,
   STAFF_AI_REQUEST_TIMEOUT_MS,
+  STAFF_AI_DRAFT_TIMEOUT_MS,
 } from "../../src/features/operations/staff-ai-request-signal";
 
 describe("staff AI network request deadline and cancellation", () => {
@@ -11,9 +12,17 @@ describe("staff AI network request deadline and cancellation", () => {
     expect(STAFF_AI_REQUEST_TIMEOUT_MS).toBe(20_000);
     const ui = readFileSync(join(process.cwd(),
       "src/features/operations/StaffAiReviewComposer.tsx"), "utf8");
-    expect(ui.split("boundedStaffRequestSignal(pending)").length - 1).toBe(2);
+    expect(STAFF_AI_DRAFT_TIMEOUT_MS).toBe(75_000);
+    expect(ui).toContain("boundedStaffRequestSignal(pending, STAFF_AI_DRAFT_TIMEOUT_MS)");
+    expect(ui).toContain("const requestSignal = boundedStaffRequestSignal(pending);");
+    expect(ui).toContain("requestSignal.aborted || pending.signal.aborted");
+    expect(ui).toContain("controller.current !== pending");
     expect(ui.match(/signal: requestSignal/g)).toHaveLength(2);
     expect(ui).toContain("idempotencyKey.current ??= crypto.randomUUID()");
+    expect(ui).toContain('if (busy !== "idle" || receipt || controller.current) return;');
+    expect(ui).toContain('if (busy !== "idle" || controller.current || !draft');
+    expect(ui).toContain("Never abort a still-running");
+    expect(ui).toContain("a second immediate click must NOT");
     expect(ui).toContain("Check the saved conversation before trying again");
   });
 

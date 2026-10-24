@@ -6,12 +6,15 @@ describe("staff AI suggestion cancellation",()=>{
     const src=readFileSync(join(process.cwd(),
       "src/features/operations/StaffAiReviewComposer.tsx"),"utf8");
     expect(src).toContain("function cancelSuggestion()");
+    expect(src).toContain('if (busy !== "idle" || receipt || controller.current) return;');
+    expect(src).toContain("controller.current = pending;");
+    expect(src).toContain("controller.current !== pending");
     expect(src).toContain('busy !== "drafting"');
     expect(src).toContain("controller.current?.abort()");
-expect(src).toContain("if (pending.signal.aborted) return;");
+expect(src).toContain("if (pending.signal.aborted || requestSignal.aborted || controller.current !== pending) return;");
     expect(src).toContain('setError("cancelled")');
     expect(src).toContain("Cancel suggestion");
     expect(src).toContain("No reply was approved or queued.");
-    expect(src).toContain("if (!pending.signal.aborted) setBusy");
+    expect(src).toContain("if (controller.current === pending && !pending.signal.aborted)");
   });
 });

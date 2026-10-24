@@ -1,71 +1,107 @@
+import Link from "next/link";
 import { readOwnerQuoteRecoverySummary } from "@/server/workflows/owner-quote-recovery-queue";
+import { buildStaffModuleHref } from "./staff-modules";
+import { OwnerRecoveryRefreshControl } from "./OwnerRecoveryRefreshControl";
+import { isConsistentOwnerRecoveryAggregate, summarizeOwnerRecoveryReview } from "./owner-quote-recovery-guide";
+import styles from "./OwnerQuoteRecoveryQueue.module.css";
 
-/** Owner-only read-only queue evidence; no worker action or mutation. */
+const states = [
+  ["PENDING", "Queued", "Awaiting eligible processing"],
+  ["PROCESSING", "Leased", "Claim exists; live worker not confirmed"],
+  ["RETRY_PENDING", "Retry pending", "Scheduled, not executed"],
+  ["DEAD_LETTER", "Needs review", "Human investigation required"],
+  ["SUCCEEDED", "Completed", "Internal source state only"],
+  ["SKIPPED", "Skipped", "Saved decision, not delivered"],
+] as const;
+
+/** Owner-only read-only internal queue evidence; no worker action or mutation.
+ * Existing server reader reauthorizes workspace + owner and never returns
+ * source event/customer IDs to the browser.
+ */
 export async function OwnerQuoteRecoveryQueue({ workspaceSlug }: { workspaceSlug: string }) {
   const proof = await readOwnerQuoteRecoverySummary(workspaceSlug);
   if (proof.state === "OWNER_REQUIRED") return null;
+  const consistent = isConsistentOwnerRecoveryAggregate(proof);
+  // Preserve the initial source state independently from the guarded JSX
+  // branch; a malformed AVAILABLE aggregate must show a distinct warning.
+  const inconsistentSaved = proof.state === "AVAILABLE" && !consistent;
+  const guidance = summarizeOwnerRecoveryReview(proof);
+  const automationHref = buildStaffModuleHref(workspaceSlug, "automations");
   return (
-    <section aria-label="Saved accepted quote source recovery" className="app-panel"
-      style={{ background: "#fff", border: "1px solid #d8e9e4",
-        borderRadius: 14, padding: 20, marginBlock: 15 }}>
-      <p style={{ margin: 0, color: "#2b7467", fontSize: ".73rem",
-        fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em" }}>
-        Internal queue evidence · read only
-      </p>
-      <h3 style={{ color: "#184e46", margin: ".5rem 0" }}>
-        Saved quote-acceptance recovery
-      </h3>
-      {proof.state !== "AVAILABLE" ? (
-        <p role="status" style={{ color: "#715d44", lineHeight: 1.6 }}>
-          Queue data is unavailable or migration 0063 is not yet installed.
-          This is <strong>not</strong> evidence of an empty queue or an active worker.
-        </p>
+    <section aria-label="Saved accepted quote source recovery" className={styles.panel}>
+      <header className={styles.header}>
+        <div>
+          <p className={styles.eyebrow}>Internal queue evidence · read only</p>
+          <h3>Saved quote-acceptance recovery</h3>
+          <p>Observe tenant-scoped quote event processing and examine exceptions before
+            taking action. This panel cannot activate or retry a worker.</p>
+        </div>
+        <div className={styles.sourceTools}>
+          <span className={styles.source}>
+            {consistent ? "Saved database counts" : "Source unverified"}
+          </span>
+          <OwnerRecoveryRefreshControl />
+        </div>
+      </header>
+      {!consistent ? (
+        <div className={styles.unavailable} role="status">
+          <strong>Recovery queue cannot be verified</strong>
+          <p>{inconsistentSaved
+            ? "Independent queue counts conflict with current due or lease totals. Refresh authorized records before taking action."
+            : "Queue data is unavailable or migration 0063 is not yet installed."}
+            This is <strong>not</strong> evidence of an empty queue or an active worker.</p>
+          <Link href={automationHref}>Review the Automation workspace →</Link>
+        </div>
       ) : (
         <>
-          <dl style={{ display: "grid", gap: 12,
-            gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
-            {([
-              ["PENDING", "Queued"],
-              ["PROCESSING", "Leased"],
-              ["RETRY_PENDING", "Retry pending"],
-              ["DEAD_LETTER", "Needs review"],
-              ["SUCCEEDED", "Completed"],
-              ["SKIPPED", "Skipped"],
-            ] as const).map(([state, label]) => (
-              <div key={state} style={{ border: "1px solid #e2eeea",
-                borderRadius: 12, padding: "12px 14px", minWidth: 0 }}>
-                <dt style={{ color: "#557369", fontSize: ".76rem" }}>{label}</dt>
-                <dd style={{ margin: "5px 0 0", color: "#184e46",
-                  fontSize: "1.4rem", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-                  {proof.counts[state]}
-                </dd>
+          <dl className={styles.metrics} aria-label="Verified persisted queue state counts">
+            {states.map(([state,label,description]) => (
+              <div key={state} className={styles.metric}>
+                <dt>{label}</dt>
+                <dd>{proof.counts[state]}</dd>
+                <p>{description}</p>
               </div>
             ))}
           </dl>
-          <div aria-label="Internal recovery backlog" style={{
-            display: "grid", gap: 12, marginTop: 14,
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-          }}>
-            <p role="status" style={{ margin: 0, padding: 12,
-              border: "1px solid #e2eeea", borderRadius: 12 }}>
+          <div aria-label="Internal recovery backlog" className={styles.health}>
+            <p role="status">
               <strong>{proof.health.dueNow}</strong> due now
-              <span style={{ display: "block", fontSize: ".78rem" }}>
-                Pending or retry-ready event count; a running worker is not verified.
-              </span>
+              <span>Pending or retry-ready event count; a running worker is not verified.</span>
             </p>
-            <p role={proof.health.expiredLeases > 0 ? "alert" : "status"}
-              style={{ margin: 0, padding: 12, border: "1px solid #e2eeea",
-                borderRadius: 12 }}>
+            <p role={proof.health.expiredLeases > 0 ? "alert" : "status"}>
               <strong>{proof.health.expiredLeases}</strong> expired leases
-              <span style={{ display: "block", fontSize: ".78rem" }}>
-                These claims may need reviewed retry or investigation.
-              </span>
+              <span>These claims may need reviewed retry or investigation.</span>
             </p>
           </div>
-          <p style={{ color: "#557369", fontSize: ".8rem", lineHeight: 1.6 }}>
+          <section className={styles.actions} aria-label="Saved recovery items for human review">
+            <div className={styles.actionsHead}>
+              <h4>Owner review priorities</h4>
+              <small>Derived only from saved aggregate counts</small>
+            </div>
+            {guidance.length ? <ol>
+              {guidance.map((item) => <li key={item.id} className={styles.action}>
+                <span className={item.level === "danger" ? styles.danger : styles.warning}>
+                  {item.count} requiring review
+                </span>
+                <strong>{item.title}</strong>
+                <p>{item.description}</p>
+                <Link href={automationHref}>
+                  Inspect authorized workflow evidence →
+                </Link>
+              </li>)}
+            </ol> : (
+              <p className={styles.empty} role="status">
+                No due, dead-letter or expired-lease items in this aggregate read.
+                Other unresolved operations may still exist.
+              </p>
+            )}
+          </section>
+          <p className={styles.disclosure}>
             Counts come from saved, tenant-scoped internal source records only.
             Completed events do not prove a customer message, external provider
-            delivery, payment, or automatic scheduler execution.
+            delivery, payment, or automatic scheduler execution. Counts are
+            a point-in-time read without a persisted timestamp in this response;
+            inspecting the workflow records is required before retrying anything.
           </p>
         </>
       )}

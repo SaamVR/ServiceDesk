@@ -65,6 +65,13 @@ describe("V3 staff-only reviewed AI reply path", () => {
     expect(ui).toContain("setError(staffAiReviewErrorAfterEdit)");
     expect(ui).toContain('error !== "stale"');
     expect(ui).toContain("Reload this conversation before approving another reply.");
+    expect(ui).toContain('error === "approval" && !retryVerified');
+    expect(ui).toContain("if (error === \"approval\") return;");
+    expect(ui).toContain('error === "approval"}');
+    expect(ui).toContain("checked={retryVerified}");
+    expect(ui).toContain("setRetryVerified(false)");
+    expect(ui).toContain("the preserved idempotency key");
+    expect(ui).toContain("I inspected the saved Inbox history");
   });
 
   it("does not mistake a durable queue receipt for delivered customer confirmation", () => {
@@ -103,10 +110,21 @@ describe("V3 staff-only reviewed AI reply path", () => {
     expect(ui).toContain('onClick={approve}');
     expect(ui).toContain("confirmedByStaff: true");
     expect(ui).toContain("idempotencyKey.current ??= crypto.randomUUID()");
+    expect(ui).toContain("sameStaffAiApprovalIntent(approvalIntent.current,currentIntent)");
+    expect(ui).toContain("approvalIntent.current ??= currentIntent");
+    expect(ui).toContain("approvalIntent.current = null");
+    expect(ui).toContain("!idempotencyKey.current");
+    expect(ui).toContain("sourceMessageId, expectedVersion, reviewedBody");
     expect(ui).toContain("sourceMessageId,");
     expect(ui).toContain("expectedVersion,");
     expect(ui).toContain("draft.handoverRequired");
     expect(ui).toContain("Queue acceptance is not customer delivery confirmation.");
+    expect(ui).toContain('buildStaffModuleHref(workspaceSlug, "inbox")');
+    expect(ui).toContain('inboxQueueHref("all", conversationId)');
+    expect(ui).toContain('href={historyHref}');
+    expect(ui).toContain("Verify saved conversation in Inbox");
+    expect(ui).toContain("Find current saved conversation in Inbox");
+    expect(css).toContain(".historyLink:focus-visible");
     expect(ui).toContain('method: "POST"');
     expect(ui).toContain('credentials: "same-origin"');
     expect(route).toContain('process.env.SERVICEDESK_AI_ENABLED === "true"');

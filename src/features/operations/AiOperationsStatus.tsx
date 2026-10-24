@@ -57,10 +57,11 @@ export function AiOperationsStatus({
       {compact && evidence ? (
         <div className={styles.proof} aria-label="Persisted AI and automation activity">
           <div><strong>{evidence.recordedLiveExecutions}</strong><span>Recorded live rule decisions</span></div>
-          <div><strong>{evidence.internalAttentionSucceeded}</strong><span>Completed internal attention records</span></div>
+          <div><strong>{evidence.internalAttentionSucceeded}</strong><span>Current completed internal attention actions</span></div>
           <div><strong>{evidence.externalApprovalRequired}</strong><span>External actions requiring approval</span></div>
-          <div><strong>{evidence.failedActions}</strong><span>Failed action records</span></div>
-          <p>Authorized database records · simulated previews excluded · no provider delivery verified.
+          <div><strong>{evidence.failedActions}</strong><span>Current failed action slots</span></div>
+          <p>Authorized, loaded latest-action states · historical retries and ambiguous slots excluded · source capped before branch filtering · no provider delivery verified.
+            {evidence.ambiguousActionSlots > 0 ? ` ${evidence.ambiguousActionSlots} conflicting action slot(s) need operator review.` : ""}
             <Link href={buildStaffModuleHref(workspaceSlug, "automations")}> Review execution evidence →</Link>
           </p>
         </div>
