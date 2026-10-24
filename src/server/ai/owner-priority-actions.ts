@@ -28,22 +28,36 @@ export function ownerPriorityActions(
   facts: VerifiedOwnerQueueFacts,
   limit = 5,
 ): OwnerPriorityAction[] | null {
-  if (!facts || typeof facts !== "object" || Array.isArray(facts) ||
-      Object.getPrototypeOf(facts) !== Object.prototype ||
-      !Number.isSafeInteger(limit) || limit < 1 || limit > 7) return null;
-  // The seven saved source buckets are named and allowlisted; a list of
-  // seven values, a prototype-injected object or a missing key must never be
-  // mistaken for a verified "zero outstanding work" owner snapshot.
-  const expected = [
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 7) return null;
+  // Never evaluate getters, inherited keys, symbols or proxy-substituted
+  // values inside a supposedly verified saved-counts source. Snapshot seven
+  // inert own data descriptors before computing merchant priorities.
+  const expected:readonly (keyof VerifiedOwnerQueueFacts)[] = [
     "openRequests", "waitingOnCustomerQuotes", "quoteValidityNeedsReview",
     "collectibleInvoices", "invoiceLedgersNeedingReview",
     "unassignedActiveVisits", "unresolvedCriticalAttentions",
   ];
-  if (Object.keys(facts).length !== expected.length ||
-      expected.some(key => !Object.hasOwn(facts,key))) return null;
-  const values = Object.values(facts);
-  if (values.some(value => typeof value !== "number" ||
-        !Number.isSafeInteger(value) || value < 0 || value > 5000)) return null;
+  const verified = {} as VerifiedOwnerQueueFacts;
+  try {
+    if (!facts || typeof facts !== "object" || Array.isArray(facts) ||
+        Object.getPrototypeOf(facts) !== Object.prototype) return null;
+    const keys = Reflect.ownKeys(facts);
+    if (keys.length !== expected.length ||
+        keys.some(key => typeof key !== "string" ||
+          !expected.includes(key as keyof VerifiedOwnerQueueFacts))) return null;
+    const descriptors = Object.getOwnPropertyDescriptors(facts);
+    for (const key of expected) {
+      const descriptor = descriptors[key];
+      if (!descriptor || !Object.hasOwn(descriptor, "value") ||
+          descriptor.enumerable !== true || typeof descriptor.value !== "number" ||
+          !Number.isSafeInteger(descriptor.value) ||
+          descriptor.value < 0 || descriptor.value > 5000) return null;
+      verified[key] = descriptor.value;
+    }
+  } catch {
+    // Proxy traps may throw. Missing trust is not an all-clear owner queue.
+    return null;
+  }
   const table: Array<[keyof VerifiedOwnerQueueFacts, Omit<OwnerPriorityAction, "count" | "source">]> = [
     ["unresolvedCriticalAttentions", {
       key:"CRITICAL_ATTENTION",module:"overview",priority:"CRITICAL",
@@ -74,8 +88,8 @@ export function ownerPriorityActions(
       label:"Open service requests to qualify",instruction:"Inspect saved requests for missing service details and next steps.",
     }],
   ];
-  return table.filter(([key]) => facts[key] > 0).slice(0,limit)
+  return table.filter(([key]) => verified[key] > 0).slice(0,limit)
     .map(([key,info]) => ({
-      ...info,count:facts[key],source:"VERIFIED_SAVED_QUEUE_COUNT" as const,
+      ...info,count:verified[key],source:"VERIFIED_SAVED_QUEUE_COUNT" as const,
     }));
 }
