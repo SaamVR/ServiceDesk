@@ -51,7 +51,8 @@ export function planOwnerAutomationFailureTriage(input:AutomationTriageInput):Au
  const items:Extract<AutomationTriageResult,{ok:true}>["value"]["items"]=[];
  for(let i=0;i<input.failures.length;i++){
    const descriptor=Object.getOwnPropertyDescriptor(input.failures,String(i));
-   if(!descriptor||!Object.hasOwn(descriptor,"value"))return {ok:false,code:"AUTOMATION_TRIAGE_EVIDENCE_INVALID"};
+   if(!descriptor||!Object.hasOwn(descriptor,"value")||
+      descriptor.enumerable!==true)return {ok:false,code:"AUTOMATION_TRIAGE_EVIDENCE_INVALID"};
    const receipt=input.failures[i];
    if(!exactReceipt(receipt)||receipt.workspaceId!==input.workspaceId||
       seen.has(receipt.executionId)||Date.parse(receipt.occurredAt)>Date.parse(input.now))
