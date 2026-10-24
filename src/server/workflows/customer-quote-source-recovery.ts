@@ -39,14 +39,27 @@ const safeError = (code: unknown): string =>
  * Never call iterator/getters/proxy methods while evaluating lease authority.
  * Additional ordinary SQL columns are allowed; non-data descriptors are not.
  */
-function inertSourceRecord(value: unknown): value is Record<string,unknown> {
+function snapshotInertRecord(value: unknown): Record<string,unknown>|null {
   try {
-    return !!value && typeof value==="object" && !Array.isArray(value) &&
-      Object.getPrototypeOf(value)===Object.prototype &&
-      Reflect.ownKeys(value).length===Object.keys(value).length &&
-      Object.values(Object.getOwnPropertyDescriptors(value))
-        .every(d=>Object.hasOwn(d,"value"));
-  } catch {return false;}
+    if(!value || typeof value!=="object" || Array.isArray(value) ||
+       Object.getPrototypeOf(value)!==Object.prototype)return null;
+    const names=Reflect.ownKeys(value);
+    const descriptors=Object.getOwnPropertyDescriptors(value);
+    if(names.length!==Object.keys(descriptors).length)return null;
+    // Do not read properties from the original RPC object after validation:
+    // a hostile Proxy can replace an indexed value or getter mid-flight.
+    const snapshot:Record<string,unknown>=Object.create(null);
+    for(const name of names){
+      if(typeof name!=="string" ||
+         !Object.hasOwn(descriptors,name) ||
+         !Object.hasOwn(descriptors[name],"value"))return null;
+      Object.defineProperty(snapshot,name,{
+        value:descriptors[name].value,enumerable:true,
+        configurable:false,writable:false,
+      });
+    }
+    return snapshot;
+  }catch{return null;}
 }
 function captureClaimRows(value:unknown,limit:number):Record<string,unknown>[]|null{
   try {
@@ -59,9 +72,10 @@ function captureClaimRows(value:unknown,limit:number):Record<string,unknown>[]|n
     const records:Record<string,unknown>[]=[];
     for(let i=0;i<length;i++){
       const item=descriptors[String(i)];
-      if(!item||!Object.hasOwn(item,"value")||
-         !inertSourceRecord(item.value))return null;
-      records.push(item.value);
+      if(!item||!Object.hasOwn(item,"value"))return null;
+      const row=snapshotInertRecord(item.value);
+      if(!row)return null;
+      records.push(row);
     }
     return records;
   }catch{return null;}
@@ -211,7 +225,7 @@ export async function runInternalQuoteSourceRecoveryBatch(
         p_error_code:outcome==="FAILED"?errorCode:null,
       });
       const confirmed = completion.data;
-      const record = inertSourceRecord(confirmed) ? confirmed : undefined;
+      const record = snapshotInertRecord(confirmed) ?? undefined;
       const state = record?.state;
       const validState = outcome === "SUCCEEDED" ? state === "SUCCEEDED"
         : outcome === "SKIPPED" ? state === "SKIPPED"
