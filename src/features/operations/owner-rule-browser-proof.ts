@@ -41,14 +41,36 @@ const keys:Record<SupportedOwnerRuleEvent,string>={
   INVOICE_PAID:"AI_REVIEW_PAID_INVOICE",
   ATTENTION_OPENED:"AI_TRIAGE_EXCEPTION",
 };
-const plain=(value:unknown):value is Record<string,unknown> =>
-  !!value && typeof value==="object" && !Array.isArray(value) &&
-  Object.getPrototypeOf(value)===Object.prototype &&
-  Reflect.ownKeys(value).length===Object.keys(value).length;
+/** JSON responses and server-action values must be inert own-data records.
+ * A getter can throw or import concealed provider/customer authority before
+ * the owner sees a safe review. Reject rather than execute it. */
+const plain=(value:unknown):value is Record<string,unknown> => {
+  try {
+    return !!value && typeof value==="object" && !Array.isArray(value) &&
+      Object.getPrototypeOf(value)===Object.prototype &&
+      Reflect.ownKeys(value).length===Object.keys(value).length &&
+      Object.values(Object.getOwnPropertyDescriptors(value))
+        .every(desc=>Object.hasOwn(desc,"value"));
+  } catch {return false;}
+};
+/** Dense arrays with no accessor/symbol/sidecar fields; max bounds prevent
+ * model fanout or untrusted property enumeration. */
+const inertArray=(value:unknown,max:number):value is unknown[] => {
+  try {
+    if(!Array.isArray(value) || Object.getPrototypeOf(value)!==Array.prototype ||
+       value.length>max || Reflect.ownKeys(value).length!==value.length+1)
+      return false;
+    const descriptors=Object.getOwnPropertyDescriptors(value);
+    return Array.from({length:value.length},(_,i)=>
+      Object.hasOwn(descriptors,String(i)) &&
+      Object.hasOwn(descriptors[String(i)],"value")).every(Boolean);
+  } catch {return false;}
+};
 const exact=(obj:Record<string,unknown>,names:readonly string[]) =>
   Object.keys(obj).length===names.length && names.every(k=>Object.hasOwn(obj,k));
 
 export function validateOwnerRuleIntent(raw:string):string|null {
+  if(typeof raw!=="string")return null;
   const value=raw.trim();
   if(value.length<10 || value.length>240 || /[\d@<>$€£]/u.test(value) ||
      /https?:|www\.|bearer\s|api[_ -]?key/iu.test(value) ||
@@ -76,8 +98,8 @@ export function parseOwnerWorkflowSuggestion(raw:unknown,expected:{
      d.maxActionsPerEvent!==1 || d.published!==false ||
      d.requiresOwnerPublish!==true || d.previewOnly!==true ||
      d.sendsCustomerMessages!==false || d.mutatesFinancialState!==false ||
-     !Array.isArray(d.conditions) || d.conditions.length>1 ||
-     !Array.isArray(d.actions) || d.actions.length!==1 || !plain(d.actions[0])) return null;
+     !inertArray(d.conditions,1) ||
+     !inertArray(d.actions,1) || d.actions.length!==1 || !plain(d.actions[0])) return null;
   const eventType=d.eventType as SupportedOwnerRuleEvent;
   const action=d.actions[0] as Record<string,unknown>;
   if(!exact(action,["type","severity","summaryKey"]) ||
@@ -112,7 +134,7 @@ export function parseOwnerWhatIfResponse(raw:unknown,expected:{
      raw.inputSource!=="OWNER_HYPOTHETICAL_NOT_SAVED_EVENT" ||
      raw.eventType!==expected.eventType ||
      typeof raw.matched!=="boolean" || typeof raw.wouldCreateAttention!=="boolean" ||
-     !Array.isArray(raw.checkedConditions) ||
+     !inertArray(raw.checkedConditions,1) ||
      !Number.isSafeInteger(raw.conditionCount) ||
      raw.conditionCount!==raw.checkedConditions.length || raw.conditionCount>1 ||
      raw.executed!==false || raw.published!==false ||
@@ -149,7 +171,7 @@ export function parseOwnerWhatIfMatrix(raw:unknown):VerifiedOwnerWhatIfMatrix|nu
     raw.ok!==true||raw.state!=="SYNTHETIC_COMPARISON_ONLY"||
     raw.executed!==false||raw.published!==false||
     raw.customerMessaged!==false||raw.paymentChanged!==false||
-    !Array.isArray(raw.results)||raw.results.length!==3)return null;
+    !inertArray(raw.results,3)||raw.results.length!==3)return null;
   const codes:readonly SuggestedServiceCode[]=["STANDARD","DEEP","MOVE_OUT"];
   const results:VerifiedOwnerWhatIfMatrix["results"]=[];
   for(let i=0;i<codes.length;i++){
