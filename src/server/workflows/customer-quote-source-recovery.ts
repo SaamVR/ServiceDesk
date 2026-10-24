@@ -35,6 +35,38 @@ const safeError = (code: unknown): string =>
   typeof code === "string" && /^[A-Z0-9_]{1,80}$/.test(code)
     ? code : "QUOTE_SOURCE_RECOVERY_UNVERIFIED";
 
+/** A database RPC response is still an untrusted transport boundary.
+ * Never call iterator/getters/proxy methods while evaluating lease authority.
+ * Additional ordinary SQL columns are allowed; non-data descriptors are not.
+ */
+function inertSourceRecord(value: unknown): value is Record<string,unknown> {
+  try {
+    return !!value && typeof value==="object" && !Array.isArray(value) &&
+      Object.getPrototypeOf(value)===Object.prototype &&
+      Reflect.ownKeys(value).length===Object.keys(value).length &&
+      Object.values(Object.getOwnPropertyDescriptors(value))
+        .every(d=>Object.hasOwn(d,"value"));
+  } catch {return false;}
+}
+function captureClaimRows(value:unknown,limit:number):Record<string,unknown>[]|null{
+  try {
+    if(!Array.isArray(value)||Object.getPrototypeOf(value)!==Array.prototype)
+      return null;
+    const descriptors=Object.getOwnPropertyDescriptors(value);
+    const length=descriptors.length?.value;
+    if(!Number.isSafeInteger(length)||length<0||length>limit||
+       Reflect.ownKeys(value).length!==length+1) return null;
+    const records:Record<string,unknown>[]=[];
+    for(let i=0;i<length;i++){
+      const item=descriptors[String(i)];
+      if(!item||!Object.hasOwn(item,"value")||
+         !inertSourceRecord(item.value))return null;
+      records.push(item.value);
+    }
+    return records;
+  }catch{return null;}
+}
+
 /**
  * Only an explicitly trusted server scheduler may supply these privileged
  * service-role ports. No public endpoint, user token or provider send exists.
@@ -61,17 +93,13 @@ export async function runInternalQuoteSourceRecoveryBatch(
   } catch {
     return summary;
   }
-  if (claim.error || !Array.isArray(claim.data) || claim.data.length > limit) {
-    return summary;
-  }
+  // Validate and snapshot the WHOLE claim before the first internal side
+  // effect. A proxy iterator or hidden event row must not partially dispatch.
+  const sourceRows=claim.error?null:captureClaimRows(claim.data,limit);
+  if (!sourceRows) return summary;
   summary.state = "BATCH_PROCESSED";
   const seen = new Set<string>();
-  for (const raw of claim.data) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-      summary.completionNotVerified++;
-      continue;
-    }
-    const row = raw as Record<string, unknown>;
+  for (const row of sourceRows) {
     const id = row.id;
     const workspaceId = row.workspace_id;
     const quoteId = row.quote_id;
@@ -183,8 +211,7 @@ export async function runInternalQuoteSourceRecoveryBatch(
         p_error_code:outcome==="FAILED"?errorCode:null,
       });
       const confirmed = completion.data;
-      const record = confirmed && typeof confirmed === "object" && !Array.isArray(confirmed)
-        ? confirmed as Record<string,unknown> : undefined;
+      const record = inertSourceRecord(confirmed) ? confirmed : undefined;
       const state = record?.state;
       const validState = outcome === "SUCCEEDED" ? state === "SUCCEEDED"
         : outcome === "SKIPPED" ? state === "SKIPPED"
