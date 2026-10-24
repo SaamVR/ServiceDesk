@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
+import { buildStaffModuleHref } from "./staff-modules";
+import { inboxQueueHref } from "./inbox-triage";
 import {
   parseReviewedAiDraft,
   parseReviewedReplyReceipt,
@@ -11,7 +14,13 @@ import {
 } from "./staff-ai-review-contract";
 import { presentOutboundDelivery } from "./inbox-delivery-presentation";
 import { staffAiReviewScopeKey } from "./staff-ai-review-scope";
-import { boundedStaffRequestSignal } from "./staff-ai-request-signal";
+import {
+  sameStaffAiApprovalIntent, type StaffAiApprovalIntent,
+} from "./staff-ai-approval-intent";
+import {
+  detectStaffReplyRisks, hasUnsafeReplyFormatting, staffReplyRiskLabels,
+} from "./staff-ai-reply-risk";
+import { boundedStaffRequestSignal, STAFF_AI_DRAFT_TIMEOUT_MS } from "./staff-ai-request-signal";
 import styles from "./StaffAiReviewComposer.module.css";
 
 /**
@@ -43,28 +52,45 @@ function ScopedStaffAiReviewComposer({
   expectedVersion,
 }: StaffAiReviewProps) {
   const [draft, setDraft] = useState<ReviewedAiDraft>();
+  const replyFieldId = useId();
   const [body, setBody] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [sensitiveConfirmed, setSensitiveConfirmed] = useState(false);
+  const [retryVerified, setRetryVerified] = useState(false);
   const [busy, setBusy] = useState<"idle" | "drafting" | "approving">("idle");
   const [error, setError] = useState<StaffAiReviewError>();
   const [receipt, setReceipt] = useState<ApprovedReplyReceipt>();
   const controller = useRef<AbortController | null>(null);
   const idempotencyKey = useRef<string | null>(null);
+  const approvalIntent = useRef<StaffAiApprovalIntent | null>(null);
 
   useEffect(() => () => controller.current?.abort(), []);
 
   async function suggest() {
-    if (busy !== "idle" || receipt) return;
-    controller.current?.abort();
+    // State updates are asynchronous: a second immediate click must NOT
+    // abort and replace an already-issued (potentially billable) model call.
+    if (busy !== "idle" || receipt || controller.current) return;
     const pending = new AbortController();
     controller.current = pending;
-    const requestSignal = boundedStaffRequestSignal(pending);
+    const requestSignal = boundedStaffRequestSignal(pending, STAFF_AI_DRAFT_TIMEOUT_MS);
+    // AbortSignal.timeout may fire without fetch()/response.json() settling.
+    // Unlock the screen immediately, and invalidate buffered late model data.
+    const onDraftDeadline = () => {
+      if (pending.signal.aborted || controller.current !== pending) return;
+      controller.current = null;
+      setBusy("idle");
+      setError("draft");
+    };
+    requestSignal.addEventListener("abort", onDraftDeadline, { once: true });
     setBusy("drafting");
     setError(undefined);
     setDraft(undefined);
     setBody("");
     setConfirmed(false);
+    setSensitiveConfirmed(false);
+    setRetryVerified(false);
     idempotencyKey.current = null;
+    approvalIntent.current = null;
     try {
       const response = await fetch("/api/internal/ai/draft", {
         method: "POST",
@@ -74,23 +100,29 @@ function ScopedStaffAiReviewComposer({
         body: JSON.stringify({ workspaceSlug, conversationId, messageId: sourceMessageId }),
         signal: requestSignal,
       });
-      if (pending.signal.aborted) return;
+      if (pending.signal.aborted || requestSignal.aborted || controller.current !== pending) return;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
         setError("draft");
         return;
       }
       const parsed = parseReviewedAiDraft(await response.json() as unknown, conversationId, sourceMessageId);
-      if (pending.signal.aborted) return;
+      if (pending.signal.aborted || requestSignal.aborted || controller.current !== pending) return;
       if (!parsed) {
         setError("draft");
         return;
       }
       setDraft(parsed);
       setBody(parsed.replyDraft);
+      setSensitiveConfirmed(false);
     } catch {
-      if (!pending.signal.aborted) setError("draft");
+      if (!pending.signal.aborted && controller.current === pending) setError("draft");
     } finally {
-      if (!pending.signal.aborted) setBusy("idle");
+      requestSignal.removeEventListener("abort", onDraftDeadline);
+      if (controller.current === pending && !pending.signal.aborted) {
+        if (requestSignal.aborted) setError("draft");
+        setBusy("idle");
+        controller.current = null;
+      }
     }
   }
 
@@ -102,21 +134,47 @@ function ScopedStaffAiReviewComposer({
     setDraft(undefined);
     setBody("");
     setConfirmed(false);
+    setSensitiveConfirmed(false);
+    setRetryVerified(false);
     setError("cancelled");
     // Cancelling the browser request does not certify that provider billing stopped.
   }
 
+  const unsafeFormatting = hasUnsafeReplyFormatting(body);
+  const reviewRisks = detectStaffReplyRisks(body);
+  const needsSensitiveReview = reviewRisks.length > 0;
   async function approve() {
     const reviewedBody = body.trim();
-    if (busy !== "idle" || !draft || draft.handoverRequired ||
-        !confirmed || !reviewedBody || reviewedBody.length > 4_000 ||
-        receipt || error === "stale") return;
-    controller.current?.abort();
+    // Approval is a durable, idempotent command. Never abort a still-running
+    // approval and issue a second network command before React sets busy.
+    if (busy !== "idle" || controller.current || !draft || draft.handoverRequired ||
+        !confirmed || unsafeFormatting ||
+        (needsSensitiveReview && !sensitiveConfirmed) ||
+        !reviewedBody || reviewedBody.length > 4_000 ||
+        receipt || error === "stale" ||
+        (error === "approval" && !retryVerified)) return;
+    const currentIntent:StaffAiApprovalIntent = {
+      workspaceSlug, conversationId, sourceMessageId, expectedVersion, reviewedBody,
+    };
+    if (approvalIntent.current &&
+        (!sameStaffAiApprovalIntent(approvalIntent.current,currentIntent) ||
+         !idempotencyKey.current))return;
+    approvalIntent.current ??= currentIntent;
     const pending = new AbortController();
     controller.current = pending;
     const requestSignal = boundedStaffRequestSignal(pending);
+    // A durable command can still be processed upstream after client timeout.
+    // Re-enable manual verification without inventing a failed customer send.
+    const onApprovalDeadline = () => {
+      if (pending.signal.aborted || controller.current !== pending) return;
+      controller.current = null;
+      setBusy("idle");
+      setError("approval");
+    };
+    requestSignal.addEventListener("abort", onApprovalDeadline, { once: true });
     setBusy("approving");
     setError(undefined);
+    setRetryVerified(false);
     // Preserve this key across uncertain network retries. An edit starts a
     // new approval intent, never silently reuses a key for another body.
     idempotencyKey.current ??= crypto.randomUUID().replaceAll("-", "");
@@ -136,6 +194,7 @@ function ScopedStaffAiReviewComposer({
         }),
         signal: requestSignal,
       });
+      if (requestSignal.aborted || pending.signal.aborted || controller.current !== pending) return;
       if (response.status === 409) {
         setError("stale");
         return;
@@ -145,22 +204,36 @@ function ScopedStaffAiReviewComposer({
         return;
       }
       const parsed = parseReviewedReplyReceipt(await response.json() as unknown, conversationId, sourceMessageId);
+      if (requestSignal.aborted || pending.signal.aborted || controller.current !== pending) return;
       if (!parsed) {
         setError("approval");
         return;
       }
       setReceipt(parsed);
       setConfirmed(false);
+      setRetryVerified(false);
     } catch {
-      if (!pending.signal.aborted) setError("approval");
+      if (!pending.signal.aborted && controller.current === pending) setError("approval");
     } finally {
-      if (!pending.signal.aborted) setBusy("idle");
+      requestSignal.removeEventListener("abort", onApprovalDeadline);
+      if (controller.current === pending && !pending.signal.aborted) {
+        // Timed-out approval may already have queued a durable reply.
+        // Do not invent a failed send or assign a fresh idempotency key.
+        if (requestSignal.aborted) setError("approval");
+        setBusy("idle");
+        controller.current = null;
+      }
     }
   }
 
+  const historyHref = buildStaffModuleHref(workspaceSlug, "inbox") +
+    inboxQueueHref("all", conversationId);
   const canApprove = Boolean(draft && !draft.handoverRequired &&
     body.trim().length > 0 && body.trim().length <= 4_000 &&
-    confirmed && busy === "idle" && !receipt && error !== "stale");
+    confirmed && !unsafeFormatting &&
+    (!needsSensitiveReview || sensitiveConfirmed) &&
+    busy === "idle" && !receipt && error !== "stale" &&
+    (error !== "approval" || retryVerified));
 
   return (
     <section className={styles.panel} aria-label="AI-assisted human reply review">
@@ -186,43 +259,85 @@ function ScopedStaffAiReviewComposer({
           <p>Suggestion request cancelled in this browser. No reply was approved or queued.</p>
         ) : null}
         {error === "draft" ? (
-          <p>AI drafting is unavailable for this workspace. Continue with the standard staff reply form.</p>
+          <p>AI drafting did not return a verified suggestion. The model may still finish upstream; continue with the standard staff reply form.</p>
         ) : error === "stale" ? (
-          <p>The conversation changed or a newer customer message arrived. Reload this conversation before approving another reply.</p>
+          <p>The conversation changed or a newer customer message arrived.
+            Reload this conversation before approving another reply.{" "}
+            <Link href={historyHref} className={styles.historyLink}>
+              Find current saved conversation in Inbox →
+            </Link>
+          </p>
         ) : error === "approval" ? (
-          <p>Approval could not be confirmed. Check the saved conversation before trying again; the same approval key will be reused.</p>
+          <p>Approval could not be confirmed. Check the saved conversation before trying again;
+            the same approval key will be reused.{" "}
+            <Link href={historyHref} className={styles.historyLink}>
+              Verify saved conversation in Inbox →
+            </Link>
+          </p>
         ) : null}
+        {error === "approval" && draft && !receipt ? <label className={styles.confirm}>
+          <input type="checkbox" checked={retryVerified} disabled={busy !== "idle"}
+            onChange={event=>setRetryVerified(event.target.checked)} />
+          <span>I inspected the saved Inbox history and found no equivalent
+            queued reply. Retry only the exact, unchanged message with the preserved idempotency key.</span>
+        </label> : null}
         {receipt ? (
           <div className={styles.receipt}>
             <strong>{receipt.state === "EXISTING_REPLY" ? "Previously approved reply found" : "Staff-reviewed reply queued"}</strong>
             <p>{presentOutboundDelivery(receipt.deliveryState).label}. Queue acceptance is not customer delivery confirmation.</p>
-            <p>Return to the message history to verify the stored provider status.</p>
+            <p><Link href={historyHref} className={styles.historyLink}>
+              Verify saved provider status in Inbox →
+            </Link></p>
           </div>
         ) : draft ? (
           <>
             {draft.handoverRequired ? (
               <p className={styles.warning}>AI identified a handover requirement. This suggestion cannot be queued here. Use the standard human reply workflow.</p>
             ) : null}
-            <label className={styles.label} htmlFor="ai-reviewed-reply">
+            <label className={styles.label} htmlFor={replyFieldId}>
               Review and edit the proposed reply
             </label>
             <textarea
               className={styles.input}
-              id="ai-reviewed-reply"
+              id={replyFieldId}
               value={body}
               maxLength={4000}
               rows={5}
               onChange={(event) => {
+                if (error === "approval") return;
                 setBody(event.target.value);
                 setConfirmed(false);
+                setSensitiveConfirmed(false);
                 setError(staffAiReviewErrorAfterEdit);
                 idempotencyKey.current = null;
+                approvalIntent.current = null;
               }}
-              disabled={busy !== "idle" || draft.handoverRequired}
+              disabled={busy !== "idle" || draft.handoverRequired ||
+                error === "approval"}
             />
             <p className={styles.limit}>{body.length}/4000 characters · generated suggestions are not verified facts</p>
+            {unsafeFormatting ? <p className={styles.warning} role="alert">
+              Edited reply contains hidden or unsafe formatting controls.
+              Remove those characters before approving or queueing a response.
+            </p> : null}
             {!draft.handoverRequired ? (
               <>
+                {needsSensitiveReview ? <div className={styles.warning}
+                  role="note" aria-label="Additional sensitive reply review required">
+                  <strong>Additional verification required</strong>
+                  <p>This reply contains possible sensitive commitments or
+                    contact instructions. Heuristic detection may miss risks.
+                    Verify the current saved record and authorized channel.</p>
+                  <ul>{reviewRisks.map(risk=><li key={risk}>
+                    {staffReplyRiskLabels[risk]}</li>)}</ul>
+                  <label className={styles.confirm}>
+                    <input type="checkbox" checked={sensitiveConfirmed}
+                      disabled={busy !== "idle"}
+                      onChange={event=>setSensitiveConfirmed(event.target.checked)} />
+                    <span>I verified these statements against saved records
+                      and approve the exact edited reply.</span>
+                  </label>
+                </div> : null}
                 <label className={styles.confirm}>
                   <input type="checkbox" checked={confirmed} disabled={busy !== "idle"}
                     onChange={(event) => setConfirmed(event.target.checked)} />
