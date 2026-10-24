@@ -63,6 +63,22 @@ export function decideOutboxPersistence(input: OutboxRetryPolicyInput): Result<O
   const { attempt, maxAttempts, baseDelaySeconds, maxDelaySeconds } = policy.value;
   const { outcome } = input;
 
+  // An executor/transport is an untrusted authority boundary even if its
+  // TypeScript declaration is a tagged union. Unknown tags used to fall
+  // through to RETRYABLE_FAILURE and arbitrary provider error strings used to
+  // flow into durable outbox rows and the worker's diagnostic summaries.
+  if (!["SENT", "RETRYABLE_FAILURE", "TERMINAL_FAILURE", "SUPPRESSED"]
+      .includes(outcome.outcome)) {
+    return { ok: false, code: "OUTBOX_OUTCOME_INVALID",
+      message: "Executor returned an unknown outbox outcome." };
+  }
+  if (outcome.outcome !== "SENT" &&
+      (typeof outcome.code !== "string" ||
+       !/^[A-Z][A-Z0-9_]{0,95}$/.test(outcome.code))) {
+    return { ok: false, code: "OUTBOX_FAILURE_CODE_INVALID",
+      message: "Provider failures require a bounded, redacted machine code." };
+  }
+
   if (outcome.outcome === "SENT") {
     // Never persist an arbitrary provider response into a durable SENT
     // receipt. Opaque WhatsApp/Stripe-style IDs are fine; customer contacts,
