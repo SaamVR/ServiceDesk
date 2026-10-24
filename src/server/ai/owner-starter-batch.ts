@@ -42,7 +42,7 @@ function captureSelection(value:unknown):readonly string[]|null{
   if(!Array.isArray(value)||Object.getPrototypeOf(value)!==Array.prototype)
    return null;
   const descriptors=Object.getOwnPropertyDescriptors(value);
-  const length=descriptors.length?.value;
+  const length=Object.getOwnPropertyDescriptor(value,"length")?.value;
   if(!Number.isSafeInteger(length)||length<1||length>12||
      Reflect.ownKeys(value).length!==length+1)return null;
   const seen=new Set<string>(),selected:string[]=[];
