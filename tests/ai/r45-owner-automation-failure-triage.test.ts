@@ -39,6 +39,12 @@ describe("SONIC AI owner saved automation failure triage",()=>{
    expect(planOwnerAutomationFailureTriage(input(sparse)))
      .toMatchObject({ok:false,code:"AUTOMATION_TRIAGE_EVIDENCE_INVALID"});
  });
+ it("independent critic: disallow hidden array index evidence",()=>{
+   const forged=[one("run-1")];
+   Object.defineProperty(forged,"0",{value:one("run-1"),enumerable:false,configurable:true});
+   expect(planOwnerAutomationFailureTriage(input(forged)))
+     .toMatchObject({ok:false,code:"AUTOMATION_TRIAGE_EVIDENCE_INVALID"});
+ });
  it("does not expose raw source payloads, payment records or customer PII",()=>{
    const r=planOwnerAutomationFailureTriage(input([one("run-1")]));
    expect(JSON.stringify(r)).not.toContain("Bearer");
