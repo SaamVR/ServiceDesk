@@ -13,6 +13,20 @@ export interface StaffCommandDestination {
   href: string;
 }
 
+/** Navigation terms are not customer data. Strip invisible direction/control
+ * marks to prevent visually misleading destinations and bounded deep links.
+ * Do not erase real Bangla, Banglish or other visible Unicode search text.
+ */
+export function normalizeStaffCommandQuery(raw: string): string {
+  const safe = raw.normalize("NFKC")
+    .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/gu," ")
+    // Malformed standalone UTF-16 surrogates break encodeURIComponent().
+    // Unicode property /u keeps valid emoji surrogate PAIRS intact.
+    .replace(/[\uD800-\uDFFF]/gu,"")
+    .replace(/\s+/gu," ").trim();
+  return Array.from(safe).slice(0,100).join("");
+}
+
 const orderedModules: readonly StaffModule[] = [
   "overview", "inbox", "schedule", "jobs",
   "requests", "quotes", "customers", "invoices",
@@ -24,7 +38,7 @@ export function searchStaffDestinations(
   term: string,
   limit = 13,
 ): StaffCommandDestination[] {
-  const normalized = term.trim().toLocaleLowerCase("en");
+  const normalized = normalizeStaffCommandQuery(term).toLocaleLowerCase("en");
   const tokens = normalized.split(/\s+/).filter(Boolean);
   const results = orderedModules.flatMap((module, index) => {
     const entry = staffModuleConfig[module];
@@ -35,6 +49,23 @@ export function searchStaffDestinations(
     return [{ module, label: entry.label, eyebrow: entry.eyebrow, description: entry.description,
       href: buildStaffModuleHref(workspace, module), score: starts, index }];
   });
+  // The Studio is an actual scoped route nested under Automations.
+  // Show it only for a relevant nonempty query, preserving the 13 existing
+  // module destinations and their workday-first empty-search order.
+  if (normalized) {
+    const label = "AI Studio";
+    const eyebrow = "Saved workflow and model review";
+    const description = "Review AI request briefs, owner model diagnostics and saved execution evidence.";
+    const fields = [label, eyebrow, description].map(value => value.toLocaleLowerCase("en"));
+    if (tokens.every(token => fields.some(field => field.includes(token)))) {
+      results.push({
+        module: "automations", label, eyebrow, description,
+        href: buildStaffModuleHref(workspace, "automations") + "/ai-studio",
+        score: label.toLowerCase().startsWith(normalized) ? 0 : 1,
+        index: -1,
+      });
+    }
+  }
   return results.sort((a, b) => a.score - b.score || a.index - b.index)
     .slice(0, Math.max(0, Math.min(13, Math.floor(Number.isFinite(limit) ? limit : 13))))
     .map(item => ({ module: item.module, label: item.label, eyebrow: item.eyebrow,
@@ -67,7 +98,7 @@ const recordSearchModules: readonly {
   { module: "invoices", label: "Invoices", queryKey: "search" },
 ];
 export function buildStaffRecordSearches(workspace:string, rawQuery:string):StaffRecordSearchTarget[] {
-  const term = rawQuery.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 100);
+  const term = normalizeStaffCommandQuery(rawQuery);
   if (term.length < 2) return [];
   return recordSearchModules.map(({ module, label, queryKey }) => ({
     module,
