@@ -82,7 +82,7 @@ describe("R50 model-free owner verified workday",()=>{
   expect(child).toContain("requestOwnerVerifiedWorkdayReview(workspaceSlug)");
   expect(child).toContain("WAIT_MS=30_000");
   expect(child).toContain("A repeat request is blocked until it finishes");
-  expect(child).toContain("source.read");
+  expect(child).toContain("This saved-source review is taking longer");
   expect(child).not.toContain("callAiModel(");
   expect(child).not.toContain("publishOperationalWorkflowVersion(");
   expect(styles).toContain("min-height:44px");
