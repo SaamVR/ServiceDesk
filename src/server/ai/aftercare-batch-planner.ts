@@ -35,7 +35,7 @@ function denseDataArray(value:unknown,max:number):value is unknown[]{
      Reflect.ownKeys(value).length!==value.length+1)return false;
   for(let i=0;i<value.length;i++){
     const d=Object.getOwnPropertyDescriptor(value,String(i));
-    if(!d||!Object.hasOwn(d,"value"))return false;
+    if(!d||!Object.hasOwn(d,"value")||d.enumerable!==true)return false;
   }
   return true;
 }
