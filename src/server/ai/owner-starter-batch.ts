@@ -35,15 +35,24 @@ const slugOk=(s:unknown):s is string=>typeof s==="string"&&
 const uuid=(v:unknown):v is string=>typeof v==="string"&&
  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
 function exactSelection(value:unknown):value is string[]{
- if(!Array.isArray(value)||value.length<1||value.length>12 ||
-    Reflect.ownKeys(value).length!==value.length+1)return false;
- const seen=new Set<string>();
- for(let i=0;i<value.length;i++){
-  if(!Object.hasOwn(value,i)||typeof value[i]!=="string"||
-     !/^[a-z0-9-]{3,80}$/.test(value[i])||seen.has(value[i]))return false;
-  seen.add(value[i]);
- }
- return true;
+ // Client arrays are untrusted: accessors, inherited indexed values and
+ // hidden sidecars must not be evaluated during authorization checks.
+ try {
+  if(!Array.isArray(value)||Object.getPrototypeOf(value)!==Array.prototype||
+     value.length<1||value.length>12||
+     Reflect.ownKeys(value).length!==value.length+1)return false;
+  const descriptors=Object.getOwnPropertyDescriptors(value);
+  const seen=new Set<string>();
+  for(let i=0;i<value.length;i++){
+   const entry=descriptors[String(i)];
+   if(!entry||!Object.hasOwn(entry,"value")||
+      typeof entry.value!=="string"||
+      !/^[a-z0-9-]{3,80}$/.test(entry.value)||
+      seen.has(entry.value))return false;
+   seen.add(entry.value);
+  }
+  return true;
+ } catch {return false;}
 }
 function owner(resolved:Awaited<ReturnType<Resolver>>,slug:string):
  resolved is Extract<Awaited<ReturnType<Resolver>>,{ok:true}>{
@@ -56,9 +65,14 @@ async function savedBranch(
  workspaceId:string,branchId:string,
 ):Promise<boolean>{
  try{
-  const r=await service.from("branches").select("id,workspace_id")
-   .eq("workspace_id",workspaceId).eq("id",branchId).maybeSingle();
-  return !r.error&&!!r.data&&r.data.id===branchId&&r.data.workspace_id===workspaceId;
+  // The real persisted branch authority is workspace_branches. Never rely
+  // on an unrelated/absent generic "branches" relation or display DTO alone.
+  const r=await service.from("workspace_branches")
+   .select("id,workspace_id,active")
+   .eq("workspace_id",workspaceId).eq("id",branchId)
+   .eq("active",true).maybeSingle();
+  return !r.error&&!!r.data&&r.data.id===branchId&&
+    r.data.workspace_id===workspaceId&&r.data.active===true;
  }catch{return false;}
 }
 /** A batch of 27-catalog STARTER previews, not 27 live rule installations.
