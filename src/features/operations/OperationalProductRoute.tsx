@@ -69,7 +69,8 @@ import { AiOperationsStatus } from "./AiOperationsStatus";
 import { OwnerQuoteAcceptedAutomationControl } from "./OwnerQuoteAcceptedAutomationControl";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
-import { automationPlaybooks, automationPlaybookCategories, getAutomationPlaybook } from "./automation-playbooks";
+import { getAutomationPlaybook } from "./automation-playbooks";
+import { AutomationPlaybookBrowser } from "./AutomationPlaybookBrowser";
 import { runOwnerSavedOperationalAutomation, type OwnerOperationalEventType } from "@/server/workflows/owner-operational-automation";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
@@ -2976,26 +2977,7 @@ function WorkflowBuilderPanel({
         </section>
       ) : null}
 
-      <section aria-label="Cleaning automation starter playbooks">
-        <p>27 owner-reviewed internal task recipes across intake, quoting, field work, payments and exceptions. Choose a starter, customize its condition, preview it, then publish intentionally.</p>
-        {automationPlaybookCategories.map(category => (
-          <details key={category} open={category === (playbook?.category ?? "Intake")}>
-            <summary><strong>{category}</strong> · {automationPlaybooks.filter(item => item.category === category).length} recipes</summary>
-            <nav className={styles.automationPlaybookGrid} aria-label={category + " automation recipes"}>
-              {automationPlaybooks.filter(item => item.category === category).map(item => (
-                <a key={item.id}
-                   className={item.id === playbook?.id ? styles.automationPlaybookSelected : styles.automationPlaybookCard}
-                   href={"?template=" + encodeURIComponent(item.id)}
-                   aria-current={item.id === playbook?.id ? "true" : undefined}>
-                  <strong>{item.name}</strong>
-                  <span>{item.description}</span>
-                  <small>{item.id === playbook?.id ? "Loaded into draft form" : "Load draft starter"} ↗</small>
-                </a>
-              ))}
-            </nav>
-          </details>
-        ))}
-      </section>
+      <AutomationPlaybookBrowser selectedId={playbook?.id} />
       <p className={styles.automationPlaybookDisclaimer}>
         These starters only prefill a draft. Saving, synthetic preview and owner publication remain separate required steps.
         Only internal attention actions are included; no provider delivery occurs by selecting a starter.

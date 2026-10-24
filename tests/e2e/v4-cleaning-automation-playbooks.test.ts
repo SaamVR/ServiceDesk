@@ -68,8 +68,10 @@ describe("27 real-catalogue cleaning automation starter playbooks", () => {
     const route = read("src/features/operations/OperationalProductRoute.tsx");
     const page = read("src/app/app/[workspace]/automations/page.tsx");
     expect(route).toContain("getAutomationPlaybook(automationTemplate)");
-    expect(route).toContain('href={"?template=" + encodeURIComponent(item.id)}');
-    expect(route).toContain("automationPlaybookCategories.map(category");
+    expect(route).toContain("<AutomationPlaybookBrowser selectedId={playbook?.id} />");
+    const browser = read("src/features/operations/AutomationPlaybookBrowser.tsx");
+    expect(browser).toContain('href={"?template=" + encodeURIComponent(item.id)}');
+    expect(browser).toContain("automationPlaybookCategories.map(category");
     expect(route).toContain("playbook?.condition?.field");
     expect(route).toContain("playbook?.condition?.operator");
     expect(route).toContain("String(playbook.condition.value)");
