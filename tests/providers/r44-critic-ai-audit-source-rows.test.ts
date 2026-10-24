@@ -1,5 +1,6 @@
 import {describe,expect,it} from "vitest";
 import {buildAiActionAuditRecord} from "../../src/server/ai/action-audit";
+type InputTool = Parameters<typeof buildAiActionAuditRecord>[0]["toolResults"][number];
 const base={
  workspaceId:"workspace-1",conversationId:"conversation-1",
  messageId:"message-1",model:"synthetic",promptVersion:"r44",
@@ -12,7 +13,8 @@ describe("R44 independent critic — tool-audit untrusted row integrity",()=>{
        enumerable:true,get(){throw new Error("private model callback executed");},
      });
    const audit=buildAiActionAuditRecord({
-     ...base,toolResults:[poisoned],
+     ...base,// An intentionally hostile runtime object cannot satisfy the typed provider DTO.
+     toolResults:[poisoned as unknown as InputTool],
    } as Parameters<typeof buildAiActionAuditRecord>[0]);
    expect(audit.toolResults).toMatchObject([{
      toolName:"unknown",outcome:"BLOCKED",summary:"Unverified tool evidence",
@@ -24,7 +26,7 @@ describe("R44 independent critic — tool-audit untrusted row integrity",()=>{
      toolName:"calculateQuote",outcome:"COMPLETED",summary:"unverified completion",
    },"providerSecret",{value:"Bearer private-credential",enumerable:false});
    const audit=buildAiActionAuditRecord({
-     ...base,toolResults:[hidden],
+     ...base,toolResults:[hidden as unknown as InputTool],
    });
    expect(audit.toolResults).toMatchObject([{
      toolName:"unknown",outcome:"BLOCKED",
