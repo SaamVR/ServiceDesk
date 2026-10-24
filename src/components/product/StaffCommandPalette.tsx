@@ -12,6 +12,13 @@ import styles from "./StaffCommandPalette.module.css";
  * Directory searches are navigational deep-links; this dialog never fetches customer data.
  */
 export function StaffCommandPalette({ workspace }: { workspace: string }) {
+  // Remount the entire query/dialog/key-handler state when workspace changes.
+  // Closing in an effect is too late to prevent an old query from briefly
+  // constructing navigation links in a newly selected tenant.
+  return <ScopedStaffCommandPalette key={workspace} workspace={workspace} />;
+}
+
+function ScopedStaffCommandPalette({ workspace }: { workspace: string }) {
   const [query, setQuery] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -41,7 +48,7 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
     // A route change must dismiss stale navigation and leave focus in the
     // newly active page rather than trapping it behind a modal.
     dialog.current?.close();
-  }, [pathname]);
+  }, [pathname, workspace]);
 
   const matches = searchStaffDestinations(workspace, query);
   const recordSearches = buildStaffRecordSearches(workspace, query);
@@ -109,7 +116,7 @@ export function StaffCommandPalette({ workspace }: { workspace: string }) {
         <div ref={results} className={styles.results} onKeyDown={handleResultKeyDown} aria-live="polite" aria-label="Workspace destinations">
           {matches.length ? matches.map(destination => (
             <Link
-              key={destination.module}
+              key={destination.href}
               href={destination.href}
               onClick={close}
               className={styles.result}
