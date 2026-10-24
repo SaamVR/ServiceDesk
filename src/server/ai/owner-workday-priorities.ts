@@ -1,4 +1,4 @@
-import {resolveStaffActor,loadOperationalStaffSnapshot} from "@/features/operations/operational-product-runtime";
+import {resolveStaffActor,loadOperationalStaffSnapshot,type OperationalStaffSnapshot} from "@/features/operations/operational-product-runtime";
 import {deriveOwnerOperationsBriefFacts,isFreshOwnerOperationsSnapshotAt,
   type OwnerOperationsBriefFacts} from "./owner-operations-brief";
 import {ownerPriorityActions,type OwnerPriorityAction} from "./owner-priority-actions";
@@ -38,6 +38,51 @@ function verifiedOwner(result:Awaited<ReturnType<Resolver>>,slug:string):boolean
 const sameFacts=(a:OwnerOperationsBriefFacts,b:OwnerOperationsBriefFacts)=>
   (Object.keys(a) as Array<keyof OwnerOperationsBriefFacts>).every(k=>a[k]===b[k]);
 
+/** An aggregate may remain identical after two requests or quote IDs swap.
+ * Compare only the saved, non-customer fields capable of invalidating the
+ * workday review. Never serialize notes, contact, address, invoice line items
+ * or provider response bodies to an AI model or outward receipt.
+ */
+const sourceColumns={
+ requests:["id","workspaceId","branchId","status","serviceCode","version","updatedAt","createdAt"],
+ quotes:["id","workspaceId","requestId","branchId","status","version","validUntil","expiresAt","acceptedAt","updatedAt"],
+ invoices:["id","workspaceId","quoteId","status","state","version","paidMinor","balanceDueMinor","updatedAt"],
+ visits:["id","workspaceId","branchId","status","crewId","assignedCrewId","scheduledAt","updatedAt"],
+ attentionItems:["id","workspaceId","status","severity","type","resourceId","dueAt","updatedAt"],
+} as const;
+function sourceIdentity(snapshot:Pick<OperationalStaffSnapshot,
+  "requests"|"quotes"|"visits"|"invoices"|"attentionItems">):string|null {
+ try{
+  const out:unknown[][]=[];
+  for(const [name,columns] of Object.entries(sourceColumns)){
+   const rows=snapshot[name as keyof typeof sourceColumns];
+   if(!Array.isArray(rows)||Object.getPrototypeOf(rows)!==Array.prototype||
+      rows.length>5000||Reflect.ownKeys(rows).length!==rows.length+1)return null;
+   const mapped:string[]=[];
+   for(let i=0;i<rows.length;i++){
+    const entry=Object.getOwnPropertyDescriptor(rows,String(i));
+    if(!entry||!Object.hasOwn(entry,"value"))return null;
+    const row:unknown=entry.value;
+    if(!row||typeof row!=="object"||Array.isArray(row)||
+       Object.getPrototypeOf(row)!==Object.prototype)return null;
+    const descriptors=Object.getOwnPropertyDescriptors(row);
+    if(Reflect.ownKeys(row).length!==Object.keys(descriptors).length ||
+       Object.values(descriptors).some(d=>!Object.hasOwn(d,"value")))return null;
+    const fields=columns.map(key=>{
+     const d=descriptors[key];
+     if(!d)return null;
+     const v=d.value;
+     return v===null||typeof v==="string"||typeof v==="number"||
+       typeof v==="boolean"?v:null;
+    });
+    mapped.push(JSON.stringify(fields));
+   }
+   out.push([name,...mapped.sort()]);
+  }
+  return JSON.stringify(out);
+ }catch{return null;}
+}
+
 /** An actual authenticated server-side owner workday entrypoint. Unlike the
  * generative owner AI brief, it remains usable with all AI provider flags off.
  * AI cannot invent counts or prevent access to verified saved queues. */
@@ -68,6 +113,8 @@ export async function loadOwnerWorkdayPriorities(
   try{facts=deriveOwnerOperationsBriefFacts(saved.value);}
   catch{return {ok:false,code:"WORKDAY_SNAPSHOT_UNAVAILABLE"};}
   if(!facts)return {ok:false,code:"WORKDAY_SNAPSHOT_UNAVAILABLE"};
+  const firstSourceIdentity=sourceIdentity(saved.value);
+  if(firstSourceIdentity===null)return {ok:false,code:"WORKDAY_SNAPSHOT_UNAVAILABLE"};
   const sourceSla=planOwnerAttentionSla({
     workspaceId,actor:saved.value.actor,now:saved.value.loadedAt,
     attentionItems:saved.value.attentionItems,
@@ -92,7 +139,8 @@ export async function loadOwnerWorkdayPriorities(
   let freshFacts:ReturnType<typeof deriveOwnerOperationsBriefFacts>;
   try{freshFacts=deriveOwnerOperationsBriefFacts(latest.value);}
   catch{return {ok:false,code:"WORKDAY_SOURCE_CHANGED"};}
-  if(!freshFacts || !sameFacts(facts,freshFacts))
+  if(!freshFacts || !sameFacts(facts,freshFacts) ||
+      sourceIdentity(latest.value)!==firstSourceIdentity)
     return {ok:false,code:"WORKDAY_SOURCE_CHANGED"};
   const latestSla=planOwnerAttentionSla({
     workspaceId,actor:latest.value.actor,now:latest.value.loadedAt,
