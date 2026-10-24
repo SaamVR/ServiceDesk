@@ -51,7 +51,7 @@ describe("deterministic saved quote preflight", () => {
     const local = readFileSync(join(process.cwd(),
       "src/features/operations/StaffQuoteChecklist.tsx"), "utf8");
     expect(page).toContain("<StaffQuoteChecklist quote={selectedQuote} loadedAt={data.loadedAt} />");
-    expect(page).toContain("<AiQuoteReview key={selectedQuote.id}");
+    expect(page).toContain('key={selectedQuote.id + ":" + selectedQuote.version}');
     expect(local).toContain("No AI provider, customer contact");
     expect(local).toContain('aria-label="Saved quote staff preflight"');
   });
