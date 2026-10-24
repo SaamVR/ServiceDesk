@@ -45,7 +45,9 @@ function captureAttention(source:unknown):ScopedAttention[]|null{
     Object.defineProperty(copy,key,{
       value:descriptor.value,enumerable:true,configurable:false,writable:false,
     });
-   copied.push(copy as ScopedAttention);
+   // Descriptors above are inert; shape and tenant-scope validation still
+   // occur below before any priority is returned.
+   copied.push(copy as unknown as ScopedAttention);
   }
   return copied;
  }catch{return null;}
