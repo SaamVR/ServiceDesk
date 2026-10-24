@@ -19,16 +19,38 @@ export interface AttentionSlaSource{
 }
 export interface OwnerAttentionSlaDeps{loadSnapshot?:Loader;now?:()=>number;signal?:AbortSignal}
 const validId=(v:unknown):v is string=>typeof v==="string"&&/^[A-Za-z0-9:_-]{3,128}$/.test(v);
-function dense(source:unknown):source is ScopedAttention[]{
-  if(!Array.isArray(source)||source.length>=5000 ||
-    Reflect.ownKeys(source).length!==source.length+1)return false;
-  return source.every((row,i)=>Object.hasOwn(source,i)&&!!row);
-}
-function plainRow(x:unknown):x is ScopedAttention {
- if(!x||typeof x!=="object"||Array.isArray(x)||Object.getPrototypeOf(x)!==Object.prototype)return false;
- const names=Object.getOwnPropertyNames(x);
- return names.length===Object.keys(x).length&&Object.getOwnPropertySymbols(x).length===0&&
-   Object.values(Object.getOwnPropertyDescriptors(x)).every(d=>Object.hasOwn(d,"value"));
+/** Snapshot inert source rows before prioritization. No getters, proxy
+ * iterators, symbolic sidecars or in-place mutations from external adapters.
+ */
+function captureAttention(source:unknown):ScopedAttention[]|null{
+ try{
+  if(!Array.isArray(source)||Object.getPrototypeOf(source)!==Array.prototype)
+   return null;
+  const length=Object.getOwnPropertyDescriptor(source,"length")?.value;
+  if(!Number.isSafeInteger(length)||length>=5000||
+     Reflect.ownKeys(source).length!==length+1)return null;
+  const arrayDescriptors=Object.getOwnPropertyDescriptors(source);
+  const copied:ScopedAttention[]=[];
+  for(let i=0;i<length;i++){
+   const item=arrayDescriptors[String(i)];
+   if(!item||!Object.hasOwn(item,"value"))return null;
+   const original:unknown=item.value;
+   if(!original||typeof original!=="object"||Array.isArray(original)||
+      Object.getPrototypeOf(original)!==Object.prototype)return null;
+   const descriptors=Object.getOwnPropertyDescriptors(original);
+   if(Reflect.ownKeys(original).length!==Object.keys(descriptors).length ||
+      Object.values(descriptors).some(d=>!Object.hasOwn(d,"value")))return null;
+   const copy:Record<string,unknown>=Object.create(null);
+   for(const [key,descriptor] of Object.entries(descriptors))
+    Object.defineProperty(copy,key,{
+      value:descriptor.value,enumerable:true,configurable:false,writable:false,
+    });
+   // Descriptors above are inert; shape and tenant-scope validation still
+   // occur below before any priority is returned.
+   copied.push(copy as unknown as ScopedAttention);
+  }
+  return copied;
+ }catch{return null;}
 }
 /** No AI model and no external actions. A saved dueAt, not a guessed SLA,
  * is the only acceptable evidence for an overdue owner priority. */
@@ -37,12 +59,13 @@ export function planOwnerAttentionSla(input:AttentionSlaSource):OwnerAttentionSl
     input.actor.role!=="OWNER"||input.actor.workspaceId!==input.workspaceId)
    return {ok:false,code:"ATTENTION_OWNER_REQUIRED"};
  const time=trustedQuoteInstant(input.now);
- if(time===null||!dense(input.attentionItems))
+ const rows=captureAttention(input.attentionItems);
+ if(time===null||!rows)
    return {ok:false,code:"ATTENTION_SOURCE_UNVERIFIED"};
  const seen=new Set<string>(),alerts:Alert[]=[];
  let unscheduled=0;
- for(const a of input.attentionItems){
-   if(!plainRow(a)||!validId(a.id)||seen.has(a.id)||
+ for(const a of rows){
+   if(!validId(a.id)||seen.has(a.id)||
       (a.workspaceId!==undefined&&a.workspaceId!==input.workspaceId)||
       !validId(a.resourceId)||!["OPEN","ACKNOWLEDGED","RESOLVED"].includes(a.status)||
       !["INFO","WARNING","CRITICAL"].includes(a.severity)||
@@ -67,7 +90,7 @@ export function planOwnerAttentionSla(input:AttentionSlaSource):OwnerAttentionSl
    Date.parse(a.dueAt)-Date.parse(b.dueAt)||a.attentionId.localeCompare(b.attentionId));
  return {ok:true,value:{state:"SAVED_ATTENTION_SLA_OWNER_REVIEW",
    source:"DOUBLE_CHECKED_SAVED_ATTENTION_ROWS",workspaceId:input.workspaceId,
-   inspected:input.attentionItems.length,overdueCount:alerts.length,
+   inspected:rows.length,overdueCount:alerts.length,
    unscheduledCount:unscheduled,overdue:alerts,
    ownerReviewRequired:true,modelInvoked:false,customerMessaged:false,workflowExecuted:false}};
 }
