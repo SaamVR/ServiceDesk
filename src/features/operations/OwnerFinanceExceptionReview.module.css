@@ -1,0 +1,26 @@
+.panel{display:grid;gap:13px;padding:clamp(16px,2vw,23px);margin:13px 0;border:1px solid #cce3d6;border-radius:14px;background:#fff;color:#254c3d;min-width:0;}
+.header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start;}
+.header h3{font-size:17px;margin:0;color:#1d513f;}
+.header p{font-size:12px;line-height:1.65;color:#5a7568;margin:6px 0 0;max-width:65ch;}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#397b5a;margin:0;}
+.action{background:#175e49;color:#fff;border:1px solid #175e49;border-radius:8px;padding:10px 13px;min-height:44px;font-size:12px;font-weight:800;cursor:pointer;}
+.action:disabled{opacity:.55;cursor:not-allowed;}
+.action:focus-visible,.more:focus-visible,.rows a:focus-visible{outline:3px solid #258b75;outline-offset:3px;}
+.feedback{font-size:12px;line-height:1.7;margin:0;color:#597162;}
+.error{border:1px solid #e8d8b1;background:#fff9eb;color:#795629;border-radius:9px;padding:11px;font-size:12px;line-height:1.7;}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0;}
+.stats div{background:#f4fbf7;border:1px solid #d3e8db;border-radius:9px;padding:12px;display:grid;gap:4px;}
+.stats dt{color:#526d60;font-size:11px;}
+.stats dd{margin:0;color:#1d513f;font-size:23px;font-weight:850;font-variant-numeric:tabular-nums;}
+.rows{list-style:none;display:grid;gap:8px;padding:0;margin:0;}
+.rows li{display:grid;gap:7px;min-width:0;border:1px solid #d9e9e0;border-radius:10px;padding:11px;background:#fbfdfc;}
+.rowHead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.rows strong{font-size:12px;color:#20523e;}
+.priority{background:#fff2e5;color:#8b4b23;padding:4px 7px;border-radius:6px;font-size:10px;font-weight:850;}
+.rows p{font-size:12px;color:#587263;line-height:1.5;margin:0;}
+.rows a{font-size:12px;color:#156347;font-weight:800;text-decoration:none;}
+.rows a:hover{text-decoration:underline;}
+.more{justify-self:start;background:#fff;color:#1e674c;border:1px solid #aacbb8;padding:9px 12px;border-radius:8px;min-height:44px;font-size:12px;font-weight:800;cursor:pointer;}
+.disclosure{font-size:11px;line-height:1.65;color:#5b7666;margin:0;border-top:1px solid #dce9e0;padding-top:10px;}
+@media(max-width:540px){.stats{grid-template-columns:1fr;}.action{width:100%;}}
+@media(prefers-reduced-motion:reduce){.panel *{transition:none!important;}}
