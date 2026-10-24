@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { automationPlaybooks } from "../../src/features/operations/automation-playbooks";
 import { filterAutomationPlaybooks } from "../../src/features/operations/automation-playbook-finder";
 
-const search = (query: string, category: "All" | "Quoting" | "Intake" = "All",
+const search = (query: string, category: "All" | "Quoting" | "Intake" | "Exceptions" = "All",
   severity: "Any" | "INFO" | "WARNING" | "CRITICAL" = "Any") =>
   filterAutomationPlaybooks(automationPlaybooks, {
     search: query, category, severity,
