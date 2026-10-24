@@ -124,7 +124,8 @@ export function AiStudioWorkspace({
         {isOwner ? (
           <div className={styles.ownerGrid}>
             <AiOwnerModelProbe workspaceSlug={workspaceSlug} configured={configured} />
-            <AiOwnerOperationsBrief workspaceSlug={workspaceSlug} configured={configured} />
+            <AiOwnerOperationsBrief workspaceSlug={workspaceSlug} workspaceId={data.workspace.id}
+              configured={configured} />
           </div>
         ) : (
           <div className={styles.emptyState}>
