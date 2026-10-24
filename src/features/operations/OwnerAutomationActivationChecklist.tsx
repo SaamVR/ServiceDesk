@@ -4,6 +4,9 @@ import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import styles from "./OwnerAutomationActivationChecklist.module.css";
+import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
+import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
+import { OwnerWorkflowRuleAssistant } from "./OwnerWorkflowRuleAssistant";
 
 /**
  * A signed-in, owner-only operational readiness readout. The parent route
@@ -24,6 +27,17 @@ export function OwnerAutomationActivationChecklist({
     data.branchScope, data.ownerPricingBookProof,
   ).length > 0;
   const settingsHref = buildStaffModuleHref(workspaceSlug, "settings");
+  // Only authorized branch IDs from the already-resolved owner staff snapshot
+  // cross to the client. The suggestion HTTP endpoint and what-if server action
+  // each re-authorize this workspace/branch independently.
+  const allowedBranches = data.branchScope?.mode === "BRANCH"
+    ? (data.branchScope.branches ?? []).filter(b => b.id === data.branchScope?.selectedBranchId)
+    : data.branchScope?.branches ?? [];
+  const ownerRuleBranches = data.actor?.role === "OWNER"
+    ? allowedBranches.filter(b =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(b.id))
+      .slice(0,24).map(b=>({id:b.id,name:b.name}))
+    : [];
   return (
     <section className={styles.panel} aria-labelledby="owner-activation-title">
       <header className={styles.header}>
@@ -66,6 +80,12 @@ export function OwnerAutomationActivationChecklist({
           </article>
         ))}
       </div>
+      {data.actor?.role === "OWNER" ? <OwnerWorkflowRuleAssistant
+        workspaceSlug={workspaceSlug} workspaceId={data.workspace.id}
+        branches={ownerRuleBranches}
+        configured={readConfiguredAiRuntimeConfig().ok}
+        draftWritable={data.workflowAvailable === true &&
+          operationalDatabaseMode() === "SERVICE_ROLE"} /> : null}
       <p className={styles.disclosure} role="note">
         {summary.allEvidenceReady
           ? "Exact saved quote-source and linked internal attention are evidenced with the other workspace prerequisites. Independent customer-session UAT, provider delivery and deployment opt-in still require separate checks."
