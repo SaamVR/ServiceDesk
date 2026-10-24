@@ -32,12 +32,20 @@ const plain=(v:unknown):v is Record<string,unknown>=>{
  } catch {return false;}
 };
 const dense=(v:unknown,max:number):v is unknown[]=>{
- if(!Array.isArray(v)||v.length>max||
-    Reflect.ownKeys(v).length!==v.length+1)return false;
- return v.every((_,i)=>Object.hasOwn(Object.getOwnPropertyDescriptor(v,String(i))??{},"value"));
+ // Model-originated and preview arrays must contain inert own-data entries,
+ // never getters, extra metadata, holes, subclasses or proxy traps.
+ try{
+  if(!Array.isArray(v)||Object.getPrototypeOf(v)!==Array.prototype||
+     v.length>max || Reflect.ownKeys(v).length!==v.length+1)return false;
+  const descriptors=Object.getOwnPropertyDescriptors(v);
+  return Array.from({length:v.length},(_,i)=>
+    Object.hasOwn(descriptors,String(i)) &&
+    Object.hasOwn(descriptors[String(i)],"value")).every(Boolean);
+ }catch{return false;}
 };
 const safeKey=(v:unknown)=>typeof v==="string" && /^[A-Za-z0-9_-]{1,80}$/.test(v);
 function validCondition(v:unknown):v is WorkflowConditionDTO{
+ try{
  if(!plain(v) || Object.keys(v).length!==3 ||
     !["field","operator","value"].every(k=>Object.hasOwn(v,k)) ||
     !safeKey(v.field) && !(typeof v.field==="string" &&
@@ -49,6 +57,7 @@ function validCondition(v:unknown):v is WorkflowConditionDTO{
    typeof val==="number" && Number.isFinite(val) ||
    dense(val,20) && val.every(x=>x===null || ["string","number","boolean"].includes(typeof x) &&
      (typeof x!=="number" || Number.isFinite(x)) && (typeof x!=="string" || x.length<=160));
+ }catch{return false;}
 }
 function validAction(v:unknown):v is WorkflowActionDTO{
  if(!plain(v) || Object.keys(v).some(k=>![
@@ -62,6 +71,7 @@ function validAction(v:unknown):v is WorkflowActionDTO{
  return false;
 }
 function validVersion(v:unknown):v is WorkflowRuleVersionDTO{
+ try{
  const keys=new Set(["id","workspaceId","branchId","ruleId","versionNumber",
    "state","eventType","conditions","actions","maxActionsPerEvent",
    "basedOnVersionNumber","publishedAt","createdAt"]);
@@ -99,12 +109,14 @@ function validVersion(v:unknown):v is WorkflowRuleVersionDTO{
    eventType:validated.eventType,snapshot:{},recursionDepth:0,
  },"PREVIEW");
  return checked.ok;
+ }catch{return false;}
 }
 const external=(a:readonly WorkflowActionDTO[])=>a.filter(x=>
  x.type==="SEND_EMAIL_TEMPLATE"||x.type==="SEND_WHATSAPP_TEMPLATE").length;
 
 /** Owner sees a source-grounded diff, never an AI authorization to publish. */
 export function reviewAutomationRevision(input:AutomationRevisionInput):AutomationRevisionResult{
+ try{
  if(!plain(input) || Object.keys(input).some(key=>
    !["actor","workspaceId","branchId","previous","draft"].includes(key)))
    return {ok:false,code:"AUTOMATION_REVIEW_SOURCE_INVALID"};
@@ -146,4 +158,5 @@ export function reviewAutomationRevision(input:AutomationRevisionInput):Automati
    requiresExplicitExternalApproval:nowExternal>0,
    published:false,executed:false,customerMessaged:false,
  }};
+ }catch{return {ok:false,code:"AUTOMATION_REVIEW_SOURCE_INVALID"};}
 }
