@@ -66,7 +66,7 @@ function captureClaimRows(value:unknown,limit:number):Record<string,unknown>[]|n
     if(!Array.isArray(value)||Object.getPrototypeOf(value)!==Array.prototype)
       return null;
     const descriptors=Object.getOwnPropertyDescriptors(value);
-    const length=descriptors.length?.value;
+    const length=Object.getOwnPropertyDescriptor(value,"length")?.value;
     if(!Number.isSafeInteger(length)||length<0||length>limit||
        Reflect.ownKeys(value).length!==length+1) return null;
     const records:Record<string,unknown>[]=[];
