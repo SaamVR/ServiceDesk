@@ -1,4 +1,5 @@
-import {loadOperationalStaffSnapshot} from "@/features/operations/operational-product-runtime";
+import {loadOperationalStaffSnapshot, type OperationalInvoice} from "@/features/operations/operational-product-runtime";
+import type {InvoiceDTO} from "@/contracts";
 import {isFreshOwnerOperationsSnapshotAt} from "./owner-operations-brief";
 import {planOwnerInvoiceExceptions, type FinanceReviewResult} from "./invoice-exception-review";
 
@@ -28,11 +29,46 @@ function identity(snapshot:Awaited<ReturnType<Loader>>, slug:string):snapshot is
     typeof value.actor.userId==="string" &&
     value.actor.userId.length>0 && value.actor.role==="OWNER";
 }
+// OperationalInvoice is a UI DTO, not the narrower finance planner contract.
+// Reject unknown, hidden and accessor properties before dropping quoteId. An
+// unchecked object spread would admit customer contacts and payment assertions.
+const INVOICE_SOURCE_KEYS=new Set([
+ "id","workspaceId","quoteId","visitId","status","currency",
+ "totalMinor","allocatedMinor","refundedMinor","balanceMinor",
+]);
+function projectSavedInvoiceRows(rows:unknown):InvoiceDTO[]|null {
+ if(!Array.isArray(rows) || rows.length>=300 ||
+    Object.getPrototypeOf(rows)!==Array.prototype ||
+    Reflect.ownKeys(rows).length!==rows.length+1)return null;
+ const projected:InvoiceDTO[]=[];
+ for(const value of rows as unknown[]){
+   if(!value || typeof value!=="object" || Array.isArray(value))return null;
+   try {
+     if(Object.getPrototypeOf(value)!==Object.prototype ||
+       Object.getOwnPropertySymbols(value).length!==0 ||
+       Object.getOwnPropertyNames(value).length!==Object.keys(value).length ||
+       !Object.keys(value).every(key=>INVOICE_SOURCE_KEYS.has(key)) ||
+       !Object.values(Object.getOwnPropertyDescriptors(value))
+         .every(desc=>Object.hasOwn(desc,"value")))return null;
+     const row=value as OperationalInvoice;
+     if((row.quoteId!==undefined && typeof row.quoteId!=="string") ||
+        (row.visitId!==undefined && typeof row.visitId!=="string"))return null;
+     projected.push({
+       id:row.id,workspaceId:row.workspaceId,visitId:row.visitId,
+       status:row.status,currency:row.currency,totalMinor:row.totalMinor,
+       allocatedMinor:row.allocatedMinor,refundedMinor:row.refundedMinor,
+       balanceMinor:row.balanceMinor,
+     });
+   } catch {return null;}
+ }
+ return projected;
+}
+
 /** Only compare bounded authoritative invoice fields. PII, display strings
  * and customer contacts never participate in output or a model prompt. */
 function ledgerFingerprint(s:Extract<Awaited<ReturnType<Loader>>,{ok:true}>["value"]):string {
  return JSON.stringify(s.invoices.map(i=>[
-   i.id,i.workspaceId,i.status,i.currency,i.totalMinor,i.allocatedMinor,
+   i.id,i.workspaceId,i.quoteId,i.visitId,i.status,i.currency,i.totalMinor,i.allocatedMinor,
    i.refundedMinor,i.balanceMinor,
  ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))));
 }
@@ -56,9 +92,11 @@ export async function loadAuthorizedOwnerFinanceReview(
   // report an authoritative "all-clear" from truncated financial evidence.
   if(!Array.isArray(first.value.invoices) || first.value.invoices.length>=300)
     return {ok:false,code:"FINANCE_SOURCE_INCOMPLETE"};
+  const firstLedger=projectSavedInvoiceRows(first.value.invoices);
+  if(!firstLedger)return {ok:false,code:"FINANCE_SNAPSHOT_UNAVAILABLE"};
   const source=planOwnerInvoiceExceptions({
     actor:{workspaceId:first.value.workspace.id,role:"OWNER"},
-    workspaceId:first.value.workspace.id,invoices:first.value.invoices,
+    workspaceId:first.value.workspace.id,invoices:firstLedger,
   });
   if(!source.ok)return {ok:false,code:"FINANCE_SNAPSHOT_UNAVAILABLE"};
   let second:Awaited<ReturnType<Loader>>;
@@ -69,6 +107,8 @@ export async function loadAuthorizedOwnerFinanceReview(
     return {ok:false,code:"FINANCE_OWNER_REQUIRED"};
   if(!Array.isArray(second.value.invoices) || second.value.invoices.length>=300)
     return {ok:false,code:"FINANCE_SOURCE_INCOMPLETE"};
+  if(!projectSavedInvoiceRows(second.value.invoices))
+    return {ok:false,code:"FINANCE_SAVED_STATE_CHANGED"};
   if(!isFreshOwnerOperationsSnapshotAt(second.value.loadedAt,now()))
     return {ok:false,code:"FINANCE_SAVED_STATE_CHANGED"};
   try {
