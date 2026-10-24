@@ -19,8 +19,7 @@ function harness(change:(reads:number)=>unknown[], opts?:{reorder?:boolean}){
    quotes:[],visits:[],invoices:[],attentionItems:[],
   }};
  };
- const deps=({resolveActor,loadSnapshot,now:()=>Date.parse(clock)}
-  as unknown as OwnerWorkdayDependencies);
+ const deps = {resolveActor,loadSnapshot,now:()=>Date.parse(clock)} as unknown as OwnerWorkdayDependencies;
  return {deps,counts:()=>({ownerReads,snapshotReads}),opts};
 }
 const read=(t:ReturnType<typeof harness>)=>loadOwnerWorkdayPriorities(slug,t.deps);
