@@ -34,25 +34,29 @@ const slugOk=(s:unknown):s is string=>typeof s==="string"&&
  s.length>=3&&s.length<=40&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s);
 const uuid=(v:unknown):v is string=>typeof v==="string"&&
  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
-function exactSelection(value:unknown):value is string[]{
- // Client arrays are untrusted: accessors, inherited indexed values and
- // hidden sidecars must not be evaluated during authorization checks.
+function captureSelection(value:unknown):readonly string[]|null{
+ // A previously validated external Array or Proxy can replace .map() or
+ // numeric reads. Copy ONLY inert indexed descriptor VALUES once, then use
+ // the trusted local snapshot for ALL later authorization and catalogue work.
  try {
-  if(!Array.isArray(value)||Object.getPrototypeOf(value)!==Array.prototype||
-     value.length<1||value.length>12||
-     Reflect.ownKeys(value).length!==value.length+1)return false;
+  if(!Array.isArray(value)||Object.getPrototypeOf(value)!==Array.prototype)
+   return null;
   const descriptors=Object.getOwnPropertyDescriptors(value);
-  const seen=new Set<string>();
-  for(let i=0;i<value.length;i++){
+  const length=Object.getOwnPropertyDescriptor(value,"length")?.value;
+  if(!Number.isSafeInteger(length)||length<1||length>12||
+     Reflect.ownKeys(value).length!==length+1)return null;
+  const seen=new Set<string>(),selected:string[]=[];
+  for(let i=0;i<length;i++){
    const entry=descriptors[String(i)];
    if(!entry||!Object.hasOwn(entry,"value")||
       typeof entry.value!=="string"||
       !/^[a-z0-9-]{3,80}$/.test(entry.value)||
-      seen.has(entry.value))return false;
+      seen.has(entry.value))return null;
    seen.add(entry.value);
+   selected.push(entry.value);
   }
-  return true;
- } catch {return false;}
+  return Object.freeze(selected);
+ } catch {return null;}
 }
 function owner(resolved:Awaited<ReturnType<Resolver>>,slug:string):
  resolved is Extract<Awaited<ReturnType<Resolver>>,{ok:true}>{
@@ -82,10 +86,11 @@ export async function prepareAuthorizedAutomationStarterBatch(
  workspaceSlug:string,branchId:string,starterIds:unknown,
  deps:AutomationDraftBatchDependencies={},
 ):Promise<OwnerAutomationBatchResult>{
- if(!slugOk(workspaceSlug)||!uuid(branchId)||!exactSelection(starterIds))
+ const selectedIds=captureSelection(starterIds);
+ if(!slugOk(workspaceSlug)||!uuid(branchId)||!selectedIds)
   return {ok:false,code:"BATCH_INPUT_INVALID"};
  if(deps.signal?.aborted)return {ok:false,code:"BATCH_CANCELLED"};
- const selected=starterIds.map(id=>automationPlaybooks.find(p=>p.id===id));
+ const selected=selectedIds.map(id=>automationPlaybooks.find(p=>p.id===id));
  if(selected.some(p=>!p||!["INFO","WARNING","CRITICAL"].includes(p.severity)||
     !/^[A-Z0-9_]{3,80}$/.test(p.actionDetail)||
     !["REQUEST_CREATED","QUOTE_ACCEPTED","VISIT_COMPLETED","INVOICE_PAID","ATTENTION_OPENED"].includes(p.eventType)))
