@@ -34,7 +34,8 @@ describe("saved AI request copilot browser evidence", () => {
       "src/features/operations/AiRequestBrief.tsx"),"utf8");
     expect(source).toContain("const request = new AbortController()");
     expect(source).toContain("request.abort()");
-    expect(source).toContain("20_000");
+    expect(source).toContain("REQUEST_BRIEF_WAIT_LIMIT_MS = 75_000");
+    expect(source).toContain("verifiedBrief = undefined;");
     expect(source).toContain("signal: request.signal");
     expect(source).toContain('response.headers.get("content-type")');
     expect(source).toContain("parseSavedAiRequestBrief(result, requestId)");
