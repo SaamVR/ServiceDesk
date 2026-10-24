@@ -1,0 +1,29 @@
+name: V4 SONIC unattended exact-HEAD source gate watchdog
+
+on:
+  push:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: v4-sonic-exact-head-guardian-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reconcile-integrated-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify current SHA and both exact-head source / PG17 gate conclusions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/release/v4-sonic-exact-head-guardian.mjs
