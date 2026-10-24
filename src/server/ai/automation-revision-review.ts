@@ -82,7 +82,7 @@ function validVersion(v:unknown):v is WorkflowRuleVersionDTO{
       !Number.isFinite(Date.parse(v.publishedAt)) ||
       new Date(Date.parse(v.publishedAt)).toISOString()!==v.publishedAt)) ||
     (v.basedOnVersionNumber!==undefined &&
-      (!Number.isSafeInteger(v.basedOnVersionNumber) || (v.basedOnVersionNumber as number)<1)) ||
+      (!Number.isSafeInteger(v.basedOnVersionNumber) || (v.basedOnVersionNumber as number)<0)) ||
     !Number.isSafeInteger(v.maxActionsPerEvent) ||
     (v.maxActionsPerEvent as number)<1 ||
     (v.maxActionsPerEvent as number)>5 ||
