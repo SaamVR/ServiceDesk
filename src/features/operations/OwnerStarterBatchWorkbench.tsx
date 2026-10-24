@@ -1,7 +1,9 @@
 "use client";
 
 import {useEffect,useRef,useState} from "react";
-import {automationPlaybooks} from "./automation-playbooks";
+import {automationPlaybooks,automationPlaybookCategories} from "./automation-playbooks";
+import {filterAutomationPlaybooks,type PlaybookCategoryFilter,
+ type PlaybookSeverityFilter} from "./automation-playbook-finder";
 import {previewOwnerAutomationStarters,type OwnerStarterBatchPreview}
  from "./owner-starter-batch-preview-action";
 import styles from "./OwnerStarterBatchWorkbench.module.css";
@@ -18,9 +20,13 @@ export function OwnerStarterBatchWorkbench(props:Props){
 function ScopedOwnerStarterBatchWorkbench({workspaceSlug,branches}:Props){
  const [branchId,setBranchId]=useState(branches[0]?.id??"");
  const [selected,setSelected]=useState<string[]>([]);
+ const [search,setSearch]=useState("");
+ const [category,setCategory]=useState<PlaybookCategoryFilter>("All");
+ const [severity,setSeverity]=useState<PlaybookSeverityFilter>("Any");
  const [result,setResult]=useState<OwnerStarterBatchPreview|null>(null);
  const [busy,setBusy]=useState(false);
  const [feedback,setFeedback]=useState("");
+ const visible=filterAutomationPlaybooks(automationPlaybooks,{search,category,severity});
  const requestSequence=useRef(0),pending=useRef(false);
  useEffect(()=>()=>{
   requestSequence.current+=1;
@@ -97,8 +103,41 @@ function ScopedOwnerStarterBatchWorkbench({workspaceSlug,branches}:Props){
      <option value="">No authorized branch available</option>}
    </select>
   </label>
+  <div className={styles.filters} aria-label="Filter bulk workflow starters">
+   <label>Find by name or action
+    <input type="search" autoComplete="off" value={search} maxLength={80}
+     onChange={event=>setSearch(event.target.value)}
+     placeholder="Quote, incident, follow-up…" />
+   </label>
+   <label>Workflow area
+    <select value={category}
+     onChange={event=>setCategory(event.target.value as PlaybookCategoryFilter)}>
+     <option value="All">All categories</option>
+     {automationPlaybookCategories.map(item=>
+      <option value={item} key={item}>{item}</option>)}
+    </select>
+   </label>
+   <label>Review severity
+    <select value={severity}
+     onChange={event=>setSeverity(event.target.value as PlaybookSeverityFilter)}>
+     <option value="Any">All review levels</option>
+     <option value="INFO">Informational</option>
+     <option value="WARNING">Needs review</option>
+     <option value="CRITICAL">Critical</option>
+    </select>
+   </label>
+   <button type="button" className={styles.filterReset}
+    disabled={!search && category==="All" && severity==="Any"}
+    onClick={()=>{setSearch("");setCategory("All");setSeverity("Any");}}>
+    Reset filters
+   </button>
+  </div>
+  <p className={styles.filterSummary} role="status" aria-live="polite">
+   {visible.length} of {automationPlaybooks.length} templates shown.
+   {" "}{selected.length} selected across all categories.
+  </p>
   <div className={styles.options} role="group" aria-label="Choose internal automation starters">
-   {automationPlaybooks.map(item=><label key={item.id} className={styles.option}>
+   {visible.map(item=><label key={item.id} className={styles.option}>
     <input type="checkbox" checked={selected.includes(item.id)}
      onChange={()=>toggle(item.id)}
      disabled={!selected.includes(item.id)&&selected.length>=12}/>
@@ -106,6 +145,9 @@ function ScopedOwnerStarterBatchWorkbench({workspaceSlug,branches}:Props){
      <small>{item.category} · {item.eventType.replaceAll("_"," ")} · {item.severity}</small></span>
    </label>)}
   </div>
+  {!visible.length?<p className={styles.empty} role="status">
+   No internal starters match these filters. Selections in other categories remain unchanged.
+  </p>:null}
   <div className={styles.controls}>
    <button type="button" disabled={busy||!branchId||selected.length<1}
     onClick={()=>void run()}> {busy?"Checking saved branch…":"Preview selected internal drafts"}</button>
