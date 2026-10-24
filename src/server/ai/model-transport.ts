@@ -276,14 +276,50 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
   }
 
   const requestedToolCalls = (parsed as { requestedToolCalls?: unknown }).requestedToolCalls;
+  // Model-produced actions are *proposals*, but even their transport shape
+  // must be verified before downstream business authorization examines them.
+  // Do not return an array of nulls, unbounded argument graphs or a forged
+  // tool object under a trusted TypeScript type.
+  const boundedRecord = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === "object" && !Array.isArray(value);
+  const validTool = (tool: unknown): boolean => {
+    if (!boundedRecord(tool) || typeof tool.name !== "string" ||
+        !/^[A-Za-z][A-Za-z0-9_]{0,79}$/.test(tool.name)) return false;
+    const keys = Object.keys(tool);
+    if (keys.some(key => key !== "name" && key !== "arguments")) return false;
+    if (tool.arguments === undefined) return true;
+    if (!boundedRecord(tool.arguments) || Object.keys(tool.arguments).length > 24)
+      return false;
+    // The JSON wire body is already bounded; also limit each tool argument
+    // individually, so no one proposal can dominate downstream processing.
+    return JSON.stringify(tool.arguments).length <= 8_192;
+  };
   if (requestedToolCalls !== undefined &&
-      (!Array.isArray(requestedToolCalls) || requestedToolCalls.length > 8)) {
-    return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider response has an invalid or oversized tool call list." };
+      (!Array.isArray(requestedToolCalls) || requestedToolCalls.length > 8 ||
+       !requestedToolCalls.every(validTool))) {
+    return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider response has invalid tool proposals." };
   }
 
   const citations = (parsed as { citations?: unknown }).citations;
-  if (citations !== undefined && !Array.isArray(citations)) {
-    return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider response has invalid citation shape." };
+  const validCitation = (citation: unknown): boolean => {
+    if (!boundedRecord(citation) ||
+        Object.keys(citation).some(key =>
+          !["documentId", "title", "version", "chunkId"].includes(key)) ||
+        Object.keys(citation).length !== 4) return false;
+    return typeof citation.documentId === "string" &&
+      citation.documentId.length > 0 && citation.documentId.length <= 128 &&
+      typeof citation.title === "string" &&
+      citation.title.length > 0 && citation.title.length <= 200 &&
+      typeof citation.version === "number" &&
+      Number.isSafeInteger(citation.version) &&
+      citation.version >= 1 && citation.version <= 1_000_000 &&
+      typeof citation.chunkId === "string" &&
+      citation.chunkId.length > 0 && citation.chunkId.length <= 128;
+  };
+  if (citations !== undefined &&
+      (!Array.isArray(citations) || citations.length > 20 ||
+       !citations.every(validCitation))) {
+    return { ok: false, code: "AI_MODEL_INVALID_RESPONSE", message: "AI model provider response has invalid citations." };
   }
 
   const replyDraft = (parsed as { replyDraft?: unknown }).replyDraft;
