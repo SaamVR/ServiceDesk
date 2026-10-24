@@ -6,6 +6,7 @@ import {previewOwnerAutomationStarters,type OwnerStarterBatchPreview}
  from "./owner-starter-batch-preview-action";
 import styles from "./OwnerStarterBatchWorkbench.module.css";
 
+const REVIEW_WAIT_LIMIT_MS=30_000;
 type Branch={id:string;name:string};
 type Props={workspaceSlug:string;workspaceId:string;branches:readonly Branch[]};
 
@@ -45,6 +46,15 @@ function ScopedOwnerStarterBatchWorkbench({workspaceSlug,branches}:Props){
   const selectedIds=[...selected];
   setBusy(true);setResult(null);
   setFeedback("Checking saved owner and branch authority for internal draft previews…");
+  const waitTimeout=setTimeout(()=>{
+   // Browser UI timeout is NOT server cancellation. A delayed result from
+   // this expired review cannot override a newer scope or draft preview.
+   if(sequence!==requestSequence.current)return;
+   requestSequence.current+=1;
+   pending.current=false;
+   setBusy(false);setResult(null);
+   setFeedback("The browser stopped waiting after 30 seconds. A server request may still finish, but no automation was saved or published by this preview. You can retry.");
+  },REVIEW_WAIT_LIMIT_MS);
   try{
    const response=await previewOwnerAutomationStarters({
     workspaceSlug,branchId,starterIds:selectedIds,
@@ -65,12 +75,14 @@ function ScopedOwnerStarterBatchWorkbench({workspaceSlug,branches}:Props){
     setResult(null);setFeedback("Owner starter preview unavailable. No business action ran.");
    }
   }finally{
+   clearTimeout(waitTimeout);
    if(sequence===requestSequence.current){
     pending.current=false;setBusy(false);
    }
   }
  };
- return <section className={styles.panel} aria-label="Owner bulk automation starter review">
+ return <section className={styles.panel} aria-label="Owner bulk automation starter review"
+  aria-busy={busy}>
   <header className={styles.heading}>
    <div><p className={styles.eyebrow}>Owner automation · internal-only batch</p>
     <h3>Prepare several workflow starters for review</h3>
@@ -113,6 +125,10 @@ function ScopedOwnerStarterBatchWorkbench({workspaceSlug,branches}:Props){
      <small>{d.conditions.length ? d.conditions.map(c=>
        `${c.field} ${c.operator} ${String(c.value)}`).join(" · ") :
        "No condition. Owner must separately review and publish any saved rule."}</small>
+     <a className={styles.reviewLink}
+      href={"?template="+encodeURIComponent(d.starterId)}>
+      Open this exact starter in the existing draft editor (review required)
+     </a>
     </li>;
    })}</ul>
    <p className={styles.disclosure}>Nothing has been installed, published,
