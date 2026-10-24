@@ -136,3 +136,97 @@ const reasonLabels: Record<DeliveryTriageReason, string> = {
 export function deliveryReviewLabel(reason?: DeliveryTriageReason): string {
   return reason ? reasonLabels[reason] : "Review provider evidence";
 }
+
+
+export type DeliveryReviewChannelFilter="ALL"|"EMAIL"|"WHATSAPP";
+export type DeliveryReviewReasonFilter="ALL"|DeliveryTriageReason;
+/** Read-only prioritization of independently validated saved delivery metadata. */
+export function selectDeliveryReviewItems(items:readonly DeliveryDiagnostic[],
+  channel:DeliveryReviewChannelFilter,reason:DeliveryReviewReasonFilter):DeliveryDiagnostic[]{
+  if(!["ALL","EMAIL","WHATSAPP"].includes(channel) ||
+     !(reason==="ALL"||validReasons.has(reason)))return [];
+  const rank:Record<DeliveryTriageReason,number>={
+    PROVIDER_FAILURE:0,SUPPRESSED_BY_POLICY:1,OUTBOX_REFERENCE_MISSING:2,
+    OUTBOX_RECEIPT_MISSING:3,STATUS_MISSING:4,STALE_PENDING:5,
+  };
+  return items.filter(item=>item.health==="NEEDS_REVIEW" &&
+    (channel==="ALL"||item.channel===channel) &&
+    (reason==="ALL"||item.reason===reason)).sort((a,b)=>
+      rank[a.reason??"STATUS_MISSING"]-rank[b.reason??"STATUS_MISSING"] ||
+      b.ageMinutes-a.ageMinutes || a.messageId.localeCompare(b.messageId));
+}
+/** A noisy thread can contribute many failed messages and hide other
+ * customers from the initial 8-row investigation view. Collapse only for
+ * presentation and always choose the highest-severity first record from the
+ * already sorted list. All original saved-message counts remain unchanged.
+ */
+export function distinctDeliveryReviewConversations(
+  sortedItems: readonly DeliveryDiagnostic[],
+): DeliveryDiagnostic[] {
+  const seen = new Set<string>();
+  return sortedItems.filter(item => {
+    if (item.health !== "NEEDS_REVIEW" || seen.has(item.conversationId))
+      return false;
+    seen.add(item.conversationId);
+    return true;
+  });
+}
+
+export const deliveryReviewReasonOptions:readonly {value:DeliveryReviewReasonFilter;label:string}[]=[
+  {value:"ALL",label:"All review reasons"},
+  {value:"PROVIDER_FAILURE",label:"Provider failed"},
+  {value:"SUPPRESSED_BY_POLICY",label:"Policy suppressed"},
+  {value:"OUTBOX_REFERENCE_MISSING",label:"Outbox reference missing"},
+  {value:"OUTBOX_RECEIPT_MISSING",label:"Acceptance receipt missing"},
+  {value:"STATUS_MISSING",label:"Delivery status missing"},
+  {value:"STALE_PENDING",label:"Pending too long"},
+];
+
+/** Summary pills are derived only from already validated, authorized sample
+ * rows. Totals are sample-local; no live provider metric is inferred.
+ */
+export function summarizeDeliveryReviewReasons(
+  items:readonly DeliveryDiagnostic[],channel:DeliveryReviewChannelFilter,
+):Array<{value:DeliveryTriageReason;label:string;count:number}>{
+  const scoped=selectDeliveryReviewItems(items,channel,"ALL");
+  return deliveryReviewReasonOptions
+    .filter((option):option is {value:DeliveryTriageReason;label:string}=>
+      option.value!=="ALL")
+    .map(option=>({
+      value:option.value,label:option.label,
+      count:scoped.filter(item=>item.reason===option.value).length,
+    }))
+    .filter(entry=>entry.count>0);
+}
+
+/** Human-only source investigation guidance. Never authorize a resend, mutate
+ * consent or present the absence of evidence as a provider receipt. */
+export type DeliveryReviewAction =
+  "PROVIDER_FAILURE_REVIEW"|"CONSENT_POLICY_REVIEW"|"PENDING_OUTBOX_REVIEW"|
+  "SOURCE_STATUS_REVIEW"|"ACCEPTANCE_RECEIPT_REVIEW"|"OUTBOX_LINK_REVIEW";
+export function deliveryReviewAction(reason:DeliveryTriageReason|undefined):{
+  code:DeliveryReviewAction;label:string;instructions:string;
+}{
+  switch(reason){
+    case "PROVIDER_FAILURE":return {code:"PROVIDER_FAILURE_REVIEW",
+      label:"Inspect provider failure",
+      instructions:"Compare the saved provider failure code, outbox attempt and current consent before considering a new human-approved send."};
+    case "SUPPRESSED_BY_POLICY":return {code:"CONSENT_POLICY_REVIEW",
+      label:"Review policy suppression",
+      instructions:"Inspect saved consent, opt-out and quiet-hour rules. Do not resend a policy-suppressed message."};
+    case "STALE_PENDING":return {code:"PENDING_OUTBOX_REVIEW",
+      label:"Inspect pending outbox",
+      instructions:"Review the durable outbox claim, provider acknowledgement and latest retry state. Pending does not prove delivery or permission to retry."};
+    case "STATUS_MISSING":return {code:"SOURCE_STATUS_REVIEW",
+      label:"Reconcile delivery status",
+      instructions:"Inspect the exact authorized saved conversation and provider status records. Missing status is not successful delivery."};
+    case "OUTBOX_RECEIPT_MISSING":return {code:"ACCEPTANCE_RECEIPT_REVIEW",
+      label:"Verify provider acceptance",
+      instructions:"Check the saved outbox and provider acceptance receipt; queued or running states do not prove customer delivery."};
+    case "OUTBOX_REFERENCE_MISSING":return {code:"OUTBOX_LINK_REVIEW",
+      label:"Investigate outbox reference",
+      instructions:"Review the saved message-to-outbox relationship and branch before any manual reconciliation."};
+    default:return {code:"SOURCE_STATUS_REVIEW",label:"Inspect source records",
+      instructions:"Review the authorized Inbox and provider evidence. Do not infer delivery or resend from a missing reason."};
+  }
+}
