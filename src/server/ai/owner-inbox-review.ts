@@ -120,6 +120,23 @@ export function planOwnerInboxReview(input:OwnerInboxReviewInput):InboxReviewPla
    candidates,inspectedConversations:conversations.length,inspectedMessages:messages.length,
    humanReviewRequired:true,outboundMessageQueued:false,aiModelInvoked:false}};
 }
+/** Use only the exact saved fields that determine our review decisions.
+ * Never include customer message bodies or provider tokens in comparison or
+ * user-facing output. A change to IDs/delivery/status with the same aggregate
+ * candidate count still invalidates an owner operational source receipt. */
+function reviewSourceIdentity(input:{
+ conversations:readonly ConversationDTO[];messages:readonly MessageDTO[];
+}):string {
+ const conversations=input.conversations.map(c=>[
+  c.id,c.workspaceId,c.channel,c.version,c.handoverActive,
+  c.lastMessageAt??null,
+ ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+ const messages=input.messages.map(m=>[
+  m.id,m.workspaceId,m.conversationId,m.direction,m.senderKind,
+  m.createdAt,m.deliveryState??null,
+ ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+ return JSON.stringify([conversations,messages]);
+}
 export interface AuthorizedOwnerInboxDependencies {
  loadSnapshot?:Loader;now?:()=>number;signal?:AbortSignal;
 }
@@ -163,7 +180,8 @@ export async function loadAuthorizedOwnerInboxReview(
  });
  if(!second.ok||JSON.stringify(first.value.candidates)!==JSON.stringify(second.value.candidates)||
     first.value.inspectedMessages!==second.value.inspectedMessages||
-    first.value.inspectedConversations!==second.value.inspectedConversations)
+    first.value.inspectedConversations!==second.value.inspectedConversations||
+    reviewSourceIdentity(a.value)!==reviewSourceIdentity(b.value))
      return {ok:false,code:"INBOX_SOURCE_CHANGED"};
  if(deps.signal?.aborted)return {ok:false,code:"INBOX_CANCELLED"};
  return {ok:true,value:{...second.value,workspaceId,authorizedOwner:true,doubleChecked:true}};
