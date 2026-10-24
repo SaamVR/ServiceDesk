@@ -93,9 +93,10 @@ function validVersion(v:unknown):v is WorkflowRuleVersionDTO{
  // Every field used by the production evaluator has passed the strict
  // own-data-only validation above. Keep the cast localized after validation;
  // it grants no authority and cannot bypass the fail-closed runtime guards.
- const checked=evaluateWorkflowRule(v as unknown as WorkflowRuleVersionDTO,{
-   workspaceId:v.workspaceId,branchId:v.branchId,eventType:v.eventType,
-   snapshot:{},recursionDepth:0,
+ const validated=v as unknown as WorkflowRuleVersionDTO;
+ const checked=evaluateWorkflowRule(validated,{
+   workspaceId:validated.workspaceId,branchId:validated.branchId,
+   eventType:validated.eventType,snapshot:{},recursionDepth:0,
  },"PREVIEW");
  return checked.ok;
 }
