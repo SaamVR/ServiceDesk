@@ -10,10 +10,13 @@ const source = [
 ];
 describe("authorized quality triage",()=>{
  it("makes mutually understandable tabs and accurate outstanding counts",()=>{
-  expect(qualityQueueCount(source)).toEqual({all:4,open:2,review:1,overdue:0,unassigned:1,resolved:1});
+  expect(qualityQueueCount(source)).toEqual({all:4,open:2,review:1,overdue:0,unverified:3,unassigned:1,resolved:1});
   expect(filterQualityQueue(source,"unassigned","").map(x=>x.id)).toEqual(["c1"]);
   expect(filterQualityQueue(source,"resolved","").map(x=>x.id)).toEqual(["c3"]);
   expect(normalizeQualityQueue("unknown")).toBe("all");
+  expect(normalizeQualityQueue("unverified")).toBe("unverified");
+  expect(filterQualityQueue(source,"unverified","").map(x=>x.id))
+    .toEqual(["c1","c2","c4"]);
  });
  it("searches each term in real summary plus authorized related fields",()=>{
   expect(filterQualityQueue(source,"all","Kitchen WALTER",i=>[i.summary,i.id==="c1"?"Walter Jones":undefined]).map(x=>x.id)).toEqual(["c1"]);
