@@ -31,7 +31,7 @@ describe("R49 SONIC unattended exact-head CI controller",()=>{
   expect(script).toContain("GATES_FAILED");
   expect(script).toContain("head_sha===sha");
   expect(script).toContain("head_branch===branch");
-  expect(script).toContain("two");
+  expect(script).toContain("TWO matching exact commit");
   expect(script).not.toContain("customer_message");
   expect(script).not.toContain("execute_sql");
  });
