@@ -13,6 +13,20 @@ export interface StaffInvoiceReminderFacts {
   balanceMinor: number;
 }
 
+/** React identity for a saved, refund-adjusted clipboard handoff.
+ * A reused invoice ID does not mean its quote and ledger proof are unchanged.
+ * Altered amounts, settlement status or quote authority must discard previous
+ * client-only copied text and approval feedback before another click.
+ */
+export function staffInvoiceReminderScopeKey(invoice: StaffInvoiceReminderFacts): string {
+  return JSON.stringify([
+    invoice.id, invoice.status, invoice.currency,
+    invoice.quoteStatus, invoice.quoteCurrency,
+    String(invoice.totalMinor), String(invoice.allocatedMinor),
+    String(invoice.refundedMinor), String(invoice.balanceMinor),
+  ]);
+}
+
 /** This is a human-review clipboard draft, never a provider send.
  * No draft may be produced without a linked accepted saved quote and a
  * reconciled, payable refund-adjusted invoice.
