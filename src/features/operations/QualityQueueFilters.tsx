@@ -21,6 +21,14 @@ export function QualityQueueFilters({
           </a>
         ))}
       </nav>
+      {counts.unverified > 0 ? <p role="status" style={{
+        border:"1px solid #e6d4b0",background:"#fff8eb",borderRadius:8,
+        padding:"10px 12px",margin:0,color:"#775221",fontSize:12,lineHeight:1.6
+      }}>
+        {counts.unverified} unresolved quality case(s) have missing or unverified
+        deadline evidence. This does not prove they are overdue or safe to defer.{" "}
+        <a href={qualityQueueHref("unverified",search)}>Review unverified timing →</a>
+      </p> : null}
       <form action="" method="get" role="search" className={styles.searchForm}>
         {queue !== "all" ? <input name="queue" type="hidden" value={queue} /> : null}
         <label htmlFor="quality-case-search">Find a quality case</label>
