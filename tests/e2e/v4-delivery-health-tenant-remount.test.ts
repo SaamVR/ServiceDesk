@@ -9,6 +9,7 @@ expect(src).toContain("function ScopedInboxDeliveryDiagnostics");
 expect(src).toContain("requestController.current?.abort()");
 expect(src).toContain("15_000");
 expect(src).toContain("clearTimeout(timeout)");
-expect(src).toContain("if (controller.signal.aborted) return;");
+expect(src).toContain("if (controller.signal.aborted || requestController.current !== controller) return;");
+expect(src).toContain("requestController.current = null;");
 });
 });

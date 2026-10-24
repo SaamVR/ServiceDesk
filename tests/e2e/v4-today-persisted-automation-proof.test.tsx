@@ -23,7 +23,9 @@ const preview: OperationalWorkflowExecution = {
 const action = (executionId: string, state: OperationalWorkflowActionExecution["state"],
   actionType: OperationalWorkflowActionExecution["actionType"]): OperationalWorkflowActionExecution => ({
   id: executionId + "-" + state + "-" + actionType,
-  branchId: "branch-a", executionId, actionIndex: 0,
+  branchId: "branch-a", executionId,
+  actionIndex: actionType === "CREATE_ATTENTION" ? 0 :
+    actionType === "SEND_WHATSAPP_TEMPLATE" ? 1 : 2,
   attemptNumber: 1, actionType, state, createdAt: "2026-10-12T00:01:00Z",
 });
 const renderStatus = (props: Partial<React.ComponentProps<typeof AiOperationsStatus>>) =>
@@ -43,10 +45,10 @@ describe("V4 Today visible operational AI + automation proof", () => {
     });
     expect(html).toContain('aria-label="Persisted AI and automation activity"');
     expect(html).toContain("Recorded live rule decisions");
-    expect(html).toContain("Completed internal attention records");
+    expect(html).toContain("Current completed internal attention actions");
     expect(html).toContain("External actions requiring approval");
-    expect(html).toContain("Failed action records");
-    expect(html).toContain("simulated previews excluded");
+    expect(html).toContain("Current failed action slots");
+    expect(html).toContain("historical retries and ambiguous slots excluded");
     expect(html).toContain("no provider delivery verified");
     expect(html).toContain('href="/app/qa-cleaning/automations"');
     expect(html).not.toContain("provider delivered");
