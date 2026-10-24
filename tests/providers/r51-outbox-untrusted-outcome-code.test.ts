@@ -47,7 +47,7 @@ describe("R51 untrusted outbox executor outcome boundary", () => {
       for (const code of unsafe) {
         const result = decide({ outcome, failedAt: date, code });
         expect(result).toMatchObject({ ok: false, code: "OUTBOX_FAILURE_CODE_INVALID" });
-        expect(JSON.stringify(result)).not.toContain(code);
+        if (code.length > 0) expect(JSON.stringify(result)).not.toContain(code);
       }
     }
   });
