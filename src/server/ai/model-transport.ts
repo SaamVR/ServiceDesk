@@ -310,8 +310,9 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
       citation.documentId.length > 0 && citation.documentId.length <= 128 &&
       typeof citation.title === "string" &&
       citation.title.length > 0 && citation.title.length <= 200 &&
+      typeof citation.version === "number" &&
       Number.isSafeInteger(citation.version) &&
-      (citation.version as number) >= 1 && (citation.version as number) <= 1_000_000 &&
+      citation.version >= 1 && citation.version <= 1_000_000 &&
       typeof citation.chunkId === "string" &&
       citation.chunkId.length > 0 && citation.chunkId.length <= 128;
   };
