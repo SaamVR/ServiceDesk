@@ -16,7 +16,7 @@ const saved=()=>({
    source:"TRUSTED_27_STARTER_CATALOG_SAVED_BRANCH",
    workspaceId:wid,branchId:bid,selectedCount:1,
    drafts:[{
-     starterId:"quote-accepted",code:"QUOTE_ACCEPTED_DISPATCH",
+     state:"UNPERSISTED_OWNER_RULE_DRAFT",starterId:"quote-accepted",code:"QUOTE_ACCEPTED_DISPATCH",
      eventType:"QUOTE_ACCEPTED",conditions:[],
      actions:[{type:"CREATE_ATTENTION",severity:"WARNING",
        summaryKey:"CHECK_CREW_ASSIGNMENT"}],
