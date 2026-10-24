@@ -7,6 +7,7 @@ import styles from "./OwnerAutomationActivationChecklist.module.css";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { OwnerWorkflowRuleAssistant } from "./OwnerWorkflowRuleAssistant";
+import { OwnerStarterBatchWorkbench } from "./OwnerStarterBatchWorkbench";
 
 /**
  * A signed-in, owner-only operational readiness readout. The parent route
@@ -86,6 +87,9 @@ export function OwnerAutomationActivationChecklist({
         configured={readConfiguredAiRuntimeConfig().ok}
         draftWritable={data.workflowAvailable === true &&
           operationalDatabaseMode() === "SERVICE_ROLE"} /> : null}
+      {data.actor?.role === "OWNER" ? <OwnerStarterBatchWorkbench
+        workspaceSlug={workspaceSlug} workspaceId={data.workspace.id}
+        branches={ownerRuleBranches} /> : null}
       <p className={styles.disclosure} role="note">
         {summary.allEvidenceReady
           ? "Exact saved quote-source and linked internal attention are evidenced with the other workspace prerequisites. Independent customer-session UAT, provider delivery and deployment opt-in still require separate checks."
