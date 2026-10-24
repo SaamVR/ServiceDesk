@@ -1,4 +1,4 @@
-import {resolveStaffActor,loadOperationalStaffSnapshot} from "@/features/operations/operational-product-runtime";
+import {resolveStaffActor,loadOperationalStaffSnapshot,type OperationalStaffSnapshot} from "@/features/operations/operational-product-runtime";
 import {deriveOwnerOperationsBriefFacts,isFreshOwnerOperationsSnapshotAt,
   type OwnerOperationsBriefFacts} from "./owner-operations-brief";
 import {ownerPriorityActions,type OwnerPriorityAction} from "./owner-priority-actions";
@@ -50,7 +50,7 @@ const sourceColumns={
  visits:["id","workspaceId","branchId","status","crewId","assignedCrewId","scheduledAt","updatedAt"],
  attentionItems:["id","workspaceId","status","severity","type","resourceId","dueAt","updatedAt"],
 } as const;
-function sourceIdentity(snapshot:Pick<Awaited<ReturnType<Loader>> extends {ok:true;value:infer V}?V:never,
+function sourceIdentity(snapshot:Pick<OperationalStaffSnapshot,
   "requests"|"quotes"|"visits"|"invoices"|"attentionItems">):string|null {
  try{
   const out:unknown[][]=[];
