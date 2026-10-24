@@ -43,8 +43,11 @@ describe("R51 double-saved-workday view-model key and navigation scope", () => {
   it("projects five safe queue destinations from seven accepted verified rows", async () => {
     expect(await deliver(approvedRows)).toMatchObject({
       ok: true, priorities: [
-        { key: "CRITICAL_ATTENTION", module: "overview", priority: "CRITICAL" },
-        { key: "LEDGER_REVIEW", module: "invoices", priority: "HIGH" },
+        { key: "CRITICAL_ATTENTION", module: "overview", priority: "CRITICAL", count: 1, source: "VERIFIED_SAVED_QUEUE_COUNT" },
+        { key: "LEDGER_REVIEW", module: "invoices", priority: "HIGH", count: 1, source: "VERIFIED_SAVED_QUEUE_COUNT" },
+        { key: "QUOTE_VALIDITY", module: "quotes", priority: "HIGH", count: 1, source: "VERIFIED_SAVED_QUEUE_COUNT" },
+        { key: "UNASSIGNED_VISIT", module: "schedule", priority: "HIGH", count: 1, source: "VERIFIED_SAVED_QUEUE_COUNT" },
+        { key: "COLLECTIBLE_INVOICE", module: "invoices", priority: "NORMAL", count: 1, source: "VERIFIED_SAVED_QUEUE_COUNT" },
       ],
       manualReviewRequired: true, workflowExecuted: false,
     });
