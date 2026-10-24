@@ -23,11 +23,14 @@ export type AutomationRevisionResult=
  }};
 
 const id=(v:unknown)=>typeof v==="string" && /^[A-Za-z0-9:_-]{3,128}$/.test(v);
-const plain=(v:unknown):v is Record<string,unknown>=>
- !!v && typeof v==="object" && !Array.isArray(v) &&
- Object.getPrototypeOf(v)===Object.prototype &&
- Reflect.ownKeys(v).length===Object.keys(v).length &&
- Object.values(Object.getOwnPropertyDescriptors(v)).every(d=>Object.hasOwn(d,"value"));
+const plain=(v:unknown):v is Record<string,unknown>=>{
+ try {
+  return !!v && typeof v==="object" && !Array.isArray(v) &&
+   Object.getPrototypeOf(v)===Object.prototype &&
+   Reflect.ownKeys(v).length===Object.keys(v).length &&
+   Object.values(Object.getOwnPropertyDescriptors(v)).every(d=>Object.hasOwn(d,"value"));
+ } catch {return false;}
+};
 const dense=(v:unknown,max:number):v is unknown[]=>{
  if(!Array.isArray(v)||v.length>max||
     Reflect.ownKeys(v).length!==v.length+1)return false;
@@ -101,7 +104,13 @@ const external=(a:readonly WorkflowActionDTO[])=>a.filter(x=>
 
 /** Owner sees a source-grounded diff, never an AI authorization to publish. */
 export function reviewAutomationRevision(input:AutomationRevisionInput):AutomationRevisionResult{
- if(!input || !input.actor || input.actor.role!=="OWNER" ||
+ if(!plain(input) || Object.keys(input).some(key=>
+   !["actor","workspaceId","branchId","previous","draft"].includes(key)))
+   return {ok:false,code:"AUTOMATION_REVIEW_SOURCE_INVALID"};
+ if(!plain(input.actor) || Object.keys(input.actor).some(key=>
+   !["workspaceId","role"].includes(key)))
+   return {ok:false,code:"AUTOMATION_REVIEW_OWNER_REQUIRED"};
+ if(input.actor.role!=="OWNER" ||
     input.actor.workspaceId!==input.workspaceId ||
     !id(input.workspaceId)||!id(input.branchId))
    return {ok:false,code:"AUTOMATION_REVIEW_OWNER_REQUIRED"};
