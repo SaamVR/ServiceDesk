@@ -27,7 +27,10 @@ describe("R51 model-proposed tool and citation transport authority", () => {
       citations: [{ documentId: "doc-1", title: "Approved catalog", version: 2, chunkId: "part-1" }],
     });
     expect(result).toMatchObject({ ok: true, value: {
-      requestedToolCalls: [{ name: "getServiceCatalog" }],
+      requestedToolCalls: [
+        { name: "getServiceCatalog", arguments: { serviceCode: "DEEP" } },
+        { name: "getOperatingHours" },
+      ],
       citations: [{ documentId: "doc-1", version: 2 }],
     } });
   });
