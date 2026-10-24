@@ -46,7 +46,7 @@ describe("V4 operator truth on automatic customer quote-accepted rules", () => {
     const source = readFileSync(join(process.cwd(), "src/features/operations/AiOperationsStatus.tsx"), "utf8");
     expect(source).toContain('process.env.SERVICEDESK_AUTO_INTERNAL_QUOTE_ACCEPTED === "true"');
     expect(source).toContain("summarizeWorkflowEvidence");
-    expect(source).toContain("simulated previews excluded");
+    expect(source).toContain("historical retries and ambiguous slots excluded");
     expect(source).not.toContain("NEXT_PUBLIC_SERVICEDESK_AUTO_INTERNAL");
   });
 });
