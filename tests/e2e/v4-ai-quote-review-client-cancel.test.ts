@@ -3,24 +3,41 @@ import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 describe("quote AI review client cancellation without false transport claims", () => {
-  const src=readFileSync(join(process.cwd(),"src/features/operations/AiQuoteReview.tsx"),"utf8");
-  test("invalidates stale model replies when switching quotes or unmounting",()=>{
-    expect(src).toContain('key={workspaceSlug + ":" + quoteId}');
-    expect(src).toContain("const requestSequence = useRef(0)");
+  const src = readFileSync(join(process.cwd(),
+    "src/features/operations/AiQuoteReview.tsx"), "utf8");
+
+  test("invalidates stale model replies when switching quotes, configuration or unmounting", () => {
+    expect(src).toContain("key={aiQuoteReviewScopeKey(props.workspaceSlug,props.quoteId,props.quoteVersion,props.configured)}");
+    expect(src).toContain("quoteVersion");
+    expect(src).toContain("const scopeKey = aiQuoteReviewScopeKey(");
+    expect(src).toContain("workspaceSlug,quoteId,quoteVersion,configured");
+    expect(src).toContain("status?.scopeKey === scopeKey ? status : undefined");
+    expect(src).toContain("previous?.scopeKey === submittedScope");
     expect(src).toContain("activeRequest.current?.abort()");
-    expect(src).toContain("if (requestSequence.current !== id || controller.signal.aborted) return;");
+    expect(src).toContain("activeRequest.current === controller");
+    expect(src).toContain("A suspended fetch/JSON stream may never settle after abort");
+    expect(src).toContain("if (activeRequest.current === controller) {");
+    expect(src).toContain("activeRequest.current = null;");
+    expect(src).toContain("previous?.scopeKey === submittedScope && previous.busy");
+    expect(src).toContain("parseAuthorizedQuoteReview(payload, expectedQuoteId)");
   });
-  test("human can cancel display without claiming paid provider request stopped",()=>{
+
+  test("cancels local display without claiming paid provider request stopped", () => {
     expect(src).toContain("function cancelReview()");
-    expect(src).toContain("requestSequence.current += 1;");
-    expect(src).toContain("Cancel pending review display");
-    expect(src).toContain("A paid provider request may still be processing");
+    expect(src).toContain("activeRequest.current = null;");
+    expect(src).toContain("request.abort()");
+    expect(src).toContain("Stop waiting");
+    expect(src).toContain("A provider call may still finish or incur usage");
+    expect(src).toContain("provider-side cancellation is not confirmed");
     expect(src).not.toContain("provider request was cancelled");
   });
-  test("never enables delivery, quote approval or unreviewed business changes",()=>{
+
+  test("never enables delivery, quote approval or unreviewed business changes", () => {
     expect(src).toContain('fetch("/api/internal/ai/quote-review", {');
+    expect(src).toContain('credentials: "same-origin"');
+    expect(src).toContain('cache: "no-store"');
     expect(src).not.toContain("sendOperationalQuote");
     expect(src).not.toContain("launchCustomerInvoiceSandboxCheckout");
-    expect(src).toContain("credentials: \"same-origin\"");
+    expect(src).not.toContain("OPENAI_API_KEY");
   });
 });

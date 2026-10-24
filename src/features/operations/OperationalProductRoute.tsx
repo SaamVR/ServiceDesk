@@ -1632,10 +1632,17 @@ function QuotesView({
           )}
 
           <StaffQuoteChecklist quote={selectedQuote} loadedAt={data.loadedAt} />
+          {!selectedQuoteIsCurrent && ["APPROVED", "SENT"].includes(selectedQuote.status) ?
+            <p role="status">This is a historical quote version. Select the
+              current saved quote to request AI review; old model suggestions
+              cannot authorize price, status or customer delivery.</p> : null}
 
-          {selectedQuote.lineItems?.length && ["APPROVED", "SENT"].includes(selectedQuote.status) ? (
-            <AiQuoteReview key={selectedQuote.id} workspaceSlug={workspaceSlug}
-              quoteId={selectedQuote.id} configured={readConfiguredAiRuntimeConfig().ok} />
+          {selectedQuote.lineItems?.length && selectedQuoteIsCurrent &&
+            ["APPROVED", "SENT"].includes(selectedQuote.status) ? (
+            <AiQuoteReview key={selectedQuote.id + ":" + selectedQuote.version}
+              workspaceSlug={workspaceSlug} quoteId={selectedQuote.id}
+              quoteVersion={selectedQuote.version}
+              configured={readConfiguredAiRuntimeConfig().ok} />
           ) : null}
 
           <div className={styles.salesDetailGrid}>
