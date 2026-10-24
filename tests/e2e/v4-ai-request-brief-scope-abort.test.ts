@@ -30,7 +30,9 @@ describe("V4 request AI copilot tenant and request switch handling",()=>{
     expect(source).toContain("if (pendingRequest.current === request) pendingRequest.current = null;");
     expect(source).toContain("if (!request.signal.aborted || timedOut) {");
     expect(source).toContain("clearTimeout(timeout)");
-    expect(source).toContain("20_000");
+    expect(source).toContain("REQUEST_BRIEF_WAIT_LIMIT_MS = 75_000");
+    expect(source).toContain("verifiedBrief = undefined;");
+    expect(source).toContain("if (timedOut) message =");
   });
   it("provides a user-initiated cancel that aborts in-flight HTTP and cannot publish stale output",()=>{
     expect(source).toContain("function cancelBrief()");
@@ -40,6 +42,7 @@ describe("V4 request AI copilot tenant and request switch handling",()=>{
     expect(source).toContain("pendingRequest.current = null;");
     expect(source).toContain("previous?.scopeKey === scopeKey");
     expect(source).toContain("Saved requests, quotes and customer records are unchanged.");
+    expect(source).toContain("Provider-side cancellation is not confirmed.");
     expect(source).toContain("aria-label=\"Cancel AI request briefing\"");
     expect(source).toContain("onClick={cancelBrief}");
     expect(source).toContain("{busy ? (");

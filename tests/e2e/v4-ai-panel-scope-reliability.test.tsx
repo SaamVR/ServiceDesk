@@ -47,12 +47,17 @@ describe("V4 AI panels never reuse cross-workspace or cross-request receipts", (
 
   it("hides obsolete model connection receipts after a workspace change", () => {
     const src = read("src/features/operations/AiOwnerModelProbe.tsx");
-    expect(src).toContain("status?.workspace === workspaceSlug ? status : undefined");
-    expect(src).toContain("previous?.workspace === submittedWorkspace");
-    expect(src).toContain("body: JSON.stringify({ workspaceSlug })");
-    expect(src).toContain('candidate.durableReceipt !== false');
-    expect(src).toContain("Number.isFinite(Date.parse(candidate.checkedAt))");
+    // The protected owner probe now scopes results by both workspace and
+    // configuration. Reject obsolete diagnostics when either changes.
+    expect(src).toContain('scopeKey = workspaceSlug +');
+    expect(src).toContain("status?.scopeKey === scopeKey ? status : undefined");
+    expect(src).toContain("previous?.scopeKey === submittedScope");
+    expect(src).toContain("body: JSON.stringify({ workspaceSlug: requestedWorkspace })");
+    expect(src).toContain("parseOwnerModelProbe(payload)");
+    expect(src).toContain("activeRequest.current?.abort()");
     expect(src).toContain("not a durable");
+    expect(src).toContain("approvedScope === scopeKey");
+    expect(src).toContain("event.target.checked ? scopeKey : null");
   });
 
   it("keeps explicit human-triggered calls and disabled-state communication", () => {

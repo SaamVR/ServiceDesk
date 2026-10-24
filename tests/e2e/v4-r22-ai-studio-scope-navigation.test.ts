@@ -40,8 +40,8 @@ describe("R22 real authenticated AI Studio — source and UI boundaries", () => 
       { id: "not-an-id", status: "NEW" },
       { id: idA, status: "DUPLICATE" },
     ])).toEqual([
-      { id: idA, label: "Request 1 · NEW" },
-      { id: idB, label: "Request 2 · PENDING APPROVAL" },
+      { id: idA, label: "Request 1 · ID aaaaaaaa · NEW" },
+      { id: idB, label: "Request 2 · ID bbbbbbbb · PENDING APPROVAL" },
     ]);
     const exported = JSON.stringify(verifiedStudioRecordChoices("Request", [sensitive]));
     for (const forbidden of ["private user", "private road", "+1-secret",
@@ -59,7 +59,7 @@ describe("R22 real authenticated AI Studio — source and UI boundaries", () => 
       ...ids.map((id) => ({ id, status: "SENT" })),
     ]);
     expect(got).toHaveLength(40);
-    expect(got[0]).toEqual({ id: idA, label: "Quote 1 · Status unavailable" });
+    expect(got[0]).toEqual({ id: idA, label: "Quote 1 · ID aaaaaaaa · Status unavailable" });
     expect(got.every(item => !item.label.includes("<script>"))).toBe(true);
   });
 

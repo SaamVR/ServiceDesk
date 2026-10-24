@@ -2,6 +2,8 @@ import Link from "next/link";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { AiStudioWorkbench } from "./AiStudioWorkbench";
+import { WorkflowExecutionInspector } from "./WorkflowExecutionInspector";
+import { selectWorkflowInspectorClientSnapshot } from "./workflow-inspector-client-snapshot";
 import { verifiedStudioRecordChoices } from "./ai-studio-records";
 import { AiOwnerOperationsBrief } from "./AiOwnerOperationsBrief";
 import { AiOwnerModelProbe } from "./AiOwnerModelProbe";
@@ -28,6 +30,9 @@ export function AiStudioWorkspace({
   const executionCount = (data.workflowExecutions ?? [])
     .filter(item => item.mode === "LIVE").length;
   const isOwner = data.actor.role === "OWNER";
+  // Browser receives only the verified workflow evidence projection, not
+  // customer contacts, message bodies, or the full operational snapshot.
+  const workflowInspectorSnapshot = selectWorkflowInspectorClientSnapshot(data);
 
   return (
     <div className={styles.studio} data-testid="operational-ai-studio">
@@ -75,6 +80,8 @@ export function AiStudioWorkspace({
         <AiStudioWorkbench key={workspaceSlug} workspaceSlug={workspaceSlug}
           configured={configured} requests={requests} quotes={quotes} />
       </div>
+
+      <WorkflowExecutionInspector snapshot={workflowInspectorSnapshot} workspaceSlug={workspaceSlug} />
 
       <section className={styles.toolSection} aria-label="AI Studio tools and capabilities">
         <div className={styles.panelTitle}>
@@ -124,7 +131,8 @@ export function AiStudioWorkspace({
         {isOwner ? (
           <div className={styles.ownerGrid}>
             <AiOwnerModelProbe workspaceSlug={workspaceSlug} configured={configured} />
-            <AiOwnerOperationsBrief workspaceSlug={workspaceSlug} configured={configured} />
+            <AiOwnerOperationsBrief workspaceSlug={workspaceSlug} workspaceId={data.workspace.id}
+              configured={configured} />
           </div>
         ) : (
           <div className={styles.emptyState}>
