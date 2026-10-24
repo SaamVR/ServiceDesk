@@ -71,11 +71,11 @@ function validVersion(v:unknown):v is WorkflowRuleVersionDTO{
     !v.conditions.every(validCondition)||!v.actions.every(validAction) ||
     new Set(v.actions.map(a=>JSON.stringify(a))).size!==v.actions.length ||
     (typeof v.createdAt!=="string" ||
-      !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(v.createdAt) ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v.createdAt) ||
       !Number.isFinite(Date.parse(v.createdAt)) ||
       new Date(Date.parse(v.createdAt)).toISOString()!==v.createdAt) ||
     (v.publishedAt!==undefined && (typeof v.publishedAt!=="string" ||
-      !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(v.publishedAt) ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v.publishedAt) ||
       !Number.isFinite(Date.parse(v.publishedAt)) ||
       new Date(Date.parse(v.publishedAt)).toISOString()!==v.publishedAt)) ||
     (v.basedOnVersionNumber!==undefined &&
