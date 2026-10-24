@@ -1,6 +1,7 @@
 "use server";
 
 import { prepareAuthorizedAutomationStarterBatch } from "@/server/ai/owner-starter-batch";
+import { automationPlaybooks } from "./automation-playbooks";
 import type { WorkflowEventType } from "@/contracts";
 
 /** A safe owner-read preview, not a model call or workflow installation. */
@@ -46,29 +47,49 @@ export async function previewOwnerAutomationStarters(input:{
      response.value.providerMessagesSent!==false ||
      response.value.paymentChanged!==false ||
      response.value.modelInvoked!==false ||
+     response.value.ownerPublishRequired!==true ||
      response.value.drafts.length<1 || response.value.drafts.length>12 ||
      response.value.selectedCount!==response.value.drafts.length ||
      response.value.branchId!==input.branchId)
     return blocked();
+  const selected=new Set(input.starterIds);
+  if(selected.size!==response.value.drafts.length)return blocked();
+  const seen=new Set<string>();
   const drafts:OwnerStarterPreview[]=[];
   for(const draft of response.value.drafts){
-   if(draft.persisted!==false || draft.published!==false ||
+   // Bind the returned data to the EXACT selected catalogue definition.
+   // The server cannot display substituted, duplicated or private model rows.
+   const template=automationPlaybooks.find(p=>p.id===draft.starterId);
+   if(!template || !selected.has(draft.starterId) ||
+      seen.has(draft.starterId) || template.code!==draft.code ||
+      template.eventType!==draft.eventType ||
+      draft.state!=="UNPERSISTED_OWNER_RULE_DRAFT" ||
+      draft.requiresOwnerReview!==true || draft.maxActionsPerEvent!==1 ||
+      draft.persisted!==false || draft.published!==false ||
       draft.providerMessagesSent!==false || draft.paymentChanged!==false ||
-      draft.actions.length!==1 || draft.actions[0]?.type!=="CREATE_ATTENTION")
+      !Array.isArray(draft.conditions) ||
+      draft.conditions.length!==(template.condition?1:0) ||
+      !Array.isArray(draft.actions) || draft.actions.length!==1 ||
+      draft.actions[0]?.type!=="CREATE_ATTENTION")
      return blocked();
    const action=draft.actions[0];
-   if(!action || !["INFO","WARNING","CRITICAL"].includes(String(action.severity)) ||
-      typeof action.summaryKey!=="string" ||
-      !/^[A-Z0-9_]{3,80}$/.test(action.summaryKey))
-     return blocked();
+   if(!action || action.severity!==template.severity ||
+      action.summaryKey!==template.actionDetail)return blocked();
+   if(template.condition){
+    const actual=draft.conditions[0],expected=template.condition;
+    if(!actual || actual.field!==expected.field ||
+       actual.operator!==expected.operator || actual.value!==expected.value)
+      return blocked();
+   }
+   seen.add(draft.starterId);
    drafts.push({
-    starterId:draft.starterId,code:draft.code,eventType:draft.eventType,
-    conditions:draft.conditions.map(c=>({
-      field:c.field,operator:c.operator,value:c.value,
-    })),
+    starterId:template.id,code:template.code,eventType:template.eventType,
+    conditions:template.condition?[{
+      field:template.condition.field,operator:template.condition.operator,
+      value:template.condition.value,
+    }]:[],
     actions:[{type:"CREATE_ATTENTION",
-      severity:action.severity as "INFO"|"WARNING"|"CRITICAL",
-      summaryKey:action.summaryKey}],
+      severity:template.severity,summaryKey:template.actionDetail}],
     persisted:false,published:false,executed:false,
    });
   }
