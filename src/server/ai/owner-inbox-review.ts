@@ -21,13 +21,17 @@ export type InboxReviewPlan =
 
 const id=(v:unknown):v is string=>typeof v==="string"&&/^[A-Za-z0-9:_-]{3,128}$/.test(v);
 function dense(value:unknown,maximum:number):boolean{
- if(!Array.isArray(value)||value.length>=maximum||
-    Reflect.ownKeys(value).length!==value.length+1)return false;
- for(let i=0;i<value.length;i++){
-   const d=Object.getOwnPropertyDescriptor(value,String(i));
-   if(!d||!Object.hasOwn(d,"value"))return false;
- }
- return true;
+ try {
+  if(!Array.isArray(value)||Object.getPrototypeOf(value)!==Array.prototype||
+     value.length>=maximum||
+     Reflect.ownKeys(value).length!==value.length+1)return false;
+  const descriptors=Object.getOwnPropertyDescriptors(value);
+  for(let i=0;i<value.length;i++){
+   if(!Object.hasOwn(descriptors,String(i))||
+      !Object.hasOwn(descriptors[String(i)],"value"))return false;
+  }
+  return true;
+ } catch {return false;}
 }
 function timestamp(v:unknown):v is string{
  if(typeof v!=="string")return false;
@@ -47,11 +51,13 @@ function timestamp(v:unknown):v is string{
  return Number.isFinite(Date.parse(v));
 }
 function exactSavedSnapshot(value:unknown):boolean{
- return !!value&&typeof value==="object"&&!Array.isArray(value)&&
-  Object.getPrototypeOf(value)===Object.prototype &&
-  Object.getOwnPropertyNames(value).length===Object.keys(value).length &&
-  Object.getOwnPropertySymbols(value).length===0 &&
-  Object.values(Object.getOwnPropertyDescriptors(value)).every(d=>Object.hasOwn(d,"value"));
+ try {
+  return !!value&&typeof value==="object"&&!Array.isArray(value)&&
+   Object.getPrototypeOf(value)===Object.prototype &&
+   Object.getOwnPropertyNames(value).length===Object.keys(value).length &&
+   Object.getOwnPropertySymbols(value).length===0 &&
+   Object.values(Object.getOwnPropertyDescriptors(value)).every(d=>Object.hasOwn(d,"value"));
+ } catch {return false;}
 }
 
 /** No message text or customer identities leave this planner. The input must
@@ -59,7 +65,8 @@ function exactSavedSnapshot(value:unknown):boolean{
  * could be missing from a capped row sample, producing false outreach alerts.
  * Failed/queued provider attempts NEVER count as successfully answered. */
 export function planOwnerInboxReview(input:OwnerInboxReviewInput):InboxReviewPlan {
- if(!input||!id(input.workspaceId)||!input.actor||input.actor.workspaceId!==input.workspaceId||
+ if(!exactSavedSnapshot(input)||!exactSavedSnapshot(input.actor)||
+    !id(input.workspaceId)||input.actor.workspaceId!==input.workspaceId||
     input.actor.role!=="OWNER")return {ok:false,code:"INBOX_OWNER_REQUIRED"};
  const conversations=input.conversations,messages=input.messages;
  if(!Array.isArray(conversations)||!Array.isArray(messages)||
