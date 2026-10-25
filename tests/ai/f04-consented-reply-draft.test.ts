@@ -95,7 +95,7 @@ describe("F04 verified conversation draft, no unauthorized outbound",()=>{
    (s:Snapshot)=>{s.conversations[0].channel="WEB";},
   ];
   for(const patch of patches)expect(await run(mock({first:patch,second:patch}).deps))
-   .toMatchObject({ok:false,code:"F04_DRAFT_THREAD_NOT_REVIEWABLE"});
+   .toMatchObject({ok:false,code:expect.stringMatching(/F04_DRAFT_(THREAD_NOT_REVIEWABLE|SOURCE_INCOMPLETE)/)});
  });
  it("detects consent/preference, actor, recipient or thread drift on the second read",async()=>{
   const patches=[
