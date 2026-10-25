@@ -61,8 +61,13 @@ export function proposeSonicF09Event(input:unknown):SonicF09EventResult{
  if(input.actor.role!=="OWNER"||input.actor.workspaceId!==input.workspaceId)
    return fail("F09_OWNER_REQUIRED");
  const r=input.record;
- if(!r||typeof r!=="object"||Array.isArray(r))return fail("F09_INVALID_INPUT");
- const kind=(r as Record<string,unknown>).kind;
+ let kind:unknown;
+ try{
+  if(!r||typeof r!=="object"||Array.isArray(r)||
+     Object.getPrototypeOf(r)!==Object.prototype)return fail("F09_INVALID_INPUT");
+  const descriptor=Object.getOwnPropertyDescriptor(r,"kind");
+  kind=descriptor&&Object.hasOwn(descriptor,"value")?descriptor.value:undefined;
+ }catch{return fail("F09_INVALID_INPUT");}
  if(typeof kind!=="string"||!Object.hasOwn(fields,kind))return fail("F09_INVALID_INPUT");
  const k=kind as SonicF09EventType;
  if(!exact(r,[...base,...fields[k]])||!safeId(r.workspaceId)||
@@ -111,6 +116,8 @@ export function proposeSonicF09Event(input:unknown):SonicF09EventResult{
  const fingerprint=createHash("sha256").update(JSON.stringify([
   "F09_EVENT_PROPOSAL_NOT_COMMIT",k,input.workspaceId,input.branchId,
   r.sourceId,r.sourceVersion,evidenceAt,
+  // Bind every allowlisted saved state/evidence field, not only the timestamp.
+  ...fields[k].map(field=>r[field]),
  ])).digest("hex");
  return {ok:true,value:{
   state:"UNPERSISTED_F09_EVENT_CANDIDATE",kind:k,
