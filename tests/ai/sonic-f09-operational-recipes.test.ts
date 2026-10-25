@@ -72,6 +72,9 @@ describe("SONIC F09 first four business-value task automation plans",()=>{
    {...cases[2],lastReplyAt:past},
    {...cases[3],checkInAt:past},
    {...cases[1],thresholdMinutes:999},
+   {...cases[1],thresholdMinutes:"30"},
+   {...cases[2],waitHours:"24"},
+   {...cases[3],graceMinutes:"15"},
    {...cases[3],graceMinutes:0},
   ])expect(planSonicF09OperationalRecipe(make(bad)))
    .toMatchObject({ok:false,code:"F09_RECIPE_EVIDENCE_INVALID"});
@@ -84,6 +87,12 @@ describe("SONIC F09 first four business-value task automation plans",()=>{
   const r=make(cases[1]);
   Object.defineProperty(r,"asOf",{enumerable:true,get(){throw Error("private effect");}});
   expect(planSonicF09OperationalRecipe(r))
+   .toMatchObject({ok:false,code:"F09_RECIPE_INVALID"});
+  const poisoned=make(cases[0]);
+  Object.defineProperty(poisoned.record,"kind",{
+   enumerable:true,get(){throw Error("untrusted recipe getter");},
+  });
+  expect(planSonicF09OperationalRecipe(poisoned))
    .toMatchObject({ok:false,code:"F09_RECIPE_INVALID"});
  });
  it("leaves external messaging, payment and operations unchanged",()=>{
