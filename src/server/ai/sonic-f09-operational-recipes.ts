@@ -64,8 +64,13 @@ export function planSonicF09OperationalRecipe(input:unknown):SonicF09RecipeResul
  if(input.actor.role!=="OWNER"||input.actor.workspaceId!==input.workspaceId)
   return fail("F09_RECIPE_OWNER_REQUIRED");
  const r=input.record;
- if(!r||typeof r!=="object"||Array.isArray(r))return fail("F09_RECIPE_INVALID");
- const k=(r as Record<string,unknown>).kind;
+ let k:unknown;
+ try{
+  if(!r||typeof r!=="object"||Array.isArray(r)||
+     Object.getPrototypeOf(r)!==Object.prototype)return fail("F09_RECIPE_INVALID");
+  const d=Object.getOwnPropertyDescriptor(r,"kind");
+  k=d&&Object.hasOwn(d,"value")?d.value:undefined;
+ }catch{return fail("F09_RECIPE_INVALID");}
  if(typeof k!=="string"||!Object.hasOwn(required,k))return fail("F09_RECIPE_INVALID");
  const kind=k as SonicF09RecipeKind;
  if(!exact(r,[...common,...required[kind]])||
@@ -88,12 +93,12 @@ export function planSonicF09OperationalRecipe(input:unknown):SonicF09RecipeResul
   due=trustedQuoteInstant(r.receivedAt)!+Number(r.thresholdMinutes)*60_000;
  }else if(kind==="QUOTE_OPEN_FOLLOW_UP"){
   if(r.status!=="SENT"||r.lastReplyAt!==null||
-    ![24,48].includes(Number(r.waitHours))||trustedQuoteInstant(r.openedAt)===null)
+    (typeof r.waitHours!=="number"||![24,48].includes(r.waitHours))||trustedQuoteInstant(r.openedAt)===null)
    return fail("F09_RECIPE_EVIDENCE_INVALID");
   due=trustedQuoteInstant(r.openedAt)!+Number(r.waitHours)*3600_000;
  }else{
   if(r.status!=="ASSIGNED"||r.checkInAt!==null||
-   ![15,30].includes(Number(r.graceMinutes))||
+   (typeof r.graceMinutes!=="number"||![15,30].includes(r.graceMinutes))||
    trustedQuoteInstant(r.scheduledStartAt)===null)
    return fail("F09_RECIPE_EVIDENCE_INVALID");
   due=trustedQuoteInstant(r.scheduledStartAt)!+Number(r.graceMinutes)*60_000;
