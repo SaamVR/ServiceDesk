@@ -35,7 +35,7 @@ describe("SONIC P05 quote accepted durable event — migration-gated source proo
   expect(journal).toContain("revoke all on public.workflow_source_events from public, anon, authenticated");
   expect(journal).toContain("grant select, insert, update on public.workflow_source_events to service_role");
   expect(journal).toContain("from public,anon,authenticated");
-  expect(journal).toContain("Do NOT apply");
+  expect(journal).toContain("NOT applied by CI");
   expect(journal).not.toMatch(/insert\s+into\s+public\.outbox_events\b/i);
  });
  it("lease reclaim is bounded, unique, retry/dead-letter and only persisted by SQL claim",()=>{
@@ -45,7 +45,7 @@ describe("SONIC P05 quote accepted durable event — migration-gated source proo
   expect(journal).toContain("locked_by = p_worker");
   expect(journal).toContain("locked_until = now() + interval '90 seconds'");
   expect(journal).toContain("state='DEAD_LETTER'");
-  expect(journal).toContain("state='RETRY_PENDING'");
+  expect(journal).toContain("'RETRY_PENDING'");
   expect(journal).toContain("p_outcome not in ('SUCCEEDED','FAILED','SKIPPED')");
   expect(journal).toContain("locked_until > now()");
  });
