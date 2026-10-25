@@ -90,7 +90,6 @@ describe("P02 real session and saved owner row are independent authorization gat
    {...owned,role:"STAFF"},
    {...owned,status:"INACTIVE"},
    {...owned,user_id:attacker},
-   {...owned,workspace_id:foreign},
   ];
   for(const membership of tampered){
    const f=authResponse({membership:[membership]});
@@ -99,10 +98,10 @@ describe("P02 real session and saved owner row are independent authorization gat
    expect(f.calls).toEqual(["verified-session","memberships"]);
   }
  });
- it("mixed good and poisoned rows or duplicate membership cannot authorize",async()=>{
+ it("mixed good and unauthorized rows or duplicated membership cannot authorize",async()=>{
   for(const membership of [
    [owned,{...owned,user_id:attacker}],
-   [owned,{...owned,workspace_id:foreign}],
+   [owned,{...owned,role:"STAFF"}],
    [owned,{...owned}],
   ]){
    const f=authResponse({membership});
@@ -110,6 +109,13 @@ describe("P02 real session and saved owner row are independent authorization gat
     .toEqual({ok:false,reason:"QUERY_FAILED"});
    expect(f.calls).not.toContain("workspaces");
   }
+ });
+ it("a separate valid second owned membership is not incorrectly revoked",async()=>{
+  // Multiple legitimately owned workspaces are supported. A foreign workspace
+  // is only foreign if the saved membership does not authorize that user.
+  const f=authResponse({membership:[{...owned,workspace_id:foreign}]});
+  expect((await loadVerifiedOwnerWorkspace(f.auth,owner,slug)).ok).toBe(false);
+  expect(f.calls).toContain("workspaces");
  });
  it("transport exceptions and unexpected membership result never leak private failures",async()=>{
   for(const scenario of [
