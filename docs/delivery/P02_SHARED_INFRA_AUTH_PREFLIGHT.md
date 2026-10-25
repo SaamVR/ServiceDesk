@@ -2,6 +2,18 @@
 
 **Scope:** Owner correction 2026-10-25 — **USE EXISTING** Render and ServiceDesk Supabase, not separate staging resources. This report is **read-only evidence and action sequence, NOT staging acceptance**.
 
+## New shared-database safeguards merged 2026-10-25
+
+**Canonical source:** `f745c5990b51b5ab239c789a8c8bdbb383443223` ([P02 #838](https://github.com/SaamVR/ServiceDesk/pull/838), [#839](https://github.com/SaamVR/ServiceDesk/pull/839)). Source changes only; full exact merged-head application/Chrome CI was in progress at this document update.
+
+- `SERVICEDESK_QA_FIXTURE_WRITES_APPROVED` must remain **unset/false** by default on the existing main Supabase/Render environment. It is an **additional separate write authorization**: even an explicitly allowlisted test owner cannot insert demo customers, properties or enquiries until this flag is set to literal `true`, QA-only registration remains authorized, and backend access uses the signed-in RLS mode rather than service-role elevation.
+- Onboarding verified page **and** server seed action enforce this fail-closed gate; any public signup mode, missing tenant approval, missing QA allowlist, service-role operations mode or disabled RLS preview denies seeding.
+- Existing V3 signup page incorrectly described QA registration as an isolated environment. The new code truthfully notes the possibility of using the shared primary database.
+- Explicit `?workspace=` URL selections must have a 3–40-character valid slug before querying tenant-scoped data. Unconfirmed email accounts navigate to the check-email flow, not workspace creation.
+- Review before eventual activation: keep `SERVICEDESK_OWNER_REGISTRATION_ENABLED=false`, `SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED` unset until the approved 0065 security repair is genuinely installed and real two-owner authorization is tested.
+- **Live environment as inspected:** existing Render still suspended on old V3; main Supabase at 0062 with old installed default-branch lookup. Operator-approved 0065 migration invocation was blocked; see [accepted authorization and manual migration handoff](./P02_AUTHORIZED_0065_MIGRATION_HANDOFF.md). Do not use git-source CI as a substitute for live schema verification.
+- Independent read-only database role-context counts: existing owner's simulated authenticated context sees 1 workspace/1 membership/1 branch/1 request; an unrelated synthetic identity sees none in tenant-scoped tables. This is **not real two-owner login acceptance**; see [P02 role evidence](./P02_READONLY_TENANT_AUTH_EVIDENCE.md).
+
 ## Targets locked by owner
 - Supabase: **`cpmmgivhlkfbiwzhlcey`** `ServiceDesk`, PG17, `us-east-1` ACTIVE_HEALTHY. This project contains existing business records; **NO RESET, purge, or cloned schema**.
 - Render: **existing** [`servicedesk-v3-frontend-review`](https://dashboard.render.com/web/srv-db5p1s142hec739noohg) (`srv-db5p1s142hec739noohg`), free plan, current lifecycle `suspended`, old release branch `deploy/servicedesk-v3-public-review-20261011`, deploy SHA `3962aa5c84c3aa5f47ad72b62d51ae4382467708`. Do NOT create a new service.
