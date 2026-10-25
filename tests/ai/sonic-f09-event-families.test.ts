@@ -39,10 +39,10 @@ describe("SONIC F09 eight additional typed event candidate families",()=>{
  });
  it("fails closed on foreign actor and cross-tenant source row",()=>{
   expect(proposeSonicF09Event(make(records[0],{
-    actor:{workspaceId:"tenant_b",role:"OWNER"}}))
+    actor:{workspaceId:"tenant_b",role:"OWNER"}})))
    .toMatchObject({ok:false,code:"F09_OWNER_REQUIRED"});
   expect(proposeSonicF09Event(make(records[0],{
-    actor:{workspaceId:"tenant_a",role:"DISPATCHER"}}))
+    actor:{workspaceId:"tenant_a",role:"DISPATCHER"}})))
    .toMatchObject({ok:false,code:"F09_OWNER_REQUIRED"});
   expect(proposeSonicF09Event(make({...root,...records[0],workspaceId:"tenant_b"})))
    .toMatchObject({ok:false,code:"F09_SCOPE_MISMATCH"});
