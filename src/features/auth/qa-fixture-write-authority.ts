@@ -20,3 +20,28 @@ export function qaFixtureWritesAllowed(env: NodeJS.ProcessEnv = process.env): bo
       SERVICEDESK_OWNER_REGISTRATION_ENABLED: env.SERVICEDESK_OWNER_REGISTRATION_ENABLED,
     }) === "QA_SESSION_RLS";
 }
+
+
+const QA_WORKSPACE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Main Supabase can contain real owner workspaces beside fictional QA ones.
+ * An email allowlist and global QA permission cannot authorize every workspace
+ * owned by that identity. Require a separately reviewed, exact slug allowlist.
+ */
+export function qaFixtureWritesAllowedForWorkspace(
+  workspaceSlug: string,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  if (!qaFixtureWritesAllowed(env) ||
+      typeof workspaceSlug !== "string" || workspaceSlug.length < 3 ||
+      workspaceSlug.length > 40 || !QA_WORKSPACE_SLUG.test(workspaceSlug)) return false;
+
+  const raw = env.SERVICEDESK_QA_FIXTURE_WORKSPACE_SLUGS ?? "";
+  if (!raw || raw.length > 419) return false;
+  const parts = raw.split(",").map(slug => slug.trim());
+  if (parts.length < 1 || parts.length > 10 ||
+      parts.some(slug => slug.length < 3 || slug.length > 40 ||
+        !QA_WORKSPACE_SLUG.test(slug)) || new Set(parts).size !== parts.length) return false;
+  return parts.includes(workspaceSlug);
+}
