@@ -19,7 +19,7 @@ export function filterAutomationPlaybooks(
   // typographic dashes as equivalent word boundaries. This still searches
   // only one local, inert starter at a time and never generates a live rule.
   const normalize = (value: string) => value.normalize("NFKC").toLowerCase()
-    .replace(/[\\u2010-\\u2015_-]+/g, " ").replace(/\\s+/g, " ").trim();
+    .replace(/[\u2010-\u2015_-]+/g, " ").replace(/\s+/g, " ").trim();
   const terms = normalize(input.search.slice(0, 80)).split(/\\s+/).filter(Boolean).slice(0, 8);
   return source.filter(item => {
     if ((input.category !== "All" && input.category !== item.category) ||
