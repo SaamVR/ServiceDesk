@@ -13,7 +13,7 @@ describe("P02 source acceptance gate: Node two-owner adversarial suite is exerci
   ],{cwd:root,encoding:"utf8",timeout:30_000,
      env:{...process.env,NODE_ENV:"test",SD_P02_ACCEPTANCE_APPROVED:""}}); 
   expect(output).toContain("# fail 0");
-  expect(output).toContain("not ok").toBe(false);
+  expect(output).not.toContain("not ok");
   expect(output).toContain("requires two scoped active owners");
   expect(output).toContain("fails closed rather than reporting two-owner acceptance");
  });
