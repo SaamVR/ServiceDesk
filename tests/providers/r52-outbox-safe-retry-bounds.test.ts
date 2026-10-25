@@ -40,11 +40,17 @@ describe("R52 outbox retry integer and bounded scheduling", () => {
   });
 
   it("rejects a provider Retry-After that exceeds exact integer precision", () => {
-    for (const seconds of [Number.MAX_SAFE_INTEGER + 1, Infinity, NaN, -1, 2.5]) {
+    for (const seconds of [Infinity, NaN, -1, 2.5]) {
       expect(decide({ outcome: {
         outcome: "RETRYABLE_FAILURE", failedAt: clock,
         code: "HTTP_503", retryAfterSeconds: seconds,
       } })).toMatchObject({ ok: false, code: "OUTBOX_RETRY_AFTER_INVALID" });
+    }
+    for (const seconds of [Number.MAX_SAFE_INTEGER + 1, 1e18]) {
+      expect(decide({ outcome: {
+        outcome: "RETRYABLE_FAILURE", failedAt: clock,
+        code: "HTTP_503", retryAfterSeconds: seconds,
+      } })).toMatchObject({ ok: false, code: "OUTBOX_RETRY_SCHEDULE_INVALID" });
     }
     expect(decide({ outcome: {
       outcome: "RETRYABLE_FAILURE", failedAt: clock,
