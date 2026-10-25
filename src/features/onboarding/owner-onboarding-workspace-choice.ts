@@ -37,6 +37,13 @@ export async function resolveOwnerOnboardingWorkspaceChoice(
       return { ok: false, code: "MEMBERSHIP_UNVERIFIED" };
     }
     if (membership.data.length > 20) return { ok: false, code: "TOO_MANY" };
+    // Never turn a corrupt/untrusted membership row into an apparently new
+    // business. A filtered-out owner record could otherwise produce NONE,
+    // inviting duplicate onboarding under an existing authenticated identity.
+    if (membership.data.some(row =>
+      !row || typeof row.workspace_id !== "string" || !UUID.test(row.workspace_id))) {
+      return { ok: false, code: "MEMBERSHIP_UNVERIFIED" };
+    }
 
     // A duplicate membership must never create two apparent businesses.
     const ids = [...new Set(membership.data
