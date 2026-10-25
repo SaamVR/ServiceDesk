@@ -6,6 +6,7 @@ import { createQuoteSnapshot, type QuoteServiceCode } from "@/domain/quote";
 /** Verified pricing proposals, never saved/sent quotes or price predictions. */
 type Resolver = typeof resolveStaffActor;
 type Reader = typeof loadOperationalQuoteRateCard;
+type AuthorizedService = Extract<Awaited<ReturnType<Resolver>>, { ok: true }>["value"]["service"];
 export interface GroundedAlternativesInput {
   workspaceSlug: string;
   requestId: string;
@@ -97,7 +98,7 @@ export async function proposeAuthorizedGroundedQuoteAlternatives(
        (branchScope.mode !== "BRANCH" || !validId(branchScope.selectedBranchId))))
     return fail("F01_QUOTE_AUTH_DENIED");
 
-  async function readRequest(db: typeof first.value.service): Promise<Row | null> {
+  async function readRequest(db: AuthorizedService): Promise<Row | null> {
     try {
       const r = await db.from("requests")
         .select(fields.join(",")).eq("workspace_id",workspace.id)
@@ -105,7 +106,7 @@ export async function proposeAuthorizedGroundedQuoteAlternatives(
       return r.error ? null : r.data as Row | null;
     } catch { return null; }
   }
-  async function readCatalog(db: typeof first.value.service): Promise<unknown[] | null> {
+  async function readCatalog(db: AuthorizedService): Promise<unknown[] | null> {
     try {
       const r = await db.from("service_catalog")
         .select("id,workspace_id,code,active,requires_review")
