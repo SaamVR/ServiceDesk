@@ -72,30 +72,36 @@ export async function OnboardingProductRoute({
       <main className="site-shell">
         <Panel>
           <FeedbackBanner
-            tone={result.kind === "authentication" ? "info" : "danger"}
+            tone={result.kind === "authentication" || result.kind === "verification" ? "info" : "danger"}
             title={
               result.kind === "authentication"
                 ? "Sign in to continue setup"
+                : result.kind === "verification"
+                  ? "Confirm your email to continue"
                 : result.kind === "authorization"
                   ? "Create your business workspace"
                   : "Onboarding unavailable"
             }
             description={result.message}
             action={
-              result.kind === "authentication" || result.kind === "authorization" ? (
+              result.kind === "authentication" || result.kind === "authorization" ||
+              result.kind === "verification" ? (
                 <Link
                   className="app-button-primary"
-                  href={result.kind === "authorization"
-                    ? "/auth/create-workspace"
-                    : "/auth/sign-in?next=" +
-                    encodeURIComponent(
-                      workspaceSlug
-                        ? "/onboarding?workspace=" + encodeURIComponent(workspaceSlug)
-                        : "/onboarding",
-                    )
+                  href={result.kind === "verification"
+                    ? "/auth/sign-up/check-email"
+                    : result.kind === "authorization"
+                      ? "/auth/create-workspace"
+                      : "/auth/sign-in?next=" +
+                        encodeURIComponent(
+                          workspaceSlug
+                            ? "/onboarding?workspace=" + encodeURIComponent(workspaceSlug)
+                            : "/onboarding",
+                        )
                   }
                 >
-                  {result.kind === "authorization" ? "Create workspace" : "Sign in"}
+                  {result.kind === "verification" ? "Check email" :
+                    result.kind === "authorization" ? "Create workspace" : "Sign in"}
                 </Link>
               ) : undefined
             }

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
 import { ownerRegistrationEmailAllowed, ownerRegistrationMode } from "@/features/auth/owner-registration-readiness";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
+import { qaFixtureWritesAllowed } from "@/features/auth/qa-fixture-write-authority";
 import { loadVerifiedOwnerWorkspace } from "@/features/auth/verified-owner-workspace";
 import { seedQaWorkspaceData } from "@/features/auth/qa-sample-seed";
 
@@ -30,7 +31,7 @@ export async function seedVerifiedQaWorkspace(formData: FormData): Promise<never
   // All gates are server-side and fail closed. Public customer accounts,
   // unverified QA testers and production service-role mode cannot seed.
   if (operationalDatabaseMode() !== "QA_SESSION_RLS" ||
-      ownerRegistrationMode() !== "QA_ONLY") {
+      ownerRegistrationMode() !== "QA_ONLY" || !qaFixtureWritesAllowed()) {
     back(slug, "not-enabled");
   }
 

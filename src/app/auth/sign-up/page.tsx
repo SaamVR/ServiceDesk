@@ -23,7 +23,7 @@ export default async function SignUpPage({
     >
       {query.error ? <p className={styles.error} role="alert">{query.error}</p> : null}
       {qaOnly ? (
-        <p className={styles.notice} role="status">This is an isolated testing environment. Registration is limited to approved test email addresses. Real payment and outbound messaging remain disabled.</p>
+        <p className={styles.notice} role="status">QA registration is limited to approved test email addresses. Test data may use the existing ServiceDesk database; no demo records are inserted unless separately approved. Real payments and outbound messaging remain disabled.</p>
       ) : null}
       {!registrationEnabled ? (
         <p className={styles.notice} role="status">
