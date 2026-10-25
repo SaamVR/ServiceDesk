@@ -10,6 +10,7 @@ const migration=source("supabase/migrations/0065_v4_default_branch_membership_au
 const audit=source("scripts/release/v4-p02-two-owner-readonly-acceptance.mjs");
 const twoOwner=source("scripts/release/v4-default-branch-rpc-boundary.mjs");
 const ownerEnv:NodeJS.ProcessEnv={
+ NODE_ENV:"test",
  NEXT_PUBLIC_SUPABASE_URL:"https://synthetic-project.supabase.co",
  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:"sb_publishable_synthetic",
  SERVICEDESK_AUTH_REDIRECT_ORIGIN:"https://example.test",
