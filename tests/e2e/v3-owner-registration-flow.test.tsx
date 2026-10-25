@@ -83,6 +83,7 @@ describe("V3 customer-safe account creation and onboarding", () => {
   it("refuses owner signup until the explicit deploy switch, keys and trusted email origin agree", () => {
     const ready = {
       SERVICEDESK_OWNER_REGISTRATION_ENABLED: "true",
+      SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED: "true",
       NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "public-placeholder",
       SERVICEDESK_AUTH_REDIRECT_ORIGIN: "https://servicedesk-preview.onrender.com",
