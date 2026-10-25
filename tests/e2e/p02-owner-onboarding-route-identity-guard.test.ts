@@ -26,7 +26,8 @@ describe("P02 untrusted owner onboarding workspace URL and verification UX", () 
     expect(runtime.indexOf('parsed.kind === "INVALID"'))
       .toBeLessThan(runtime.indexOf("loadOperationalStaffSnapshot(slug)"));
     expect(route).toContain('result.kind === "verification"');
-    expect(route).toContain('href="/auth/sign-up/check-email"');
+    expect(route).toContain('"/auth/sign-up/check-email"');
+    expect(route).toContain('result.kind === "verification"\n                    ? "/auth/sign-up/check-email"');
     expect(route).toContain('result.kind === "authorization"');
   });
 });
