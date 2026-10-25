@@ -29,30 +29,55 @@ export async function loadVerifiedOwnerWorkspace(
   userId: string,
   slug: string,
 ): Promise<LookupResult> {
-  if (!userId || !slugPattern.test(slug) || slug.length < 3 || slug.length > 40) {
+  if (!UUID.test(userId) || !slugPattern.test(slug) ||
+      slug.length < 3 || slug.length > 40) {
     return { ok: false, reason: "INVALID" };
   }
 
-  const members = await auth.from("memberships")
-    .select("workspace_id")
-    .eq("user_id", userId)
+  // The caller-supplied user ID is never proof of account ownership. Validate
+  // it against the *currently authenticated* Supabase user. This is in
+  // addition to server-side getUser() checks in onboarding routes.
+  // Never fall back to getSession() or unverified JWT user_metadata.
+  let authenticatedId: string | undefined;
+  try {
+    const identity = await auth.auth.getUser();
+    if (identity.error) return { ok: false, reason: "DENIED" };
+    authenticatedId = identity.data?.user?.id;
+  } catch {
+    return { ok: false, reason: "QUERY_FAILED" };
+  }
+  if (!authenticatedId || authenticatedId !== userId) {
+    return { ok: false, reason: "DENIED" };
+  }
+
+  // Request identity, role and active status as saved RLS-visible evidence.
+  // A database result with just a workspace ID must not silently authorize.
+  const readMembers = () => auth.from("memberships")
+    .select("workspace_id,user_id,role,status")
+    .eq("user_id", authenticatedId)
     .eq("role", "OWNER")
     .eq("status", "ACTIVE")
     .limit(21);
+  const members = await readMembers().catch(() => null);
+  if (!members) return { ok: false, reason: "QUERY_FAILED" };
 
   if (members.error || !Array.isArray(members.data)) {
     return { ok: false, reason: "QUERY_FAILED" };
   }
   if (members.data.length > 20) return { ok: false, reason: "TOO_MANY" };
-  // A partly malformed membership response cannot authorize only the
-  // well-formed subset: doing so conceals data-integrity/RLS drift and may
-  // select the wrong business for a verified owner.
-  if (members.data.some(row => !row || typeof row.workspace_id !== "string" ||
-      !UUID.test(row.workspace_id))) {
+  // Never accept a partly malformed, out-of-scope or duplicate membership
+  // simply because another row appears valid.
+  if (members.data.some(row => !row ||
+      typeof row.workspace_id !== "string" || !UUID.test(row.workspace_id) ||
+      row.user_id !== authenticatedId || row.role !== "OWNER" ||
+      row.status !== "ACTIVE")) {
     return { ok: false, reason: "QUERY_FAILED" };
   }
 
-  const ids = [...new Set(members.data.map(row => row.workspace_id))];
+  const ids = members.data.map(row => row.workspace_id);
+  if (new Set(ids).size !== ids.length) {
+    return { ok: false, reason: "QUERY_FAILED" };
+  }
 
   if (!ids.length) return { ok: false, reason: "DENIED" };
   const workspace = await auth.from("workspaces")
