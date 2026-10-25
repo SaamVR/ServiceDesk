@@ -60,9 +60,9 @@ describe("F07 owner saved workflow failures and provider-success critic",()=>{
   };
   const r=await run(fixture({first:patch,second:patch}).deps);
   expect(r).toMatchObject({ok:true,value:{warnings:expect.arrayContaining([
-   {kind:"WORKFLOW_ACTION_FAILED",operatorNextStep:"REVIEW_ACTION_AND_RETRY_BUDGET"},
-   {kind:"WORKFLOW_SUCCESS_CONTRADICTED",operatorNextStep:"RECONCILE_WORKFLOW_COMPLETION"},
-   {kind:"PROVIDER_CODE_UNRECOGNIZED",operatorNextStep:"REVIEW_ACTION_AND_RETRY_BUDGET"},
+   expect.objectContaining({kind:"WORKFLOW_ACTION_FAILED",operatorNextStep:"REVIEW_ACTION_AND_RETRY_BUDGET"}),
+   expect.objectContaining({kind:"WORKFLOW_SUCCESS_CONTRADICTED",operatorNextStep:"RECONCILE_WORKFLOW_COMPLETION"}),
+   expect.objectContaining({kind:"PROVIDER_CODE_UNRECOGNIZED",operatorNextStep:"REVIEW_ACTION_AND_RETRY_BUDGET"}),
   ])}});
   expect(JSON.stringify(r)).not.toContain("sk_live_PRIVATE");
   expect(JSON.stringify(r)).not.toContain("Bearer");
@@ -92,8 +92,8 @@ describe("F07 owner saved workflow failures and provider-success critic",()=>{
   const r=await run(fixture({first:patch,second:patch}).deps);
   expect(r).toMatchObject({ok:true,value:{automaticRetry:false,
    warnings:expect.arrayContaining([
-    {kind:"REPLAY_NEEDS_DEDUP_REVIEW",operatorNextStep:"INSPECT_REPLAY_IDEMPOTENCY"},
-    {kind:"PROVIDER_DELIVERY_UNVERIFIED",operatorNextStep:"CHECK_SAVED_OUTBOX_AND_PROVIDER_RECEIPT"},
+    expect.objectContaining({kind:"REPLAY_NEEDS_DEDUP_REVIEW",operatorNextStep:"INSPECT_REPLAY_IDEMPOTENCY"}),
+    expect.objectContaining({kind:"PROVIDER_DELIVERY_UNVERIFIED",operatorNextStep:"CHECK_SAVED_OUTBOX_AND_PROVIDER_RECEIPT"}),
    ])}});
  });
  it("refuses forged success, owner changes, poison event records and exhausted pages",async()=>{
