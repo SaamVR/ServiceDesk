@@ -50,8 +50,6 @@ const uuid=(v:unknown):v is string=>typeof v==="string"&&
 const slug=(v:unknown):v is string=>typeof v==="string"&&v.length>=3&&v.length<=40&&
  /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v);
 const id=(v:unknown):v is string=>typeof v==="string"&&/^[A-Za-z0-9:_-]{3,128}$/.test(v);
-const scalar=(v:unknown)=>typeof v==="string"||typeof v==="boolean"||
- typeof v==="number"&&Number.isFinite(v);
 const inert=(v:unknown):v is Record<string,unknown>=>{
  try{return !!v&&typeof v==="object"&&!Array.isArray(v)&&
    Object.getPrototypeOf(v)===Object.prototype&&
@@ -209,7 +207,7 @@ export async function prepareF05VersionedInstructionDraft(
     (input.ruleId!==undefined&&!uuid(input.ruleId))||
     (input.ruleId===undefined&&input.expectedSavedRuleVersion!==undefined)||
     (input.ruleId!==undefined&&(!Number.isSafeInteger(input.expectedSavedRuleVersion)||
-      input.expectedSavedRuleVersion!<1)) ||
+      input.expectedSavedRuleVersion < 1)) ||
     Object.keys(input).some(k=>!["workspaceSlug","branchId","instruction","ruleId","expectedSavedRuleVersion"].includes(k)))
     return bad("F05_INPUT_INVALID");
  const suggestion=typedInstruction(input.instruction);
