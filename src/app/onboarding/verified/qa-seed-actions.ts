@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
 import { ownerRegistrationEmailAllowed, ownerRegistrationMode } from "@/features/auth/owner-registration-readiness";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
-import { qaFixtureWritesAllowed } from "@/features/auth/qa-fixture-write-authority";
+import { qaFixtureWritesAllowed, qaFixtureWritesAllowedForWorkspace } from "@/features/auth/qa-fixture-write-authority";
 import { loadVerifiedOwnerWorkspace } from "@/features/auth/verified-owner-workspace";
 import { seedQaWorkspaceData } from "@/features/auth/qa-sample-seed";
 
@@ -53,6 +53,11 @@ export async function seedVerifiedQaWorkspace(formData: FormData): Promise<never
 
   const owner = await loadVerifiedOwnerWorkspace(auth, data.user.id, slug);
   if (!owner.ok) back(slug, "not-authorized");
+  // Main database QA consent is scoped to an exact, owner-verified workspace;
+  // the QA email allowlist must never authorize writes to a real business.
+  if (!qaFixtureWritesAllowedForWorkspace(owner.workspace.slug)) {
+    back(slug, "not-authorized");
+  }
 
   const result = await seedQaWorkspaceData(auth, owner.workspace);
   if (!result.ok) back(slug, "write-failed");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { qaFixtureWritesAllowed } from "../../src/features/auth/qa-fixture-write-authority";
+import { qaFixtureWritesAllowed, qaFixtureWritesAllowedForWorkspace } from "../../src/features/auth/qa-fixture-write-authority";
 
 const configured: NodeJS.ProcessEnv = {
   NODE_ENV: "test",
@@ -12,6 +12,7 @@ const configured: NodeJS.ProcessEnv = {
   SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS: "owner-one@example.test",
   SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true",
   SERVICEDESK_QA_FIXTURE_WRITES_APPROVED: "true",
+  SERVICEDESK_QA_FIXTURE_WORKSPACE_SLUGS: "sd-qa-owner-a,sd-qa-owner-b",
 };
 
 describe("P02 shared main Supabase synthetic fixture write authority", () => {
@@ -41,9 +42,40 @@ describe("P02 shared main Supabase synthetic fixture write authority", () => {
     const { readFileSync } = await import("node:fs");
     const page = readFileSync("src/app/onboarding/verified/page.tsx", "utf8");
     const action = readFileSync("src/app/onboarding/verified/qa-seed-actions.ts", "utf8");
-    expect(page).toContain("qaFixtureWritesAllowed()");
+    expect(page).toContain("qaFixtureWritesAllowedForWorkspace(workspace.slug)");
     expect(action).toContain("qaFixtureWritesAllowed()");
     expect(action.indexOf("qaFixtureWritesAllowed()"))
       .toBeLessThan(action.indexOf("seedQaWorkspaceData("));
   });
+  it("never seeds an existing real workspace without a distinct exact slug approval", () => {
+    expect(qaFixtureWritesAllowed(configured)).toBe(true);
+    expect(qaFixtureWritesAllowedForWorkspace("sd-qa-owner-a", configured)).toBe(true);
+    expect(qaFixtureWritesAllowedForWorkspace("sd-qa-owner-b", configured)).toBe(true);
+    for (const slug of ["live-cleaners", "sd-qa-owner-a-extra", "SD-QA-OWNER-A",
+      "", "../sd-qa-owner-a", "sd-qa-owner-a/other", "a".repeat(41)]) {
+      expect(qaFixtureWritesAllowedForWorkspace(slug, configured)).toBe(false);
+    }
+    for (const value of [undefined, "", "*", "sd-qa-owner-a,,sd-qa-owner-b",
+      "sd-qa-owner-a,sd-qa-owner-a", "a".repeat(420)]) {
+      expect(qaFixtureWritesAllowedForWorkspace("sd-qa-owner-a", {
+        ...configured, SERVICEDESK_QA_FIXTURE_WORKSPACE_SLUGS: value,
+      })).toBe(false);
+    }
+    expect(qaFixtureWritesAllowedForWorkspace("sd-qa-owner-a", {
+      ...configured, SERVICEDESK_QA_FIXTURE_WRITES_APPROVED: undefined,
+    })).toBe(false);
+  });
+
+  it("requires scoped QA write authorization after verified owner lookup in the server action", async () => {
+    const { readFileSync } = await import("node:fs");
+    const page = readFileSync("src/app/onboarding/verified/page.tsx", "utf8");
+    const action = readFileSync("src/app/onboarding/verified/qa-seed-actions.ts", "utf8");
+    expect(page).toContain("qaFixtureWritesAllowedForWorkspace(workspace.slug)");
+    expect(action).toContain("qaFixtureWritesAllowedForWorkspace(owner.workspace.slug)");
+    expect(action.indexOf("loadVerifiedOwnerWorkspace("))
+      .toBeLessThan(action.indexOf("qaFixtureWritesAllowedForWorkspace("));
+    expect(action.indexOf("qaFixtureWritesAllowedForWorkspace("))
+      .toBeLessThan(action.indexOf("seedQaWorkspaceData("));
+  });
+
 });
