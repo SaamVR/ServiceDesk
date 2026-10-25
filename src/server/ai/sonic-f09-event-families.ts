@@ -106,7 +106,7 @@ export function proposeSonicF09Event(input:unknown):SonicF09EventResult{
  }
  const at=trustedQuoteInstant(evidenceAt);
  if(at===null)return fail("F09_EVIDENCE_INVALID");
- if(k==="RECURRING_VISIT_DUE"?at>now:at>now)
+ if(at>now)
    return fail("F09_NOT_DUE");
  const fingerprint=createHash("sha256").update(JSON.stringify([
   "F09_EVENT_PROPOSAL_NOT_COMMIT",k,input.workspaceId,input.branchId,
