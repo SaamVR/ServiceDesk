@@ -11,7 +11,7 @@
 
 ## Runnable acceptance probe
 
-**Source:** [`scripts/release/v4-p02-two-owner-readonly-acceptance.mjs`](https://github.com/SaamVR/ServiceDesk/blob/ops/p02-real-two-owner-readonly-supabase-probe-20261025/scripts/release/v4-p02-two-owner-readonly-acceptance.mjs) (PR [#844](https://github.com/SaamVR/ServiceDesk/pull/844), merge verification pending at authorship).
+**Source:** [`scripts/release/v4-p02-two-owner-readonly-acceptance.mjs`](https://github.com/SaamVR/ServiceDesk/blob/feat/servicedesk-v4-reconciled-qa-shell-20261012/scripts/release/v4-p02-two-owner-readonly-acceptance.mjs) (merged PR [#844](https://github.com/SaamVR/ServiceDesk/pull/844), target SHA `ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4`; exact merged-head CI requires verification).
 
 The operator's private environment supplies:
 
