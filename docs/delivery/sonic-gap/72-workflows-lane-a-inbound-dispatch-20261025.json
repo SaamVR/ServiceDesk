@@ -1,0 +1,359 @@
+{
+  "schemaVersion": "sonic72-lane-v1",
+  "lane": "INBOUND_QUOTES_DISPATCH",
+  "canonicalHead": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
+  "issue": 173,
+  "sourceTaskNumbers": [
+    1,
+    30
+  ],
+  "authority": "AUDIT_ONLY",
+  "items": [
+    {
+      "number": 1,
+      "title": "Webhook enquiry normalization",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/integrations/whatsapp/inbound-normalization.ts"
+      ],
+      "sourceCaveat": "Channel normalization exists; generic tenant-verified lead webhook ingestion is not operationally evidenced",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 2,
+      "title": "Email-to-lead intake",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/api-handlers/provider-email-inbound.ts"
+      ],
+      "sourceCaveat": "Email inbound handler source exists; durable saved lead/outbox and live recipient proof absent",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 3,
+      "title": "WhatsApp-to-lead intake",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/integrations/whatsapp/inbound-core-handoff.ts"
+      ],
+      "sourceCaveat": "WhatsApp inbound handoff exists; consented saved lead readback not accepted",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 4,
+      "title": "Duplicate lead merge review",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "No verified duplicate lead merge review job, adjudication and saved audit receipt located",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 5,
+      "title": "Spam and abuse suppression",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "No distinct persistent spam/abuse moderation automation with reversible human verdict identified",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 6,
+      "title": "Service-area routing",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/operations/request-quote-input.ts"
+      ],
+      "sourceCaveat": "Request/service input validation exists, not a proven branch-service-area auto-router",
+      "nextGate": "P04",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 7,
+      "title": "Branch routing by property",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "No committed property-geofence-to-branch auto-routing journal identified",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 8,
+      "title": "Lead-source attribution",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/request-brief.ts"
+      ],
+      "sourceCaveat": "Request brief source exists; durable lead-source attribution event not accepted",
+      "nextGate": "P04",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 9,
+      "title": "Photo/attachment consent check",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/photo-intake.ts"
+      ],
+      "sourceCaveat": "Photo intake consent/PII review source exists, but provider attachment ingest remains unverified",
+      "nextGate": "P04",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 10,
+      "title": "Unanswered lead SLA escalation",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "Owner attention-SLA module is not evidence of a durable unanswered-inbound-lead escalation job",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 11,
+      "title": "Catalog service qualification",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/catalog-knowledge.ts"
+      ],
+      "sourceCaveat": "Catalog reasoning source exists; actual populated branch catalog is missing from verified staging",
+      "nextGate": "P03",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 12,
+      "title": "AI scope extraction draft",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/extraction.ts"
+      ],
+      "sourceCaveat": "AI extraction helper exists; resulting request still needs owner confirmation and saved-row proof",
+      "nextGate": "P04",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 13,
+      "title": "Missing-details clarification task",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/request-brief.ts"
+      ],
+      "sourceCaveat": "Missing-detail suggestion source exists; create/resolve durable clarification task not verified",
+      "nextGate": "P04",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 14,
+      "title": "Branch-price-book lookup",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/features/operations/request-quote-price-readiness.ts"
+      ],
+      "sourceCaveat": "Saved price readiness source exists; real catalog/price evidence required",
+      "nextGate": "P03",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 15,
+      "title": "Price anomaly review",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/quote-review-safety.ts"
+      ],
+      "sourceCaveat": "Quote safety review exists; saved finance anomaly escalation job not proved",
+      "nextGate": "P04",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 16,
+      "title": "Human quote approval",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/quotes/server-boundary.ts"
+      ],
+      "sourceCaveat": "Quote authorization boundary source exists; real two-owner approval receipt not verified",
+      "nextGate": "P04",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 17,
+      "title": "Approved quote delivery",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/operations/quote-send-readiness.ts"
+      ],
+      "sourceCaveat": "Quote send readiness exists; approved provider send/delivery proof absent",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 18,
+      "title": "Quote-open reminder",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "No approved quote-open tracking receipt and timed reminder automation identified",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 19,
+      "title": "Quote-expiry follow-up",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/operations/quote-validity-clock.ts"
+      ],
+      "sourceCaveat": "Quote validity helper plus F06 QUOTE_EXPIRED proposal only, no durable expiry-trigger writer",
+      "nextGate": "P05",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 20,
+      "title": "Accepted quote-to-dispatch event",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/workflows/customer-quote-accepted-bridge.ts"
+      ],
+      "sourceCaveat": "Quote-to-workflow bridge exists but crash-window transactional event journal blocker #199 remains",
+      "nextGate": "P05",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 21,
+      "title": "Crew suitability scoring",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/features/dispatch/recommendations.ts"
+      ],
+      "sourceCaveat": "Crew recommendation logic exists; human assignment and current capacity proof still required",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 22,
+      "title": "Capacity-aware slot proposals",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/dispatch-review.ts"
+      ],
+      "sourceCaveat": "AI slot/capacity suggestions exist, no transactional held reservation",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 23,
+      "title": "Crew collision detection",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/features/dispatch/assignment-boundary.ts"
+      ],
+      "sourceCaveat": "Assignment guard source exists; end-to-end collision-free saved assignment not accepted",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 24,
+      "title": "Hold expiry release",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "No accepted durable hold-expiry scheduler and release journal identified",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 25,
+      "title": "Calendar intent sync",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/integrations/google-calendar/visit-projection-bridge.ts"
+      ],
+      "sourceCaveat": "Visit calendar projection bridge exists; provider-authenticated bidirectional sync acceptance missing",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 26,
+      "title": "Assignment approval",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/dispatch/assignment-boundary.ts"
+      ],
+      "sourceCaveat": "Crew assignment approval gate exists; source does not prove current owner-confirmed saved action",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 27,
+      "title": "Crew dispatch notification",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "No separately authorized crew-dispatch notification event, consented worker delivery or receipt identified",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 28,
+      "title": "Customer visit reminder",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/integrations/outbox/visit-reminder-intent.ts"
+      ],
+      "sourceCaveat": "Visit reminder outbox intent exists; scheduled, consented provider send not verified",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 29,
+      "title": "Reschedule review",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/schedule/customer-booking-boundary.ts"
+      ],
+      "sourceCaveat": "Booking/reschedule policy source exists; reschedule decision workflow receipt missing",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 30,
+      "title": "Route/window conflict escalation",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/integrations/google-calendar/external-conflict.ts"
+      ],
+      "sourceCaveat": "External window conflict source exists; no owner-approved escalation job acceptance",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    }
+  ]
+}
