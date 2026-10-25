@@ -47,11 +47,25 @@
     "approved_security_patch_source": "supabase/migrations/0065_v4_default_branch_membership_authority.sql",
     "approved_security_patch_sha256": "f4f6ac434c94cfe1543b0fa4c8f1ccd6cd7f832d53cedb02d9db26f3e27866fe",
     "security_patch_approved": true,
-    "security_patch_applied": false,
-    "write_connector_state": "safety_blocked",
+    "security_patch_applied": true,
+    "write_connector_state": "2026-10-26 SUCCESS using previously owner-approved normal Supabase apply_migration; prior safety block historical",
     "old_function_md5": "ba7dd7890bbd1da8597eabdee656b0a3",
     "preimage_private_vault": "SaamVR/ServiceDesk-Recovery-Vault",
-    "two_real_owner_sessions_verified": false
+    "two_real_owner_sessions_verified": false,
+    "applied_migration": "20261025200147 sd_0065_v4_default_branch_membership_authority",
+    "latest_migration": "sd_0065_v4_default_branch_membership_authority",
+    "installed_function_md5": "9f14160f16e16ffe6ac16f35c3f4557f",
+    "authenticated_execute": true,
+    "anonymous_execute": false,
+    "verified_role_context": {
+      "existing_owner_branch_access": "PASS",
+      "foreign_synthetic_nonmember_branch_denial": "PASS",
+      "foreign_synthetic_nonmember_workspace_rows": 0,
+      "real_two_owner_jwt_acceptance": false
+    },
+    "migration_0063_applied": false,
+    "migration_0064_applied": false,
+    "future_migration_order_warning": "0065 was applied ahead of 0063/0064 by owner-approved security-only exception; reconcile Supabase migration ledger and source directory before future db push."
   },
   "operations": {
     "next_batch": "P02",
@@ -60,7 +74,8 @@
       "read-only reviews",
       "source pull requests",
       "GitHub branch creation",
-      "read-only existing-service HTTP preflights"
+      "read-only existing-service HTTP preflights",
+      "read-only DB security verification after installed 0065"
     ],
     "unapproved_actions": [
       "create new Supabase projects",
@@ -69,11 +84,11 @@
       "change existing Render branch",
       "resume or deploy Render service",
       "create real test owners without controlled inbox permission",
-      "apply migrations 0063/0064",
       "modify business/customer data",
       "send real customer messages",
       "enable production signup",
-      "promote GitHub main"
+      "promote GitHub main",
+      "apply migrations 0063/0064 or reset existing data"
     ]
   },
   "milestone_evidence": {
@@ -82,5 +97,5 @@
     "real_owner_acceptance": false,
     "production_ready": false
   },
-  "readme": "Dated observation, not a live dynamic lock. Re-fetch branch SHAs, connected Render service and Supabase migration ledger before all source/environment actions. Do NOT infer V4 deployment from these green source-only GitHub workflows."
+  "readme": "2026-10-26 observation, not live dynamic state. DB security patch installed and tested with simulated role contexts; real 2-owner JWT/browser acceptance and Render V4 deployment blocked. Check live source, Render and Supabase before subsequent actions."
 }
