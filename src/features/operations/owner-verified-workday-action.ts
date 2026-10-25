@@ -77,8 +77,8 @@ export async function requestOwnerVerifiedWorkdayReview(
        ["key","count","module","priority","source"].some(key=>!Object.hasOwn(fields,key)))
       return denied();
     verified.push({
-     key:fields.key.value,count:fields.count.value,module:fields.module.value,
-     priority:fields.priority.value,source:fields.source.value,
+     key:fields.key.value!,count:fields.count.value!,module:fields.module.value!,
+     priority:fields.priority.value!,source:fields.source.value!,
     });
    }
   }catch{return denied();}
