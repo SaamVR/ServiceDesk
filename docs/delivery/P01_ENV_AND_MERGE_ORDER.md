@@ -1,3 +1,5 @@
+> **OWNER OVERRIDE — 2026-10-25:** Use **EXISTING** ServiceDesk Supabase project `cpmmgivhlkfbiwzhlcey` and **EXISTING** suspended Render service `srv-db5p1s142hec739noohg` ONLY. The earlier recommendation to create a separate staging service/database is rejected. Preserve original user data and Render deploy `3962aa5c84c3aa5f47ad72b62d51ae4382467708`; do not create paid or extra resources. [Final owner decision](https://github.com/SaamVR/ServiceDesk/issues/829) · [P02 shared-infrastructure preflight](./P02_SHARED_INFRA_AUTH_PREFLIGHT.md).
+
 # P01 — staging topology, integration graph and launch-risk acceptance
 
 **Batch:** [P01 #817](https://github.com/SaamVR/ServiceDesk/issues/817) · **Source pinned:** `974e9f040071b1a2c1199c7ff6fb652a67812a47` · **Date:** 2026-10-25.
