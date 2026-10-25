@@ -13,7 +13,7 @@
 | Old configured branch | `deploy/servicedesk-v3-public-review-20261011` |
 | Last successful old V3 SHA | `3962aa5c84c3aa5f47ad72b62d51ae4382467708` |
 | Current reviewed V4 canonical | `ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4` |
-| New **immutable GitHub-only** V4 RC ref | `deploy/servicedesk-v4-p02-rc-20261026`, pinned to above SHA |
+| New **pinned-at-creation GitHub-only** V4 RC ref | `deploy/servicedesk-v4-p02-rc-20261026`, pinned to above SHA |
 | Auto-deploy setting | OFF |
 | First live anonymous HTTP probe | **503** for `/health`, `/auth/sign-in` and internal delivery anonymous boundary |
 
@@ -23,7 +23,7 @@ The branch creation **did not** switch the Render service, unsuspend it, trigger
 
 1. Open the existing [Render service dashboard](https://dashboard.render.com/web/srv-db5p1s142hec739noohg). Inspect **Monthly Included Usage / service suspension**. It is quota-blocked. Confirm actual resource/reset eligibility before trying to resume or upgrade; do not promise a date or alter billing. A Free tier may be unsuitable for sellable production.
 2. Record a provider-backed snapshot of the existing service's branch, old deploy ID `dep-db9gv3rrjlhs73epr34g`, commit, region, runtime, instance plan, auto deploy, public URL, health path and existing environment-key NAMES (never secret values). Keep the previous revision available for rollback.
-3. **Separate source-switch/service-resume approval remains required.** When granted, use the authorized Render Dashboard/Work browser action (the connected Render plugin exposes deployment and reads but no safe branch-edit/resume action). Change **the same existing service** to release branch `deploy/servicedesk-v4-p02-rc-20261026`. Do not force-update the V3 branch or GitHub `main`. Keep auto deploy OFF until reviewed.
+3. **Before changing Render, fetch the current GitHub deploy branch HEAD and require it to equal the recorded 40-character reviewed V4 SHA**; a Git branch is movable unless protected. **Separate source-switch/service-resume approval remains required.** When granted, use the authorized Render Dashboard/Work browser action (the connected Render plugin exposes deployment and reads but no safe branch-edit/resume action). Change **the same existing service** to release branch `deploy/servicedesk-v4-p02-rc-20261026`. Do not force-update the V3 branch or GitHub `main`. Keep auto deploy OFF until reviewed.
 4. Confirm the app's Render environment has only secure server-side Supabase settings for the selected existing project `cpmmgivhlkfbiwzhlcey`; do not copy secrets into GitHub, chat, Markdown or frontend bundles. Registration flags and synthetic fixture flags must remain OFF until the approved security patch is genuinely installed, and two real owner sessions are tested.
 5. After Render quota availability and branch/source approval, trigger only the approved V4 build on the **existing** service; record Render deploy ID, SHA, finished status, service URL and rollback revision.
 6. Run the merged [host-only read-only identity gate](https://github.com/SaamVR/ServiceDesk/pull/848) with:
