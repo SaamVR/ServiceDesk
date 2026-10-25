@@ -82,7 +82,7 @@ export function planSonicF09OperationalRecipe(input:unknown):SonicF09RecipeResul
    return fail("F09_RECIPE_EVIDENCE_INVALID");
   due=now;
  }else if(kind==="LEAD_SLA_ESCALATION"){
-  if(r.status!=="UNANSWERED"||![15,30,60].includes(Number(r.thresholdMinutes))||
+  if(r.status!=="UNANSWERED"||(typeof r.thresholdMinutes!=="number"||![15,30,60].includes(r.thresholdMinutes))||
    trustedQuoteInstant(r.receivedAt)===null)
    return fail("F09_RECIPE_EVIDENCE_INVALID");
   due=trustedQuoteInstant(r.receivedAt)!+Number(r.thresholdMinutes)*60_000;
