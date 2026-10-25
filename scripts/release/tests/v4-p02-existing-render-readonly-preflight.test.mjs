@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  EXISTING_HOST, ORIGIN, validateP02RenderReadOnlyConfig,
+  EXISTING_HOST, ORIGIN, REVIEWED_P02_RC_SHA, validateP02RenderReadOnlyConfig,
   evaluateP02RenderProbe, runP02RenderReadOnlyPreflight,
 } from "../v4-p02-existing-render-readonly-preflight.mjs";
 
-const SHA = "a".repeat(40);
+const SHA = REVIEWED_P02_RC_SHA;
 const accepted = {
   permission: "READ_ONLY", expectedSha: SHA, existingHost: EXISTING_HOST,
   existingServiceId: "srv-db5p1s142hec739noohg",
@@ -36,6 +36,8 @@ test("refuses unapproved/freeform hosts, unknown services and unreviewed source"
     { existingServiceId: "srv-wrong" },
     { expectedSha: "unknown" },
     { expectedSha: "1234567" },
+    { expectedSha: "3962aa5c84c3aa5f47ad72b62d51ae4382467708" },
+    { expectedSha: "a".repeat(40) },
   ]) {
     assert.equal(validateP02RenderReadOnlyConfig({ ...accepted, ...overrides }), null);
   }
