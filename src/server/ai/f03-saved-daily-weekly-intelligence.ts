@@ -17,7 +17,7 @@ export type F03SavedIntelligenceResult=
       "F03_BI_SOURCE_CHANGED"|"F03_BI_CANCELLED"}
   | {ok:true;value:{
       state:"AUTHORIZED_SAVED_DAILY_WEEKLY_OPERATIONS_REVIEW";
-      source:"DOUBLE_READ_COMPLETE_AUTHORIZED_REQUEST_VISIT_ROWS";
+      source:"DOUBLE_READ_BOUNDED_AUTHORIZED_REQUEST_VISIT_ROWS";
       workspaceId:string;
       sourceClock:string;
       timeBasis:"UTC_CIVIL_DAYS_NO_DEADLINE_INFERENCE";
@@ -37,6 +37,7 @@ export type F03SavedIntelligenceResult=
         createdRequestRecords:number;
         nonCancelledVisitStartRecords:number;
       };
+      historicalCompletenessUnverified:true;
       revenueUnavailable:true;
       paymentSettlementUnverified:true;
       deadlinesUnavailable:true;
@@ -131,7 +132,7 @@ function savedProjection(s:OperationalStaffSnapshot):Projection|null{
 
 /** UTC civil date aggregation only. No revenue or relative deadline can be
  * derived from creation/start instants and the persisted operational snapshot
- * does not supply settlement receipts or complete accounting records.
+ * does not supply settlement receipts or complete accounting records.\n * The loader can truncate workspace rows before branch filtering, so even\n * a <300-row selected branch does not prove full historical completeness.
  */
 export async function loadF03SavedDailyWeeklyIntelligence(
   workspaceSlug:string,deps:F03SavedIntelligenceDependencies={},
@@ -176,7 +177,7 @@ export async function loadF03SavedDailyWeeklyIntelligence(
   const daily=days[6];
   return {ok:true,value:{
     state:"AUTHORIZED_SAVED_DAILY_WEEKLY_OPERATIONS_REVIEW",
-    source:"DOUBLE_READ_COMPLETE_AUTHORIZED_REQUEST_VISIT_ROWS",
+    source:"DOUBLE_READ_BOUNDED_AUTHORIZED_REQUEST_VISIT_ROWS",
     workspaceId:second.value.workspace.id,sourceClock:second.value.loadedAt,
     timeBasis:"UTC_CIVIL_DAYS_NO_DEADLINE_INFERENCE",
     daily,weekly:{
@@ -185,7 +186,7 @@ export async function loadF03SavedDailyWeeklyIntelligence(
       createdRequestRecords:days.reduce((sum,d)=>sum+d.createdRequestRecords,0),
       nonCancelledVisitStartRecords:days.reduce((sum,d)=>sum+d.nonCancelledVisitStartRecords,0),
     },
-    revenueUnavailable:true,paymentSettlementUnverified:true,
+    historicalCompletenessUnverified:true,revenueUnavailable:true,paymentSettlementUnverified:true,
     deadlinesUnavailable:true,financialAmountsAsserted:false,
     messagesSent:false,businessStateMutated:false,modelInvoked:false,
     manualReviewRequired:true,

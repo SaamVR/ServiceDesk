@@ -56,13 +56,13 @@ describe("F03 source-bound UTC daily/weekly BI without invented finance or deadl
   const t=fixture(),r=await run(t.deps);
   expect(r).toMatchObject({ok:true,value:{
    state:"AUTHORIZED_SAVED_DAILY_WEEKLY_OPERATIONS_REVIEW",
-   source:"DOUBLE_READ_COMPLETE_AUTHORIZED_REQUEST_VISIT_ROWS",
+   source:"DOUBLE_READ_BOUNDED_AUTHORIZED_REQUEST_VISIT_ROWS",
    sourceClock:at,
    timeBasis:"UTC_CIVIL_DAYS_NO_DEADLINE_INFERENCE",
    daily:{utcDay:"2026-10-25",createdRequestRecords:1,nonCancelledVisitStartRecords:1},
    weekly:{fromUtcDay:"2026-10-19",throughUtcDay:"2026-10-25",
     createdRequestRecords:2,nonCancelledVisitStartRecords:2},
-   revenueUnavailable:true,paymentSettlementUnverified:true,
+   historicalCompletenessUnverified:true,revenueUnavailable:true,paymentSettlementUnverified:true,
    deadlinesUnavailable:true,financialAmountsAsserted:false,
    messagesSent:false,businessStateMutated:false,modelInvoked:false,
    manualReviewRequired:true,
@@ -75,7 +75,7 @@ describe("F03 source-bound UTC daily/weekly BI without invented finance or deadl
   expect(JSON.stringify(r)).not.toContain("PRIVATE");
   expect(JSON.stringify(r)).not.toContain("customer-private");
  });
- it("returns verified empty counts ONLY when both bounded source tables are truly empty",async()=>{
+ it("returns zero observed counts for empty loaded arrays without a whole-history claim",async()=>{
   const empty=(s:S)=>{s.requests=[];s.visits=[];};
   const r=await run(fixture({first:empty,second:empty}).deps);
   expect(r).toMatchObject({ok:true,value:{weekly:{
