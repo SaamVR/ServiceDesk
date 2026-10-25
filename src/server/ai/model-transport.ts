@@ -282,17 +282,43 @@ function parseModelOutput(body: string): Result<AiModelOutput> {
   // tool object under a trusted TypeScript type.
   const boundedRecord = (value: unknown): value is Record<string, unknown> =>
     !!value && typeof value === "object" && !Array.isArray(value);
+  // JSON.parse safely materializes these names as ordinary own keys, but a
+  // downstream Object.assign or dynamic tool lookup may not. Prevent model
+  // proposals from carrying prototype-pollution keys at ANY nesting level.
+  const reservedArgumentKeys = new Set(["__proto__", "prototype", "constructor"]);
+  const reservedToolNames = new Set([
+    ...reservedArgumentKeys, "toString", "valueOf", "toLocaleString",
+    "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable",
+  ]);
+  const inertArguments = (value: unknown, depth: number, nodes: { left: number }): boolean => {
+    if (--nodes.left < 0 || depth > 8) return false;
+    if (Array.isArray(value)) {
+      return value.length <= 64 &&
+        value.every(child => inertArguments(child, depth + 1, nodes));
+    }
+    if (boundedRecord(value)) {
+      const keys = Object.keys(value);
+      return keys.length <= 24 &&
+        keys.every(key => !reservedArgumentKeys.has(key) &&
+          inertArguments(value[key], depth + 1, nodes));
+    }
+    return value === null ||
+      typeof value === "string" || typeof value === "boolean" ||
+      (typeof value === "number" && Number.isFinite(value));
+  };
   const validTool = (tool: unknown): boolean => {
     if (!boundedRecord(tool) || typeof tool.name !== "string" ||
-        !/^[A-Za-z][A-Za-z0-9_]{0,79}$/.test(tool.name)) return false;
+        !/^[A-Za-z][A-Za-z0-9_]{0,79}$/.test(tool.name) ||
+        reservedToolNames.has(tool.name)) return false;
     const keys = Object.keys(tool);
     if (keys.some(key => key !== "name" && key !== "arguments")) return false;
     if (tool.arguments === undefined) return true;
     if (!boundedRecord(tool.arguments) || Object.keys(tool.arguments).length > 24)
       return false;
     // The JSON wire body is already bounded; also limit each tool argument
-    // individually, so no one proposal can dominate downstream processing.
-    return JSON.stringify(tool.arguments).length <= 8_192;
+    // individually, and refuse deeply nested/massively repeated inert data.
+    return JSON.stringify(tool.arguments).length <= 8_192 &&
+      inertArguments(tool.arguments, 0, { left: 128 });
   };
   if (requestedToolCalls !== undefined &&
       (!Array.isArray(requestedToolCalls) || requestedToolCalls.length > 8 ||
