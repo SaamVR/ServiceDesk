@@ -56,7 +56,32 @@ export async function requestOwnerVerifiedWorkdayReview(
   if(counts.some(v=>!Number.isSafeInteger(v)||v<0||v>5000))return denied();
   // Validate the *whole* returned owner priority list before projecting
   // the first five entries. A poisoned sixth or seventh row must not disappear.
-  const verified=result.value.priorities;
+  // Treat even the server-side projection as an untrusted typed boundary.
+  // Never invoke accessor-backed row properties, mutate a source row, or
+  // leak extra/hidden fields into an owner-verification response.
+  const allowedFields=new Set(["key","count","module","priority","source","label","instruction"]);
+  const verified:Array<Pick<OwnerPriorityAction,"key"|"count"|"module"|"priority"|"source">>=[];
+  try {
+   for(const row of result.value.priorities) {
+    if(!row || typeof row!=="object" || Array.isArray(row) ||
+       Object.getPrototypeOf(row)!==Object.prototype)return denied();
+    const keys=Reflect.ownKeys(row);
+    const fields=Object.getOwnPropertyDescriptors(row);
+    if(keys.length<5 || keys.length>7 ||
+       keys.some(key=>typeof key!=="string" || !allowedFields.has(key)) ||
+       keys.some(key=>{
+        const descriptor=fields[key as string];
+        return !descriptor || !Object.hasOwn(descriptor,"value") ||
+          descriptor.enumerable!==true;
+       }) ||
+       ["key","count","module","priority","source"].some(key=>!Object.hasOwn(fields,key)))
+      return denied();
+    verified.push({
+     key:fields.key.value,count:fields.count.value,module:fields.module.value,
+     priority:fields.priority.value,source:fields.source.value,
+    });
+   }
+  }catch{return denied();}
   const seen=new Set<string>();
   if(verified.some(item=>{
     if(!item || typeof item.key!=="string" ||
