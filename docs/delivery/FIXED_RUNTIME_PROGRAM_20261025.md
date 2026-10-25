@@ -1,3 +1,5 @@
+> **OWNER OVERRIDE — 2026-10-25:** Use **EXISTING** ServiceDesk Supabase project `cpmmgivhlkfbiwzhlcey` and **EXISTING** suspended Render service `srv-db5p1s142hec739noohg` ONLY. The earlier recommendation to create a separate staging service/database is rejected. Preserve original user data and Render deploy `3962aa5c84c3aa5f47ad72b62d51ae4382467708`; do not create paid or extra resources. [Final owner decision](https://github.com/SaamVR/ServiceDesk/issues/829) · [P02 shared-infrastructure preflight](./P02_SHARED_INFRA_AUTH_PREFLIGHT.md).
+
 # ServiceDesk — fixed-runtime delivery program v1.0 (25 October 2026)
 
 **Single progress index:** [SD-DELIVERY #808](https://github.com/SaamVR/ServiceDesk/issues/808). Each batch's own GitHub issue is the authoritative checklist. `continue` means run **the first still-unfinished batch in the current chat's track**; never silently skip blocked gates.
