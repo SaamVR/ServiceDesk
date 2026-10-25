@@ -59,11 +59,23 @@ describe("R52 owner workday inert row projection", () => {
     for (const poisoned of [
       Object.defineProperty({ ...good }, "customerContact", { value: "private", enumerable: false }),
       { ...good, [Symbol("approval")]: true },
-      { ...good, unrelatedCommand: "PUBLISH" },
     ]) {
       expect(await review([good, poisoned])).toEqual({
         ok: false, state: "SAVED_WORKDAY_UNAVAILABLE",
       });
+    }
+  });
+
+  it("strips extra inert personal data and commands instead of rejecting a legitimate saved row", async () => {
+    const extra = { ...good, customerEmail: "private@example.test",
+      unrelatedCommand: "PUBLISH", internalSecret: "sk-not-for-output" };
+    const result = await review([extra]);
+    expect(result).toMatchObject({ ok: true,
+      priorities: [{ key: "OPEN_REQUEST", count: 3, module: "requests" }],
+    });
+    const serialized = JSON.stringify(result);
+    for (const value of ["private@example.test", "PUBLISH", "sk-not-for-output"]) {
+      expect(serialized).not.toContain(value);
     }
   });
 
