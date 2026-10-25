@@ -5,15 +5,17 @@
   "repository": "SaamVR/ServiceDesk",
   "source": {
     "canonical_branch": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
-    "source_verified_sha": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
+    "source_verified_sha": "1003075d1bfcefb6415d6c9a4bdda9c57a0546ff",
     "candidate_branch": "deploy/servicedesk-v4-p02-rc-20261026",
     "candidate_branch_sha_at_creation": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
     "candidate_branch_is_git_protected": false,
     "source_checks": [
-      "https://github.com/SaamVR/ServiceDesk/actions/runs/40188428616",
-      "https://github.com/SaamVR/ServiceDesk/actions/runs/40188428513",
-      "https://github.com/SaamVR/ServiceDesk/actions/runs/40188428582"
-    ]
+      "https://github.com/SaamVR/ServiceDesk/actions/runs/40226954444",
+      "https://github.com/SaamVR/ServiceDesk/actions/runs/40226954390",
+      "https://github.com/SaamVR/ServiceDesk/actions/runs/40226954402"
+    ],
+    "release_candidate_deliberately_lags_canonical": true,
+    "release_candidate_expectation": "RC branch SHA remains ac78ff...; latest 1003075d... adds read-only host verification tooling only. Live branch and provider source SHA must be re-read prior to any deployment."
   },
   "render": {
     "workspace": "tea-d1ihdsbipnbc73bpc8f0",
@@ -32,7 +34,11 @@
       "health": 503,
       "sign_in": 503,
       "anonymous_owner": 503
-    }
+    },
+    "workspace_free_web_services_observed": 8,
+    "workspace_free_web_services_suspended": 8,
+    "http_source_preflight_result": "BLOCKED_503",
+    "preflight_script": "scripts/release/v4-p02-existing-render-readonly-preflight.mjs"
   },
   "supabase": {
     "project": "cpmmgivhlkfbiwzhlcey",
@@ -76,5 +82,5 @@
     "real_owner_acceptance": false,
     "production_ready": false
   },
-  "readme": "This is a dated VERIFIED OBSERVATION and authorization map, not continuously live provider state. Reread GitHub refs/Render/Supabase before doing anything."
+  "readme": "Dated observation, not a live dynamic lock. Re-fetch branch SHAs, connected Render service and Supabase migration ledger before all source/environment actions. Do NOT infer V4 deployment from these green source-only GitHub workflows."
 }
