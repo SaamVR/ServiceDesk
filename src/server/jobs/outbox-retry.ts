@@ -40,13 +40,15 @@ function validatePolicy(input: OutboxRetryPolicyInput): Result<{
   }
   const baseDelaySeconds = input.baseDelaySeconds ?? 60;
   const maxDelaySeconds = input.maxDelaySeconds ?? 3_600;
-  if (!Number.isInteger(input.event.attempt) || input.event.attempt < 1) {
+  if (!Number.isSafeInteger(input.event.attempt) || input.event.attempt < 1) {
     return { ok: false, code: "OUTBOX_ATTEMPT_INVALID", message: "Claimed outbox attempt must be a positive integer." };
   }
-  if (!Number.isInteger(input.maxAttempts) || input.maxAttempts < 1) {
+  if (!Number.isSafeInteger(input.maxAttempts) || input.maxAttempts < 1) {
     return { ok: false, code: "OUTBOX_MAX_ATTEMPTS_INVALID", message: "Outbox maxAttempts must be a positive integer." };
   }
-  if (!Number.isInteger(baseDelaySeconds) || baseDelaySeconds < 1 || !Number.isInteger(maxDelaySeconds) || maxDelaySeconds < baseDelaySeconds) {
+  if (!Number.isSafeInteger(baseDelaySeconds) || baseDelaySeconds < 1 ||
+      !Number.isSafeInteger(maxDelaySeconds) || maxDelaySeconds < baseDelaySeconds ||
+      maxDelaySeconds > 604_800) {
     return { ok: false, code: "OUTBOX_RETRY_CONFIG_INVALID", message: "Outbox retry delays must be positive integers and max must be >= base." };
   }
   return { ok: true, value: { attempt: input.event.attempt, maxAttempts: input.maxAttempts, baseDelaySeconds, maxDelaySeconds } };
@@ -111,7 +113,7 @@ export function decideOutboxPersistence(input: OutboxRetryPolicyInput): Result<O
 
   const minimum = minimumBackoffSeconds(attempt, baseDelaySeconds, maxDelaySeconds);
   const retryAfter = outcome.retryAfterSeconds ?? 0;
-  if (!Number.isInteger(retryAfter) || retryAfter < 0) {
+  if (!Number.isSafeInteger(retryAfter) || retryAfter < 0) {
     return { ok: false, code: "OUTBOX_RETRY_AFTER_INVALID", message: "retryAfterSeconds must be a nonnegative integer when provided." };
   }
   const delaySeconds = Math.max(minimum, retryAfter);
