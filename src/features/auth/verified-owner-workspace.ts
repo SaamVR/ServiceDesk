@@ -52,7 +52,7 @@ export async function loadVerifiedOwnerWorkspace(
 
   // Request identity, role and active status as saved RLS-visible evidence.
   // A database result with just a workspace ID must not silently authorize.
-  const readMembers = () => auth.from("memberships")
+  const readMembers = async () => await auth.from("memberships")
     .select("workspace_id,user_id,role,status")
     .eq("user_id", authenticatedId)
     .eq("role", "OWNER")
@@ -80,13 +80,14 @@ export async function loadVerifiedOwnerWorkspace(
   }
 
   if (!ids.length) return { ok: false, reason: "DENIED" };
-  const workspace = await auth.from("workspaces")
+  const readWorkspace = async () => await auth.from("workspaces")
     .select("id,slug,name,timezone,currency")
     .in("id", ids)
     .eq("slug", slug)
     .maybeSingle();
+  const workspace = await readWorkspace().catch(() => null);
 
-  if (workspace.error) return { ok: false, reason: "QUERY_FAILED" };
+  if (!workspace || workspace.error) return { ok: false, reason: "QUERY_FAILED" };
   const row = workspace.data;
   if (!row) return { ok: false, reason: "DENIED" };
   if (typeof row.id !== "string" || !UUID.test(row.id) ||
