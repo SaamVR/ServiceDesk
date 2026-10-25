@@ -76,14 +76,20 @@ describe("SONIC F09 eight additional typed event candidate families",()=>{
   expect(proposeSonicF09Event(r)).toMatchObject({ok:false,code:"F09_INVALID_INPUT"});
   expect(proposeSonicF09Event(Object.create({actor:{role:"OWNER"}})))
    .toMatchObject({ok:false,code:"F09_INVALID_INPUT"});
+  const poisoned=make(records[0]);
+  Object.defineProperty(poisoned.record,"kind",{
+   enumerable:true,get(){throw Error("untrusted kind getter");},
+  });
+  expect(proposeSonicF09Event(poisoned))
+   .toMatchObject({ok:false,code:"F09_INVALID_INPUT"});
  });
  it("fingerprints source changes without claiming an idempotent execution receipt",()=>{
   const a=proposeSonicF09Event(make(records[0]));
   const b=proposeSonicF09Event(make({...records[0],messageId:"msg_changed"}));
   expect(a.ok&&b.ok).toBe(true);
-  if(a.ok&&b.ok)expect(a.value.fingerprint).toBe(b.value.fingerprint);
-  // The candidate fingerprint deliberately only uses source ID/version/time.
-  // A changed message ID MUST therefore be caught at persisted-source recheck.
+  if(a.ok&&b.ok)expect(a.value.fingerprint).not.toBe(b.value.fingerprint);
+  // Every allowlisted evidence field is included, but an actual persisted
+  // current version must STILL be authenticated by the final writer.
   const c=proposeSonicF09Event(make({...records[0],receivedAt:"2026-10-25T10:00:00+06:00"}));
   expect(c.ok).toBe(true);
   if(a.ok&&c.ok)expect(c.value.fingerprint).not.toBe(a.value.fingerprint);
