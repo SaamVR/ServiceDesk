@@ -14,6 +14,7 @@ type LookupResult =
   | { ok: false; reason: "INVALID" | "DENIED" | "QUERY_FAILED" | "TOO_MANY" };
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * Read the first owner workspace with the actual browser's authenticated
@@ -39,12 +40,19 @@ export async function loadVerifiedOwnerWorkspace(
     .eq("status", "ACTIVE")
     .limit(21);
 
-  if (members.error) return { ok: false, reason: "QUERY_FAILED" };
-  if ((members.data ?? []).length > 20) return { ok: false, reason: "TOO_MANY" };
+  if (members.error || !Array.isArray(members.data)) {
+    return { ok: false, reason: "QUERY_FAILED" };
+  }
+  if (members.data.length > 20) return { ok: false, reason: "TOO_MANY" };
+  // A partly malformed membership response cannot authorize only the
+  // well-formed subset: doing so conceals data-integrity/RLS drift and may
+  // select the wrong business for a verified owner.
+  if (members.data.some(row => !row || typeof row.workspace_id !== "string" ||
+      !UUID.test(row.workspace_id))) {
+    return { ok: false, reason: "QUERY_FAILED" };
+  }
 
-  const ids = [...new Set((members.data ?? [])
-    .map(row => row.workspace_id)
-    .filter((id): id is string => typeof id === "string" && /^[a-f0-9-]{36}$/i.test(id)))];
+  const ids = [...new Set(members.data.map(row => row.workspace_id))];
 
   if (!ids.length) return { ok: false, reason: "DENIED" };
   const workspace = await auth.from("workspaces")
@@ -55,7 +63,15 @@ export async function loadVerifiedOwnerWorkspace(
 
   if (workspace.error) return { ok: false, reason: "QUERY_FAILED" };
   const row = workspace.data;
-  if (!row || !ids.includes(row.id) || row.slug !== slug) return { ok: false, reason: "DENIED" };
+  if (!row) return { ok: false, reason: "DENIED" };
+  if (typeof row.id !== "string" || !UUID.test(row.id) ||
+      !ids.includes(row.id) || row.slug !== slug ||
+      typeof row.name !== "string" || !row.name.trim() || row.name.length > 160 ||
+      typeof row.timezone !== "string" || row.timezone.length < 1 ||
+      row.timezone.length > 100 ||
+      typeof row.currency !== "string" || !/^[A-Z]{3}$/.test(row.currency)) {
+    return { ok: false, reason: "QUERY_FAILED" };
+  }
   return { ok: true, workspace: {
     id: row.id,
     slug: row.slug,
