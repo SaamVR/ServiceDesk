@@ -110,7 +110,7 @@ describe("SONIC #173 complete 72-task source-to-automation reconciliation",()=>{
   changed[0].items[0].number=2;
   expect(verify(changed)).toContain("task-id");
   const spoofed=load();
-  (spoofed[0].items[0] as Task & {acceptedOperationalReceipt:boolean})
+  (spoofed[0].items[0] as unknown as {acceptedOperationalReceipt:boolean})
     .acceptedOperationalReceipt=true;
   expect(verify(spoofed)).toContain("false-live-proof");
  });
