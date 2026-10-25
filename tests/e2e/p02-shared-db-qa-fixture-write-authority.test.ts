@@ -42,7 +42,7 @@ describe("P02 shared main Supabase synthetic fixture write authority", () => {
     const { readFileSync } = await import("node:fs");
     const page = readFileSync("src/app/onboarding/verified/page.tsx", "utf8");
     const action = readFileSync("src/app/onboarding/verified/qa-seed-actions.ts", "utf8");
-    expect(page).toContain("qaFixtureWritesAllowed()");
+    expect(page).toContain("qaFixtureWritesAllowedForWorkspace(workspace.slug)");
     expect(action).toContain("qaFixtureWritesAllowed()");
     expect(action.indexOf("qaFixtureWritesAllowed()"))
       .toBeLessThan(action.indexOf("seedQaWorkspaceData("));
