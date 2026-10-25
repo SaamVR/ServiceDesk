@@ -206,8 +206,9 @@ export async function prepareF05VersionedInstructionDraft(
  if(!inert(input)||!slug(input.workspaceSlug)||!uuid(input.branchId)||
     (input.ruleId!==undefined&&!uuid(input.ruleId))||
     (input.ruleId===undefined&&input.expectedSavedRuleVersion!==undefined)||
-    (input.ruleId!==undefined&&(!Number.isSafeInteger(input.expectedSavedRuleVersion)||
-      input.expectedSavedRuleVersion < 1)) ||
+    (input.ruleId!==undefined&&(typeof input.expectedSavedRuleVersion!=="number"||
+      !Number.isSafeInteger(input.expectedSavedRuleVersion)||
+      input.expectedSavedRuleVersion<1)) ||
     Object.keys(input).some(k=>!["workspaceSlug","branchId","instruction","ruleId","expectedSavedRuleVersion"].includes(k)))
     return bad("F05_INPUT_INVALID");
  const suggestion=typedInstruction(input.instruction);
