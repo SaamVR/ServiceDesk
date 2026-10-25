@@ -15,6 +15,9 @@ import { resolve } from "node:path";
 
 export const EXISTING_HOST = "servicedesk-v3-frontend-review.onrender.com";
 export const ORIGIN = "https://" + EXISTING_HOST;
+// Pinned to the owner-approved GitHub-only V4 P02 release-candidate branch.
+// A syntactically valid V3 SHA must never produce a V4 preflight PASS.
+export const REVIEWED_P02_RC_SHA = "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4";
 const SHA = /^[a-f0-9]{40}$/i;
 const PUBLIC_PATHS = Object.freeze([
   { key: "hosting-sha", path: "/health", accept: "application/json" },
@@ -27,6 +30,7 @@ const PUBLIC_PATHS = Object.freeze([
 export function validateP02RenderReadOnlyConfig(input) {
   if (input?.permission !== "READ_ONLY" ||
       typeof input.expectedSha !== "string" || !SHA.test(input.expectedSha) ||
+      input.expectedSha.toLowerCase() !== REVIEWED_P02_RC_SHA ||
       input.existingHost !== EXISTING_HOST ||
       input.existingServiceId !== "srv-db5p1s142hec739noohg") return null;
   return { expectedSha: input.expectedSha.toLowerCase(), origin: ORIGIN };
