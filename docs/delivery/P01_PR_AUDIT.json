@@ -1,0 +1,2928 @@
+{
+  "schema_version": 1,
+  "timestamp_utc": "2026-10-25T05:17:36.965849+00:00",
+  "repo": "SaamVR/ServiceDesk",
+  "canonical_sha": "974e9f040071b1a2c1199c7ff6fb652a67812a47",
+  "open_prs": 67,
+  "counts": {
+    "DEFER": 25,
+    "MERGE_CANDIDATE": 19,
+    "REBUILD": 8,
+    "SUPERSEDED": 15
+  },
+  "caution": "Blob equality only detects exact identical files; an automatic class is triage and NOT merge approval.",
+  "pr": [
+    {
+      "number": 21,
+      "title": "Professionalize V2 jobs and quality workspaces",
+      "branch": "feat/servicedesk-v2-jobs-quality-ui-20261006",
+      "head_sha": "b96595b25f942c3206fbe44a75217884855b4f29",
+      "base": "feat/servicedesk-v2-multilane-20261006",
+      "draft": false,
+      "updated_at": "2026-10-05T21:38:25Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/21",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 1,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "tests/e2e/v2-operational-product-routing.test.ts"
+      ],
+      "matched_paths": [],
+      "total_additions": 2,
+      "total_deletions": 2
+    },
+    {
+      "number": 67,
+      "title": "Frontend V3: workflow-first staff shell and readable operations ledger",
+      "branch": "feat/servicedesk-v3-workflow-shell-20261010",
+      "head_sha": "dd6d2d54af9dc873fee73b7bd78b86e301d5b810",
+      "base": "feat/servicedesk-v2-multilane-20261006",
+      "draft": true,
+      "updated_at": "2026-10-10T08:36:29Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/67",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 5,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 5,
+      "mismatch_paths": [
+        ".github/workflows/v2-release-focused.yml",
+        "src/components/product/StaffAppShell.tsx",
+        "src/components/product/StaffWorkspaceV3.module.css",
+        "src/features/operations/StaffOverviewDashboard.module.css",
+        "tests/e2e/staff-v3-navigation.test.tsx"
+      ],
+      "matched_paths": [],
+      "total_additions": 476,
+      "total_deletions": 26
+    },
+    {
+      "number": 68,
+      "title": "V3 registration: verified signup, owner workspace bootstrap and live-browser redesign audit",
+      "branch": "feat/servicedesk-v3-owner-registration-20261010",
+      "head_sha": "64bf21fb1ea9704561def858eb80fc1d1e3d9a8a",
+      "base": "feat/servicedesk-v2-multilane-20261006",
+      "draft": true,
+      "updated_at": "2026-10-10T11:19:20Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/68",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 34,
+      "unchanged_files": 11,
+      "changed_vs_canonical": 23,
+      "mismatch_paths": [
+        ".github/workflows/v2-release-focused.yml",
+        "src/app/auth/confirm/route.ts",
+        "src/app/auth/continue/route.ts",
+        "src/app/auth/create-workspace/actions.ts",
+        "src/app/auth/sign-in/page.tsx",
+        "src/app/auth/sign-up/actions.ts",
+        "src/app/auth/sign-up/check-email/page.tsx",
+        "src/app/auth/sign-up/page.tsx",
+        "src/app/page.tsx",
+        "src/components/product/StaffAppShell.tsx",
+        "src/components/product/StaffWorkspaceV3.module.css",
+        "src/components/shell/MarketingNavV3.module.css",
+        "src/components/shell/MarketingShell.tsx",
+        "src/features/auth/RegistrationShell.module.css",
+        "src/features/auth/email-origin.ts",
+        "src/features/auth/owner-registration-readiness.ts",
+        "src/features/onboarding/OnboardingProductRoute.tsx",
+        "src/features/onboarding/onboarding-product-runtime.ts",
+        "src/features/operations/StaffOverviewDashboard.module.css",
+        "tests/e2e/staff-v3-navigation.test.tsx",
+        "tests/e2e/v2-public-marketing-professional-ui.test.ts",
+        "tests/e2e/v3-owner-registration-flow.test.tsx",
+        "tests/providers/v2-migration-rehearsal.test.ts"
+      ],
+      "matched_paths": [
+        "docs/design/v3-live-browser-audit-20261010.md",
+        "docs/execution/v3-auth-release-gates-20261010.md",
+        "src/app/auth/create-workspace/page.tsx",
+        "src/app/auth/forgot-password/actions.ts",
+        "src/app/auth/forgot-password/check-email/page.tsx",
+        "src/app/auth/forgot-password/page.tsx",
+        "src/app/auth/reset-password/actions.ts",
+        "src/app/auth/reset-password/page.tsx",
+        "src/features/auth/RegistrationShell.tsx",
+        "src/features/auth/registration.ts",
+        "supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql"
+      ],
+      "total_additions": 2198,
+      "total_deletions": 108
+    },
+    {
+      "number": 69,
+      "title": "Frontend V3: operational Inbox triage, queue filters and readable messaging",
+      "branch": "feat/servicedesk-v3-inbox-triage-20261010",
+      "head_sha": "5c72e4a5f269733807f4cdaf4b3c81563b4ae79e",
+      "base": "feat/servicedesk-v3-owner-registration-20261010",
+      "draft": true,
+      "updated_at": "2026-10-10T11:03:29Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/69",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 6,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 6,
+      "mismatch_paths": [
+        ".github/workflows/v2-release-focused.yml",
+        "src/app/app/[workspace]/inbox/page.tsx",
+        "src/features/operations/OperationalProductRoute.module.css",
+        "src/features/operations/OperationalProductRoute.tsx",
+        "src/features/operations/inbox-triage.ts",
+        "tests/e2e/v3-inbox-triage.test.ts"
+      ],
+      "matched_paths": [],
+      "total_additions": 499,
+      "total_deletions": 16
+    },
+    {
+      "number": 70,
+      "title": "Frontend V3: replace fake marketing hero with operational product storytelling",
+      "branch": "feat/servicedesk-v3-marketing-story-20261010",
+      "head_sha": "7570d1be87a191e0ff92044f1fde059ff47f9792",
+      "base": "feat/servicedesk-v3-owner-registration-20261010",
+      "draft": true,
+      "updated_at": "2026-10-10T11:07:17Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/70",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 4,
+      "unchanged_files": 1,
+      "changed_vs_canonical": 3,
+      "mismatch_paths": [
+        "src/components/shell/MarketingHeroV3.module.css",
+        "src/components/shell/MarketingShell.tsx",
+        "tests/e2e/v3-marketing-story.test.tsx"
+      ],
+      "matched_paths": [
+        "src/components/shell/OperationalFlowHero.tsx"
+      ],
+      "total_additions": 357,
+      "total_deletions": 22
+    },
+    {
+      "number": 71,
+      "title": "V3 signup database: verified PG17 migration, rollback and owner-RPC rehearsal evidence",
+      "branch": "docs/servicedesk-v3-signup-db-rehearsal-20261011",
+      "head_sha": "a673a2adb470ad30e2767606d4f6d40a53b42a54",
+      "base": "feat/servicedesk-v3-integrated-review-20261010",
+      "draft": true,
+      "updated_at": "2026-10-10T19:04:18Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/71",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 3,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 3,
+      "mismatch_paths": [
+        "docs/execution/v3-auth-email-provider-observations-20261011.md",
+        "docs/execution/v3-connected-project-migration-rollout-20261011.md",
+        "docs/execution/v3-signup-database-rehearsal-evidence-20261011.md"
+      ],
+      "matched_paths": [],
+      "total_additions": 283,
+      "total_deletions": 0
+    },
+    {
+      "number": 72,
+      "title": "Fix V3 signup runtime: modern Supabase key and RLS-backed onboarding",
+      "branch": "fix/servicedesk-v3-auth-runtime-20261011",
+      "head_sha": "466c0a31ea7481c388e60c656e258d35bb06e7e3",
+      "base": "feat/servicedesk-v3-integrated-review-20261010",
+      "draft": true,
+      "updated_at": "2026-10-10T19:16:07Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/72",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 10,
+      "unchanged_files": 3,
+      "changed_vs_canonical": 7,
+      "mismatch_paths": [
+        ".github/workflows/v2-release-focused.yml",
+        "src/app/auth/confirm/route.ts",
+        "src/app/auth/continue/route.ts",
+        "src/features/onboarding/onboarding-product-runtime.ts",
+        "src/features/operations/customer-product-runtime.ts",
+        "src/features/operations/operational-product-runtime.ts",
+        "tests/e2e/v3-supabase-public-auth-runtime.test.ts"
+      ],
+      "matched_paths": [
+        "src/features/auth/email-origin.ts",
+        "src/features/auth/supabase-public-config.ts",
+        "src/features/crew/crew-product-runtime.ts"
+      ],
+      "total_additions": 215,
+      "total_deletions": 45
+    },
+    {
+      "number": 73,
+      "title": "V3 account emails: SSR-safe signup and recovery templates for Resend SMTP",
+      "branch": "feat/servicedesk-v3-auth-resend-templates-20261011",
+      "head_sha": "176979f1b248b19a5c748085735ccd938d4c9290",
+      "base": "fix/servicedesk-v3-auth-runtime-20261011",
+      "draft": true,
+      "updated_at": "2026-10-10T21:55:59Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/73",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 5,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 3,
+      "mismatch_paths": [
+        ".github/workflows/v2-release-focused.yml",
+        "docs/execution/v3-resend-supabase-auth-staging-20261011.md",
+        "tests/e2e/v3-auth-mail-templates.test.ts"
+      ],
+      "matched_paths": [
+        "supabase/auth-templates/confirm-signup.html",
+        "supabase/auth-templates/recovery.html"
+      ],
+      "total_additions": 225,
+      "total_deletions": 0
+    },
+    {
+      "number": 74,
+      "title": "V3 Auth callback: persist verified sessions without stale-cookie revalidation",
+      "branch": "fix/servicedesk-v3-verified-callback-20261011",
+      "head_sha": "b2b153d57213bb2f5f4aea1473a205b359b53a9b",
+      "base": "feat/servicedesk-v3-auth-resend-templates-20261011",
+      "draft": true,
+      "updated_at": "2026-10-10T23:02:10Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/74",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 8,
+      "unchanged_files": 7,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "src/app/auth/sign-up/check-email/actions.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v2-release-focused.yml",
+        "docs/execution/v3-resend-supabase-auth-staging-20261011.md",
+        "src/app/auth/confirm/route.ts",
+        "src/app/auth/sign-up/check-email/page.tsx",
+        "tests/e2e/v3-auth-mail-templates.test.ts",
+        "tests/e2e/v3-resend-signup-confirmation.test.ts",
+        "tests/e2e/v3-verified-auth-callback.test.ts"
+      ],
+      "total_additions": 355,
+      "total_deletions": 8
+    },
+    {
+      "number": 80,
+      "title": "V3 coordinated backend: workspace-choice domain + Resend-native transport + UI handoff",
+      "branch": "feat/servicedesk-v3-coordination-20261011",
+      "head_sha": "58add3f061494f47aad24e0a66d27bac654e0cc1",
+      "base": "fix/servicedesk-v3-verified-callback-20261011",
+      "draft": true,
+      "updated_at": "2026-10-11T10:00:09Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/80",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 82,
+      "unchanged_files": 55,
+      "changed_vs_canonical": 27,
+      "mismatch_paths": [
+        "scripts/release/v3-staging-auth-smoke.test.mjs",
+        "src/server/ai/catalog-knowledge.ts",
+        "src/server/ai/configured-service.ts",
+        "src/server/ai/fetch-transport.ts",
+        "src/server/ai/model-transport.ts",
+        "src/server/ai/runtime-config.ts",
+        "src/server/ai/staff-invocation.ts",
+        "src/server/ai/tool-orchestration.ts",
+        "src/server/api-handlers/ai-staff-http.ts",
+        "src/server/api-handlers/reviewed-inbox-reply-http.ts",
+        "src/server/core/conversation-postgres.ts",
+        "src/server/core/reviewed-inbox-reply.ts",
+        "src/server/integrations/email/transport.ts",
+        "src/server/integrations/outbox/dispatch-router.ts",
+        "src/server/integrations/whatsapp/delivery-triage.ts",
+        "src/server/jobs/outbox-repository.ts",
+        "src/server/jobs/outbox-retry.ts",
+        "tests/db/v3-inbound-rpc-scope.test.ts",
+        "tests/e2e/v3-ai-staff-http.test.ts",
+        "tests/e2e/v3-reviewed-reply-http.test.ts",
+        "tests/e2e/v3-whatsapp-http-boundary.test.ts",
+        "tests/providers/ai-configured-service.test.ts",
+        "tests/providers/ai-fetch-runtime.test.ts",
+        "tests/providers/ai-model-transport-hardening.test.ts",
+        "tests/providers/ai-staff-invocation.test.ts",
+        "tests/providers/outbox-dispatch-router.test.ts",
+        "tests/providers/v3-delivery-triage.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v3-focused-pr.yml",
+        ".github/workflows/v3-ui-focused-pr.yml",
+        "docs/design/v3-frontend-overhaul-direction-20261011.md",
+        "docs/execution/v3-backend-five-pr-run-20261011.md",
+        "docs/execution/v3-four-lane-active-batch-20261011.md",
+        "docs/execution/v3-new-chat-verified-multilane-handoff-20261011.md",
+        "docs/execution/v3-next-chat-control-tower-prompt-20261011.md",
+        "docs/execution/v3-optimized-run-handoff-20261011.md",
+        "docs/execution/v3-parallel-recovery-20261011.md",
+        "docs/execution/v3-real-outbox-reply-provider-evidence-verified-20261011.md",
+        "docs/execution/v3-reviewed-reply-delivery-triage-handoff-20261011.md",
+        "docs/execution/v3-run-status-ai-whatsapp-verified-20261011.md",
+        "docs/taskboard.md",
+        "scripts/release/v3-staging-auth-smoke.mjs",
+        "src/domain/auth/authorized-workspace-selection.ts",
+        "src/server/ai/index.ts",
+        "src/server/ai/operational-runtime.ts",
+        "src/server/ai/postgres-configured-service.ts",
+        "src/server/ai/postgres-conversation-store.ts",
+        "src/server/api-handlers/delivery-triage-http.ts",
+        "src/server/api-handlers/provider-whatsapp-http.ts",
+        "src/server/api-handlers/provider-whatsapp-runtime.ts",
+        "src/server/api-handlers/provider-whatsapp.ts",
+        "src/server/integrations/outbox/conversation-reply-intent.ts",
+        "src/server/integrations/outbox/conversation-reply-postgres.ts",
+        "src/server/integrations/outbox/execution-adapter.ts",
+        "src/server/integrations/recovery/lease.ts",
+        "src/server/integrations/recovery/scheduler.ts",
+        "src/server/integrations/recovery/serialization.ts",
+        "src/server/integrations/whatsapp/adapter.ts",
+        "src/server/integrations/whatsapp/delivery-outbox-evidence.ts",
+        "src/server/integrations/whatsapp/inbound-config.ts",
+        "src/server/integrations/whatsapp/status-postgres.ts",
+        "src/server/jobs/outbox-worker.ts",
+        "tests/db/outbox-postgres-gateway.test.ts",
+        "tests/db/outbox-worker.test.ts",
+        "tests/db/v3-ai-durable-conversation-store.test.ts",
+        "tests/domain/authorized-workspace-selection.test.ts",
+        "tests/e2e/v3-delivery-triage-http.test.ts",
+        "tests/providers/ai-catalog-knowledge.test.ts",
+        "tests/providers/ai-operational-runtime.test.ts",
+        "tests/providers/ai-postgres-configured-service.test.ts",
+        "tests/providers/ai-tool-orchestration.test.ts",
+        "tests/providers/e05-conversation-reply-intent.test.ts",
+        "tests/providers/provider-recovery-lease.test.ts",
+        "tests/providers/provider-recovery-scheduler.test.ts",
+        "tests/providers/provider-recovery-serialization.test.ts",
+        "tests/providers/resend-transactional-email-contract.test.ts",
+        "tests/providers/v3-conversation-reply-postgres.test.ts",
+        "tests/providers/v3-delivery-outbox-evidence.test.ts",
+        "tests/providers/v3-reviewed-inbox-reply.test.ts",
+        "tests/providers/whatsapp-handler-hardening.test.ts",
+        "tests/providers/whatsapp-runtime-inbound.test.ts",
+        "tests/providers/whatsapp-status-postgres.test.ts",
+        "vitest.config.ts"
+      ],
+      "total_additions": 7541,
+      "total_deletions": 70
+    },
+    {
+      "number": 83,
+      "title": "V3 Studio OS frontend redesign \u2014 operational dashboard, Inbox, CRM, dispatch and brand system",
+      "branch": "feat/servicedesk-v3-ui-overhaul-20261011",
+      "head_sha": "ddc2392047772969d275c4292628da2cf93dc07e",
+      "base": "feat/servicedesk-v3-coordination-20261011",
+      "draft": false,
+      "updated_at": "2026-10-11T10:45:19Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/83",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 107,
+      "unchanged_files": 72,
+      "changed_vs_canonical": 35,
+      "mismatch_paths": [
+        "docs/design/v3-studio-acceptance-command-20261011.md",
+        "src/app/auth/continue/route.ts",
+        "src/app/auth/select-workspace/page.tsx",
+        "src/components/product/StaffAppShell.tsx",
+        "src/components/product/StaffCommandPalette.tsx",
+        "src/components/shell/MarketingNavV3.module.css",
+        "src/features/auth/RegistrationShell.module.css",
+        "src/features/operations/DispatchCoverageWeek.module.css",
+        "src/features/operations/DispatchCoverageWeek.tsx",
+        "src/features/operations/OperationalProductRoute.module.css",
+        "src/features/operations/OperationalProductRoute.tsx",
+        "src/features/operations/QualityQueueFilters.tsx",
+        "src/features/operations/StaffOverviewDashboard.module.css",
+        "src/features/operations/StaffOverviewDashboard.tsx",
+        "src/features/operations/dispatch-coverage-week.ts",
+        "src/features/operations/invoice-collection-queue.ts",
+        "src/features/operations/product-truth.ts",
+        "src/features/operations/quality-queue.ts",
+        "src/features/operations/quote-pipeline.ts",
+        "src/features/operations/staff-command-search.ts",
+        "src/features/operations/staff-local-day.ts",
+        "src/features/operations/staff-snapshot-index.ts",
+        "tests/e2e/staff-v3-navigation.test.tsx",
+        "tests/e2e/v3-authorized-workspace-access.test.ts",
+        "tests/e2e/v3-capture-workroom.mjs",
+        "tests/e2e/v3-inbox-triage.test.ts",
+        "tests/e2e/v3-quality-triage.test.ts",
+        "tests/e2e/v3-studio-brand-continuity.test.ts",
+        "tests/e2e/v3-studio-browser-matrix.test.ts",
+        "tests/e2e/v3-studio-dashboard.test.ts",
+        "tests/e2e/v3-studio-local-day.test.ts",
+        "tests/e2e/v3-studio-queue-performance.test.ts",
+        "tests/e2e/v3-studio-quote-version-safety.test.ts",
+        "tests/e2e/v3-studio-submit-pending.test.ts",
+        "tests/e2e/v3-studio-workspaces.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v3-ui-focused-pr.yml",
+        "docs/design/v3-studio-product-ux-standard-20261011.md",
+        "src/app/app/[workspace]/StaffRouteBoundary.module.css",
+        "src/app/app/[workspace]/customers/page.tsx",
+        "src/app/app/[workspace]/error.tsx",
+        "src/app/app/[workspace]/inbox/page.tsx",
+        "src/app/app/[workspace]/invoices/page.tsx",
+        "src/app/app/[workspace]/jobs/page.tsx",
+        "src/app/app/[workspace]/loading.tsx",
+        "src/app/app/[workspace]/quality/page.tsx",
+        "src/app/app/[workspace]/quotes/page.tsx",
+        "src/app/app/[workspace]/requests/page.tsx",
+        "src/app/app/[workspace]/schedule/page.tsx",
+        "src/app/auth/select-workspace/page.module.css",
+        "src/components/product/StaffCommandPalette.module.css",
+        "src/components/product/StaffSubmitButton.module.css",
+        "src/components/product/StaffSubmitButton.tsx",
+        "src/components/product/StaffWorkspaceV3.module.css",
+        "src/components/shell/MarketingHeroV3.module.css",
+        "src/features/auth/authorized-workspace-access.ts",
+        "src/features/commercial/CommercialBillingWorkspace.module.css",
+        "src/features/commercial/CommercialBillingWorkspace.tsx",
+        "src/features/operations/InboxThreadNavigator.module.css",
+        "src/features/operations/InboxThreadNavigator.tsx",
+        "src/features/operations/InvoiceCollectionFilters.module.css",
+        "src/features/operations/InvoiceCollectionFilters.tsx",
+        "src/features/operations/JobQueueFilters.module.css",
+        "src/features/operations/JobQueueFilters.tsx",
+        "src/features/operations/JobQueueSearch.module.css",
+        "src/features/operations/JobQueueSearch.tsx",
+        "src/features/operations/QualityQueueFilters.module.css",
+        "src/features/operations/RecordDirectorySearch.module.css",
+        "src/features/operations/RecordDirectorySearch.tsx",
+        "src/features/operations/dispatch-backlog.ts",
+        "src/features/operations/inbox-delivery-presentation.ts",
+        "src/features/operations/inbox-thread-navigation.ts",
+        "src/features/operations/inbox-triage.ts",
+        "src/features/operations/jobs-queue.ts",
+        "src/features/operations/operational-journey-counts.ts",
+        "src/features/operations/record-directory.ts",
+        "src/features/operations/settings-navigation.ts",
+        "src/features/operations/staff-schedule-window.ts",
+        "src/features/settings/TeamInvitationManager.module.css",
+        "src/features/settings/TeamInvitationManager.tsx",
+        "tests/e2e/v2-product-truth.test.ts",
+        "tests/e2e/v2-professional-dashboard-ui.test.ts",
+        "tests/e2e/v2-professional-schedule-ui.test.ts",
+        "tests/e2e/v3-dispatch-coverage-week.test.ts",
+        "tests/e2e/v3-inbox-delivery-presentation.test.ts",
+        "tests/e2e/v3-inbox-search.test.ts",
+        "tests/e2e/v3-inbox-thread-navigation.test.ts",
+        "tests/e2e/v3-jobs-queue.test.tsx",
+        "tests/e2e/v3-jobs-search.test.tsx",
+        "tests/e2e/v3-operational-empty-actions.test.tsx",
+        "tests/e2e/v3-record-directory.test.tsx",
+        "tests/e2e/v3-settings-context.test.ts",
+        "tests/e2e/v3-staff-boundary-theme.test.ts",
+        "tests/e2e/v3-staff-command-search.test.ts",
+        "tests/e2e/v3-staff-route-resilience.test.tsx",
+        "tests/e2e/v3-studio-command-record-search.test.ts",
+        "tests/e2e/v3-studio-contrast.test.ts",
+        "tests/e2e/v3-studio-coverage.test.ts",
+        "tests/e2e/v3-studio-finance-readability.test.ts",
+        "tests/e2e/v3-studio-finance-team.test.ts",
+        "tests/e2e/v3-studio-finance-workspaces.test.ts",
+        "tests/e2e/v3-studio-invoice-queue.test.ts",
+        "tests/e2e/v3-studio-operational-continuity.test.ts",
+        "tests/e2e/v3-studio-readable-density.test.ts",
+        "tests/e2e/v3-studio-reply-brief.test.ts",
+        "tests/e2e/v3-studio-schedule-window.test.ts",
+        "tests/e2e/v3-studio-visual-standard.test.ts",
+        "tests/e2e/v3-studio-workflow-counts.test.ts"
+      ],
+      "total_additions": 6202,
+      "total_deletions": 1227
+    },
+    {
+      "number": 104,
+      "title": "V3 route bridge: WhatsApp, staff AI draft, reviewed reply and delivery triage",
+      "branch": "feat/servicedesk-v3-http-route-bridge-20261011",
+      "head_sha": "e786cdc357cbe294f41241be0b18fa2d0a12abb4",
+      "base": "feat/servicedesk-v3-coordination-20261011",
+      "draft": true,
+      "updated_at": "2026-10-11T09:45:37Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/104",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 6,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 6,
+      "mismatch_paths": [
+        "src/app/api/internal/ai/draft/route.ts",
+        "src/app/api/internal/inbox/delivery/route.ts",
+        "src/app/api/internal/inbox/reply/route.ts",
+        "src/app/api/providers/whatsapp/route.ts",
+        "tests/e2e/v3-ai-staff-http.test.ts",
+        "tests/e2e/v3-next-http-route-bridge.test.ts"
+      ],
+      "matched_paths": [],
+      "total_additions": 93,
+      "total_deletions": 0
+    },
+    {
+      "number": 105,
+      "title": "V3 integration candidate: Studio OS + coordinator backend + reviewed HTTP adapters (RC validation)",
+      "branch": "feat/servicedesk-v3-combined-acceptance-20261011",
+      "head_sha": "bcd3e8f752abb65ccff95e9a4a260bbd473221a6",
+      "base": "feat/servicedesk-v3-coordination-20261011",
+      "draft": true,
+      "updated_at": "2026-10-11T21:19:58Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/105",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 216,
+      "unchanged_files": 162,
+      "changed_vs_canonical": 54,
+      "mismatch_paths": [
+        ".github/workflows/v3-rc-contract-reconciliation.yml",
+        "scripts/release/v3-public-browser-proof.mjs",
+        "scripts/release/v3-public-browser-proof.test.mjs",
+        "src/app/auth/sign-in/page.tsx",
+        "src/app/auth/sign-up/page.tsx",
+        "src/app/onboarding/verified/page.tsx",
+        "src/app/page.tsx",
+        "src/app/tour/page.tsx",
+        "src/components/product/StaffAppShell.tsx",
+        "src/components/product/StaffCommandPalette.tsx",
+        "src/components/shell/MarketingNavV3.module.css",
+        "src/components/shell/MarketingShell.tsx",
+        "src/features/auth/RegistrationShell.module.css",
+        "src/features/auth/qa-sample-seed.ts",
+        "src/features/operations/DispatchCoverageWeek.module.css",
+        "src/features/operations/DispatchCoverageWeek.tsx",
+        "src/features/operations/InboxDeliveryDiagnostics.module.css",
+        "src/features/operations/InboxDeliveryDiagnostics.tsx",
+        "src/features/operations/OperationalProductRoute.module.css",
+        "src/features/operations/OperationalProductRoute.tsx",
+        "src/features/operations/QualityQueueFilters.tsx",
+        "src/features/operations/StaffAiReviewComposer.module.css",
+        "src/features/operations/StaffAiReviewComposer.tsx",
+        "src/features/operations/StaffOverviewDashboard.module.css",
+        "src/features/operations/StaffOverviewDashboard.tsx",
+        "src/features/operations/dispatch-coverage-week.ts",
+        "src/features/operations/inbox-delivery-diagnostics.ts",
+        "src/features/operations/invoice-collection-queue.ts",
+        "src/features/operations/operational-product-runtime.ts",
+        "src/features/operations/product-truth.ts",
+        "src/features/operations/quality-queue.ts",
+        "src/features/operations/quote-pipeline.ts",
+        "src/features/operations/staff-ai-review-contract.ts",
+        "src/features/operations/staff-command-search.ts",
+        "src/features/operations/staff-local-day.ts",
+        "src/features/operations/staff-snapshot-index.ts",
+        "src/features/product/StaticProductPage.tsx",
+        "src/features/sandbox/SandboxJourney.module.css",
+        "tests/e2e/staff-v3-navigation.test.tsx",
+        "tests/e2e/v2-auth-product.test.ts",
+        "tests/e2e/v2-public-marketing-professional-ui.test.ts",
+        "tests/e2e/v3-ai-staff-http.test.ts",
+        "tests/e2e/v3-inbox-delivery-diagnostics.test.ts",
+        "tests/e2e/v3-marketing-entry-truth.test.ts",
+        "tests/e2e/v3-qa-synthetic-persistence.test.ts",
+        "tests/e2e/v3-quality-triage.test.ts",
+        "tests/e2e/v3-staff-ai-review-composer.test.ts",
+        "tests/e2e/v3-studio-brand-continuity.test.ts",
+        "tests/e2e/v3-studio-dashboard.test.ts",
+        "tests/e2e/v3-studio-local-day.test.ts",
+        "tests/e2e/v3-studio-queue-performance.test.ts",
+        "tests/e2e/v3-studio-quote-version-safety.test.ts",
+        "tests/e2e/v3-supabase-public-auth-runtime.test.ts",
+        "tests/providers/v2-migration-rehearsal.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v3-anon-definer-closure.yml",
+        ".github/workflows/v3-auth-entry-ci.yml",
+        ".github/workflows/v3-auth-qa.yml",
+        ".github/workflows/v3-marketing-entry-rc.yml",
+        ".github/workflows/v3-owner-first-login.yml",
+        ".github/workflows/v3-pricing-claim-rc.yml",
+        ".github/workflows/v3-public-browser-proof.yml",
+        ".github/workflows/v3-qa-operations-rls.yml",
+        ".github/workflows/v3-qa-seed.yml",
+        ".github/workflows/v3-reviewed-composer-pr.yml",
+        ".github/workflows/v3-sandbox-rc.yml",
+        "docs/design/v3-marketing-registration-cta-truth-20261011.md",
+        "docs/design/v3-public-chromium-qa-20261011.md",
+        "docs/design/v3-public-page-metadata-20261011.md",
+        "docs/design/v3-public-product-hero-20261011.md",
+        "docs/design/v3-staging-provenance-acceptance-20261011.md",
+        "docs/design/v3-studio-acceptance-command-20261011.md",
+        "docs/design/v3-studio-product-ux-standard-20261011.md",
+        "docs/execution/v3-anon-definer-rpc-closure-20261011.md",
+        "docs/execution/v3-owner-first-login-20261011.md",
+        "docs/execution/v3-qa-auth-allowlist-20261011.md",
+        "docs/execution/v3-qa-session-rls-operations-20261011.md",
+        "docs/execution/v3-qa-synthetic-tenant-seed-20261011.md",
+        "docs/execution/v3-sandbox-quickstart-20261011.md",
+        "scripts/release/v3-migration-source-audit.mjs",
+        "scripts/release/v3-migration-source-audit.test.mjs",
+        "scripts/release/v3-sandbox-browser.mjs",
+        "scripts/release/v3-staging-auth-smoke.test.mjs",
+        "scripts/release/v3-staging-source-preflight.mjs",
+        "scripts/release/v3-staging-source-preflight.test.mjs",
+        "src/app/api/internal/ai/draft/route.ts",
+        "src/app/api/internal/inbox/delivery/route.ts",
+        "src/app/api/internal/inbox/reply/route.ts",
+        "src/app/api/providers/whatsapp/route.ts",
+        "src/app/app/[workspace]/StaffRouteBoundary.module.css",
+        "src/app/app/[workspace]/customers/page.tsx",
+        "src/app/app/[workspace]/error.tsx",
+        "src/app/app/[workspace]/inbox/page.tsx",
+        "src/app/app/[workspace]/invoices/page.tsx",
+        "src/app/app/[workspace]/jobs/page.tsx",
+        "src/app/app/[workspace]/loading.tsx",
+        "src/app/app/[workspace]/quality/page.tsx",
+        "src/app/app/[workspace]/quotes/page.tsx",
+        "src/app/app/[workspace]/requests/page.tsx",
+        "src/app/app/[workspace]/schedule/page.tsx",
+        "src/app/auth/continue/route.ts",
+        "src/app/auth/create-workspace/actions.ts",
+        "src/app/auth/select-workspace/page.module.css",
+        "src/app/auth/select-workspace/page.tsx",
+        "src/app/auth/sign-up/actions.ts",
+        "src/app/auth/sign-up/check-email/actions.ts",
+        "src/app/contact/page.tsx",
+        "src/app/features/page.tsx",
+        "src/app/globals.css",
+        "src/app/health/deployment-identity.ts",
+        "src/app/health/route.ts",
+        "src/app/integrations/page.tsx",
+        "src/app/layout.tsx",
+        "src/app/onboarding/verified/qa-seed-actions.ts",
+        "src/app/pricing/page.tsx",
+        "src/app/sandbox/page.tsx",
+        "src/components/product/StaffCommandPalette.module.css",
+        "src/components/product/StaffSubmitButton.module.css",
+        "src/components/product/StaffSubmitButton.tsx",
+        "src/components/product/StaffWorkspaceV3.module.css",
+        "src/components/shell/MarketingHeroV3.module.css",
+        "src/components/shell/MarketingNavLinks.tsx",
+        "src/components/shell/ProductStoryHero.module.css",
+        "src/components/shell/ProductStoryHero.tsx",
+        "src/features/auth/authorized-workspace-access.ts",
+        "src/features/auth/marketing-entry-policy.ts",
+        "src/features/auth/operational-preview-mode.ts",
+        "src/features/auth/owner-registration-readiness.ts",
+        "src/features/auth/return-path.ts",
+        "src/features/auth/verified-owner-workspace.ts",
+        "src/features/commercial/CommercialBillingWorkspace.module.css",
+        "src/features/commercial/CommercialBillingWorkspace.tsx",
+        "src/features/operations/InboxThreadNavigator.module.css",
+        "src/features/operations/InboxThreadNavigator.tsx",
+        "src/features/operations/InvoiceCollectionFilters.module.css",
+        "src/features/operations/InvoiceCollectionFilters.tsx",
+        "src/features/operations/JobQueueFilters.module.css",
+        "src/features/operations/JobQueueFilters.tsx",
+        "src/features/operations/JobQueueSearch.module.css",
+        "src/features/operations/JobQueueSearch.tsx",
+        "src/features/operations/QualityQueueFilters.module.css",
+        "src/features/operations/RecordDirectorySearch.module.css",
+        "src/features/operations/RecordDirectorySearch.tsx",
+        "src/features/operations/dispatch-backlog.ts",
+        "src/features/operations/inbox-delivery-presentation.ts",
+        "src/features/operations/inbox-thread-navigation.ts",
+        "src/features/operations/inbox-triage.ts",
+        "src/features/operations/jobs-queue.ts",
+        "src/features/operations/operational-journey-counts.ts",
+        "src/features/operations/record-directory.ts",
+        "src/features/operations/settings-navigation.ts",
+        "src/features/operations/staff-schedule-window.ts",
+        "src/features/product/ProductSections.tsx",
+        "src/features/product/public-page-metadata.ts",
+        "src/features/sandbox/SandboxJourney.tsx",
+        "src/features/sandbox/sandbox-engine.ts",
+        "src/features/settings/TeamInvitationManager.module.css",
+        "src/features/settings/TeamInvitationManager.tsx",
+        "supabase/migrations/0060_v3_restrict_anonymous_branch_helpers.sql",
+        "tests/e2e/v2-commercial-finance-product.test.ts",
+        "tests/e2e/v2-customers-product-workspace.test.ts",
+        "tests/e2e/v2-invoices-product-workspace.test.ts",
+        "tests/e2e/v2-jobs-product-workspace.test.ts",
+        "tests/e2e/v2-product-truth.test.ts",
+        "tests/e2e/v2-professional-dashboard-ui.test.ts",
+        "tests/e2e/v2-professional-inbox-ui.test.ts",
+        "tests/e2e/v2-professional-schedule-ui.test.ts",
+        "tests/e2e/v2-request-quote-workspace.test.ts",
+        "tests/e2e/v3-anonymous-definer-closure.test.ts",
+        "tests/e2e/v3-auth-safe-return.test.ts",
+        "tests/e2e/v3-authorized-workspace-access.test.ts",
+        "tests/e2e/v3-capture-workroom.mjs",
+        "tests/e2e/v3-dispatch-coverage-week.test.ts",
+        "tests/e2e/v3-hosting-commit-identity.test.ts",
+        "tests/e2e/v3-http-adapter-contract.test.ts",
+        "tests/e2e/v3-inbox-delivery-presentation.test.ts",
+        "tests/e2e/v3-inbox-search.test.ts",
+        "tests/e2e/v3-inbox-thread-navigation.test.ts",
+        "tests/e2e/v3-inbox-triage.test.ts",
+        "tests/e2e/v3-integrated-studio-http-wiring.test.ts",
+        "tests/e2e/v3-jobs-queue.test.tsx",
+        "tests/e2e/v3-jobs-search.test.tsx",
+        "tests/e2e/v3-marketing-nav-redesign.test.ts",
+        "tests/e2e/v3-marketing-story.test.tsx",
+        "tests/e2e/v3-operational-empty-actions.test.tsx",
+        "tests/e2e/v3-owner-first-login.test.ts",
+        "tests/e2e/v3-owner-registration-flow.test.tsx",
+        "tests/e2e/v3-pricing-claim-truth.test.ts",
+        "tests/e2e/v3-private-qa-paths.test.ts",
+        "tests/e2e/v3-public-route-metadata.test.ts",
+        "tests/e2e/v3-public-story-hero.test.tsx",
+        "tests/e2e/v3-qa-operations-rls-fallback.test.ts",
+        "tests/e2e/v3-qa-registration-allowlist.test.ts",
+        "tests/e2e/v3-record-directory.test.tsx",
+        "tests/e2e/v3-sandbox-workflow.test.ts",
+        "tests/e2e/v3-settings-context.test.ts",
+        "tests/e2e/v3-signin-registration-truth.test.ts",
+        "tests/e2e/v3-staff-boundary-theme.test.ts",
+        "tests/e2e/v3-staff-command-search.test.ts",
+        "tests/e2e/v3-staff-route-resilience.test.tsx",
+        "tests/e2e/v3-studio-browser-matrix.test.ts",
+        "tests/e2e/v3-studio-command-record-search.test.ts",
+        "tests/e2e/v3-studio-contrast.test.ts",
+        "tests/e2e/v3-studio-coverage.test.ts",
+        "tests/e2e/v3-studio-finance-readability.test.ts",
+        "tests/e2e/v3-studio-finance-team.test.ts",
+        "tests/e2e/v3-studio-finance-workspaces.test.ts",
+        "tests/e2e/v3-studio-invoice-queue.test.ts",
+        "tests/e2e/v3-studio-operational-continuity.test.ts",
+        "tests/e2e/v3-studio-readable-density.test.ts",
+        "tests/e2e/v3-studio-reply-brief.test.ts",
+        "tests/e2e/v3-studio-reviewed-composer.test.ts",
+        "tests/e2e/v3-studio-schedule-window.test.ts",
+        "tests/e2e/v3-studio-submit-pending.test.ts",
+        "tests/e2e/v3-studio-visual-standard.test.ts",
+        "tests/e2e/v3-studio-workflow-counts.test.ts",
+        "tests/e2e/v3-studio-workspaces.test.ts"
+      ],
+      "total_additions": 12140,
+      "total_deletions": 1408
+    },
+    {
+      "number": 120,
+      "title": "V4 Clean Air \u2014 bright image-led cleaning homepage and interactive human-reviewed AI story",
+      "branch": "feat/servicedesk-v4-clean-bright-home-20261011",
+      "head_sha": "0b4b919863197b62011bce1f58f177aaa42826b9",
+      "base": "feat/servicedesk-v3-combined-acceptance-20261011",
+      "draft": true,
+      "updated_at": "2026-10-11T15:46:19Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/120",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 14,
+      "unchanged_files": 7,
+      "changed_vs_canonical": 7,
+      "mismatch_paths": [
+        "scripts/release/v3-public-browser-proof.mjs",
+        "scripts/release/v3-public-browser-proof.test.mjs",
+        "src/components/shell/MarketingNavV3.module.css",
+        "src/components/shell/MarketingShell.tsx",
+        "src/features/product/BrightHomeExperience.module.css",
+        "tests/e2e/staff-v3-navigation.test.tsx",
+        "tests/e2e/v4-clean-air-home.test.tsx"
+      ],
+      "matched_paths": [
+        "docs/design/v4-clean-air-home-art-direction-20261011.md",
+        "src/app/page.tsx",
+        "src/features/product/BrightHomeExperience.tsx",
+        "src/features/product/BrightHomeInteractions.tsx",
+        "tests/e2e/v2-public-marketing-professional-ui.test.ts",
+        "tests/e2e/v3-marketing-entry-truth.test.ts",
+        "tests/e2e/v3-studio-brand-continuity.test.ts"
+      ],
+      "total_additions": 1342,
+      "total_deletions": 33
+    },
+    {
+      "number": 122,
+      "title": "V4 Clean Air site-wide redesign: eight distinct public pages, interactive examples, bright authentication",
+      "branch": "feat/servicedesk-v4-clean-public-pages-20261011",
+      "head_sha": "6e723dd3652d05ad71186df8fbdcf2e4fba871c4",
+      "base": "feat/servicedesk-v3-combined-acceptance-20261011",
+      "draft": true,
+      "updated_at": "2026-10-11T16:29:38Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/122",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 24,
+      "unchanged_files": 15,
+      "changed_vs_canonical": 9,
+      "mismatch_paths": [
+        "scripts/release/v3-public-browser-proof.mjs",
+        "scripts/release/v3-public-browser-proof.test.mjs",
+        "src/components/shell/MarketingNavV3.module.css",
+        "src/features/auth/RegistrationShell.module.css",
+        "src/features/product/BrightHomeExperience.module.css",
+        "src/features/product/BrightProductPages.module.css",
+        "tests/e2e/staff-v3-navigation.test.tsx",
+        "tests/e2e/v4-clean-air-home.test.tsx",
+        "tests/e2e/v4-clean-public-pages.test.tsx"
+      ],
+      "matched_paths": [
+        "docs/design/v4-clean-air-home-art-direction-20261011.md",
+        "src/app/help/page.tsx",
+        "src/app/page.tsx",
+        "src/app/privacy/page.tsx",
+        "src/app/terms/page.tsx",
+        "src/app/use-cases/cleaning/page.tsx",
+        "src/components/shell/MarketingShell.tsx",
+        "src/features/product/BrightHomeExperience.tsx",
+        "src/features/product/BrightHomeInteractions.tsx",
+        "src/features/product/BrightPageInteractions.tsx",
+        "src/features/product/BrightProductExperience.tsx",
+        "src/features/product/StaticProductPage.tsx",
+        "tests/e2e/v2-public-marketing-professional-ui.test.ts",
+        "tests/e2e/v3-marketing-entry-truth.test.ts",
+        "tests/e2e/v3-studio-brand-continuity.test.ts"
+      ],
+      "total_additions": 2696,
+      "total_deletions": 47
+    },
+    {
+      "number": 124,
+      "title": "V4 Clean Air guided tour + true local-only sandbox visual redesign",
+      "branch": "feat/servicedesk-v4-tour-sandbox-20261011",
+      "head_sha": "7e2c6bf35a161929e79c7514ad19e7bcd2880996",
+      "base": "feat/servicedesk-v3-combined-acceptance-20261011",
+      "draft": true,
+      "updated_at": "2026-10-11T16:39:01Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/124",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 28,
+      "unchanged_files": 15,
+      "changed_vs_canonical": 13,
+      "mismatch_paths": [
+        "scripts/release/v3-public-browser-proof.mjs",
+        "scripts/release/v3-public-browser-proof.test.mjs",
+        "src/app/tour/BrightTour.module.css",
+        "src/app/tour/page.tsx",
+        "src/components/shell/MarketingNavV3.module.css",
+        "src/features/auth/RegistrationShell.module.css",
+        "src/features/product/BrightHomeExperience.module.css",
+        "src/features/product/BrightProductPages.module.css",
+        "src/features/sandbox/SandboxJourney.module.css",
+        "tests/e2e/staff-v3-navigation.test.tsx",
+        "tests/e2e/v4-clean-air-home.test.tsx",
+        "tests/e2e/v4-clean-public-pages.test.tsx",
+        "tests/e2e/v4-tour-sandbox-design.test.ts"
+      ],
+      "matched_paths": [
+        "docs/design/v4-clean-air-home-art-direction-20261011.md",
+        "src/app/help/page.tsx",
+        "src/app/page.tsx",
+        "src/app/privacy/page.tsx",
+        "src/app/terms/page.tsx",
+        "src/app/use-cases/cleaning/page.tsx",
+        "src/components/shell/MarketingShell.tsx",
+        "src/features/product/BrightHomeExperience.tsx",
+        "src/features/product/BrightHomeInteractions.tsx",
+        "src/features/product/BrightPageInteractions.tsx",
+        "src/features/product/BrightProductExperience.tsx",
+        "src/features/product/StaticProductPage.tsx",
+        "tests/e2e/v2-public-marketing-professional-ui.test.ts",
+        "tests/e2e/v3-marketing-entry-truth.test.ts",
+        "tests/e2e/v3-studio-brand-continuity.test.ts"
+      ],
+      "total_additions": 3097,
+      "total_deletions": 56
+    },
+    {
+      "number": 125,
+      "title": "V4 Clean Air guided tour: cleaning-first journey, grounded scenarios and interactive sandbox entry",
+      "branch": "feat/servicedesk-v4-clean-tour-20261011",
+      "head_sha": "c550a1e12ddb4aa87a84b0a3c6f914e5abe7a346",
+      "base": "feat/servicedesk-v3-combined-acceptance-20261011",
+      "draft": true,
+      "updated_at": "2026-10-11T17:06:19Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/125",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 29,
+      "unchanged_files": 20,
+      "changed_vs_canonical": 9,
+      "mismatch_paths": [
+        "src/app/tour/tour.module.css",
+        "src/components/shell/MarketingNavV3.module.css",
+        "src/features/auth/RegistrationShell.module.css",
+        "src/features/product/BrightHomeExperience.module.css",
+        "src/features/product/BrightProductPages.module.css",
+        "tests/e2e/staff-v3-navigation.test.tsx",
+        "tests/e2e/v4-clean-air-home.test.tsx",
+        "tests/e2e/v4-clean-public-pages.test.tsx",
+        "tests/e2e/v4-clean-tour-public.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v4-clean-air-public-rc.yml",
+        "docs/design/v4-clean-air-home-art-direction-20261011.md",
+        "scripts/release/v3-public-browser-proof.mjs",
+        "scripts/release/v3-public-browser-proof.test.mjs",
+        "src/app/help/page.tsx",
+        "src/app/page.tsx",
+        "src/app/privacy/page.tsx",
+        "src/app/terms/page.tsx",
+        "src/app/tour/page.tsx",
+        "src/app/use-cases/cleaning/page.tsx",
+        "src/components/shell/MarketingShell.tsx",
+        "src/features/product/BrightHomeExperience.tsx",
+        "src/features/product/BrightHomeInteractions.tsx",
+        "src/features/product/BrightPageInteractions.tsx",
+        "src/features/product/BrightProductExperience.tsx",
+        "src/features/product/StaticProductPage.tsx",
+        "tests/e2e/product-server-boundary.test.ts",
+        "tests/e2e/v2-public-marketing-professional-ui.test.ts",
+        "tests/e2e/v3-marketing-entry-truth.test.ts",
+        "tests/e2e/v3-studio-brand-continuity.test.ts"
+      ],
+      "total_additions": 3140,
+      "total_deletions": 67
+    },
+    {
+      "number": 126,
+      "title": "V4 Clean Air Studio OS: white/aqua authenticated sidebar, refined workspace typography and accessible shell",
+      "branch": "feat/servicedesk-v4-clean-studio-shell-20261011",
+      "head_sha": "6db0ad9a0a8687a8ebda2faa522953a68f1a8b92",
+      "base": "feat/servicedesk-v3-combined-acceptance-20261011",
+      "draft": true,
+      "updated_at": "2026-10-11T17:01:49Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/126",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 27,
+      "unchanged_files": 16,
+      "changed_vs_canonical": 11,
+      "mismatch_paths": [
+        "scripts/release/v3-public-browser-proof.mjs",
+        "scripts/release/v3-public-browser-proof.test.mjs",
+        "src/components/product/StaffAppShell.tsx",
+        "src/components/product/StaffCleanAirV4.module.css",
+        "src/components/shell/MarketingNavV3.module.css",
+        "src/features/auth/RegistrationShell.module.css",
+        "src/features/product/BrightHomeExperience.module.css",
+        "src/features/product/BrightProductPages.module.css",
+        "tests/e2e/staff-v3-navigation.test.tsx",
+        "tests/e2e/v4-clean-air-home.test.tsx",
+        "tests/e2e/v4-clean-public-pages.test.tsx"
+      ],
+      "matched_paths": [
+        "docs/design/v4-clean-air-home-art-direction-20261011.md",
+        "src/app/help/page.tsx",
+        "src/app/page.tsx",
+        "src/app/privacy/page.tsx",
+        "src/app/terms/page.tsx",
+        "src/app/use-cases/cleaning/page.tsx",
+        "src/components/shell/MarketingShell.tsx",
+        "src/features/product/BrightHomeExperience.tsx",
+        "src/features/product/BrightHomeInteractions.tsx",
+        "src/features/product/BrightPageInteractions.tsx",
+        "src/features/product/BrightProductExperience.tsx",
+        "src/features/product/StaticProductPage.tsx",
+        "tests/e2e/v2-public-marketing-professional-ui.test.ts",
+        "tests/e2e/v3-marketing-entry-truth.test.ts",
+        "tests/e2e/v3-studio-brand-continuity.test.ts",
+        "tests/e2e/v4-clean-studio-shell.test.ts"
+      ],
+      "total_additions": 3089,
+      "total_deletions": 48
+    },
+    {
+      "number": 127,
+      "title": "V4 Clean Air integrated visual candidate \u2014 site-wide, Tour and actual Studio OS shell",
+      "branch": "feat/servicedesk-v4-full-visual-candidate-20261011",
+      "head_sha": "0797cb567b3cc145109e986f884a23ab0203ef9e",
+      "base": "feat/servicedesk-v3-combined-acceptance-20261011",
+      "draft": true,
+      "updated_at": "2026-10-11T18:49:48Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/127",
+      "classification": "DEFER",
+      "reason": "Earlier V3/visual base; cannot replay into V4 without redesign review",
+      "file_count": 39,
+      "unchanged_files": 23,
+      "changed_vs_canonical": 16,
+      "mismatch_paths": [
+        ".github/workflows/v4-integrated-visual-acceptance.yml",
+        ".github/workflows/v4-sandbox-upstream-rc.yml",
+        ".github/workflows/v4-today-clean-air-rc.yml",
+        "src/app/tour/tour.module.css",
+        "src/components/product/StaffAppShell.tsx",
+        "src/components/product/StaffCleanAirV4.module.css",
+        "src/components/shell/MarketingNavV3.module.css",
+        "src/features/auth/RegistrationShell.module.css",
+        "src/features/operations/StaffOverviewDashboard.module.css",
+        "src/features/product/BrightHomeExperience.module.css",
+        "src/features/product/BrightProductPages.module.css",
+        "tests/e2e/staff-v3-navigation.test.tsx",
+        "tests/e2e/v4-clean-air-home.test.tsx",
+        "tests/e2e/v4-clean-public-pages.test.tsx",
+        "tests/e2e/v4-clean-tour-public.test.ts",
+        "tests/e2e/v4-today-clean-air.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v4-clean-air-public-rc.yml",
+        "docs/design/v4-clean-air-home-art-direction-20261011.md",
+        "scripts/release/v3-public-browser-proof.mjs",
+        "scripts/release/v3-public-browser-proof.test.mjs",
+        "src/app/help/page.tsx",
+        "src/app/page.tsx",
+        "src/app/privacy/page.tsx",
+        "src/app/terms/page.tsx",
+        "src/app/tour/page.tsx",
+        "src/app/use-cases/cleaning/page.tsx",
+        "src/components/shell/MarketingShell.tsx",
+        "src/features/product/BrightHomeExperience.tsx",
+        "src/features/product/BrightHomeInteractions.tsx",
+        "src/features/product/BrightPageInteractions.tsx",
+        "src/features/product/BrightProductExperience.tsx",
+        "src/features/product/StaticProductPage.tsx",
+        "src/features/sandbox/SandboxJourney.module.css",
+        "tests/e2e/product-server-boundary.test.ts",
+        "tests/e2e/v2-public-marketing-professional-ui.test.ts",
+        "tests/e2e/v3-marketing-entry-truth.test.ts",
+        "tests/e2e/v3-studio-brand-continuity.test.ts",
+        "tests/e2e/v4-clean-studio-shell.test.ts",
+        "tests/e2e/v4-sandbox-clean-air.test.ts"
+      ],
+      "total_additions": 4273,
+      "total_deletions": 68
+    },
+    {
+      "number": 224,
+      "title": "V4 current-controller recovery: transactional QUOTE_ACCEPTED journal 0063 and fail-closed replay",
+      "branch": "feat/v4-quote-source-recovery-current-20261012",
+      "head_sha": "b19a2825cc70d1288c70a29338c5024c4cbd26b4",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-12T18:41:23Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/224",
+      "classification": "REBUILD",
+      "reason": "Competing migration 0063/transaction journal versions; choose one after SQL review",
+      "file_count": 12,
+      "unchanged_files": 7,
+      "changed_vs_canonical": 5,
+      "mismatch_paths": [
+        ".github/workflows/v4-quote-source-recovery-rc.yml",
+        "docs/execution/v4-quote-source-recovery-staging-acceptance.md",
+        "src/server/workflows/customer-quote-source-recovery.ts",
+        "tests/db/v4-quote-accepted-source-recovery.test.ts",
+        "tests/providers/v2-migration-rehearsal.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v4-two-tenant-pg17.yml",
+        "scripts/release/v4-quote-source-pg17-concurrency.sh",
+        "supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql",
+        "tests/e2e/v4-pg17-concurrent-quote-lease.test.ts",
+        "tests/sql/v4-quote-source-pg17-acceptance.sql",
+        "tests/sql/v4-quote-source-pg17-fixture.sql",
+        "tests/sql/v4-quote-source-pg17-two-tenant-resilience.sql"
+      ],
+      "total_additions": 1176,
+      "total_deletions": 1
+    },
+    {
+      "number": 227,
+      "title": "V4 protected replay on race-tested 0063 journal: strict server auth and truthful partial outcomes",
+      "branch": "feat/v4-private-quote-worker-raceproof-20261012",
+      "head_sha": "9470ceb5c887d1a90167d04ff00aa3b1472b417e",
+      "base": "feat/v4-quote-source-recovery-current-20261012",
+      "draft": true,
+      "updated_at": "2026-10-12T18:41:25Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/227",
+      "classification": "REBUILD",
+      "reason": "Competing migration 0063/transaction journal versions; choose one after SQL review",
+      "file_count": 5,
+      "unchanged_files": 3,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "docs/execution/v4-quote-source-recovery-staging-acceptance.md",
+        "src/app/api/internal/workflows/quote-source/route.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v4-quote-source-worker-rc.yml",
+        "src/server/workflows/customer-quote-source-worker-http.ts",
+        "tests/e2e/v4-quote-source-protected-worker-http.test.ts"
+      ],
+      "total_additions": 379,
+      "total_deletions": 0
+    },
+    {
+      "number": 253,
+      "title": "V4 durable accepted-quote journal 0063 \u2014 rebased integration candidate (default OFF)",
+      "branch": "feat/v4-quote-durable-integration-gate-20261013",
+      "head_sha": "b475de8e3bd4cf25a1bf5fcd86fc12e8cd507783",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-12T19:06:58Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/253",
+      "classification": "REBUILD",
+      "reason": "Competing migration 0063/transaction journal versions; choose one after SQL review",
+      "file_count": 17,
+      "unchanged_files": 11,
+      "changed_vs_canonical": 6,
+      "mismatch_paths": [
+        ".github/workflows/v4-quote-recovery-integrated-pg17.yml",
+        ".github/workflows/v4-quote-source-recovery-rc.yml",
+        "src/app/api/internal/workflows/quote-source/route.ts",
+        "src/server/workflows/customer-quote-source-recovery.ts",
+        "tests/db/v4-quote-accepted-source-recovery.test.ts",
+        "tests/providers/v2-migration-rehearsal.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v4-quote-source-worker-rc.yml",
+        ".github/workflows/v4-two-tenant-pg17.yml",
+        "docs/execution/v4-quote-source-recovery-staging-acceptance.md",
+        "scripts/release/v4-quote-source-pg17-concurrency.sh",
+        "src/server/workflows/customer-quote-source-worker-http.ts",
+        "supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql",
+        "tests/e2e/v4-pg17-concurrent-quote-lease.test.ts",
+        "tests/e2e/v4-quote-source-protected-worker-http.test.ts",
+        "tests/sql/v4-quote-source-pg17-acceptance.sql",
+        "tests/sql/v4-quote-source-pg17-fixture.sql",
+        "tests/sql/v4-quote-source-pg17-two-tenant-resilience.sql"
+      ],
+      "total_additions": 1663,
+      "total_deletions": 1
+    },
+    {
+      "number": 259,
+      "title": "V4 internal quote recovery: reconcile tested default-off journal and worker with current owner activation",
+      "branch": "feat/v4-quote-recovery-current-controller-20261013",
+      "head_sha": "813c5de2b94757cd9ac7602cd86443f9d4d11e8b",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-12T20:21:01Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/259",
+      "classification": "REBUILD",
+      "reason": "Competing migration 0063/transaction journal versions; choose one after SQL review",
+      "file_count": 21,
+      "unchanged_files": 11,
+      "changed_vs_canonical": 10,
+      "mismatch_paths": [
+        ".github/workflows/v4-quote-recovery-integrated-pg17.yml",
+        ".github/workflows/v4-quote-source-recovery-rc.yml",
+        "src/app/api/internal/workflows/quote-source/route.ts",
+        "src/features/operations/OwnerQuoteAcceptedAutomationControl.tsx",
+        "src/features/operations/OwnerQuoteRecoveryQueue.tsx",
+        "src/server/workflows/customer-quote-source-recovery.ts",
+        "src/server/workflows/owner-quote-recovery-queue.ts",
+        "tests/db/v4-owner-quote-recovery-queue.test.ts",
+        "tests/db/v4-quote-accepted-source-recovery.test.ts",
+        "tests/providers/v2-migration-rehearsal.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v4-quote-source-worker-rc.yml",
+        ".github/workflows/v4-two-tenant-pg17.yml",
+        "docs/execution/v4-quote-source-recovery-staging-acceptance.md",
+        "scripts/release/v4-quote-source-pg17-concurrency.sh",
+        "src/server/workflows/customer-quote-source-worker-http.ts",
+        "supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql",
+        "tests/e2e/v4-pg17-concurrent-quote-lease.test.ts",
+        "tests/e2e/v4-quote-source-protected-worker-http.test.ts",
+        "tests/sql/v4-quote-source-pg17-acceptance.sql",
+        "tests/sql/v4-quote-source-pg17-fixture.sql",
+        "tests/sql/v4-quote-source-pg17-two-tenant-resilience.sql"
+      ],
+      "total_additions": 1962,
+      "total_deletions": 1
+    },
+    {
+      "number": 280,
+      "title": "V4 quote recovery source integration: journal 0063, protected replay and real owner queue (default OFF)",
+      "branch": "feat/v4-quote-recovery-on-current-controller-20261013",
+      "head_sha": "b612cdcb765443763a5c5ed171ef63990320d71f",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-12T20:47:56Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/280",
+      "classification": "REBUILD",
+      "reason": "Competing migration 0063/transaction journal versions; choose one after SQL review",
+      "file_count": 21,
+      "unchanged_files": 12,
+      "changed_vs_canonical": 9,
+      "mismatch_paths": [
+        ".github/workflows/v4-quote-recovery-integrated-pg17.yml",
+        ".github/workflows/v4-quote-source-recovery-rc.yml",
+        "src/features/operations/OwnerQuoteAcceptedAutomationControl.tsx",
+        "src/features/operations/OwnerQuoteRecoveryQueue.tsx",
+        "src/server/workflows/customer-quote-source-recovery.ts",
+        "src/server/workflows/owner-quote-recovery-queue.ts",
+        "tests/db/v4-owner-quote-recovery-queue.test.ts",
+        "tests/db/v4-quote-accepted-source-recovery.test.ts",
+        "tests/providers/v2-migration-rehearsal.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v4-quote-source-worker-rc.yml",
+        ".github/workflows/v4-two-tenant-pg17.yml",
+        "docs/execution/v4-quote-source-recovery-staging-acceptance.md",
+        "scripts/release/v4-quote-source-pg17-concurrency.sh",
+        "src/app/api/internal/workflows/quote-source/route.ts",
+        "src/server/workflows/customer-quote-source-worker-http.ts",
+        "supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql",
+        "tests/e2e/v4-pg17-concurrent-quote-lease.test.ts",
+        "tests/e2e/v4-quote-source-protected-worker-http.test.ts",
+        "tests/sql/v4-quote-source-pg17-acceptance.sql",
+        "tests/sql/v4-quote-source-pg17-fixture.sql",
+        "tests/sql/v4-quote-source-pg17-two-tenant-resilience.sql"
+      ],
+      "total_additions": 1962,
+      "total_deletions": 1
+    },
+    {
+      "number": 307,
+      "title": "V4 current-controller quote recovery: verified 0063 journal, protected replay and owner evidence \u2014 default OFF",
+      "branch": "feat/v4-quote-recovery-rebased-source-20261013",
+      "head_sha": "c54a6453ee1bff4796eeb093ea25c509b1e78f91",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-13T00:01:08Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/307",
+      "classification": "REBUILD",
+      "reason": "Competing migration 0063/transaction journal versions; choose one after SQL review",
+      "file_count": 21,
+      "unchanged_files": 12,
+      "changed_vs_canonical": 9,
+      "mismatch_paths": [
+        ".github/workflows/v4-quote-recovery-integrated-pg17.yml",
+        ".github/workflows/v4-quote-source-recovery-rc.yml",
+        "src/features/operations/OwnerQuoteAcceptedAutomationControl.tsx",
+        "src/features/operations/OwnerQuoteRecoveryQueue.tsx",
+        "src/server/workflows/customer-quote-source-recovery.ts",
+        "src/server/workflows/owner-quote-recovery-queue.ts",
+        "tests/db/v4-owner-quote-recovery-queue.test.ts",
+        "tests/db/v4-quote-accepted-source-recovery.test.ts",
+        "tests/providers/v2-migration-rehearsal.test.ts"
+      ],
+      "matched_paths": [
+        ".github/workflows/v4-quote-source-worker-rc.yml",
+        ".github/workflows/v4-two-tenant-pg17.yml",
+        "docs/execution/v4-quote-source-recovery-staging-acceptance.md",
+        "scripts/release/v4-quote-source-pg17-concurrency.sh",
+        "src/app/api/internal/workflows/quote-source/route.ts",
+        "src/server/workflows/customer-quote-source-worker-http.ts",
+        "supabase/migrations/0063_v4_quote_accept_internal_source_journal.sql",
+        "tests/e2e/v4-pg17-concurrent-quote-lease.test.ts",
+        "tests/e2e/v4-quote-source-protected-worker-http.test.ts",
+        "tests/sql/v4-quote-source-pg17-acceptance.sql",
+        "tests/sql/v4-quote-source-pg17-fixture.sql",
+        "tests/sql/v4-quote-source-pg17-two-tenant-resilience.sql"
+      ],
+      "total_additions": 1963,
+      "total_deletions": 1
+    },
+    {
+      "number": 371,
+      "title": "V4 staff requests: verified cleaning quote next-step checklist",
+      "branch": "feat/v4-cleaning-request-readiness-checklist-20261013",
+      "head_sha": "1a1deb4dc670cfd31cf7c1aae55a2f0c3307f2e1",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-13T07:56:25Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/371",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 4,
+      "unchanged_files": 1,
+      "changed_vs_canonical": 3,
+      "mismatch_paths": [
+        "src/features/operations/OperationalProductRoute.tsx",
+        "src/features/operations/cleaning-request-next-steps.ts",
+        "tests/e2e/v4-cleaning-request-next-steps.test.ts"
+      ],
+      "matched_paths": [
+        "src/features/operations/CleaningRequestNextSteps.tsx"
+      ],
+      "total_additions": 115,
+      "total_deletions": 0
+    },
+    {
+      "number": 564,
+      "title": "R15A Core: fail closed on incomplete tenant price-book uniqueness",
+      "branch": "fix/v4-r15a-core-pricebook-completeness-20261017",
+      "head_sha": "858850b406a8af52547c9d8be6b8e04d20d7d8ae",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T07:04:02Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/564",
+      "classification": "REBUILD",
+      "reason": "Critical core/schema delta requires integrated rebase and SQL review",
+      "file_count": 2,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "src/server/core/operational-quote-rate-card.ts",
+        "tests/db/v4-operational-quote-rate-card.test.ts"
+      ],
+      "matched_paths": [],
+      "total_additions": 30,
+      "total_deletions": 4
+    },
+    {
+      "number": 565,
+      "title": "R15B AI: refuse unapproved symbol prices and discount claims",
+      "branch": "fix/v4-r15b-ai-quote-review-money-proof-20261017",
+      "head_sha": "0033ef18c07c816fe391a9693b947676edd7624a",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T07:04:06Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/565",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 2,
+      "unchanged_files": 1,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "src/server/ai/quote-review-safety.ts"
+      ],
+      "matched_paths": [
+        "tests/ai/v4-r15-quote-review-money-proof.test.ts"
+      ],
+      "total_additions": 32,
+      "total_deletions": 0
+    },
+    {
+      "number": 566,
+      "title": "R15C Product: saved quote review must exclude zero-value and timezone-ambiguous approval",
+      "branch": "fix/v4-r15c-product-quote-checklist-truth-20261017",
+      "head_sha": "f2418f89522195f869c6994ddf610b806addc929",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T07:04:09Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/566",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 2,
+      "unchanged_files": 1,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "src/features/operations/staff-quote-checklist.ts"
+      ],
+      "matched_paths": [
+        "tests/e2e/v4-r15-staff-quote-checklist-readiness.test.ts"
+      ],
+      "total_additions": 46,
+      "total_deletions": 3
+    },
+    {
+      "number": 567,
+      "title": "R15 CRITIC-01 independent: merchant usefulness, negative gates and CI throughput",
+      "branch": "review/v4-r15-critic01-independent-20261017",
+      "head_sha": "4d3af748dc6b5cbad25249de2a409aa2eeb9d578",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T07:06:20Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/567",
+      "classification": "DEFER",
+      "reason": "Historic QA or critic only; not on launch critical path",
+      "file_count": 1,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "docs/reviews/v4-r15-critic01-independent-20261017.md"
+      ],
+      "matched_paths": [],
+      "total_additions": 40,
+      "total_deletions": 0
+    },
+    {
+      "number": 568,
+      "title": "R15 Product: truthful owner price-book readiness with complete rate rules",
+      "branch": "feat/sd-r15-c1-owner-rate-evidence-20261017",
+      "head_sha": "8e4bc734004ad15dd9fd5b6a4e077997a5a9dcd7",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T09:04:58Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/568",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 4,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 4,
+      "mismatch_paths": [
+        "src/features/operations/operational-product-runtime.ts",
+        "src/features/operations/verified-owner-price-evidence.ts",
+        "tests/db/v4-owner-pricing-dashboard-proof.test.ts",
+        "tests/e2e/v4-r15-owner-effective-quote-rate-proof.test.ts"
+      ],
+      "matched_paths": [],
+      "total_additions": 138,
+      "total_deletions": 53
+    },
+    {
+      "number": 569,
+      "title": "R15 Core: reject ambiguous effective price-book periods before customer quoting",
+      "branch": "fix/sd-r15-a1-quote-effective-time-20261017",
+      "head_sha": "2749e7c231c3c82ece0ded4288a384ae99343f77",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T07:18:26Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/569",
+      "classification": "REBUILD",
+      "reason": "Critical core/schema delta requires integrated rebase and SQL review",
+      "file_count": 2,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "src/server/core/operational-quote-rate-card.ts",
+        "tests/db/v4-r15-quote-effective-book-boundary.test.ts"
+      ],
+      "matched_paths": [],
+      "total_additions": 55,
+      "total_deletions": 6
+    },
+    {
+      "number": 570,
+      "title": "R15 Connectors: exact recovered outbox recipient and tenant authority",
+      "branch": "fix/sd-r15-b2-outbox-resolver-authority-20261017",
+      "head_sha": "e45b4908cb58eb1517eda3572b18bf31372746ca",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:30:52Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/570",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 2,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "src/server/integrations/outbox/intent-resolver.ts",
+        "tests/providers/v4-r15-outbox-resolution-tenant-identity.test.ts"
+      ],
+      "matched_paths": [],
+      "total_additions": 94,
+      "total_deletions": 17
+    },
+    {
+      "number": 571,
+      "title": "R15D Product: exact zoned expiry proof for staff send and customer acceptance",
+      "branch": "fix/v4-r15d-quote-send-accept-clock-20261017",
+      "head_sha": "199fc5b5363d398ee1dbcb7205c00533b275a6b8",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:30:55Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/571",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 4,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "src/features/operations/quote-validity-clock.ts",
+        "tests/e2e/v4-r15-quote-send-accept-clock.test.ts"
+      ],
+      "matched_paths": [
+        "src/features/operations/customer-quote-acceptance.ts",
+        "src/features/operations/quote-send-readiness.ts"
+      ],
+      "total_additions": 51,
+      "total_deletions": 6
+    },
+    {
+      "number": 573,
+      "title": "R15 CRITIC-01: independent adversarial review, CI-waste ledger and authorized merchant UAT criteria",
+      "branch": "audit/sd-r15-critic-01-20261017",
+      "head_sha": "43cf222fee52f2d99e3c37fc63cfaa403f20fbb4",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T07:20:34Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/573",
+      "classification": "DEFER",
+      "reason": "Historic QA or critic only; not on launch critical path",
+      "file_count": 1,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "docs/engineering/critic/critic-01-r15-crosslane-adversarial-and-merchant-uat-20261017.md"
+      ],
+      "matched_paths": [],
+      "total_additions": 39,
+      "total_deletions": 0
+    },
+    {
+      "number": 596,
+      "title": "R19A Core: reject ambiguous saved rate-card and branch currency identities",
+      "branch": "fix/sd-r19a-rate-card-authority-20261017",
+      "head_sha": "cfee3b0ecd0429aa78df87036078882230df33f8",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:45:39Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/596",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 2,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/server/core/operational-quote-rate-card.ts",
+        "tests/db/v4-operational-quote-rate-card.test.ts"
+      ],
+      "total_additions": 30,
+      "total_deletions": 2
+    },
+    {
+      "number": 597,
+      "title": "R19B AI: require civil-valid zoned owner brief snapshot timestamps",
+      "branch": "fix/sd-r19b-owner-brief-snapshot-clock-20261017",
+      "head_sha": "b2ab2f9faa98c77c8165c0707ac862e9cfd2e9e7",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:45:43Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/597",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 2,
+      "unchanged_files": 1,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "src/server/ai/owner-operations-brief.ts"
+      ],
+      "matched_paths": [
+        "tests/ai/v4-r19b-owner-snapshot-clock.test.ts"
+      ],
+      "total_additions": 38,
+      "total_deletions": 6
+    },
+    {
+      "number": 598,
+      "title": "R19C Product: reject forged delivery clock and repeated message evidence",
+      "branch": "fix/sd-r19c-inbox-delivery-clock-20261017",
+      "head_sha": "93802fcc11bf1c4dde16c3b8006e38036440731c",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:45:47Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/598",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 2,
+      "unchanged_files": 1,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "src/features/operations/inbox-delivery-diagnostics.ts"
+      ],
+      "matched_paths": [
+        "tests/e2e/v3-inbox-delivery-diagnostics.test.ts"
+      ],
+      "total_additions": 20,
+      "total_deletions": 16
+    },
+    {
+      "number": 599,
+      "title": "R19D Connectors: refuse malformed recovered template/freeform dispatch",
+      "branch": "fix/sd-r19d-outbox-dispatch-input-20261017",
+      "head_sha": "8fcb852789c3e8cf55180bfa7e616be136e65b40",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:45:50Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/599",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 2,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/server/integrations/outbox/intent-resolver.ts",
+        "tests/providers/v4-r18-resolved-outbox-authority.test.ts"
+      ],
+      "total_additions": 49,
+      "total_deletions": 0
+    },
+    {
+      "number": 600,
+      "title": "CRITIC-01 R19: independent merchant efficacy veto and CI throughput protocol",
+      "branch": "audit/sd-r19-critic01-20261017",
+      "head_sha": "8b828771cc20c98ce599080e57c447c815b5080d",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:51:06Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/600",
+      "classification": "DEFER",
+      "reason": "Historic QA or critic only; not on launch critical path",
+      "file_count": 1,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "docs/engineering/critic/critic-01-r19-merchant-impact-and-throughput-20261017.md"
+      ],
+      "matched_paths": [],
+      "total_additions": 46,
+      "total_deletions": 0
+    },
+    {
+      "number": 602,
+      "title": "R19E Critic follow-up: owner brief second-read tenant authority",
+      "branch": "fix/sd-r19e-owner-postmodel-snapshot-scope-20261017",
+      "head_sha": "fb0bbf5e3ba64661e0670dabd5811364dd97f2f8",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:49:37Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/602",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 2,
+      "unchanged_files": 1,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "src/server/ai/owner-operations-brief.ts"
+      ],
+      "matched_paths": [
+        "tests/ai/v4-r19e-owner-brief-second-read-scope.test.ts"
+      ],
+      "total_additions": 58,
+      "total_deletions": 0
+    },
+    {
+      "number": 607,
+      "title": "R20A Core: fail closed on duplicate-priced owner forms",
+      "branch": "feat/sd-v4-r20a-core-pricing-input-20261017",
+      "head_sha": "93fd9c564ec2b8e26679f761962cc2d6b53d5bee",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:55:44Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/607",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 2,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/server/core/owner-cleaning-pricing-input.ts",
+        "tests/db/v4-r20a-pricing-form-ambiguity.test.ts"
+      ],
+      "total_additions": 60,
+      "total_deletions": 1
+    },
+    {
+      "number": 608,
+      "title": "R20B Connectors: reject impossible and unzoned WhatsApp timestamps",
+      "branch": "feat/sd-v4-r20b-whatsapp-time-evidence-20261017",
+      "head_sha": "791f29a3025f44f27c2f2b89a88cd721a08c10d6",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:55:47Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/608",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 2,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/server/integrations/whatsapp/timestamp-normalization.ts",
+        "tests/providers/v4-r20b-whatsapp-chronology.test.ts"
+      ],
+      "total_additions": 51,
+      "total_deletions": 21
+    },
+    {
+      "number": 609,
+      "title": "R20C Product: invoice checkout preflight refuses coerced ledger objects",
+      "branch": "feat/sd-v4-r20c-product-invoice-preflight-20261017",
+      "head_sha": "de1a0419e6fb1d038b28c23812a478c64ba9621e",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T08:55:49Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/609",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 2,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/features/operations/customer-invoice-checkout-readiness.ts",
+        "tests/e2e/v4-r20c-invoice-preflight-input.test.ts"
+      ],
+      "total_additions": 44,
+      "total_deletions": 4
+    },
+    {
+      "number": 610,
+      "title": "R20D Calendar: reject malformed outbox claim and idempotency substitution",
+      "branch": "feat/sd-v4-r20d-calendar-claim-integrity-20261017",
+      "head_sha": "21c1ae6ba19372fbea281667cf9a9aa58554359e",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T09:08:00Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/610",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 2,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/server/integrations/outbox/calendar-visit-intent.ts",
+        "tests/providers/v4-r20d-calendar-claim-integrity.test.ts"
+      ],
+      "total_additions": 110,
+      "total_deletions": 9
+    },
+    {
+      "number": 612,
+      "title": "CRITIC-01 R20: independent merchant-usefulness veto and faster CI integration protocol",
+      "branch": "docs/sd-v4-r20-critic-01-20261017",
+      "head_sha": "985acedfee6e38229264fde762b38d385c6a52d7",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T09:08:33Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/612",
+      "classification": "DEFER",
+      "reason": "Historic QA or critic only; not on launch critical path",
+      "file_count": 2,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "docs/engineering/critic/critic-01-r20-merchant-runtime-and-throughput-20261017.md",
+        "docs/execution/r20-disjoint-engineering-critic-ledger-20261017.md"
+      ],
+      "matched_paths": [],
+      "total_additions": 61,
+      "total_deletions": 0
+    },
+    {
+      "number": 615,
+      "title": "R20 integration: pricing, WhatsApp chronology, invoice money and Calendar outbox safety",
+      "branch": "feat/sd-v4-r20-source-integration-20261017",
+      "head_sha": "37e84babf80d168846f0ef7f7d07434ceb62f453",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T09:13:44Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/615",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 8,
+      "unchanged_files": 8,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/features/operations/customer-invoice-checkout-readiness.ts",
+        "src/server/core/owner-cleaning-pricing-input.ts",
+        "src/server/integrations/outbox/calendar-visit-intent.ts",
+        "src/server/integrations/whatsapp/timestamp-normalization.ts",
+        "tests/db/v4-r20a-pricing-form-ambiguity.test.ts",
+        "tests/e2e/v4-r20c-invoice-preflight-input.test.ts",
+        "tests/providers/v4-r20b-whatsapp-chronology.test.ts",
+        "tests/providers/v4-r20d-calendar-claim-integrity.test.ts"
+      ],
+      "total_additions": 265,
+      "total_deletions": 35
+    },
+    {
+      "number": 618,
+      "title": "CRITIC-01 R21: independent merchant usefulness veto and source/CI efficiency",
+      "branch": "feat/sdv4-r21-critic-independent-review-20261017",
+      "head_sha": "9051766dffd54db15018fa9dad564ed1d0abbce1",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-17T11:20:30Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/618",
+      "classification": "DEFER",
+      "reason": "Historic QA or critic only; not on launch critical path",
+      "file_count": 1,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "docs/engineering/critic/critic-01-r21-merchant-acceptance-and-throughput-20261017.md"
+      ],
+      "matched_paths": [],
+      "total_additions": 70,
+      "total_deletions": 0
+    },
+    {
+      "number": 631,
+      "title": "Frontend lane: searchable accessible AI Studio workbench",
+      "branch": "feat/frontend-ai-studio-usable-record-picker-20261017",
+      "head_sha": "84db0ddfc2bc55f8edcb36f48091b47096d78db5",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T12:07:02Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/631",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 8,
+      "unchanged_files": 8,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/features/operations/AiRequestBrief.tsx",
+        "src/features/operations/AiStudioWorkbench.tsx",
+        "src/features/operations/AiStudioWorkspace.module.css",
+        "src/features/operations/ai-studio-records.ts",
+        "tests/e2e/v4-ai-request-brief-scope-abort.test.ts",
+        "tests/e2e/v4-ai-request-copilot-lifecycle.test.ts",
+        "tests/e2e/v4-ai-studio-accessible-record-picker.test.ts",
+        "tests/e2e/v4-r22-ai-studio-scope-navigation.test.ts"
+      ],
+      "total_additions": 320,
+      "total_deletions": 23
+    },
+    {
+      "number": 633,
+      "title": "Frontend/AI: persisted workflow execution inspector in AI Studio",
+      "branch": "feat/servicedesk-v4-ai-workflow-inspector-20261018",
+      "head_sha": "37fa6baca2d1456a9db4ba5520b84f2cb78a63e7",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T05:16:38Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/633",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 7,
+      "unchanged_files": 6,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "src/features/operations/AiStudioWorkspace.tsx"
+      ],
+      "matched_paths": [
+        "src/features/operations/WorkflowExecutionInspector.module.css",
+        "src/features/operations/WorkflowExecutionInspector.tsx",
+        "src/features/operations/workflow-inspector-client-snapshot.ts",
+        "src/features/operations/workflow-inspector-model.ts",
+        "tests/e2e/v4-ai-workflow-client-snapshot-privacy.test.ts",
+        "tests/e2e/v4-ai-workflow-execution-inspector.test.ts"
+      ],
+      "total_additions": 1303,
+      "total_deletions": 0
+    },
+    {
+      "number": 645,
+      "title": "AI-A: bound saved quote reviewer to exact record, trustworthy response and cancel",
+      "branch": "feat/servicedesk-v4-quote-review-client-proof-20261018",
+      "head_sha": "2b2a7d77adc75a70a11e5efa6f2ce34878fe3fe7",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-19T16:07:59Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/645",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 7,
+      "unchanged_files": 5,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "src/features/operations/OperationalProductRoute.tsx",
+        "tests/e2e/v4-ai-quote-review-client-proof.test.tsx"
+      ],
+      "matched_paths": [
+        "src/features/operations/AiQuoteReview.module.css",
+        "src/features/operations/AiQuoteReview.tsx",
+        "src/features/operations/ai-quote-review-response.ts",
+        "tests/e2e/r37-staff-quote-ai-adversarial-corpus.test.ts",
+        "tests/e2e/v4-ai-quote-review-client-cancel.test.ts"
+      ],
+      "total_additions": 638,
+      "total_deletions": 76
+    },
+    {
+      "number": 650,
+      "title": "Frontend AI: canonical-based owner diagnostics, verified priority UI and safe 75s waits",
+      "branch": "feat/servicedesk-v4-owner-ai-studio-ui-canonical-20261018",
+      "head_sha": "10831f2592f5ebb4a5887accb11a11e6a11bb93c",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-19T16:10:50Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/650",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 15,
+      "unchanged_files": 13,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "src/features/operations/AiOwnerOperationsBrief.tsx",
+        "src/features/operations/AiStudioWorkspace.tsx"
+      ],
+      "matched_paths": [
+        "src/features/operations/AiOwnerModelProbe.module.css",
+        "src/features/operations/AiOwnerModelProbe.tsx",
+        "src/features/operations/AiOwnerOperationsBrief.module.css",
+        "src/features/operations/OwnerFinanceExceptionReview.module.css",
+        "src/features/operations/OwnerFinanceExceptionReview.tsx",
+        "src/features/operations/ai-owner-model-probe-result.ts",
+        "src/features/operations/owner-finance-exception-proof.ts",
+        "src/features/operations/owner-operations-brief-proof.ts",
+        "tests/e2e/r38-owner-finance-exception-source-panel.test.ts",
+        "tests/e2e/v4-ai-panel-scope-reliability.test.tsx",
+        "tests/e2e/v4-owner-ai-brief-ui-guardrails.test.tsx",
+        "tests/e2e/v4-owner-ai-priority-actions-client-proof.test.ts",
+        "tests/e2e/v4-owner-ai-probe-guardrails.test.ts"
+      ],
+      "total_additions": 1352,
+      "total_deletions": 131
+    },
+    {
+      "number": 661,
+      "title": "SONIC UX-1: long-running AI draft, safe human approval receipt lifecycle",
+      "branch": "feat/servicedesk-v4-sonic-ai-reply-lifecycle-20261018",
+      "head_sha": "b948609216a232e9167380feec3b9db2cb83b613",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T12:13:54Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/661",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 11,
+      "unchanged_files": 11,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/features/operations/StaffAiReviewComposer.module.css",
+        "src/features/operations/StaffAiReviewComposer.tsx",
+        "src/features/operations/staff-ai-approval-intent.ts",
+        "src/features/operations/staff-ai-reply-risk.ts",
+        "src/features/operations/staff-ai-request-signal.ts",
+        "tests/e2e/r37-staff-ai-exact-approval-intent.test.ts",
+        "tests/e2e/r37-staff-ai-sensitive-reply-review.test.ts",
+        "tests/e2e/v3-staff-ai-review-composer.test.ts",
+        "tests/e2e/v4-sonic-staff-ai-reply-timeout-proof.test.ts",
+        "tests/e2e/v4-staff-ai-request-bounds.test.ts",
+        "tests/e2e/v4-staff-ai-review-cancel.test.ts"
+      ],
+      "total_additions": 387,
+      "total_deletions": 26
+    },
+    {
+      "number": 662,
+      "title": "SONIC UX-2: trusted delivery sample, Stop check and recoverable timeout",
+      "branch": "feat/servicedesk-v4-sonic-delivery-ops-20261018",
+      "head_sha": "49933bee169f39bcf22581912ce713d7fe22b208",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-19T15:46:45Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/662",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 7,
+      "unchanged_files": 7,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/features/operations/InboxDeliveryDiagnostics.module.css",
+        "src/features/operations/InboxDeliveryDiagnostics.tsx",
+        "src/features/operations/inbox-delivery-diagnostics.ts",
+        "tests/e2e/r37-delivery-review-reason-summary.test.ts",
+        "tests/e2e/r38-delivery-source-investigation-guide.test.ts",
+        "tests/e2e/v4-delivery-health-tenant-remount.test.ts",
+        "tests/e2e/v4-sonic-inbox-delivery-operator-lifecycle.test.ts"
+      ],
+      "total_additions": 486,
+      "total_deletions": 16
+    },
+    {
+      "number": 665,
+      "title": "SONIC UX-3: replay-aware workflow evidence and ambiguity handling",
+      "branch": "feat/servicedesk-v4-sonic-workflow-retry-truth-20261018",
+      "head_sha": "81fce2177302f619cf7a83fc53f2485643d34a57",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T05:16:42Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/665",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 7,
+      "unchanged_files": 7,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/features/operations/AiOperationsStatus.tsx",
+        "src/features/operations/WorkflowEvidenceStrip.tsx",
+        "src/features/operations/workflow-evidence-summary.ts",
+        "tests/e2e/v4-automation-trigger-operator-truth.test.tsx",
+        "tests/e2e/v4-persisted-workflow-evidence.test.ts",
+        "tests/e2e/v4-sonic-workflow-retry-state-proof.test.ts",
+        "tests/e2e/v4-today-persisted-automation-proof.test.tsx"
+      ],
+      "total_additions": 186,
+      "total_deletions": 34
+    },
+    {
+      "number": 668,
+      "title": "SONIC UX-4: search, filter and safely prefill 27 internal automation starters",
+      "branch": "feat/servicedesk-v4-sonic-playbook-finder-20261018",
+      "head_sha": "5eb7ba5b29dcb43878bcfbc9c46d713987f6fcc8",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T22:43:50Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/668",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 6,
+      "unchanged_files": 4,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "src/features/operations/OperationalProductRoute.tsx",
+        "src/features/operations/automation-playbook-finder.ts"
+      ],
+      "matched_paths": [
+        "src/features/operations/AutomationPlaybookBrowser.module.css",
+        "src/features/operations/AutomationPlaybookBrowser.tsx",
+        "tests/e2e/v4-cleaning-automation-playbooks.test.ts",
+        "tests/e2e/v4-sonic-automation-playbook-finder.test.ts"
+      ],
+      "total_additions": 314,
+      "total_deletions": 23
+    },
+    {
+      "number": 681,
+      "title": "R35 L22 \u00b7 Verified Gregorian dispatch days and zoned schedule evidence",
+      "branch": "feat/servicedesk-v4-r35-dispatch-date-proof-20261018",
+      "head_sha": "bc44ea2178b0c21625a5c4cf7852fa629404361b",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T05:16:47Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/681",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 6,
+      "unchanged_files": 5,
+      "changed_vs_canonical": 1,
+      "mismatch_paths": [
+        "src/features/operations/OperationalProductRoute.tsx"
+      ],
+      "matched_paths": [
+        "src/features/operations/DispatchCoverageWeek.module.css",
+        "src/features/operations/DispatchCoverageWeek.tsx",
+        "src/features/operations/dispatch-coverage-week.ts",
+        "tests/e2e/r35-dispatch-calendar-trust.test.ts",
+        "tests/e2e/r36-dispatch-active-crew-proof.test.ts"
+      ],
+      "total_additions": 200,
+      "total_deletions": 15
+    },
+    {
+      "number": 682,
+      "title": "R35 L07 \u00b7 Evidence-verified field quality deadlines and overdue triage",
+      "branch": "feat/servicedesk-v4-r35-quality-deadline-proof-20261018",
+      "head_sha": "c7ede2dab93fcdbf19181e549edc68dbc8d202d8",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T05:16:52Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/682",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 5,
+      "unchanged_files": 5,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/features/operations/QualityQueueFilters.tsx",
+        "src/features/operations/quality-queue.ts",
+        "tests/e2e/r35-quality-verified-deadlines.test.ts",
+        "tests/e2e/r36-quality-unverified-timing-queue.test.ts",
+        "tests/e2e/v3-quality-triage.test.ts"
+      ],
+      "total_additions": 134,
+      "total_deletions": 7
+    },
+    {
+      "number": 683,
+      "title": "R35 L23 \u00b7 Invoice reminder resets on ledger drift; safe clipboard lifecycle",
+      "branch": "feat/servicedesk-v4-r35-invoice-manual-scope-20261018",
+      "head_sha": "324429c5e26b4128e490dc6fdc8c4cb5803732a8",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T05:16:57Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/683",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 3,
+      "unchanged_files": 3,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/features/operations/StaffInvoiceManualReminder.tsx",
+        "src/features/operations/staff-invoice-manual-reminder.ts",
+        "tests/e2e/r35-staff-invoice-reminder-scope.test.ts"
+      ],
+      "total_additions": 117,
+      "total_deletions": 17
+    },
+    {
+      "number": 685,
+      "title": "R35 L21 \u00b7 Actionable, source-grounded owner quote recovery dashboard",
+      "branch": "feat/servicedesk-v4-r35-recovery-operator-brief-20261018",
+      "head_sha": "87421a084bbc2d69a56a18ecf01e5b87eed48e73",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T22:43:55Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/685",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 5,
+      "unchanged_files": 5,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/features/operations/OwnerQuoteRecoveryQueue.module.css",
+        "src/features/operations/OwnerQuoteRecoveryQueue.tsx",
+        "src/features/operations/OwnerRecoveryRefreshControl.tsx",
+        "src/features/operations/owner-quote-recovery-guide.ts",
+        "tests/e2e/r35-owner-recovery-review-truth.test.ts"
+      ],
+      "total_additions": 290,
+      "total_deletions": 50
+    },
+    {
+      "number": 687,
+      "title": "R35 L13 \u00b7 Direct AI Studio command palette, tenant reset and safe search",
+      "branch": "feat/servicedesk-v4-r35-ai-studio-command-navigation-20261018",
+      "head_sha": "d98c847aa345b695a7f554315fd2158009d2bc1a",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T22:43:45Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/687",
+      "classification": "SUPERSEDED",
+      "reason": "All changed-file blobs identical to canonical",
+      "file_count": 3,
+      "unchanged_files": 3,
+      "changed_vs_canonical": 0,
+      "mismatch_paths": [],
+      "matched_paths": [
+        "src/components/product/StaffCommandPalette.tsx",
+        "src/features/operations/staff-command-search.ts",
+        "tests/e2e/r35-ai-studio-command-palette.test.ts"
+      ],
+      "total_additions": 103,
+      "total_deletions": 4
+    },
+    {
+      "number": 689,
+      "title": "R35 L13/18 \u00b7 Real owner AI workflow proposal and synthetic what-if workbench",
+      "branch": "feat/servicedesk-v4-r35-owner-ai-rule-whatif-ui-20261018",
+      "head_sha": "35ddf004e3f15266c96cf97fe4d6668368349cfa",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T05:17:01Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/689",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 12,
+      "unchanged_files": 10,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "src/features/operations/OwnerAutomationActivationChecklist.tsx",
+        "src/features/operations/owner-rule-browser-proof.ts"
+      ],
+      "matched_paths": [
+        "src/features/operations/OwnerWorkflowRuleAssistant.module.css",
+        "src/features/operations/OwnerWorkflowRuleAssistant.tsx",
+        "src/features/operations/owner-rule-save-action.ts",
+        "src/features/operations/owner-rule-whatif-action.ts",
+        "tests/e2e/r35-owner-ai-workflow-preview-source.test.ts",
+        "tests/e2e/r36-owner-ai-draft-action-auth.test.ts",
+        "tests/e2e/r36-owner-ai-reviewed-draft-save.test.ts",
+        "tests/e2e/r36-owner-ai-three-scenario-matrix.test.ts",
+        "tests/e2e/r36-owner-ai-whatif-authority.test.ts",
+        "tests/e2e/r36-owner-rule-adversarial-eval-corpus.test.ts"
+      ],
+      "total_additions": 1513,
+      "total_deletions": 0
+    },
+    {
+      "number": 706,
+      "title": "SONIC R36 AI-E: photo classification input and model output safety",
+      "branch": "ai/r36-deadline-photo-classifier-guard-20261018",
+      "head_sha": "df4dd2227db762b5ef6993214955f7309b7509e6",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T05:08:19Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/706",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 4,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "docs/control-tower/critic/r36-photo-optional-fields-veto-20261018.md",
+        "docs/engineering/ai/r36-photo-classifier-trust-boundary-20261018.md"
+      ],
+      "matched_paths": [
+        "src/server/ai/photo-intake.ts",
+        "tests/ai/r36-photo-intake-model-output-guard.test.ts"
+      ],
+      "total_additions": 123,
+      "total_deletions": 27
+    },
+    {
+      "number": 716,
+      "title": "SONIC R37 AI-E: owner-trusted automation draft vs published revision review",
+      "branch": "ai/r37-automation-revision-owner-review-20261018",
+      "head_sha": "622c80e8a6593d421cece3135080c144f7c7f43f",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T05:48:38Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/716",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 5,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 3,
+      "mismatch_paths": [
+        "docs/control-tower/critic/r37-automation-revision-veto-20261018.md",
+        "docs/engineering/ai/r37-automation-revision-owner-review-20261018.md",
+        "src/server/ai/automation-revision-review.ts"
+      ],
+      "matched_paths": [
+        "tests/ai/r37-automation-revision-review.test.ts",
+        "tests/ai/r37-critic-automation-revision-veto.test.ts"
+      ],
+      "total_additions": 232,
+      "total_deletions": 0
+    },
+    {
+      "number": 723,
+      "title": "SONIC R38 C25: exact saved owner Inbox delivery readback before double-check receipt",
+      "branch": "ai/r38-owner-inbox-exact-second-read-source-20261018",
+      "head_sha": "49c353f2951ebaaebd258ddb20b80545507bb4a9",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T08:35:53Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/723",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 3,
+      "unchanged_files": 1,
+      "changed_vs_canonical": 2,
+      "mismatch_paths": [
+        "docs/engineering/ai/r38-inbox-second-read-authority-20261018.md",
+        "src/server/ai/owner-inbox-review.ts"
+      ],
+      "matched_paths": [
+        "tests/ai/r38-inbox-second-read-authority.test.ts"
+      ],
+      "total_additions": 75,
+      "total_deletions": 1
+    },
+    {
+      "number": 750,
+      "title": "SONIC R42 L21: batch prepare up to 12 saved-branch automation starter drafts",
+      "branch": "ai/sonic-r42-bulk-owner-starter-rule-drafts-20261019",
+      "head_sha": "e0f3220d08538e5521c91ab871d83905a4b9b5ee",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-18T22:56:50Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/750",
+      "classification": "MERGE_CANDIDATE",
+      "reason": "Small current diff; manual semantics/CI needed before merging",
+      "file_count": 5,
+      "unchanged_files": 2,
+      "changed_vs_canonical": 3,
+      "mismatch_paths": [
+        "docs/control-tower/critic/r42-bulk-branch-bool-veto-20261019.md",
+        "docs/engineering/ai/r42-owner-starter-batch-20261019.md",
+        "src/server/ai/owner-starter-batch.ts"
+      ],
+      "matched_paths": [
+        "tests/ai/r42-critic-bulk-branch-proof.test.ts",
+        "tests/ai/r42-owner-starter-batch.test.ts"
+      ],
+      "total_additions": 208,
+      "total_deletions": 0
+    },
+    {
+      "number": 830,
+      "title": "F01 draft: persisted intake classification and verified branch-priced quote options",
+      "branch": "feature-factory/f01-integrated-candidate-20261025",
+      "head_sha": "1d1c498e30273e3c0e9220f280afd6d86316eb0a",
+      "base": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+      "draft": true,
+      "updated_at": "2026-10-25T03:42:31Z",
+      "url": "https://github.com/SaamVR/ServiceDesk/pull/830",
+      "classification": "DEFER",
+      "reason": "New Feature Chat F01 PR; do not merge in P01",
+      "file_count": 4,
+      "unchanged_files": 0,
+      "changed_vs_canonical": 4,
+      "mismatch_paths": [
+        "src/server/ai/f01-grounded-quote-alternatives.ts",
+        "src/server/ai/f01-saved-intake-proposal.ts",
+        "tests/ai/f01-grounded-quote-alternatives.test.ts",
+        "tests/ai/f01-saved-intake-proposal.test.ts"
+      ],
+      "matched_paths": [],
+      "total_additions": 548,
+      "total_deletions": 0
+    }
+  ],
+  "overlap_hotspots": [
+    {
+      "path": "tests/e2e/staff-v3-navigation.test.tsx",
+      "count": 10,
+      "prs": [
+        67,
+        68,
+        83,
+        105,
+        120,
+        122,
+        124,
+        125,
+        126,
+        127
+      ]
+    },
+    {
+      "path": "src/components/shell/MarketingNavV3.module.css",
+      "count": 9,
+      "prs": [
+        68,
+        83,
+        105,
+        120,
+        122,
+        124,
+        125,
+        126,
+        127
+      ]
+    },
+    {
+      "path": "src/features/auth/RegistrationShell.module.css",
+      "count": 8,
+      "prs": [
+        68,
+        83,
+        105,
+        122,
+        124,
+        125,
+        126,
+        127
+      ]
+    },
+    {
+      "path": "src/features/operations/OperationalProductRoute.tsx",
+      "count": 7,
+      "prs": [
+        69,
+        83,
+        105,
+        371,
+        645,
+        668,
+        681
+      ]
+    },
+    {
+      "path": "tests/providers/v2-migration-rehearsal.test.ts",
+      "count": 7,
+      "prs": [
+        68,
+        105,
+        224,
+        253,
+        259,
+        280,
+        307
+      ]
+    },
+    {
+      "path": "src/components/product/StaffAppShell.tsx",
+      "count": 6,
+      "prs": [
+        67,
+        68,
+        83,
+        105,
+        126,
+        127
+      ]
+    },
+    {
+      "path": "src/features/product/BrightHomeExperience.module.css",
+      "count": 6,
+      "prs": [
+        120,
+        122,
+        124,
+        125,
+        126,
+        127
+      ]
+    },
+    {
+      "path": "tests/e2e/v4-clean-air-home.test.tsx",
+      "count": 6,
+      "prs": [
+        120,
+        122,
+        124,
+        125,
+        126,
+        127
+      ]
+    },
+    {
+      "path": ".github/workflows/v2-release-focused.yml",
+      "count": 5,
+      "prs": [
+        67,
+        68,
+        69,
+        72,
+        73
+      ]
+    },
+    {
+      "path": ".github/workflows/v4-quote-source-recovery-rc.yml",
+      "count": 5,
+      "prs": [
+        224,
+        253,
+        259,
+        280,
+        307
+      ]
+    },
+    {
+      "path": "scripts/release/v3-public-browser-proof.mjs",
+      "count": 5,
+      "prs": [
+        105,
+        120,
+        122,
+        124,
+        126
+      ]
+    },
+    {
+      "path": "scripts/release/v3-public-browser-proof.test.mjs",
+      "count": 5,
+      "prs": [
+        105,
+        120,
+        122,
+        124,
+        126
+      ]
+    },
+    {
+      "path": "src/features/operations/StaffOverviewDashboard.module.css",
+      "count": 5,
+      "prs": [
+        67,
+        68,
+        83,
+        105,
+        127
+      ]
+    },
+    {
+      "path": "src/features/product/BrightProductPages.module.css",
+      "count": 5,
+      "prs": [
+        122,
+        124,
+        125,
+        126,
+        127
+      ]
+    },
+    {
+      "path": "src/server/workflows/customer-quote-source-recovery.ts",
+      "count": 5,
+      "prs": [
+        224,
+        253,
+        259,
+        280,
+        307
+      ]
+    },
+    {
+      "path": "tests/db/v4-quote-accepted-source-recovery.test.ts",
+      "count": 5,
+      "prs": [
+        224,
+        253,
+        259,
+        280,
+        307
+      ]
+    },
+    {
+      "path": "tests/e2e/v4-clean-public-pages.test.tsx",
+      "count": 5,
+      "prs": [
+        122,
+        124,
+        125,
+        126,
+        127
+      ]
+    },
+    {
+      "path": ".github/workflows/v4-quote-recovery-integrated-pg17.yml",
+      "count": 4,
+      "prs": [
+        253,
+        259,
+        280,
+        307
+      ]
+    },
+    {
+      "path": "src/components/shell/MarketingShell.tsx",
+      "count": 4,
+      "prs": [
+        68,
+        70,
+        105,
+        120
+      ]
+    },
+    {
+      "path": "src/app/api/internal/workflows/quote-source/route.ts",
+      "count": 3,
+      "prs": [
+        227,
+        253,
+        259
+      ]
+    },
+    {
+      "path": "src/app/auth/continue/route.ts",
+      "count": 3,
+      "prs": [
+        68,
+        72,
+        83
+      ]
+    },
+    {
+      "path": "src/features/operations/OperationalProductRoute.module.css",
+      "count": 3,
+      "prs": [
+        69,
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/OwnerQuoteAcceptedAutomationControl.tsx",
+      "count": 3,
+      "prs": [
+        259,
+        280,
+        307
+      ]
+    },
+    {
+      "path": "src/features/operations/OwnerQuoteRecoveryQueue.tsx",
+      "count": 3,
+      "prs": [
+        259,
+        280,
+        307
+      ]
+    },
+    {
+      "path": "src/features/operations/operational-product-runtime.ts",
+      "count": 3,
+      "prs": [
+        72,
+        105,
+        568
+      ]
+    },
+    {
+      "path": "src/server/workflows/owner-quote-recovery-queue.ts",
+      "count": 3,
+      "prs": [
+        259,
+        280,
+        307
+      ]
+    },
+    {
+      "path": "tests/db/v4-owner-quote-recovery-queue.test.ts",
+      "count": 3,
+      "prs": [
+        259,
+        280,
+        307
+      ]
+    },
+    {
+      "path": "tests/e2e/v3-ai-staff-http.test.ts",
+      "count": 3,
+      "prs": [
+        80,
+        104,
+        105
+      ]
+    },
+    {
+      "path": "docs/execution/v4-quote-source-recovery-staging-acceptance.md",
+      "count": 2,
+      "prs": [
+        224,
+        227
+      ]
+    },
+    {
+      "path": "src/app/auth/confirm/route.ts",
+      "count": 2,
+      "prs": [
+        68,
+        72
+      ]
+    },
+    {
+      "path": "src/app/auth/sign-in/page.tsx",
+      "count": 2,
+      "prs": [
+        68,
+        105
+      ]
+    },
+    {
+      "path": "src/app/auth/sign-up/page.tsx",
+      "count": 2,
+      "prs": [
+        68,
+        105
+      ]
+    },
+    {
+      "path": "src/app/page.tsx",
+      "count": 2,
+      "prs": [
+        68,
+        105
+      ]
+    },
+    {
+      "path": "src/app/tour/page.tsx",
+      "count": 2,
+      "prs": [
+        105,
+        124
+      ]
+    },
+    {
+      "path": "src/app/tour/tour.module.css",
+      "count": 2,
+      "prs": [
+        125,
+        127
+      ]
+    },
+    {
+      "path": "src/components/product/StaffCleanAirV4.module.css",
+      "count": 2,
+      "prs": [
+        126,
+        127
+      ]
+    },
+    {
+      "path": "src/components/product/StaffCommandPalette.tsx",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/components/product/StaffWorkspaceV3.module.css",
+      "count": 2,
+      "prs": [
+        67,
+        68
+      ]
+    },
+    {
+      "path": "src/features/onboarding/onboarding-product-runtime.ts",
+      "count": 2,
+      "prs": [
+        68,
+        72
+      ]
+    },
+    {
+      "path": "src/features/operations/AiStudioWorkspace.tsx",
+      "count": 2,
+      "prs": [
+        633,
+        650
+      ]
+    },
+    {
+      "path": "src/features/operations/DispatchCoverageWeek.module.css",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/DispatchCoverageWeek.tsx",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/QualityQueueFilters.tsx",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/StaffOverviewDashboard.tsx",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/dispatch-coverage-week.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/inbox-delivery-diagnostics.ts",
+      "count": 2,
+      "prs": [
+        105,
+        598
+      ]
+    },
+    {
+      "path": "src/features/operations/invoice-collection-queue.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/product-truth.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/quality-queue.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/quote-pipeline.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/staff-command-search.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/staff-local-day.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/operations/staff-snapshot-index.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "src/features/sandbox/SandboxJourney.module.css",
+      "count": 2,
+      "prs": [
+        105,
+        124
+      ]
+    },
+    {
+      "path": "src/server/ai/owner-operations-brief.ts",
+      "count": 2,
+      "prs": [
+        597,
+        602
+      ]
+    },
+    {
+      "path": "src/server/core/operational-quote-rate-card.ts",
+      "count": 2,
+      "prs": [
+        564,
+        569
+      ]
+    },
+    {
+      "path": "tests/e2e/v2-public-marketing-professional-ui.test.ts",
+      "count": 2,
+      "prs": [
+        68,
+        105
+      ]
+    },
+    {
+      "path": "tests/e2e/v3-inbox-triage.test.ts",
+      "count": 2,
+      "prs": [
+        69,
+        83
+      ]
+    },
+    {
+      "path": "tests/e2e/v3-quality-triage.test.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "tests/e2e/v3-studio-brand-continuity.test.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "tests/e2e/v3-studio-dashboard.test.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "tests/e2e/v3-studio-local-day.test.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "tests/e2e/v3-studio-queue-performance.test.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "tests/e2e/v3-studio-quote-version-safety.test.ts",
+      "count": 2,
+      "prs": [
+        83,
+        105
+      ]
+    },
+    {
+      "path": "tests/e2e/v3-supabase-public-auth-runtime.test.ts",
+      "count": 2,
+      "prs": [
+        72,
+        105
+      ]
+    },
+    {
+      "path": "tests/e2e/v4-clean-tour-public.test.ts",
+      "count": 2,
+      "prs": [
+        125,
+        127
+      ]
+    }
+  ]
+}
