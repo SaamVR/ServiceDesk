@@ -1,0 +1,398 @@
+{
+  "schemaVersion": "sonic-gap-v1",
+  "auditDate": "2026-10-25",
+  "repository": "SaamVR/ServiceDesk",
+  "originalPlanPath": "docs/engineering/ai/sonic-ai-first-delivery-plan-20261018.md",
+  "originalPlanBranch": "ops/servicedesk-fixed-delivery-program-20261025",
+  "canonicalBranch": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+  "canonicalObservedSha": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
+  "frozenBundlePr": 841,
+  "frozenBundleHead": "25ca21486d9f735fceaf9b52691e2ba561224416",
+  "frozenBundleMerged": false,
+  "featureFreezeIssue": 816,
+  "masterIssue": 808,
+  "productionFirstIncompleteIssue": 818,
+  "recordType": "READ_ONLY_SOURCE_GAP_RECONCILIATION_NOT_SCOPE_APPROVAL",
+  "canonicalFoundations": [
+    {
+      "id": "MODEL_TRANSPORT_GUARDS",
+      "path": "src/server/ai/model-transport.ts",
+      "classification": "BUILT_CANONICAL_COMPONENT",
+      "productionVerified": false
+    },
+    {
+      "id": "OPT_IN_RUNTIME_CONFIG",
+      "path": "src/server/ai/runtime-config.ts",
+      "classification": "BUILT_CANONICAL_COMPONENT",
+      "productionVerified": false
+    },
+    {
+      "id": "PROTECTED_AI_STUDIO_UI",
+      "path": "src/features/operations/AiStudioWorkspace.tsx",
+      "classification": "BUILT_CANONICAL_COMPONENT",
+      "productionVerified": false
+    },
+    {
+      "id": "STUDIO_RECORD_WORKBENCH",
+      "path": "src/features/operations/AiStudioWorkbench.tsx",
+      "classification": "BUILT_CANONICAL_COMPONENT",
+      "productionVerified": false
+    },
+    {
+      "id": "OWNER_WORKDAY_PRIORITY_FALLBACK",
+      "path": "src/server/ai/owner-workday-priorities.ts",
+      "classification": "BUILT_CANONICAL_COMPONENT",
+      "productionVerified": false
+    },
+    {
+      "id": "FIVE_EVENT_THREE_ACTION_ENGINE",
+      "path": "src/server/workflows/engine.ts",
+      "classification": "BUILT_CANONICAL_COMPONENT",
+      "productionVerified": false
+    },
+    {
+      "id": "WORKFLOW_CONTRACT_TYPES",
+      "path": "src/contracts/workflow-rules.ts",
+      "classification": "BUILT_CANONICAL_COMPONENT",
+      "productionVerified": false
+    },
+    {
+      "id": "TWENTY_SEVEN_STARTER_DRAFT_RECIPES",
+      "path": "src/server/ai/owner-starter-batch.ts",
+      "classification": "BUILT_CANONICAL_COMPONENT",
+      "productionVerified": false
+    }
+  ],
+  "agents": [
+    {
+      "id": "AI-01",
+      "label": "Bounded model gateway and owner probe",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/model-transport.ts",
+      "dependencies": [
+        "provider.621",
+        "production.P08"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-02",
+      "label": "Integrated owner AI Studio, record picker and inspector",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/features/operations/AiStudioWorkspace.tsx",
+      "dependencies": [
+        "pr.631",
+        "pr.633",
+        "pr.645",
+        "production.P08"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-03",
+      "label": "Saved record copilot with guarded stale authority",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/request-brief.ts",
+      "dependencies": [
+        "pr.830",
+        "pr.833",
+        "production.P08"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-04",
+      "label": "Owner AI workday triage and action links",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/owner-workday-priorities.ts",
+      "dependencies": [
+        "production.P08"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-05",
+      "label": "AI intake agent with approval and saved customer/property link",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/extraction.ts",
+      "dependencies": [
+        "pr.830",
+        "production.P04"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-06",
+      "label": "AI quote assistant with actual branch-priced currency",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/quote-review.ts",
+      "dependencies": [
+        "pr.830",
+        "production.P03",
+        "production.P04"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-07",
+      "label": "AI dispatch assistant with saved crew authority",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/dispatch-review.ts",
+      "dependencies": [
+        "pr.831",
+        "production.P06"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-08",
+      "label": "AI visit-quality and verified rework evidence",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/visit-qa-assessment.ts",
+      "dependencies": [
+        "pr.831",
+        "production.P06"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-09",
+      "label": "AI finance and reconciled ledger exception",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/invoice-exception-review.ts",
+      "dependencies": [
+        "pr.832",
+        "production.P07"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-10",
+      "label": "Consent-aware provider messaging agent",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/reply-safety.ts",
+      "dependencies": [
+        "pr.833",
+        "production.P09"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-11",
+      "label": "Recurring retention and evidence-based churn warnings",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/aftercare-review.ts",
+      "dependencies": [
+        "pr.833",
+        "production.P06",
+        "production.P09"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-12",
+      "label": "Daily and weekly evidence-backed business intelligence",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/owner-operations-brief.ts",
+      "dependencies": [
+        "pr.832",
+        "production.P10"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-13",
+      "label": "Typed automation draft, preview, approved publish",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/workflow-draft-proposal.ts",
+      "dependencies": [
+        "pr.836",
+        "production.P08"
+      ],
+      "originalEndToEndAccepted": false
+    },
+    {
+      "id": "AI-14",
+      "label": "Redacted independent critic and actual model-cost monitoring",
+      "classification": "PARTIAL_FEATURE",
+      "canonicalEvidence": "src/server/ai/action-audit.ts",
+      "dependencies": [
+        "pr.840",
+        "production.P10"
+      ],
+      "originalEndToEndAccepted": false
+    }
+  ],
+  "shippedWorkflowEvents": [
+    "REQUEST_CREATED",
+    "QUOTE_ACCEPTED",
+    "VISIT_COMPLETED",
+    "INVOICE_PAID",
+    "ATTENTION_OPENED"
+  ],
+  "shippedWorkflowActions": [
+    "CREATE_ATTENTION",
+    "SEND_EMAIL_TEMPLATE",
+    "SEND_WHATSAPP_TEMPLATE"
+  ],
+  "plannedNewEvents": [
+    {
+      "id": "MESSAGE_RECEIVED",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "QUOTE_SENT",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "QUOTE_EXPIRED",
+      "classification": "PROPOSAL_ONLY",
+      "evidencePr": 837,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "BOOKING_CONFIRMED",
+      "classification": "PROPOSAL_ONLY",
+      "evidencePr": 837,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "CREW_ASSIGNED",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "VISIT_DELAYED",
+      "classification": "PROPOSAL_ONLY",
+      "evidencePr": 837,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "INCIDENT_REPORTED",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "QA_FAILED",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "INVOICE_ISSUED",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "INVOICE_OVERDUE",
+      "classification": "PROPOSAL_ONLY",
+      "evidencePr": 837,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "PAYMENT_FAILED",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveTriggerVerified": false
+    },
+    {
+      "id": "RECURRING_VISIT_DUE",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveTriggerVerified": false
+    }
+  ],
+  "plannedNewActions": [
+    {
+      "id": "CREATE_TASK",
+      "classification": "PREVIEW_ONLY",
+      "evidencePr": 837,
+      "canonicalLiveActionVerified": false
+    },
+    {
+      "id": "SET_INTERNAL_PRIORITY",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveActionVerified": false
+    },
+    {
+      "id": "REQUEST_OWNER_APPROVAL",
+      "classification": "PREVIEW_ONLY",
+      "evidencePr": 837,
+      "canonicalLiveActionVerified": false
+    },
+    {
+      "id": "CREATE_DRAFT_REPLY",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveActionVerified": false
+    },
+    {
+      "id": "SUGGEST_SLOT",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveActionVerified": false
+    },
+    {
+      "id": "SCHEDULE_REMINDER",
+      "classification": "PREVIEW_ONLY",
+      "evidencePr": 837,
+      "canonicalLiveActionVerified": false
+    },
+    {
+      "id": "START_N8N_APPROVED_JOB",
+      "classification": "MISSING_WORKFLOW_PRIMITIVE",
+      "evidencePr": null,
+      "canonicalLiveActionVerified": false
+    },
+    {
+      "id": "EMIT_OWNER_DIGEST",
+      "classification": "PREVIEW_ONLY",
+      "evidencePr": 837,
+      "canonicalLiveActionVerified": false
+    }
+  ],
+  "catalogStarterDraftRecipes": 27,
+  "automationRoadmapIssue": 173,
+  "automationRoadmapUnverifiedTasks": 72,
+  "originalAIAgentsEndToEndVerified": 0,
+  "changedScopeApproved": false,
+  "featureFreezeRespected": true,
+  "externalCallsPerformed": false,
+  "databaseMutationsPerformed": false,
+  "canonicalMergedByAudit": false,
+  "stagingAcceptanceVerified": false,
+  "providerAcceptanceVerified": false,
+  "liveProductAccepted": false,
+  "priorityOrderedGates": [
+    818,
+    819,
+    820,
+    821,
+    822,
+    823,
+    824,
+    825,
+    826,
+    827,
+    828
+  ],
+  "operationalBlockers": [
+    199,
+    487,
+    621
+  ],
+  "readmeDocs": [
+    "docs/delivery/sonic-gap/01-ai-agent-reconciliation-20261025.md",
+    "docs/delivery/sonic-gap/02-event-action-workflow-reconciliation-20261025.md",
+    "docs/delivery/sonic-gap/03-studio-provider-and-operational-gates-20261025.md",
+    "docs/delivery/sonic-gap/04-deadline-priority-and-multilane-plan-20261025.md"
+  ]
+}
