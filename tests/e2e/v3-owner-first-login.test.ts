@@ -6,7 +6,9 @@ import { loadVerifiedOwnerWorkspace, ownerAfterLoginHref } from "@/features/auth
 
 const ownId = "da5c10ef-0d3b-4f2c-9cce-df1b1d8b7ab0";
 const otherId = "fcdebf16-d7ce-4571-840a-f8718bf5afe9";
-type Member = { workspace_id: string };
+const authUserId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+type Member = { workspace_id: string;user_id: string;role: string;status: string };
+const savedMember = (id: string = ownId):Member=>({workspace_id:id,user_id:authUserId,role:"OWNER",status:"ACTIVE"});
 type Workspace = { id: string; slug: string; name: string; timezone: string; currency: string };
 
 function fakeClient(options: {
@@ -36,6 +38,7 @@ function fakeClient(options: {
     },
   };
   const client = {
+    auth:{async getUser(){calls.push("auth:getUser");return {data:{user:{id:authUserId}},error:null};}},
     from(name: string) {
       if (name === "memberships") return members;
       if (name === "workspaces") return workspaces;
@@ -55,11 +58,11 @@ const attacker: Workspace = {
 
 describe("verified owner first-login RLS landing", () => {
   it("loads only the verified user's real owner workspace", async () => {
-    const { client, calls } = fakeClient({ members: [{ workspace_id: ownId }], workspaces: [owned, attacker] });
-    expect(await loadVerifiedOwnerWorkspace(client, "real-authenticated-user", owned.slug)).toEqual({
+    const { client, calls } = fakeClient({ members: [savedMember()], workspaces: [owned, attacker] });
+    expect(await loadVerifiedOwnerWorkspace(client, authUserId, owned.slug)).toEqual({
       ok: true, workspace: owned,
     });
-    expect(calls).toContain("member:user_id=real-authenticated-user");
+    expect(calls).toContain("member:user_id="+authUserId);
     expect(calls).toContain("member:role=OWNER");
     expect(calls).toContain("member:status=ACTIVE");
     expect(calls).toContain("workspace-in:id");
@@ -67,31 +70,31 @@ describe("verified owner first-login RLS landing", () => {
   });
 
   it("denies another workspace, even if it is visible to an improperly configured read facade", async () => {
-    const { client } = fakeClient({ members: [{ workspace_id: ownId }], workspaces: [owned, attacker] });
-    expect(await loadVerifiedOwnerWorkspace(client, "real-user", attacker.slug)).toEqual({
+    const { client } = fakeClient({ members: [savedMember()], workspaces: [owned, attacker] });
+    expect(await loadVerifiedOwnerWorkspace(client, authUserId, attacker.slug)).toEqual({
       ok: false, reason: "DENIED",
     });
-    expect(await loadVerifiedOwnerWorkspace(client, "real-user", "missing-business")).toEqual({
+    expect(await loadVerifiedOwnerWorkspace(client, authUserId, "missing-business")).toEqual({
       ok: false, reason: "DENIED",
     });
   });
 
   it("fails closed for anonymous, malformed slug, no membership, and excessive membership rows", async () => {
-    const { client, calls } = fakeClient({ members: [{ workspace_id: ownId }], workspaces: [owned] });
+    const { client, calls } = fakeClient({ members: [savedMember()], workspaces: [owned] });
     expect(await loadVerifiedOwnerWorkspace(client, "", owned.slug)).toEqual({ ok: false, reason: "INVALID" });
-    expect(await loadVerifiedOwnerWorkspace(client, "user", "../admin")).toEqual({ ok: false, reason: "INVALID" });
+    expect(await loadVerifiedOwnerWorkspace(client, authUserId, "../admin")).toEqual({ ok: false, reason: "INVALID" });
     expect(calls).toEqual([]);
     const empty = fakeClient({ members: [] });
-    expect(await loadVerifiedOwnerWorkspace(empty.client, "user", owned.slug)).toEqual({ ok: false, reason: "DENIED" });
-    const crowded = fakeClient({ members: Array.from({ length: 21 }, () => ({ workspace_id: ownId })) });
-    expect(await loadVerifiedOwnerWorkspace(crowded.client, "user", owned.slug)).toEqual({ ok: false, reason: "TOO_MANY" });
+    expect(await loadVerifiedOwnerWorkspace(empty.client, authUserId, owned.slug)).toEqual({ ok: false, reason: "DENIED" });
+    const crowded = fakeClient({ members: Array.from({ length: 21 }, () => savedMember()) });
+    expect(await loadVerifiedOwnerWorkspace(crowded.client, authUserId, owned.slug)).toEqual({ ok: false, reason: "TOO_MANY" });
   });
 
   it("fails closed if any RLS query fails", async () => {
     const first = fakeClient({ memberError: true });
-    expect(await loadVerifiedOwnerWorkspace(first.client, "user", owned.slug)).toEqual({ ok: false, reason: "QUERY_FAILED" });
-    const second = fakeClient({ members: [{ workspace_id: ownId }], workspaceError: true });
-    expect(await loadVerifiedOwnerWorkspace(second.client, "user", owned.slug)).toEqual({ ok: false, reason: "QUERY_FAILED" });
+    expect(await loadVerifiedOwnerWorkspace(first.client, authUserId, owned.slug)).toEqual({ ok: false, reason: "QUERY_FAILED" });
+    const second = fakeClient({ members: [savedMember()], workspaceError: true });
+    expect(await loadVerifiedOwnerWorkspace(second.client, authUserId, owned.slug)).toEqual({ ok: false, reason: "QUERY_FAILED" });
   });
 
   it("routes verified owners without operational secrets into real RLS-only welcome, not a broken staff dashboard", () => {
