@@ -1,3 +1,5 @@
+> **OWNER OVERRIDE — 2026-10-25:** Use **EXISTING** ServiceDesk Supabase project `cpmmgivhlkfbiwzhlcey` and **EXISTING** suspended Render service `srv-db5p1s142hec739noohg` ONLY. The earlier recommendation to create a separate staging service/database is rejected. Preserve original user data and Render deploy `3962aa5c84c3aa5f47ad72b62d51ae4382467708`; do not create paid or extra resources. [Final owner decision](https://github.com/SaamVR/ServiceDesk/issues/829) · [P02 shared-infrastructure preflight](./P02_SHARED_INFRA_AUTH_PREFLIGHT.md).
+
 # P01 — Render workspace and actual ServiceDesk service: read-only inspection
 
 **Inspection date:** 2026-10-25. **Authorization scope:** owner confirmed connected Render `My Workspace` for READ-ONLY ServiceDesk inspection; no permission to deploy, resume, create or change any service.
