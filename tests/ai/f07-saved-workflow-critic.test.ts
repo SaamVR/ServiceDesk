@@ -114,7 +114,7 @@ describe("F07 owner saved workflow failures and provider-success critic",()=>{
  it("detects saved provider code, attempts, state, owner or replay revision drift",async()=>{
   const cases=[
    (v:Source)=>{v.workflowActionExecutions[0].state="FAILED";},
-   (v:Source)=>{v.workflowActionExecutions[0].errorCode="RATE_LIMITED";},
+   (v:Source)=>{Object.assign(v.workflowActionExecutions[0],{errorCode:"RATE_LIMITED"});},
    (v:Source)=>{v.workflowActionExecutions[0].attemptNumber=2;},
    (v:Source)=>{v.workflowExecutions[0].state="PARTIAL_FAILED";},
    (v:Source)=>{v.actor.userId="other-owner";},
