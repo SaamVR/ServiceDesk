@@ -66,6 +66,8 @@ test("refuses to run without explicit read-only opt-in and a publishable key", (
     /SIGNED_IN_OWNER_SESSION_REQUIRED/);
   assert.throws(() => validateInputs({ ...env, SD_P02_OWNER_A_JWT: token(userA, "authenticated", "https:\/\/wrong.supabase.co\/auth\/v1") }),
     /WRONG_SUPABASE_PROJECT_JWT/);
+  assert.throws(() => validateInputs({ ...env, SD_P02_OWNER_A_JWT: token(userA, "authenticated", null) }),
+    /WRONG_SUPABASE_PROJECT_JWT/);
   assert.throws(() => validateInputs({ ...env, SD_P02_OWNER_B_JWT: token(userA) }),
     /OWNERS_AND_WORKSPACES_MUST_BE_DIFFERENT/);
 });
