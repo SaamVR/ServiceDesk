@@ -113,8 +113,14 @@ export function decideOutboxPersistence(input: OutboxRetryPolicyInput): Result<O
 
   const minimum = minimumBackoffSeconds(attempt, baseDelaySeconds, maxDelaySeconds);
   const retryAfter = outcome.retryAfterSeconds ?? 0;
-  if (!Number.isSafeInteger(retryAfter) || retryAfter < 0) {
+  if (!Number.isFinite(retryAfter) || !Number.isInteger(retryAfter) || retryAfter < 0) {
     return { ok: false, code: "OUTBOX_RETRY_AFTER_INVALID", message: "retryAfterSeconds must be a nonnegative integer when provided." };
+  }
+  // Preserve the R39 worker contract: a syntactically integral but unsafe
+  // provider delay is a schedule overflow, never a durable retry timestamp.
+  if (!Number.isSafeInteger(retryAfter)) {
+    return { ok: false, code: "OUTBOX_RETRY_SCHEDULE_INVALID",
+      message: "Provider retry schedule exceeds supported timestamp range." };
   }
   const delaySeconds = Math.max(minimum, retryAfter);
   // A provider Retry-After can be a syntactically valid integer but still
