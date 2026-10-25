@@ -2,6 +2,27 @@
 
 **Date:** 2026-10-25 · **Connected main Supabase:** `cpmmgivhlkfbiwzhlcey` · **Current live migration:** 0062 · **Source canonical:** `8ed57739bedf924c3b7554eb702bd28d7520d63c` (PRs #834/#835 merged, source release CI pending at this writing).
 
+## Four-definer nonmember comparison — independent read-only security review, 2026-10-26
+
+The existing primary Supabase database has five publicly defined `SECURITY DEFINER` functions callable by the `authenticated` role (not `anon`): `has_active_membership`, `is_customer_for_workspace`, `servicedesk_default_branch`, `servicedesk_has_branch_access`, and `servicedesk_register_owner_workspace`. The last is a **state-changing registration action** and **was NOT invoked** during this read-only security comparison.
+
+Within `BEGIN TRANSACTION READ ONLY` / `SET LOCAL ROLE authenticated`, a fictional nonmember JWT identity with no workspace membership was tested against the following four read-only helper functions using the already-existing workspace/branch identifiers internally (identifiers omitted from this report):
+
+| Function (all actually installed on MAIN) | Nonmember result | Claim |
+|---|---|---|
+| `has_active_membership(workspace,null)` | `false` | Correct membership denial in tested context |
+| `servicedesk_has_branch_access(workspace,branch,null)` | `false` | Correct branch access denial in tested context |
+| `is_customer_for_workspace(workspace,synthetic_customer)` | `false` | Correct identity-related denial in tested context |
+| **`servicedesk_default_branch(workspace)`** | **non-null branch exists, true** | **Foreign default-branch-ID information disclosure** |
+
+All operations executed in a read-only transaction with rollback. This is a scoped synthetic nonmember test, **not proof that every RLS policy, customer access path, SQL function or second real login is secure**. The registration function's definition was inspected only: it enforces authenticated confirmed email, serialized owner registration and transactional workspace/member/branch creation, but real authorized onboarding still requires browser acceptance. Other SECURITY DEFINER paths should receive further independent security review under P11.
+
+**Remediation decision:** keep the owner-approved change narrowly scoped to the default-branch function's membership guard / EXECUTE ACL in reviewed source migration 0065. No broad policy rewrites or 0063/0064 installation is justified by this comparison. **The approved 0065 fix remains NOT installed because the connected database mutation was safety-blocked.**
+
+## Latest source and host-only parity checkpoint
+
+Canonical V4 after adding offline-only existing-Render read gate: `1003075d1bfcefb6415d6c9a4bdda9c57a0546ff` (merged [PR #848](https://github.com/SaamVR/ServiceDesk/pull/848), combined CI pending at this document update). The separate Render V4 P02 candidate branch remains pinned to the earlier fully source-verified `ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4`, and the old suspended Render V3 deployment remains at `3962aa5c84c3aa5f47ad72b62d51ae4382467708`. **No V4 Render deploy occurred.**
+
 ## Latest verified code and recovery checkpoint
 
 - Canonical V4 `8ed57739bedf924c3b7554eb702bd28d7520d63c` has **exact merged-head PASS** in [app / 752 suites / 3,713 tests / Chrome #40172156776](https://github.com/SaamVR/ServiceDesk/actions/runs/40172156776), [PostgreSQL 17 + worker #40172156769](https://github.com/SaamVR/ServiceDesk/actions/runs/40172156769), and [unattended guardian #40172156787](https://github.com/SaamVR/ServiceDesk/actions/runs/40172156787). These CI reports still correctly say authenticated owner, tenant RLS and provider delivery acceptance are **FALSE**.
