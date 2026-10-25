@@ -101,7 +101,7 @@ describe("F07 saved AI_ACTIONS count is NOT provider token cost",()=>{
    expect((await run(fixture({first:patch}).deps)).ok).toBe(false);
  });
  it("cancels before authorization and declines malformed workspace slugs",async()=>{
-  const c=new AbortController();c.abort(),f=fixture();
+  const c=new AbortController();c.abort();const f=fixture();
   expect(await run({...f.deps,signal:c.signal}))
    .toMatchObject({ok:false,code:"F07_USAGE_CANCELLED"});
   expect(f.counts()).toEqual({resolves:0,reads:0});
