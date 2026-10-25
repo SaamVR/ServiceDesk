@@ -128,8 +128,8 @@ function checkedSource(s: OperationalStaffSnapshot): string | null {
   }
   // Prove identical persisted scheduling facts without serializing customer,
   // crew names, notes, payment data or free-form attacker-authored summaries.
-  const tuple = (rows: readonly Record<string, unknown>[], keys: string[]) =>
-    rows.map(row => keys.map(k => row[k] ?? null))
+  const tuple = (rows: readonly object[], keys: string[]) =>
+    rows.map(row => keys.map(k => (row as Record<string, unknown>)[k] ?? null))
       .sort((a,b) => String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify({
     scope: [branch.mode,branch.selectedBranchId ?? null,[...branches].sort()],
