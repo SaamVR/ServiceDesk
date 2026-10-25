@@ -165,7 +165,9 @@ export async function proposeF04SavedRetentionReview(
  const load=deps.loadSnapshot??loadOperationalStaffSnapshot,now=deps.now??Date.now;
  let a:Awaited<ReturnType<Loader>>;
  try{a=await load(slug);}catch{return fail("F04_RETENTION_SOURCE_UNAVAILABLE");}
- if(!a.ok||!authorized(a.value,slug,now()))return fail("F04_RETENTION_OWNER_REQUIRED");
+ if(!a.ok)return fail(a.kind==="authorization"||a.kind==="authentication"
+   ?"F04_RETENTION_OWNER_REQUIRED":"F04_RETENTION_SOURCE_UNAVAILABLE");
+ if(!authorized(a.value,slug,now()))return fail("F04_RETENTION_OWNER_REQUIRED");
  const first=savedProof(a.value);
  if(!first)return fail("F04_RETENTION_SOURCE_INCOMPLETE");
  if(deps.signal?.aborted)return fail("F04_RETENTION_CANCELLED");
