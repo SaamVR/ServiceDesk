@@ -1,3 +1,5 @@
+> **SAMVR RECOVERY CHECKPOINT — 2026-10-25, after original storage warnings:** Verified root `/dev/sda1` **117 GB total, 46 GB used, 71 GB free (40% used)**. Sole ServiceDesk `samvr:/home/ubuntu/work/ServiceDesk` cleanly fast-forwarded (NO forced reset or deletion) to verified V4 canonical `ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4` and `git status --porcelain` remains empty. Node22 on-device acceptance probe 5/5 PASS. Local `node_modules/.bin/vitest` not cached; exact GitHub hosted source/Chrome/PG17/guardian gates are green; do not perform redundant whole-suite installs merely because disk space recovered. Earlier disk figures in this historical document are OBSOLETE; `samai` backups and other projects untouched.
+
 # Production Readiness Chat — fixed-batch execution contract
 
 **Role:** ServiceDesk AI V4 Production Readiness Principal Integrator, multi-lane release coordinator, independent critic and final acceptance authority. This is THIS chat's role. This is not a background task or a separate ongoing agent process.
