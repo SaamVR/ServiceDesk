@@ -7,6 +7,7 @@ import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
 import { loadVerifiedOwnerWorkspace } from "@/features/auth/verified-owner-workspace";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
+import { qaFixtureWritesAllowed } from "@/features/auth/qa-fixture-write-authority";
 import { seedVerifiedQaWorkspace } from "./qa-seed-actions";
 import { RegistrationSubmitButton } from "@/features/auth/RegistrationSubmitButton";
 
@@ -54,7 +55,8 @@ export default async function VerifiedOwnerWorkspacePage({
   const operationalMode = operationalDatabaseMode();
   const operationalConnected = operationalMode !== "DISABLED";
   const overviewHref = "/app/" + encodeURIComponent(workspace.slug) + "/overview";
-  const canSeed = operationalMode === "QA_SESSION_RLS" && ownerRegistrationEmailAllowed(data.user.email);
+  const canSeed = operationalMode === "QA_SESSION_RLS" &&
+    qaFixtureWritesAllowed() && ownerRegistrationEmailAllowed(data.user.email);
   const seedNotice = ({
     created: "Fictional sample customer, property and enquiry saved in your real test workspace.",
     "already-exists": "Sample records already exist. No duplicate records were created.",
