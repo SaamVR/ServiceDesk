@@ -43,9 +43,10 @@ export function validateInputs(env) {
     const claims = jwtClaims(jwt);
     if (claims.role !== "authenticated" || !UUID.test(claims.sub || ""))
       throw Error("SIGNED_IN_OWNER_SESSION_REQUIRED");
-    if (claims.exp && Number(claims.exp) * 1000 <= Date.now())
-      throw Error("EXPIRED_OWNER_JWT");
-    if (claims.iss && !String(claims.iss).startsWith(ORIGIN + "/auth/v1"))
+    if (!Number.isSafeInteger(claims.exp) ||
+        Number(claims.exp) * 1000 <= Date.now())
+      throw Error("EXPIRED_OR_UNVERIFIABLE_OWNER_JWT");
+    if (claims.iss !== ORIGIN + "/auth/v1")
       throw Error("WRONG_SUPABASE_PROJECT_JWT");
     return { tag, token: jwt, expectedWorkspace: id, subject: claims.sub };
   });
