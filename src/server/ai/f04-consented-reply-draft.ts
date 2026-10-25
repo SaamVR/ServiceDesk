@@ -117,7 +117,9 @@ export async function proposeF04ConsentedReplyDraft(
  const load=deps.loadSnapshot??loadOperationalStaffSnapshot,now=deps.now??Date.now;
  let a:Awaited<ReturnType<Loader>>;
  try{a=await load(workspaceSlug);}catch{return deny("F04_DRAFT_SOURCE_UNAVAILABLE");}
- if(!a.ok||!authorized(a.value,workspaceSlug,now()))return deny("F04_DRAFT_OWNER_REQUIRED");
+ if(!a.ok)return deny(a.kind==="authorization"||a.kind==="authentication"
+  ?"F04_DRAFT_OWNER_REQUIRED":"F04_DRAFT_SOURCE_UNAVAILABLE");
+ if(!authorized(a.value,workspaceSlug,now()))return deny("F04_DRAFT_OWNER_REQUIRED");
  const first=project(a.value,conversationId);
  if(!first)return deny("F04_DRAFT_SOURCE_INCOMPLETE");
  if(first.decision!=="READY")return deny(first.decision==="CONSENT"
