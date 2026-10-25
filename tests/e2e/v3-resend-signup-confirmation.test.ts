@@ -26,6 +26,7 @@ import { resendSignupConfirmation } from "../../src/app/auth/sign-up/check-email
 
 const ready = {
   SERVICEDESK_OWNER_REGISTRATION_ENABLED: "true",
+  SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED: "true",
   NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic",
   SERVICEDESK_AUTH_REDIRECT_ORIGIN: "https://servicedesk-v2-multilane-gate.onrender.com",
