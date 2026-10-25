@@ -3,7 +3,9 @@ import { verifiedEmailRedirectOrigin } from "./email-origin";
 /**
  * Public registration remains off until full provider and operational
  * acceptance. QA mode permits only a small, server-configured email allowlist
- * against the isolated staging database. Neither mode bypasses Supabase
+ * even when using the existing main database. Both modes additionally require
+ * an explicit server-only tenant-security approval after DB/RLS verification;
+ * neither mode bypasses Supabase
  * email verification, password policy, RLS or the verified-owner RPC.
  */
 export type OwnerRegistrationMode = "DISABLED" | "QA_ONLY" | "PUBLIC";
@@ -33,7 +35,10 @@ function qaAllowlist(env: NodeJS.ProcessEnv): string[] {
 }
 
 export function ownerRegistrationMode(env: NodeJS.ProcessEnv = process.env): OwnerRegistrationMode {
-  if (!hasValidAuthConfig(env)) return "DISABLED";
+  if (!hasValidAuthConfig(env) ||
+      env.SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED !== "true") {
+    return "DISABLED";
+  }
   if (env.SERVICEDESK_OWNER_REGISTRATION_ENABLED === "true") return "PUBLIC";
   if (env.SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED === "true" && qaAllowlist(env).length) {
     return "QA_ONLY";

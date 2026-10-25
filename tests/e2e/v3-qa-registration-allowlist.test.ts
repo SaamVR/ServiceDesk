@@ -9,6 +9,7 @@ const env: NodeJS.ProcessEnv = {
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
   SERVICEDESK_AUTH_REDIRECT_ORIGIN: "https://servicedesk-v3-frontend-review.onrender.com",
   SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false",
+  SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED: "true",
   SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "true",
   SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS: "tester@example.com, second@example.org",
 };

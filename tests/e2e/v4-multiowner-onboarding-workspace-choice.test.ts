@@ -102,6 +102,26 @@ describe("V4 onboarding explicit verified owner workspace selection", () => {
     expect(calls).toContain("workspace-filter:id=" + north);
   });
 
+  it("refuses malformed membership results instead of offering a duplicate business", async () => {
+    for (const malformed of [
+      { workspace_id: "not-a-workspace-uuid" },
+      { workspace_id: "" },
+      { workspace_id: null },
+      null,
+      { workspace_id: 42 },
+    ]) {
+      const { auth, calls } = fakeRls([malformed as OwnerRow], []);
+      expect(await resolveOwnerOnboardingWorkspaceChoice(auth, person))
+        .toEqual({ ok: false, code: "MEMBERSHIP_UNVERIFIED" });
+      expect(calls).not.toContain("table:workspaces");
+    }
+    const mixed = fakeRls([
+      membership(north), { workspace_id: "../../foreign" },
+    ], [workspace(north, "north-cleaning", "North Cleaning")]);
+    expect(await resolveOwnerOnboardingWorkspaceChoice(mixed.auth, person))
+      .toEqual({ ok: false, code: "MEMBERSHIP_UNVERIFIED" });
+  });
+
   it("fails closed when RLS hides one of several linked owner workspaces", async () => {
     const { auth } = fakeRls(
       [membership(north), membership(south)],
