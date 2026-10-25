@@ -9,11 +9,13 @@ import {
   resolveOwnerOnboardingWorkspaceChoice,
   type OwnerOnboardingWorkspace,
 } from "./owner-onboarding-workspace-choice";
+import { parseOwnerOnboardingQuery } from "./owner-onboarding-query";
 
 type OnboardingErrorKind =
   | "configuration"
   | "authentication"
   | "authorization"
+  | "verification"
   | "not_found"
   | "server";
 
@@ -53,7 +55,7 @@ async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
       message: "Sign in with an owner account to continue setup." };
   }
   if (!data.user.email_confirmed_at) {
-    return { ok: false, kind: "authorization",
+    return { ok: false, kind: "verification",
       message: "Confirm your account email before configuring a business." };
   }
 
@@ -75,7 +77,11 @@ async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
 export async function loadOnboardingProduct(
   workspaceSlug?: string,
 ): Promise<OnboardingProductResult> {
-  let slug = workspaceSlug?.trim();
+  const parsed = parseOwnerOnboardingQuery(workspaceSlug);
+  if (parsed.kind === "INVALID") {
+    return { ok: false, kind: "not_found", message: "Invalid workspace selection." };
+  }
+  let slug = parsed.kind === "SELECTED" ? parsed.slug : undefined;
 
   if (!slug) {
     const selected = await defaultOwnerWorkspaceSlug();
