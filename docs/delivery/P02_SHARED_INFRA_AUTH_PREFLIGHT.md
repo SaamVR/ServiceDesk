@@ -1,3 +1,5 @@
+> **Verified provider-quota root cause (25 Oct 2026 inspection):** Render service `srv-db5p1s142hec739noohg` was suspended at `2026-10-20T22:15:42Z`; its event `suspender_added` explicitly states **`Free Tier Usage Exceeded`**. Earlier V3 build/deployment succeeded on October 17, so this is a billing/quota lifecycle suspension, NOT proven application failure. Restoring availability needs an authorized provider quota reset/replenishment or separately approved plan change. There is NO authorization to upgrade, deploy, resume, create resources, alter billing or guess a reset date. Retain V3 rollback commit `3962aa5c84c3aa5f47ad72b62d51ae4382467708` and the approved existing-service-only target.
+
 # P02 — Shared primary ServiceDesk Supabase + existing Render onboarding preflight
 
 **Scope:** Owner correction 2026-10-25 — **USE EXISTING** Render and ServiceDesk Supabase, not separate staging resources. This report is **read-only evidence and action sequence, NOT staging acceptance**.
