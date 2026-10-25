@@ -5,6 +5,7 @@ import {
 } from "../../src/features/auth/owner-registration-readiness";
 
 const base: NodeJS.ProcessEnv = {
+  NODE_ENV: "test",
   NEXT_PUBLIC_SUPABASE_URL: "https://synthetic-project.supabase.co",
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic",
   SERVICEDESK_AUTH_REDIRECT_ORIGIN: "https://servicedesk-v3-frontend-review.onrender.com",
