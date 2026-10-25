@@ -44,11 +44,30 @@ function mockFetch(options = {}) {
     } else {
       assert.equal(request.method, "GET");
       const name = url.pathname.split("/").at(-1);
-      assert.ok(["workspaces", "memberships", "requests"].includes(name));
+      assert.ok(["workspaces", "memberships", "requests", "workspace_branches"].includes(name));
       const id = (url.searchParams.get(name === "workspaces" ? "id" : "workspace_id") || "").slice(3);
-      data = (id === expected || options.leakForeignRows && id !== expected) &&
-        (name !== "requests" || options.savedRequest) ?
-        [{ [name === "memberships" ? "workspace_id" : "id"]: id }] : [];
+      if (name === "memberships") {
+        assert.equal(url.searchParams.get("user_id"),"eq." + (owner === "A" ? userA : userB));
+        assert.equal(url.searchParams.get("role"),"eq.OWNER");
+        assert.equal(url.searchParams.get("status"),"eq.ACTIVE");
+      }
+      if (name === "workspace_branches") {
+        assert.equal(url.searchParams.get("is_default"),"eq.true");
+        assert.equal(url.searchParams.get("active"),"eq.true");
+      }
+      const present=(id === expected || options.leakForeignRows && id !== expected) &&
+        (name !== "requests" || options.savedRequest);
+      if (!present) data=[];
+      else if(name==="workspaces") data=[{id}];
+      else if(name==="memberships") data=[{
+        workspace_id:id,
+        user_id:owner==="A"?userA:userB,
+        role:options.wrongRole?"CREW":"OWNER",
+        status:options.inactiveOwner?"INACTIVE":"ACTIVE",
+      }];
+      else if(name==="requests") data=[{id:branch,workspace_id:id}];
+      else data=[{id:id===workA?branchA:branchB,workspace_id:id,
+        is_default:true,active:true}];
     }
     return new Response(JSON.stringify(data), {
       status: 200, headers: { "content-type": "application/json" },
@@ -79,9 +98,9 @@ test("proves two different owners' own visibility, foreign denial and own-only b
   assert.equal(result.noWrites, true);
   assert.equal(result.checks.length, 2);
   assert.ok(result.checks.every(x => x.scope === "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED"));
-  assert.equal(calls.length, 16);
+  assert.equal(calls.length, 20);
   assert.equal(calls.filter(x => x.method === "POST").length, 4);
-  assert.equal(calls.filter(x => x.method === "GET").length, 12);
+  assert.equal(calls.filter(x => x.method === "GET").length, 16);
 });
 
 test("does not require seeded requests to prove owner workspace isolation", async () => {
