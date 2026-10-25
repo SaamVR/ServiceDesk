@@ -88,12 +88,13 @@ export async function planAuthorizedSavedIntake(
   if (["CANCELLED", "CLOSED", "REJECTED", "DECLINED"].includes(saved.status as string))
     return fail("F01_INTAKE_CLOSED_REQUEST");
 
+  const savedServiceId = saved.service_id;
   async function readCatalog(db: typeof service): Promise<Row | null> {
-    if (saved.service_id === null) return null;
+    if (savedServiceId === null) return null;
     try {
       const result = await db.from("service_catalog")
         .select("id,workspace_id,code,active,requires_review")
-        .eq("workspace_id", workspace.id).eq("id", saved.service_id).maybeSingle();
+        .eq("workspace_id", workspace.id).eq("id", savedServiceId).maybeSingle();
       if (result.error || !result.data) return null;
       return result.data as Row;
     } catch { return null; }
