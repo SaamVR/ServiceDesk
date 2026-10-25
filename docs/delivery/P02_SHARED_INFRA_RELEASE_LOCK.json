@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "program": "ServiceDesk-P02-SHARED-INFRA",
+  "created_on": "2026-10-26",
+  "repository": "SaamVR/ServiceDesk",
+  "source": {
+    "canonical_branch": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+    "source_verified_sha": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
+    "candidate_branch": "deploy/servicedesk-v4-p02-rc-20261026",
+    "candidate_branch_sha_at_creation": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
+    "candidate_branch_is_git_protected": false,
+    "source_checks": [
+      "https://github.com/SaamVR/ServiceDesk/actions/runs/40188428616",
+      "https://github.com/SaamVR/ServiceDesk/actions/runs/40188428513",
+      "https://github.com/SaamVR/ServiceDesk/actions/runs/40188428582"
+    ]
+  },
+  "render": {
+    "workspace": "tea-d1ihdsbipnbc73bpc8f0",
+    "service": "srv-db5p1s142hec739noohg",
+    "url": "https://servicedesk-v3-frontend-review.onrender.com",
+    "service_lifecycle_at_inspection": "suspended",
+    "suspension_reason": "Free Tier Usage Exceeded",
+    "suspension_event_timestamp": "2026-10-20T22:15:42.099919Z",
+    "current_branch": "deploy/servicedesk-v3-public-review-20261011",
+    "current_deploy_sha": "3962aa5c84c3aa5f47ad72b62d51ae4382467708",
+    "current_deploy_id": "dep-db9gv3rrjlhs73epr34g",
+    "source_switch_approved": false,
+    "extra_service_approved": false,
+    "paid_upgrade_approved": false,
+    "observed_http_statuses": {
+      "health": 503,
+      "sign_in": 503,
+      "anonymous_owner": 503
+    }
+  },
+  "supabase": {
+    "project": "cpmmgivhlkfbiwzhlcey",
+    "project_type": "existing_primary",
+    "last_migration": "sd_0062_v4_branch_trigger_rowtype_guard",
+    "approved_security_patch_source": "supabase/migrations/0065_v4_default_branch_membership_authority.sql",
+    "approved_security_patch_sha256": "f4f6ac434c94cfe1543b0fa4c8f1ccd6cd7f832d53cedb02d9db26f3e27866fe",
+    "security_patch_approved": true,
+    "security_patch_applied": false,
+    "write_connector_state": "safety_blocked",
+    "old_function_md5": "ba7dd7890bbd1da8597eabdee656b0a3",
+    "preimage_private_vault": "SaamVR/ServiceDesk-Recovery-Vault",
+    "two_real_owner_sessions_verified": false
+  },
+  "operations": {
+    "next_batch": "P02",
+    "issue": 818,
+    "allowed_now": [
+      "read-only reviews",
+      "source pull requests",
+      "GitHub branch creation",
+      "read-only existing-service HTTP preflights"
+    ],
+    "unapproved_actions": [
+      "create new Supabase projects",
+      "create new Render services",
+      "upgrade paid Render plan",
+      "change existing Render branch",
+      "resume or deploy Render service",
+      "create real test owners without controlled inbox permission",
+      "apply migrations 0063/0064",
+      "modify business/customer data",
+      "send real customer messages",
+      "enable production signup",
+      "promote GitHub main"
+    ]
+  },
+  "milestone_evidence": {
+    "observed_source_tests": 3725,
+    "observed_source_test_suites": 755,
+    "real_owner_acceptance": false,
+    "production_ready": false
+  },
+  "readme": "This is a dated VERIFIED OBSERVATION and authorization map, not continuously live provider state. Reread GitHub refs/Render/Supabase before doing anything."
+}
