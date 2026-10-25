@@ -28,6 +28,7 @@ export interface GroundedQuoteAlternative {
   rateVersion: string;
   requiresStaffServiceSelection: boolean;
   requiresStaffAddonConfirmation: boolean;
+  requiresSpecialistReview: boolean;
 }
 export interface GroundedQuoteAlternatives {
   state: "STAFF_APPROVAL_REQUIRED";
@@ -165,6 +166,8 @@ export async function proposeAuthorizedGroundedQuoteAlternatives(
   // Only saved, active supported service codes qualify. Alternatives to
   // selected service require fresh, explicit staff/customer selection later.
   for (const serviceCode of [selectedService, ...codes.filter(code => code !== selectedService)]) {
+    const matchedCatalog = rawCatalog.find(raw => (raw as Row).code === serviceCode) as Row | undefined;
+    if (!matchedCatalog) return fail("F01_QUOTE_CATALOG_UNVERIFIED");
     for (const variant of (serviceCode === "MOVE_OUT" ? ["BASE","OPTIONAL_OVEN"] : ["BASE"]) as Array<"BASE"|"OPTIONAL_OVEN">) {
       let candidate: ReturnType<typeof createQuoteSnapshot>;
       try {
@@ -183,6 +186,7 @@ export async function proposeAuthorizedGroundedQuoteAlternatives(
         balanceMinor: candidate.balanceMinor, durationMinutes: candidate.durationMinutes,
         rateVersion: rate.version, requiresStaffServiceSelection: serviceCode !== selectedService,
         requiresStaffAddonConfirmation: variant === "OPTIONAL_OVEN",
+        requiresSpecialistReview: matchedCatalog.requires_review === true,
       });
     }
   }
