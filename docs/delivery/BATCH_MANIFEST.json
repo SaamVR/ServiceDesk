@@ -1,0 +1,177 @@
+{
+  "schema": 1,
+  "program": "SD-DELIVERY-20261025",
+  "control_issue": 808,
+  "repository": "SaamVR/ServiceDesk",
+  "canonical_branch": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+  "planning_branch": "ops/servicedesk-fixed-delivery-program-20261025",
+  "verified_start_sha": "974e9f040071b1a2c1199c7ff6fb652a67812a47",
+  "batch_done_requires": [
+    "GitHub issue CLOSED",
+    "all mandatory - [x] checkboxes",
+    "body contains BATCH_DONE_VERIFIED: <40-character Git SHA>",
+    "comment links actual tests and applicable staging receipts"
+  ],
+  "feature": [
+    {
+      "id": "F01",
+      "issue": 809,
+      "prerequisites": [],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "F02",
+      "issue": 810,
+      "prerequisites": [
+        "F01"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "F03",
+      "issue": 811,
+      "prerequisites": [
+        "F02"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "F04",
+      "issue": 812,
+      "prerequisites": [
+        "F03"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "F05",
+      "issue": 813,
+      "prerequisites": [
+        "F04"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "F06",
+      "issue": 814,
+      "prerequisites": [
+        "F05"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "F07",
+      "issue": 815,
+      "prerequisites": [
+        "F06"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "F08",
+      "issue": 816,
+      "prerequisites": [
+        "F07"
+      ],
+      "merge_authority": "production-only"
+    }
+  ],
+  "production": [
+    {
+      "id": "P01",
+      "issue": 817,
+      "prerequisites": [],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P02",
+      "issue": 818,
+      "prerequisites": [
+        "P01"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P03",
+      "issue": 819,
+      "prerequisites": [
+        "P02"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P04",
+      "issue": 820,
+      "prerequisites": [
+        "P03"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P05",
+      "issue": 821,
+      "prerequisites": [
+        "P04"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P06",
+      "issue": 822,
+      "prerequisites": [
+        "P05"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P07",
+      "issue": 823,
+      "prerequisites": [
+        "P06"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P08",
+      "issue": 824,
+      "prerequisites": [
+        "P07"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P09",
+      "issue": 825,
+      "prerequisites": [
+        "P08"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P10",
+      "issue": 826,
+      "prerequisites": [
+        "P09"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P11",
+      "issue": 827,
+      "prerequisites": [
+        "P10"
+      ],
+      "merge_authority": "production-only"
+    },
+    {
+      "id": "P12",
+      "issue": 828,
+      "prerequisites": [
+        "P11"
+      ],
+      "merge_authority": "production-only"
+    }
+  ],
+  "privacy": "Never store provider secrets, raw customer contacts, passwords, recovery private keys or real PII in batch issues.",
+  "work_authority": "Source drafts and read-only verifications okay; DB migrations, paid provider calls, staging data creation, production promotion and deletes require explicit separate approvals."
+}
