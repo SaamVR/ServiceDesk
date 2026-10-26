@@ -11,6 +11,7 @@ import {
   summarizeWorkflowActivity,
 } from "./workflow-inspector-model";
 import { buildStaffModuleHref } from "./staff-modules";
+import {guideRecordedWorkflowIntervention} from "./workflow-operator-guidance";
 import styles from "./WorkflowExecutionInspector.module.css";
 
 type Snapshot = WorkflowInspectorClientSnapshot;
@@ -50,11 +51,12 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
   const visible = selectedFromAll && !firstPage.some(run => run.id === selectedFromAll.id)
     ? [selectedFromAll, ...firstPage] : firstPage;
   const selected = selectedFromAll ?? visible[0];
+  const guidance=selected?guideRecordedWorkflowIntervention(selected):null;
   const averageDuration = summary.measuredDurationMs.length
     ? Math.round(summary.measuredDurationMs.reduce((a, b) => a + b, 0) / summary.measuredDurationMs.length / 1000)
     : null;
 
-  return <section className={styles.panel} aria-label="Recorded automation activity"
+  return <section id="workflow-evidence" className={styles.panel} aria-label="Recorded automation activity"
     data-testid="workflow-execution-inspector">
     <header className={styles.header}>
       <div>
@@ -167,6 +169,18 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
               <div><dt>Completion timestamp</dt><dd>{selected.completedAt ?? "Not recorded"}</dd></div>
             </dl>
 
+            {guidance?<section className={styles.notice} aria-label="Recorded workflow next-step guidance"
+               data-testid="workflow-operator-guidance">
+              <strong>{guidance.title}</strong>
+              <p>{guidance.detail}</p>
+              <p>Recommended review: {guidance.nextStep.replaceAll("_"," ").toLowerCase()}.
+                 {" "}This is read-only: retries, approvals, customer messages, payments,
+                 rule publication and provider delivery are not authorized or verified here.</p>
+              {guidance.disposition==="OWNER_APPROVAL_REQUIRED"?
+                <Link href={buildStaffModuleHref(workspaceSlug,"automations")}>
+                  Open owner workflow controls for separate review
+                </Link>:null}
+             </section>:null}
             <h4>Evidence-backed workflow stages</h4>
             <ol className={styles.stages}>
               <li><strong>Event</strong><span>{humanize(selected.eventType)} — saved</span></li>
