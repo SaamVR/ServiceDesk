@@ -5,7 +5,7 @@ create role authenticated nologin;
 create role service_role nologin;
 create schema auth;
 create function auth.role() returns text language sql stable
-  as $select current_setting('request.jwt.claim.role', true)$;
+  as $$ select current_setting('request.jwt.claim.role', true) $$;
 create function auth.uid() returns uuid language sql stable
   as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create table auth.users (
