@@ -26,6 +26,7 @@ function environment(){
 }
 function harness(env,{fault,afterFinalBranch}={}){
  const calls=[],seen=new Map();
+ let secondOwnerStarted=false;
  const fetcher=async(raw,opts)=>{
   const url=new URL(raw);assert.equal(url.origin,ORIGIN);
   assert.equal(opts.redirect,"error");
