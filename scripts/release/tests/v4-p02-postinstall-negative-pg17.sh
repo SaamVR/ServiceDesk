@@ -71,6 +71,12 @@ pg -c "grant select (mode) on table servicedesk_security.owner_registration_cont
 assert_blocked COLUMN_SELECT
 pg -c "revoke select (mode) on table servicedesk_security.owner_registration_control from anon"
 
+# Tampering with DDL constraints must be detected even if the current
+# control row is still CLOSED and there are no QA grants.
+pg -c "alter table servicedesk_security.owner_registration_control drop constraint owner_registration_control_mode_check"
+assert_blocked MODE_CHECK_DROPPED
+pg -c "alter table servicedesk_security.owner_registration_control add constraint owner_registration_control_mode_check check (mode in ('CLOSED','QA_ONLY','PUBLIC'))"
+
 pg -c "alter table servicedesk_security.owner_registration_grants disable row level security"
 assert_blocked RLS_OFF
 pg -c "alter table servicedesk_security.owner_registration_grants enable row level security"
