@@ -116,3 +116,15 @@ The reviewed P02 SQL is still **NOT INSTALLED**. The postinstall receipt must no
 The same read-only gate rejects drift to either private table owner or security schema owner, extra user-defined triggers on the protected control/grant tables, and rewrite rules. FK-generated internal triggers are expected and intentionally exempt. Five new disposable PG17 adversarial scenarios each have to return a nonzero marked BLOCK and a complete restored final PASS: `MODE_CHECK_WEAKENED`, `SCHEMA_OWNER_DRIFT`, `TABLE_OWNER_DRIFT`, `EXTRA_TRIGGER`, `EXTRA_RULE`.
 
 **Authority unchanged:** tests execute only on fixed-name local PostgreSQL 17 CI database. They are not production rollback approval, guard installation permission, QA account authorization, genuine signed-in JWT/browser RLS acceptance, or deployment authority.
+
+## P21 pre-install migration ledger reconciliation (source-only, 2026-10-27)
+
+Independent live read-only catalog and Supabase migration history inventory confirms 70 recorded migrations, including `sd_0062_v4_branch_trigger_rowtype_guard` (`20261012105723`) and the out-of-order installed `sd_0065_v4_default_branch_membership_authority` (`20261025200147`); 0063 and 0064 are **not** recorded. This is not permission to install them. The existing reviewed registration preflight's ten checks currently pass on main, but the guarded registration schema is **absent**, so signed-in callers still execute an unguarded owner registration RPC.
+
+Before any future separately owner-approved guarded migration, the DBA must run BOTH read-only gates:
+1. `docs/engineering/security/p02-registration-live-readonly-preflight.sql` — exact live preimage and privileges.
+2. `docs/engineering/security/p02-registration-migration-ledger-readonly-gate.sql` — exact 0062 + 0065 ledger state, no 0063/0064 recorded, and no reused/relabelled migration entries.
+
+**Use `psql -X -v ON_ERROR_STOP=1 -f` on the intended live database**, with read-only credentials if available. STOP on any missing `...PASS`, even if another gate passes. Never use `db push` to automatically reconcile the out-of-order ledger. A *separate* owner-reviewed migration sequence plan and exact authority are required; the gate is not a migration installer.
+
+P21 disposable PostgreSQL 17 workflow tests seven independent mutation-and-restore scenarios against a synthetic local `supabase_migrations.schema_migrations` fixture, never against Supabase: missing/renamed 0062 or 0065, accidentally recorded 0063/0064, duplicate 0065 under a changed version. Each must fail with the ledger-specific BLOCK marker, and a restored final PASS is mandatory. These are source-only dry-run proofs and cannot assert real JWT/browser acceptance or release readiness.
