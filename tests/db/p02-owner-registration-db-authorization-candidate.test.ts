@@ -165,6 +165,12 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(post).toContain("owner_registration_control_mode_check");
     expect(post).toContain("owner_registration_grants_user_id_fkey");
     expect(post).toContain("protected table constraint drift");
+    expect(post).toContain("v_config is distinct from 'search_path=pg_catalog, public, pg_temp'");
+    expect(post).toContain("protected control defaults drift");
+    expect(post).toContain("pg_get_expr(d.adbin,d.adrelid)");
+    expect(negative).toContain("alter column mode set default 'PUBLIC'");
+    expect(negative).toContain("set row_security = off");
+
     expect(post).toContain("pg_get_constraintdef(c.oid)");
     expect(negative).toContain("drop constraint owner_registration_control_mode_check");
 
@@ -176,7 +182,7 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(negative).toContain("P02_POSTINSTALL_DISPOSABLE_ONLY");
     expect(negative).toContain("P02_POSTINSTALL_NEGATIVE_MATRIX_PASS");
     expect(negative).toContain("P02_POSTINSTALL_WRONG_FAILURE_");
-    for (const tag of ["MODE_OPEN","GRANT_PRESENT","ANON_RPC","PUBLIC_RPC","PRIVATE_SCHEMA","TABLE_DELETE","TABLE_MAINTAIN","COLUMN_SELECT","MODE_CHECK_DROPPED","RLS_OFF","INVOKER","BODY_HASH"]) {
+    for (const tag of ["MODE_OPEN","GRANT_PRESENT","ANON_RPC","PUBLIC_RPC","PRIVATE_SCHEMA","TABLE_DELETE","TABLE_MAINTAIN","COLUMN_SELECT","MODE_CHECK_DROPPED","MODE_DEFAULT_PUBLIC","SINGLETON_DEFAULT_DROPPED","EXTRA_FUNCTION_GUC","RLS_OFF","INVOKER","BODY_HASH"]) {
       expect(workflow).toContain("P02_POSTINSTALL_DENIED_" + tag);
       expect(negative).toContain("assert_blocked " + tag);
     }
