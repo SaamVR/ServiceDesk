@@ -51,6 +51,29 @@ describe("P02 sign-out redirect provenance", () => {
     expect(signingOut).toHaveBeenCalledTimes(1);
   });
 
+  it("never claims sign-out success when provider returns an error or throws", async () => {
+    for (const failure of ["returns-error", "throws-error"]) {
+      signingOut.mockReset();
+      if (failure === "returns-error")
+        signingOut.mockResolvedValueOnce({ error: { message: "Synthetic auth failure" } });
+      else signingOut.mockRejectedValueOnce(new Error("Synthetic auth exception"));
+      const response = await POST(new NextRequest(origin + "/auth/sign-out", { method: "POST" }));
+      expect(response.status).toBe(503);
+      expect(response.headers.get("location")).toBeNull();
+      expect(response.headers.get("cache-control")).toBe("private, no-store");
+      expect(signingOut).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("does not announce success if the Supabase sign-out client is unconfigured", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_URL", "");
+    const response = await POST(new NextRequest(origin + "/auth/sign-out", { method: "POST" }));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("location")).toBeNull();
+    expect(signingOut).not.toHaveBeenCalled();
+  });
+
   it("fails closed without a trusted HTTPS origin before touching the session", async () => {
     vi.stubEnv("SERVICEDESK_AUTH_REDIRECT_ORIGIN", "");
     const response = await POST(new NextRequest("https://untrusted.example.test/auth/sign-out", {
