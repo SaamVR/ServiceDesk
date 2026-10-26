@@ -4,7 +4,7 @@
 
 ## Product delta and strict source truth
 This feature makes the existing **saved-workday-based** `suggestOwnerAutomationOpportunities` useful in the UI. Instead of adding another mock planner, the new `/app/[workspace]/automations/opportunities` owner page:
-1. Loads an authenticated owner workspace and branch scope at render.
+1. Loads the lightweight authenticated `resolveStaffActor` owner and branch scope at render, **not** the expensive full operational staff snapshot. This is UI scope discovery only, not acceptance proof.
 2. On explicit click, invokes a **server action** that reuses the existing double-owner-workday and actor-resolution engine, with correct `workspace_branches` active membership queries on both branch checks (the existing generic `branches` fallback is deliberately overridden). Denies untrusted slugs, forged workspaces, inactive branches or invalid result contracts.
 3. Returns a bounded browser-safe projection of only `CRITICAL_ATTENTION` or `OPEN_REQUEST` positive counts to **future** `ATTENTION_OPENED` or `REQUEST_CREATED` internal `CREATE_ATTENTION` drafts. Does NOT pretend existing queued work was processed.
 4. The client independently validates all source labels, scope, action types, summary keys, counts and explicit false-effect booleans, then shows safe locally fixed labels.
