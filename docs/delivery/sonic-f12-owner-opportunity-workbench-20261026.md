@@ -24,3 +24,7 @@ The server action still depends on the operational database and valid signed-in 
 
 ## Production gates
 The Feature lane cannot merge the draft, apply database migrations, create a real owner, call a paid model/provider, send emails/WhatsApp, mutate a financial record, publish a rule, deploy or change device state. Production must independently verify authoritative workspace_branches active membership and two distinct OWNER identities, proper stable workday loader, real saved source rows, branch switch revocation, browser navigation and accessibility on approved staging; only then decide merge and deployment. Existing F08–F11 drafts remain separately unmerged. No task in #173 becomes LIVE because F12 source tests pass. Publish and retroactive processing are deliberately unsupported here.
+
+
+## Concurrent Production reconciliation (2026-10-26)
+Production canonical advanced from original feature base `d5e86b369c46384278be8006812a3e27c41da21e` to `ef8015909e58adcf2d33db2cb6648f840599e238` by P02 #849 authenticated two-owner acceptance hardening. Verified Git compare lists five P02-only paths, none overlapping the ten F12 paths. Coordinator must construct an additive merge-tree from the **new** canonical tree and retain F12's existing commit ancestry; do not force push, delete the P02 proof, merge to canonical, or reinterpret source CI as the real OWNER A/B read.
