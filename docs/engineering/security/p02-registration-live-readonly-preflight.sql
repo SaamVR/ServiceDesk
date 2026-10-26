@@ -14,6 +14,11 @@ select (
   and (select p.prosecdef from pg_proc p
        where p.oid = to_regprocedure('public.servicedesk_register_owner_workspace(text,text,text,text)')
       ) is true
+  -- SECURITY DEFINER executes with FUNCTION OWNER privileges. A body hash
+  -- and the flag alone cannot detect ALTER FUNCTION ... OWNER TO drift.
+  and (select pg_catalog.pg_get_userbyid(p.proowner) from pg_proc p
+       where p.oid = to_regprocedure('public.servicedesk_register_owner_workspace(text,text,text,text)')
+      ) = 'postgres'
   and has_function_privilege(
       'authenticated',
       'public.servicedesk_register_owner_workspace(text,text,text,text)',
@@ -34,6 +39,9 @@ select (
     from pg_proc p
     where p.oid = to_regprocedure('public.servicedesk_default_branch(uuid)')
   ) = '9f14160f16e16ffe6ac16f35c3f4557f'
+  and (select pg_catalog.pg_get_userbyid(p.proowner) from pg_proc p
+       where p.oid = to_regprocedure('public.servicedesk_default_branch(uuid)')
+      ) = 'postgres'
 ) as p02_source_preimage_valid
 \gset
 \if :p02_source_preimage_valid
