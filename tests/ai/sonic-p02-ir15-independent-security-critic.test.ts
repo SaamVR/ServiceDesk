@@ -89,6 +89,10 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(wf).toContain("P02_POSTINSTALL_DENIED_TABLE_DELETE");
   expect(wf).toContain("P02_POSTINSTALL_DENIED_TABLE_MAINTAIN");
   expect(wf).toContain("P02_POSTINSTALL_DENIED_COLUMN_SELECT");
+  expect(post).toContain("owner_registration_control_mode_check");
+  expect(post).toContain("owner_registration_grants_user_id_fkey");
+  expect(post).toContain("protected table constraint drift");
+  expect(wf).toContain("P02_POSTINSTALL_DENIED_MODE_CHECK_DROPPED");
   expect(postNegative).toContain("P18_UNREVIEWED_COMMENT_BODY_DRIFT");
   expect(postNegative).toContain("P02_POSTINSTALL_NEGATIVE_MATRIX_PASS");
   expect(wf).toContain("P02_POSTINSTALL_DENIED_BODY_HASH");
