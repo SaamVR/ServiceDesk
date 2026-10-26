@@ -83,6 +83,12 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(post).toContain("md5(v_body) is distinct from 'b24154db78c5f1b210f86c97f896d44d'");
   expect(post).toContain("P02_REGISTRATION_POSTINSTALL_BLOCKED");
   expect(post).toContain("P02_REGISTRATION_POSTINSTALL_CLOSED_PASS");
+  // Every table and column ACL right must be denied to both API roles.
+  expect(post).toContain("has_any_column_privilege");
+  expect(post).toContain("has_table_privilege(api.role_name");
+  expect(wf).toContain("P02_POSTINSTALL_DENIED_TABLE_DELETE");
+  expect(wf).toContain("P02_POSTINSTALL_DENIED_TABLE_MAINTAIN");
+  expect(wf).toContain("P02_POSTINSTALL_DENIED_COLUMN_SELECT");
   expect(postNegative).toContain("P18_UNREVIEWED_COMMENT_BODY_DRIFT");
   expect(postNegative).toContain("P02_POSTINSTALL_NEGATIVE_MATRIX_PASS");
   expect(wf).toContain("P02_POSTINSTALL_DENIED_BODY_HASH");
