@@ -52,6 +52,17 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(db).toContain("expired_long_transaction");
   expect(wf).toContain("P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED");
   expect(wf).toContain("P02_REGISTRATION_CONCURRENCY_LOCKS_PASS");
+  // Operator-first is the opposite lock acquisition ordering. It must
+  // demonstrate an approved actor can register before operator lock changes,
+  // then that CLOSED and exact grant revocation both cause denial.
+  const operator=get("scripts/release/tests/v4-p02-registration-operator-first-pg17.sh");
+  expect(wf).toContain("P02_OPERATOR_FIRST_CONCURRENCY_PASS");
+  expect(wf).toContain("P02_OPERATOR_CLOSED_WINS_PASS");
+  expect(wf).toContain("P02_OPERATOR_REVOCATION_WINS_PASS");
+  expect(operator).toContain("P02_APPROVED_PRECONDITION_PASS");
+  expect(operator).toContain("P02_OPERATOR_WIN_RETAINED_UNAUTHORIZED_WORKSPACE_OR_LOST_REVOCATION");
+  expect(operator).toContain("REGISTRATION_NOT_AUTHORIZED");
+
   const concurrency=get("scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh");
   expect(concurrency).toContain("P02_CONCURRENCY_FIXTURE_ONLY");
   expect(concurrency).toContain("P02_QA_GRANT_REVOCATION_RACED_IN_FLIGHT_REGISTRATION");
