@@ -89,7 +89,7 @@ function ScopedWorkbench({workspaceSlug,workspaceId,branches}:Props){
     </select>
    </label>
    <button type="button" onClick={()=>void inspect()}
-    disabled={!branchId||busy||previewBusy||pending.current} aria-busy={busy}>
+    disabled={!branchId||busy||previewBusy} aria-busy={busy}>
     {busy?"Checking saved evidence…":result?"Refresh owner opportunities":"Review opportunities"}
    </button>
   </div>
@@ -105,7 +105,7 @@ function ScopedWorkbench({workspaceSlug,workspaceId,branches}:Props){
     <p className={styles.rule}>Future {item.eventType.replaceAll("_"," ")}
       {" → "}CREATE_ATTENTION: {item.summaryKey}</p>
     <div className={styles.cardActions}>
-     <button type="button" disabled={busy||previewBusy||previewPending.current}
+     <button type="button" disabled={busy||previewBusy}
       onClick={()=>void simulate(item)}>Preview fictional event</button>
      <Link href={buildStaffModuleHref(workspaceSlug,item.module)}>Inspect saved queue</Link>
     </div>
