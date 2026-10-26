@@ -163,6 +163,13 @@ describe("P02 source-only database-side owner registration authorization", () =>
     }
     expect(post).toContain("direct protected table or column access");
     expect(post).toContain("owner_registration_control_mode_check");
+    // Never accept a broadened CHECK just because the named states appear.
+    expect(post).toContain("pg_get_constraintdef(c.oid) =");
+    expect(post).toContain("and c.convalidated");
+    expect(post).toContain("not t.tgisinternal");
+    expect(post).toContain("pg_rewrite rw");
+    expect(post).toContain("pg_get_userbyid(n.nspowner)");
+    expect(post).toContain("protected schema owner or trigger/rule drift");
     expect(post).toContain("owner_registration_grants_user_id_fkey");
     expect(post).toContain("protected table constraint drift");
     expect(post).toContain("v_config is distinct from 'search_path=pg_catalog, public, pg_temp'");
@@ -182,7 +189,7 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(negative).toContain("P02_POSTINSTALL_DISPOSABLE_ONLY");
     expect(negative).toContain("P02_POSTINSTALL_NEGATIVE_MATRIX_PASS");
     expect(negative).toContain("P02_POSTINSTALL_WRONG_FAILURE_");
-    for (const tag of ["MODE_OPEN","GRANT_PRESENT","ANON_RPC","PUBLIC_RPC","PRIVATE_SCHEMA","TABLE_DELETE","TABLE_MAINTAIN","COLUMN_SELECT","MODE_CHECK_DROPPED","MODE_DEFAULT_PUBLIC","SINGLETON_DEFAULT_DROPPED","EXTRA_FUNCTION_GUC","RLS_OFF","INVOKER","BODY_HASH"]) {
+    for (const tag of ["MODE_OPEN","GRANT_PRESENT","ANON_RPC","PUBLIC_RPC","PRIVATE_SCHEMA","TABLE_DELETE","TABLE_MAINTAIN","COLUMN_SELECT","MODE_CHECK_DROPPED","MODE_CHECK_WEAKENED","SCHEMA_OWNER_DRIFT","TABLE_OWNER_DRIFT","EXTRA_TRIGGER","EXTRA_RULE","MODE_DEFAULT_PUBLIC","SINGLETON_DEFAULT_DROPPED","EXTRA_FUNCTION_GUC","RLS_OFF","INVOKER","BODY_HASH"]) {
       expect(workflow).toContain("P02_POSTINSTALL_DENIED_" + tag);
       expect(negative).toContain("assert_blocked " + tag);
     }
