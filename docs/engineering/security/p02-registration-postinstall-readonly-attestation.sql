@@ -45,8 +45,9 @@ begin
   end if;
 
   if v_rpc_definer is distinct from true or v_rpc_owner is distinct from 'postgres'
-     or v_config is null
-     or v_config not like '%search_path=pg_catalog, public, pg_temp%'
+     -- Function-level GUC drift (including row_security overrides) is not
+     -- permitted merely because the original search_path is still present.
+     or v_config is distinct from 'search_path=pg_catalog, public, pg_temp'
      or v_body not like '%select c.mode into v_registration_mode%'
      or v_body not like '%select true into v_qa_granted%'
      or v_body not like '%g.expires_at > pg_catalog.clock_timestamp()%'
@@ -186,6 +187,26 @@ begin
            and a.attnotnull)
   ) <> 6 then
     raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: protected table constraint drift';
+  end if;
+
+  -- A fresh CLOSED row does not protect future registrations if a later
+  -- INSERT can inherit a PUBLIC default. Pin the reviewed column defaults.
+  if (
+    select pg_get_expr(d.adbin,d.adrelid)
+    from pg_attribute a
+    join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+    where a.attrelid='servicedesk_security.owner_registration_control'::regclass
+      and a.attname='mode'
+  ) is distinct from '''CLOSED''::text'
+     or (
+    select pg_get_expr(d.adbin,d.adrelid)
+    from pg_attribute a
+    join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+    where a.attrelid='servicedesk_security.owner_registration_control'::regclass
+      and a.attname='singleton'
+  ) is distinct from 'true'
+  then
+    raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: protected control defaults drift';
   end if;
 
   if (select pg_get_userbyid(p.proowner) from pg_proc p where p.oid=v_branch) is distinct from 'postgres'
