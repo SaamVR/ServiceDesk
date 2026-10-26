@@ -82,32 +82,77 @@ export async function runTwoOwnerReadOnlyAudit(
         throw Error("AUTHENTICATED_DATABASE_REQUEST_FAILED");
       return await res.json();
     };
+    // Count-only checks are not a proof of OWNER authority: a STAFF row,
+    // stale membership or mis-scoped response could otherwise pass.
+    // Independently validate the row identity *and* the verified JWT subject.
     const scoped = async (table, workspaceId) => {
+      const projection = {
+        workspaces: "id",
+        memberships: "workspace_id,user_id,role,status",
+        requests: "id,workspace_id",
+        workspace_branches: "id,workspace_id,is_default,active",
+      }[table];
+      if (!projection) throw Error("UNAPPROVED_TABLE");
       const filter = new URLSearchParams({
-        select: table === "memberships" ? "workspace_id" : "id",
+        select: projection,
         [table === "workspaces" ? "id" : "workspace_id"]: "eq." + workspaceId,
+        ...(table === "memberships" ? {
+          user_id: "eq." + owner.subject, role: "eq.OWNER", status: "eq.ACTIVE",
+        } : {}),
+        ...(table === "workspace_branches" ? {
+          is_default: "eq.true", active: "eq.true",
+        } : {}),
         limit: "2",
       });
       const data = await request(table + "?" + filter.toString());
       if (!Array.isArray(data) || data.length > 2)
         throw Error("UNEXPECTED_DATABASE_SHAPE");
-      return data.length;
+      for (const row of data) {
+        if (!row || typeof row !== "object" || Array.isArray(row) ||
+            Object.getPrototypeOf(row) !== Object.prototype)
+          throw Error("UNEXPECTED_DATABASE_SHAPE");
+        if (table === "workspaces" && row.id !== workspaceId)
+          throw Error("DATABASE_ROW_SCOPE_UNVERIFIED");
+        if (table === "memberships" &&
+            (row.workspace_id !== workspaceId || row.user_id !== owner.subject ||
+             row.role !== "OWNER" || row.status !== "ACTIVE"))
+          throw Error("OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED");
+        if (table === "requests" &&
+            (row.workspace_id !== workspaceId || !UUID.test(row.id ?? "")))
+          throw Error("DATABASE_ROW_SCOPE_UNVERIFIED");
+        if (table === "workspace_branches" &&
+            (row.workspace_id !== workspaceId || !UUID.test(row.id ?? "") ||
+             row.is_default !== true || row.active !== true))
+          throw Error("DEFAULT_BRANCH_SAVED_SCOPE_UNVERIFIED");
+      }
+      return data;
     };
     for (const table of ["workspaces", "memberships", "requests"]) {
       const ownRows = await scoped(table, owner.expectedWorkspace);
       const foreignRows = await scoped(table, foreign.expectedWorkspace);
-      if (table !== "requests" && ownRows < 1)
+      // A second or duplicated owner membership is not an unambiguous proof.
+      if (table !== "requests" && ownRows.length !== 1)
         throw Error("EXPECTED_OWNER_ACCESS_MISSING_" + table.toUpperCase());
-      if (foreignRows !== 0)
+      if (foreignRows.length !== 0)
         throw Error("FOREIGN_TENANT_DATA_EXPOSED_" + table.toUpperCase());
     }
+    // Verify the saved *branch* independently of the SECURITY DEFINER RPC:
+    // a valid-looking unrelated UUID is not evidence of an authorized result.
+    const ownDefaults = await scoped("workspace_branches",owner.expectedWorkspace);
+    const foreignDefaults = await scoped("workspace_branches",foreign.expectedWorkspace);
+    if (ownDefaults.length !== 1)
+      throw Error("DEFAULT_BRANCH_OWN_ROW_NOT_UNAMBIGUOUS");
+    if (foreignDefaults.length !== 0)
+      throw Error("FOREIGN_TENANT_DATA_EXPOSED_WORKSPACE_BRANCHES");
     const branch = async id => request("rpc/servicedesk_default_branch", {
       method: "POST", body: { target_workspace: id },
     });
     const ownBranch = await branch(owner.expectedWorkspace);
     const foreignBranch = await branch(foreign.expectedWorkspace);
-    if (!UUID.test(ownBranch || "") || foreignBranch !== null)
-      throw Error("FOREIGN_DEFAULT_BRANCH_DISCLOSURE_OR_OWN_BRANCH_MISSING");
+    if (ownBranch !== ownDefaults[0].id)
+      throw Error("DEFAULT_BRANCH_OWN_RPC_NOT_VERIFIED");
+    if (foreignBranch !== null)
+      throw Error("FOREIGN_DEFAULT_BRANCH_DISCLOSURE");
     checked.push({ owner: owner.tag, scope: "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED",
       defaultBranch: "AUTHORIZED_ONLY", authenticated: true });
   }

@@ -11,7 +11,7 @@ This feature makes the existing **saved-workday-based** `suggestOwnerAutomationO
 5. Allows a second explicit **fictional** rule-engine preview via the **existing** owner-protected `requestOwnerWorkflowWhatIf`. It never publishes, saves or sends anything.
 6. Adds navigation from the existing Automation Studio. No paid AI provider call is required.
 
-The server action still depends on the operational database and valid signed-in active OWNER/branch records at runtime; green unit/CI results are NOT a real two-tenant staging read, source-receipt proof or deployed feature. The opportunity engine uses future-event inferences from saved *aggregate queue counts*, not a stored-rule writer nor a tenant-scoped event journal. The browser never receives raw customer records, private notes, API keys or billing amounts.
+The server action still depends on the operational database and valid signed-in active OWNER/branch records at runtime; green unit/CI results are NOT a real two-tenant staging read, source-receipt proof or deployed feature. The opportunity engine uses future-event inferences from saved *workspace-aggregate queue counts* (NOT filtered by the currently selected branch), not a stored-rule writer nor a tenant-scoped event journal. The selected active branch only scopes the proposed future rule/preview. The UI must never imply that displayed queue counts belong to that branch. The browser never receives raw customer records, private notes, API keys or billing amounts.
 
 ## Disjoint source ownership and critic
 - Action: `sonic-feature/f12-owner-action-20261026` owns `owner-opportunity-preview-action.ts` and independent tests.
@@ -24,3 +24,7 @@ The server action still depends on the operational database and valid signed-in 
 
 ## Production gates
 The Feature lane cannot merge the draft, apply database migrations, create a real owner, call a paid model/provider, send emails/WhatsApp, mutate a financial record, publish a rule, deploy or change device state. Production must independently verify authoritative workspace_branches active membership and two distinct OWNER identities, proper stable workday loader, real saved source rows, branch switch revocation, browser navigation and accessibility on approved staging; only then decide merge and deployment. Existing F08–F11 drafts remain separately unmerged. No task in #173 becomes LIVE because F12 source tests pass. Publish and retroactive processing are deliberately unsupported here.
+
+
+## Concurrent Production reconciliation (2026-10-26)
+Production canonical advanced from original feature base `d5e86b369c46384278be8006812a3e27c41da21e` to `ef8015909e58adcf2d33db2cb6648f840599e238` by P02 #849 authenticated two-owner acceptance hardening. Verified Git compare lists five P02-only paths, none overlapping the ten F12 paths. Coordinator must construct an additive merge-tree from the **new** canonical tree and retain F12's existing commit ancestry; do not force push, delete the P02 proof, merge to canonical, or reinterpret source CI as the real OWNER A/B read.

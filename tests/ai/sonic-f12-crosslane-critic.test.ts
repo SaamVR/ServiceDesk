@@ -67,6 +67,9 @@ describe("F12 crosslane critic: owner backlog to existing engine and browser tru
   expect(route).toContain("resolveStaffActor(workspace)");
   expect(route).not.toContain("loadOperationalStaffSnapshot");
   expect(route).toContain('actor.role==="OWNER"');
+  const ui=readFileSync("src/features/operations/OwnerOpportunityWorkbench.tsx","utf8");
+  expect(ui).toContain("workspace-wide saved queue");
+  expect(ui).toContain("not necessarily the selected branch");
  });
 
 });
