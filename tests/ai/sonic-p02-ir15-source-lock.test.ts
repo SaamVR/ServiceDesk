@@ -21,26 +21,26 @@ describe("P02 IR15 immutable two-source integration provenance",()=>{
    schemaVersion:1,kind:"P02_UNMERGED_SOURCE_REHEARSAL_LOCK",
    canonicalBase:"cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
    sourceOnly:true,realOwnerSessionVerified:false,migrationAuthorized:false,
-   migrationInstalled:false,liveDeploymentAuthorized:false,fileCount:17,
+   migrationInstalled:false,liveDeploymentAuthorized:false,fileCount:20,
    sourceHeads:{
     868:"9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    869:"8e94a5311a69374c13d236f19943f1d5f655a74b",
+    869:"84e5895169ad469e6241ea9e0835d15cdc267d9e",
    },
   });
  });
- it("has exactly seventeen disjoint source paths, with three intentional modifications",()=>{
-  expect(lock.files).toHaveLength(17);
+ it("has exactly twenty disjoint source paths, with three intentional modifications",()=>{
+  expect(lock.files).toHaveLength(20);
   // Both source drafts now contain 7 + 8 files. Check each
   // provenance path is unique, not the old 7 + 7 count.
-  expect(new Set(lock.files.map(x=>x.path)).size).toBe(17);
-  expect(lock.files.filter(x=>x.status==="added")).toHaveLength(14);
+  expect(new Set(lock.files.map(x=>x.path)).size).toBe(20);
+  expect(lock.files.filter(x=>x.status==="added")).toHaveLength(17);
   expect(lock.files.filter(x=>x.status==="modified").map(x=>x.path).sort()).toEqual([
    "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
    "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
    "scripts/release/v4-p02-two-owner-readonly-acceptance.mjs",
   ]);
   expect(lock.files.filter(x=>x.sourcePr===868)).toHaveLength(7);
-  expect(lock.files.filter(x=>x.sourcePr===869)).toHaveLength(10);
+  expect(lock.files.filter(x=>x.sourcePr===869)).toHaveLength(13);
  });
  it("compares every imported file with its exact Git object identity",()=>{
   for(const file of lock.files){

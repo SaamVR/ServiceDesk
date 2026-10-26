@@ -9,6 +9,9 @@ on:
       - "tests/sql/p02-owner-registration-db-authorization-pg17.sql"
       - "tests/sql/p02-registration-preflight-negative-setup-pg17.sql"
       - "tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql"
+      - "docs/engineering/security/p02-registration-postinstall-readonly-attestation.sql"
+      - "tests/sql/p02-registration-postinstall-disposable-setup-pg17.sql"
+      - "scripts/release/tests/v4-p02-postinstall-negative-pg17.sh"
       - "scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh"
       - "scripts/release/tests/v4-p02-registration-operator-first-pg17.sh"
       - "docs/engineering/security/p02-registration-live-readonly-preflight.sql"
@@ -180,6 +183,29 @@ jobs:
           grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-rollback-baseline.log
           psql -d servicedesk_p02_registration_rollback -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql | tee /tmp/p02-rollback-proof.log
           grep -q 'P02_FAIL_CLOSED_REGISTRATION_ROLLBACK_PASS' /tmp/p02-rollback-proof.log
+      - name: P02 read-only after-install CLOSED attestation + seven negative cases
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          psql -d postgres -v ON_ERROR_STOP=1 -c 'create database servicedesk_p02_postinstall_negative'
+          psql -d servicedesk_p02_postinstall_negative -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-postinstall-disposable-setup-pg17.sql | tee /tmp/p02-postinstall-initial.log
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-postinstall-initial.log
+          grep -q 'P02_REGISTRATION_POSTINSTALL_CLOSED_PASS' /tmp/p02-postinstall-initial.log
+          grep -q 'P02_POSTINSTALL_DISPOSABLE_BASELINE_PASS' /tmp/p02-postinstall-initial.log
+          PGDATABASE=servicedesk_p02_postinstall_negative bash scripts/release/tests/v4-p02-postinstall-negative-pg17.sh | tee /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_MODE_OPEN' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_GRANT_PRESENT' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_ANON_RPC' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_PUBLIC_RPC' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_PRIVATE_SCHEMA' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_RLS_OFF' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_INVOKER' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_BODY_HASH' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_NEGATIVE_MATRIX_PASS' /tmp/p02-postinstall-negative.log
       - uses: pnpm/action-setup@v4
         with:
           version: 10.17.1

@@ -4,20 +4,20 @@
   "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
   "sourceHeads": {
     "868": "9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    "869": "8e94a5311a69374c13d236f19943f1d5f655a74b"
+    "869": "84e5895169ad469e6241ea9e0835d15cdc267d9e"
   },
   "sourceOnly": true,
   "realOwnerSessionVerified": false,
   "migrationAuthorized": false,
   "migrationInstalled": false,
   "liveDeploymentAuthorized": false,
-  "fileCount": 17,
+  "fileCount": 20,
   "files": [
     {
       "path": ".github/workflows/p02-owner-registration-candidate-pg17.yml",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "b24eca79ff457331f2d265a91302a0e85a90bbd5"
+      "gitBlobSha": "7e2a3627938d9f0373a12d60954a0ee8c902c243"
     },
     {
       "path": ".github/workflows/v4-p02-final-owner-readback-source-rc.yml",
@@ -29,7 +29,7 @@
       "path": "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "bf86c06d9e245a8a488036e25512496be059c36f"
+      "gitBlobSha": "b54e70541cb027d444c8550ef37cb2bf78258f44"
     },
     {
       "path": "docs/delivery/sonic-p02-end-readback-source-checkpoint-20261026.md",
@@ -50,10 +50,22 @@
       "gitBlobSha": "6988e4949c2ba517addc15e47c2a22e4986307cd"
     },
     {
+      "path": "docs/engineering/security/p02-registration-postinstall-readonly-attestation.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "fc290ea03c996843051848bcc1a4829c34664d89"
+    },
+    {
       "path": "scripts/release/tests/v4-p02-mid-audit-authority-revocation.test.mjs",
       "sourcePr": 868,
       "status": "added",
       "gitBlobSha": "38114dd33a653d2495d5a8dfbdeae328a17feb8d"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-postinstall-negative-pg17.sh",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "b2463335c92752d5f29cb1970a187b5c00e0221b"
     },
     {
       "path": "scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh",
@@ -95,7 +107,7 @@
       "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "5c8666562e1af3f53826f9b442b11a4c9b8bafc0"
+      "gitBlobSha": "53d6be910a200df8e25bdbe53f4c0b2ab54ed8e0"
     },
     {
       "path": "tests/sql/p02-owner-registration-db-authorization-pg17.sql",
@@ -108,6 +120,12 @@
       "sourcePr": 869,
       "status": "added",
       "gitBlobSha": "3057c82498a10552e752b3156d280595ca288b26"
+    },
+    {
+      "path": "tests/sql/p02-registration-postinstall-disposable-setup-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "1157202d5224bc25dd1d7411fca947f332a71683"
     },
     {
       "path": "tests/sql/p02-registration-preflight-negative-setup-pg17.sql",

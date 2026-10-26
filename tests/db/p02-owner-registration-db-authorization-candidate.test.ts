@@ -141,6 +141,36 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(rollback).toContain("P02_ROLLBACK_CREATED_UNAUTHORIZED_WORKSPACE");
     expect(workflow).toContain("P02 guarded registration fail-closed rollback rehearsal");
     expect(workflow).toContain("tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql");
+    // INSTALL RECEIPT is separate from the preinstall gate and is strictly
+    // read-only, only immediately after installation before any QA grant.
+    // A successful source diff or a PG17 candidate is not a live receipt.
+    const post = read("docs/engineering/security/p02-registration-postinstall-readonly-attestation.sql");
+    const setup = read("tests/sql/p02-registration-postinstall-disposable-setup-pg17.sql");
+    const negative = read("scripts/release/tests/v4-p02-postinstall-negative-pg17.sh");
+    expect(post).toContain("begin transaction read only;");
+    expect(post).toContain("P02_REGISTRATION_POSTINSTALL_BLOCKED");
+    expect(post).toContain("P02_REGISTRATION_POSTINSTALL_CLOSED_PASS");
+    expect(post).toContain("v_mode_rows <> 1 or v_closed_rows <> 1 or v_qa_grants <> 0");
+    expect(post).toContain("has_function_privilege('anon',v_reg,'EXECUTE')");
+    expect(post).toContain("aclexplode(coalesce(p.proacl,acldefault('f',p.proowner)))");
+    expect(post).toContain("v_rpc_owner is distinct from 'postgres'");
+    expect(post).toContain("md5(v_body) is distinct from 'b24154db78c5f1b210f86c97f896d44d'");
+    expect(negative).toContain("P18_UNREVIEWED_COMMENT_BODY_DRIFT");
+    expect(post).toContain("relrowsecurity");
+    expect(post).toContain("9f14160f16e16ffe6ac16f35c3f4557f");
+    expect(post).not.toMatch(/(?:create\s+(?:schema|table|function)|insert\s+into|delete\s+from|update\s+\w+\s+set|alter\s+table|drop\s+(?:schema|table|function))\b/i);
+    expect(setup).toContain("P02_POSTINSTALL_DISPOSABLE_DB_REQUIRED");
+    expect(setup).toContain("P02_POSTINSTALL_DISPOSABLE_BASELINE_PASS");
+    expect(negative).toContain("P02_POSTINSTALL_DISPOSABLE_ONLY");
+    expect(negative).toContain("P02_POSTINSTALL_NEGATIVE_MATRIX_PASS");
+    expect(negative).toContain("P02_POSTINSTALL_WRONG_FAILURE_");
+    for (const tag of ["MODE_OPEN","GRANT_PRESENT","ANON_RPC","PUBLIC_RPC","PRIVATE_SCHEMA","RLS_OFF","INVOKER","BODY_HASH"]) {
+      expect(workflow).toContain("P02_POSTINSTALL_DENIED_" + tag);
+      expect(negative).toContain("assert_blocked " + tag);
+    }
+    expect(workflow).toContain("servicedesk_p02_postinstall_negative");
+    expect(workflow).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+
     // Reverse race proof: operator must win when its write takes the lock
     // before the new-owner RPC, with a positive approved registration
     // precondition and no persisted workspace or audit row after denials.
