@@ -66,6 +66,39 @@ pg -c "alter function public.servicedesk_register_owner_workspace(text,text,text
 assert_blocked INVOKER
 pg -c "alter function public.servicedesk_register_owner_workspace(text,text,text,text) security definer"
 
+# Even an otherwise harmless unreviewed function comment must invalidate
+# the exact post-install source receipt. This checks the body digest, not only
+# the presence of key authorization words or the SECURITY DEFINER flag.
+pg <<'SQL'
+do $p18_tamper$
+declare old_ddl text; modified_ddl text;
+begin
+  select pg_get_functiondef(p.oid) into old_ddl
+  from pg_proc p where p.oid=to_regprocedure(
+    'public.servicedesk_register_owner_workspace(text,text,text,text)');
+  modified_ddl := replace(old_ddl,
+    '-- Do not trust user_metadata, caller IDs, client-owned roles or actor IDs.',
+    '-- P18_UNREVIEWED_COMMENT_BODY_DRIFT'||chr(10)||
+    '  -- Do not trust user_metadata, caller IDs, client-owned roles or actor IDs.');
+  if modified_ddl=old_ddl then raise exception 'P02_UNREVIEWED_TEST_TAMPER_MISSING'; end if;
+  execute modified_ddl;
+end $p18_tamper$;
+SQL
+assert_blocked BODY_HASH
+pg <<'SQL'
+do $p18_restore$
+declare old_ddl text; restored_ddl text;
+begin
+  select pg_get_functiondef(p.oid) into old_ddl
+  from pg_proc p where p.oid=to_regprocedure(
+    'public.servicedesk_register_owner_workspace(text,text,text,text)');
+  restored_ddl := replace(old_ddl,
+    '  -- P18_UNREVIEWED_COMMENT_BODY_DRIFT'||chr(10),'');
+  if restored_ddl=old_ddl then raise exception 'P02_UNREVIEWED_TEST_RESTORE_MISSING'; end if;
+  execute restored_ddl;
+end $p18_restore$;
+SQL
+
 # Check negative cases did not leave test database falsely damaged.
 assert_passed
 echo P02_POSTINSTALL_NEGATIVE_MATRIX_PASS

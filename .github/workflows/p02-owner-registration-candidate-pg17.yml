@@ -204,6 +204,7 @@ jobs:
           grep -q 'P02_POSTINSTALL_DENIED_PRIVATE_SCHEMA' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_DENIED_RLS_OFF' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_DENIED_INVOKER' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_BODY_HASH' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_NEGATIVE_MATRIX_PASS' /tmp/p02-postinstall-negative.log
       - uses: pnpm/action-setup@v4
         with:
