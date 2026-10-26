@@ -134,6 +134,33 @@ begin
   end if;
 
 
+  -- A different schema/table owner or added rule/trigger can change effective
+  -- enforcement without changing the currently CLOSED row or SQL body digest.
+  -- FK-generated internal triggers are expected and excluded.
+  if (select pg_get_userbyid(n.nspowner)
+      from pg_namespace n where n.nspname='servicedesk_security') is distinct from 'postgres'
+     or (select count(*)
+         from pg_class c join pg_namespace n on n.oid=c.relnamespace
+         where n.nspname='servicedesk_security'
+           and c.relname in ('owner_registration_control','owner_registration_grants')
+           and c.relkind='r' and pg_get_userbyid(c.relowner)='postgres') <> 2
+     or exists (
+       select 1 from pg_trigger t join pg_class c on c.oid=t.tgrelid
+       join pg_namespace n on n.oid=c.relnamespace
+       where n.nspname='servicedesk_security'
+         and c.relname in ('owner_registration_control','owner_registration_grants')
+         and not t.tgisinternal
+     )
+     or exists (
+       select 1 from pg_rewrite rw join pg_class c on c.oid=rw.ev_class
+       join pg_namespace n on n.oid=c.relnamespace
+       where n.nspname='servicedesk_security'
+         and c.relname in ('owner_registration_control','owner_registration_grants')
+     )
+  then
+    raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: protected schema owner or trigger/rule drift';
+  end if;
+
   -- The immediate row contents alone cannot prove that constraints survived.
   -- Reject missing/replaced PKs, the CLOSED/QA_ONLY/PUBLIC check, singleton
   -- check or Auth FK, even while the current dataset looks harmless.
@@ -144,6 +171,14 @@ begin
     join pg_namespace n on n.oid=t.relnamespace
     where n.nspname='servicedesk_security'
       and t.relname in ('owner_registration_control','owner_registration_grants')
+  ) <> 5 or (
+    select count(*)
+    from pg_constraint c
+    join pg_class t on t.oid=c.conrelid
+    join pg_namespace n on n.oid=t.relnamespace
+    where n.nspname='servicedesk_security'
+      and t.relname in ('owner_registration_control','owner_registration_grants')
+      and c.convalidated
   ) <> 5 or (
     select count(*)
     from pg_constraint c
@@ -162,10 +197,10 @@ begin
         or (t.relname='owner_registration_control'
          and c.conname='owner_registration_control_mode_check'
          and c.contype='c'
-         and pg_get_constraintdef(c.oid) like '%mode = ANY%'
-         and pg_get_constraintdef(c.oid) like '%CLOSED%'
-         and pg_get_constraintdef(c.oid) like '%QA_ONLY%'
-         and pg_get_constraintdef(c.oid) like '%PUBLIC%')
+         -- Exact PG17-rendered CHECK expression, not substring matching:
+         -- CHECK(mode IN (...)) OR TRUE retains these words but admits all modes.
+         and pg_get_constraintdef(c.oid) =
+           'CHECK ((mode = ANY (ARRAY[''CLOSED''::text, ''QA_ONLY''::text, ''PUBLIC''::text])))')
         or (t.relname='owner_registration_grants'
          and c.conname='owner_registration_grants_pkey'
          and c.contype='p'
@@ -173,8 +208,8 @@ begin
         or (t.relname='owner_registration_grants'
          and c.conname='owner_registration_grants_user_id_fkey'
          and c.contype='f'
-         and pg_get_constraintdef(c.oid)
-              like 'FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE%')
+         and pg_get_constraintdef(c.oid) =
+              'FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE')
       )
   ) <> 5 or (
     select count(*)
