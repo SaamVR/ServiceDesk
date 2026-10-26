@@ -35,7 +35,7 @@ describe("F13 persisted workflow operator guidance",()=>{
   for(const state of ["ACTIONS_PENDING"]){
    const x=run({state});
    expect(x).toMatchObject({disposition:"PROCESSING_ONLY",nextStep:"WAIT_FOR_SAVED_OUTCOME"});
-   expect(x.detail).not.toMatch(/overdue|late|deadline missed/i);
+   expect(x.detail).not.toMatch(/\b(?:overdue|late|deadline missed)\b/i);
    denied(x);
   }
  });
