@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadAuthorizedWorkspaceDecision } from "../../src/features/auth/authorized-workspace-access";
 
-interface Member { workspace_id: string; role: string; status: string }
+interface Member { workspace_id: string; role: string; status: string; user_id?: string }
 interface Workspace { id: string; slug: string; name: string }
 
 function fakeRlsClient(
@@ -14,12 +14,13 @@ function fakeRlsClient(
   workspaceError = false,
 ) {
   const calls: string[] = [];
+  let queriedUserId = "";
   const membershipQuery = {
     select(columns: string) { calls.push("members:" + columns); return this; },
-    eq(column: string, value: string) { calls.push(column + ":" + value); return this; },
+    eq(column: string, value: string) { calls.push(column + ":" + value); if (column === "user_id") queriedUserId = value; return this; },
     async limit(n: number) {
       calls.push("member-limit:" + n);
-      return { data: members, error: membershipError ? { message: "synthetic failure" } : null };
+      return { data: members.map(row => ({ ...row, user_id: row.user_id ?? queriedUserId })), error: membershipError ? { message: "synthetic failure" } : null };
     },
   };
   const workspaceQuery = {
@@ -70,6 +71,32 @@ describe("verified authenticated RLS workspace discovery", () => {
     }
     expect(calls).toContain("status:ACTIVE");
     expect(calls).toContain("id:one,two");
+  });
+
+  it("denies a foreign user, revoked status, unknown role or malformed workspace membership", async () => {
+    const tampered: Member[][] = [
+      [{ ...member("one", "OWNER"), user_id: "foreign-subject" }],
+      [member("one", "OWNER", "REVOKED")],
+      [member("one", "ADMIN")],
+      [member("../foreign", "OWNER")],
+    ];
+    for (const rows of tampered) {
+      const { client, calls } = fakeRlsClient(rows, [workspace("one", "one-office")]);
+      expect(await loadAuthorizedWorkspaceDecision(client, "verified-user"))
+        .toEqual({ ok: false, code: "MEMBERSHIP_LOOKUP" });
+      expect(calls).not.toContain("workspaces:id,slug,name");
+    }
+  });
+
+  it("denies foreign or duplicate workspace rows after valid saved owner membership", async () => {
+    for (const rows of [
+      [workspace("foreign", "foreign-office")],
+      [workspace("one", "one-office"), workspace("one", "one-office")],
+    ]) {
+      const { client } = fakeRlsClient([member("one", "OWNER")], rows);
+      expect(await loadAuthorizedWorkspaceDecision(client, "verified-user"))
+        .toEqual({ ok: false, code: "WORKSPACE_LOOKUP" });
+    }
   });
 
   it("never enters a staff workspace hidden by RLS", async () => {

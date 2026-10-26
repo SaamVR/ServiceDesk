@@ -9,7 +9,7 @@ export type WorkspaceAccessLoad =
   | { ok: true; decision: AuthorizedWorkspaceDecision }
   | { ok: false; code: "MEMBERSHIP_LOOKUP" | "MEMBERSHIP_LIMIT" | "WORKSPACE_LOOKUP" };
 
-interface MembershipRow { workspace_id: string; role: string; status: string }
+interface MembershipRow { workspace_id: string; user_id: string; role: string; status: string }
 interface WorkspaceRow { id: string; slug: string; name: string }
 
 /**
@@ -22,17 +22,27 @@ export async function loadAuthorizedWorkspaceDecision(
   client: SupabaseClient,
   verifiedUserId: string,
 ): Promise<WorkspaceAccessLoad> {
-  if (!verifiedUserId) return { ok: false, code: "MEMBERSHIP_LOOKUP" };
+  if (typeof verifiedUserId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(verifiedUserId))
+    return { ok: false, code: "MEMBERSHIP_LOOKUP" };
   const membership = await client.from("memberships")
-    .select("workspace_id,role,status")
+    .select("workspace_id,user_id,role,status")
     .eq("user_id", verifiedUserId)
     .eq("status", "ACTIVE")
     .limit(101);
   if (membership.error) return { ok: false, code: "MEMBERSHIP_LOOKUP" };
 
-  const members = (membership.data ?? []) as MembershipRow[];
-  // A truncated response must never silently choose the first workspace.
+  // A filtered response is not proof of identity. Verify each saved row
+  // against the verified caller; never grant navigation from a corrupt row.
+  if (!Array.isArray(membership.data))
+    return { ok: false, code: "MEMBERSHIP_LOOKUP" };
+  const members = membership.data as MembershipRow[];
   if (members.length > 100) return { ok: false, code: "MEMBERSHIP_LIMIT" };
+  if (members.some(row => !row || typeof row !== "object" ||
+      row.user_id !== verifiedUserId || row.status !== "ACTIVE" ||
+      !["OWNER", "DISPATCHER", "CREW"].includes(row.role) ||
+      typeof row.workspace_id !== "string" ||
+      !/^[A-Za-z0-9_-]{1,128}$/.test(row.workspace_id)))
+    return { ok: false, code: "MEMBERSHIP_LOOKUP" };
   const staffIds = [...new Set(members
     .filter(row => row.status === "ACTIVE" &&
       (row.role === "OWNER" || row.role === "DISPATCHER"))
@@ -47,8 +57,15 @@ export async function loadAuthorizedWorkspaceDecision(
       .in("id", staffIds)
       .limit(101);
     if (result.error) return { ok: false, code: "WORKSPACE_LOOKUP" };
-    workspaceRows = (result.data ?? []) as WorkspaceRow[];
+    if (!Array.isArray(result.data))
+      return { ok: false, code: "WORKSPACE_LOOKUP" };
+    workspaceRows = result.data as WorkspaceRow[];
     if (workspaceRows.length > 100) return { ok: false, code: "WORKSPACE_LOOKUP" };
+    if (workspaceRows.some(row => !row || typeof row !== "object" ||
+        !staffIds.includes(row.id) || typeof row.slug !== "string" ||
+        typeof row.name !== "string") ||
+        new Set(workspaceRows.map(row => row.id)).size !== workspaceRows.length)
+      return { ok: false, code: "WORKSPACE_LOOKUP" };
   }
 
   const workspaceById = new Map<string, WorkspaceRow[]>();
