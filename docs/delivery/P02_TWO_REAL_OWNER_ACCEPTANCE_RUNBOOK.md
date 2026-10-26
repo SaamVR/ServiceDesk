@@ -1,3 +1,5 @@
+> **SUPERSEDED HOSTING TARGET — 2026-10-26:** The owner chose **Vercel**, NOT Render, for any future ServiceDesk deployment and expressly forbade **all deployments without separate permission** (including previews and Git-triggered builds). This file's Render instructions are retained as HISTORICAL evidence/rollback context only, not an active deploy authorization. Do not create a ServiceDesk Vercel project, link Git, change billing, deploy any environment or provision test users from this runbook. Follow [Vercel manual-only owner directive](./P02_VERCEL_MANUAL_ONLY_HANDOFF_20261026.md) and [release lock](./P02_SHARED_INFRA_RELEASE_LOCK.json). The database 0065 security patch is already installed; P02 real two-owner acceptance remains open.
+
 # P02 — real two-owner read-only acceptance on the EXISTING ServiceDesk Supabase
 
 **Decision:** keep existing main Supabase `cpmmgivhlkfbiwzhlcey` and original Render service. No new resources, users, messages, charges, migrations or deployments are authorized by this document.
