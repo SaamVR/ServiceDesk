@@ -4,20 +4,20 @@
   "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
   "sourceHeads": {
     "868": "9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    "869": "3030152a7a7d161230a513e2f73a3c4cc0f67b7b"
+    "869": "a766fe90793572553594c8a226885a6c94e83c81"
   },
   "sourceOnly": true,
   "realOwnerSessionVerified": false,
   "migrationAuthorized": false,
   "migrationInstalled": false,
   "liveDeploymentAuthorized": false,
-  "fileCount": 15,
+  "fileCount": 16,
   "files": [
     {
       "path": ".github/workflows/p02-owner-registration-candidate-pg17.yml",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "334c3cc3c121c81ee4802d3eccf9634a3906b0eb"
+      "gitBlobSha": "b72649a9c1b25c023393036873c042f75872998e"
     },
     {
       "path": ".github/workflows/v4-p02-final-owner-readback-source-rc.yml",
@@ -29,7 +29,7 @@
       "path": "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "3749453f748797c382ddcfcbbd1e62b523d92865"
+      "gitBlobSha": "d65e9077a1a15aca3ae65467e09ff60021871503"
     },
     {
       "path": "docs/delivery/sonic-p02-end-readback-source-checkpoint-20261026.md",
@@ -62,6 +62,12 @@
       "gitBlobSha": "dc1c6ad6b5483b992ab06d325717a5b4b6de57da"
     },
     {
+      "path": "scripts/release/tests/v4-p02-registration-operator-first-pg17.sh",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "1073e23c730548973b18167af72081bd20b6f6d8"
+    },
+    {
       "path": "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
       "sourcePr": 868,
       "status": "modified",
@@ -89,7 +95,7 @@
       "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "db54101a4f850609f2483f7a3d2584be6333c9a2"
+      "gitBlobSha": "67ff20ae0c43231e4d19b2e56c77fe5ee2fa06dd"
     },
     {
       "path": "tests/sql/p02-owner-registration-db-authorization-pg17.sql",
