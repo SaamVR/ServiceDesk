@@ -108,3 +108,11 @@ The immediate CLOSED/zero-grants attestation also verifies the *schema contract*
 ## P19 read-only receipt: default and function-GUC exactness (source-only, 2026-10-27)
 
 Postinstall receipt now rejects a drifted default of `PUBLIC` on the CLOSED-mode control, absence of the `singleton = true` default, and any additional function-level GUC beyond the reviewed `search_path=pg_catalog, public, pg_temp`. A currently CLOSED row alone is insufficient to prove safe future inserts. Three isolated PostgreSQL 17 adversarial cases mutate and restore only disposable fixtures, each requiring a marked nonzero BLOCK and a final baseline PASS. No main Supabase SQL or user/account/fixture or deployment authority is implied.
+
+## P20 exact DDL/owner integrity attestation (source-only, 2026-10-27)
+
+The reviewed P02 SQL is still **NOT INSTALLED**. The postinstall receipt must not treat mode CHECK as valid only because its textual definition *mentions* CLOSED/QA_ONLY/PUBLIC. A tautological `OR TRUE` extension could preserve all those strings while removing the constraint's enforcement. P20 replaces substring checks with the exact PostgreSQL 17 mode CHECK representation, requires constraints to be validated, and keeps the precise Auth FK cascade definition.
+
+The same read-only gate rejects drift to either private table owner or security schema owner, extra user-defined triggers on the protected control/grant tables, and rewrite rules. FK-generated internal triggers are expected and intentionally exempt. Five new disposable PG17 adversarial scenarios each have to return a nonzero marked BLOCK and a complete restored final PASS: `MODE_CHECK_WEAKENED`, `SCHEMA_OWNER_DRIFT`, `TABLE_OWNER_DRIFT`, `EXTRA_TRIGGER`, `EXTRA_RULE`.
+
+**Authority unchanged:** tests execute only on fixed-name local PostgreSQL 17 CI database. They are not production rollback approval, guard installation permission, QA account authorization, genuine signed-in JWT/browser RLS acceptance, or deployment authority.
