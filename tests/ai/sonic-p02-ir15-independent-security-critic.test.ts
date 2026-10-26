@@ -61,6 +61,20 @@ describe("P02 IR15 independent release-safety critic",()=>{
   // then that CLOSED and exact grant revocation both cause denial.
   const operator=get("scripts/release/tests/v4-p02-registration-operator-first-pg17.sh");
   expect(wf).toContain("P02_OPERATOR_FIRST_CONCURRENCY_PASS");
+  // Restoring the original unguarded 0059 body without revoking EXECUTE
+  // would re-open owner registration. Ensure the rollback fixture keeps
+  // authenticated users unable to call the restored function.
+  const rollback=get("tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql");
+  expect(wf).toContain("P02_FAIL_CLOSED_REGISTRATION_ROLLBACK_PASS");
+  expect(rollback).toContain("P02_ROLLBACK_DISPOSABLE_DB_REQUIRED");
+  expect(rollback).toContain("P02_ROLLBACK_GUARD_OR_RPC_PRIVILEGE_LEFT_OPEN");
+  expect(rollback).toContain("P02_FAIL_CLOSED_REGISTRATION_ROLLBACK_PASS");
+  const revoked=rollback.indexOf("revoke all on function public.servicedesk_register_owner_workspace");
+  const restored=rollback.indexOf("execute v_original_ddl");
+  expect(revoked).toBeGreaterThan(0);
+  expect(restored).toBeGreaterThan(revoked);
+  expect(rollback).toContain("exception when insufficient_privilege");
+
   expect(wf).toContain("P02_OPERATOR_CLOSED_WINS_PASS");
   expect(wf).toContain("P02_OPERATOR_REVOCATION_WINS_PASS");
   expect(operator).toContain("P02_APPROVED_PRECONDITION_PASS");
