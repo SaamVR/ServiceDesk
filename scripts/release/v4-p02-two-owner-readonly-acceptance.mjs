@@ -62,6 +62,7 @@ export async function runTwoOwnerReadOnlyAudit(
 ) {
   const { key, entries } = validateInputs(env);
   const checked = [];
+  const finalAuthorityReadbacks = [];
   for (const owner of entries) {
     const foreign = entries.find(item => item.tag !== owner.tag);
     const headers = {
@@ -153,8 +154,36 @@ export async function runTwoOwnerReadOnlyAudit(
       throw Error("DEFAULT_BRANCH_OWN_RPC_NOT_VERIFIED");
     if (foreignBranch !== null)
       throw Error("FOREIGN_DEFAULT_BRANCH_DISCLOSURE");
+
+    // Defer both final authority reads until BOTH owners' full scope/RPC
+    // matrices have finished. Checking owner A before auditing owner B could
+    // miss a revocation of owner A while owner B's calls are in flight.
+    finalAuthorityReadbacks.push(async () => {
+      const finalMembership = await scoped("memberships", owner.expectedWorkspace);
+      const finalDefault = await scoped("workspace_branches", owner.expectedWorkspace);
+      if (finalMembership.length !== 1 || finalDefault.length !== 1 ||
+          finalDefault[0].id !== ownDefaults[0].id)
+        throw Error("OWNER_AUTHORITY_CHANGED_DURING_AUDIT");
+      const finalClaims = jwtClaims(owner.token);
+      if (!Number.isSafeInteger(finalClaims?.exp) ||
+          finalClaims.exp * 1000 <= Date.now())
+        throw Error("OWNER_SESSION_EXPIRED_DURING_AUDIT");
+    });
+
     checked.push({ owner: owner.tag, scope: "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED",
       defaultBranch: "AUTHORIZED_ONLY", authenticated: true });
+  }
+  // No PASS until both owners have been rechecked after the *entire*
+  // matrix. This narrows TOCTOU exposure but remains non-atomic; signed-in
+  // browser/session acceptance is still a separate Production gate.
+  for (const recheck of finalAuthorityReadbacks) await recheck();
+  // A JWT that expired during the other owner's final readback must not be
+  // counted as a currently usable session.
+  for (const owner of entries) {
+    const finalClaims = jwtClaims(owner.token);
+    if (!Number.isSafeInteger(finalClaims?.exp) ||
+        finalClaims.exp * 1000 <= Date.now())
+      throw Error("OWNER_SESSION_EXPIRED_DURING_AUDIT");
   }
   return { result: "PASS", project: PROJECT_REF,
     checks: checked, noWrites: true,

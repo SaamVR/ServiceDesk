@@ -98,9 +98,9 @@ test("proves two different owners' own visibility, foreign denial and own-only b
   assert.equal(result.noWrites, true);
   assert.equal(result.checks.length, 2);
   assert.ok(result.checks.every(x => x.scope === "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED"));
-  assert.equal(calls.length, 20);
+  assert.equal(calls.length, 24);
   assert.equal(calls.filter(x => x.method === "POST").length, 4);
-  assert.equal(calls.filter(x => x.method === "GET").length, 16);
+  assert.equal(calls.filter(x => x.method === "GET").length, 20);
 });
 
 test("does not require seeded requests to prove owner workspace isolation", async () => {
