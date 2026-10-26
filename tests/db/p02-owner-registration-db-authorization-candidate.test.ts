@@ -156,6 +156,12 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(post).toContain("v_rpc_owner is distinct from 'postgres'");
     expect(post).toContain("md5(v_body) is distinct from 'b24154db78c5f1b210f86c97f896d44d'");
     expect(negative).toContain("P18_UNREVIEWED_COMMENT_BODY_DRIFT");
+    expect(post).toContain("has_any_column_privilege");
+    expect(post).toContain("has_table_privilege(api.role_name");
+    for (const aclRight of ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER", "MAINTAIN"]) {
+      expect(post).toContain("('" + aclRight + "'::text)");
+    }
+    expect(post).toContain("direct protected table or column access");
     expect(post).toContain("relrowsecurity");
     expect(post).toContain("9f14160f16e16ffe6ac16f35c3f4557f");
     expect(post).not.toMatch(/(?:create\s+(?:schema|table|function)|insert\s+into|delete\s+from|update\s+\w+\s+set|alter\s+table|drop\s+(?:schema|table|function))\b/i);
@@ -164,7 +170,7 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(negative).toContain("P02_POSTINSTALL_DISPOSABLE_ONLY");
     expect(negative).toContain("P02_POSTINSTALL_NEGATIVE_MATRIX_PASS");
     expect(negative).toContain("P02_POSTINSTALL_WRONG_FAILURE_");
-    for (const tag of ["MODE_OPEN","GRANT_PRESENT","ANON_RPC","PUBLIC_RPC","PRIVATE_SCHEMA","RLS_OFF","INVOKER","BODY_HASH"]) {
+    for (const tag of ["MODE_OPEN","GRANT_PRESENT","ANON_RPC","PUBLIC_RPC","PRIVATE_SCHEMA","TABLE_DELETE","TABLE_MAINTAIN","COLUMN_SELECT","RLS_OFF","INVOKER","BODY_HASH"]) {
       expect(workflow).toContain("P02_POSTINSTALL_DENIED_" + tag);
       expect(negative).toContain("assert_blocked " + tag);
     }
