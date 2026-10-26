@@ -218,6 +218,27 @@ jobs:
           grep -q 'P02_POSTINSTALL_DENIED_INVOKER' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_DENIED_BODY_HASH' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_NEGATIVE_MATRIX_PASS' /tmp/p02-postinstall-negative.log
+      - name: P21 out-of-order Supabase migration ledger read-only gate, seven fail-closed cases
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          psql -d postgres -v ON_ERROR_STOP=1 -c 'create database servicedesk_p02_ledger_probe'
+          psql -d servicedesk_p02_ledger_probe -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-migration-ledger-disposable-setup-pg17.sql | tee /tmp/p02-ledger-initial.log
+          grep -q 'P02_MIGRATION_LEDGER_READONLY_PASS' /tmp/p02-ledger-initial.log
+          grep -q 'P02_LEDGER_DISPOSABLE_BASELINE_PASS' /tmp/p02-ledger-initial.log
+          PGDATABASE=servicedesk_p02_ledger_probe bash scripts/release/tests/v4-p02-migration-ledger-negative-pg17.sh | tee /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_MISSING_0065' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_RENAMED_0065' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_MISSING_0062' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_UNREVIEWED_0063' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_UNREVIEWED_0064' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_DUPLICATE_0065_NAME' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_RENAMED_0062' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_NEGATIVE_MATRIX_PASS' /tmp/p02-ledger-negative.log
       - uses: pnpm/action-setup@v4
         with:
           version: 10.17.1
