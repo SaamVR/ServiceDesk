@@ -37,6 +37,8 @@ select (
 \else
   \echo P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED
   rollback;
-  \quit 3
+  -- SQL execution failure + ON_ERROR_STOP gives a nonzero psql exit.
+  -- A bare psql \quit command may exit with status 0 despite a BLOCKED gate.
+  select 1 / 0 as p02_preimage_blocked;
 \endif
 rollback;

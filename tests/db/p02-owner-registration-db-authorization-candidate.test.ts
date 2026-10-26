@@ -71,12 +71,15 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(preflight).toContain("begin transaction read only");
     expect(preflight).toContain("P02_REGISTRATION_READONLY_PREIMAGE_PASS");
     expect(preflight).toContain("P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED");
+    expect(preflight).toContain("select 1 / 0 as p02_preimage_blocked");
     expect(preflight).toContain("e4de11c0b1b6736e46e201ee491d908f");
     expect(preflight).toContain("9f14160f16e16ffe6ac16f35c3f4557f");
     expect(preflight).not.toMatch(/(?:insert into|update\s+public\.|delete from|drop table|create table)/i);
     const workflow = read(".github/workflows/p02-owner-registration-candidate-pg17.yml");
     expect(workflow).toContain("image: postgres:17");
     expect(workflow).toContain("tests/sql/p02-owner-registration-db-authorization-pg17.sql");
+    expect(workflow).toContain("P02_REGISTRATION_READONLY_PREIMAGE_PASS");
+    expect(workflow).toContain("P02_DISPOSABLE_PG17_REGISTRATION_DB_AUTHORIZATION_PASS");
     expect(workflow).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
     // In one transaction a new grant is valid at BEGIN but must be invalid
     // after real time elapses. This catches the now() transaction-clock bypass

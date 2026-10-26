@@ -46,7 +46,19 @@ jobs:
           PGPASSWORD: disposable-p02-registration-only
         run: |
           command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
-          psql -v ON_ERROR_STOP=1 -f tests/sql/p02-owner-registration-db-authorization-pg17.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/p02-owner-registration-db-authorization-pg17.sql | tee /tmp/p02-pg17-registration-receipt.log
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-pg17-registration-receipt.log
+          grep -q 'P02_DISPOSABLE_PG17_REGISTRATION_DB_AUTHORIZATION_PASS' /tmp/p02-pg17-registration-receipt.log
+          if grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-pg17-registration-receipt.log; then
+            echo 'Read-only preflight incorrectly blocked or skipped' >&2
+            exit 1
+          fi
+          # A second run AFTER candidate installation MUST fail closed.
+          if psql -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-after-install-blocked.log 2>&1; then
+            echo 'Preflight wrongly accepted an already-changed database' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-after-install-blocked.log
       - uses: pnpm/action-setup@v4
         with:
           version: 10.17.1

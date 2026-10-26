@@ -2,7 +2,10 @@
 -- Disposable PostgreSQL 17 ONLY; synthetic identities and rows, no Supabase network.
 create role anon nologin;
 create role authenticated nologin;
+create role service_role nologin;
 create schema auth;
+create function auth.role() returns text language sql stable
+  as $select current_setting('request.jwt.claim.role', true)$;
 create function auth.uid() returns uuid language sql stable
   as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create table auth.users (
@@ -42,6 +45,7 @@ values
   ('ffffffff-0000-4000-8000-000000000006', now(), false);
 
 \i supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql
+\i supabase/migrations/0065_v4_default_branch_membership_authority.sql
 \i docs/engineering/security/p02-registration-live-readonly-preflight.sql
 \i docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql
 
