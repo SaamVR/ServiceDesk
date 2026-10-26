@@ -170,6 +170,40 @@ begin
 end $expired$;
 rollback;
 
+-- DEADLINE REGRESSION: a grant written after BEGIN is valid at transaction
+-- start, but must be denied when the actual registration attempt happens
+-- after expiry. pg_catalog.now() would incorrectly use the BEGIN timestamp
+-- and allow owner B here; clock_timestamp() must refuse it. This is a
+-- disposable PG17 transaction and rolls back its temporary grant.
+begin;
+insert into servicedesk_security.owner_registration_grants(user_id,expires_at)
+values (
+  'bbbbbbbb-0000-4000-8000-000000000002',
+  pg_catalog.clock_timestamp() + interval '1 second'
+);
+set local role authenticated;
+set local request.jwt.claim.sub='bbbbbbbb-0000-4000-8000-000000000002';
+select pg_catalog.pg_sleep(1.4);
+do $expired_long_transaction$
+declare result jsonb;
+begin
+  result:=public.servicedesk_register_owner_workspace(
+    'Synthetic B','qa-owner-b','UTC','USD');
+  if result->>'code' is distinct from 'REGISTRATION_NOT_AUTHORIZED' then
+    raise exception 'Transaction-start time incorrectly accepted expired grant: %', result;
+  end if;
+end $expired_long_transaction$;
+rollback;
+-- Rollback must discard temporary approval and any incomplete registration.
+do $expired_rollback$
+begin
+  if exists (select 1 from servicedesk_security.owner_registration_grants
+     where user_id='bbbbbbbb-0000-4000-8000-000000000002')
+    or exists (select 1 from public.workspaces where slug='qa-owner-b') then
+    raise exception 'Expired-grant regression left persisted approvals or workspaces';
+  end if;
+end $expired_rollback$;
+
 update servicedesk_security.owner_registration_grants
   set expires_at=now()+interval '1 hour'
   where user_id='aaaaaaaa-0000-4000-8000-000000000001';
