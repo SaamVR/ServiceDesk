@@ -3,11 +3,11 @@ import {trustedQuoteInstant} from "@/features/operations/quote-validity-clock";
 
 /** F11 resilience review proposals from caller-claimed saved projections.
  * Never persist, schedule, notify, charge, dispatch or claim a provider receipt. */
-export const SONIC_F11_Resilience_KINDS=["PROVIDER_HEALTH_REVIEW","OUTBOX_DEAD_LETTER_REVIEW"] as const;
-export type SonicF11ResilienceKind=typeof SONIC_F11_Resilience_KINDS[number];
+export const SONIC_F11_RESILIENCE_KINDS=["PROVIDER_HEALTH_REVIEW","OUTBOX_DEAD_LETTER_REVIEW"] as const;
+export type SonicF11ResilienceKind=typeof SONIC_F11_RESILIENCE_KINDS[number];
 export type SonicF11ResilienceResult=
- | {ok:false;code:"F11_Resilience_INPUT_INVALID"|"F11_Resilience_OWNER_REQUIRED"|
-   "F11_Resilience_SCOPE_MISMATCH"|"F11_Resilience_STALE"|"F11_Resilience_EVIDENCE_INVALID"}
+ | {ok:false;code:"F11_RESILIENCE_INPUT_INVALID"|"F11_RESILIENCE_OWNER_REQUIRED"|
+   "F11_RESILIENCE_SCOPE_MISMATCH"|"F11_RESILIENCE_STALE"|"F11_RESILIENCE_EVIDENCE_INVALID"}
  | {ok:true;value:{
    state:"F11_UNPERSISTED_OWNER_REVIEW";kind:SonicF11ResilienceKind;
    workspaceId:string;branchId:string;sourceId:string;sourceVersion:number;
@@ -51,17 +51,17 @@ export function planSonicF11Resilience(input:unknown):SonicF11ResilienceResult{
   if(!exact(input,["actor","workspaceId","branchId","asOf","expectedVersion","record"])||
    !exact(input.actor,["workspaceId","role"])||!id(input.workspaceId)||!id(input.branchId)||
    !id(input.actor.workspaceId)||!vers(input.expectedVersion))
-   return fail("F11_Resilience_INPUT_INVALID");
+   return fail("F11_RESILIENCE_INPUT_INVALID");
   const now=trustedQuoteInstant(input.asOf);
-  if(now===null)return fail("F11_Resilience_INPUT_INVALID");
+  if(now===null)return fail("F11_RESILIENCE_INPUT_INVALID");
   if(input.actor.role!=="OWNER"||input.actor.workspaceId!==input.workspaceId)
-   return fail("F11_Resilience_OWNER_REQUIRED");
+   return fail("F11_RESILIENCE_OWNER_REQUIRED");
   const r=input.record,kind=ownedKind(r);
   if(!kind||!exact(r,[...common,...extras[kind]])||!id(r.workspaceId)||!id(r.branchId)||
-   !id(r.sourceId)||!vers(r.sourceVersion))return fail("F11_Resilience_INPUT_INVALID");
+   !id(r.sourceId)||!vers(r.sourceVersion))return fail("F11_RESILIENCE_INPUT_INVALID");
   if(r.workspaceId!==input.workspaceId||r.branchId!==input.branchId)
-   return fail("F11_Resilience_SCOPE_MISMATCH");
-  if(r.sourceVersion!==input.expectedVersion)return fail("F11_Resilience_STALE");
+   return fail("F11_RESILIENCE_SCOPE_MISMATCH");
+  if(r.sourceVersion!==input.expectedVersion)return fail("F11_RESILIENCE_STALE");
   let due:number|null=null;
   if(kind==="PROVIDER_HEALTH_REVIEW"){
    if(r.status!=="DEGRADED"||(typeof r.providerCode!=="string"||!["AI_GATEWAY","EMAIL","WHATSAPP","CALENDAR"].includes(r.providerCode))||
@@ -76,10 +76,10 @@ export function planSonicF11Resilience(input:unknown):SonicF11ResilienceResult{
     trustedQuoteInstant(r.deadLetterAt)!>now)return fail("F11_RESILIENCE_EVIDENCE_INVALID");
    due=trustedQuoteInstant(r.deadLetterAt);
   }
-  if(due===null||!Number.isFinite(due))return fail("F11_Resilience_EVIDENCE_INVALID");
+  if(due===null||!Number.isFinite(due))return fail("F11_RESILIENCE_EVIDENCE_INVALID");
   const pending=due>now;
   const fingerprint=pending?null:createHash("sha256").update(JSON.stringify([
-   "F11_Resilience_UNPERSISTED_NOT_EXECUTION",kind,r.workspaceId,r.branchId,r.sourceId,
+   "F11_RESILIENCE_UNPERSISTED_NOT_EXECUTION",kind,r.workspaceId,r.branchId,r.sourceId,
    r.sourceVersion,...extras[kind].map(field=>r[field]),
   ])).digest("hex");
   return {ok:true,value:{
@@ -92,5 +92,5 @@ export function planSonicF11Resilience(input:unknown):SonicF11ResilienceResult{
    saved:false,scheduled:false,executed:false,providerCalled:false,
    customerMessageSent:false,financialMutation:false,bookingChanged:false,recordChanged:false,
   }};
- } catch {return fail("F11_Resilience_INPUT_INVALID");}
+ } catch {return fail("F11_RESILIENCE_INPUT_INVALID");}
 }
