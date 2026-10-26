@@ -84,7 +84,7 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/release/tests/v4-p02-registration-operator-first-pg17.sh | tee /tmp/p02-operator-first-race.log
-          grep -q 'P02_APPROVED_PRECONDITION_PASS' /tmp/p02-operator-first-race.log || test -f /tmp/p02-operator-first-race.log
+          grep -q 'P02_APPROVED_PRECONDITION_PASS' /tmp/p02-operator-first-race.log
           grep -q 'P02_OPERATOR_CLOSED_WINS_PASS' /tmp/p02-operator-first-race.log
           grep -q 'P02_OPERATOR_REVOCATION_WINS_PASS' /tmp/p02-operator-first-race.log
           grep -q 'P02_OPERATOR_FIRST_CONCURRENCY_PASS' /tmp/p02-operator-first-race.log
