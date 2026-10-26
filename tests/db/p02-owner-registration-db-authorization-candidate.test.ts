@@ -94,6 +94,7 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(workflow).toContain("preflight accepted anonymous registration RPC");
     expect(workflow).toContain("preflight accepted changed function security mode");
     expect(workflow).toContain("preflight accepted changed registration function fingerprint");
+    expect(workflow).toContain("preflight accepted authenticated CREATE on privileged search_path schema");
     expect(workflow).toContain("P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED");
     expect(workflow).toContain("P02_FRESH_BASELINE_PREFLIGHT_PASS");
     // In one transaction a new grant is valid at BEGIN but must be invalid

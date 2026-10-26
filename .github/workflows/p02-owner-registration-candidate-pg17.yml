@@ -102,6 +102,16 @@ jobs:
           grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-source-block.log
           psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) set search_path = pg_catalog, public, pg_temp'
 
+          # An API role granted CREATE on the SECURITY DEFINER function's
+          # public search_path schema must invalidate the reviewed preimage.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'grant create on schema public to authenticated'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-public-create-block.log 2>&1; then
+            echo 'preflight accepted authenticated CREATE on privileged search_path schema' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-public-create-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'revoke create on schema public from authenticated'
+
           # A fully restored baseline must pass; otherwise the failure tests
           # could be falsely green from a permanently damaged test database.
           psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql | tee /tmp/p02-preflight-restored.log
