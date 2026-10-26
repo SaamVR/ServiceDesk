@@ -1,0 +1,43 @@
+name: ServiceDesk P02 final owner authority readback SOURCE CI
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+    paths:
+      - .github/workflows/v4-p02-final-owner-readback-source-rc.yml
+      - scripts/release/v4-p02-two-owner-readonly-acceptance.mjs
+      - scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs
+      - scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs
+      - scripts/release/tests/v4-p02-mid-audit-authority-revocation.test.mjs
+permissions:
+  contents: read
+concurrency:
+  group: sd-p02-final-owner-readback-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  offline-readonly-authority-proof:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify exact source under test
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Verify no-credential P02 read-only probe syntax
+        run: |
+          node --check scripts/release/v4-p02-two-owner-readonly-acceptance.mjs
+          node --check scripts/release/tests/v4-p02-mid-audit-authority-revocation.test.mjs
+      - name: Test final active owner membership, branch stability and in-flight JWT expiry
+        run: |
+          node --test \
+            scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs \
+            scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs \
+            scripts/release/tests/v4-p02-mid-audit-authority-revocation.test.mjs
