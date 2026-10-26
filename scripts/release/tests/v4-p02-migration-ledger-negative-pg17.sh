@@ -55,6 +55,15 @@ pg -c "insert into supabase_migrations.schema_migrations values ('20261027100101
 assert_blocked UNREVIEWED_0064
 pg -c "delete from supabase_migrations.schema_migrations where version='20261027100101'"
 
+# The ledger uses letter-suffixed versions elsewhere (e.g. sd_0012a), so
+# 0063a/0064a must not slip past a too-specific _ suffix matcher.
+pg -c "insert into supabase_migrations.schema_migrations values ('20261027100103','sd_0063a_unreviewed')"
+assert_blocked UNREVIEWED_0063A
+pg -c "delete from supabase_migrations.schema_migrations where version='20261027100103'"
+pg -c "insert into supabase_migrations.schema_migrations values ('20261027100104','sd_0064a_unreviewed')"
+assert_blocked UNREVIEWED_0064A
+pg -c "delete from supabase_migrations.schema_migrations where version='20261027100104'"
+
 pg -c "insert into supabase_migrations.schema_migrations values ('20261027100102','sd_0065_v4_default_branch_membership_authority')"
 assert_blocked DUPLICATE_0065_NAME
 pg -c "delete from supabase_migrations.schema_migrations where version='20261027100102'"
