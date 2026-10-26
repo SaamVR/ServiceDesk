@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # PostgreSQL17 disposable proof ONLY. No Supabase credentials or network.
 set -euo pipefail
-if [[ "\${PGHOST:-}" != "127.0.0.1" ||
-      "\${PGPORT:-}" != "5432" ||
-      "\${PGDATABASE:-}" != "servicedesk_p02_postinstall_negative" ||
-      "\${PGUSER:-}" != "postgres" ||
-      "\${PGPASSWORD:-}" != "disposable-p02-registration-only" ]]; then
+if [[ "${PGHOST:-}" != "127.0.0.1" ||
+      "${PGPORT:-}" != "5432" ||
+      "${PGDATABASE:-}" != "servicedesk_p02_postinstall_negative" ||
+      "${PGUSER:-}" != "postgres" ||
+      "${PGPASSWORD:-}" != "disposable-p02-registration-only" ]]; then
   echo P02_POSTINSTALL_DISPOSABLE_ONLY >&2
   exit 2
 fi
