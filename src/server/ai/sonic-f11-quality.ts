@@ -3,11 +3,11 @@ import {trustedQuoteInstant} from "@/features/operations/quote-validity-clock";
 
 /** F11 quality review proposals from caller-claimed saved projections.
  * Never persist, schedule, notify, charge, dispatch or claim a provider receipt. */
-export const SONIC_F11_Quality_KINDS=["CHECKLIST_GAP_REVIEW","INCIDENT_ESCALATION_REVIEW"] as const;
-export type SonicF11QualityKind=typeof SONIC_F11_Quality_KINDS[number];
+export const SONIC_F11_QUALITY_KINDS=["CHECKLIST_GAP_REVIEW","INCIDENT_ESCALATION_REVIEW"] as const;
+export type SonicF11QualityKind=typeof SONIC_F11_QUALITY_KINDS[number];
 export type SonicF11QualityResult=
- | {ok:false;code:"F11_Quality_INPUT_INVALID"|"F11_Quality_OWNER_REQUIRED"|
-   "F11_Quality_SCOPE_MISMATCH"|"F11_Quality_STALE"|"F11_Quality_EVIDENCE_INVALID"}
+ | {ok:false;code:"F11_QUALITY_INPUT_INVALID"|"F11_QUALITY_OWNER_REQUIRED"|
+   "F11_QUALITY_SCOPE_MISMATCH"|"F11_QUALITY_STALE"|"F11_QUALITY_EVIDENCE_INVALID"}
  | {ok:true;value:{
    state:"F11_UNPERSISTED_OWNER_REVIEW";kind:SonicF11QualityKind;
    workspaceId:string;branchId:string;sourceId:string;sourceVersion:number;
@@ -51,17 +51,17 @@ export function planSonicF11Quality(input:unknown):SonicF11QualityResult{
   if(!exact(input,["actor","workspaceId","branchId","asOf","expectedVersion","record"])||
    !exact(input.actor,["workspaceId","role"])||!id(input.workspaceId)||!id(input.branchId)||
    !id(input.actor.workspaceId)||!vers(input.expectedVersion))
-   return fail("F11_Quality_INPUT_INVALID");
+   return fail("F11_QUALITY_INPUT_INVALID");
   const now=trustedQuoteInstant(input.asOf);
-  if(now===null)return fail("F11_Quality_INPUT_INVALID");
+  if(now===null)return fail("F11_QUALITY_INPUT_INVALID");
   if(input.actor.role!=="OWNER"||input.actor.workspaceId!==input.workspaceId)
-   return fail("F11_Quality_OWNER_REQUIRED");
+   return fail("F11_QUALITY_OWNER_REQUIRED");
   const r=input.record,kind=ownedKind(r);
   if(!kind||!exact(r,[...common,...extras[kind]])||!id(r.workspaceId)||!id(r.branchId)||
-   !id(r.sourceId)||!vers(r.sourceVersion))return fail("F11_Quality_INPUT_INVALID");
+   !id(r.sourceId)||!vers(r.sourceVersion))return fail("F11_QUALITY_INPUT_INVALID");
   if(r.workspaceId!==input.workspaceId||r.branchId!==input.branchId)
-   return fail("F11_Quality_SCOPE_MISMATCH");
-  if(r.sourceVersion!==input.expectedVersion)return fail("F11_Quality_STALE");
+   return fail("F11_QUALITY_SCOPE_MISMATCH");
+  if(r.sourceVersion!==input.expectedVersion)return fail("F11_QUALITY_STALE");
   let due:number|null=null;
   if(kind==="CHECKLIST_GAP_REVIEW"){
    if(r.status!=="IN_PROGRESS"||typeof r.requiredCount!=="number"||
@@ -76,10 +76,10 @@ export function planSonicF11Quality(input:unknown):SonicF11QualityResult{
     trustedQuoteInstant(r.observedAt)!>now)return fail("F11_QUALITY_EVIDENCE_INVALID");
    due=trustedQuoteInstant(r.observedAt)!+(r.severity==="CRITICAL"?0:30*60_000);
   }
-  if(due===null||!Number.isFinite(due))return fail("F11_Quality_EVIDENCE_INVALID");
+  if(due===null||!Number.isFinite(due))return fail("F11_QUALITY_EVIDENCE_INVALID");
   const pending=due>now;
   const fingerprint=pending?null:createHash("sha256").update(JSON.stringify([
-   "F11_Quality_UNPERSISTED_NOT_EXECUTION",kind,r.workspaceId,r.branchId,r.sourceId,
+   "F11_QUALITY_UNPERSISTED_NOT_EXECUTION",kind,r.workspaceId,r.branchId,r.sourceId,
    r.sourceVersion,...extras[kind].map(field=>r[field]),
   ])).digest("hex");
   return {ok:true,value:{
@@ -92,5 +92,5 @@ export function planSonicF11Quality(input:unknown):SonicF11QualityResult{
    saved:false,scheduled:false,executed:false,providerCalled:false,
    customerMessageSent:false,financialMutation:false,bookingChanged:false,recordChanged:false,
   }};
- } catch {return fail("F11_Quality_INPUT_INVALID");}
+ } catch {return fail("F11_QUALITY_INPUT_INVALID");}
 }
