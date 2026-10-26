@@ -8,6 +8,7 @@ on:
       - "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md"
       - "tests/sql/p02-owner-registration-db-authorization-pg17.sql"
       - "tests/sql/p02-registration-preflight-negative-setup-pg17.sql"
+      - "scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh"
       - "docs/engineering/security/p02-registration-live-readonly-preflight.sql"
       - "tests/db/p02-owner-registration-db-authorization-candidate.test.ts"
       - ".github/workflows/p02-owner-registration-candidate-pg17.yml"
@@ -61,6 +62,17 @@ jobs:
             exit 1
           fi
           grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-after-install-blocked.log
+      - name: P02 two-session registration control and grant revocation race
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: servicedesk_p02_registration_test
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          bash scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh | tee /tmp/p02-registration-rowlocks-receipt.log
+          grep -q 'P02_REGISTRATION_CONCURRENCY_LOCKS_PASS' /tmp/p02-registration-rowlocks-receipt.log
       - name: P02 source preflight fail-closed adversarial proof
         env:
           PGHOST: 127.0.0.1
