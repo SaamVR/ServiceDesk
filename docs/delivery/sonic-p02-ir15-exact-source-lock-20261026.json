@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "kind": "P02_UNMERGED_SOURCE_REHEARSAL_LOCK",
+  "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
+  "sourceHeads": {
+    "868": "797a1284380394491aab032516dc1afb1144ceb6",
+    "869": "e46735ae9f4385cb8521b1d2c22665c800e5815c"
+  },
+  "sourceOnly": true,
+  "realOwnerSessionVerified": false,
+  "migrationAuthorized": false,
+  "migrationInstalled": false,
+  "liveDeploymentAuthorized": false,
+  "fileCount": 14,
+  "files": [
+    {
+      "path": ".github/workflows/p02-owner-registration-candidate-pg17.yml",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "8bf7a39fb4c082767d6731f418e27f49379031ec"
+    },
+    {
+      "path": ".github/workflows/v4-p02-final-owner-readback-source-rc.yml",
+      "sourcePr": 868,
+      "status": "added",
+      "gitBlobSha": "47be92d21515cfa6789fc44fd584f697d52e6363"
+    },
+    {
+      "path": "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "8d1f1318765580750e0e15953e0c062bf16e2709"
+    },
+    {
+      "path": "docs/delivery/sonic-p02-end-readback-source-checkpoint-20261026.md",
+      "sourcePr": 868,
+      "status": "added",
+      "gitBlobSha": "811659b13ecd6074c8104ea0d05b12db7519d472"
+    },
+    {
+      "path": "docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "c94e871adc86be2a5425c84c5061a7d010534d57"
+    },
+    {
+      "path": "docs/engineering/security/p02-registration-live-readonly-preflight.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "9ff78053809e60967d8a992d02bcdab89160d73a"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-mid-audit-authority-revocation.test.mjs",
+      "sourcePr": 868,
+      "status": "added",
+      "gitBlobSha": "cf2835872a65860ec8430340fc69289d9b3e6a6a"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
+      "sourcePr": 868,
+      "status": "modified",
+      "gitBlobSha": "91812d7031461273b4ca1edafd206e07cd6f27b2"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
+      "sourcePr": 868,
+      "status": "modified",
+      "gitBlobSha": "9ecbcc98c356c5362025ac71100cd8db15ec82db"
+    },
+    {
+      "path": "scripts/release/v4-p02-two-owner-readonly-acceptance.mjs",
+      "sourcePr": 868,
+      "status": "modified",
+      "gitBlobSha": "d1085ab25b389b644ec967553e4d0d73d0548309"
+    },
+    {
+      "path": "tests/ai/sonic-p02-end-authority-readback-critic.test.ts",
+      "sourcePr": 868,
+      "status": "added",
+      "gitBlobSha": "0176bfb1f1a4fe8088f99b3fce2a11666fba158d"
+    },
+    {
+      "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "65efc86c056a53d094bf0f0187a2ebd4a95159e5"
+    },
+    {
+      "path": "tests/sql/p02-owner-registration-db-authorization-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "9911be1f416c84e2cce5abbd936b309eb3517134"
+    },
+    {
+      "path": "tests/sql/p02-registration-preflight-negative-setup-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "1ef17c97ef1cff18f4a0a597060691a3e011a03a"
+    }
+  ]
+}
