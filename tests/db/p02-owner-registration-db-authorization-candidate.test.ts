@@ -162,6 +162,12 @@ describe("P02 source-only database-side owner registration authorization", () =>
       expect(post).toContain("('" + aclRight + "'::text)");
     }
     expect(post).toContain("direct protected table or column access");
+    expect(post).toContain("owner_registration_control_mode_check");
+    expect(post).toContain("owner_registration_grants_user_id_fkey");
+    expect(post).toContain("protected table constraint drift");
+    expect(post).toContain("pg_get_constraintdef(c.oid)");
+    expect(negative).toContain("drop constraint owner_registration_control_mode_check");
+
     expect(post).toContain("relrowsecurity");
     expect(post).toContain("9f14160f16e16ffe6ac16f35c3f4557f");
     expect(post).not.toMatch(/(?:create\s+(?:schema|table|function)|insert\s+into|delete\s+from|update\s+\w+\s+set|alter\s+table|drop\s+(?:schema|table|function))\b/i);
@@ -170,7 +176,7 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(negative).toContain("P02_POSTINSTALL_DISPOSABLE_ONLY");
     expect(negative).toContain("P02_POSTINSTALL_NEGATIVE_MATRIX_PASS");
     expect(negative).toContain("P02_POSTINSTALL_WRONG_FAILURE_");
-    for (const tag of ["MODE_OPEN","GRANT_PRESENT","ANON_RPC","PUBLIC_RPC","PRIVATE_SCHEMA","TABLE_DELETE","TABLE_MAINTAIN","COLUMN_SELECT","RLS_OFF","INVOKER","BODY_HASH"]) {
+    for (const tag of ["MODE_OPEN","GRANT_PRESENT","ANON_RPC","PUBLIC_RPC","PRIVATE_SCHEMA","TABLE_DELETE","TABLE_MAINTAIN","COLUMN_SELECT","MODE_CHECK_DROPPED","RLS_OFF","INVOKER","BODY_HASH"]) {
       expect(workflow).toContain("P02_POSTINSTALL_DENIED_" + tag);
       expect(negative).toContain("assert_blocked " + tag);
     }
