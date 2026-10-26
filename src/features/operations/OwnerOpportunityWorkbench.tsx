@@ -77,7 +77,7 @@ function ScopedWorkbench({workspaceSlug,workspaceId,branches}:Props){
   <div className={styles.header}>
    <div><p className={styles.eyebrow}>SONIC / Owner automation / Model-free</p>
     <h2>Find the next useful internal automation</h2>
-    <p>Use real saved queue counts to propose future-event internal reviews. No paid model calls, automatic publication or contact with customers.</p>
+    <p>Use workspace-wide saved queue counts to propose future-event internal reviews. No paid model calls, automatic publication or contact with customers.</p>
    </div><span className={styles.badge}>Owner review only</span>
   </div>
   <div className={styles.controls}>
@@ -95,11 +95,11 @@ function ScopedWorkbench({workspaceSlug,workspaceId,branches}:Props){
   </div>
   <p className={styles.status} role="status" aria-live="polite">{message}</p>
   {result?<div className={styles.results} aria-label="Future automation review suggestions">
-   <p>{result.inspectedPriorities} saved workday priority categories inspected;
+   <p>{result.inspectedPriorities} workspace-wide saved workday priority categories inspected;
     {" "}{result.suggestions.length} supported future-event idea(s). Source truth must be rechecked when saving a real rule.</p>
    {!result.suggestions.length?<p>No supported source signal is positive. Open the verified queues for other work.</p>:null}
    <div className={styles.cards}>{result.suggestions.map(item=><article key={item.key} className={styles.card}>
-    <p className={styles.eyebrow}>{item.severity} internal review · {item.count} saved queue item(s)</p>
+    <p className={styles.eyebrow}>{item.severity} internal review · {item.count} workspace-wide saved queue item(s)</p>
     <h3>{item.title}</h3>
     <p>{item.description}</p>
     <p className={styles.rule}>Future {item.eventType.replaceAll("_"," ")}
@@ -116,7 +116,7 @@ function ScopedWorkbench({workspaceSlug,workspaceId,branches}:Props){
     </p>:null}
    </article>)}</div>
   </div>:null}
-  <p className={styles.disclaimer}>These are future-rule suggestions only; existing queue items are not processed.
+  <p className={styles.disclaimer}>Counts cover the verified workspace, not necessarily the selected branch. Choosing a branch scopes only a future rule preview. These are future-rule suggestions only; existing queue items are not processed.
     Saving or publishing a rule requires the separate owner workflow editor and approvals.
     No current provider delivery, AI response, payment or saved execution is claimed.
     {" "}<Link href={buildStaffModuleHref(workspaceSlug,"automations")}>Return to Automation Studio</Link>
