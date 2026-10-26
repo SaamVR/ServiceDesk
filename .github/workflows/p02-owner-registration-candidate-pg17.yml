@@ -9,6 +9,7 @@ on:
       - "tests/sql/p02-owner-registration-db-authorization-pg17.sql"
       - "tests/sql/p02-registration-preflight-negative-setup-pg17.sql"
       - "scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh"
+      - "scripts/release/tests/v4-p02-registration-operator-first-pg17.sh"
       - "docs/engineering/security/p02-registration-live-readonly-preflight.sql"
       - "tests/db/p02-owner-registration-db-authorization-candidate.test.ts"
       - ".github/workflows/p02-owner-registration-candidate-pg17.yml"
@@ -73,6 +74,20 @@ jobs:
           set -euo pipefail
           bash scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh | tee /tmp/p02-registration-rowlocks-receipt.log
           grep -q 'P02_REGISTRATION_CONCURRENCY_LOCKS_PASS' /tmp/p02-registration-rowlocks-receipt.log
+      - name: P02 operator-first revocation and CLOSED win PG17 race
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: servicedesk_p02_registration_test
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          bash scripts/release/tests/v4-p02-registration-operator-first-pg17.sh | tee /tmp/p02-operator-first-race.log
+          grep -q 'P02_APPROVED_PRECONDITION_PASS' /tmp/p02-operator-first-race.log
+          grep -q 'P02_OPERATOR_CLOSED_WINS_PASS' /tmp/p02-operator-first-race.log
+          grep -q 'P02_OPERATOR_REVOCATION_WINS_PASS' /tmp/p02-operator-first-race.log
+          grep -q 'P02_OPERATOR_FIRST_CONCURRENCY_PASS' /tmp/p02-operator-first-race.log
       - name: P02 source preflight fail-closed adversarial proof
         env:
           PGHOST: 127.0.0.1
