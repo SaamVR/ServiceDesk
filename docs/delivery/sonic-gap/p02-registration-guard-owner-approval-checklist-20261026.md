@@ -19,3 +19,9 @@ The source candidate at docs/engineering/security/p02-owner-registration-db-auth
 Passing candidate CI means CONTRACT_TESTED for the proposed SQL in disposable PostgreSQL, not main database remediation, tenant RLS acceptance, provider verification, staging readiness or commercial production release.
 
 **NEXT_BATCH=P02 — complete the owner-approved DB guard and genuine two-owner onboarding/RLS acceptance before advancing P03.**
+
+## Emergency containment and rollback safety
+
+**Preferred emergency response:** Using a separately authorized privileged, audited operation, set the database `owner_registration_control.mode` back to `CLOSED`. This preserves existing owner workspaces, audit events, and approval records while refusing new workspace creation. The disposable PG17 fixture proves that a signed-in unapproved account remains denied and existing-owner idempotent readback still works.
+
+**Do not revert blindly to the original 0059 RPC**: that would reopen the server-bypass vulnerability. Any structural rollback, such as restoring the prior function definition or dropping protected tables, must be independently approved with a recorded preimage, backups, migration ledger accounting and a non-destructive retention policy; no automatic `DROP ... CASCADE` is authorized. In an incident, keep the protected schema and CLOSED gate until the operator completes a reviewed recovery.

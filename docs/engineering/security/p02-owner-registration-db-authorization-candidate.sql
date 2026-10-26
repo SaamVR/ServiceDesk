@@ -110,7 +110,7 @@ begin
         select 1 from servicedesk_security.owner_registration_grants g
         where g.user_id = v_actor
           and g.revoked_at is null
-          and (g.expires_at is null or g.expires_at > pg_catalog.now())
+          and g.expires_at > pg_catalog.now()
       ))
     )
   ) then

@@ -37,7 +37,8 @@ values
   ('aaaaaaaa-0000-4000-8000-000000000001', now(), false),
   ('bbbbbbbb-0000-4000-8000-000000000002', now(), false),
   ('cccccccc-0000-4000-8000-000000000003', null, false),
-  ('dddddddd-0000-4000-8000-000000000004', now(), false);
+  ('dddddddd-0000-4000-8000-000000000004', now(), false),
+  ('eeeeeeee-0000-4000-8000-000000000005', now(), false);
 
 \i docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql
 
@@ -62,6 +63,50 @@ begin
     raise exception 'New registration did not default to CLOSED';
   end if;
 end $catalog$;
+
+-- SQL-layer client abuse tests: no UI middleware is trusted here.
+-- Anonymous direct RPC execution must be a permission error, not an SQL call.
+begin;
+set local role anon;
+do $anon_rpc$
+declare result jsonb;
+begin
+  begin
+    result:=public.servicedesk_register_owner_workspace(
+      'Synthetic Anonymous','anonymous-owner','UTC','USD');
+    raise exception 'Anonymous can call registration RPC';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $anon_rpc$;
+rollback;
+
+-- An authenticated account cannot turn its own QA switch to PUBLIC or grant
+-- itself registration. Check actual SQL permissions, not only catalog flags.
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='eeeeeeee-0000-4000-8000-000000000005';
+do $client_tamper$
+begin
+  begin
+    update servicedesk_security.owner_registration_control
+      set mode='PUBLIC';
+    raise exception 'Authenticated client changed protected registration mode';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    insert into servicedesk_security.owner_registration_grants(
+      user_id,expires_at
+    ) values(
+      'eeeeeeee-0000-4000-8000-000000000005',now()+interval '1 hour'
+    );
+    raise exception 'Authenticated client approved its own registration';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $client_tamper$;
+rollback;
 
 -- A/B both denied in CLOSED, with zero workspace/audit writes.
 begin;
@@ -260,4 +305,48 @@ begin
     raise exception 'Wrong post-PUBLIC synthetic workspace count';
   end if;
 end $final$;
+
+-- Emergency containment is deliberately non-destructive: revert the
+-- privileged control MODE to CLOSED without restoring the unsafe old RPC or
+-- deleting owner grants. A new, verified actor must be denied immediately.
+update servicedesk_security.owner_registration_control set mode='CLOSED';
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='eeeeeeee-0000-4000-8000-000000000005';
+do $kill_switch$
+declare result jsonb;
+begin
+  result:=public.servicedesk_register_owner_workspace(
+    'Synthetic E','qa-owner-e','UTC','USD');
+  if result->>'code' is distinct from 'REGISTRATION_NOT_AUTHORIZED' then
+    raise exception 'Emergency CLOSED mode failed: %', result;
+  end if;
+end $kill_switch$;
+rollback;
+
+-- Already registered owners still have immutable existing-owner readback;
+-- source-controlled CLOSED mode must never delete their saved workspaces.
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='aaaaaaaa-0000-4000-8000-000000000001';
+do $existing_after_kill$
+declare result jsonb;
+begin
+  result:=public.servicedesk_register_owner_workspace(
+    'Synthetic Alternate','new-mutable-slug','UTC','USD');
+  if result->>'existing' is distinct from 'true'
+    or result->>'slug' is distinct from 'qa-owner-a' then
+    raise exception 'Emergency switch corrupted existing owner readback';
+  end if;
+end $existing_after_kill$;
+rollback;
+
+do $post_kill_integrity$
+begin
+  if (select count(*) from public.workspaces) <> 3
+    or (select mode from servicedesk_security.owner_registration_control)
+       is distinct from 'CLOSED' then
+    raise exception 'Emergency containment changed saved workspaces/control';
+  end if;
+end $post_kill_integrity$;
 select 'P02_DISPOSABLE_PG17_REGISTRATION_DB_AUTHORIZATION_PASS' as result;
