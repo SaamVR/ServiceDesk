@@ -20,7 +20,7 @@ describe("F13 persisted workflow operator guidance",()=>{
   denied(r);
  });
  it("surfaces saved failure only as manual review, never auto retry",()=>{
-  for(const data of [{failedCount:2},{state:"PARTIAL_FAILED"},{state:"FAILED"}]){
+  for(const data of [{failedCount:2},{state:"PARTIAL_FAILED"}]){
    const x=run(data);
    expect(x).toMatchObject({disposition:"REVIEW_FAILURE",nextStep:"VERIFY_SOURCE_AND_RULE"});
    denied(x);
@@ -32,7 +32,7 @@ describe("F13 persisted workflow operator guidance",()=>{
   denied(x);
  });
  it("processing and pending are not called failures or overdue",()=>{
-  for(const state of ["ACTIONS_PENDING","PENDING"]){
+  for(const state of ["ACTIONS_PENDING"]){
    const x=run({state});
    expect(x).toMatchObject({disposition:"PROCESSING_ONLY",nextStep:"WAIT_FOR_SAVED_OUTCOME"});
    expect(x.detail).not.toMatch(/overdue|late|deadline missed/i);
@@ -47,7 +47,8 @@ describe("F13 persisted workflow operator guidance",()=>{
  });
  it("fails conservatively on damaged or injected numeric states",()=>{
   for(const fields of [{failedCount:-1},{pendingCount:1.5},{approvalCount:999999},
-   {state:"SUCCESS_ALL_CUSTOMERS_NOTIFIED"},{ambiguousActionSlots:NaN}]){
+   {state:"SUCCESS_ALL_CUSTOMERS_NOTIFIED"},{state:"FAILED"},{state:"PENDING"},
+   {state:"PREVIEWED"},{ambiguousActionSlots:NaN}]){
    const x=run(fields);
    expect(x.disposition).toBe("HOLD_AND_RECONCILE");denied(x);
   }

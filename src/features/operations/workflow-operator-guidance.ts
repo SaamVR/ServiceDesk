@@ -51,12 +51,12 @@ export function guideRecordedWorkflowIntervention(
  const count=[run?.ambiguousActionSlots,run?.failedCount,run?.approvalCount,run?.pendingCount];
  const invalid=!run||count.some(v=>typeof v!=="number"||
   !Number.isSafeInteger(v)||v<0||v>2000)||
-  !["COMPLETED","SKIPPED","ACTIONS_PENDING","PARTIAL_FAILED","FAILED","PENDING"].includes(run.state);
+  !["COMPLETED","PREVIEWED","SKIPPED","ACTIONS_PENDING","PARTIAL_FAILED"].includes(run.state);
  const disposition:WorkflowOperatorDisposition=invalid?"HOLD_AND_RECONCILE":
-  run.ambiguousActionSlots>0?"HOLD_AND_RECONCILE":
-  run.failedCount>0||run.state==="PARTIAL_FAILED"||run.state==="FAILED"?"REVIEW_FAILURE":
+  (run.ambiguousActionSlots>0||run.state==="PREVIEWED")?"HOLD_AND_RECONCILE":
+  run.failedCount>0||run.state==="PARTIAL_FAILED"?"REVIEW_FAILURE":
   run.approvalCount>0?"OWNER_APPROVAL_REQUIRED":
-  run.pendingCount>0||run.state==="ACTIONS_PENDING"||run.state==="PENDING"?"PROCESSING_ONLY":
+  run.pendingCount>0||run.state==="ACTIONS_PENDING"?"PROCESSING_ONLY":
   "NO_INTERVENTION_VERIFIED";
  const decision=fixed[disposition];
  return {...decision,disposition,
