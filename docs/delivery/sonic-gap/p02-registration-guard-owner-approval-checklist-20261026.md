@@ -43,3 +43,9 @@ Before any separately approved DDL, a designated DBA can execute `docs/engineeri
 ## SECURITY DEFINER search_path preflight condition
 
 The existing owner-registration function runs as `postgres` with a `pg_catalog, public, pg_temp` search path. Live read-only privilege checks on 2026-10-26 established `anon` and `authenticated` both **lack** `CREATE` on the `public` schema. The preflight now rejects any future `CREATE` grant to either API role, preventing installation from proceeding on a drifted schema-permission boundary without explicit DBA review. It does not authorize broad privilege changes; in particular, do not grant API roles `CREATE` to repair an installer failure.
+
+## Additional fail-closed preflight adversarial proof — disposable PG17
+
+The existing after-install negative check is supplemented with an isolated disposable PostgreSQL 17 database reconstructed from 0059 plus 0065. The gate must first PASS on the untouched baseline; separately granting anonymous EXECUTE, removing SECURITY DEFINER, or altering the registration function source fingerprint must each make the exact read-only preflight exit nonzero with `P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED`. All temporary drift is reversed and the final baseline must PASS again. The previously added public-schema CREATE-permission deny checks remain unchanged. This guards against a misleading green test caused by a permanently damaged fixture.
+
+No main database SQL, user/account provisioning, deployment or data mutation is authorized. Independent DBA verification of the exact live preimage, complete privileges, migration ledger and rollback is required immediately before any separately approved installation.
