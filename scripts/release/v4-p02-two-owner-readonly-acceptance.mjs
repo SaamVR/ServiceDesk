@@ -13,6 +13,7 @@
  *  SD_P02_OWNER_A_JWT=<real signed-in owner A JWT>
  *  SD_P02_OWNER_B_JWT=<real signed-in owner B JWT>
  *  SD_P02_OWNER_A_WORKSPACE_ID=<uuid> ; SD_P02_OWNER_B_WORKSPACE_ID=<uuid>
+ *  SD_P02_OWNER_A_REQUEST_ID=<uuid> ; SD_P02_OWNER_B_REQUEST_ID=<uuid>
  * Supabase host is pinned to the previously owner-approved main ServiceDesk project.
  */
 import { fileURLToPath } from "node:url";
@@ -40,6 +41,8 @@ export function validateInputs(env) {
     const jwt = env["SD_P02_OWNER_" + tag + "_JWT"];
     const id = env["SD_P02_OWNER_" + tag + "_WORKSPACE_ID"];
     if (!UUID.test(id || "")) throw Error("EXPECTED_WORKSPACE_ID_INVALID");
+    const requestId = env["SD_P02_OWNER_" + tag + "_REQUEST_ID"];
+    if (!UUID.test(requestId || "")) throw Error("EXPECTED_SAVED_REQUEST_FIXTURE_REQUIRED");
     const claims = jwtClaims(jwt);
     if (claims.role !== "authenticated" || !UUID.test(claims.sub || ""))
       throw Error("SIGNED_IN_OWNER_SESSION_REQUIRED");
@@ -48,10 +51,11 @@ export function validateInputs(env) {
       throw Error("EXPIRED_OR_UNVERIFIABLE_OWNER_JWT");
     if (claims.iss !== ORIGIN + "/auth/v1")
       throw Error("WRONG_SUPABASE_PROJECT_JWT");
-    return { tag, token: jwt, expectedWorkspace: id, subject: claims.sub };
+    return { tag, token: jwt, expectedWorkspace: id, expectedRequest: requestId, subject: claims.sub };
   });
   if (entries[0].subject === entries[1].subject ||
-      entries[0].expectedWorkspace === entries[1].expectedWorkspace)
+      entries[0].expectedWorkspace === entries[1].expectedWorkspace ||
+      entries[0].expectedRequest === entries[1].expectedRequest)
     throw Error("OWNERS_AND_WORKSPACES_MUST_BE_DIFFERENT");
   return { key, entries };
 }
@@ -86,7 +90,7 @@ export async function runTwoOwnerReadOnlyAudit(
     // Count-only checks are not a proof of OWNER authority: a STAFF row,
     // stale membership or mis-scoped response could otherwise pass.
     // Independently validate the row identity *and* the verified JWT subject.
-    const scoped = async (table, workspaceId) => {
+    const scoped = async (table, workspaceId, requestId) => {
       const projection = {
         workspaces: "id",
         memberships: "workspace_id,user_id,role,status",
@@ -94,12 +98,15 @@ export async function runTwoOwnerReadOnlyAudit(
         workspace_branches: "id,workspace_id,is_default,active",
       }[table];
       if (!projection) throw Error("UNAPPROVED_TABLE");
+      if (table === "requests" && !UUID.test(requestId || ""))
+        throw Error("EXPECTED_SAVED_REQUEST_FIXTURE_REQUIRED");
       const filter = new URLSearchParams({
         select: projection,
         [table === "workspaces" ? "id" : "workspace_id"]: "eq." + workspaceId,
         ...(table === "memberships" ? {
           user_id: "eq." + owner.subject, role: "eq.OWNER", status: "eq.ACTIVE",
         } : {}),
+        ...(table === "requests" ? { id: "eq." + requestId } : {}),
         ...(table === "workspace_branches" ? {
           is_default: "eq.true", active: "eq.true",
         } : {}),
@@ -119,7 +126,7 @@ export async function runTwoOwnerReadOnlyAudit(
              row.role !== "OWNER" || row.status !== "ACTIVE"))
           throw Error("OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED");
         if (table === "requests" &&
-            (row.workspace_id !== workspaceId || !UUID.test(row.id ?? "")))
+            (row.workspace_id !== workspaceId || row.id !== requestId))
           throw Error("DATABASE_ROW_SCOPE_UNVERIFIED");
         if (table === "workspace_branches" &&
             (row.workspace_id !== workspaceId || !UUID.test(row.id ?? "") ||
@@ -129,9 +136,12 @@ export async function runTwoOwnerReadOnlyAudit(
       return data;
     };
     for (const table of ["workspaces", "memberships", "requests"]) {
-      const ownRows = await scoped(table, owner.expectedWorkspace);
-      const foreignRows = await scoped(table, foreign.expectedWorkspace);
+      const ownRows = await scoped(table, owner.expectedWorkspace, owner.expectedRequest);
+      const foreignRows = await scoped(table, foreign.expectedWorkspace, foreign.expectedRequest);
       // A second or duplicated owner membership is not an unambiguous proof.
+      // Foreign denial is not meaningful without a saved row that its owner can read.
+      if (table === "requests" && ownRows.length !== 1)
+        throw Error("EXPECTED_OWNER_REQUEST_FIXTURE_MISSING");
       if (table !== "requests" && ownRows.length !== 1)
         throw Error("EXPECTED_OWNER_ACCESS_MISSING_" + table.toUpperCase());
       if (foreignRows.length !== 0)

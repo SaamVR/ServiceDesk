@@ -10,6 +10,8 @@ const workA = "11111111-1111-4111-8111-111111111111";
 const workB = "22222222-2222-4222-8222-222222222222";
 const branchA = "33333333-3333-4333-8333-333333333333";
 const branchB = "44444444-4444-4444-8444-444444444444";
+const requestA = "55555555-5555-4555-8555-555555555555";
+const requestB = "66666666-6666-4666-8666-666666666666";
 
 function token(sub, role = "authenticated", iss = ORIGIN + "/auth/v1") {
   const claims = { sub, role, iss, exp: Math.floor(Date.now() / 1000) + 1800 };
@@ -26,6 +28,8 @@ const env = {
   SD_P02_OWNER_B_JWT: token(userB),
   SD_P02_OWNER_A_WORKSPACE_ID: workA,
   SD_P02_OWNER_B_WORKSPACE_ID: workB,
+  SD_P02_OWNER_A_REQUEST_ID: requestA,
+  SD_P02_OWNER_B_REQUEST_ID: requestB,
 };
 function mockFetch(options = {}) {
   const calls = [];
@@ -46,6 +50,8 @@ function mockFetch(options = {}) {
       const name = url.pathname.split("/").at(-1);
       assert.ok(["workspaces", "memberships", "requests", "workspace_branches"].includes(name));
       const id = (url.searchParams.get(name === "workspaces" ? "id" : "workspace_id") || "").slice(3);
+      if (name === "requests")
+        assert.equal(url.searchParams.get("id"),"eq."+(id===workA?requestA:requestB));
       if (name === "memberships") {
         assert.equal(url.searchParams.get("user_id"),"eq." + (owner === "A" ? userA : userB));
         assert.equal(url.searchParams.get("role"),"eq.OWNER");
@@ -65,7 +71,7 @@ function mockFetch(options = {}) {
         role:options.wrongRole?"CREW":"OWNER",
         status:options.inactiveOwner?"INACTIVE":"ACTIVE",
       }];
-      else if(name==="requests") data=[{id:branch,workspace_id:id}];
+      else if(name==="requests") data=[{id:id===workA?requestA:requestB,workspace_id:id}];
       else data=[{id:id===workA?branchA:branchB,workspace_id:id,
         is_default:true,active:true}];
     }
@@ -103,9 +109,13 @@ test("proves two different owners' own visibility, foreign denial and own-only b
   assert.equal(calls.filter(x => x.method === "GET").length, 20);
 });
 
-test("does not require seeded requests to prove owner workspace isolation", async () => {
+test("rejects empty request fixtures rather than declaring false-positive request isolation", async () => {
   const { fetcher } = mockFetch();
-  assert.equal((await runTwoOwnerReadOnlyAudit(env, fetcher)).result, "PASS");
+  await assert.rejects(runTwoOwnerReadOnlyAudit(env, fetcher), /EXPECTED_OWNER_REQUEST_FIXTURE_MISSING/);
+});
+test("requires distinct known saved request IDs for two real owner scopes", () => {
+  assert.throws(() => validateInputs({...env, SD_P02_OWNER_A_REQUEST_ID: ""}), /EXPECTED_SAVED_REQUEST_FIXTURE_REQUIRED/);
+  assert.throws(() => validateInputs({...env, SD_P02_OWNER_A_REQUEST_ID: requestB}), /OWNERS_AND_WORKSPACES_MUST_BE_DIFFERENT/);
 });
 
 test("fails when a foreign tenant row is visible", async () => {
@@ -117,7 +127,7 @@ test("fails when a foreign tenant row is visible", async () => {
 
 test("fails on default-branch RPC disclosure, even if table RLS is correctly configured", async () => {
   await assert.rejects(
-    runTwoOwnerReadOnlyAudit(env, mockFetch({ leakForeignBranch: true }).fetcher),
+    runTwoOwnerReadOnlyAudit(env, mockFetch({ leakForeignBranch: true, savedRequest: true }).fetcher),
     /FOREIGN_DEFAULT_BRANCH_DISCLOSURE/,
   );
 });

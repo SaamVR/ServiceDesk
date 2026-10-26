@@ -15,6 +15,14 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(s).toContain("OWNER_AUTHORITY_CHANGED_DURING_AUDIT");
   expect(s).toContain("OWNER_SESSION_EXPIRED_DURING_AUDIT");
   expect(s).toContain("OWNERS_AND_WORKSPACES_MUST_BE_DIFFERENT");
+  // An empty foreign request result alone is meaningless unless the owner
+  // can read a specifically identified saved request in its own tenant.
+  expect(s).toContain("EXPECTED_SAVED_REQUEST_FIXTURE_REQUIRED");
+  expect(s).toContain("EXPECTED_OWNER_REQUEST_FIXTURE_MISSING");
+  expect(s).toContain("entries[0].expectedRequest === entries[1].expectedRequest");
+  expect(s).toContain('foreign.expectedWorkspace, foreign.expectedRequest');
+  expect(s).toContain('row.id !== requestId');
+
  });
  it("keeps privileged registration schema unapplied and deny by default",()=>{
   const candidate=get("docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql");
