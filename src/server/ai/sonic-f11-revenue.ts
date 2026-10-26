@@ -3,11 +3,11 @@ import {trustedQuoteInstant} from "@/features/operations/quote-validity-clock";
 
 /** F11 revenue review proposals from caller-claimed saved projections.
  * Never persist, schedule, notify, charge, dispatch or claim a provider receipt. */
-export const SONIC_F11_Revenue_KINDS=["QUOTE_EXPIRY_REVIEW","INVOICE_OVERDUE_REVIEW"] as const;
-export type SonicF11RevenueKind=typeof SONIC_F11_Revenue_KINDS[number];
+export const SONIC_F11_REVENUE_KINDS=["QUOTE_EXPIRY_REVIEW","INVOICE_OVERDUE_REVIEW"] as const;
+export type SonicF11RevenueKind=typeof SONIC_F11_REVENUE_KINDS[number];
 export type SonicF11RevenueResult=
- | {ok:false;code:"F11_Revenue_INPUT_INVALID"|"F11_Revenue_OWNER_REQUIRED"|
-   "F11_Revenue_SCOPE_MISMATCH"|"F11_Revenue_STALE"|"F11_Revenue_EVIDENCE_INVALID"}
+ | {ok:false;code:"F11_REVENUE_INPUT_INVALID"|"F11_REVENUE_OWNER_REQUIRED"|
+   "F11_REVENUE_SCOPE_MISMATCH"|"F11_REVENUE_STALE"|"F11_REVENUE_EVIDENCE_INVALID"}
  | {ok:true;value:{
    state:"F11_UNPERSISTED_OWNER_REVIEW";kind:SonicF11RevenueKind;
    workspaceId:string;branchId:string;sourceId:string;sourceVersion:number;
@@ -51,17 +51,17 @@ export function planSonicF11Revenue(input:unknown):SonicF11RevenueResult{
   if(!exact(input,["actor","workspaceId","branchId","asOf","expectedVersion","record"])||
    !exact(input.actor,["workspaceId","role"])||!id(input.workspaceId)||!id(input.branchId)||
    !id(input.actor.workspaceId)||!vers(input.expectedVersion))
-   return fail("F11_Revenue_INPUT_INVALID");
+   return fail("F11_REVENUE_INPUT_INVALID");
   const now=trustedQuoteInstant(input.asOf);
-  if(now===null)return fail("F11_Revenue_INPUT_INVALID");
+  if(now===null)return fail("F11_REVENUE_INPUT_INVALID");
   if(input.actor.role!=="OWNER"||input.actor.workspaceId!==input.workspaceId)
-   return fail("F11_Revenue_OWNER_REQUIRED");
+   return fail("F11_REVENUE_OWNER_REQUIRED");
   const r=input.record,kind=ownedKind(r);
   if(!kind||!exact(r,[...common,...extras[kind]])||!id(r.workspaceId)||!id(r.branchId)||
-   !id(r.sourceId)||!vers(r.sourceVersion))return fail("F11_Revenue_INPUT_INVALID");
+   !id(r.sourceId)||!vers(r.sourceVersion))return fail("F11_REVENUE_INPUT_INVALID");
   if(r.workspaceId!==input.workspaceId||r.branchId!==input.branchId)
-   return fail("F11_Revenue_SCOPE_MISMATCH");
-  if(r.sourceVersion!==input.expectedVersion)return fail("F11_Revenue_STALE");
+   return fail("F11_REVENUE_SCOPE_MISMATCH");
+  if(r.sourceVersion!==input.expectedVersion)return fail("F11_REVENUE_STALE");
   let due:number|null=null;
   if(kind==="QUOTE_EXPIRY_REVIEW"){
    if(r.status!=="SENT"||r.acceptedAt!==null||trustedQuoteInstant(r.expiresAt)===null)
@@ -75,10 +75,10 @@ export function planSonicF11Revenue(input:unknown):SonicF11RevenueResult{
    due=trustedQuoteInstant(r.dueAt);
   }
   if(due===null||due>now+365*86400_000)return fail("F11_REVENUE_EVIDENCE_INVALID");
-  if(due===null||!Number.isFinite(due))return fail("F11_Revenue_EVIDENCE_INVALID");
+  if(due===null||!Number.isFinite(due))return fail("F11_REVENUE_EVIDENCE_INVALID");
   const pending=due>now;
   const fingerprint=pending?null:createHash("sha256").update(JSON.stringify([
-   "F11_Revenue_UNPERSISTED_NOT_EXECUTION",kind,r.workspaceId,r.branchId,r.sourceId,
+   "F11_REVENUE_UNPERSISTED_NOT_EXECUTION",kind,r.workspaceId,r.branchId,r.sourceId,
    r.sourceVersion,...extras[kind].map(field=>r[field]),
   ])).digest("hex");
   return {ok:true,value:{
@@ -91,5 +91,5 @@ export function planSonicF11Revenue(input:unknown):SonicF11RevenueResult{
    saved:false,scheduled:false,executed:false,providerCalled:false,
    customerMessageSent:false,financialMutation:false,bookingChanged:false,recordChanged:false,
   }};
- } catch {return fail("F11_Revenue_INPUT_INVALID");}
+ } catch {return fail("F11_REVENUE_INPUT_INVALID");}
 }
