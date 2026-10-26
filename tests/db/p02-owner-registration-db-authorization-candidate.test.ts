@@ -67,7 +67,13 @@ describe("P02 source-only database-side owner registration authorization", () =>
     const b = newFunction.indexOf(guardEnd);
     expect(a).toBeGreaterThanOrEqual(0);
     expect(b).toBeGreaterThan(a);
-    expect(newFunction.slice(0, a) + newFunction.slice(b)).toBe(oldFunction);
+    // Only two local scalar state variables may be added outside the guard.
+    // The prior registration implementation must otherwise remain byte-exact.
+    const restored = (newFunction.slice(0, a) + newFunction.slice(b)).replace(
+      "  v_registration_mode text;\\n  v_qa_granted boolean := false;\\n",
+      "",
+    );
+    expect(restored).toBe(oldFunction);
     expect(a).toBeGreaterThan(newFunction.indexOf("if (v_existing_slug is not null)"));
   });
 
