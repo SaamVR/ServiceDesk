@@ -2,7 +2,7 @@
 
 Issue [#856](https://github.com/SaamVR/ServiceDesk/issues/856) · Master [#808](https://github.com/SaamVR/ServiceDesk/issues/808) · Original 72-workflow [#173](https://github.com/SaamVR/ServiceDesk/issues/173). Feature-only authority, Production owns integration/fixes/release.
 
-Base canonical `1003075d1bfcefb6415d6c9a4bdda9c57a0546ff`, distinct from F08 draft #841, F09 draft #852 and F10 draft #854. No other repo/source path overwritten. Three source lanes and independent tests, one separate crosslane critic test lane, one governance lane. Draft integrated PR for review only.
+Original lane source base `1003075d1bfcefb6415d6c9a4bdda9c57a0546ff`; coordinator integration parent `d5e86b369c46384278be8006812a3e27c41da21e` after P02 Vercel guard merge, distinct from F08 draft #841, F09 draft #852 and F10 draft #854. No other repo/source path overwritten. Three source lanes and independent tests, one separate crosslane critic test lane, one governance lane. Draft integrated PR for review only.
 
 ## Six new source policies
 
