@@ -21,20 +21,20 @@ describe("P02 IR15 immutable two-source integration provenance",()=>{
    schemaVersion:1,kind:"P02_UNMERGED_SOURCE_REHEARSAL_LOCK",
    canonicalBase:"cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
    sourceOnly:true,realOwnerSessionVerified:false,migrationAuthorized:false,
-   migrationInstalled:false,liveDeploymentAuthorized:false,fileCount:25,
+   migrationInstalled:false,liveDeploymentAuthorized:false,fileCount:28,
    sourceHeads:{
     868:"9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    869:"b6fabee30d823e56356c1c40eb59bf404c857dbf",
+    869:"117f6365197a4d07ba774f3241820697ee8ddf6a",
     875:"908f3a731cc1eab348ee4f07f4f858fc18becbd9",
    },
   });
  });
- it("has exactly twenty-five disjoint source paths, with five intentional modifications",()=>{
-  expect(lock.files).toHaveLength(25);
-  // Three source drafts contain 7 + 13 + 5 files; all imported Git blobs
+ it("has exactly twenty-eight disjoint source paths, with five intentional modifications",()=>{
+  expect(lock.files).toHaveLength(28);
+  // Three source drafts contain 7 + 16 + 5 files; all imported Git blobs
   // must remain unique and byte-for-byte identical to their reviewed heads.
-  expect(new Set(lock.files.map(x=>x.path)).size).toBe(25);
-  expect(lock.files.filter(x=>x.status==="added")).toHaveLength(20);
+  expect(new Set(lock.files.map(x=>x.path)).size).toBe(28);
+  expect(lock.files.filter(x=>x.status==="added")).toHaveLength(23);
   expect(lock.files.filter(x=>x.status==="modified").map(x=>x.path).sort()).toEqual([
    "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
    "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
@@ -43,7 +43,7 @@ describe("P02 IR15 immutable two-source integration provenance",()=>{
    "src/app/auth/create-workspace/page.tsx",
   ]);
   expect(lock.files.filter(x=>x.sourcePr===868)).toHaveLength(7);
-  expect(lock.files.filter(x=>x.sourcePr===869)).toHaveLength(13);
+  expect(lock.files.filter(x=>x.sourcePr===869)).toHaveLength(16);
   expect(lock.files.filter(x=>x.sourcePr===875)).toHaveLength(5);
  });
  it("compares every imported file with its exact Git object identity",()=>{
