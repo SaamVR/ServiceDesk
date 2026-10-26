@@ -87,9 +87,9 @@ test("requires two scoped active owners, a saved default branch, and separately 
  assert.equal(result.result,"PASS");
  assert.equal(result.noWrites,true);
  assert.equal(result.checks.length,2);
- assert.equal(h.calls.length,20);
+ assert.equal(h.calls.length,24);
  assert.equal(h.calls.filter(x=>x.method==="POST").length,4);
- assert.equal(h.calls.filter(x=>x.method==="GET").length,16);
+ assert.equal(h.calls.filter(x=>x.method==="GET").length,20);
  assert.deepEqual(new Set(h.calls.map(x=>x.method)),new Set(["POST","GET"]));
 });
 for(const [fault,expected] of [
