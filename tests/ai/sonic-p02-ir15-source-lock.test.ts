@@ -21,24 +21,24 @@ describe("P02 IR15 immutable two-source integration provenance",()=>{
    schemaVersion:1,kind:"P02_UNMERGED_SOURCE_REHEARSAL_LOCK",
    canonicalBase:"cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
    sourceOnly:true,realOwnerSessionVerified:false,migrationAuthorized:false,
-   migrationInstalled:false,liveDeploymentAuthorized:false,fileCount:14,
+   migrationInstalled:false,liveDeploymentAuthorized:false,fileCount:15,
    sourceHeads:{
     868:"9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    869:"e46735ae9f4385cb8521b1d2c22665c800e5815c",
+    869:"3030152a7a7d161230a513e2f73a3c4cc0f67b7b",
    },
   });
  });
- it("has exactly fourteen disjoint source paths, with three intentional modifications",()=>{
-  expect(lock.files).toHaveLength(14);
+ it("has exactly fifteen disjoint source paths, with three intentional modifications",()=>{
+  expect(lock.files).toHaveLength(15);
   expect(new Set(lock.files.map(x=>x.path)).size).toBe(14);
-  expect(lock.files.filter(x=>x.status==="added")).toHaveLength(11);
+  expect(lock.files.filter(x=>x.status==="added")).toHaveLength(12);
   expect(lock.files.filter(x=>x.status==="modified").map(x=>x.path).sort()).toEqual([
    "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
    "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
    "scripts/release/v4-p02-two-owner-readonly-acceptance.mjs",
   ]);
   expect(lock.files.filter(x=>x.sourcePr===868)).toHaveLength(7);
-  expect(lock.files.filter(x=>x.sourcePr===869)).toHaveLength(7);
+  expect(lock.files.filter(x=>x.sourcePr===869)).toHaveLength(8);
  });
  it("compares every imported file with its exact Git object identity",()=>{
   for(const file of lock.files){

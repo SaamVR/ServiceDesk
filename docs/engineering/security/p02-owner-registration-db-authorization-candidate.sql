@@ -54,6 +54,8 @@ declare
   v_workspace uuid;
   v_existing_slug text;
   v_branch uuid;
+  v_registration_mode text;
+  v_qa_granted boolean := false;
 begin
   -- Do not trust user_metadata, caller IDs, client-owned roles or actor IDs.
   if v_actor is null or not exists (
@@ -102,20 +104,29 @@ begin
   -- authorization. Server-side Next flags/QA email allowlists cannot protect
   -- the direct PostgREST RPC. Control is owned by the database.
   -- Existing owner idempotent readback above intentionally stays available.
-  if not exists (
-    select 1 from servicedesk_security.owner_registration_control c
-    where c.singleton and (
-      c.mode = 'PUBLIC'
-      or (c.mode = 'QA_ONLY' and exists (
-        select 1 from servicedesk_security.owner_registration_grants g
-        where g.user_id = v_actor
-          and g.revoked_at is null
-          -- A QA grant expires at actual invocation time, even inside a
-          -- long-running transaction: now() is fixed at transaction start.
-          and g.expires_at > pg_catalog.clock_timestamp()
-      ))
-    )
-  ) then
+  -- Serialize new-owner registration with operator control changes.
+  -- FOR SHARE allows concurrent approved readers but prevents an operator
+  -- UPDATE/DELETE of the exact mode or QA grant row from committing until
+  -- this transaction finishes. No lock can retroactively cancel a transaction
+  -- already admitted. The mode is always locked before a grant row.
+  select c.mode into v_registration_mode
+  from servicedesk_security.owner_registration_control c
+  where c.singleton
+  for share;
+
+  if v_registration_mode = 'QA_ONLY' then
+    select true into v_qa_granted
+    from servicedesk_security.owner_registration_grants g
+    where g.user_id = v_actor
+      and g.revoked_at is null
+      -- Enforce the deadline at actual registration time, not txn BEGIN.
+      and g.expires_at > pg_catalog.clock_timestamp()
+    for share;
+  end if;
+
+  if v_registration_mode is distinct from 'PUBLIC'
+     and not (v_registration_mode = 'QA_ONLY' and coalesce(v_qa_granted,false))
+  then
     return jsonb_build_object('ok', false, 'code', 'REGISTRATION_NOT_AUTHORIZED');
   end if;
 

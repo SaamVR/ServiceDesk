@@ -22,6 +22,18 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(candidate).toContain("g.user_id = v_actor");
     expect(candidate).toContain("g.revoked_at is null");
     expect(candidate).toContain("g.expires_at > pg_catalog.clock_timestamp()");
+    // An operator CLOSED/QA grant revocation must serialize behind the
+    // already-admitted registration transaction, not race the insert/audit.
+    expect(candidate).toContain("select c.mode into v_registration_mode");
+    expect(candidate).toContain("select true into v_qa_granted");
+    const gate = candidate.slice(candidate.indexOf("select c.mode into v_registration_mode"),
+      candidate.indexOf("if exists (select 1 from public.workspaces where slug = v_slug)"));
+    expect((gate.match(/for share;/g) ?? [])).toHaveLength(2);
+    expect(gate.indexOf("select true into v_qa_granted"))
+      .toBeGreaterThan(gate.indexOf("select c.mode into v_registration_mode"));
+    expect(gate).toContain("v_registration_mode is distinct from 'PUBLIC'");
+    expect(gate).toContain("coalesce(v_qa_granted,false)");
+
     expect(candidate).not.toContain("g.expires_at > pg_catalog.now()");
     expect(candidate).not.toContain("g.expires_at is null");
     expect(candidate).toContain("expires_at timestamptz not null");
@@ -55,7 +67,13 @@ describe("P02 source-only database-side owner registration authorization", () =>
     const b = newFunction.indexOf(guardEnd);
     expect(a).toBeGreaterThanOrEqual(0);
     expect(b).toBeGreaterThan(a);
-    expect(newFunction.slice(0, a) + newFunction.slice(b)).toBe(oldFunction);
+    // Only two local scalar state variables may be added outside the guard.
+    // The prior registration implementation must otherwise remain byte-exact.
+    const restored = (newFunction.slice(0, a) + newFunction.slice(b)).replace(
+      "  v_registration_mode text;\n  v_qa_granted boolean := false;\n",
+      "",
+    );
+    expect(restored).toBe(oldFunction);
     expect(a).toBeGreaterThan(newFunction.indexOf("if (v_existing_slug is not null)"));
   });
 
@@ -89,6 +107,20 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(workflow).toContain("P02_REGISTRATION_READONLY_PREIMAGE_PASS");
     expect(workflow).toContain("P02_DISPOSABLE_PG17_REGISTRATION_DB_AUTHORIZATION_PASS");
     expect(workflow).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    // The shell fixture uses real independent PostgreSQL transactions.
+    // A single mocked SELECT or static SQL check would not prove locking.
+    const concurrency = read("scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh");
+    expect(workflow).toContain("P02 two-session registration control and grant revocation race");
+    expect(workflow).toContain("v4-p02-registration-concurrent-revocation-pg17.sh");
+    expect(workflow).toContain("P02_REGISTRATION_CONCURRENCY_LOCKS_PASS");
+    expect(concurrency).toContain('P02_CONCURRENCY_FIXTURE_ONLY');
+    expect(concurrency).toContain('P02_REGISTRATION_TX_OPEN');
+    expect(concurrency).toContain("canceling statement due to lock timeout");
+    expect(concurrency).toContain("P02_CONTROL_KILL_SWITCH_WRITE_RACED_IN_FLIGHT_REGISTRATION");
+    expect(concurrency).toContain("P02_QA_GRANT_REVOCATION_RACED_IN_FLIGHT_REGISTRATION");
+    expect(concurrency).toContain("rollback;");
+    expect(concurrency).toContain("P02_REGISTRATION_CONCURRENCY_LOCKS_PASS");
+
     expect(workflow).toContain("P02 source preflight fail-closed adversarial proof");
     expect(workflow).toContain("tests/sql/p02-registration-preflight-negative-setup-pg17.sql");
     expect(workflow).toContain("preflight accepted anonymous registration RPC");
