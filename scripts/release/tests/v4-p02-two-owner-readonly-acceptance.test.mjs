@@ -127,7 +127,7 @@ test("fails when a foreign tenant row is visible", async () => {
 
 test("fails on default-branch RPC disclosure, even if table RLS is correctly configured", async () => {
   await assert.rejects(
-    runTwoOwnerReadOnlyAudit(env, mockFetch({ leakForeignBranch: true }).fetcher),
+    runTwoOwnerReadOnlyAudit(env, mockFetch({ leakForeignBranch: true, savedRequest: true }).fetcher),
     /FOREIGN_DEFAULT_BRANCH_DISCLOSURE/,
   );
 });
