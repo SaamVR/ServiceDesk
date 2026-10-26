@@ -11,7 +11,7 @@ This feature makes the existing **saved-workday-based** `suggestOwnerAutomationO
 5. Allows a second explicit **fictional** rule-engine preview via the **existing** owner-protected `requestOwnerWorkflowWhatIf`. It never publishes, saves or sends anything.
 6. Adds navigation from the existing Automation Studio. No paid AI provider call is required.
 
-The server action still depends on the operational database and valid signed-in active OWNER/branch records at runtime; green unit/CI results are NOT a real two-tenant staging read, source-receipt proof or deployed feature. The opportunity engine uses future-event inferences from saved *aggregate queue counts*, not a stored-rule writer nor a tenant-scoped event journal. The browser never receives raw customer records, private notes, API keys or billing amounts.
+The server action still depends on the operational database and valid signed-in active OWNER/branch records at runtime; green unit/CI results are NOT a real two-tenant staging read, source-receipt proof or deployed feature. The opportunity engine uses future-event inferences from saved *workspace-aggregate queue counts* (NOT filtered by the currently selected branch), not a stored-rule writer nor a tenant-scoped event journal. The selected active branch only scopes the proposed future rule/preview. The UI must never imply that displayed queue counts belong to that branch. The browser never receives raw customer records, private notes, API keys or billing amounts.
 
 ## Disjoint source ownership and critic
 - Action: `sonic-feature/f12-owner-action-20261026` owns `owner-opportunity-preview-action.ts` and independent tests.
