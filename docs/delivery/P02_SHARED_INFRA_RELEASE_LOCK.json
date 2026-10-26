@@ -38,7 +38,9 @@
     "workspace_free_web_services_observed": 8,
     "workspace_free_web_services_suspended": 8,
     "http_source_preflight_result": "BLOCKED_503",
-    "preflight_script": "scripts/release/v4-p02-existing-render-readonly-preflight.mjs"
+    "preflight_script": "scripts/release/v4-p02-existing-render-readonly-preflight.mjs",
+    "historical_only": true,
+    "current_future_deployment_target": false
   },
   "supabase": {
     "project": "cpmmgivhlkfbiwzhlcey",
@@ -88,8 +90,15 @@
       "send real customer messages",
       "enable production signup",
       "promote GitHub main",
-      "apply migrations 0063/0064 or reset existing data"
-    ]
+      "apply migrations 0063/0064 or reset existing data",
+      "create or link a ServiceDesk Vercel project if it could trigger a build/deployment",
+      "deploy or preview anything to Vercel without exact user approval",
+      "enable Vercel Git automatic deployments",
+      "change Vercel Hobby to Pro without separately approved cost",
+      "create QA auth users without authorization"
+    ],
+    "noDeploymentWithoutExplicitOwnerApproval": true,
+    "currentSelectedProvider": "vercel"
   },
   "milestone_evidence": {
     "observed_source_tests": 3725,
@@ -97,5 +106,32 @@
     "real_owner_acceptance": false,
     "production_ready": false
   },
-  "readme": "2026-10-26 observation, not live dynamic state. DB security patch installed and tested with simulated role contexts; real 2-owner JWT/browser acceptance and Render V4 deployment blocked. Check live source, Render and Supabase before subsequent actions."
+  "readme": "VERCEL SELECTED as of 2026-10-26, but NO DEPLOYMENT AUTHORIZED. This is a dated read-only and governance snapshot, not live provider state. Supabase 0065 installed; two real owner sessions and manual Vercel deploy UAT pending.",
+  "owner_directive_20261026": {
+    "selected_deployment_provider": "vercel",
+    "all_deployments_require_separate_explicit_permission": true,
+    "no_previews_without_approval": true,
+    "no_staging_without_approval": true,
+    "no_production_without_approval": true,
+    "no_auto_git_deployments": true,
+    "no_paid_upgrade_approved": true,
+    "controlled_qa_email_supplied_privately": true,
+    "real_owner_account_provisioning_approved": false
+  },
+  "vercel": {
+    "team_id": "team_SwFPLhTkG0XpAX3RQ8B4vbLt",
+    "team_slug": "samvrc",
+    "observed_plan": "hobby",
+    "servicdesk_project_exists": false,
+    "project_id": null,
+    "deploy_target_approved": false,
+    "auto_git_deployments_allowed": false,
+    "source_only_guard_pr": 855,
+    "git_policy_expected": "git.deploymentEnabled = false",
+    "existing_project_count_for_this_repo": 0,
+    "deploys_performed_for_servicedesk_in_this_turn": 0,
+    "commercial_hobby_usage_allowed": false,
+    "paid_upgrade_approved": false,
+    "note": "A ServiceDesk Vercel project was not present in read-only repo/name checks. Do not create/link/deploy without a separate explicit user authorization."
+  }
 }
