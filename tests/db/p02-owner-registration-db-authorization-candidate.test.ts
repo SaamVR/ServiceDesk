@@ -74,6 +74,8 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(preflight).toContain("select 1 / 0 as p02_preimage_blocked");
     expect(preflight).toContain("e4de11c0b1b6736e46e201ee491d908f");
     expect(preflight).toContain("9f14160f16e16ffe6ac16f35c3f4557f");
+    expect(preflight).toContain("has_schema_privilege('anon', 'public', 'CREATE')");
+    expect(preflight).toContain("has_schema_privilege('authenticated', 'public', 'CREATE')");
     expect(preflight).not.toMatch(/(?:insert into|update\s+public\.|delete from|drop table|create table)/i);
     const workflow = read(".github/workflows/p02-owner-registration-candidate-pg17.yml");
     expect(workflow).toContain("image: postgres:17");

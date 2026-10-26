@@ -24,6 +24,10 @@ select (
       'public.servicedesk_register_owner_workspace(text,text,text,text)',
       'EXECUTE'
     )
+  -- This SECURITY DEFINER RPC searches public. Any CREATE grant to the
+  -- Data API roles would undermine the reviewed search_path preimage.
+  and not has_schema_privilege('anon', 'public', 'CREATE')
+  and not has_schema_privilege('authenticated', 'public', 'CREATE')
   and to_regnamespace('servicedesk_security') is null
   and (
     select md5(pg_get_functiondef(p.oid))

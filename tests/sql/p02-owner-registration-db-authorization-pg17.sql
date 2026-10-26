@@ -46,6 +46,14 @@ values
 
 \i supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql
 \i supabase/migrations/0065_v4_default_branch_membership_authority.sql
+-- The real ServiceDesk preimage disallows API roles creating objects in the
+-- search_path-visible public schema of this SECURITY DEFINER function.
+do $public_schema_acl$
+begin
+  if has_schema_privilege('anon', 'public', 'CREATE')
+     or has_schema_privilege('authenticated', 'public', 'CREATE')
+  then raise exception 'Data API role has CREATE on public search_path schema'; end if;
+end $public_schema_acl$;
 \i docs/engineering/security/p02-registration-live-readonly-preflight.sql
 \i docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql
 
