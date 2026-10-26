@@ -55,7 +55,9 @@ describe("SONIC F11 Resilience saved-projection owner review (source only)",()=>
   const x=make(first);
   Object.defineProperty(x.record,"kind",{enumerable:true,get(){throw Error("getter");}});
   expect(planSonicF11Resilience(x)).toMatchObject({ok:false,code:"F11_Resilience_INPUT_INVALID"});
-  expect(planSonicF11Resilience(make(Object.assign(Object.create(null),first))))
+  const poisoned=make(first);
+  Object.setPrototypeOf(poisoned.record,null);
+  expect(planSonicF11Resilience(poisoned))
    .toMatchObject({ok:false,code:"F11_Resilience_INPUT_INVALID"});
  });
  it("binds changing approved saved evidence and source version into the candidate fingerprint",()=>{
