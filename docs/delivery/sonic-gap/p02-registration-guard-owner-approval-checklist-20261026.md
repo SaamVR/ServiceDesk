@@ -96,3 +96,7 @@ An independent **disposable PostgreSQL 17 rollback rehearsal** now snapshots the
 
 The existing installation and QA identity gates remain unchanged. No main Supabase SQL or user creation is authorized.
 
+
+## P18 independent ACL-completeness correction (source-only, 2026-10-27)
+
+An independent review identified that the first postinstall receipt checked only selected table rights. PostgreSQL 17 has eight table rights (including `MAINTAIN`) and four possible column-level grants. The stricter receipt enumerates all eight rights for both API roles and both protected tables, plus effective column-level `SELECT`, `INSERT`, `UPDATE`, and `REFERENCES`. New disposable PG17 adversarial tests inject authenticated `DELETE`, anonymous `MAINTAIN`, and anonymous column-only `SELECT(mode)` independently and require nonzero BLOCKED, then verify a restored final PASS. Source evidence only; does **not** change or authorize live Supabase or QA provisioning. Official PostgreSQL reference: https://www.postgresql.org/docs/17/functions-info.html
