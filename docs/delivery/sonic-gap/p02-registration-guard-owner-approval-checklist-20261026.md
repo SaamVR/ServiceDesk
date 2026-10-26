@@ -100,3 +100,7 @@ The existing installation and QA identity gates remain unchanged. No main Supaba
 ## P18 independent ACL-completeness correction (source-only, 2026-10-27)
 
 An independent review identified that the first postinstall receipt checked only selected table rights. PostgreSQL 17 has eight table rights (including `MAINTAIN`) and four possible column-level grants. The stricter receipt enumerates all eight rights for both API roles and both protected tables, plus effective column-level `SELECT`, `INSERT`, `UPDATE`, and `REFERENCES`. New disposable PG17 adversarial tests inject authenticated `DELETE`, anonymous `MAINTAIN`, and anonymous column-only `SELECT(mode)` independently and require nonzero BLOCKED, then verify a restored final PASS. Source evidence only; does **not** change or authorize live Supabase or QA provisioning. Official PostgreSQL reference: https://www.postgresql.org/docs/17/functions-info.html
+
+## P18 constraint-integrity follow-up (source-only, 2026-10-27)
+
+The immediate CLOSED/zero-grants attestation also verifies the *schema contract*, not just current rows: two primary keys, singleton and mode CHECK constraints, the Auth user foreign key with cascading deletion, and required non-null fields. An additional disposable PostgreSQL 17 adversary drops the mode CHECK constraint while leaving the CLOSED row intact; the receipt MUST block and a repaired final baseline MUST pass. This does not authorize Production installation. No user IDs are printed.
