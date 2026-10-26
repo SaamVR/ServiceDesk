@@ -40,7 +40,7 @@ function mockSource(options:{active?:boolean;foreign?:boolean;error?:boolean}={}
    data:{id:branch,workspace_id:options.foreign?"other_ws":ws,active:options.active!==false}};}};
  const service={from(table:string){tables.push(table);return query;}};
  mocked.suggest.mockImplementation(async (_slug:string,_branch:string,deps:OwnerAutomationOpportunityDependencies)=>{
-  if(!deps.verifyBranch||!(await deps.verifyBranch(service as never,ws,branch)))
+  if(!deps?.verifyBranch||!(await deps.verifyBranch(service as never,ws,branch)))
    return {ok:false,code:"OPPORTUNITY_BRANCH_UNVERIFIED"};
   return response();
  });
@@ -55,7 +55,8 @@ describe("F12 owner source action and saved active workspace_branch guard",()=>{
    modelInvoked:false,saved:false,executed:false,published:false,providerMessagesSent:false,
    financialStateChanged:false,
    suggestions:[{evidenceKey:"CRITICAL_ATTENTION",eventType:"ATTENTION_OPENED",
-    summaryKey:"AI_TRIAGE_EXCEPTION"}]});
+    summaryKey:"AI_TRIAGE_EXCEPTION"},{evidenceKey:"OPEN_REQUEST",
+    eventType:"REQUEST_CREATED",summaryKey:"AI_REVIEW_NEW_REQUEST"}]});
   expect(rig.tables).toEqual(["workspace_branches"]);
   expect(rig.filters).toContainEqual(["workspace_id",ws]);
   expect(rig.filters).toContainEqual(["active",true]);

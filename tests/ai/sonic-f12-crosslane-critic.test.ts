@@ -1,4 +1,5 @@
 import {describe,expect,it} from "vitest";
+import {readFileSync} from "node:fs";
 import {compileModelWorkflowDraft} from "../../src/server/ai/workflow-draft-proposal";
 import {previewOwnerWorkflowWhatIf} from "../../src/server/ai/workflow-what-if-preview";
 import {parseOwnerOpportunityPreview} from "../../src/features/operations/owner-opportunity-preview-proof";
@@ -60,4 +61,12 @@ describe("F12 crosslane critic: owner backlog to existing engine and browser tru
   expect(previewOwnerWorkflowWhatIf({eventType:"REQUEST_CREATED",severity:"WARNING"},
    staff,{}).ok).toBe(false);
  });
+ it("keeps the new route lightweight: actor scope only, no full operational snapshot",()=>{
+  const path="src/app/app/[workspace]/automations/opportunities/page.tsx";
+  const route=readFileSync(path,"utf8");
+  expect(route).toContain("resolveStaffActor(workspace)");
+  expect(route).not.toContain("loadOperationalStaffSnapshot");
+  expect(route).toContain('actor.role==="OWNER"');
+ });
+
 });
