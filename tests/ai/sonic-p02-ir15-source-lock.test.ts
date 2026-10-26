@@ -30,7 +30,7 @@ describe("P02 IR15 immutable two-source integration provenance",()=>{
  });
  it("has exactly fifteen disjoint source paths, with three intentional modifications",()=>{
   expect(lock.files).toHaveLength(15);
-  expect(new Set(lock.files.map(x=>x.path)).size).toBe(14);
+  expect(new Set(lock.files.map(x=>x.path)).size).toBe(15);
   expect(lock.files.filter(x=>x.status==="added")).toHaveLength(12);
   expect(lock.files.filter(x=>x.status==="modified").map(x=>x.path).sort()).toEqual([
    "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
