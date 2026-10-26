@@ -173,8 +173,26 @@ begin
   end if;
 end $deny_b$;
 rollback;
-insert into servicedesk_security.owner_registration_grants(user_id,expires_at)
-values('bbbbbbbb-0000-4000-8000-000000000002',now()+interval '1 hour');
+-- A revoked grant must DENY a brand-new owner, not merely be checked
+-- on the already registered owner's idempotent readback.
+insert into servicedesk_security.owner_registration_grants(user_id,expires_at,revoked_at)
+values('bbbbbbbb-0000-4000-8000-000000000002',now()+interval '1 hour',now());
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='bbbbbbbb-0000-4000-8000-000000000002';
+do $revoked_new_owner$
+declare result jsonb;
+begin
+  result:=public.servicedesk_register_owner_workspace(
+    'Synthetic B','qa-owner-b','UTC','USD');
+  if result->>'code' is distinct from 'REGISTRATION_NOT_AUTHORIZED' then
+    raise exception 'Revoked new-owner registration grant was accepted';
+  end if;
+end $revoked_new_owner$;
+rollback;
+
+update servicedesk_security.owner_registration_grants set revoked_at=null
+where user_id='bbbbbbbb-0000-4000-8000-000000000002';
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub='bbbbbbbb-0000-4000-8000-000000000002';
