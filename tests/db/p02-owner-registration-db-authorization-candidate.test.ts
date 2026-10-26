@@ -120,6 +120,28 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(concurrency).toContain("P02_QA_GRANT_REVOCATION_RACED_IN_FLIGHT_REGISTRATION");
     expect(concurrency).toContain("rollback;");
     expect(concurrency).toContain("P02_REGISTRATION_CONCURRENCY_LOCKS_PASS");
+    // Reverse race proof: operator must win when its write takes the lock
+    // before the new-owner RPC, with a positive approved registration
+    // precondition and no persisted workspace or audit row after denials.
+    const operatorFirst = read("scripts/release/tests/v4-p02-registration-operator-first-pg17.sh");
+    expect(workflow).toContain("P02 operator-first revocation and CLOSED win PG17 race");
+    expect(workflow).toContain("v4-p02-registration-operator-first-pg17.sh");
+    for (const marker of [
+      "P02_CONCURRENCY_FIXTURE_ONLY",
+      "P02_APPROVED_PRECONDITION_PASS",
+      "P02_MODE_UPDATE_LOCKED",
+      "P02_OPERATOR_CLOSED_WINS_PASS",
+      "P02_GRANT_REVOKE_LOCKED",
+      "P02_OPERATOR_REVOCATION_WINS_PASS",
+      "P02_OPERATOR_WIN_RETAINED_UNAUTHORIZED_WORKSPACE_OR_LOST_REVOCATION",
+      "P02_OPERATOR_FIRST_CONCURRENCY_PASS",
+    ]) {
+      expect(operatorFirst).toContain(marker);
+    }
+    expect(operatorFirst).toContain("pg_catalog.pg_sleep(2)");
+    expect(operatorFirst).toContain("rollback;");
+    expect(operatorFirst).toContain("REGISTRATION_NOT_AUTHORIZED");
+
 
     expect(workflow).toContain("P02 source preflight fail-closed adversarial proof");
     expect(workflow).toContain("tests/sql/p02-registration-preflight-negative-setup-pg17.sql");

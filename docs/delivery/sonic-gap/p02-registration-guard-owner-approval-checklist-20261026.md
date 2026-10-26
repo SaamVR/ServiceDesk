@@ -38,6 +38,14 @@ An additional **two-session disposable PostgreSQL 17 CI** now starts a verified 
 
 **Approval remains blocked:** This is additional source contract testing, not an applied migration or authorized customer-facing rollout. Independent DBA review should confirm lock ordering/latency, migration ledger and rollback and investigate any effect of database isolation settings or administrative lock timeouts. No direct main Supabase SQL, user creation, Vercel deployment or provider action is authorized.
 
+## Operator-first concurrency proof — opposite ordering (source only)
+
+The existing two-session PostgreSQL 17 regression proves **registration-first** precedence: once registration acquires the mode/QA grant row locks, later operator attempts to update CLOSED or revoke its grant block until registration ends. This additional disposable regression proves the reverse **operator-first** precedence under PostgreSQL's READ COMMITTED locking rules: an operator opens a transaction, changes the mode to CLOSED or revokes the exact user grant, then waits before committing. A new-owner registration attempt started after the uncommitted operator change waits, rechecks the committed row, returns `REGISTRATION_NOT_AUTHORIZED`, and does not save a workspace or audit row. The script first proves this same fictional owner can register under an otherwise valid QA_ONLY grant, rolling that precondition transaction back; so a broken registration routine cannot falsely pass through blanket denial.
+
+The disposable CI requires both `P02_OPERATOR_CLOSED_WINS_PASS` and `P02_OPERATOR_REVOCATION_WINS_PASS`, plus final `P02_OPERATOR_FIRST_CONCURRENCY_PASS`. It restores the CLOSED mode and removes only the fictional test actor/grant. A strict host/port/database/password guard refuses non-disposable execution. These concurrency tests do **not** provide real Supabase tenant acceptance or guarantee behavior under deliberately different transaction isolation levels. Source: [PostgreSQL 17 READ COMMITTED row recheck rules](https://www.postgresql.org/docs/17/transaction-iso.html) and [row lock semantics](https://www.postgresql.org/docs/17/explicit-locking.html).
+
+**Production boundary remains the same:** No main SQL installation, migrations, verified QA account provisioning, customer request writes, provider calls, or Vercel deployment can occur without explicit owner permission and independent DBA review. This source proof improves the DBA's decision evidence only.
+
 ## Emergency containment and rollback safety
 
 **Preferred emergency response:** Using a separately authorized privileged, audited operation, set the database `owner_registration_control.mode` back to `CLOSED`. This preserves existing owner workspaces, audit events, and approval records while refusing new workspace creation. The disposable PG17 fixture proves that a signed-in unapproved account remains denied and existing-owner idempotent readback still works.
