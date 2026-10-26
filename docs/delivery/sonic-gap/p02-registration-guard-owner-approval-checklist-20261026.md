@@ -128,3 +128,7 @@ Before any future separately owner-approved guarded migration, the DBA must run 
 **Use `psql -X -v ON_ERROR_STOP=1 -f` on the intended live database**, with read-only credentials if available. STOP on any missing `...PASS`, even if another gate passes. Never use `db push` to automatically reconcile the out-of-order ledger. A *separate* owner-reviewed migration sequence plan and exact authority are required; the gate is not a migration installer.
 
 P21 disposable PostgreSQL 17 workflow tests seven independent mutation-and-restore scenarios against a synthetic local `supabase_migrations.schema_migrations` fixture, never against Supabase: missing/renamed 0062 or 0065, accidentally recorded 0063/0064, duplicate 0065 under a changed version. Each must fail with the ledger-specific BLOCK marker, and a restored final PASS is mandatory. These are source-only dry-run proofs and cannot assert real JWT/browser acceptance or release readiness.
+
+### P21 independent suffix-replay correction
+
+Migration history already uses letter-suffixed names (e.g. `sd_0012a_*`). Ledger gate now catches any 0063/0064 prefix, including `sd_0063a_*` and `sd_0064a_*`. Two extra disposable PostgreSQL 17 negative cases `UNREVIEWED_0063A` and `UNREVIEWED_0064A` prevent this exact false-green. Total ledger cases: **nine**, with a restored final positive baseline.
