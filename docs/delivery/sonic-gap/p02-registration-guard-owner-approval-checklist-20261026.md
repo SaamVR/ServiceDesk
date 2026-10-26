@@ -36,6 +36,14 @@ The disposable PostgreSQL 17 regression now inserts an expiring grant within a t
 
 **QA identity cleanup:** The private grant uses an `auth.users` foreign key with `ON DELETE CASCADE`, so a separately authorized deletion of an *unregistered fictional QA user* cannot leave stale approval rows or be blocked by this grant table. It does not authorize deleting existing owners or workspaces. Preserve independently required audit/approval evidence before any deletion; do not automatically remove registered tenant records.
 
+## Additional preflight negative tests — disposable PostgreSQL only
+
+Beyond the original after-install fail-closed case, CI uses a second isolated PostgreSQL 17 database initialized from the real 0059 registration and 0065 branch-helper migrations. It first requires the read-only source preflight to PASS.
+
+Three independent drifts must each make the same preflight return nonzero with P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED: an unexpected anonymous EXECUTE grant, a registration function changed from SECURITY DEFINER to SECURITY INVOKER, and a changed registration function search_path (fingerprint drift). After restoring all three settings, the same fixture must PASS again. This prevents false-green results caused by a permanently damaged test database.
+
+This is not proof of full schema compatibility or permission to apply SQL. Production DBA approval still requires current preimage, ledger, backup, rollback, RLS and exact target review. Execute the read-only preflight immediately before any separately approved installation, not as a substitute for that authorization.
+
 ## Read-only exact-preimage database gate (source candidate, 2026-10-26)
 
 Before any separately approved DDL, a designated DBA can execute `docs/engineering/security/p02-registration-live-readonly-preflight.sql` using `psql -v ON_ERROR_STOP=1 -f ...` on the **explicitly approved** database connection. It begins a read-only transaction; no fixtures, role grants or deployments are created. It exits nonzero if the exact existing owner-registration function MD5 is not `e4de11c0b1b6736e46e201ee491d908f`, the existing repaired default-branch function MD5 is not `9f14160f16e16ffe6ac16f35c3f4557f`, anonymous function execution has widened, authenticated execution is absent, the SECURITY DEFINER flag differs, or the proposed protected schema already exists. This is a narrow **function/preimage** check only; migration ledger review (0065 installed, 0063/0064 unresolved), full schema compatibility, backup and rollback require independent DBA signoff. A PASS is NOT installation approval.
