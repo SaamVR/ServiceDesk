@@ -18,7 +18,7 @@ describe("F13 independent critic: genuine saved workflow evidence and no unsafe 
   const studio=read("src/features/operations/AiStudioWorkspace.tsx");
   expect(inspector).toContain('id="workflow-evidence"');
   expect(inspector).toContain("guideRecordedWorkflowIntervention(selected)");
-  expect(inspector).toContain("automatic"); // fixed disclosure forbids auto execution
+  expect(inspector).toContain("This is read-only: retries, approvals, customer messages, payments,");
   expect(studio).toContain('"automations")+"#workflow-evidence"');
   expect(studio).toContain("selectWorkflowInspectorClientSnapshot(data)");
  });
