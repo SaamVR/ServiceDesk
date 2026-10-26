@@ -57,8 +57,17 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
     fail("Workspace setup is unavailable. Contact the administrator to complete deployment.");
   }
 
-  const result = data as {ok?: boolean; slug?: string; code?: string} | null;
-  if (!result?.ok || !result.slug) {
+  const result = data as {ok?: unknown; slug?: unknown; code?: string} | null;
+  // The database is authoritative for QA account approval. A server-side
+  // email allowlist alone cannot grant access to the registration RPC.
+  if (result?.code === "REGISTRATION_NOT_AUTHORIZED") {
+    fail("Workspace creation is not approved for this account. Contact the administrator.");
+  }
+  // Refuse malformed/truthy-only RPC success objects and untrusted slugs;
+  // never redirect to onboarding without a well-formed success receipt.
+  if (result?.ok !== true || typeof result.slug !== "string" ||
+      !/^[a-z0-9][a-z0-9-]{2,39}$/.test(result.slug) ||
+      result.slug.includes("--") || result.slug.endsWith("-")) {
     if (result?.code === "SLUG_UNAVAILABLE") fail("This workspace address is taken. Try another.");
     if (result?.code === "EMAIL_VERIFICATION_REQUIRED") fail("Verify your email before creating a workspace.");
     if (result?.code === "TIMEZONE_INVALID") fail("Select another business timezone.");
