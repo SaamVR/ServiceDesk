@@ -77,7 +77,42 @@ pg -c "alter table servicedesk_security.owner_registration_control drop constrai
 assert_blocked MODE_CHECK_DROPPED
 pg -c "alter table servicedesk_security.owner_registration_control add constraint owner_registration_control_mode_check check (mode in ('CLOSED','QA_ONLY','PUBLIC'))"
 
+# A condition containing all three approved tokens but weakened with OR TRUE
+# is a semantically different CHECK and must invalidate the installation.
+pg -c "alter table servicedesk_security.owner_registration_control drop constraint owner_registration_control_mode_check"
+pg -c "alter table servicedesk_security.owner_registration_control add constraint owner_registration_control_mode_check check (mode in ('CLOSED','QA_ONLY','PUBLIC') or true)"
+assert_blocked MODE_CHECK_WEAKENED
+pg -c "alter table servicedesk_security.owner_registration_control drop constraint owner_registration_control_mode_check"
+pg -c "alter table servicedesk_security.owner_registration_control add constraint owner_registration_control_mode_check check (mode in ('CLOSED','QA_ONLY','PUBLIC'))"
+
 # Default drift remains dangerous even with a currently CLOSED singleton.
+# The owner is part of the protected security boundary, independently
+# of currently denied anon/authenticated ACLs. Never run outside disposable DB.
+pg -c "create role p20_shadow_owner nologin"
+pg -c "alter schema servicedesk_security owner to p20_shadow_owner"
+assert_blocked SCHEMA_OWNER_DRIFT
+pg -c "alter schema servicedesk_security owner to postgres"
+pg -c "alter table servicedesk_security.owner_registration_control owner to p20_shadow_owner"
+assert_blocked TABLE_OWNER_DRIFT
+pg -c "alter table servicedesk_security.owner_registration_control owner to postgres"
+pg -c "drop role p20_shadow_owner"
+
+# Disallowed user-trigger and rewrite rule can silently change a control
+# update even when all checked rows and constraints remain intact.
+pg <<'SQL'
+create function servicedesk_security.p20_disposable_trigger()
+returns trigger language plpgsql as $p20$ begin return new; end $p20$;
+create trigger p20_unreviewed_trigger before update
+on servicedesk_security.owner_registration_control
+for each row execute function servicedesk_security.p20_disposable_trigger();
+SQL
+assert_blocked EXTRA_TRIGGER
+pg -c 'drop trigger p20_unreviewed_trigger on servicedesk_security.owner_registration_control'
+pg -c 'drop function servicedesk_security.p20_disposable_trigger()'
+pg -c 'create rule p20_unreviewed_rule as on update to servicedesk_security.owner_registration_control do instead nothing'
+assert_blocked EXTRA_RULE
+pg -c 'drop rule p20_unreviewed_rule on servicedesk_security.owner_registration_control'
+
 pg -c "alter table servicedesk_security.owner_registration_control alter column mode set default 'PUBLIC'"
 assert_blocked MODE_DEFAULT_PUBLIC
 pg -c "alter table servicedesk_security.owner_registration_control alter column mode set default 'CLOSED'"
