@@ -104,3 +104,7 @@ An independent review identified that the first postinstall receipt checked only
 ## P18 constraint-integrity follow-up (source-only, 2026-10-27)
 
 The immediate CLOSED/zero-grants attestation also verifies the *schema contract*, not just current rows: two primary keys, singleton and mode CHECK constraints, the Auth user foreign key with cascading deletion, and required non-null fields. An additional disposable PostgreSQL 17 adversary drops the mode CHECK constraint while leaving the CLOSED row intact; the receipt MUST block and a repaired final baseline MUST pass. This does not authorize Production installation. No user IDs are printed.
+
+## P19 read-only receipt: default and function-GUC exactness (source-only, 2026-10-27)
+
+Postinstall receipt now rejects a drifted default of `PUBLIC` on the CLOSED-mode control, absence of the `singleton = true` default, and any additional function-level GUC beyond the reviewed `search_path=pg_catalog, public, pg_temp`. A currently CLOSED row alone is insufficient to prove safe future inserts. Three isolated PostgreSQL 17 adversarial cases mutate and restore only disposable fixtures, each requiring a marked nonzero BLOCK and a final baseline PASS. No main Supabase SQL or user/account/fixture or deployment authority is implied.
