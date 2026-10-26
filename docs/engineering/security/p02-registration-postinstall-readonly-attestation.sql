@@ -132,6 +132,62 @@ begin
     raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: protected table RLS or policy drift';
   end if;
 
+
+  -- The immediate row contents alone cannot prove that constraints survived.
+  -- Reject missing/replaced PKs, the CLOSED/QA_ONLY/PUBLIC check, singleton
+  -- check or Auth FK, even while the current dataset looks harmless.
+  if (
+    select count(*)
+    from pg_constraint c
+    join pg_class t on t.oid=c.conrelid
+    join pg_namespace n on n.oid=t.relnamespace
+    where n.nspname='servicedesk_security'
+      and t.relname in ('owner_registration_control','owner_registration_grants')
+  ) <> 5 or (
+    select count(*)
+    from pg_constraint c
+    join pg_class t on t.oid=c.conrelid
+    join pg_namespace n on n.oid=t.relnamespace
+    where n.nspname='servicedesk_security'
+      and (
+        (t.relname='owner_registration_control'
+         and c.conname='owner_registration_control_pkey'
+         and c.contype='p'
+         and pg_get_constraintdef(c.oid)='PRIMARY KEY (singleton)')
+        or (t.relname='owner_registration_control'
+         and c.conname='owner_registration_control_singleton_check'
+         and c.contype='c'
+         and pg_get_constraintdef(c.oid)='CHECK (singleton)')
+        or (t.relname='owner_registration_control'
+         and c.conname='owner_registration_control_mode_check'
+         and c.contype='c'
+         and pg_get_constraintdef(c.oid) like '%mode = ANY%'
+         and pg_get_constraintdef(c.oid) like '%CLOSED%'
+         and pg_get_constraintdef(c.oid) like '%QA_ONLY%'
+         and pg_get_constraintdef(c.oid) like '%PUBLIC%')
+        or (t.relname='owner_registration_grants'
+         and c.conname='owner_registration_grants_pkey'
+         and c.contype='p'
+         and pg_get_constraintdef(c.oid)='PRIMARY KEY (user_id)')
+        or (t.relname='owner_registration_grants'
+         and c.conname='owner_registration_grants_user_id_fkey'
+         and c.contype='f'
+         and pg_get_constraintdef(c.oid)
+              like 'FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE%')
+      )
+  ) <> 5 or (
+    select count(*)
+    from pg_attribute a
+    where (a.attrelid='servicedesk_security.owner_registration_control'::regclass
+           and a.attname in ('singleton','mode','updated_at')
+           and a.attnotnull)
+       or (a.attrelid='servicedesk_security.owner_registration_grants'::regclass
+           and a.attname in ('user_id','expires_at','approved_at')
+           and a.attnotnull)
+  ) <> 6 then
+    raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: protected table constraint drift';
+  end if;
+
   if (select pg_get_userbyid(p.proowner) from pg_proc p where p.oid=v_branch) is distinct from 'postgres'
      or (select p.prosecdef from pg_proc p where p.oid=v_branch) is distinct from true
      or (select md5(pg_get_functiondef(p.oid)) from pg_proc p where p.oid=v_branch)
