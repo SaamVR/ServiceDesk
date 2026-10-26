@@ -183,7 +183,7 @@ jobs:
           grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-rollback-baseline.log
           psql -d servicedesk_p02_registration_rollback -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql | tee /tmp/p02-rollback-proof.log
           grep -q 'P02_FAIL_CLOSED_REGISTRATION_ROLLBACK_PASS' /tmp/p02-rollback-proof.log
-      - name: P02 read-only after-install CLOSED attestation + seven negative cases
+      - name: P02 read-only after-install CLOSED attestation + eleven negative cases
         env:
           PGHOST: 127.0.0.1
           PGPORT: "5432"
@@ -202,6 +202,9 @@ jobs:
           grep -q 'P02_POSTINSTALL_DENIED_ANON_RPC' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_DENIED_PUBLIC_RPC' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_DENIED_PRIVATE_SCHEMA' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_TABLE_DELETE' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_TABLE_MAINTAIN' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_COLUMN_SELECT' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_DENIED_RLS_OFF' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_DENIED_INVOKER' /tmp/p02-postinstall-negative.log
           grep -q 'P02_POSTINSTALL_DENIED_BODY_HASH' /tmp/p02-postinstall-negative.log
