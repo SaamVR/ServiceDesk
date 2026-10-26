@@ -8,6 +8,7 @@ const WA="11111111-1111-4111-8111-111111111111";
 const WB="22222222-2222-4222-8222-222222222222";
 const BA="33333333-3333-4333-8333-333333333333";
 const BB="44444444-4444-4444-8444-444444444444";
+const RA="55555555-5555-4555-8555-555555555555", RB="66666666-6666-4666-8666-666666666666";
 function mockJwt(user){
  const payload={iss:ORIGIN+"/auth/v1",sub:user,role:"authenticated",
   exp:Math.floor(Date.now()/1000)+1800};
@@ -20,6 +21,7 @@ const env={
  SD_P02_PUBLISHABLE_KEY:"sb_publishable_local_only_no_real_credentials",
  SD_P02_OWNER_A_JWT:tokens[0],SD_P02_OWNER_B_JWT:tokens[1],
  SD_P02_OWNER_A_WORKSPACE_ID:WA,SD_P02_OWNER_B_WORKSPACE_ID:WB,
+ SD_P02_OWNER_A_REQUEST_ID:RA,SD_P02_OWNER_B_REQUEST_ID:RB,
 };
 function harness(fault){
  const calls=[];
@@ -59,7 +61,11 @@ function harness(fault){
    }
    const exists=target===own ||
     (fault==="foreign-default-visible"&&target===other&&table==="workspace_branches");
-   if(!exists||table==="requests")data=[];
+   if(!exists)data=[];
+   else if(table==="requests"){
+    assert.equal(url.searchParams.get("id"),"eq."+(target===WA?RA:RB));
+    data=fault==="request-missing"?[]:[{id:target===WA?RA:RB,workspace_id:target}];
+   }
    else if(table==="workspaces")
     data=[{id:fault==="foreign-workspace-identity"?other:target}];
    else if(table==="memberships"){
@@ -93,6 +99,7 @@ test("requires two scoped active owners, a saved default branch, and separately 
  assert.deepEqual(new Set(h.calls.map(x=>x.method)),new Set(["POST","GET"]));
 });
 for(const [fault,expected] of [
+ ["request-missing","EXPECTED_OWNER_REQUEST_FIXTURE_MISSING"],
  ["staff-instead-of-owner","OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED"],
  ["revoked-owner","OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED"],
  ["different-user","OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED"],

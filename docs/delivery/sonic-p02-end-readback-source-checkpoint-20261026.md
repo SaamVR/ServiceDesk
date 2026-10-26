@@ -46,3 +46,7 @@ Coordinator combines disjoint source ownership into an **OPEN DRAFT PR** against
 - This is only a source safety improvement. Never count these tests as a second real owner or close P02 just because full TypeScript/tests/lint/build pass.
 
 **NEXT TASK:** Production #818 — seek separately scoped authorization and securely provision/identify second QA owner/workspace, then conduct real two-token read-only audit and signed-in browser UAT; only Production may decide IR14/source integration after current-canonical QA. Until credentials and approval exist, mark that action `BLOCKED_OWNER_AUTHORIZATION`, not DONE.
+
+## Required known saved request witnesses for genuine cross-tenant request proof
+
+Previously the probe returned PASS when BOTH owner's saved request tables were empty; a negative read of a nonexistent foreign row is not meaningful evidence of request-level RLS isolation. The updated read-only probe requires separate known fictional saved request IDs (SD_P02_OWNER_A_REQUEST_ID / SD_P02_OWNER_B_REQUEST_ID) and verifies that each record exists in its owner's workspace under its owner's real JWT, while querying that identical known record with the other owner's JWT must return no rows. Missing, duplicate or mismatched request receipts fail closed. This does not create or mutate any record. Creating two isolated fictional requests requires separate explicit owner-approved QA data authorization. Protected mutating-command denial and signed-in browser journeys remain independent P02 gates.

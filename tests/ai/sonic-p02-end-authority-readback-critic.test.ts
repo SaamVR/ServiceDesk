@@ -39,6 +39,11 @@ describe("P02 independent critic: latest read-only authority before audit PASS",
  it("retains owner/workspace uniqueness and hides auth tokens from proof payload",()=>{
   expect(source).toContain("entries[0].subject === entries[1].subject");
   expect(source).toContain("entries[0].expectedWorkspace === entries[1].expectedWorkspace");
+  expect(source).toContain("entries[0].expectedRequest === entries[1].expectedRequest");
+  expect(source).toContain('id: "eq." + requestId');
+  expect(source).toContain("EXPECTED_OWNER_REQUEST_FIXTURE_MISSING");
+  const requestTests=readFileSync("scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs","utf8");
+  expect(requestTests).toContain("rejects empty request fixtures rather than declaring false-positive request isolation");
   expect(source).toContain('scope: "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED"');
   const reply=source.slice(source.indexOf('return { result: "PASS"'));
   expect(reply).not.toContain("owner.token");

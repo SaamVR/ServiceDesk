@@ -9,7 +9,8 @@ const wA="11111111-1111-4111-8111-111111111111";
 const wB="22222222-2222-4222-8222-222222222222";
 const brA="33333333-3333-4333-8333-333333333333";
 const brB="44444444-4444-4444-8444-444444444444";
-const brChanged="55555555-5555-4555-8555-555555555555";
+const brChanged="77777777-7777-4777-8777-777777777777";
+const reqA="55555555-5555-4555-8555-555555555555", reqB="66666666-6666-4666-8666-666666666666";
 function token(sub){
  const payload={sub,iss:ORIGIN+"/auth/v1",role:"authenticated",
   exp:Math.floor(Date.now()/1000)+1800};
@@ -22,7 +23,8 @@ function environment(){
  return {SD_P02_ACCEPTANCE_APPROVED:"READ_ONLY",
   SD_P02_PUBLISHABLE_KEY:"sb_publishable_fictional_offline_only",
   SD_P02_OWNER_A_JWT:tokenA,SD_P02_OWNER_B_JWT:tokenB,
-  SD_P02_OWNER_A_WORKSPACE_ID:wA,SD_P02_OWNER_B_WORKSPACE_ID:wB};
+  SD_P02_OWNER_A_WORKSPACE_ID:wA,SD_P02_OWNER_B_WORKSPACE_ID:wB,
+  SD_P02_OWNER_A_REQUEST_ID:reqA,SD_P02_OWNER_B_REQUEST_ID:reqB};
 }
 function harness(env,{fault,afterFinalBranch}={}){
  const calls=[],seen=new Map();
@@ -53,7 +55,11 @@ function harness(env,{fault,afterFinalBranch}={}){
    const key=owner+"|"+table+"|"+scope;
    seen.set(key,(seen.get(key)??0)+1);
    const count=seen.get(key);
-   if(scope!==own||table==="requests")data=[];
+   if(scope!==own)data=[];
+   else if(table==="requests"){
+    assert.equal(url.searchParams.get("id"),"eq."+(own===wA?reqA:reqB));
+    data=[{id:own===wA?reqA:reqB,workspace_id:own}];
+   }
    else if(table==="workspaces")data=[{id:scope}];
    else if(table==="memberships"){
     if(owner==="A"&&count>1&&
