@@ -110,7 +110,9 @@ begin
         select 1 from servicedesk_security.owner_registration_grants g
         where g.user_id = v_actor
           and g.revoked_at is null
-          and g.expires_at > pg_catalog.now()
+          -- A QA grant expires at actual invocation time, even inside a
+          -- long-running transaction: now() is fixed at transaction start.
+          and g.expires_at > pg_catalog.clock_timestamp()
       ))
     )
   ) then

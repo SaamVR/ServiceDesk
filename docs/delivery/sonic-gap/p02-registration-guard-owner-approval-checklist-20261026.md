@@ -20,6 +20,14 @@ Passing candidate CI means CONTRACT_TESTED for the proposed SQL in disposable Po
 
 **NEXT_BATCH=P02 — complete the owner-approved DB guard and genuine two-owner onboarding/RLS acceptance before advancing P03.**
 
+## Long-running transaction QA grant expiry (source correction, 2026-10-26)
+
+PostgreSQL `now()` and `transaction_timestamp()` return the **transaction start** timestamp. A QA grant that expires while a transaction is open could therefore remain acceptable to the original candidate guard. The corrected candidate compares the NOT NULL `expires_at` against `pg_catalog.clock_timestamp()` at the registration check and rejects revoked, missing or expired grants even after a transaction outlives its deadline. Source: [PostgreSQL 17 date/time functions](https://www.postgresql.org/docs/17/functions-datetime.html).
+
+The disposable PostgreSQL 17 regression now inserts an expiring grant within a transaction, waits beyond its expiry and attempts **new-owner** registration in that same transaction. It must fail with `REGISTRATION_NOT_AUTHORIZED` and roll back with no persisted grant/workspace. Existing valid fresh QA grant, revocation, duplicate-owner idempotence, CLOSED kill switch and email verification tests remain required.
+
+**Security limitation:** This deadline check narrows the transaction-clock bypass but is not proof of concurrent independent transaction revocation and is not installation approval. Source and PG17 tests must be verified at the **updated draft exact SHA**. Do not apply SQL on existing main, do not create a user or workspace, and do not deploy without explicit separately scoped Production authorization.
+
 ## Emergency containment and rollback safety
 
 **Preferred emergency response:** Using a separately authorized privileged, audited operation, set the database `owner_registration_control.mode` back to `CLOSED`. This preserves existing owner workspaces, audit events, and approval records while refusing new workspace creation. The disposable PG17 fixture proves that a signed-in unapproved account remains denied and existing-owner idempotent readback still works.
