@@ -64,7 +64,7 @@ export function planSonicF11Resilience(input:unknown):SonicF11ResilienceResult{
   if(r.sourceVersion!==input.expectedVersion)return fail("F11_Resilience_STALE");
   let due:number|null=null;
   if(kind==="PROVIDER_HEALTH_REVIEW"){
-   if(r.status!=="DEGRADED"||!["AI_GATEWAY","EMAIL","WHATSAPP","CALENDAR"].includes(String(r.providerCode))||
+   if(r.status!=="DEGRADED"||(typeof r.providerCode!=="string"||!["AI_GATEWAY","EMAIL","WHATSAPP","CALENDAR"].includes(r.providerCode))||
     typeof r.failedChecks!=="number"||!Number.isSafeInteger(r.failedChecks)||
     r.failedChecks<3||r.failedChecks>100||trustedQuoteInstant(r.lastCheckAt)===null||
     trustedQuoteInstant(r.lastCheckAt)!>now)return fail("F11_RESILIENCE_EVIDENCE_INVALID");
