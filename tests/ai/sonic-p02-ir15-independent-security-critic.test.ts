@@ -129,11 +129,11 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(ledger).toContain("P02_MIGRATION_LEDGER_READONLY_PASS");
   expect(ledger).toContain("sd_0065_v4_default_branch_membership_authority");
   expect(ledger).toContain("sd_0062_v4_branch_trigger_rowtype_guard");
-  expect(ledger).toContain("name ~ '^sd_006[34](_|$)'");
+  expect(ledger).toContain("name ~ '^sd_006[34]'");
   expect(ledgerSetup).toContain("P02_LEDGER_DISPOSABLE_DATABASE_REQUIRED");
   expect(ledgerNeg).toContain("P02_LEDGER_DISPOSABLE_ONLY");
   expect(ledgerNeg).toContain("P02_LEDGER_WRONG_FAILURE_");
-  for (const marker of ["MISSING_0065", "RENAMED_0065", "MISSING_0062", "UNREVIEWED_0063", "UNREVIEWED_0064", "DUPLICATE_0065_NAME", "RENAMED_0062"]) {
+  for (const marker of ["MISSING_0065", "RENAMED_0065", "MISSING_0062", "UNREVIEWED_0063", "UNREVIEWED_0064", "UNREVIEWED_0063A", "UNREVIEWED_0064A", "DUPLICATE_0065_NAME", "RENAMED_0062"]) {
     expect(wf).toContain("P02_LEDGER_DENIED_" + marker);
     expect(ledgerNeg).toContain("assert_blocked " + marker);
   }
