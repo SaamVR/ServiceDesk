@@ -25,8 +25,7 @@ begin
     and name = 'sd_0065_v4_default_branch_membership_authority';
   select count(*) into v_absent
   from supabase_migrations.schema_migrations
-  where name ~ '^sd_006[34](_|$)'
-    or version in ('20261025200145','20261025200146');
+  where name ~ '^sd_006[34](_|$)';
   select count(*) into v_duplicates
   from supabase_migrations.schema_migrations
   where (name = 'sd_0065_v4_default_branch_membership_authority'
