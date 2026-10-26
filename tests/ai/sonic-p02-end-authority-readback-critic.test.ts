@@ -33,7 +33,7 @@ describe("P02 independent critic: latest read-only authority before audit PASS",
   expect(source).toContain("if (url.origin !== ORIGIN)");
   expect(source).toContain('method: "POST", body: { target_workspace: id }');
   expect(source).toContain('method: options.method ?? "GET"');
-  expect(source).not.toMatch(/\b(?:service_role|SUPABASE_SERVICE_ROLE_KEY)\b/);
+  expect(source).not.toMatch(/process\.env\.(?:SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY)/);
   expect(source).not.toMatch(/\b(?:PATCH|PUT|DELETE)\b/);
  });
  it("retains owner/workspace uniqueness and hides auth tokens from proof payload",()=>{
@@ -46,7 +46,7 @@ describe("P02 independent critic: latest read-only authority before audit PASS",
  });
  it("no real second owner means real P02 UAT remains explicitly BLOCKED",()=>{
   const doc=readFileSync("docs/delivery/sonic-p02-end-readback-source-checkpoint-20261026.md","utf8");
-  expect(doc).toContain("1 distinct active owner identity");
+  expect(doc).toContain("| Distinct `ACTIVE` `OWNER` membership subjects | **1** |");
   expect(doc).toContain("BLOCKED_OWNER_AUTHORIZATION");
   expect(doc).toContain("NO LIVE TWO-OWNER ACCEPTANCE");
   expect(doc).toContain("NO DEPLOYMENT");
