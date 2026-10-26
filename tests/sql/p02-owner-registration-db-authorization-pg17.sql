@@ -41,6 +41,8 @@ values
   ('eeeeeeee-0000-4000-8000-000000000005', now(), false),
   ('ffffffff-0000-4000-8000-000000000006', now(), false);
 
+\i supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql
+\i docs/engineering/security/p02-registration-live-readonly-preflight.sql
 \i docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql
 
 do $catalog$

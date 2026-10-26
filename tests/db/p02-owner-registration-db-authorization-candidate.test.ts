@@ -67,6 +67,13 @@ describe("P02 source-only database-side owner registration authorization", () =>
     for (const value of ["CLOSED", "QA_ONLY", "PUBLIC", "expired", "revoked_at", "EMAIL_VERIFICATION_REQUIRED", "client_tamper", "kill_switch", "anon_rpc", "deleted_qa_user"]) {
       expect(fixture.toLowerCase()).toContain(value.toLowerCase());
     }
+    const preflight = read("docs/engineering/security/p02-registration-live-readonly-preflight.sql");
+    expect(preflight).toContain("begin transaction read only");
+    expect(preflight).toContain("P02_REGISTRATION_READONLY_PREIMAGE_PASS");
+    expect(preflight).toContain("P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED");
+    expect(preflight).toContain("e4de11c0b1b6736e46e201ee491d908f");
+    expect(preflight).toContain("9f14160f16e16ffe6ac16f35c3f4557f");
+    expect(preflight).not.toMatch(/(?:insert into|update\s+public\.|delete from|drop table|create table)/i);
     const workflow = read(".github/workflows/p02-owner-registration-candidate-pg17.yml");
     expect(workflow).toContain("image: postgres:17");
     expect(workflow).toContain("tests/sql/p02-owner-registration-db-authorization-pg17.sql");
