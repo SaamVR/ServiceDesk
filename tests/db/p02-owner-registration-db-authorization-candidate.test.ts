@@ -122,6 +122,25 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(concurrency).toContain("P02_QA_GRANT_REVOCATION_RACED_IN_FLIGHT_REGISTRATION");
     expect(concurrency).toContain("rollback;");
     expect(concurrency).toContain("P02_REGISTRATION_CONCURRENCY_LOCKS_PASS");
+    // A rollback must not restore the unauthorised old RPC with a preserved
+    // authenticated EXECUTE grant. Validate original byte preimage,
+    // explicit revoke-first ordering, and a real role-level denial.
+    const rollback = read("tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql");
+    expect(rollback).toContain("P02_ROLLBACK_DISPOSABLE_DB_REQUIRED");
+    expect(rollback).toContain("servicedesk_p02_registration_rollback");
+    expect(rollback).toContain("P02_ROLLBACK_PREIMAGE_MISMATCH");
+    expect(rollback).toContain("P02_ROLLBACK_GUARD_OR_RPC_PRIVILEGE_LEFT_OPEN");
+    expect(rollback).toContain("P02_FAIL_CLOSED_REGISTRATION_ROLLBACK_PASS");
+    const revoke = rollback.indexOf("revoke all on function public.servicedesk_register_owner_workspace");
+    const restore = rollback.indexOf("execute v_original_ddl");
+    const drop = rollback.indexOf("drop schema servicedesk_security cascade");
+    expect(revoke).toBeGreaterThan(0);
+    expect(restore).toBeGreaterThan(revoke);
+    expect(drop).toBeGreaterThan(restore);
+    expect(rollback).toContain("exception when insufficient_privilege");
+    expect(rollback).toContain("P02_ROLLBACK_CREATED_UNAUTHORIZED_WORKSPACE");
+    expect(workflow).toContain("P02 guarded registration fail-closed rollback rehearsal");
+    expect(workflow).toContain("tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql");
     // Reverse race proof: operator must win when its write takes the lock
     // before the new-owner RPC, with a positive approved registration
     // precondition and no persisted workspace or audit row after denials.
