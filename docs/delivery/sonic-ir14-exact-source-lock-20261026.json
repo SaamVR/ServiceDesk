@@ -1,0 +1,446 @@
+{
+  "schemaVersion": 1,
+  "kind": "FROZEN_DRAFT_SOURCE_REHEARSAL_ONLY",
+  "canonicalBase": "d8b77cbb3a62f7187ff79e5ffb0b2b0392d6e2be",
+  "sourceHeads": {
+    "841": "25ca21486d9f735fceaf9b52691e2ba561224416",
+    "852": "b10078b520abb4d8623e933d004f5712ef4d2b2d",
+    "854": "6b5793653e95a721de82bff7f17f08586c2f016e",
+    "857": "079c13a2f561e82f2a50e828132980b382463448",
+    "859": "70bf56d947ceb58d07faa7915ca24b254c254b1c",
+    "861": "7c86ac47576078bd8bdc355d9c37f97edc2980ef"
+  },
+  "liveDeploymentAuthorized": false,
+  "canonicalMutationAuthorized": false,
+  "modelOrProviderCalled": false,
+  "sourceOnly": true,
+  "fileCount": 71,
+  "files": [
+    {
+      "path": "docs/delivery/f06-source-interface-request-20261025.md",
+      "status": "added",
+      "blobSha": "cf5cd85ffe75e39d508e8bec4a78d4c9af9d6471",
+      "sourcePr": 841
+    },
+    {
+      "path": "docs/delivery/f07-audit-source-and-spend-controls-20261025.md",
+      "status": "added",
+      "blobSha": "c4c516b55179337dbb19802494bfc450ea6663ea",
+      "sourcePr": 841
+    },
+    {
+      "path": "docs/delivery/f08-feature-freeze-manifest-20261025.json",
+      "status": "added",
+      "blobSha": "0b91ac8598d2b7ed964ea7b2aaacddce145db694",
+      "sourcePr": 841
+    },
+    {
+      "path": "docs/delivery/f08-production-handoff-and-freeze-20261025.md",
+      "status": "added",
+      "blobSha": "9d15f719db3cba272f7d9692af0fdf61b74708fe",
+      "sourcePr": 841
+    },
+    {
+      "path": "docs/delivery/sonic-f09-feature-wave-20261026.md",
+      "status": "added",
+      "blobSha": "192c036b09cf23b9d65f6e4e1f1d797fa9886adf",
+      "sourcePr": 852
+    },
+    {
+      "path": "docs/delivery/sonic-f10-automation-wave-20261026.md",
+      "status": "added",
+      "blobSha": "b0d6ced9c13ff26ffb9d4365e6c4e6d3ed72c0b1",
+      "sourcePr": 854
+    },
+    {
+      "path": "docs/delivery/sonic-f11-feature-wave-20261026.md",
+      "status": "added",
+      "blobSha": "bd4f11368b81a07767cf0d0fd710508f45a7c299",
+      "sourcePr": 857
+    },
+    {
+      "path": "docs/delivery/sonic-f12-owner-opportunity-workbench-20261026.md",
+      "status": "added",
+      "blobSha": "202c8997165ac8b6225317047e4bc0666e01ec33",
+      "sourcePr": 859
+    },
+    {
+      "path": "docs/delivery/sonic-f13-workflow-operator-evidence-20261026.md",
+      "status": "added",
+      "blobSha": "4805ff5c29fdf795ef7e341f9faa2bcc7593d803",
+      "sourcePr": 861
+    },
+    {
+      "path": "src/app/app/[workspace]/automations/opportunities/page.tsx",
+      "status": "added",
+      "blobSha": "a9f60946ad5652cc7644492fd2f5d56e373ca0ed",
+      "sourcePr": 859
+    },
+    {
+      "path": "src/app/app/[workspace]/automations/page.tsx",
+      "status": "modified",
+      "blobSha": "4132eb19ea6757ae520c4167c3f4df01615f855a",
+      "sourcePr": 859
+    },
+    {
+      "path": "src/features/operations/AiStudioWorkspace.tsx",
+      "status": "modified",
+      "blobSha": "981534d8a807e97b2b47585dfdc637cac94b084a",
+      "sourcePr": 861
+    },
+    {
+      "path": "src/features/operations/OperationalProductRoute.tsx",
+      "status": "modified",
+      "blobSha": "9d801e935d28a2052bd8c57e43dd93788a5a934c",
+      "sourcePr": 861
+    },
+    {
+      "path": "src/features/operations/owner-opportunity-preview-action.ts",
+      "status": "added",
+      "blobSha": "ca23bcc325e4ad85b5395de28a4081ce88a4b33e",
+      "sourcePr": 859
+    },
+    {
+      "path": "src/features/operations/owner-opportunity-preview-proof.ts",
+      "status": "added",
+      "blobSha": "79f4a9ab4613036b1983cae2441a5d10857c689c",
+      "sourcePr": 859
+    },
+    {
+      "path": "src/features/operations/OwnerOpportunityWorkbench.module.css",
+      "status": "added",
+      "blobSha": "f48b19a17cfbbf1063c07a213424eb476df65171",
+      "sourcePr": 859
+    },
+    {
+      "path": "src/features/operations/OwnerOpportunityWorkbench.tsx",
+      "status": "added",
+      "blobSha": "b98efa8e19c7e57a27af165a2310161b802bdf67",
+      "sourcePr": 859
+    },
+    {
+      "path": "src/features/operations/workflow-operator-guidance.ts",
+      "status": "added",
+      "blobSha": "b838476b19db9a855ef22250fff9ba6cf4f3ccc8",
+      "sourcePr": 861
+    },
+    {
+      "path": "src/features/operations/WorkflowExecutionInspector.tsx",
+      "status": "modified",
+      "blobSha": "abf7da2bd43966b9a62cf9c8b4b42dbaa92a9589",
+      "sourcePr": 861
+    },
+    {
+      "path": "src/server/ai/f01-grounded-quote-alternatives.ts",
+      "status": "added",
+      "blobSha": "412e78e01e10fb0607c85853186e615b3d1718d6",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f01-saved-intake-proposal.ts",
+      "status": "added",
+      "blobSha": "4c323a9eb2dfbf756c9bde418e36f0dd731a22e8",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f02-saved-capacity-dispatch.ts",
+      "status": "added",
+      "blobSha": "12e28039dd51ad19d171705f15adccaf0f3a521f",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f02-saved-visit-quality.ts",
+      "status": "added",
+      "blobSha": "aad4b21fa392943e86a9a587fb7b19cb3949818f",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f03-saved-daily-weekly-intelligence.ts",
+      "status": "added",
+      "blobSha": "988f765efa29ec6d367403751c21880d83eb03f1",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f03-saved-ledger-explanations.ts",
+      "status": "added",
+      "blobSha": "1145065086bc1332b1113682f255637b28c909e8",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f04-consented-reply-draft.ts",
+      "status": "added",
+      "blobSha": "b0b796f17cfe08ca6a36e1046280740f1f8c5938",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f04-saved-retention-review.ts",
+      "status": "added",
+      "blobSha": "0fd1a4b837222542a12ca84f19f83f33e2d32e36",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f05-versioned-instruction-draft.ts",
+      "status": "added",
+      "blobSha": "3e73db01a2f7efb33ddb928aaaf4b2e91871a2da",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f05-versioned-whatif.ts",
+      "status": "added",
+      "blobSha": "f4546bbeb95aeb8938f317de86b78afcf7f5b9c5",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f06-internal-action-previews.ts",
+      "status": "added",
+      "blobSha": "8077f47a8d70bd21df47b1dde9b150f364d3b9fc",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f06-typed-event-proposals.ts",
+      "status": "added",
+      "blobSha": "85357c5f46a60c9990b58f636fd55b2d6e383b41",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f07-saved-ai-usage-review.ts",
+      "status": "added",
+      "blobSha": "58df709b04b9e146d6a95fc436fe3b13bfa710ac",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/f07-saved-workflow-critic.ts",
+      "status": "added",
+      "blobSha": "51e311faffc9d262776c40742336dba7b84697d9",
+      "sourcePr": 841
+    },
+    {
+      "path": "src/server/ai/sonic-f09-event-families.ts",
+      "status": "added",
+      "blobSha": "51b37bd9e67707c59411ef3295400087c3f54756",
+      "sourcePr": 852
+    },
+    {
+      "path": "src/server/ai/sonic-f09-internal-actions.ts",
+      "status": "added",
+      "blobSha": "47dde7776acb891064b92aee304971c1640e7033",
+      "sourcePr": 852
+    },
+    {
+      "path": "src/server/ai/sonic-f09-operational-recipes.ts",
+      "status": "added",
+      "blobSha": "f4bbccdbc66e153597d2a7b02e8d292b09cffb08",
+      "sourcePr": 852
+    },
+    {
+      "path": "src/server/ai/sonic-f10-field-recovery.ts",
+      "status": "added",
+      "blobSha": "a90641fc852f6e00719674888469edb7b2325e33",
+      "sourcePr": 854
+    },
+    {
+      "path": "src/server/ai/sonic-f10-lead-triage.ts",
+      "status": "added",
+      "blobSha": "cba315ecd70efc7ec11d04455615c1ee8dd60ad2",
+      "sourcePr": 854
+    },
+    {
+      "path": "src/server/ai/sonic-f11-quality.ts",
+      "status": "added",
+      "blobSha": "b88fa7f1a92a4845a9c23cb817e355d9751a030a",
+      "sourcePr": 857
+    },
+    {
+      "path": "src/server/ai/sonic-f11-resilience.ts",
+      "status": "added",
+      "blobSha": "96c9ac9dcfb2990bbaa6aa13fccbbb6e79629ade",
+      "sourcePr": 857
+    },
+    {
+      "path": "src/server/ai/sonic-f11-revenue.ts",
+      "status": "added",
+      "blobSha": "a54ebfe0aeddfa2952101e38ea6f3b4588cb45b7",
+      "sourcePr": 857
+    },
+    {
+      "path": "tests/ai/f01-grounded-quote-alternatives.test.ts",
+      "status": "added",
+      "blobSha": "d7fe0c4dea3db1873945b33cd29bf618ab8f8f8b",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f01-saved-intake-proposal.test.ts",
+      "status": "added",
+      "blobSha": "2c2c782c3f8a00b2f747ab4e9c65e68e106f9a04",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f02-saved-capacity-dispatch.test.ts",
+      "status": "added",
+      "blobSha": "a6e7c6a04ce875a73def93348413541e641e4be9",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f02-saved-visit-quality.test.ts",
+      "status": "added",
+      "blobSha": "0919050c2c17d654be8dd3ccd2739c95e50f4a82",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f03-saved-daily-weekly-intelligence.test.ts",
+      "status": "added",
+      "blobSha": "caaf3a874f95364b29b061398319291106d225df",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f03-saved-ledger-explanations.test.ts",
+      "status": "added",
+      "blobSha": "3ef0c95b913069eb935049137ee74c82d8932fa4",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f04-consented-reply-draft.test.ts",
+      "status": "added",
+      "blobSha": "8894dffabaae96c7449df5ff31f5767bac6fa017",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f04-saved-retention-review.test.ts",
+      "status": "added",
+      "blobSha": "3ba0c48c26d8233917c20521ae72cebb7dcd1859",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f05-versioned-instruction-draft.test.ts",
+      "status": "added",
+      "blobSha": "d8a59a8252db25c036e46472622fa03998707f46",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f05-versioned-whatif.test.ts",
+      "status": "added",
+      "blobSha": "829f0135a19551f1fdb0bd99c32cc6084004096a",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f06-internal-action-previews.test.ts",
+      "status": "added",
+      "blobSha": "2f8c80675cd5cc9d5eb65348c561457c72e4be7b",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f06-typed-event-proposals.test.ts",
+      "status": "added",
+      "blobSha": "2b9a6cbe0ca7605c6ff74f24997a2a00b7c84cb8",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f07-saved-ai-usage-review.test.ts",
+      "status": "added",
+      "blobSha": "0fa5b1ff32a2bc6ec9a0385fa8a94be345b2cc67",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f07-saved-workflow-critic.test.ts",
+      "status": "added",
+      "blobSha": "243356bfdb5f652202c15a612f58d015303cfad4",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/f08-feature-freeze-combined.test.ts",
+      "status": "added",
+      "blobSha": "a77a07932d4194931175bfa654e16b4ed09d5161",
+      "sourcePr": 841
+    },
+    {
+      "path": "tests/ai/sonic-f09-crosslane-critic.test.ts",
+      "status": "added",
+      "blobSha": "92df7197a106e1efc4d552ab10391fcf8d5d2d01",
+      "sourcePr": 852
+    },
+    {
+      "path": "tests/ai/sonic-f09-event-families.test.ts",
+      "status": "added",
+      "blobSha": "3853cde574620a675c2e37c2c340b54b0d3d5911",
+      "sourcePr": 852
+    },
+    {
+      "path": "tests/ai/sonic-f09-internal-actions.test.ts",
+      "status": "added",
+      "blobSha": "e1d96bd3af20327cdf70d92c2d71edf3a7014095",
+      "sourcePr": 852
+    },
+    {
+      "path": "tests/ai/sonic-f09-operational-recipes.test.ts",
+      "status": "added",
+      "blobSha": "cd95e670431358b6331bd2215e3d19729ab00d35",
+      "sourcePr": 852
+    },
+    {
+      "path": "tests/ai/sonic-f10-field-recovery.test.ts",
+      "status": "added",
+      "blobSha": "8ca22acaa8f96c866d3a8a4f8de055531a6dc7d9",
+      "sourcePr": 854
+    },
+    {
+      "path": "tests/ai/sonic-f10-lead-triage.test.ts",
+      "status": "added",
+      "blobSha": "0462198ca8c569b8179ed6466a9cb155b6fa138c",
+      "sourcePr": 854
+    },
+    {
+      "path": "tests/ai/sonic-f11-crosslane-critic.test.ts",
+      "status": "added",
+      "blobSha": "0544e461c5812402d7b890f68a2d5733af0f80f3",
+      "sourcePr": 857
+    },
+    {
+      "path": "tests/ai/sonic-f11-quality.test.ts",
+      "status": "added",
+      "blobSha": "f36e757db55c31aa4b2a04c3ba7997e56fc6e1e8",
+      "sourcePr": 857
+    },
+    {
+      "path": "tests/ai/sonic-f11-resilience.test.ts",
+      "status": "added",
+      "blobSha": "be4cdce84a6a7a00902b20a1ad8eff396bb6d278",
+      "sourcePr": 857
+    },
+    {
+      "path": "tests/ai/sonic-f11-revenue.test.ts",
+      "status": "added",
+      "blobSha": "135d0bb2db8d681e677deb625f33a9a1967478da",
+      "sourcePr": 857
+    },
+    {
+      "path": "tests/ai/sonic-f12-crosslane-critic.test.ts",
+      "status": "added",
+      "blobSha": "a9378df376c63f1f8e38f6e918776a410112ea80",
+      "sourcePr": 859
+    },
+    {
+      "path": "tests/ai/sonic-f12-owner-opportunity-action.test.ts",
+      "status": "added",
+      "blobSha": "51fae30c87fd7aa5d8b9a31f9d076d87c116cd9e",
+      "sourcePr": 859
+    },
+    {
+      "path": "tests/ai/sonic-f12-owner-opportunity-browser-proof.test.ts",
+      "status": "added",
+      "blobSha": "1b4caca81f77b7d357d1ea7122f00fc78fa46a38",
+      "sourcePr": 859
+    },
+    {
+      "path": "tests/ai/sonic-f13-workflow-evidence-critic.test.ts",
+      "status": "added",
+      "blobSha": "548f055c0789915dba0c9f61fa195e684c7d2649",
+      "sourcePr": 861
+    },
+    {
+      "path": "tests/ai/sonic-f13-workflow-operator-guidance.test.ts",
+      "status": "added",
+      "blobSha": "86fba860ff2d565d30f3a5f2df2f48ac82b2f1eb",
+      "sourcePr": 861
+    }
+  ]
+}
