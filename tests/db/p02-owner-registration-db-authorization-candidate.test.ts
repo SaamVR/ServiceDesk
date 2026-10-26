@@ -208,7 +208,7 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(ledger).toContain("sd_0062_v4_branch_trigger_rowtype_guard");
     expect(ledger).toContain("sd_0065_v4_default_branch_membership_authority");
     expect(ledger).toContain("name ~ '^sd_006[34](_|$)'");
-    expect(ledger).not.toMatch(/(?:create\\s+(?:schema|table|function)|insert\\s+into|delete\\s+from|update\\s+\\w+\\s+set|alter\\s+table|drop\\s+(?:schema|table|function))\\b/i);
+    expect(ledger).not.toMatch(/(?:create\s+(?:schema|table|function)|insert\s+into|delete\s+from|update\s+\w+\s+set|alter\s+table|drop\s+(?:schema|table|function))\b/i);
     expect(ledgerSetup).toContain("P02_LEDGER_DISPOSABLE_DATABASE_REQUIRED");
     expect(ledgerSetup).toContain("P02_LEDGER_DISPOSABLE_BASELINE_PASS");
     expect(ledgerNegatives).toContain("P02_LEDGER_DISPOSABLE_ONLY");
