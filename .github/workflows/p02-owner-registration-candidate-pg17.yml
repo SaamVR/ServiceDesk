@@ -7,6 +7,8 @@ on:
       - "docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql"
       - "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md"
       - "tests/sql/p02-owner-registration-db-authorization-pg17.sql"
+      - "tests/sql/p02-registration-preflight-negative-setup-pg17.sql"
+      - "docs/engineering/security/p02-registration-live-readonly-preflight.sql"
       - "tests/db/p02-owner-registration-db-authorization-candidate.test.ts"
       - ".github/workflows/p02-owner-registration-candidate-pg17.yml"
 permissions:
@@ -59,6 +61,51 @@ jobs:
             exit 1
           fi
           grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-after-install-blocked.log
+      - name: P02 source preflight fail-closed adversarial proof
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          psql -d postgres -v ON_ERROR_STOP=1 -c 'create database servicedesk_p02_preflight_negative'
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-preflight-negative-setup-pg17.sql | tee /tmp/p02-preflight-fresh.log
+          grep -q 'P02_FRESH_BASELINE_PREFLIGHT_PASS' /tmp/p02-preflight-fresh.log
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-preflight-fresh.log
+
+          # A changed anonymous RPC permission must fail the preimage check.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'grant execute on function public.servicedesk_register_owner_workspace(text,text,text,text) to anon'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-anon-block.log 2>&1; then
+            echo 'preflight accepted anonymous registration RPC' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-anon-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'revoke execute on function public.servicedesk_register_owner_workspace(text,text,text,text) from anon'
+
+          # SECURITY INVOKER drift must be denied independently of grants.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) security invoker'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-invoker-block.log 2>&1; then
+            echo 'preflight accepted changed function security mode' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-invoker-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) security definer'
+
+          # Source fingerprint drift is independently denied even when grants
+          # and SECURITY DEFINER stay correct.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) set search_path = pg_catalog'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-source-block.log 2>&1; then
+            echo 'preflight accepted changed registration function fingerprint' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-source-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) set search_path = pg_catalog, public, pg_temp'
+
+          # A fully restored baseline must pass; otherwise the failure tests
+          # could be falsely green from a permanently damaged test database.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql | tee /tmp/p02-preflight-restored.log
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-preflight-restored.log
       - uses: pnpm/action-setup@v4
         with:
           version: 10.17.1

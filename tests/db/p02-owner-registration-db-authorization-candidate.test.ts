@@ -77,12 +77,25 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(preflight).toContain("has_schema_privilege('anon', 'public', 'CREATE')");
     expect(preflight).toContain("has_schema_privilege('authenticated', 'public', 'CREATE')");
     expect(preflight).not.toMatch(/(?:insert into|update\s+public\.|delete from|drop table|create table)/i);
+    const negativeSetup = read("tests/sql/p02-registration-preflight-negative-setup-pg17.sql");
+    expect(negativeSetup).toContain("\\i supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql");
+    expect(negativeSetup).toContain("\\i supabase/migrations/0065_v4_default_branch_membership_authority.sql");
+    expect(negativeSetup).toContain("\\i docs/engineering/security/p02-registration-live-readonly-preflight.sql");
+    expect(negativeSetup).toContain("P02_FRESH_BASELINE_PREFLIGHT_PASS");
+    expect(negativeSetup).not.toMatch(/create role (?:anon|authenticated|service_role)/);
     const workflow = read(".github/workflows/p02-owner-registration-candidate-pg17.yml");
     expect(workflow).toContain("image: postgres:17");
     expect(workflow).toContain("tests/sql/p02-owner-registration-db-authorization-pg17.sql");
     expect(workflow).toContain("P02_REGISTRATION_READONLY_PREIMAGE_PASS");
     expect(workflow).toContain("P02_DISPOSABLE_PG17_REGISTRATION_DB_AUTHORIZATION_PASS");
     expect(workflow).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(workflow).toContain("P02 source preflight fail-closed adversarial proof");
+    expect(workflow).toContain("tests/sql/p02-registration-preflight-negative-setup-pg17.sql");
+    expect(workflow).toContain("preflight accepted anonymous registration RPC");
+    expect(workflow).toContain("preflight accepted changed function security mode");
+    expect(workflow).toContain("preflight accepted changed registration function fingerprint");
+    expect(workflow).toContain("P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED");
+    expect(workflow).toContain("P02_FRESH_BASELINE_PREFLIGHT_PASS");
     // In one transaction a new grant is valid at BEGIN but must be invalid
     // after real time elapses. This catches the now() transaction-clock bypass
     // while all data stays in disposable PostgreSQL, then rolls back.
