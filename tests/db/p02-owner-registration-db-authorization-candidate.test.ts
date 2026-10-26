@@ -21,7 +21,8 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(candidate).toContain("values(true,'CLOSED');");
     expect(candidate).toContain("g.user_id = v_actor");
     expect(candidate).toContain("g.revoked_at is null");
-    expect(candidate).toContain("g.expires_at > pg_catalog.now()");
+    expect(candidate).toContain("g.expires_at > pg_catalog.clock_timestamp()");
+    expect(candidate).not.toContain("g.expires_at > pg_catalog.now()");
     expect(candidate).not.toContain("g.expires_at is null");
     expect(candidate).toContain("expires_at timestamptz not null");
     expect(candidate).toContain("references auth.users(id) on delete cascade");
@@ -70,5 +71,15 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(workflow).toContain("image: postgres:17");
     expect(workflow).toContain("tests/sql/p02-owner-registration-db-authorization-pg17.sql");
     expect(workflow).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    // In one transaction a new grant is valid at BEGIN but must be invalid
+    // after real time elapses. This catches the now() transaction-clock bypass
+    // while all data stays in disposable PostgreSQL, then rolls back.
+    expect(fixture).toContain("do $expired_long_transaction$");
+    expect(fixture).toContain("select pg_catalog.pg_sleep(1.4)");
+    expect(fixture).toContain("Transaction-start time incorrectly accepted expired grant");
+    const beg = fixture.indexOf("do $expired_long_transaction$");
+    expect(beg).toBeGreaterThan(fixture.indexOf("select pg_catalog.pg_sleep(1.4)"));
+    expect(fixture.slice(beg)).toContain("rollback;");
+    expect(fixture).toContain("do $expired_rollback$");
   });
 });
