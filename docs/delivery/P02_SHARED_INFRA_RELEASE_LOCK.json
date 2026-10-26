@@ -5,17 +5,19 @@
   "repository": "SaamVR/ServiceDesk",
   "source": {
     "canonical_branch": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
-    "source_verified_sha": "1003075d1bfcefb6415d6c9a4bdda9c57a0546ff",
+    "source_verified_sha": "d5e86b369c46384278be8006812a3e27c41da21e",
     "candidate_branch": "deploy/servicedesk-v4-p02-rc-20261026",
     "candidate_branch_sha_at_creation": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
     "candidate_branch_is_git_protected": false,
     "source_checks": [
-      "https://github.com/SaamVR/ServiceDesk/actions/runs/40226954444",
-      "https://github.com/SaamVR/ServiceDesk/actions/runs/40226954390",
-      "https://github.com/SaamVR/ServiceDesk/actions/runs/40226954402"
+      "https://github.com/SaamVR/ServiceDesk/actions/runs/40250318536",
+      "https://github.com/SaamVR/ServiceDesk/actions/runs/40250318600",
+      "https://github.com/SaamVR/ServiceDesk/actions/runs/40250318555"
     ],
     "release_candidate_deliberately_lags_canonical": true,
-    "release_candidate_expectation": "RC branch SHA remains ac78ff...; latest 1003075d... adds read-only host verification tooling only. Live branch and provider source SHA must be re-read prior to any deployment."
+    "release_candidate_expectation": "RC branch SHA remains ac78ff...; latest 1003075d... adds read-only host verification tooling only. Live branch and provider source SHA must be re-read prior to any deployment.",
+    "manual_vercel_candidate_sha": "d5e86b369c46384278be8006812a3e27c41da21e",
+    "manual_vercel_candidate_note": "PINNED COMMIT ONLY, not deployed. SHA contains vercel.json git.deploymentEnabled false. No extra deploy branch is required."
   },
   "render": {
     "workspace": "tea-d1ihdsbipnbc73bpc8f0",
@@ -101,12 +103,12 @@
     "currentSelectedProvider": "vercel"
   },
   "milestone_evidence": {
-    "observed_source_tests": 3725,
-    "observed_source_test_suites": 755,
+    "observed_source_tests": 3728,
+    "observed_source_test_suites": 756,
     "real_owner_acceptance": false,
     "production_ready": false
   },
-  "readme": "VERCEL SELECTED as of 2026-10-26, but NO DEPLOYMENT AUTHORIZED. This is a dated read-only and governance snapshot, not live provider state. Supabase 0065 installed; two real owner sessions and manual Vercel deploy UAT pending.",
+  "readme": "2026-10-26: Vercel selected, exact manual-only source d5e86... verified (756 files/3728 tests, three CI); no ServiceDesk Vercel project, no build/deploy and no approval to deploy. This document is a dated source/permission record, not live provider evidence. P02 still open with real authenticated UAT pending.",
   "owner_directive_20261026": {
     "selected_deployment_provider": "vercel",
     "all_deployments_require_separate_explicit_permission": true,
@@ -132,6 +134,13 @@
     "deploys_performed_for_servicedesk_in_this_turn": 0,
     "commercial_hobby_usage_allowed": false,
     "paid_upgrade_approved": false,
-    "note": "A ServiceDesk Vercel project was not present in read-only repo/name checks. Do not create/link/deploy without a separate explicit user authorization."
+    "note": "A ServiceDesk Vercel project was not present in read-only repo/name checks. Do not create/link/deploy without a separate explicit user authorization.",
+    "manual_only_source_policy_merged": true,
+    "manual_only_source_policy_pr": 855,
+    "manual_only_source_policy_sha": "d5e86b369c46384278be8006812a3e27c41da21e",
+    "git_auto_deploy_disabled_in_reviewed_source": true,
+    "git_auto_deploy_disabled_on_project": null,
+    "project_exists": false,
+    "sha_deployments_readonly_observed": 0
   }
 }
