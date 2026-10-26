@@ -153,6 +153,26 @@ export async function runTwoOwnerReadOnlyAudit(
       throw Error("DEFAULT_BRANCH_OWN_RPC_NOT_VERIFIED");
     if (foreignBranch !== null)
       throw Error("FOREIGN_DEFAULT_BRANCH_DISCLOSURE");
+
+    // The first owner/branch reads are not an immutable authorization grant.
+    // Revocation, role changes or default-branch reassignment can happen while
+    // this read-only matrix performs its other network checks. Re-read BOTH
+    // authoritative saved rows at the end for this signed-in JWT and require
+    // the same saved branch identity before issuing even a scoped PASS.
+    // This narrows TOCTOU exposure; it is NOT an atomic DB transaction or
+    // proof that a session will remain valid after the audit finishes.
+    const finalMembership = await scoped("memberships", owner.expectedWorkspace);
+    const finalDefault = await scoped("workspace_branches", owner.expectedWorkspace);
+    if (finalMembership.length !== 1 || finalDefault.length !== 1 ||
+        finalDefault[0].id !== ownDefaults[0].id)
+      throw Error("OWNER_AUTHORITY_CHANGED_DURING_AUDIT");
+    // Short-lived JWTs may expire while the read matrix is running. A server
+    // accepted a prior request does not justify printing a fresh PASS later.
+    const finalClaims = jwtClaims(owner.token);
+    if (!Number.isSafeInteger(finalClaims?.exp) ||
+        finalClaims.exp * 1000 <= Date.now())
+      throw Error("OWNER_SESSION_EXPIRED_DURING_AUDIT");
+
     checked.push({ owner: owner.tag, scope: "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED",
       defaultBranch: "AUTHORIZED_ONLY", authenticated: true });
   }
