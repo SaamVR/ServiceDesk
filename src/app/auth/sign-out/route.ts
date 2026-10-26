@@ -27,7 +27,10 @@ export async function POST(request: NextRequest) {
   const config = authConfig();
 
   if (!config) {
-    return response;
+    return NextResponse.json(
+      { error: "Sign out is unavailable in this environment." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
   }
 
   const auth = createServerClient(config.url, config.anonKey, {
@@ -43,6 +46,21 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  await auth.auth.signOut();
+  // A provider failure must never be presented as a completed sign-out:
+  // the browser might still carry a valid session on a shared device.
+  try {
+    const { error } = await auth.auth.signOut();
+    if (error) {
+      return NextResponse.json(
+        { error: "Sign out could not be completed. Please try again." },
+        { status: 503, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+  } catch {
+    return NextResponse.json(
+      { error: "Sign out could not be completed. Please try again." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
   return response;
 }
