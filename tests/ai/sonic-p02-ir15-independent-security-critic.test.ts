@@ -93,6 +93,14 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(post).toContain("owner_registration_grants_user_id_fkey");
   expect(post).toContain("protected table constraint drift");
   expect(wf).toContain("P02_POSTINSTALL_DENIED_MODE_CHECK_DROPPED");
+  expect(post).toContain("protected control defaults drift");
+  expect(post).toContain("v_config is distinct from 'search_path=pg_catalog, public, pg_temp'");
+  for (const marker of [
+    "MODE_DEFAULT_PUBLIC", "SINGLETON_DEFAULT_DROPPED", "EXTRA_FUNCTION_GUC"
+  ]) {
+    expect(wf).toContain("P02_POSTINSTALL_DENIED_" + marker);
+    expect(postNegative).toContain("assert_blocked " + marker);
+  }
   expect(postNegative).toContain("P18_UNREVIEWED_COMMENT_BODY_DRIFT");
   expect(postNegative).toContain("P02_POSTINSTALL_NEGATIVE_MATRIX_PASS");
   expect(wf).toContain("P02_POSTINSTALL_DENIED_BODY_HASH");
