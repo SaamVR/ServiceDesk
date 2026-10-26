@@ -16,6 +16,9 @@ describe("P02 independent critic: latest read-only authority before audit PASS",
   expect(source).toContain('finalDefault[0].id !== ownDefaults[0].id');
   expect(source).toContain('finalMembership.length !== 1');
   expect(source).toContain('OWNER_AUTHORITY_CHANGED_DURING_AUDIT');
+  const deferred=source.indexOf('for (const recheck of finalAuthorityReadbacks) await recheck();');
+  expect(deferred).toBeGreaterThan(passed);
+  expect(source).toContain("if(owner===\"B\")secondOwnerStarted");
  });
  it("does not claim validity after the bearer JWT expires mid-proof",()=>{
   expect(source).toContain("const finalClaims = jwtClaims(owner.token)");
