@@ -196,6 +196,32 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(workflow).toContain("servicedesk_p02_postinstall_negative");
     expect(workflow).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
 
+    // P21: existing Supabase ledger 0065 was applied out of order.
+    // A separate read-only gate must veto lost 0065 and replayed 0063/0064.
+    const ledger = read("docs/engineering/security/p02-registration-migration-ledger-readonly-gate.sql");
+    const ledgerSetup = read("tests/sql/p02-registration-migration-ledger-disposable-setup-pg17.sql");
+    const ledgerNegatives = read("scripts/release/tests/v4-p02-migration-ledger-negative-pg17.sh");
+    expect(ledger).toContain("begin transaction read only;");
+    expect(ledger).toContain("P02_MIGRATION_LEDGER_BLOCKED");
+    expect(ledger).toContain("P02_MIGRATION_LEDGER_READONLY_PASS");
+    expect(ledger).toContain("supabase_migrations.schema_migrations");
+    expect(ledger).toContain("sd_0062_v4_branch_trigger_rowtype_guard");
+    expect(ledger).toContain("sd_0065_v4_default_branch_membership_authority");
+    expect(ledger).toContain("name ~ '^sd_006[34](_|$)'");
+    expect(ledger).not.toMatch(/(?:create\s+(?:schema|table|function)|insert\s+into|delete\s+from|update\s+\w+\s+set|alter\s+table|drop\s+(?:schema|table|function))\b/i);
+    expect(ledgerSetup).toContain("P02_LEDGER_DISPOSABLE_DATABASE_REQUIRED");
+    expect(ledgerSetup).toContain("P02_LEDGER_DISPOSABLE_BASELINE_PASS");
+    expect(ledgerNegatives).toContain("P02_LEDGER_DISPOSABLE_ONLY");
+    expect(ledgerNegatives).toContain("P02_LEDGER_WRONG_FAILURE_");
+    for (const tag of ["MISSING_0065", "RENAMED_0065", "MISSING_0062", "UNREVIEWED_0063", "UNREVIEWED_0064", "DUPLICATE_0065_NAME", "RENAMED_0062"]) {
+      expect(workflow).toContain("P02_LEDGER_DENIED_" + tag);
+      expect(ledgerNegatives).toContain("assert_blocked " + tag);
+    }
+    expect(workflow).toContain("P02_LEDGER_NEGATIVE_MATRIX_PASS");
+    expect(ledgerNegatives).toContain("P02_LEDGER_NEGATIVE_MATRIX_PASS");
+    expect(workflow).toContain("servicedesk_p02_ledger_probe");
+    expect(workflow).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+
     // Reverse race proof: operator must win when its write takes the lock
     // before the new-owner RPC, with a positive approved registration
     // precondition and no persisted workspace or audit row after denials.
