@@ -31,6 +31,13 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(candidate).toContain("REGISTRATION_NOT_AUTHORIZED");
   expect(candidate).toContain("g.revoked_at is null");
   expect(candidate).toContain("g.expires_at > pg_catalog.clock_timestamp()");
+  expect(candidate).toContain("select c.mode into v_registration_mode");
+  expect(candidate).toContain("select true into v_qa_granted");
+  const gate = candidate.slice(candidate.indexOf("select c.mode into v_registration_mode"),
+      candidate.indexOf("if exists (select 1 from public.workspaces where slug = v_slug)"));
+  expect((gate.match(/for share;/g) ?? [])).toHaveLength(2);
+  expect(gate).toContain("coalesce(v_qa_granted,false)");
+
   expect(candidate).not.toContain("g.expires_at > pg_catalog.now()");
   expect(candidate).toContain("revoke all on schema servicedesk_security from public, anon, authenticated;");
   expect(candidate).toContain("from public, anon, authenticated;");
@@ -44,6 +51,11 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(db).toContain("P02_DISPOSABLE_PG17_REGISTRATION_DB_AUTHORIZATION_PASS");
   expect(db).toContain("expired_long_transaction");
   expect(wf).toContain("P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED");
+  expect(wf).toContain("P02_REGISTRATION_CONCURRENCY_LOCKS_PASS");
+  const concurrency=get("scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh");
+  expect(concurrency).toContain("P02_CONCURRENCY_FIXTURE_ONLY");
+  expect(concurrency).toContain("P02_QA_GRANT_REVOCATION_RACED_IN_FLIGHT_REGISTRATION");
+  expect(concurrency).toContain("P02_CONTROL_KILL_SWITCH_WRITE_RACED_IN_FLIGHT_REGISTRATION");
   expect(wf).toContain("P02_FRESH_BASELINE_PREFLIGHT_PASS");
   expect(wf).toContain("preflight accepted anonymous registration RPC");
   expect(wf).toContain("preflight accepted authenticated CREATE on privileged search_path schema");
