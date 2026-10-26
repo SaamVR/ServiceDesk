@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import { trustedAuthDestination } from "@/features/auth/email-origin";
 
 function authConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
@@ -11,11 +12,18 @@ function authConfig() {
 }
 
 export async function POST(request: NextRequest) {
-  const destination = new URL(
+  // An inbound Host/request URL is not an authorized redirect origin.
+  const destination = trustedAuthDestination(
     "/auth/sign-in?notice=" + encodeURIComponent("You have been signed out."),
-    request.url,
   );
+  if (!destination) {
+    return NextResponse.json(
+      { error: "Authentication redirect is not configured for this environment." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
   const response = NextResponse.redirect(destination, 303);
+  response.headers.set("Cache-Control", "private, no-store");
   const config = authConfig();
 
   if (!config) {
