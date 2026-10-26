@@ -40,3 +40,7 @@ Six prior drafts contain substantial verified source but remain unmerged. Their 
 Source result is acceptable for Production *review* only after all at the exact rehearsal SHA: (1) Git hash lock of all 71 original blobs, (2) original F01–F13 suites all pass together, (3) TypeScript, ESLint and Next production build, (4) review merge-tree parity, (5) independent critic integrity, (6) no scope escape in diff. GitHub Actions on draft PR can validate this with no deployment. Fail closed and repair isolated rehearsal wiring only if any run fails; do not rewrite original PR blobs without a separate explicit proposal.
 
 **NEXT_BATCH:** Production selects source merge option after P02 readiness; Feature Chat must not open another speculative F14+ feature simply to accumulate source count.
+
+## Concurrent P02 canonical advance verified at rehearsal completion
+
+After initial combined source acceptance, Production merged [P02 #864](https://github.com/SaamVR/ServiceDesk/pull/864) into canonical `6064e971431e06920ba5e9d72715f5a71e0f5710`. Its only changed paths are `src/features/auth/authorized-workspace-access.ts` and `tests/e2e/v3-authorized-workspace-access.test.ts`, neither owned by the 71 feature files or IR14 QA docs. Original exact F08–F13 Git blob objects remain unchanged. Integration prepares a two-parent **isolated draft** source commit incorporating those two P02 changes plus the same locked 71 blobs and four IR14 QA docs/tests, with a fresh exact-head run. This is not permission to merge or deploy and is not live two-tenant P02 acceptance.
