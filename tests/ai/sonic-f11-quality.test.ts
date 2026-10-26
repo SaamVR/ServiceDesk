@@ -60,6 +60,13 @@ describe("SONIC F11 Quality saved-projection owner review (source only)",()=>{
   expect(planSonicF11Quality(poisoned))
    .toMatchObject({ok:false,code:"F11_Quality_INPUT_INVALID"});
  });
+ it("rejects object-valued severity without invoking attacker toString",()=>{
+  let coerced=false;
+  const poison={toString(){coerced=true;throw Error("UNTRUSTED_COERCION");}};
+  const result=planSonicF11Quality(make({...second,severity:poison}));
+  expect(result).toMatchObject({ok:false,code:"F11_Quality_EVIDENCE_INVALID"});
+  expect(coerced).toBe(false);
+ });
  it("binds changing approved saved evidence and source version into the candidate fingerprint",()=>{
   const a=planSonicF11Quality(make(first)),b=planSonicF11Quality(make(first,{
    expectedVersion:4,
