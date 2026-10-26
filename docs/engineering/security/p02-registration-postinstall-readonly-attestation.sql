@@ -79,14 +79,43 @@ begin
     raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: exposed privileged schema';
   end if;
 
-  if has_table_privilege('authenticated','servicedesk_security.owner_registration_control','SELECT')
-     or has_table_privilege('authenticated','servicedesk_security.owner_registration_control','UPDATE')
-     or has_table_privilege('authenticated','servicedesk_security.owner_registration_grants','SELECT')
-     or has_table_privilege('authenticated','servicedesk_security.owner_registration_grants','INSERT')
-     or has_table_privilege('anon','servicedesk_security.owner_registration_control','SELECT')
-     or has_table_privilege('anon','servicedesk_security.owner_registration_grants','SELECT')
-  then
-    raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: direct protected table access';
+  -- All effective API role table AND column privileges must be denied.
+  -- A SELECT-only check misses DELETE/TRUNCATE/TRIGGER/MAINTAIN grants,
+  -- and a table ACL check alone misses column-level grants.
+  if exists (
+    select 1
+    from (values ('anon'::text), ('authenticated'::text)) as api(role_name)
+    cross join (values
+      ('servicedesk_security.owner_registration_control'::regclass),
+      ('servicedesk_security.owner_registration_grants'::regclass)
+    ) as protected(table_oid)
+    cross join (values
+      ('SELECT'::text),
+      ('INSERT'::text),
+      ('UPDATE'::text),
+      ('DELETE'::text),
+      ('TRUNCATE'::text),
+      ('REFERENCES'::text),
+      ('TRIGGER'::text),
+      ('MAINTAIN'::text)
+    ) as table_right(privilege_name)
+    where has_table_privilege(api.role_name, protected.table_oid, table_right.privilege_name)
+  ) or exists (
+    select 1
+    from (values ('anon'::text), ('authenticated'::text)) as api(role_name)
+    cross join (values
+      ('servicedesk_security.owner_registration_control'::regclass),
+      ('servicedesk_security.owner_registration_grants'::regclass)
+    ) as protected(table_oid)
+    cross join (values
+      ('SELECT'::text),
+      ('INSERT'::text),
+      ('UPDATE'::text),
+      ('REFERENCES'::text)
+    ) as column_right(privilege_name)
+    where has_any_column_privilege(api.role_name, protected.table_oid, column_right.privilege_name)
+  ) then
+    raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: direct protected table or column access';
   end if;
   if (select count(*)
       from pg_class c join pg_namespace n on n.oid=c.relnamespace
