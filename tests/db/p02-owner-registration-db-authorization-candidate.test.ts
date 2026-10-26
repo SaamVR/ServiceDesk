@@ -24,6 +24,7 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(candidate).toContain("g.expires_at > pg_catalog.now()");
     expect(candidate).not.toContain("g.expires_at is null");
     expect(candidate).toContain("expires_at timestamptz not null");
+    expect(candidate).toContain("references auth.users(id) on delete cascade");
     expect(candidate).not.toContain("create table if not exists servicedesk_security");
     expect(candidate).toContain("REGISTRATION_NOT_AUTHORIZED");
     // Comments in the original function mention user_metadata only to reject it.
@@ -62,7 +63,7 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(fixture).toContain("\\i docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql");
     expect(fixture).toContain("set local role authenticated");
     expect(fixture).toContain("P02_DISPOSABLE_PG17_REGISTRATION_DB_AUTHORIZATION_PASS");
-    for (const value of ["CLOSED", "QA_ONLY", "PUBLIC", "expired", "revoked_at", "EMAIL_VERIFICATION_REQUIRED", "client_tamper", "kill_switch", "anon_rpc"]) {
+    for (const value of ["CLOSED", "QA_ONLY", "PUBLIC", "expired", "revoked_at", "EMAIL_VERIFICATION_REQUIRED", "client_tamper", "kill_switch", "anon_rpc", "deleted_qa_user"]) {
       expect(fixture.toLowerCase()).toContain(value.toLowerCase());
     }
     const workflow = read(".github/workflows/p02-owner-registration-candidate-pg17.yml");

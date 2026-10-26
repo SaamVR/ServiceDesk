@@ -38,7 +38,8 @@ values
   ('bbbbbbbb-0000-4000-8000-000000000002', now(), false),
   ('cccccccc-0000-4000-8000-000000000003', null, false),
   ('dddddddd-0000-4000-8000-000000000004', now(), false),
-  ('eeeeeeee-0000-4000-8000-000000000005', now(), false);
+  ('eeeeeeee-0000-4000-8000-000000000005', now(), false),
+  ('ffffffff-0000-4000-8000-000000000006', now(), false);
 
 \i docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql
 
@@ -349,4 +350,22 @@ begin
     raise exception 'Emergency containment changed saved workspaces/control';
   end if;
 end $post_kill_integrity$;
+-- QA cleanup: deleting a *never-registered* fictional Auth user must
+-- automatically revoke its residual approval without touching other owners.
+-- Do not delete any user on the live main project without separate approval.
+insert into servicedesk_security.owner_registration_grants(user_id,expires_at)
+values('ffffffff-0000-4000-8000-000000000006',now()+interval '1 hour');
+delete from auth.users
+ where id='ffffffff-0000-4000-8000-000000000006';
+do $deleted_qa_user$
+begin
+  if exists (select 1 from servicedesk_security.owner_registration_grants
+      where user_id='ffffffff-0000-4000-8000-000000000006') then
+    raise exception 'Deleted fictional auth user retains a registration grant';
+  end if;
+  if (select count(*) from public.workspaces) <> 3 then
+    raise exception 'QA cleanup affected another owner workspace';
+  end if;
+end $deleted_qa_user$;
+
 select 'P02_DISPOSABLE_PG17_REGISTRATION_DB_AUTHORIZATION_PASS' as result;

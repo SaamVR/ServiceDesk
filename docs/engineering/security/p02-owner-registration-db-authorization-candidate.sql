@@ -22,7 +22,7 @@ insert into servicedesk_security.owner_registration_control(singleton,mode)
   values(true,'CLOSED');
 
 create table servicedesk_security.owner_registration_grants (
-  user_id uuid primary key references auth.users(id),
+  user_id uuid primary key references auth.users(id) on delete cascade,
   expires_at timestamptz not null,
   revoked_at timestamptz,
   approved_at timestamptz not null default pg_catalog.now()
