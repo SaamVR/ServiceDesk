@@ -24,7 +24,7 @@ describe("P02 IR15 immutable two-source integration provenance",()=>{
    migrationInstalled:false,liveDeploymentAuthorized:false,fileCount:20,
    sourceHeads:{
     868:"9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    869:"ed299f13417b164a7f9c52189df254ee2f367d1a",
+    869:"fc474aedb0c4c98f85e9878fb0fd8cc8582f22cf",
    },
   });
  });
