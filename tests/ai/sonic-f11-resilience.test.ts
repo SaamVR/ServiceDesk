@@ -35,36 +35,36 @@ describe("SONIC F11 Resilience saved-projection owner review (source only)",()=>
  });
  it("rejects staff, cross-workspace, cross-branch and stale-record assertions",()=>{
   expect(planSonicF11Resilience(make(first,{actor:{workspaceId:"tenant_a",role:"STAFF"}})))
-   .toMatchObject({ok:false,code:"F11_Resilience_OWNER_REQUIRED"});
+   .toMatchObject({ok:false,code:"F11_RESILIENCE_OWNER_REQUIRED"});
   expect(planSonicF11Resilience(make({...first,workspaceId:"tenant_b"})))
-   .toMatchObject({ok:false,code:"F11_Resilience_SCOPE_MISMATCH"});
+   .toMatchObject({ok:false,code:"F11_RESILIENCE_SCOPE_MISMATCH"});
   expect(planSonicF11Resilience(make({...first,branchId:"branch_b"})))
-   .toMatchObject({ok:false,code:"F11_Resilience_SCOPE_MISMATCH"});
+   .toMatchObject({ok:false,code:"F11_RESILIENCE_SCOPE_MISMATCH"});
   expect(planSonicF11Resilience(make(first,{expectedVersion:4})))
-   .toMatchObject({ok:false,code:"F11_Resilience_STALE"});
+   .toMatchObject({ok:false,code:"F11_RESILIENCE_STALE"});
  });
  it("rejects implausible or unauthorized saved state evidence",()=>{
   for(const altered of [{failedChecks:2},{providerCode:"EVIL_URL"}]){
    expect(planSonicF11Resilience(make({...first,...altered})))
-    .toMatchObject({ok:false,code:"F11_Resilience_EVIDENCE_INVALID"});
+    .toMatchObject({ok:false,code:"F11_RESILIENCE_EVIDENCE_INVALID"});
   }
  });
  it("rejects send/payment bypass flags, poisoned prototypes and getter-backed type",()=>{
   expect(planSonicF11Resilience(make({...first,customerMessageSent:true})))
-   .toMatchObject({ok:false,code:"F11_Resilience_INPUT_INVALID"});
+   .toMatchObject({ok:false,code:"F11_RESILIENCE_INPUT_INVALID"});
   const x=make(first);
   Object.defineProperty(x.record,"kind",{enumerable:true,get(){throw Error("getter");}});
-  expect(planSonicF11Resilience(x)).toMatchObject({ok:false,code:"F11_Resilience_INPUT_INVALID"});
+  expect(planSonicF11Resilience(x)).toMatchObject({ok:false,code:"F11_RESILIENCE_INPUT_INVALID"});
   const poisoned=make(first);
   Object.setPrototypeOf(poisoned.record,null);
   expect(planSonicF11Resilience(poisoned))
-   .toMatchObject({ok:false,code:"F11_Resilience_INPUT_INVALID"});
+   .toMatchObject({ok:false,code:"F11_RESILIENCE_INPUT_INVALID"});
  });
  it("rejects object-valued providerCode without invoking attacker toString",()=>{
   let coerced=false;
   const poison={toString(){coerced=true;throw Error("UNTRUSTED_COERCION");}};
   const result=planSonicF11Resilience(make({...first,providerCode:poison}));
-  expect(result).toMatchObject({ok:false,code:"F11_Resilience_EVIDENCE_INVALID"});
+  expect(result).toMatchObject({ok:false,code:"F11_RESILIENCE_EVIDENCE_INVALID"});
   expect(coerced).toBe(false);
  });
  it("binds changing approved saved evidence and source version into the candidate fingerprint",()=>{
