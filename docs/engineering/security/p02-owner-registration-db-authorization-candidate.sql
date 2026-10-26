@@ -2,13 +2,14 @@
 -- Explicit owner authorization, reviewed SQL rehearsal, backup, and rollout
 -- are mandatory BEFORE generating/applying a corrective migration.
 -- Do not automatically include this candidate in the Supabase migration chain.
--- Intended deployment mode CLOSED. QA_ONLY needs operator-set grants and
+-- Installation MUST fail on any pre-existing conflicting schema/table.
+-- Intended deployment mode CLOSED. QA_ONLY needs operator-set expiring grants and
 -- owner-approved control mode; PUBLIC requires separate commercial approval.
 -- This design never accepts caller-supplied actor IDs, metadata, or email claims.
-create schema if not exists servicedesk_security;
+create schema servicedesk_security;
 revoke all on schema servicedesk_security from public, anon, authenticated;
 
-create table if not exists servicedesk_security.owner_registration_control (
+create table servicedesk_security.owner_registration_control (
   singleton boolean primary key default true check (singleton),
   mode text not null default 'CLOSED'
     check (mode in ('CLOSED', 'QA_ONLY', 'PUBLIC')),
@@ -18,11 +19,11 @@ alter table servicedesk_security.owner_registration_control enable row level sec
 revoke all on table servicedesk_security.owner_registration_control
   from public, anon, authenticated;
 insert into servicedesk_security.owner_registration_control(singleton,mode)
-  values(true,'CLOSED') on conflict (singleton) do nothing;
+  values(true,'CLOSED');
 
-create table if not exists servicedesk_security.owner_registration_grants (
+create table servicedesk_security.owner_registration_grants (
   user_id uuid primary key references auth.users(id),
-  expires_at timestamptz,
+  expires_at timestamptz not null,
   revoked_at timestamptz,
   approved_at timestamptz not null default pg_catalog.now()
 );

@@ -13,15 +13,17 @@ describe("P02 source-only database-side owner registration authorization", () =>
   it("is an uninstalled candidate, not an automatically applied migration", () => {
     expect(candidate).toContain("NOT A MIGRATION, NOT DEPLOYED");
     expect(candidate).toContain("BEFORE generating/applying a corrective migration");
-    expect(candidate).toContain("create schema if not exists servicedesk_security");
+    expect(candidate).toContain("create schema servicedesk_security");
   });
 
   it("defaults closed and enforces exact nonrevoked owner grants", () => {
     expect(candidate).toContain("check (mode in ('CLOSED', 'QA_ONLY', 'PUBLIC'))");
-    expect(candidate).toContain("values(true,'CLOSED') on conflict (singleton) do nothing");
+    expect(candidate).toContain("values(true,'CLOSED');");
     expect(candidate).toContain("g.user_id = v_actor");
     expect(candidate).toContain("g.revoked_at is null");
     expect(candidate).toContain("g.expires_at > pg_catalog.now()");
+    expect(candidate).toContain("expires_at timestamptz not null");
+    expect(candidate).not.toContain("create table if not exists servicedesk_security");
     expect(candidate).toContain("REGISTRATION_NOT_AUTHORIZED");
     // Comments in the original function mention user_metadata only to reject it.
     // Guard against executable privilege claims, not explanatory comments.
