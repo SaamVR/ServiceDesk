@@ -52,6 +52,10 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(db).toContain("expired_long_transaction");
   expect(wf).toContain("P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED");
   expect(wf).toContain("P02_REGISTRATION_CONCURRENCY_LOCKS_PASS");
+  const preflight=get("docs/engineering/security/p02-registration-live-readonly-preflight.sql");
+  expect((preflight.match(/pg_catalog\.pg_get_userbyid\(p\.proowner\)/g) ?? [])).toHaveLength(2);
+  expect(wf).toContain("preflight accepted changed registration SECURITY DEFINER owner");
+  expect(wf).toContain("preflight accepted changed default-branch SECURITY DEFINER owner");
   // Operator-first is the opposite lock acquisition ordering. It must
   // demonstrate an approved actor can register before operator lock changes,
   // then that CLOSED and exact grant revocation both cause denial.

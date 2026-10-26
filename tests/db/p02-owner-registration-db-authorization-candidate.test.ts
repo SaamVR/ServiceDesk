@@ -94,6 +94,8 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(preflight).toContain("9f14160f16e16ffe6ac16f35c3f4557f");
     expect(preflight).toContain("has_schema_privilege('anon', 'public', 'CREATE')");
     expect(preflight).toContain("has_schema_privilege('authenticated', 'public', 'CREATE')");
+    expect(preflight).toContain("pg_catalog.pg_get_userbyid(p.proowner)");
+    expect((preflight.match(/pg_catalog\.pg_get_userbyid\(p\.proowner\)/g) ?? [])).toHaveLength(2);
     expect(preflight).not.toMatch(/(?:insert into|update\s+public\.|delete from|drop table|create table)/i);
     const negativeSetup = read("tests/sql/p02-registration-preflight-negative-setup-pg17.sql");
     expect(negativeSetup).toContain("\\i supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql");
@@ -149,6 +151,8 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(workflow).toContain("preflight accepted changed function security mode");
     expect(workflow).toContain("preflight accepted changed registration function fingerprint");
     expect(workflow).toContain("preflight accepted authenticated CREATE on privileged search_path schema");
+    expect(workflow).toContain("preflight accepted changed registration SECURITY DEFINER owner");
+    expect(workflow).toContain("preflight accepted changed default-branch SECURITY DEFINER owner");
     expect(workflow).toContain("P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED");
     expect(workflow).toContain("P02_FRESH_BASELINE_PREFLIGHT_PASS");
     // In one transaction a new grant is valid at BEGIN but must be invalid
