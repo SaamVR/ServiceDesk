@@ -59,6 +59,18 @@ pg -c "grant usage on schema servicedesk_security to authenticated"
 assert_blocked PRIVATE_SCHEMA
 pg -c "revoke usage on schema servicedesk_security from authenticated"
 
+# Even permissions irrelevant to the normal request path must invalidate
+# the install receipt. A prior SELECT-only check missed these grants.
+pg -c "grant delete on table servicedesk_security.owner_registration_control to authenticated"
+assert_blocked TABLE_DELETE
+pg -c "revoke delete on table servicedesk_security.owner_registration_control from authenticated"
+pg -c "grant maintain on table servicedesk_security.owner_registration_grants to anon"
+assert_blocked TABLE_MAINTAIN
+pg -c "revoke maintain on table servicedesk_security.owner_registration_grants from anon"
+pg -c "grant select (mode) on table servicedesk_security.owner_registration_control to anon"
+assert_blocked COLUMN_SELECT
+pg -c "revoke select (mode) on table servicedesk_security.owner_registration_control from anon"
+
 pg -c "alter table servicedesk_security.owner_registration_grants disable row level security"
 assert_blocked RLS_OFF
 pg -c "alter table servicedesk_security.owner_registration_grants enable row level security"
