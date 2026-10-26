@@ -35,36 +35,36 @@ describe("SONIC F11 Revenue saved-projection owner review (source only)",()=>{
  });
  it("rejects staff, cross-workspace, cross-branch and stale-record assertions",()=>{
   expect(planSonicF11Revenue(make(first,{actor:{workspaceId:"tenant_a",role:"STAFF"}})))
-   .toMatchObject({ok:false,code:"F11_Revenue_OWNER_REQUIRED"});
+   .toMatchObject({ok:false,code:"F11_REVENUE_OWNER_REQUIRED"});
   expect(planSonicF11Revenue(make({...first,workspaceId:"tenant_b"})))
-   .toMatchObject({ok:false,code:"F11_Revenue_SCOPE_MISMATCH"});
+   .toMatchObject({ok:false,code:"F11_REVENUE_SCOPE_MISMATCH"});
   expect(planSonicF11Revenue(make({...first,branchId:"branch_b"})))
-   .toMatchObject({ok:false,code:"F11_Revenue_SCOPE_MISMATCH"});
+   .toMatchObject({ok:false,code:"F11_REVENUE_SCOPE_MISMATCH"});
   expect(planSonicF11Revenue(make(first,{expectedVersion:4})))
-   .toMatchObject({ok:false,code:"F11_Revenue_STALE"});
+   .toMatchObject({ok:false,code:"F11_REVENUE_STALE"});
  });
  it("rejects implausible or unauthorized saved state evidence",()=>{
   for(const altered of [{status:"ACCEPTED"},{acceptedAt:"2026-10-24T12:00:00Z"}]){
    expect(planSonicF11Revenue(make({...first,...altered})))
-    .toMatchObject({ok:false,code:"F11_Revenue_EVIDENCE_INVALID"});
+    .toMatchObject({ok:false,code:"F11_REVENUE_EVIDENCE_INVALID"});
   }
  });
  it("rejects send/payment bypass flags, poisoned prototypes and getter-backed type",()=>{
   expect(planSonicF11Revenue(make({...first,customerMessageSent:true})))
-   .toMatchObject({ok:false,code:"F11_Revenue_INPUT_INVALID"});
+   .toMatchObject({ok:false,code:"F11_REVENUE_INPUT_INVALID"});
   const x=make(first);
   Object.defineProperty(x.record,"kind",{enumerable:true,get(){throw Error("getter");}});
-  expect(planSonicF11Revenue(x)).toMatchObject({ok:false,code:"F11_Revenue_INPUT_INVALID"});
+  expect(planSonicF11Revenue(x)).toMatchObject({ok:false,code:"F11_REVENUE_INPUT_INVALID"});
   const poisoned=make(first);
   Object.setPrototypeOf(poisoned.record,null);
   expect(planSonicF11Revenue(poisoned))
-   .toMatchObject({ok:false,code:"F11_Revenue_INPUT_INVALID"});
+   .toMatchObject({ok:false,code:"F11_REVENUE_INPUT_INVALID"});
  });
  it("rejects object-valued currency without invoking attacker toString",()=>{
   let coerced=false;
   const poison={toString(){coerced=true;throw Error("UNTRUSTED_COERCION");}};
   const result=planSonicF11Revenue(make({...second,currency:poison}));
-  expect(result).toMatchObject({ok:false,code:"F11_Revenue_EVIDENCE_INVALID"});
+  expect(result).toMatchObject({ok:false,code:"F11_REVENUE_EVIDENCE_INVALID"});
   expect(coerced).toBe(false);
  });
  it("binds changing approved saved evidence and source version into the candidate fingerprint",()=>{
