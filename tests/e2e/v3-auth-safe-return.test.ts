@@ -2,8 +2,27 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { normalizeReturnPath } from "@/features/auth/return-path";
+import { trustedAuthDestination } from "@/features/auth/email-origin";
 
 describe("auth return-to-workspace behavior", () => {
+  it("pins sign-out to a trusted configured HTTPS origin, not incoming Host", () => {
+    const env = {
+      SERVICEDESK_AUTH_REDIRECT_ORIGIN: "https://servicedesk.example.test",
+      RENDER_EXTERNAL_URL: "https://legacy-render.example.test",
+    };
+    expect(trustedAuthDestination("/auth/sign-in?notice=Done", env)?.href)
+      .toBe("https://servicedesk.example.test/auth/sign-in?notice=Done");
+    expect(trustedAuthDestination("/auth/sign-in", {
+      ...env, SERVICEDESK_AUTH_REDIRECT_ORIGIN: "http://evil.example.test",
+    })).toBeNull();
+    expect(trustedAuthDestination("//evil.example.test", env)).toBeNull();
+    const src = readFileSync(join(process.cwd(), "src/app/auth/sign-out/route.ts"), "utf8");
+    expect(src).toContain("trustedAuthDestination(");
+    expect(src).toContain("Cache-Control");
+    expect(src).not.toContain("request.url");
+    expect(src).not.toContain("new URL(");
+  });
+
   it("defaults to authorized workspace continuation, never customer-only portal", () => {
     for (const value of [undefined, "", " ", "http://bad.test", "//evil.example", "/\\evil.example", "\n/evil.example"]) {
       expect(normalizeReturnPath(value)).toBe("/auth/continue");
