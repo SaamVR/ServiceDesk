@@ -1,0 +1,21 @@
+# P02 database-side registration guard — source candidate only
+
+**Status: NOT INSTALLED.** This file and SQL candidate are not deployment, migration, account creation or synthetic data authorization. NEXT_BATCH=P02.
+
+## Risk and design
+The existing public registration RPC is SECURITY DEFINER and executable by authenticated users. It verifies signed-in email but does not enforce the Next-only QA registration allowlist. A caller with a separate confirmed Supabase identity can potentially invoke the RPC directly; the issue is independent of application UI flags.
+
+The source candidate at docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql supplies protected database tables, a CLOSED default, QA_ONLY exact authenticated user-ID grants with expiry and revocation, and explicit future PUBLIC mode. Control tables are under a non-exposed security schema, RLS enabled, and no client table grants. Existing real-owner idempotence and atomic workspace/default branch/membership/audit writes are preserved.
+
+## Priorities and mandatory release conditions
+1. Obtain separate owner approval for the reviewed schema/RPC change, migration order and rollback. The main database has security patch 0065 installed, while source migrations 0063/0064 remain unapplied and unapproved. Do not deploy a migration merely because a candidate CI run passes.
+2. Independently review PostgreSQL role, schema, table and RPC grants, search_path, auth.uid source, approval expiry, revocation, advisory-lock behavior, and default CLOSED mode. Capture a protected preimage of actual function/ACL and validate read-only checks.
+3. Source PR must pass exact-head Next/Vitest/type/lint/build, automated independent Critic and PR merge-tree parity. Disposable PG17 service must prove CLOSED refusal, QA_ONLY no-grant/expired/revoked refusal, distinct approved owners, idempotence, branch/audit state, and PUBLIC gated behavior.
+4. Only upon explicit approval, generate a named, immutable corrective migration from this source candidate using the supported Supabase CLI, review numbering/ledger safety, perform a dry-run on an authorized disposable or isolated target, document exact rollback and independent database approval. Never apply to existing main simply to exercise tests.
+5. Real UAT needs two approved fictional, independently verified owner identities and isolated synthetic scope in the existing main Supabase, without any real customer record mutation. No new users/JWTs/fixtures until explicit owner authorization. Sensitive values stay in a secure secret store, not public issues.
+6. Vercel requires separate exact project/SHA/environment approval; do not import, create, link, preview, stage, deploy, pay, or expose. Source vercel.json must retain automatic Git deployments disabled.
+
+## Evidence classification
+Passing candidate CI means CONTRACT_TESTED for the proposed SQL in disposable PostgreSQL, not main database remediation, tenant RLS acceptance, provider verification, staging readiness or commercial production release.
+
+**NEXT_BATCH=P02 — complete the owner-approved DB guard and genuine two-owner onboarding/RLS acceptance before advancing P03.**
