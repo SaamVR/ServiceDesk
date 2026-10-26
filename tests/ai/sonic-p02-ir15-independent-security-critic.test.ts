@@ -74,6 +74,20 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(revoked).toBeGreaterThan(0);
   expect(restored).toBeGreaterThan(revoked);
   expect(rollback).toContain("exception when insufficient_privilege");
+  // The INSTALL receipt is a separate read-only gate, before any QA grants.
+  // Exact SQL source fingerprints prevent a comment-only unreviewed change.
+  const post=get("docs/engineering/security/p02-registration-postinstall-readonly-attestation.sql");
+  const postNegative=get("scripts/release/tests/v4-p02-postinstall-negative-pg17.sh");
+  expect(post).toContain("begin transaction read only");
+  expect(post).toContain("v_mode_rows <> 1 or v_closed_rows <> 1 or v_qa_grants <> 0");
+  expect(post).toContain("md5(v_body) is distinct from 'b24154db78c5f1b210f86c97f896d44d'");
+  expect(post).toContain("P02_REGISTRATION_POSTINSTALL_BLOCKED");
+  expect(post).toContain("P02_REGISTRATION_POSTINSTALL_CLOSED_PASS");
+  expect(postNegative).toContain("P18_UNREVIEWED_COMMENT_BODY_DRIFT");
+  expect(postNegative).toContain("P02_POSTINSTALL_NEGATIVE_MATRIX_PASS");
+  expect(wf).toContain("P02_POSTINSTALL_DENIED_BODY_HASH");
+  expect(wf).toContain("servicedesk_p02_postinstall_negative");
+
 
   expect(wf).toContain("P02_OPERATOR_CLOSED_WINS_PASS");
   expect(wf).toContain("P02_OPERATOR_REVOCATION_WINS_PASS");
