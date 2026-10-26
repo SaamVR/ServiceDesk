@@ -52,7 +52,11 @@ begin
 
   if not has_function_privilege('authenticated',v_reg,'EXECUTE')
      or has_function_privilege('anon',v_reg,'EXECUTE')
-     or has_function_privilege('PUBLIC',v_reg,'EXECUTE')
+     or exists (
+       select 1 from pg_proc p
+       cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+       where p.oid=v_reg and a.grantee=0 and a.privilege_type='EXECUTE'
+     )
   then
     raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: registration RPC ACL drift';
   end if;
