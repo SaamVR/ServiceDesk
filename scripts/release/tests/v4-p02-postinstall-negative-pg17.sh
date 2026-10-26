@@ -77,6 +77,22 @@ pg -c "alter table servicedesk_security.owner_registration_control drop constrai
 assert_blocked MODE_CHECK_DROPPED
 pg -c "alter table servicedesk_security.owner_registration_control add constraint owner_registration_control_mode_check check (mode in ('CLOSED','QA_ONLY','PUBLIC'))"
 
+# Default drift remains dangerous even with a currently CLOSED singleton.
+pg -c "alter table servicedesk_security.owner_registration_control alter column mode set default 'PUBLIC'"
+assert_blocked MODE_DEFAULT_PUBLIC
+pg -c "alter table servicedesk_security.owner_registration_control alter column mode set default 'CLOSED'"
+
+pg -c "alter table servicedesk_security.owner_registration_control alter column singleton drop default"
+assert_blocked SINGLETON_DEFAULT_DROPPED
+pg -c "alter table servicedesk_security.owner_registration_control alter column singleton set default true"
+
+# Function configuration must be exact, not a substring check. Simulate
+# an unreviewed additional function-level GUC without touching the body hash.
+pg -c "alter function public.servicedesk_register_owner_workspace(text,text,text,text) set row_security = off"
+assert_blocked EXTRA_FUNCTION_GUC
+pg -c "alter function public.servicedesk_register_owner_workspace(text,text,text,text) reset row_security"
+
+
 pg -c "alter table servicedesk_security.owner_registration_grants disable row level security"
 assert_blocked RLS_OFF
 pg -c "alter table servicedesk_security.owner_registration_grants enable row level security"
