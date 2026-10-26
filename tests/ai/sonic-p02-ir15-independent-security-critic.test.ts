@@ -93,6 +93,20 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(post).toContain("owner_registration_grants_user_id_fkey");
   expect(post).toContain("protected table constraint drift");
   expect(wf).toContain("P02_POSTINSTALL_DENIED_MODE_CHECK_DROPPED");
+  // P20: pinned exact constraints and private ownership cannot be weakened.
+  expect(post).toContain("and c.convalidated");
+  expect(post).toContain("pg_get_constraintdef(c.oid) =");
+  expect(post).toContain("pg_get_userbyid(n.nspowner)");
+  expect(post).toContain("not t.tgisinternal");
+  expect(post).toContain("pg_rewrite rw");
+  expect(post).toContain("protected schema owner or trigger/rule drift");
+  for (const tag of [
+    "MODE_CHECK_WEAKENED", "SCHEMA_OWNER_DRIFT", "TABLE_OWNER_DRIFT",
+    "EXTRA_TRIGGER", "EXTRA_RULE"
+  ]) {
+    expect(wf).toContain("P02_POSTINSTALL_DENIED_" + tag);
+    expect(postNegative).toContain("assert_blocked " + tag);
+  }
   expect(post).toContain("protected control defaults drift");
   expect(post).toContain("v_config is distinct from 'search_path=pg_catalog, public, pg_temp'");
   for (const marker of [
