@@ -4,7 +4,7 @@
   "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
   "sourceHeads": {
     "868": "9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    "869": "50bdb796ee18fd9cda4768970d7e90eadae39917",
+    "869": "b6fabee30d823e56356c1c40eb59bf404c857dbf",
     "875": "908f3a731cc1eab348ee4f07f4f858fc18becbd9"
   },
   "sourceOnly": true,
@@ -18,7 +18,7 @@
       "path": ".github/workflows/p02-owner-registration-candidate-pg17.yml",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "eb68ec3779cbd6b6f606d1d6d8f97495d37e247f"
+      "gitBlobSha": "3cc9dc353f906899f455c02bf4d34290d83a8025"
     },
     {
       "path": ".github/workflows/v4-p02-final-owner-readback-source-rc.yml",
@@ -30,7 +30,7 @@
       "path": "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "796b11a2ee2d92cfbbbef181280c8d549ee0f742"
+      "gitBlobSha": "1e6d018ef3240675975cde96d004bdcf47bd9171"
     },
     {
       "path": "docs/delivery/sonic-p02-end-readback-source-checkpoint-20261026.md",
@@ -54,7 +54,7 @@
       "path": "docs/engineering/security/p02-registration-postinstall-readonly-attestation.sql",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "590b295ebf2d826af1b5f1f27f36e47e616fc14a"
+      "gitBlobSha": "62cd3c76e36d55742beba615f7d28417744bd8ef"
     },
     {
       "path": "scripts/release/tests/v4-p02-mid-audit-authority-revocation.test.mjs",
@@ -66,7 +66,7 @@
       "path": "scripts/release/tests/v4-p02-postinstall-negative-pg17.sh",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "546056a18a0f755dc2b4a6a74eb0e8e7f8f10dea"
+      "gitBlobSha": "9f3d7f0b451dd059998bbaa8da624f718449c950"
     },
     {
       "path": "scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh",
@@ -126,7 +126,7 @@
       "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "593426daab0cd61825820996805b90b714f2c0ea"
+      "gitBlobSha": "b16b60bd00f07d685dcf24289125c468687358e2"
     },
     {
       "path": "tests/e2e/p02-registration-denial-action.test.ts",
