@@ -37,6 +37,13 @@ begin
   select p.prosrc, array_to_string(p.proconfig, ','), pg_get_userbyid(p.proowner), p.prosecdef
     into v_body, v_config, v_rpc_owner, v_rpc_definer
   from pg_proc p where p.oid = v_reg;
+  -- Exact guarded PL/pgSQL body digest from approved disposable PG17
+  -- installation of the unchanged candidate. Detects even comment-only or
+  -- otherwise syntactically valid unreviewed body modifications.
+  if md5(v_body) is distinct from 'b24154db78c5f1b210f86c97f896d44d' then
+    raise exception 'P02_REGISTRATION_POSTINSTALL_BLOCKED: guarded function body hash drift';
+  end if;
+
   if v_rpc_definer is distinct from true or v_rpc_owner is distinct from 'postgres'
      or v_config is null
      or v_config not like '%search_path=pg_catalog, public, pg_temp%'
