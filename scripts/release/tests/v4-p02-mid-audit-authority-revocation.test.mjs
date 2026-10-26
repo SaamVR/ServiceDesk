@@ -33,6 +33,7 @@ function harness(env,{fault,afterFinalBranch}={}){
   assert.ok(["Bearer "+env.SD_P02_OWNER_A_JWT,
    "Bearer "+env.SD_P02_OWNER_B_JWT].includes(auth));
   const owner=auth==="Bearer "+env.SD_P02_OWNER_A_JWT?"A":"B";
+  if(owner==="B")secondOwnerStarted=true;
   const own=owner==="A"?wA:wB,other=owner==="A"?wB:wA;
   const originalBranch=owner==="A"?brA:brB;
   calls.push({owner,method:opts.method,path:url.pathname});
@@ -54,13 +55,16 @@ function harness(env,{fault,afterFinalBranch}={}){
    if(scope!==own||table==="requests")data=[];
    else if(table==="workspaces")data=[{id:scope}];
    else if(table==="memberships"){
-    if(owner==="A"&&count>1&&fault==="membership-revoked")data=[];
+    if(owner==="A"&&count>1&&
+      (fault==="membership-revoked"||
+       fault==="membership-revoked-during-B"&&secondOwnerStarted))data=[];
     else data=[{workspace_id:own,user_id:owner==="A"?a:b,
      role:owner==="A"&&count>1&&fault==="membership-demoted"?"DISPATCHER":"OWNER",
      status:"ACTIVE"}];
    }else {
     if(owner==="A"&&count>1&&fault==="default-removed")data=[];
-    else data=[{id:owner==="A"&&count>1&&fault==="branch-changed"?
+    else data=[{id:owner==="A"&&count>1&&(fault==="branch-changed"||
+      fault==="branch-changed-during-B"&&secondOwnerStarted)?
      brChanged:originalBranch,workspace_id:own,is_default:true,active:true}];
     if(owner==="A"&&count>1&&afterFinalBranch)afterFinalBranch();
    }
@@ -90,6 +94,8 @@ test("rechecks active owner membership and current default branch after the othe
 for(const [fault,message] of [
  ["membership-revoked","OWNER_AUTHORITY_CHANGED_DURING_AUDIT"],
  ["membership-demoted","OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED"],
+ ["membership-revoked-during-B","OWNER_AUTHORITY_CHANGED_DURING_AUDIT"],
+ ["branch-changed-during-B","OWNER_AUTHORITY_CHANGED_DURING_AUDIT"],
  ["default-removed","OWNER_AUTHORITY_CHANGED_DURING_AUDIT"],
  ["branch-changed","OWNER_AUTHORITY_CHANGED_DURING_AUDIT"],
 ]){
