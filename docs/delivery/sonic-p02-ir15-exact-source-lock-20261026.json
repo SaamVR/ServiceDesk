@@ -4,7 +4,7 @@
   "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
   "sourceHeads": {
     "868": "9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    "869": "ed299f13417b164a7f9c52189df254ee2f367d1a"
+    "869": "fc474aedb0c4c98f85e9878fb0fd8cc8582f22cf"
   },
   "sourceOnly": true,
   "realOwnerSessionVerified": false,
@@ -17,7 +17,7 @@
       "path": ".github/workflows/p02-owner-registration-candidate-pg17.yml",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "259fceb1cc48c1beb6b0c5176bd32a3d461bc7c1"
+      "gitBlobSha": "b690e00aece0c65b84bef83cb3bc93bc2d9954cd"
     },
     {
       "path": ".github/workflows/v4-p02-final-owner-readback-source-rc.yml",
@@ -29,7 +29,7 @@
       "path": "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "cfebeda4ac8298a2363fe746059891cd7f50d0eb"
+      "gitBlobSha": "9133a97145d5471c64a0b168c460c04336028d21"
     },
     {
       "path": "docs/delivery/sonic-p02-end-readback-source-checkpoint-20261026.md",
@@ -53,7 +53,7 @@
       "path": "docs/engineering/security/p02-registration-postinstall-readonly-attestation.sql",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "08fd949700ec8b0b26a7854b252d819d43fef047"
+      "gitBlobSha": "bc6549f22c44f25054952cd9d7a11e2cba12cd50"
     },
     {
       "path": "scripts/release/tests/v4-p02-mid-audit-authority-revocation.test.mjs",
@@ -65,7 +65,7 @@
       "path": "scripts/release/tests/v4-p02-postinstall-negative-pg17.sh",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "bb9a32e4d656e99d54f3ee39ab6a39c729f0883e"
+      "gitBlobSha": "ee3844c55fa4e0e1cd3ce5cab39ed9e6d1e75347"
     },
     {
       "path": "scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh",
@@ -107,7 +107,7 @@
       "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "b69cdd7493c495ec6aa8db9c308ec884b8a4b39b"
+      "gitBlobSha": "0701f73af6c23769256a69d7ebb56e134af5ef7f"
     },
     {
       "path": "tests/sql/p02-owner-registration-db-authorization-pg17.sql",
