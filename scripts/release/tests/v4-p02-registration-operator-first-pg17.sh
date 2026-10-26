@@ -45,6 +45,7 @@ select case when (public.servicedesk_register_owner_workspace(
 rollback;
 SQL
 grep -qx 'P02_APPROVED_PRECONDITION_PASS' "$checklog"
+echo 'P02_APPROVED_PRECONDITION_PASS'
 
 wait_for_operator() {
   local marker="$1"
