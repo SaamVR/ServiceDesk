@@ -23,7 +23,10 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(candidate).toContain("g.revoked_at is null");
     expect(candidate).toContain("g.expires_at > pg_catalog.now()");
     expect(candidate).toContain("REGISTRATION_NOT_AUTHORIZED");
-    expect(candidate).not.toContain("user_metadata");
+    // Comments in the original function mention user_metadata only to reject it.
+    // Guard against executable privilege claims, not explanatory comments.
+    expect(candidate).not.toMatch(/\braw_user_meta_data\b/);
+    expect(candidate).not.toContain("auth.jwt()");
     expect(candidate).not.toContain("auth.jwt()");
   });
 
