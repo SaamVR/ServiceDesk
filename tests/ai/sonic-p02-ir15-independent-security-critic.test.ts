@@ -112,6 +112,21 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(wf).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
   expect(readback).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
  });
+ it("preserves database-denied registration and trusted workspace error presentation",()=>{
+  const action=get("src/app/auth/create-workspace/actions.ts");
+  const page=get("src/app/auth/create-workspace/page.tsx");
+  const trusted=get("src/features/auth/workspace-registration-error.ts");
+  const actionTest=get("tests/e2e/p02-registration-denial-action.test.ts");
+  const pageTest=get("tests/e2e/p02-workspace-error-origin.test.ts");
+  expect(action).toContain('result?.code === "REGISTRATION_NOT_AUTHORIZED"');
+  expect(action).toContain("result?.ok !== true");
+  expect(action).toContain('typeof result.slug !== "string"');
+  expect(page).toContain("trustedWorkspaceRegistrationError(query.error)");
+  expect(page).not.toContain("{query.error}");
+  expect(trusted).toContain("knownMessages.has(raw)");
+  expect(actionTest).toContain("REGISTRATION_NOT_AUTHORIZED");
+  expect(pageTest).toContain("does not render untrusted URL instructions as product errors");
+ });
  it("requires real owner A/B, SQL owner approval and separate deploy authority",()=>{
   const doc=get("docs/delivery/sonic-p02-ir15-production-decision-20261026.md");
   expect(doc).toContain("NO LIVE TWO-OWNER ACCEPTANCE");

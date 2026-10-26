@@ -9,10 +9,14 @@ Control: [#870](https://github.com/SaamVR/ServiceDesk/issues/870), main Producti
 | --- | --- | --- | ---: |
 | Post-session owner authority proof | [#868](https://github.com/SaamVR/ServiceDesk/pull/868) | `9df47e173e181cae6345a81f5baf19c2d79a6e1c` | 7 |
 | Database registration authorization candidate | [#869](https://github.com/SaamVR/ServiceDesk/pull/869) | `ed299f13417b164a7f9c52189df254ee2f367d1a` | 13 |
+| Registration authorization UX and trusted error source | [#875](https://github.com/SaamVR/ServiceDesk/pull/875) | `908f3a731cc1eab348ee4f07f4f858fc18becbd9` | 5 |
 
-Combined rehearsal pinned over canonical `cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411`. 20 source paths, **no pathname collision**. Seventeen added paths, three intentionally modified existing source/test paths. `docs/delivery/sonic-p02-ir15-exact-source-lock-20261026.json` stores PR and Git blob object SHAs. Automated source-lock unit test rehashes **all 20 exact bytes** (Git object format); an independent release critic and this runbook are the only new integration-specific artifacts. None of the original source code bytes were altered or replaced.
+Combined rehearsal pinned over canonical `cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411`. 25 source paths, **no pathname collision**. Twenty added paths, five intentionally modified existing source/test paths. `docs/delivery/sonic-p02-ir15-exact-source-lock-20261026.json` stores PR and Git blob object SHAs. Automated source-lock unit test rehashes **all 25 exact bytes** (Git object format); an independent release critic and this runbook are the only new integration-specific artifacts. None of the original source code bytes were altered or replaced.
 
 ## What combined source CI can and cannot establish
+
+- The independent application draft #875 adds truthful operator guidance on database-authoritative `REGISTRATION_NOT_AUTHORIZED` responses and refuses malformed success receipts. Its page renders only recognized registration errors rather than arbitrary caller-controlled `?error=` strings. Existing QA email allowlist remains an app-side guard, not permission to use the direct database RPC. Eight action and four message-origin regression tests provide **source** evidence, not live owner acceptance.
+
 
 - With both drafts in one tree, execute full Next.js/TypeScript/ESLint source RC, the actual off-line two-owner readback Node integration suite, disposable PostgreSQL 17 role-switch/registration + preflight-negative suite, current merge-tree parity and independent critic integrity, at ONE exact HEAD. All checks must pass and source manifests must remain immutable.
 - Readback script requires two **distinct preapproved saved request IDs**, one existing readable request record per owner/tenant. It proves each owner reads its own saved row and cannot read the other's. It retains pinned project GET or known read-only-RPC POST calls, final saved membership/default-branch authority checks AFTER complete A+B audit, and JWT-expiry denial; it does not prove server-side revocation of every in-flight JWT, atomic database snapshots, or the presence of a second real signed-in OWNER.
@@ -32,7 +36,7 @@ Migration ledger: verified `0065` default-branch authority repair installed, and
 
 ## Production selection rule — no double merge
 
-There are two **mutually exclusive source options**. Production can evaluate the original individual PRs #868 and #869 with their own rebased tests, or the joint IR15 draft as one alternative. Never merge both original drafts AND their combined rehearsal, and do not merge a draft based solely on this decision memo. Before selecting any option, verify latest canonical branch, source PR heads, audit hashes and exact-merge-head tests; original drafts remain open while Production decides.
+There are **mutually exclusive source options**. Production can evaluate the original individual PRs #868, #869 and #875 with their own rebased tests, or the joint IR15 draft as one alternative. Never merge the original drafts AND their combined rehearsal, and do not merge a draft based solely on this decision memo. Before selecting any option, verify latest canonical branch, source PR heads, audit hashes and exact-merge-head tests; original drafts remain open while Production decides.
 
 ## Authority veto and NEXT_TASK
 

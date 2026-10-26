@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-type Blob = {path:string;sourcePr:868|869;status:"added"|"modified";gitBlobSha:string};
+type Blob = {path:string;sourcePr:868|869|875;status:"added"|"modified";gitBlobSha:string};
 type P02Lock = {
  schemaVersion:number;kind:string;canonicalBase:string;sourceHeads:Record<string,string>;
  sourceOnly:boolean;realOwnerSessionVerified:boolean;migrationAuthorized:boolean;
@@ -21,26 +21,30 @@ describe("P02 IR15 immutable two-source integration provenance",()=>{
    schemaVersion:1,kind:"P02_UNMERGED_SOURCE_REHEARSAL_LOCK",
    canonicalBase:"cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
    sourceOnly:true,realOwnerSessionVerified:false,migrationAuthorized:false,
-   migrationInstalled:false,liveDeploymentAuthorized:false,fileCount:20,
+   migrationInstalled:false,liveDeploymentAuthorized:false,fileCount:25,
    sourceHeads:{
     868:"9df47e173e181cae6345a81f5baf19c2d79a6e1c",
     869:"ed299f13417b164a7f9c52189df254ee2f367d1a",
+    875:"908f3a731cc1eab348ee4f07f4f858fc18becbd9",
    },
   });
  });
- it("has exactly twenty disjoint source paths, with three intentional modifications",()=>{
-  expect(lock.files).toHaveLength(20);
-  // Both source drafts now contain 7 + 8 files. Check each
-  // provenance path is unique, not the old 7 + 7 count.
-  expect(new Set(lock.files.map(x=>x.path)).size).toBe(20);
-  expect(lock.files.filter(x=>x.status==="added")).toHaveLength(17);
+ it("has exactly twenty-five disjoint source paths, with five intentional modifications",()=>{
+  expect(lock.files).toHaveLength(25);
+  // Three source drafts contain 7 + 13 + 5 files; all imported Git blobs
+  // must remain unique and byte-for-byte identical to their reviewed heads.
+  expect(new Set(lock.files.map(x=>x.path)).size).toBe(25);
+  expect(lock.files.filter(x=>x.status==="added")).toHaveLength(20);
   expect(lock.files.filter(x=>x.status==="modified").map(x=>x.path).sort()).toEqual([
    "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
    "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
    "scripts/release/v4-p02-two-owner-readonly-acceptance.mjs",
+   "src/app/auth/create-workspace/actions.ts",
+   "src/app/auth/create-workspace/page.tsx",
   ]);
   expect(lock.files.filter(x=>x.sourcePr===868)).toHaveLength(7);
   expect(lock.files.filter(x=>x.sourcePr===869)).toHaveLength(13);
+  expect(lock.files.filter(x=>x.sourcePr===875)).toHaveLength(5);
  });
  it("compares every imported file with its exact Git object identity",()=>{
   for(const file of lock.files){
