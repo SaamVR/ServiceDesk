@@ -68,7 +68,7 @@ export function planSonicF11Revenue(input:unknown):SonicF11RevenueResult{
     return fail("F11_REVENUE_EVIDENCE_INVALID");
    due=trustedQuoteInstant(r.expiresAt);
   }else{
-   if(r.status!=="ISSUED"||r.paidAt!==null||!["BDT","USD","GBP","EUR"].includes(String(r.currency))||
+   if(r.status!=="ISSUED"||r.paidAt!==null||(typeof r.currency!=="string"||!["BDT","USD","GBP","EUR"].includes(r.currency))||
     typeof r.outstandingMinorUnits!=="number"||!Number.isSafeInteger(r.outstandingMinorUnits)||
     r.outstandingMinorUnits<1||r.outstandingMinorUnits>100_000_000_00||
     trustedQuoteInstant(r.dueAt)===null)return fail("F11_REVENUE_EVIDENCE_INVALID");

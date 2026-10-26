@@ -60,6 +60,13 @@ describe("SONIC F11 Resilience saved-projection owner review (source only)",()=>
   expect(planSonicF11Resilience(poisoned))
    .toMatchObject({ok:false,code:"F11_Resilience_INPUT_INVALID"});
  });
+ it("rejects object-valued providerCode without invoking attacker toString",()=>{
+  let coerced=false;
+  const poison={toString(){coerced=true;throw Error("UNTRUSTED_COERCION");}};
+  const result=planSonicF11Resilience(make({...first,providerCode:poison}));
+  expect(result).toMatchObject({ok:false,code:"F11_Resilience_EVIDENCE_INVALID"});
+  expect(coerced).toBe(false);
+ });
  it("binds changing approved saved evidence and source version into the candidate fingerprint",()=>{
   const a=planSonicF11Resilience(make(first)),b=planSonicF11Resilience(make(first,{
    expectedVersion:4,

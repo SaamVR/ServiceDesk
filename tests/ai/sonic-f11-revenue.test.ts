@@ -60,6 +60,13 @@ describe("SONIC F11 Revenue saved-projection owner review (source only)",()=>{
   expect(planSonicF11Revenue(poisoned))
    .toMatchObject({ok:false,code:"F11_Revenue_INPUT_INVALID"});
  });
+ it("rejects object-valued currency without invoking attacker toString",()=>{
+  let coerced=false;
+  const poison={toString(){coerced=true;throw Error("UNTRUSTED_COERCION");}};
+  const result=planSonicF11Revenue(make({...second,currency:poison}));
+  expect(result).toMatchObject({ok:false,code:"F11_Revenue_EVIDENCE_INVALID"});
+  expect(coerced).toBe(false);
+ });
  it("binds changing approved saved evidence and source version into the candidate fingerprint",()=>{
   const a=planSonicF11Revenue(make(first)),b=planSonicF11Revenue(make(first,{
    expectedVersion:4,

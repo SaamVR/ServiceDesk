@@ -71,7 +71,7 @@ export function planSonicF11Quality(input:unknown):SonicF11QualityResult{
     trustedQuoteInstant(r.scheduledEndAt)===null)return fail("F11_QUALITY_EVIDENCE_INVALID");
    due=trustedQuoteInstant(r.scheduledEndAt);
   }else{
-   if(r.status!=="OPEN"||!["HIGH","CRITICAL"].includes(String(r.severity))||
+   if(r.status!=="OPEN"||(typeof r.severity!=="string"||!["HIGH","CRITICAL"].includes(r.severity))||
     r.mitigatedAt!==null||trustedQuoteInstant(r.observedAt)===null||
     trustedQuoteInstant(r.observedAt)!>now)return fail("F11_QUALITY_EVIDENCE_INVALID");
    due=trustedQuoteInstant(r.observedAt)!+(r.severity==="CRITICAL"?0:30*60_000);
