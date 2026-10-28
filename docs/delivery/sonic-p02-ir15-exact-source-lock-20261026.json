@@ -4,7 +4,7 @@
   "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
   "sourceHeads": {
     "868": "9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    "869": "1c908c9e4847257ca630310918a65c7a3a28294a",
+    "869": "ce39727467a91436f19f37a62f6c64cb89b86974",
     "875": "908f3a731cc1eab348ee4f07f4f858fc18becbd9"
   },
   "sourceOnly": true,
@@ -138,7 +138,7 @@
       "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "20de890270c3c2a2d867a94f4a420e86466405e0"
+      "gitBlobSha": "b8226f5db99c0dbc8e8792277698268a1500ac2e"
     },
     {
       "path": "tests/e2e/p02-registration-denial-action.test.ts",
