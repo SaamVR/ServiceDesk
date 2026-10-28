@@ -141,6 +141,35 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(rollback).toContain("P02_ROLLBACK_CREATED_UNAUTHORIZED_WORKSPACE");
     expect(workflow).toContain("P02 guarded registration fail-closed rollback rehearsal");
     expect(workflow).toContain("tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql");
+    // P22 requires ONE disposable DB lifecycle, not independent successful
+    // scripts that never exercised install/rollback against the same ledger.
+    const lifecycle = read("tests/sql/p02-registration-rollback-ledger-disposable-setup-pg17.sql");
+    expect(lifecycle).toContain("P02_P22_DISPOSABLE_DB_REQUIRED");
+    expect(lifecycle).toContain("current_database() <> 'servicedesk_p02_registration_rollback'");
+    expect(lifecycle).toContain("P02_P22_BEFORE_INSTALL_LEDGER_PASS");
+    expect(lifecycle).toContain("P02_MIGRATION_LEDGER_READONLY_PASS");
+    expect(lifecycle).toContain("sd_0065_v4_default_branch_membership_authority");
+    expect(lifecycle).not.toContain("cpmmgivhlkfbiwzhlcey");
+    expect(rollback).toContain("P02_REGISTRATION_POSTINSTALL_CLOSED_PASS");
+    expect(rollback).toContain("P02_P22_ROLLBACK_RPCRIGHTS_CLOSED_PASS");
+    expect(rollback).toContain("p02-registration-postinstall-readonly-attestation.sql");
+    const installPosition = rollback.indexOf("p02-owner-registration-db-authorization-candidate.sql");
+    const receiptPosition = rollback.indexOf("p02-registration-postinstall-readonly-attestation.sql");
+    const revokePosition = rollback.indexOf("revoke all on function public.servicedesk_register_owner_workspace");
+    expect(installPosition).toBeGreaterThan(0);
+    expect(receiptPosition).toBeGreaterThan(installPosition);
+    expect(revokePosition).toBeGreaterThan(receiptPosition);
+    expect(workflow).toContain("p02-registration-rollback-ledger-disposable-setup-pg17.sql");
+    expect(workflow).toContain("P02_P22_BEFORE_INSTALL_LEDGER_PASS");
+    expect(workflow).toContain("P02_P22_ROLLBACK_RPCRIGHTS_CLOSED_PASS");
+    expect(workflow).toContain("P02_REGISTRATION_POSTINSTALL_CLOSED_PASS");
+    const ledgerBefore = workflow.indexOf("p02-lifecycle-ledger-baseline.log");
+    const rollbackRun = workflow.indexOf("-f tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql");
+    const ledgerAfter = workflow.indexOf("p02-lifecycle-ledger-after.log");
+    expect(ledgerBefore).toBeGreaterThan(0);
+    expect(rollbackRun).toBeGreaterThan(ledgerBefore);
+    expect(ledgerAfter).toBeGreaterThan(rollbackRun);
+
     // INSTALL RECEIPT is separate from the preinstall gate and is strictly
     // read-only, only immediately after installation before any QA grant.
     // A successful source diff or a PG17 candidate is not a live receipt.
