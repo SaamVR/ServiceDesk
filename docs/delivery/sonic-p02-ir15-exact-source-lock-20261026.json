@@ -4,7 +4,7 @@
   "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
   "sourceHeads": {
     "868": "9df47e173e181cae6345a81f5baf19c2d79a6e1c",
-    "869": "34c7cd0a5bbccfce89d57d2fe4d6550e788c3b05",
+    "869": "1c908c9e4847257ca630310918a65c7a3a28294a",
     "875": "908f3a731cc1eab348ee4f07f4f858fc18becbd9"
   },
   "sourceOnly": true,
@@ -12,13 +12,13 @@
   "migrationAuthorized": false,
   "migrationInstalled": false,
   "liveDeploymentAuthorized": false,
-  "fileCount": 28,
+  "fileCount": 29,
   "files": [
     {
       "path": ".github/workflows/p02-owner-registration-candidate-pg17.yml",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "8e9ff35e856f7782af9178eddf3e8d8337f372c7"
+      "gitBlobSha": "e0975c6213e3760da5031b10bfe62554bbe19c7c"
     },
     {
       "path": ".github/workflows/v4-p02-final-owner-readback-source-rc.yml",
@@ -30,7 +30,7 @@
       "path": "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "9e584f7060908a929999e505af01dfdb5ec4821d"
+      "gitBlobSha": "3dfa47343d3116ca34ed0199bdd6be3b8cb0c718"
     },
     {
       "path": "docs/delivery/sonic-p02-end-readback-source-checkpoint-20261026.md",
@@ -138,7 +138,7 @@
       "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "25532d911cd4290ad8ad4315b1aef57b0da4bab9"
+      "gitBlobSha": "20de890270c3c2a2d867a94f4a420e86466405e0"
     },
     {
       "path": "tests/e2e/p02-registration-denial-action.test.ts",
@@ -162,7 +162,7 @@
       "path": "tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql",
       "sourcePr": 869,
       "status": "added",
-      "gitBlobSha": "3057c82498a10552e752b3156d280595ca288b26"
+      "gitBlobSha": "5ba6af6e3818601e1db2585b3b5613d0533b0e03"
     },
     {
       "path": "tests/sql/p02-registration-migration-ledger-disposable-setup-pg17.sql",
@@ -181,6 +181,12 @@
       "sourcePr": 869,
       "status": "added",
       "gitBlobSha": "1ef17c97ef1cff18f4a0a597060691a3e011a03a"
+    },
+    {
+      "path": "tests/sql/p02-registration-rollback-ledger-disposable-setup-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "05df46133d787415959d4c0ab286c6d9d69709ca"
     }
   ]
 }
