@@ -3,7 +3,7 @@
   "kind": "P02_UNMERGED_SOURCE_REHEARSAL_LOCK",
   "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
   "sourceHeads": {
-    "868": "3e4117266d03fd41dc22e02c3776bc77a28d0236",
+    "868": "d9c53c05cf5f98bf9e5fec688e2f56cc3e42b360",
     "869": "053bf3493d6f38e29000e06d5a3868a24442205a",
     "875": "908f3a731cc1eab348ee4f07f4f858fc18becbd9"
   },
@@ -66,7 +66,7 @@
       "path": "scripts/release/tests/v4-p02-mid-audit-authority-revocation.test.mjs",
       "sourcePr": 868,
       "status": "added",
-      "gitBlobSha": "636000f458efd8108e76d0a20e22a7ac8dc56d06"
+      "gitBlobSha": "81f7f902ceedb68cefe85f85d8d464ba4725384a"
     },
     {
       "path": "scripts/release/tests/v4-p02-migration-ledger-negative-pg17.sh",
@@ -96,19 +96,19 @@
       "path": "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
       "sourcePr": 868,
       "status": "modified",
-      "gitBlobSha": "73e2d05030324e6409d95b4375a5e7e2ed29e918"
+      "gitBlobSha": "36513177db74056e13878625c59efd834e5af029"
     },
     {
       "path": "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
       "sourcePr": 868,
       "status": "modified",
-      "gitBlobSha": "15a3a1f5a761dcb78202ba1ceb27889aa253c855"
+      "gitBlobSha": "e2c1a937d6e97417cefc4c8d24ac0424a1325ec4"
     },
     {
       "path": "scripts/release/v4-p02-two-owner-readonly-acceptance.mjs",
       "sourcePr": 868,
       "status": "modified",
-      "gitBlobSha": "80dca201335cdafc76f78baf21a7f1c453e82332"
+      "gitBlobSha": "078bb4476982bdf857178dbcc1118d84f3e1a441"
     },
     {
       "path": "src/app/auth/create-workspace/actions.ts",
@@ -132,7 +132,7 @@
       "path": "tests/ai/sonic-p02-end-authority-readback-critic.test.ts",
       "sourcePr": 868,
       "status": "added",
-      "gitBlobSha": "14de4e027269ef4165238fa4429fb6f5b24d97ed"
+      "gitBlobSha": "612fba5b3ffd09da586a9044cf528f870e3e1c9e"
     },
     {
       "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",
