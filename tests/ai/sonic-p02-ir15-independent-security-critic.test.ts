@@ -69,6 +69,26 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(rollback).toContain("P02_ROLLBACK_DISPOSABLE_DB_REQUIRED");
   expect(rollback).toContain("P02_ROLLBACK_GUARD_OR_RPC_PRIVILEGE_LEFT_OPEN");
   expect(rollback).toContain("P02_FAIL_CLOSED_REGISTRATION_ROLLBACK_PASS");
+  // P22 lifecycle proof is on one synthetic database with out-of-order
+  // 0065 ledger preserved before and after CLOSED install + revoke-first rollback.
+  const lifecycle=get("tests/sql/p02-registration-rollback-ledger-disposable-setup-pg17.sql");
+  expect(lifecycle).toContain("P02_P22_DISPOSABLE_DB_REQUIRED");
+  expect(lifecycle).toContain("P02_P22_BEFORE_INSTALL_LEDGER_PASS");
+  expect(lifecycle).toContain("sd_0065_v4_default_branch_membership_authority");
+  expect(rollback).toContain("p02-registration-postinstall-readonly-attestation.sql");
+  expect(rollback).toContain("P02_P22_ROLLBACK_RPCRIGHTS_CLOSED_PASS");
+  const candidateInstall=rollback.indexOf("p02-owner-registration-db-authorization-candidate.sql");
+  const closedReceipt=rollback.indexOf("p02-registration-postinstall-readonly-attestation.sql");
+  const revokeOnRollback=rollback.indexOf("revoke all on function public.servicedesk_register_owner_workspace");
+  expect(candidateInstall).toBeGreaterThan(0);
+  expect(closedReceipt).toBeGreaterThan(candidateInstall);
+  expect(revokeOnRollback).toBeGreaterThan(closedReceipt);
+  expect(wf).toContain("p02-registration-rollback-ledger-disposable-setup-pg17.sql");
+  expect(wf).toContain("P02_P22_BEFORE_INSTALL_LEDGER_PASS");
+  expect(wf).toContain("P02_REGISTRATION_POSTINSTALL_CLOSED_PASS");
+  expect(wf).toContain("P02_P22_ROLLBACK_RPCRIGHTS_CLOSED_PASS");
+  expect(wf).toContain("p02-lifecycle-ledger-after.log");
+
   const revoked=rollback.indexOf("revoke all on function public.servicedesk_register_owner_workspace");
   const restored=rollback.indexOf("execute v_original_ddl");
   expect(revoked).toBeGreaterThan(0);
