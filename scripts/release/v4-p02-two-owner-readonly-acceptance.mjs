@@ -65,6 +65,33 @@ export async function runTwoOwnerReadOnlyAudit(
   fetcher = fetch,
 ) {
   const { key, entries } = validateInputs(env);
+
+  // The locally decoded JWT claims are NOT a proof of a current Auth user.
+  // The official Auth /user endpoint validates the bearer token and returns
+  // the current server-side identity. This is a GET with a publishable key;
+  // do not log the full Auth user, JWT, email, or response body.
+  const verifyAuthOwner = async owner => {
+    const res = await fetcher(ORIGIN + "/auth/v1/user", {
+      method: "GET", redirect: "error", signal: AbortSignal.timeout(15000),
+      headers: {
+        apikey: key, Authorization: "Bearer " + owner.token,
+        Accept: "application/json", "Cache-Control": "no-store",
+      },
+    });
+    if (!res.ok || !res.headers.get("content-type")?.includes("application/json"))
+      throw Error("AUTH_SERVER_USER_CHECK_FAILED");
+    let user;
+    try { user = await res.json(); }
+    catch { throw Error("AUTH_SERVER_USER_CHECK_FAILED"); }
+    if (!user || typeof user !== "object" || Array.isArray(user) ||
+        user.id !== owner.subject || user.is_anonymous === true ||
+        typeof user.email_confirmed_at !== "string" ||
+        !Number.isFinite(Date.parse(user.email_confirmed_at)))
+      throw Error("AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED");
+  };
+  // Validate BOTH identities before any tenant reads. An expired/revoked or
+  // changed session must never be reported as a usable independent owner.
+  for (const owner of entries) await verifyAuthOwner(owner);
   const checked = [];
   const finalAuthorityReadbacks = [];
   for (const owner of entries) {
@@ -187,6 +214,10 @@ export async function runTwoOwnerReadOnlyAudit(
   // matrix. This narrows TOCTOU exposure but remains non-atomic; signed-in
   // browser/session acceptance is still a separate Production gate.
   for (const recheck of finalAuthorityReadbacks) await recheck();
+  // Recheck Auth server identities after both owners' database matrices.
+  // This catches an Auth user/session changed during the read-only probe;
+  // the overall audit is still non-atomic and is NOT a browser UAT.
+  for (const owner of entries) await verifyAuthOwner(owner);
   // A JWT that expired during the other owner's final readback must not be
   // counted as a currently usable session.
   for (const owner of entries) {
