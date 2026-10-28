@@ -41,7 +41,11 @@ function harness(env,{fault,afterFinalBranch}={}){
   const originalBranch=owner==="A"?brA:brB;
   calls.push({owner,method:opts.method,path:url.pathname});
   let data;
-  if(url.pathname.endsWith("/rpc/servicedesk_default_branch")){
+  if(url.pathname==="/auth/v1/user"){
+   assert.equal(opts.method,"GET");
+   assert.equal(opts.body,undefined);
+   data={id:owner==="A"?a:b,email_confirmed_at:"2026-10-01T00:00:00Z",is_anonymous:false};
+  }else if(url.pathname.endsWith("/rpc/servicedesk_default_branch")){
    assert.equal(opts.method,"POST");
    const {target_workspace}=JSON.parse(opts.body);
    data=target_workspace===own?originalBranch:null;
@@ -87,9 +91,9 @@ test("rechecks active owner membership and current default branch after the othe
  assert.deepEqual(output.checks.map(x=>x.owner),["A","B"]);
  assert.equal(output.result,"PASS");
  assert.equal(output.noWrites,true);
- assert.equal(h.calls.length,24);
+ assert.equal(h.calls.length,28);
  assert.equal(h.calls.filter(x=>x.method==="POST").length,4);
- assert.equal(h.calls.filter(x=>x.method==="GET").length,20);
+ assert.equal(h.calls.filter(x=>x.method==="GET").length,24);
  for(const tag of ["A","B"]){
   const scope=tag==="A"?wA:wB;
   assert.equal(h.seen.get(tag+"|memberships|"+scope),2);
