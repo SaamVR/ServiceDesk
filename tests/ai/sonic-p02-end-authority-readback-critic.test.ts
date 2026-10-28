@@ -31,6 +31,19 @@ describe("P02 independent critic: latest read-only authority before audit PASS",
   expect(authorityTests).toContain("foreign-membership-visible");
   expect(authorityTests).toContain("FOREIGN_TENANT_DATA_EXPOSED_MEMBERSHIPS");
  });
+ it("rejects wrong JWT audience, Auth identity authority and active bans",()=>{
+  expect(source).toContain('claims.aud === "authenticated"');
+  expect(source).toContain('claims.is_anonymous === true');
+  expect(source).toContain('user.role !== "authenticated"');
+  expect(source).toContain('user.aud !== "authenticated"');
+  expect(source).toContain('user.banned_until != null');
+  expect(source).toContain('AUTH_SERVER_OWNER_BANNED_OR_STATUS_UNVERIFIED');
+  const tests=readFileSync("scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs","utf8");
+  for (const name of [
+    "authRoleWrong", "authAudienceWrong", "authBanned", "authBanMalformed"
+  ]) expect(tests).toContain(name);
+  expect(tests).toContain('aud:["authenticated","service_role"]');
+ });
  it("does not claim validity after the bearer JWT expires mid-proof",()=>{
   expect(source).toContain("const finalClaims = jwtClaims(owner.token)");
   expect(source).toContain('finalClaims.exp * 1000 <= Date.now()');
