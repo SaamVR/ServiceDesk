@@ -13,8 +13,9 @@ const branchB = "44444444-4444-4444-8444-444444444444";
 const requestA = "55555555-5555-4555-8555-555555555555";
 const requestB = "66666666-6666-4666-8666-666666666666";
 
-function token(sub, role = "authenticated", iss = ORIGIN + "/auth/v1") {
-  const claims = { sub, role, iss, exp: Math.floor(Date.now() / 1000) + 1800 };
+function token(sub, role = "authenticated", iss = ORIGIN + "/auth/v1", extra={}) {
+  const claims = { sub, role, iss, aud:"authenticated",
+    exp: Math.floor(Date.now() / 1000) + 1800, ...extra };
   return [
     Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
     Buffer.from(JSON.stringify(claims)).toString("base64url"),
@@ -53,6 +54,10 @@ function mockFetch(options = {}) {
       data = {
         id: owner === "A" ? userA : userB,
         email_confirmed_at: "2026-10-01T00:00:00Z",
+        role: options.authRoleWrong ? "anon" : "authenticated",
+        aud: options.authAudienceWrong ? "anon" : "authenticated",
+        banned_until: options.authBanned ? new Date(Date.now()+3600_000).toISOString() :
+          options.authBanMalformed ? "not-a-date" : null,
         is_anonymous: false,
       };
       if (options.authMismatch || (options.authChangedAtEnd && authReads > 2 && owner === "A"))
@@ -114,6 +119,15 @@ test("refuses to run without explicit read-only opt-in and a publishable key", (
     /WRONG_SUPABASE_PROJECT_JWT/);
   assert.throws(() => validateInputs({ ...env, SD_P02_OWNER_B_JWT: token(userA) }),
     /OWNERS_AND_WORKSPACES_MUST_BE_DIFFERENT/);
+  assert.throws(() => validateInputs({ ...env,
+    SD_P02_OWNER_A_JWT: token(userA,"authenticated",ORIGIN+"/auth/v1",{aud:"anon"}) }),
+    /SIGNED_IN_OWNER_SESSION_REQUIRED/);
+  assert.throws(() => validateInputs({ ...env,
+    SD_P02_OWNER_A_JWT: token(userA,"authenticated",ORIGIN+"/auth/v1",{aud:["authenticated","service_role"]}) }),
+    /SIGNED_IN_OWNER_SESSION_REQUIRED/);
+  assert.throws(() => validateInputs({ ...env,
+    SD_P02_OWNER_A_JWT: token(userA,"authenticated",ORIGIN+"/auth/v1",{is_anonymous:true}) }),
+    /SIGNED_IN_OWNER_SESSION_REQUIRED/);
 });
 
 test("proves two different owners' own visibility, foreign denial and own-only branch lookups", async () => {
@@ -172,6 +186,10 @@ for (const [options, expected] of [
   [{authServerFailure:true}, "AUTH_SERVER_USER_CHECK_FAILED"],
   [{authMismatch:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
   [{authUnconfirmed:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
+  [{authRoleWrong:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
+  [{authAudienceWrong:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
+  [{authBanned:true}, "AUTH_SERVER_OWNER_BANNED_OR_STATUS_UNVERIFIED"],
+  [{authBanMalformed:true}, "AUTH_SERVER_OWNER_BANNED_OR_STATUS_UNVERIFIED"],
   [{authAnonymous:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
   [{authChangedAtEnd:true, savedRequest:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
 ]) {
@@ -182,3 +200,15 @@ for (const [options, expected] of [
       x.path === "/rest/v1/rpc/servicedesk_default_branch"));
   });
 }
+
+test("accepts valid single authenticated JWT audience array and expired ban", async () => {
+  const local = { ...env, SD_P02_OWNER_A_JWT: token(userA, "authenticated",
+    ORIGIN+"/auth/v1", {aud:["authenticated"]}) };
+  // User A's Auth fixture uses the token from the supplied env, so a local
+  // isolated harness must use its own Authorization; input validation alone
+  // proves the strict single-audience allowance.
+  assert.equal(validateInputs(local).entries.length,2);
+  const h = mockFetch({ savedRequest:true });
+  const result=await runTwoOwnerReadOnlyAudit(env,h.fetcher);
+  assert.equal(result.result,"PASS");
+});
