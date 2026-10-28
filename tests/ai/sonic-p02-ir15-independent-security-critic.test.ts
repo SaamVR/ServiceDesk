@@ -27,11 +27,20 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(s).toContain('AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED');
   expect(s).toContain('user.id !== owner.subject');
   expect(s).toContain('user.email_confirmed_at');
+  // P24: the server identity cannot silently be banned, anonymous, or
+  // using the wrong Auth role/audience even with a matching subject ID.
+  expect(s).toContain('claims.aud === "authenticated"');
+  expect(s).toContain('claims.is_anonymous === true');
+  expect(s).toContain('user.role !== "authenticated"');
+  expect(s).toContain('user.aud !== "authenticated"');
+  expect(s).toContain('user.banned_until != null');
+  expect(s).toContain('AUTH_SERVER_OWNER_BANNED_OR_STATUS_UNVERIFIED');
+
   expect(authFirst).toBeGreaterThan(authGate);
   expect(authFirst).toBeLessThan(s.indexOf('for (const owner of entries) {'));
   expect(authFinal).toBeGreaterThan(rechecks);
   const authTests=get("scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs");
-  for (const fault of ["authServerFailure","authMismatch","authUnconfirmed","authAnonymous","authChangedAtEnd"])
+  for (const fault of ["authServerFailure","authMismatch","authUnconfirmed","authAnonymous","authChangedAtEnd","authRoleWrong","authAudienceWrong","authBanned","authBanMalformed"])
     expect(authTests).toContain(fault);
 
   expect(s).toContain("OWNERS_AND_WORKSPACES_MUST_BE_DIFFERENT");
