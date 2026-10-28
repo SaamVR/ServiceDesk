@@ -8,10 +8,10 @@ Control: [#870](https://github.com/SaamVR/ServiceDesk/issues/870), main Producti
 | Isolated source owner | Original draft | Pinned source head | Imported Git blobs |
 | --- | --- | --- | ---: |
 | Post-session owner authority proof | [#868](https://github.com/SaamVR/ServiceDesk/pull/868) | `9df47e173e181cae6345a81f5baf19c2d79a6e1c` | 7 |
-| Database registration authorization candidate | [#869](https://github.com/SaamVR/ServiceDesk/pull/869) | `34c7cd0a5bbccfce89d57d2fe4d6550e788c3b05` | 13 |
+| Database registration authorization candidate | [#869](https://github.com/SaamVR/ServiceDesk/pull/869) | `1c908c9e4847257ca630310918a65c7a3a28294a` | 13 |
 | Registration authorization UX and trusted error source | [#875](https://github.com/SaamVR/ServiceDesk/pull/875) | `908f3a731cc1eab348ee4f07f4f858fc18becbd9` | 5 |
 
-Combined rehearsal pinned over canonical `cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411`. 28 source paths, **no pathname collision**. Twenty-three added paths, five intentionally modified existing source/test paths. `docs/delivery/sonic-p02-ir15-exact-source-lock-20261026.json` stores PR and Git blob object SHAs. Automated source-lock unit test rehashes **all 28 exact imported Git blob objects**; an independent release critic and this runbook are the only new integration-specific artifacts. None of the original source code bytes were altered or replaced.
+Combined rehearsal pinned over canonical `cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411`. **29 source paths, no pathname collision**: 24 additions and five modified existing source/test paths. `docs/delivery/sonic-p02-ir15-exact-source-lock-20261026.json` stores PR and Git blob object SHAs. Automated source-lock unit test rehashes **all 29 exact imported Git blob objects**; an independent release critic and this runbook are the only new integration-specific artifacts. None of the original source code bytes were altered or replaced.
 
 ## What combined source CI can and cannot establish
 
@@ -71,10 +71,23 @@ P02 remains **2/7 complete, five unchecked**. Separate DBA security review and e
 
 ## P21 exact ledger reconciliation — source-only, 2026-10-27
 
-Imported 3 new guard-PR paths byte-for-byte into composite #871 from [#869](https://github.com/SaamVR/ServiceDesk/pull/869) at `34c7cd0a5bbccfce89d57d2fe4d6550e788c3b05`: `docs/engineering/security/p02-registration-migration-ledger-readonly-gate.sql`, `tests/sql/p02-registration-migration-ledger-disposable-setup-pg17.sql`, and `scripts/release/tests/v4-p02-migration-ledger-negative-pg17.sh`. Existing workflow, focused source critic and DBA handoff were imported byte-exact. Together this produces **28 source objects**: 7 from #868, 16 from #869, 5 from #875, verified against the Git blob-lock manifest. Only composite QA/provenance/runbook files differ from the isolated originals.
+Imported 3 new guard-PR paths byte-for-byte into composite #871 from [#869](https://github.com/SaamVR/ServiceDesk/pull/869) at `1c908c9e4847257ca630310918a65c7a3a28294a`: `docs/engineering/security/p02-registration-migration-ledger-readonly-gate.sql`, `tests/sql/p02-registration-migration-ledger-disposable-setup-pg17.sql`, and `scripts/release/tests/v4-p02-migration-ledger-negative-pg17.sh`. Existing workflow, focused source critic and DBA handoff were imported byte-exact. Together this produces **28 source objects**: 7 from #868, 16 from #869, 5 from #875, verified against the Git blob-lock manifest. Only composite QA/provenance/runbook files differ from the isolated originals.
 
 Main database's **read-only ledger** still has 70 entries, including exact 0062 (`20261012105723`) and **out-of-order 0065** (`20261025200147`), but no 0063/0064. The new second pre-install gate blocks a missing/relabelled 0062/0065, recorded 0063/0064, or duplicate 0065 identity. Nine disposable PG17 adversarial cases verify actual denial, then restored positive. The first pre-install gate's ten live source/ownership/ACL invariants also passed in read-only observation. Neither gate installs SQL nor grants accounts.
 
 **Stop/approval boundaries unchanged:** P02 remains 2/7. Owner and DBA must separately authorize an exact SQL installation/backup/rollback plan; later independently authorize QA Auth B/workspace/request and real independent signed-in JWT/browser RLS acceptance; separate permission for any Vercel deployment. No merge of draft originals alongside this composite.
 
 P21 final suffix-safety amendment: source gate blocks any `sd_0063*`/`sd_0064*` ledger entry, including PostgreSQL fixture cases `sd_0063a_unreviewed` and `sd_0064a_unreviewed`. Nine labelled negative cases and restored read-only PASS must pass in separate PG17 Actions, not against live Supabase.
+
+## P22 source-only lifecycle rehearsal — 2026-10-28
+
+The guarded draft [#869](https://github.com/SaamVR/ServiceDesk/pull/869) at `1c908c9e4847257ca630310918a65c7a3a28294a` adds one reviewed disposable PostgreSQL 17 fixture and updates four pre-existing guard-source files, leaving the guarded candidate SQL **unchanged and uninstalled**. The composite imports those exact five source objects. Its locked source provenance now contains **29 files: 7 #868 + 17 #869 + 5 #875**; the #868 and #875 original source hashes are still unchanged.
+
+**Release lifecycle on one synthetic database** `servicedesk_p02_registration_rollback`:
+- Verify exact 0059 registration preimage and repaired 0065 branch preimage.
+- Create a synthetic 0062/0065 migration ledger and require the existing **read-only** migration ledger receipt before the guard install.
+- Install the existing source guard with singleton mode `CLOSED`; require the complete post-install `P02_REGISTRATION_POSTINSTALL_CLOSED_PASS` on **the same database**.
+- Revoke authenticated EXECUTE before restoring the original 0059 function, then remove only the synthetic security schema; require actual authenticated-role function denial and no new unauthorized workspace.
+- Require an **unchanged 0062/0065 migration ledger receipt again after rollback**.
+
+This is a **disposable rehearsal only**: it does **not** prove live Supabase backup/restore, apply a migration or authorize a production rollback, create a second QA user, test real JWT/browser isolation, or deploy to Vercel. The real live DBA must choose a separately approved backup/restore procedure, and must **never execute the disposable rollback fixture against production**. Keep the issue #818 P02 acceptance tally at 2/7 with all five production gates open.
