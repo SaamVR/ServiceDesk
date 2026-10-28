@@ -12,7 +12,7 @@ const brB="44444444-4444-4444-8444-444444444444";
 const brChanged="77777777-7777-4777-8777-777777777777";
 const reqA="55555555-5555-4555-8555-555555555555", reqB="66666666-6666-4666-8666-666666666666";
 function token(sub){
- const payload={sub,iss:ORIGIN+"/auth/v1",role:"authenticated",
+ const payload={sub,iss:ORIGIN+"/auth/v1",role:"authenticated",aud:"authenticated",
   exp:Math.floor(Date.now()/1000)+1800};
  return [Buffer.from(JSON.stringify({typ:"JWT",alg:"HS256"})).toString("base64url"),
   Buffer.from(JSON.stringify(payload)).toString("base64url"),
@@ -44,7 +44,7 @@ function harness(env,{fault,afterFinalBranch}={}){
   if(url.pathname==="/auth/v1/user"){
    assert.equal(opts.method,"GET");
    assert.equal(opts.body,undefined);
-   data={id:owner==="A"?a:b,email_confirmed_at:"2026-10-01T00:00:00Z",is_anonymous:false};
+   data={id:owner==="A"?a:b,email_confirmed_at:"2026-10-01T00:00:00Z",role:"authenticated",aud:"authenticated",is_anonymous:false};
   }else if(url.pathname.endsWith("/rpc/servicedesk_default_branch")){
    assert.equal(opts.method,"POST");
    const {target_workspace}=JSON.parse(opts.body);
