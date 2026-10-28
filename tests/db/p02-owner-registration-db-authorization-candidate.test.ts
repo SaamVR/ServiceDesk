@@ -147,7 +147,10 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(lifecycle).toContain("P02_P22_DISPOSABLE_DB_REQUIRED");
     expect(lifecycle).toContain("current_database() <> 'servicedesk_p02_registration_rollback'");
     expect(lifecycle).toContain("P02_P22_BEFORE_INSTALL_LEDGER_PASS");
-    expect(lifecycle).toContain("P02_MIGRATION_LEDGER_READONLY_PASS");
+    // The included read-only SQL emits the PASS marker at runtime; its text
+    // is intentionally not duplicated in the wrapper fixture.
+    expect(lifecycle).toContain("\\i docs/engineering/security/p02-registration-migration-ledger-readonly-gate.sql");
+    expect(workflow).toContain("P02_MIGRATION_LEDGER_READONLY_PASS");
     expect(lifecycle).toContain("sd_0065_v4_default_branch_membership_authority");
     expect(lifecycle).not.toContain("cpmmgivhlkfbiwzhlcey");
     expect(rollback).toContain("P02_REGISTRATION_POSTINSTALL_CLOSED_PASS");
