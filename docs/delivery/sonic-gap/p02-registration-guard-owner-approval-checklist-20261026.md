@@ -132,3 +132,18 @@ P21 disposable PostgreSQL 17 workflow tests seven independent mutation-and-resto
 ### P21 independent suffix-replay correction
 
 Migration history already uses letter-suffixed names (e.g. `sd_0012a_*`). Ledger gate now catches any 0063/0064 prefix, including `sd_0063a_*` and `sd_0064a_*`. Two extra disposable PostgreSQL 17 negative cases `UNREVIEWED_0063A` and `UNREVIEWED_0064A` prevent this exact false-green. Total ledger cases: **nine**, with a restored final positive baseline.
+
+## P22 same-database installation-to-rollback rehearsal (SOURCE-ONLY, 2026-10-28)
+
+The P21 read-only ledger guard and the P20 CLOSED postinstall receipt previously passed in independent PostgreSQL 17 fixtures. P22 now integrates them into the **existing disposable rollback database** `servicedesk_p02_registration_rollback` with an explicit fixed-database-name guard:
+
+1. Populate the existing synthetic Auth/workspace/0059 and approved 0065 source preimage; require `P02_REGISTRATION_READONLY_PREIMAGE_PASS`.
+2. Populate a **synthetic**, two-entry 0062/0065 migration ledger (0063/0064 absent); require `P02_MIGRATION_LEDGER_READONLY_PASS` before installing anything.
+3. Install the exact P02 candidate SQL **only inside the named disposable PG17 database**; verify the singleton mode is `CLOSED`.
+4. On that same installed database run `p02-registration-postinstall-readonly-attestation.sql` and require `P02_REGISTRATION_POSTINSTALL_CLOSED_PASS`.
+5. Exercise the existing **revoke EXECUTE first → restore original reviewed function → drop disposable guard** fail-closed recovery. Require `P02_FAIL_CLOSED_REGISTRATION_ROLLBACK_PASS` plus actual authenticated-role `insufficient_privilege` denial and zero unauthorized workspace creation.
+6. Re-run the read-only 0062/0065 ledger gate on **that same database** *after rollback*. The ledger must still match its original identity and sequence.
+
+The P22 fixture is `tests/sql/p02-registration-rollback-ledger-disposable-setup-pg17.sql` and is wired to the pre-existing rollback step in `.github/workflows/p02-owner-registration-candidate-pg17.yml`. These are simulation receipts; they do not prove real Supabase backup restoration, real signed-in Auth JWT/RLS boundaries, independently created second QA owner, or the safety of applying an unreviewed migration history in Production.
+
+**Production DBA authority is STILL NOT GRANTED.** The only acceptable live approval path remains: record target project and exact reviewed migration blob; independently verify database backups and recoverability, fresh 10-condition preimage and out-of-order 0065 ledger, transaction/locking and provider impacts; get exact owner approval for security-only installation with default `CLOSED`; immediately run the strict read-only postinstall receipt; stop on any drift. No `db push`, fixture creation, customer-data touch, grant to QA users, or Vercel deployment follows automatically. If restoration becomes necessary, it requires separately scoped privileged authority and a live-specific operator-approved script; the disposable rollback fixture MUST NEVER be run on any live database.
