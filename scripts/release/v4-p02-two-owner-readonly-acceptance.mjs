@@ -13,6 +13,7 @@
  *  SD_P02_OWNER_A_JWT=<real signed-in owner A JWT>
  *  SD_P02_OWNER_B_JWT=<real signed-in owner B JWT>
  *  SD_P02_OWNER_A_WORKSPACE_ID=<uuid> ; SD_P02_OWNER_B_WORKSPACE_ID=<uuid>
+ *  SD_P02_OWNER_A_REQUEST_ID=<uuid> ; SD_P02_OWNER_B_REQUEST_ID=<uuid>
  * Supabase host is pinned to the previously owner-approved main ServiceDesk project.
  */
 import { fileURLToPath } from "node:url";
@@ -40,18 +41,29 @@ export function validateInputs(env) {
     const jwt = env["SD_P02_OWNER_" + tag + "_JWT"];
     const id = env["SD_P02_OWNER_" + tag + "_WORKSPACE_ID"];
     if (!UUID.test(id || "")) throw Error("EXPECTED_WORKSPACE_ID_INVALID");
+    const requestId = env["SD_P02_OWNER_" + tag + "_REQUEST_ID"];
+    if (!UUID.test(requestId || "")) throw Error("EXPECTED_SAVED_REQUEST_FIXTURE_REQUIRED");
     const claims = jwtClaims(jwt);
-    if (claims.role !== "authenticated" || !UUID.test(claims.sub || ""))
+    // Authenticated-role anonymous JWTs must not masquerade as owner proof.
+    // Supabase JWT audience is a string or array; only the authenticated
+    // audience is permitted for this two-real-owner acceptance.
+    const authenticatedAudience =
+      claims.aud === "authenticated" ||
+      (Array.isArray(claims.aud) && claims.aud.length === 1 &&
+       claims.aud[0] === "authenticated");
+    if (claims.role !== "authenticated" || !authenticatedAudience ||
+        claims.is_anonymous === true || !UUID.test(claims.sub || ""))
       throw Error("SIGNED_IN_OWNER_SESSION_REQUIRED");
     if (!Number.isSafeInteger(claims.exp) ||
         Number(claims.exp) * 1000 <= Date.now())
       throw Error("EXPIRED_OR_UNVERIFIABLE_OWNER_JWT");
     if (claims.iss !== ORIGIN + "/auth/v1")
       throw Error("WRONG_SUPABASE_PROJECT_JWT");
-    return { tag, token: jwt, expectedWorkspace: id, subject: claims.sub };
+    return { tag, token: jwt, expectedWorkspace: id, expectedRequest: requestId, subject: claims.sub };
   });
   if (entries[0].subject === entries[1].subject ||
-      entries[0].expectedWorkspace === entries[1].expectedWorkspace)
+      entries[0].expectedWorkspace === entries[1].expectedWorkspace ||
+      entries[0].expectedRequest === entries[1].expectedRequest)
     throw Error("OWNERS_AND_WORKSPACES_MUST_BE_DIFFERENT");
   return { key, entries };
 }
@@ -61,7 +73,43 @@ export async function runTwoOwnerReadOnlyAudit(
   fetcher = fetch,
 ) {
   const { key, entries } = validateInputs(env);
+
+  // The locally decoded JWT claims are NOT a proof of a current Auth user.
+  // The official Auth /user endpoint validates the bearer token and returns
+  // the current server-side identity. This is a GET with a publishable key;
+  // do not log the full Auth user, JWT, email, or response body.
+  const verifyAuthOwner = async owner => {
+    const res = await fetcher(ORIGIN + "/auth/v1/user", {
+      method: "GET", redirect: "error", signal: AbortSignal.timeout(15000),
+      headers: {
+        apikey: key, Authorization: "Bearer " + owner.token,
+        Accept: "application/json", "Cache-Control": "no-store",
+      },
+    });
+    if (!res.ok || !res.headers.get("content-type")?.includes("application/json"))
+      throw Error("AUTH_SERVER_USER_CHECK_FAILED");
+    let user;
+    try { user = await res.json(); }
+    catch { throw Error("AUTH_SERVER_USER_CHECK_FAILED"); }
+    if (!user || typeof user !== "object" || Array.isArray(user) ||
+        user.id !== owner.subject || user.role !== "authenticated" ||
+        user.aud !== "authenticated" || user.is_anonymous === true ||
+        typeof user.email_confirmed_at !== "string" ||
+        !Number.isFinite(Date.parse(user.email_confirmed_at)))
+      throw Error("AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED");
+    // Supabase user records expose banned_until. A still-banned or
+    // malformed ban status cannot serve as an independent QA owner.
+    if (user.banned_until != null &&
+        (typeof user.banned_until !== "string" ||
+         !Number.isFinite(Date.parse(user.banned_until)) ||
+         Date.parse(user.banned_until) > Date.now()))
+      throw Error("AUTH_SERVER_OWNER_BANNED_OR_STATUS_UNVERIFIED");
+  };
+  // Validate BOTH identities before any tenant reads. An expired/revoked or
+  // changed session must never be reported as a usable independent owner.
+  for (const owner of entries) await verifyAuthOwner(owner);
   const checked = [];
+  const finalAuthorityReadbacks = [];
   for (const owner of entries) {
     const foreign = entries.find(item => item.tag !== owner.tag);
     const headers = {
@@ -85,7 +133,13 @@ export async function runTwoOwnerReadOnlyAudit(
     // Count-only checks are not a proof of OWNER authority: a STAFF row,
     // stale membership or mis-scoped response could otherwise pass.
     // Independently validate the row identity *and* the verified JWT subject.
-    const scoped = async (table, workspaceId) => {
+    const scoped = async (table, workspaceId, requestId, membershipSubject = owner.subject) => {
+      // The foreign-membership witness must query that foreign OWNER's known
+      // saved identity. Filtering by our own actor would return zero even when
+      // an incorrectly broad RLS policy exposes the foreign OWNER row.
+      if (table === "memberships" &&
+          membershipSubject !== owner.subject && membershipSubject !== foreign.subject)
+        throw Error("UNAPPROVED_MEMBERSHIP_SUBJECT");
       const projection = {
         workspaces: "id",
         memberships: "workspace_id,user_id,role,status",
@@ -93,12 +147,15 @@ export async function runTwoOwnerReadOnlyAudit(
         workspace_branches: "id,workspace_id,is_default,active",
       }[table];
       if (!projection) throw Error("UNAPPROVED_TABLE");
+      if (table === "requests" && !UUID.test(requestId || ""))
+        throw Error("EXPECTED_SAVED_REQUEST_FIXTURE_REQUIRED");
       const filter = new URLSearchParams({
         select: projection,
         [table === "workspaces" ? "id" : "workspace_id"]: "eq." + workspaceId,
         ...(table === "memberships" ? {
-          user_id: "eq." + owner.subject, role: "eq.OWNER", status: "eq.ACTIVE",
+          user_id: "eq." + membershipSubject, role: "eq.OWNER", status: "eq.ACTIVE",
         } : {}),
+        ...(table === "requests" ? { id: "eq." + requestId } : {}),
         ...(table === "workspace_branches" ? {
           is_default: "eq.true", active: "eq.true",
         } : {}),
@@ -114,11 +171,11 @@ export async function runTwoOwnerReadOnlyAudit(
         if (table === "workspaces" && row.id !== workspaceId)
           throw Error("DATABASE_ROW_SCOPE_UNVERIFIED");
         if (table === "memberships" &&
-            (row.workspace_id !== workspaceId || row.user_id !== owner.subject ||
+            (row.workspace_id !== workspaceId || row.user_id !== membershipSubject ||
              row.role !== "OWNER" || row.status !== "ACTIVE"))
           throw Error("OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED");
         if (table === "requests" &&
-            (row.workspace_id !== workspaceId || !UUID.test(row.id ?? "")))
+            (row.workspace_id !== workspaceId || row.id !== requestId))
           throw Error("DATABASE_ROW_SCOPE_UNVERIFIED");
         if (table === "workspace_branches" &&
             (row.workspace_id !== workspaceId || !UUID.test(row.id ?? "") ||
@@ -128,9 +185,14 @@ export async function runTwoOwnerReadOnlyAudit(
       return data;
     };
     for (const table of ["workspaces", "memberships", "requests"]) {
-      const ownRows = await scoped(table, owner.expectedWorkspace);
-      const foreignRows = await scoped(table, foreign.expectedWorkspace);
+      const ownRows = await scoped(table, owner.expectedWorkspace, owner.expectedRequest);
+      const foreignRows = await scoped(
+        table, foreign.expectedWorkspace, foreign.expectedRequest, foreign.subject,
+      );
       // A second or duplicated owner membership is not an unambiguous proof.
+      // Foreign denial is not meaningful without a saved row that its owner can read.
+      if (table === "requests" && ownRows.length !== 1)
+        throw Error("EXPECTED_OWNER_REQUEST_FIXTURE_MISSING");
       if (table !== "requests" && ownRows.length !== 1)
         throw Error("EXPECTED_OWNER_ACCESS_MISSING_" + table.toUpperCase());
       if (foreignRows.length !== 0)
@@ -153,8 +215,40 @@ export async function runTwoOwnerReadOnlyAudit(
       throw Error("DEFAULT_BRANCH_OWN_RPC_NOT_VERIFIED");
     if (foreignBranch !== null)
       throw Error("FOREIGN_DEFAULT_BRANCH_DISCLOSURE");
+
+    // Defer both final authority reads until BOTH owners' full scope/RPC
+    // matrices have finished. Checking owner A before auditing owner B could
+    // miss a revocation of owner A while owner B's calls are in flight.
+    finalAuthorityReadbacks.push(async () => {
+      const finalMembership = await scoped("memberships", owner.expectedWorkspace);
+      const finalDefault = await scoped("workspace_branches", owner.expectedWorkspace);
+      if (finalMembership.length !== 1 || finalDefault.length !== 1 ||
+          finalDefault[0].id !== ownDefaults[0].id)
+        throw Error("OWNER_AUTHORITY_CHANGED_DURING_AUDIT");
+      const finalClaims = jwtClaims(owner.token);
+      if (!Number.isSafeInteger(finalClaims?.exp) ||
+          finalClaims.exp * 1000 <= Date.now())
+        throw Error("OWNER_SESSION_EXPIRED_DURING_AUDIT");
+    });
+
     checked.push({ owner: owner.tag, scope: "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED",
       defaultBranch: "AUTHORIZED_ONLY", authenticated: true });
+  }
+  // No PASS until both owners have been rechecked after the *entire*
+  // matrix. This narrows TOCTOU exposure but remains non-atomic; signed-in
+  // browser/session acceptance is still a separate Production gate.
+  for (const recheck of finalAuthorityReadbacks) await recheck();
+  // Recheck Auth server identities after both owners' database matrices.
+  // This catches an Auth user/session changed during the read-only probe;
+  // the overall audit is still non-atomic and is NOT a browser UAT.
+  for (const owner of entries) await verifyAuthOwner(owner);
+  // A JWT that expired during the other owner's final readback must not be
+  // counted as a currently usable session.
+  for (const owner of entries) {
+    const finalClaims = jwtClaims(owner.token);
+    if (!Number.isSafeInteger(finalClaims?.exp) ||
+        finalClaims.exp * 1000 <= Date.now())
+      throw Error("OWNER_SESSION_EXPIRED_DURING_AUDIT");
   }
   return { result: "PASS", project: PROJECT_REF,
     checks: checked, noWrites: true,
