@@ -29,6 +29,11 @@ begin
  then raise exception 'P02_ROLLBACK_INSTALL_NOT_CLOSED'; end if;
 end $p02_installed$;
 
+-- P22: the very SAME disposable database must produce the strict
+-- read-only CLOSED/zero-grant installation receipt BEFORE rollback.
+-- This attestation wraps its read in a transaction and rolls it back.
+\i docs/engineering/security/p02-registration-postinstall-readonly-attestation.sql
+
 -- Critical rollback order: revoke RPC execution BEFORE restoring the
 -- unguarded 0059 definition. CREATE OR REPLACE FUNCTION retains prior grants
 -- and owner; the new private schema cannot be a permanent substitute for
@@ -85,4 +90,7 @@ begin
  if exists (select 1 from public.workspaces where slug='p02-after-rollback')
  then raise exception 'P02_ROLLBACK_CREATED_UNAUTHORIZED_WORKSPACE'; end if;
 end $p02_no_workspace$;
+-- The synthetic ledger is deliberately retained; installation/rollback
+-- must not silently change 0062/0065 history while reverting the guard.
+select 'P02_P22_ROLLBACK_RPCRIGHTS_CLOSED_PASS' AS result;
 select 'P02_FAIL_CLOSED_REGISTRATION_ROLLBACK_PASS' AS result;
