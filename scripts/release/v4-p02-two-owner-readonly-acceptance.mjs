@@ -44,7 +44,15 @@ export function validateInputs(env) {
     const requestId = env["SD_P02_OWNER_" + tag + "_REQUEST_ID"];
     if (!UUID.test(requestId || "")) throw Error("EXPECTED_SAVED_REQUEST_FIXTURE_REQUIRED");
     const claims = jwtClaims(jwt);
-    if (claims.role !== "authenticated" || !UUID.test(claims.sub || ""))
+    // Authenticated-role anonymous JWTs must not masquerade as owner proof.
+    // Supabase JWT audience is a string or array; only the authenticated
+    // audience is permitted for this two-real-owner acceptance.
+    const authenticatedAudience =
+      claims.aud === "authenticated" ||
+      (Array.isArray(claims.aud) && claims.aud.length === 1 &&
+       claims.aud[0] === "authenticated");
+    if (claims.role !== "authenticated" || !authenticatedAudience ||
+        claims.is_anonymous === true || !UUID.test(claims.sub || ""))
       throw Error("SIGNED_IN_OWNER_SESSION_REQUIRED");
     if (!Number.isSafeInteger(claims.exp) ||
         Number(claims.exp) * 1000 <= Date.now())
@@ -84,10 +92,18 @@ export async function runTwoOwnerReadOnlyAudit(
     try { user = await res.json(); }
     catch { throw Error("AUTH_SERVER_USER_CHECK_FAILED"); }
     if (!user || typeof user !== "object" || Array.isArray(user) ||
-        user.id !== owner.subject || user.is_anonymous === true ||
+        user.id !== owner.subject || user.role !== "authenticated" ||
+        user.aud !== "authenticated" || user.is_anonymous === true ||
         typeof user.email_confirmed_at !== "string" ||
         !Number.isFinite(Date.parse(user.email_confirmed_at)))
       throw Error("AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED");
+    // Supabase user records expose banned_until. A still-banned or
+    // malformed ban status cannot serve as an independent QA owner.
+    if (user.banned_until != null &&
+        (typeof user.banned_until !== "string" ||
+         !Number.isFinite(Date.parse(user.banned_until)) ||
+         Date.parse(user.banned_until) > Date.now()))
+      throw Error("AUTH_SERVER_OWNER_BANNED_OR_STATUS_UNVERIFIED");
   };
   // Validate BOTH identities before any tenant reads. An expired/revoked or
   // changed session must never be reported as a usable independent owner.
