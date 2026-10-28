@@ -14,6 +14,26 @@ describe("P02 IR15 independent release-safety critic",()=>{
   expect(rechecks).toBeGreaterThan(firstComplete);
   expect(s).toContain("OWNER_AUTHORITY_CHANGED_DURING_AUDIT");
   expect(s).toContain("OWNER_SESSION_EXPIRED_DURING_AUDIT");
+  // P23: locally decoded claims cannot stand in for server-validated Auth
+  // identity. Both owners must be checked before DB reads AND after the
+  // full cross-tenant matrix, using only GET and no service_role credentials.
+  const authGate=s.indexOf('const verifyAuthOwner = async owner =>');
+  const authFirst=s.indexOf('for (const owner of entries) await verifyAuthOwner(owner);');
+  const authFinal=s.lastIndexOf('for (const owner of entries) await verifyAuthOwner(owner);');
+  expect(authGate).toBeGreaterThan(0);
+  expect(s).toContain('ORIGIN + "/auth/v1/user"');
+  expect(s).toContain('method: "GET", redirect: "error"');
+  expect(s).toContain('AUTH_SERVER_USER_CHECK_FAILED');
+  expect(s).toContain('AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED');
+  expect(s).toContain('user.id !== owner.subject');
+  expect(s).toContain('user.email_confirmed_at');
+  expect(authFirst).toBeGreaterThan(authGate);
+  expect(authFirst).toBeLessThan(s.indexOf('for (const owner of entries) {'));
+  expect(authFinal).toBeGreaterThan(rechecks);
+  const authTests=get("scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs");
+  for (const fault of ["authServerFailure","authMismatch","authUnconfirmed","authAnonymous","authChangedAtEnd"])
+    expect(authTests).toContain(fault);
+
   expect(s).toContain("OWNERS_AND_WORKSPACES_MUST_BE_DIFFERENT");
   // An empty foreign request result alone is meaningless unless the owner
   // can read a specifically identified saved request in its own tenant.
