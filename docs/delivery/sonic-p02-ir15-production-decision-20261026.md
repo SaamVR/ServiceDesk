@@ -7,11 +7,22 @@ Control: [#870](https://github.com/SaamVR/ServiceDesk/issues/870), main Producti
 
 | Isolated source owner | Original draft | Pinned source head | Imported Git blobs |
 | --- | --- | --- | ---: |
-| Post-session owner authority proof | [#868](https://github.com/SaamVR/ServiceDesk/pull/868) | `0f40b064ba0cf5fb3ff963a6969241addd5136da` | 7 |
-| Database registration authorization candidate | [#869](https://github.com/SaamVR/ServiceDesk/pull/869) | `053bf3493d6f38e29000e06d5a3868a24442205a` | 13 |
+| Post-session owner authority proof | [#868](https://github.com/SaamVR/ServiceDesk/pull/868) | `3e4117266d03fd41dc22e02c3776bc77a28d0236` | 7 |
+| Database registration authorization candidate | [#869](https://github.com/SaamVR/ServiceDesk/pull/869) | `053bf3493d6f38e29000e06d5a3868a24442205a` | 17 |
 | Registration authorization UX and trusted error source | [#875](https://github.com/SaamVR/ServiceDesk/pull/875) | `908f3a731cc1eab348ee4f07f4f858fc18becbd9` | 5 |
 
 Combined rehearsal pinned over canonical `cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411`. **29 source paths, no pathname collision**: 24 additions and five modified existing source/test paths. `docs/delivery/sonic-p02-ir15-exact-source-lock-20261026.json` stores PR and Git blob object SHAs. Automated source-lock unit test rehashes **all 29 exact imported Git blob objects**; an independent release critic and this runbook are the only new integration-specific artifacts. None of the original source code bytes were altered or replaced.
+
+## Foreign owner-membership witness corrected (2026-10-29)
+
+Source PR #868 now probes the known foreign OWNER subject on the foreign workspace,
+instead of the auditor's own subject. The previous filter could return an empty
+membership response even when another OWNER's row was improperly readable.
+Adversarial offline tests now simulate that exact foreign membership exposure,
+while other foreign resource reads remain correctly denied; PASS is rejected.
+The correction changes only read-only query selection/verification and local tests,
+not any provider, database migration, Auth fixture, or deployment. Exact-source
+provenance remains pinned in the 29-file manifest and requires fresh exact-head CI.
 
 ## What combined source CI can and cannot establish
 
@@ -94,7 +105,7 @@ This is a **disposable rehearsal only**: it does **not** prove live Supabase bac
 
 ## P23 Auth-server identity attestation (SOURCE-ONLY, 2026-10-29)
 
-[Owner readback draft #868](https://github.com/SaamVR/ServiceDesk/pull/868) at `0f40b064ba0cf5fb3ff963a6969241addd5136da` now additionally performs authenticated `GET /auth/v1/user` for **both** intended owners before any row-level-security table queries and again **after** the complete dual-owner tenant matrix. The API host is fixed to the intended Supabase project; only a publishable key and each owner's own JWT are supplied. Auth server responses must match the decoded JWT subject, show a confirmed email, and not mark a user anonymous. HTTP/Auth failures, mismatches, unconfirmed/anonymous owner users, or identity changes during the audit must veto a positive receipt. No Auth response bodies, user IDs, email addresses, JWTs or API keys are added to CLI output.
+[Owner readback draft #868](https://github.com/SaamVR/ServiceDesk/pull/868) at `3e4117266d03fd41dc22e02c3776bc77a28d0236` now additionally performs authenticated `GET /auth/v1/user` for **both** intended owners before any row-level-security table queries and again **after** the complete dual-owner tenant matrix. The API host is fixed to the intended Supabase project; only a publishable key and each owner's own JWT are supplied. Auth server responses must match the decoded JWT subject, show a confirmed email, and not mark a user anonymous. HTTP/Auth failures, mismatches, unconfirmed/anonymous owner users, or identity changes during the audit must veto a positive receipt. No Auth response bodies, user IDs, email addresses, JWTs or API keys are added to CLI output.
 
 Source-only mocks include intentional bad identity responses and offline fake JWTs; passing GitHub CI **does not validate real signed-in sessions**. Future live UAT must supply independently obtained real owner JWTs and read-only approval, and the active registration guard must be installed/attested separately before owner B is provisioned. This Auth GET verifies the server-side user record, but the overall matrix remains non-atomic, and is NOT a substitute for signed-in browser workflow or real JWT/RLS negative-path acceptance.
 

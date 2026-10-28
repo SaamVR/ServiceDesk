@@ -55,7 +55,7 @@ function harness(fault){
    assert.ok([own,other].includes(target));
    assert.equal(url.searchParams.get("limit"),"2");
    if(table==="memberships"){
-    assert.equal(url.searchParams.get("user_id"),"eq."+(me===0?A:B));
+    assert.equal(url.searchParams.get("user_id"),"eq."+(target===WA?A:B));
     assert.equal(url.searchParams.get("role"),"eq.OWNER");
     assert.equal(url.searchParams.get("status"),"eq.ACTIVE");
    }
@@ -64,7 +64,8 @@ function harness(fault){
     assert.equal(url.searchParams.get("active"),"eq.true");
    }
    const exists=target===own ||
-    (fault==="foreign-default-visible"&&target===other&&table==="workspace_branches");
+    (fault==="foreign-default-visible"&&target===other&&table==="workspace_branches") ||
+    (fault==="foreign-membership-visible"&&target===other&&table==="memberships");
    if(!exists)data=[];
    else if(table==="requests"){
     assert.equal(url.searchParams.get("id"),"eq."+(target===WA?RA:RB));
@@ -73,7 +74,7 @@ function harness(fault){
    else if(table==="workspaces")
     data=[{id:fault==="foreign-workspace-identity"?other:target}];
    else if(table==="memberships"){
-    const row={workspace_id:target,user_id:me===0?A:B,role:"OWNER",status:"ACTIVE"};
+    const row={workspace_id:target,user_id:target===WA?A:B,role:"OWNER",status:"ACTIVE"};
     if(fault==="staff-instead-of-owner")row.role="DISPATCHER";
     if(fault==="revoked-owner")row.status="INACTIVE";
     if(fault==="different-user")row.user_id=me===0?B:A;
@@ -113,6 +114,7 @@ for(const [fault,expected] of [
  ["inactive-branch","DEFAULT_BRANCH_SAVED_SCOPE_UNVERIFIED"],
  ["duplicate-default","DEFAULT_BRANCH_OWN_ROW_NOT_UNAMBIGUOUS"],
  ["foreign-default-visible","FOREIGN_TENANT_DATA_EXPOSED_WORKSPACE_BRANCHES"],
+ ["foreign-membership-visible","FOREIGN_TENANT_DATA_EXPOSED_MEMBERSHIPS"],
  ["wrong-rpc","DEFAULT_BRANCH_OWN_RPC_NOT_VERIFIED"],
  ["foreign-rpc-leak","FOREIGN_DEFAULT_BRANCH_DISCLOSURE"],
 ]){

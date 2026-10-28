@@ -3,7 +3,7 @@
   "kind": "P02_UNMERGED_SOURCE_REHEARSAL_LOCK",
   "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
   "sourceHeads": {
-    "868": "0f40b064ba0cf5fb3ff963a6969241addd5136da",
+    "868": "3e4117266d03fd41dc22e02c3776bc77a28d0236",
     "869": "053bf3493d6f38e29000e06d5a3868a24442205a",
     "875": "908f3a731cc1eab348ee4f07f4f858fc18becbd9"
   },
@@ -96,19 +96,19 @@
       "path": "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
       "sourcePr": 868,
       "status": "modified",
-      "gitBlobSha": "77138da0ecb3e486827ba7aa9b17f8d574cbccc3"
+      "gitBlobSha": "73e2d05030324e6409d95b4375a5e7e2ed29e918"
     },
     {
       "path": "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
       "sourcePr": 868,
       "status": "modified",
-      "gitBlobSha": "c58641fcebd9c8622998ed31799cdfe1fc8da301"
+      "gitBlobSha": "15a3a1f5a761dcb78202ba1ceb27889aa253c855"
     },
     {
       "path": "scripts/release/v4-p02-two-owner-readonly-acceptance.mjs",
       "sourcePr": 868,
       "status": "modified",
-      "gitBlobSha": "c7879f7622c8e26b255876873d354a6d58c2778f"
+      "gitBlobSha": "80dca201335cdafc76f78baf21a7f1c453e82332"
     },
     {
       "path": "src/app/auth/create-workspace/actions.ts",
@@ -132,7 +132,7 @@
       "path": "tests/ai/sonic-p02-end-authority-readback-critic.test.ts",
       "sourcePr": 868,
       "status": "added",
-      "gitBlobSha": "d59487283596c00af739d3e1ea00648c9a6ef566"
+      "gitBlobSha": "14de4e027269ef4165238fa4429fb6f5b24d97ed"
     },
     {
       "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",

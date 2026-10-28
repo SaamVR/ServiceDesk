@@ -20,6 +20,17 @@ describe("P02 independent critic: latest read-only authority before audit PASS",
   expect(deferred).toBeGreaterThan(passed);
   expect(regression).toContain('if(owner==="B")secondOwnerStarted');
  });
+ it("probes the actual foreign owner's saved membership as an RLS witness",()=>{
+  expect(source).toContain('user_id: "eq." + membershipSubject');
+  expect(source).toContain('row.user_id !== membershipSubject');
+  expect(source).toContain('foreign.expectedRequest, foreign.subject');
+  const readbackTests=readFileSync("scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs","utf8");
+  const authorityTests=readFileSync("scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs","utf8");
+  expect(readbackTests).toContain("leakForeignMembership: true");
+  expect(readbackTests).toContain("FOREIGN_TENANT_DATA_EXPOSED_MEMBERSHIPS");
+  expect(authorityTests).toContain("foreign-membership-visible");
+  expect(authorityTests).toContain("FOREIGN_TENANT_DATA_EXPOSED_MEMBERSHIPS");
+ });
  it("does not claim validity after the bearer JWT expires mid-proof",()=>{
   expect(source).toContain("const finalClaims = jwtClaims(owner.token)");
   expect(source).toContain('finalClaims.exp * 1000 <= Date.now()');
