@@ -57,7 +57,8 @@ function mockFetch(options = {}) {
         role: options.authRoleWrong ? "anon" : "authenticated",
         aud: options.authAudienceWrong ? "anon" : "authenticated",
         banned_until: options.authBanned ? new Date(Date.now()+3600_000).toISOString() :
-          options.authBanMalformed ? "not-a-date" : null,
+          options.authBanMalformed ? "not-a-date" :
+          options.authBanExpired ? new Date(Date.now()-3600_000).toISOString() : null,
         is_anonymous: false,
       };
       if (options.authMismatch || (options.authChangedAtEnd && authReads > 2 && owner === "A"))
@@ -208,7 +209,7 @@ test("accepts valid single authenticated JWT audience array and expired ban", as
   // isolated harness must use its own Authorization; input validation alone
   // proves the strict single-audience allowance.
   assert.equal(validateInputs(local).entries.length,2);
-  const h = mockFetch({ savedRequest:true });
+  const h = mockFetch({ savedRequest:true, authBanExpired:true });
   const result=await runTwoOwnerReadOnlyAudit(env,h.fetcher);
   assert.equal(result.result,"PASS");
 });
