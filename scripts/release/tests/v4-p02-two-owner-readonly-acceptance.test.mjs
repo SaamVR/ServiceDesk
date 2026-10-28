@@ -33,6 +33,7 @@ const env = {
 };
 function mockFetch(options = {}) {
   const calls = [];
+  let authReads = 0;
   const fetcher = async (raw, request) => {
     const url = new URL(raw), owner = request.headers.Authorization === "Bearer " + env.SD_P02_OWNER_A_JWT ? "A" : "B";
     const expected = owner === "A" ? workA : workB;
@@ -41,7 +42,24 @@ function mockFetch(options = {}) {
     assert.equal(request.redirect, "error");
     calls.push({ path: url.pathname, method: request.method, owner });
     let data;
-    if (url.pathname.endsWith("/rpc/servicedesk_default_branch")) {
+    if (url.pathname === "/auth/v1/user") {
+      assert.equal(request.method, "GET");
+      assert.equal(request.body, undefined);
+      authReads += 1;
+      if (options.authServerFailure)
+        return new Response(JSON.stringify({error:"invalid_token"}), {
+          status:401, headers:{"content-type":"application/json"},
+        });
+      data = {
+        id: owner === "A" ? userA : userB,
+        email_confirmed_at: "2026-10-01T00:00:00Z",
+        is_anonymous: false,
+      };
+      if (options.authMismatch || (options.authChangedAtEnd && authReads > 2 && owner === "A"))
+        data.id = owner === "A" ? userB : userA;
+      if (options.authUnconfirmed) data.email_confirmed_at = null;
+      if (options.authAnonymous) data.is_anonymous = true;
+    } else if (url.pathname.endsWith("/rpc/servicedesk_default_branch")) {
       assert.equal(request.method, "POST");
       const given = JSON.parse(request.body).target_workspace;
       data = given === expected || options.leakForeignBranch ? branch : null;
@@ -104,9 +122,10 @@ test("proves two different owners' own visibility, foreign denial and own-only b
   assert.equal(result.noWrites, true);
   assert.equal(result.checks.length, 2);
   assert.ok(result.checks.every(x => x.scope === "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED"));
-  assert.equal(calls.length, 24);
+  assert.equal(calls.length, 28);
+  assert.equal(calls.filter(x => x.path === "/auth/v1/user").length, 4);
   assert.equal(calls.filter(x => x.method === "POST").length, 4);
-  assert.equal(calls.filter(x => x.method === "GET").length, 20);
+  assert.equal(calls.filter(x => x.method === "GET").length, 24);
 });
 
 test("rejects empty request fixtures rather than declaring false-positive request isolation", async () => {
@@ -131,3 +150,26 @@ test("fails on default-branch RPC disclosure, even if table RLS is correctly con
     /FOREIGN_DEFAULT_BRANCH_DISCLOSURE/,
   );
 });
+
+test("verifies both owner JWTs against the read-only Auth server endpoint", async () => {
+  const h = mockFetch({ savedRequest:true });
+  const result = await runTwoOwnerReadOnlyAudit(env, h.fetcher);
+  assert.equal(result.result, "PASS");
+  const authCalls = h.calls.filter(x => x.path === "/auth/v1/user");
+  assert.deepEqual(authCalls.map(x => x.owner), ["A","B","A","B"]);
+  assert.ok(authCalls.every(x => x.method === "GET"));
+});
+for (const [options, expected] of [
+  [{authServerFailure:true}, "AUTH_SERVER_USER_CHECK_FAILED"],
+  [{authMismatch:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
+  [{authUnconfirmed:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
+  [{authAnonymous:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
+  [{authChangedAtEnd:true, savedRequest:true}, "AUTH_SERVER_OWNER_IDENTITY_UNVERIFIED"],
+]) {
+  test("fails closed for unverified Auth server identity: " + JSON.stringify(options), async () => {
+    const h = mockFetch(options);
+    await assert.rejects(runTwoOwnerReadOnlyAudit(env, h.fetcher), new RegExp(expected));
+    assert.ok(h.calls.every(x => x.method === "GET" || x.method === "POST" &&
+      x.path === "/rest/v1/rpc/servicedesk_default_branch"));
+  });
+}
