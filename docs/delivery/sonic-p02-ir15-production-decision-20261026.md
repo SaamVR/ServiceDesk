@@ -7,7 +7,7 @@ Control: [#870](https://github.com/SaamVR/ServiceDesk/issues/870), main Producti
 
 | Isolated source owner | Original draft | Pinned source head | Imported Git blobs |
 | --- | --- | --- | ---: |
-| Post-session owner authority proof | [#868](https://github.com/SaamVR/ServiceDesk/pull/868) | `3e4117266d03fd41dc22e02c3776bc77a28d0236` | 7 |
+| Post-session owner authority proof | [#868](https://github.com/SaamVR/ServiceDesk/pull/868) | `d9c53c05cf5f98bf9e5fec688e2f56cc3e42b360` | 7 |
 | Database registration authorization candidate | [#869](https://github.com/SaamVR/ServiceDesk/pull/869) | `053bf3493d6f38e29000e06d5a3868a24442205a` | 17 |
 | Registration authorization UX and trusted error source | [#875](https://github.com/SaamVR/ServiceDesk/pull/875) | `908f3a731cc1eab348ee4f07f4f858fc18becbd9` | 5 |
 
@@ -105,8 +105,12 @@ This is a **disposable rehearsal only**: it does **not** prove live Supabase bac
 
 ## P23 Auth-server identity attestation (SOURCE-ONLY, 2026-10-29)
 
-[Owner readback draft #868](https://github.com/SaamVR/ServiceDesk/pull/868) at `3e4117266d03fd41dc22e02c3776bc77a28d0236` now additionally performs authenticated `GET /auth/v1/user` for **both** intended owners before any row-level-security table queries and again **after** the complete dual-owner tenant matrix. The API host is fixed to the intended Supabase project; only a publishable key and each owner's own JWT are supplied. Auth server responses must match the decoded JWT subject, show a confirmed email, and not mark a user anonymous. HTTP/Auth failures, mismatches, unconfirmed/anonymous owner users, or identity changes during the audit must veto a positive receipt. No Auth response bodies, user IDs, email addresses, JWTs or API keys are added to CLI output.
+[Owner readback draft #868](https://github.com/SaamVR/ServiceDesk/pull/868) at `d9c53c05cf5f98bf9e5fec688e2f56cc3e42b360` now additionally performs authenticated `GET /auth/v1/user` for **both** intended owners before any row-level-security table queries and again **after** the complete dual-owner tenant matrix. The API host is fixed to the intended Supabase project; only a publishable key and each owner's own JWT are supplied. Auth server responses must match the decoded JWT subject, show a confirmed email, and not mark a user anonymous. HTTP/Auth failures, mismatches, unconfirmed/anonymous owner users, or identity changes during the audit must veto a positive receipt. No Auth response bodies, user IDs, email addresses, JWTs or API keys are added to CLI output.
 
 Source-only mocks include intentional bad identity responses and offline fake JWTs; passing GitHub CI **does not validate real signed-in sessions**. Future live UAT must supply independently obtained real owner JWTs and read-only approval, and the active registration guard must be installed/attested separately before owner B is provisioned. This Auth GET verifies the server-side user record, but the overall matrix remains non-atomic, and is NOT a substitute for signed-in browser workflow or real JWT/RLS negative-path acceptance.
 
 The composite still locks **29 exact source files**. Its original guard SQL and migration controls are untouched, and all approvals for live Supabase mutation, QA fixtures, PR merge, deployment or Vercel remain unchanged.
+
+## P24 Auth owner status and JWT-audience defense in depth — 2026-10-29
+
+The reviewed owner-source draft #868 at `d9c53c05cf5f98bf9e5fec688e2f56cc3e42b360` adds fail-closed handling for audience mismatches and anonymous JWT claims before any requests, and checks the server-side Auth user record for role `authenticated`, audience `authenticated`, and an unexpired account ban. A null or expired `banned_until` remains acceptable; a future or malformed ban value prevents a positive test receipt. Source-only mocked adversaries now cover wrong claims, wrong Auth profile role/audience, active/malformed bans and good single-audience-array JWTs. All checks are limited to the existing **read-only** owner RLS probe. The new checks do not imply the Auth provider invalidates sessions immediately on a ban, or that real user identities or browser sessions have been tested. Real P02 acceptance remains 2/7 and requires a separately approved installed CLOSED guard, backed-up live DBA plan, independently authorized QA owner fixture, two real JWT/browser sessions and source-to-live receipts. No production mutation, deployment or merge authority is granted by the source candidate.
