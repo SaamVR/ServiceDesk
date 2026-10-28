@@ -7,7 +7,7 @@ Control: [#870](https://github.com/SaamVR/ServiceDesk/issues/870), main Producti
 
 | Isolated source owner | Original draft | Pinned source head | Imported Git blobs |
 | --- | --- | --- | ---: |
-| Post-session owner authority proof | [#868](https://github.com/SaamVR/ServiceDesk/pull/868) | `9df47e173e181cae6345a81f5baf19c2d79a6e1c` | 7 |
+| Post-session owner authority proof | [#868](https://github.com/SaamVR/ServiceDesk/pull/868) | `0f40b064ba0cf5fb3ff963a6969241addd5136da` | 7 |
 | Database registration authorization candidate | [#869](https://github.com/SaamVR/ServiceDesk/pull/869) | `053bf3493d6f38e29000e06d5a3868a24442205a` | 13 |
 | Registration authorization UX and trusted error source | [#875](https://github.com/SaamVR/ServiceDesk/pull/875) | `908f3a731cc1eab348ee4f07f4f858fc18becbd9` | 5 |
 
@@ -91,3 +91,11 @@ The guarded draft [#869](https://github.com/SaamVR/ServiceDesk/pull/869) at `053
 - Require an **unchanged 0062/0065 migration ledger receipt again after rollback**.
 
 This is a **disposable rehearsal only**: it does **not** prove live Supabase backup/restore, apply a migration or authorize a production rollback, create a second QA user, test real JWT/browser isolation, or deploy to Vercel. The real live DBA must choose a separately approved backup/restore procedure, and must **never execute the disposable rollback fixture against production**. Keep the issue #818 P02 acceptance tally at 2/7 with all five production gates open.
+
+## P23 Auth-server identity attestation (SOURCE-ONLY, 2026-10-29)
+
+[Owner readback draft #868](https://github.com/SaamVR/ServiceDesk/pull/868) at `0f40b064ba0cf5fb3ff963a6969241addd5136da` now additionally performs authenticated `GET /auth/v1/user` for **both** intended owners before any row-level-security table queries and again **after** the complete dual-owner tenant matrix. The API host is fixed to the intended Supabase project; only a publishable key and each owner's own JWT are supplied. Auth server responses must match the decoded JWT subject, show a confirmed email, and not mark a user anonymous. HTTP/Auth failures, mismatches, unconfirmed/anonymous owner users, or identity changes during the audit must veto a positive receipt. No Auth response bodies, user IDs, email addresses, JWTs or API keys are added to CLI output.
+
+Source-only mocks include intentional bad identity responses and offline fake JWTs; passing GitHub CI **does not validate real signed-in sessions**. Future live UAT must supply independently obtained real owner JWTs and read-only approval, and the active registration guard must be installed/attested separately before owner B is provisioned. This Auth GET verifies the server-side user record, but the overall matrix remains non-atomic, and is NOT a substitute for signed-in browser workflow or real JWT/RLS negative-path acceptance.
+
+The composite still locks **29 exact source files**. Its original guard SQL and migration controls are untouched, and all approvals for live Supabase mutation, QA fixtures, PR merge, deployment or Vercel remain unchanged.
