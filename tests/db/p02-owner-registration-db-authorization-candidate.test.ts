@@ -153,7 +153,8 @@ describe("P02 source-only database-side owner registration authorization", () =>
     expect(workflow).toContain("P02_MIGRATION_LEDGER_READONLY_PASS");
     expect(lifecycle).toContain("sd_0065_v4_default_branch_membership_authority");
     expect(lifecycle).not.toContain("cpmmgivhlkfbiwzhlcey");
-    expect(rollback).toContain("P02_REGISTRATION_POSTINSTALL_CLOSED_PASS");
+    // Postinstall PASS belongs to the included SQL; the workflow verifies it.
+    expect(workflow).toContain("P02_REGISTRATION_POSTINSTALL_CLOSED_PASS");
     expect(rollback).toContain("P02_P22_ROLLBACK_RPCRIGHTS_CLOSED_PASS");
     expect(rollback).toContain("p02-registration-postinstall-readonly-attestation.sql");
     const installPosition = rollback.indexOf("p02-owner-registration-db-authorization-candidate.sql");
