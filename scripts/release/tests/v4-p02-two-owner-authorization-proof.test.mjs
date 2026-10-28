@@ -36,7 +36,11 @@ function harness(fault){
   assert.equal(options.headers.Accept,"application/json");
   calls.push({method:options.method,path:url.pathname});
   let data;
-  if(url.pathname.endsWith("/rpc/servicedesk_default_branch")){
+  if(url.pathname==="/auth/v1/user"){
+   assert.equal(options.method,"GET");
+   assert.equal(options.body,undefined);
+   data={id:me===0?A:B,email_confirmed_at:"2026-10-01T00:00:00Z",is_anonymous:false};
+  }else if(url.pathname.endsWith("/rpc/servicedesk_default_branch")){
    assert.equal(options.method,"POST");
    const {target_workspace}=JSON.parse(options.body);
    assert.ok([own,other].includes(target_workspace));
@@ -93,9 +97,9 @@ test("requires two scoped active owners, a saved default branch, and separately 
  assert.equal(result.result,"PASS");
  assert.equal(result.noWrites,true);
  assert.equal(result.checks.length,2);
- assert.equal(h.calls.length,24);
+ assert.equal(h.calls.length,28);
  assert.equal(h.calls.filter(x=>x.method==="POST").length,4);
- assert.equal(h.calls.filter(x=>x.method==="GET").length,20);
+ assert.equal(h.calls.filter(x=>x.method==="GET").length,24);
  assert.deepEqual(new Set(h.calls.map(x=>x.method)),new Set(["POST","GET"]));
 });
 for(const [fault,expected] of [
