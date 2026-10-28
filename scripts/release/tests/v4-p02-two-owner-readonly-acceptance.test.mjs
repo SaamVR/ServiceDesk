@@ -71,7 +71,7 @@ function mockFetch(options = {}) {
       if (name === "requests")
         assert.equal(url.searchParams.get("id"),"eq."+(id===workA?requestA:requestB));
       if (name === "memberships") {
-        assert.equal(url.searchParams.get("user_id"),"eq." + (owner === "A" ? userA : userB));
+        assert.equal(url.searchParams.get("user_id"),"eq." + (id === workA ? userA : userB));
         assert.equal(url.searchParams.get("role"),"eq.OWNER");
         assert.equal(url.searchParams.get("status"),"eq.ACTIVE");
       }
@@ -79,13 +79,14 @@ function mockFetch(options = {}) {
         assert.equal(url.searchParams.get("is_default"),"eq.true");
         assert.equal(url.searchParams.get("active"),"eq.true");
       }
-      const present=(id === expected || options.leakForeignRows && id !== expected) &&
+      const present=(id === expected || options.leakForeignRows && id !== expected ||
+        options.leakForeignMembership && id !== expected && name === "memberships") &&
         (name !== "requests" || options.savedRequest);
       if (!present) data=[];
       else if(name==="workspaces") data=[{id}];
       else if(name==="memberships") data=[{
         workspace_id:id,
-        user_id:owner==="A"?userA:userB,
+        user_id:id===workA?userA:userB,
         role:options.wrongRole?"CREW":"OWNER",
         status:options.inactiveOwner?"INACTIVE":"ACTIVE",
       }];
@@ -141,6 +142,14 @@ test("fails when a foreign tenant row is visible", async () => {
   await assert.rejects(
     runTwoOwnerReadOnlyAudit(env, mockFetch({ leakForeignRows: true }).fetcher),
     /FOREIGN_TENANT_DATA_EXPOSED_WORKSPACES/,
+  );
+});
+
+test("detects foreign OWNER membership disclosure even when other foreign tables deny", async () => {
+  const { fetcher } = mockFetch({ savedRequest: true, leakForeignMembership: true });
+  await assert.rejects(
+    runTwoOwnerReadOnlyAudit(env, fetcher),
+    /FOREIGN_TENANT_DATA_EXPOSED_MEMBERSHIPS/,
   );
 });
 

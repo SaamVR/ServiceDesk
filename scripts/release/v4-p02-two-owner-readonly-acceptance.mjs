@@ -117,7 +117,13 @@ export async function runTwoOwnerReadOnlyAudit(
     // Count-only checks are not a proof of OWNER authority: a STAFF row,
     // stale membership or mis-scoped response could otherwise pass.
     // Independently validate the row identity *and* the verified JWT subject.
-    const scoped = async (table, workspaceId, requestId) => {
+    const scoped = async (table, workspaceId, requestId, membershipSubject = owner.subject) => {
+      // The foreign-membership witness must query that foreign OWNER's known
+      // saved identity. Filtering by our own actor would return zero even when
+      // an incorrectly broad RLS policy exposes the foreign OWNER row.
+      if (table === "memberships" &&
+          membershipSubject !== owner.subject && membershipSubject !== foreign.subject)
+        throw Error("UNAPPROVED_MEMBERSHIP_SUBJECT");
       const projection = {
         workspaces: "id",
         memberships: "workspace_id,user_id,role,status",
@@ -131,7 +137,7 @@ export async function runTwoOwnerReadOnlyAudit(
         select: projection,
         [table === "workspaces" ? "id" : "workspace_id"]: "eq." + workspaceId,
         ...(table === "memberships" ? {
-          user_id: "eq." + owner.subject, role: "eq.OWNER", status: "eq.ACTIVE",
+          user_id: "eq." + membershipSubject, role: "eq.OWNER", status: "eq.ACTIVE",
         } : {}),
         ...(table === "requests" ? { id: "eq." + requestId } : {}),
         ...(table === "workspace_branches" ? {
@@ -149,7 +155,7 @@ export async function runTwoOwnerReadOnlyAudit(
         if (table === "workspaces" && row.id !== workspaceId)
           throw Error("DATABASE_ROW_SCOPE_UNVERIFIED");
         if (table === "memberships" &&
-            (row.workspace_id !== workspaceId || row.user_id !== owner.subject ||
+            (row.workspace_id !== workspaceId || row.user_id !== membershipSubject ||
              row.role !== "OWNER" || row.status !== "ACTIVE"))
           throw Error("OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED");
         if (table === "requests" &&
@@ -164,7 +170,9 @@ export async function runTwoOwnerReadOnlyAudit(
     };
     for (const table of ["workspaces", "memberships", "requests"]) {
       const ownRows = await scoped(table, owner.expectedWorkspace, owner.expectedRequest);
-      const foreignRows = await scoped(table, foreign.expectedWorkspace, foreign.expectedRequest);
+      const foreignRows = await scoped(
+        table, foreign.expectedWorkspace, foreign.expectedRequest, foreign.subject,
+      );
       // A second or duplicated owner membership is not an unambiguous proof.
       // Foreign denial is not meaningful without a saved row that its owner can read.
       if (table === "requests" && ownRows.length !== 1)
