@@ -1,4 +1,4 @@
-import type { AutomationActivationSummary } from "./owner-automation-activation";
+import type { AutomationActivationSummary, ActivationStepId } from "./owner-automation-activation";
 import type { OwnerAttentionTriage } from "./owner-attention-triage";
 import { automationPlaybooks } from "./automation-playbooks";
 
@@ -27,8 +27,9 @@ export function recommendOwnerAutomationDrafts(input: {
       input.activation.steps.some(step => !["READY", "ACTION_REQUIRED", "UNVERIFIED"].includes(step.status)))
     return [];
   const status = new Map(input.activation.steps.map(step => [step.id, step.status]));
-  if (status.size !== 5 || !["service-catalog", "pricing", "quote-rule",
-      "accepted-quote", "execution-proof"].every(id => status.has(id))) return [];
+  const requiredSteps: readonly ActivationStepId[] = ["service-catalog", "pricing",
+    "quote-rule", "accepted-quote", "execution-proof"];
+  if (status.size !== 5 || !requiredSteps.every(id => status.has(id))) return [];
   const recommendations: Array<{ id: string; why: string }> = [];
   if (input.attention.state === "AVAILABLE" && input.attention.critical > 0) {
     recommendations.push({ id: "critical-attention",
