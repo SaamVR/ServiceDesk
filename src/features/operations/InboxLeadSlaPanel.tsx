@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {loadOperationalStaffSnapshot} from "./operational-product-runtime";
 import {AiUnansweredLeadSlaReview} from "./AiUnansweredLeadSlaReview";
+import {AiInboxRequestRules} from "./AiInboxRequestRules";
 import {buildStaffModuleHref} from "./staff-modules";
 
 /** Explicit saved conversation picker. Only server-authorized OWNER + ALL
@@ -36,6 +37,7 @@ export async function InboxLeadSlaPanel({workspaceSlug,selectedConversationId}:{
    </li>)}</ul>
   </nav>
   <AiUnansweredLeadSlaReview workspaceSlug={workspaceSlug} conversationId={selected.id}/>
+  <AiInboxRequestRules workspaceSlug={workspaceSlug} conversationId={selected.id}/>
   <p>Only the first 20 authorized saved request-linked threads appear here. No external follow-up is sent by this review.</p>
  </section>;
 }
