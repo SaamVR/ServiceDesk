@@ -35,7 +35,7 @@
     },
     {
       "path": "tests/ai/f17-quote-recovery-ui.test.ts",
-      "sha": "9f68f9119043e9fe2277d33d4c42de8e2931b972",
+      "sha": "90ec2ea18eb233364ba693d866a6311b0c50f991",
       "lane": "QUOTES_RECOVERY"
     }
   ],
@@ -61,5 +61,6 @@
     "NO_PAID_PROVIDER",
     "NO_PAYMENTS"
   ],
-  "productionGate": "P02_818_OPEN_P03_819_QUEUED"
+  "productionGate": "P02_818_OPEN_P03_819_QUEUED",
+  "historicalTestFixtureSha": "9f68f9119043e9fe2277d33d4c42de8e2931b972"
 }
