@@ -11,6 +11,7 @@ import {
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { loadOnboardingProduct } from "./onboarding-product-runtime";
 import { summarizeOwnerCommercialSetup } from "./onboarding-commercial-readiness";
+import { describeSavedCleaningCatalog } from "./onboarding-cleaning-catalog-copy";
 import { OnboardingOperationalEvidencePanel } from "./OnboardingOperationalEvidencePanel";
 import { availableFirstRunUsdBranches } from "@/features/operations/owner-pricing-readiness";
 import { summarizeAutomationActivation } from "@/features/operations/owner-automation-activation";
@@ -163,9 +164,9 @@ export async function OnboardingProductRoute({
             detail: "Not a launch approval",
           },
           {
-            label: "Services",
-            value: enabledServices.length,
-            detail: "Enabled services",
+            label: "Cleaning service types",
+            value: commercial.quoteableCleaningServices,
+            detail: `${enabledServices.length} active catalog item${enabledServices.length === 1 ? "" : "s"} total; not pricing proof`,
           },
           {
             label: "Branch pricing",
@@ -207,14 +208,9 @@ export async function OnboardingProductRoute({
             <article className="app-row">
               <div>
                 <h3>Service catalog</h3>
-                <p>
-                  {servicesReady
-                    ? String(enabledServices.length) +
-                      " active service" +
-                      (enabledServices.length === 1 ? "" : "s") +
-                      " saved in the operational catalog."
-                    : "No active service is saved. Set up the real cleaning catalog and owner-entered prices."}
-                </p>
+                <p>{describeSavedCleaningCatalog(
+                  enabledServices.length, commercial.quoteableCleaningServices,
+                )}</p>
                 {!servicesReady ? <Link href={realPricingHref}>Configure actual services →</Link> : null}
               </div>
               <div className="app-row-meta">{setupState(servicesReady)}</div>
