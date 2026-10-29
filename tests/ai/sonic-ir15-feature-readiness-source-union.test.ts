@@ -8,6 +8,7 @@ const manifest = JSON.parse(read("docs/delivery/sonic-ir15-p36-f14-union-source-
  schema: string; baseP36: string; ir14ReviewedPr: number; ir14Head: string;
  sourcePrs: number[]; status: string; exactImportedCount: number;
  sourceObjects: Array<{path:string; blobSha:string;source:string}>;
+ adaptedTests: Array<{path:string;originalSha:string;integratedSha:string;source:string}>;
  reconciledRoute: {path:string;ir14OriginalSha:string;p36OriginalSha:string;
   reviewedIntegratedSha:string;keepP36PricingRouteScope:boolean;
   includeIR14DualScopedWorkflowInspector:boolean;requiresReview:boolean};
@@ -17,16 +18,24 @@ const blob = (bytes: Buffer) => createHash("sha1")
  .update(Buffer.from("blob "+bytes.length+"\0")).update(bytes).digest("hex");
 
 describe("IR15 feature integration alongside P36 production-readiness source",()=>{
- it("imports exactly the 78 unchanged IR14 source artifacts and pins each Git object",()=>{
+ it("pins 77 unchanged imported IR14 artifacts and records two exact integration test adaptations",()=>{
   expect(manifest.schema).toBe("servicedesk.ir15.f08-f14-p36.reviewed-union.v1");
   expect(manifest.ir14ReviewedPr).toBe(865);
   expect(manifest.ir14Head).toBe("5bd1d365c6afd149f3619ffe5317231fd8a7de6f");
   expect(manifest.baseP36).toBe("cb28d52912c4d2b2ad4e8b663b339db3241a3c84");
   expect(manifest.status).toBe("SOURCE_ONLY_DRAFT_UNMERGED");
   expect(manifest.sourcePrs).toEqual([841,852,854,857,859,861]);
-  expect(manifest.exactImportedCount).toBe(78);
-  expect(manifest.sourceObjects).toHaveLength(78);
-  expect(new Set(manifest.sourceObjects.map(row=>row.path)).size).toBe(78);
+  expect(manifest.exactImportedCount).toBe(77);
+  expect(manifest.sourceObjects).toHaveLength(77);
+  expect(new Set(manifest.sourceObjects.map(row=>row.path)).size).toBe(77);
+  expect(manifest.adaptedTests).toHaveLength(2);
+  expect(new Set(manifest.adaptedTests.map(row=>row.path)).size).toBe(2);
+  for(const item of manifest.adaptedTests){
+   expect(item.originalSha).toMatch(/^[a-f0-9]{40}$/);
+   expect(item.integratedSha).toMatch(/^[a-f0-9]{40}$/);
+   expect(item.originalSha).not.toBe(item.integratedSha);
+   expect(blob(read(item.path)),item.path).toBe(item.integratedSha);
+  }
   for(const row of manifest.sourceObjects){
    expect(row.path).toMatch(/^(src\/|tests\/|docs\/delivery\/)/);
    expect(row.path).not.toContain("..");
