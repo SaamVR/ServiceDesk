@@ -6,7 +6,7 @@
   "imported": [
     {
       "path": "src/features/operations/f16-grounded-quote-review-action.ts",
-      "sha": "33f567b6ee4d297e3e86782f8f7381ae0f47f779"
+      "sha": "57bc6bd472151d49631f23d1db2c4c91d4751118"
     },
     {
       "path": "src/features/operations/AiGroundedQuoteAlternatives.tsx",
@@ -24,5 +24,7 @@
   "modelCalls": false,
   "quoteCreated": false,
   "paymentOrSend": false,
-  "productionGate": "P02_818_OPEN_P03_819_QUEUED"
+  "productionGate": "P02_818_OPEN_P03_819_QUEUED",
+  "historicalPricingActionSha": "33f567b6ee4d297e3e86782f8f7381ae0f47f779",
+  "currencyPrecision": "USD_MINOR_UNITS_ONLY_NON_USD_FAIL_CLOSED"
 }
