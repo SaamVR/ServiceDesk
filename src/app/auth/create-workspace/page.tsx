@@ -6,6 +6,7 @@ import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { createOwnerWorkspace } from "./actions";
 import styles from "../sign-in/page.module.css";
 import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { trustedWorkspaceRegistrationError } from "@/features/auth/workspace-registration-error";
 
 const timezones = [
   { value: "UTC", label: "UTC" },
@@ -21,6 +22,7 @@ export default async function CreateWorkspacePage({
   searchParams,
 }: { searchParams: Promise<{ error?: string }> }) {
   const query = await searchParams;
+  const trustedError = trustedWorkspaceRegistrationError(query.error);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
@@ -50,7 +52,7 @@ export default async function CreateWorkspacePage({
       asideTitle="Your business. Your workflow."
       asideItems={["Create your private business workspace", "Add services and invite your team", "Connect approved channels when ready"]}
     >
-      {query.error ? <p className={styles.error} role="alert">{query.error}</p> : null}
+      {trustedError ? <p className={styles.error} role="alert">{trustedError}</p> : null}
       <form className={styles.form} action={createOwnerWorkspace}>
         <div className={styles.field}>
           <label htmlFor="business-name">Business name</label>
@@ -58,8 +60,8 @@ export default async function CreateWorkspacePage({
         </div>
         <div className={styles.field}>
           <label htmlFor="business-slug">Workspace address <span style={{fontWeight:400}}>(optional)</span></label>
-          <input id="business-slug" name="slug" pattern="[a-z0-9][a-z0-9-]{2,39}" placeholder="Generated from your business name" autoCapitalize="none" maxLength={40} aria-describedby="workspace-slug-hint" />
-          <span id="workspace-slug-hint" className={styles.help}>Use lowercase letters, numbers or hyphens. You can change the suggestion if it is taken.</span>
+          <input id="business-slug" name="slug" pattern="[a-z0-9](?:[a-z0-9]|-[a-z0-9]){1,39}" placeholder="Generated from your business name" autoCapitalize="none" minLength={3} maxLength={40} aria-describedby="workspace-slug-hint" />
+          <span id="workspace-slug-hint" className={styles.help}>Use 3–40 lowercase letters, numbers or single hyphens (not at either end). You can change the suggestion if it is taken.</span>
         </div>
         <div className={styles.field}>
           <label htmlFor="workspace-timezone">Business timezone</label>
