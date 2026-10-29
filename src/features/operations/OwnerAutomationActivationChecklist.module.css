@@ -38,3 +38,10 @@
   .progress { text-align: left; }
   .grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.nextAction { padding: 1rem 1.15rem; margin-bottom: 1rem; border: 1px solid #c4dfd7; border-radius: 14px; background: #f1faf6; }
+.nextAction h3 { margin: .2rem 0 .5rem; font-size: 1.05rem; }
+.nextAction p { margin: .5rem 0; color: #425e55; line-height: 1.55; }
+.nextAction a { font-weight: 750; text-decoration: underline; text-underline-offset: 4px; color: #146857; }
+.nextAction a:focus-visible { outline: 3px solid #388c7c; outline-offset: 4px; border-radius: 4px; }
+.nextAction .nextDisclosure { font-size: .8rem; color: #50695e; }
