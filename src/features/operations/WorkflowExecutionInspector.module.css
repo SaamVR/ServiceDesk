@@ -385,3 +385,19 @@
   .triageList { grid-template-columns: minmax(0, 1fr); }
   .triageInspect { width: 100%; }
 }
+
+.handoffText {
+  margin: 0;
+  padding: 12px;
+  max-height: 300px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f4faf6;
+  color: #244e3d;
+  border: 1px solid #d7e8df;
+  border-radius: 9px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
