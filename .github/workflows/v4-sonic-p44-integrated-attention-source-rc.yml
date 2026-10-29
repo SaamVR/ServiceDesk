@@ -1,0 +1,31 @@
+name: ServiceDesk P44 exact-source owner attention composite RC
+on:
+  push:
+    branches: [sonic-p03/p44-integrated-attention-integrity-20261029]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-p44-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  integrated-source-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Exact blob independent P44 critic and stacked historical provenance
+        run: pnpm exec vitest run tests/e2e/v4-p44-integrated-source-provenance-critic.test.ts tests/e2e/v4-p43-source-lineage-critic.test.ts tests/e2e/v4-p43-duplicate-attention-execution-identity.test.ts tests/e2e/v4-p42-integrated-attention-security-critic.test.ts tests/e2e/v4-p34-exact-source-and-security-critic.test.ts
+      - name: Full source typecheck, tests, lint and Next build
+        run: pnpm check:rc

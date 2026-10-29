@@ -50,10 +50,21 @@ export function summarizeOwnerAttentionTriage(input: {
       (scope.mode === "BRANCH" && !allowed.has(scope.selectedBranchId ?? ""))) return empty;
   const selected = scope.mode === "BRANCH"
     ? new Set([scope.selectedBranchId]) : allowed;
-  const live = new Map(input.workflowExecutions
-    .filter(row => row.mode === "LIVE" && row.matched === true &&
-      selected.has(row.branchId) && typeof row.id === "string" && row.id.length > 0)
-    .map(row => [row.id, row]));
+  // Contradictory duplicate LIVE execution IDs cannot safely link a saved
+  // action or attention to a single current run. Never allow Map-last-wins
+  // to silently convert duplicate source evidence into a ready review item.
+  const live = new Map<string, OperationalWorkflowExecution>();
+  const duplicateLiveExecutionIds = new Set<string>();
+  for (const row of input.workflowExecutions) {
+    if (row.mode !== "LIVE" || row.matched !== true ||
+        !selected.has(row.branchId) || typeof row.id !== "string" || !row.id) continue;
+    if (live.has(row.id)) {
+      duplicateLiveExecutionIds.add(row.id);
+      live.delete(row.id);
+    } else if (!duplicateLiveExecutionIds.has(row.id)) {
+      live.set(row.id, row);
+    }
+  }
   // Current action proof is the unique highest attempt in a logical slot.
   // Two top attempts or malformed retry metadata never prove success.
   const actionAttempts = new Map<string, Map<number, OperationalWorkflowActionExecution[]>>();
@@ -103,7 +114,8 @@ export function summarizeOwnerAttentionTriage(input: {
     if (unique.has(item.id)) duplicates.add(item.id);
     unique.set(item.id, item);
   }
-  const result: OwnerAttentionTriage = { ...empty, state: "AVAILABLE" };
+  const result: OwnerAttentionTriage = { ...empty, state: "AVAILABLE",
+    ambiguous: duplicateLiveExecutionIds.size };
   const queue: Array<OwnerAttentionTriage["review"][number] & { rank: number }> = [];
   for (const [id, item] of unique) {
     if (duplicates.has(id) || !["INFO", "WARNING", "CRITICAL"].includes(item.severity)) {

@@ -7,6 +7,16 @@ import { planOwnerAttentionReviewPlaybook } from "@/features/operations/owner-at
 
 const manifest = JSON.parse(readFileSync(join(process.cwd(),
   "docs/delivery/sonic-p03-p42-source-provenance-20261029.json"), "utf8"));
+const p44 = JSON.parse(readFileSync(join(process.cwd(),
+  "docs/delivery/sonic-p03-p44-source-provenance-20261029.json"), "utf8")) as {
+  files: Record<string, { gitBlobSha: string }>;
+  previousTriage: { p34: string; p42: string };
+};
+const p43 = JSON.parse(readFileSync(join(process.cwd(),
+  "docs/delivery/sonic-p03-p43-attention-lineage-20261029.json"), "utf8")) as {
+    parent: { sourceBlob: string };
+    successor: { path: string; gitBlobSha: string };
+  };
 const now = "2026-10-29T11:00:00Z";
 const execution = { id: "exec-a", branchId: "authorized", ruleId: "rule-a",
   ruleVersionId: "version-a", mode: "LIVE", eventType: "QUOTE_ACCEPTED",
@@ -35,7 +45,18 @@ describe("P42 independent-by-test integration and provenance critic", () => {
       const gitBlob = createHash("sha1")
         .update("blob " + source.length + "\0")
         .update(source).digest("hex");
-      expect(gitBlob, path).toBe((record as { gitBlobSha: string }).gitBlobSha);
+      if (path === "src/features/operations/owner-attention-triage.ts") {
+        expect((record as { gitBlobSha: string }).gitBlobSha)
+          .toBe(p44.previousTriage.p42);
+        expect(p43.parent.sourceBlob).toBe(p44.previousTriage.p42);
+        expect(p43.successor).toMatchObject({
+          path, gitBlobSha: "706f21c1b28209cc022281fdf1631dc3eb6bfa54",
+        });
+        expect(p44.files[path]?.gitBlobSha).toBe(p43.successor.gitBlobSha);
+        expect(gitBlob, path).toBe(p43.successor.gitBlobSha);
+      } else {
+        expect(gitBlob, path).toBe((record as { gitBlobSha: string }).gitBlobSha);
+      }
     }
     expect(manifest.constraints).toMatchObject({
       databaseMutation: false, authCreation: false, providerActions: false,
