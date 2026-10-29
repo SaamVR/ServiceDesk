@@ -1,5 +1,6 @@
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { readVerifiedCustomerQuoteLineItems } from "./customer-quote-line-items";
+import { countQuoteableCleaningServices } from "./owner-pricing-readiness";
 
 export type ActivationStatus = "READY" | "ACTION_REQUIRED" | "UNVERIFIED";
 export type ActivationStepId = "service-catalog" | "pricing" | "quote-rule" | "accepted-quote" | "execution-proof";
@@ -30,7 +31,9 @@ export function summarizeAutomationActivation(
     "workflowRules" | "workflowRuleVersions" | "workflowExecutions" | "workflowActionExecutions"> &
     Partial<Pick<OperationalStaffSnapshot, "requests" | "quotes" | "attentionItems">>,
 ): AutomationActivationSummary {
-  const catalogReady = data.serviceCatalog.some(item => item.active);
+  // Only supported cleaning-service codes can count toward an actual
+  // accepted-quote automation. Unrelated active add-ons do not qualify.
+  const catalogReady = countQuoteableCleaningServices(data.serviceCatalog) > 0;
   const pricing = data.ownerPricingBookProof;
   // In a multi-branch business, a price book or rule from another branch
   // cannot certify the currently selected USD cleaning operation.
@@ -40,7 +43,14 @@ export function summarizeAutomationActivation(
       (data.branchScope?.mode !== "BRANCH" ||
         branch.id === data.branchScope.selectedBranchId))
     .map(branch => branch.id));
-  const pricedBranchIds = new Set(pricing?.state === "VERIFIED"
+  // A VERIFIED label is insufficient without the separately read inventory
+  // of saved active books. Without it, a stale/foreign priced branch could
+  // falsely unlock published workflow and completed-action readiness.
+  const pricingInventoryVerified = pricing?.state === "VERIFIED" &&
+    Array.isArray(pricing.activeBranchIds) &&
+    Array.isArray(pricing.existingBookBranchIds) &&
+    pricing.activeBranchIds.every(id => pricing.existingBookBranchIds?.includes(id));
+  const pricedBranchIds = new Set(pricingInventoryVerified
     ? pricing.activeBranchIds.filter(id => eligibleBranchIds.has(id)) : []);
   const pricingVerified = pricedBranchIds.size > 0;
   const pricingScopeKnown = scopeKnown && eligibleBranchIds.size > 0;
@@ -159,16 +169,16 @@ export function summarizeAutomationActivation(
       title: "Offer at least one cleaning service",
       status: catalogReady ? "READY" : "ACTION_REQUIRED",
       detail: catalogReady
-        ? "An active service is present in this workspace."
+        ? "An active Standard, Deep or Move-Out cleaning service is present in this workspace."
         : "Activate a reviewed service in workspace Settings.",
       module: "settings",
     },
     {
       id: "pricing",
       title: "Verify branch pricing",
-      status: pricing === undefined || pricing.state === "UNAVAILABLE" || !pricingScopeKnown
+      status: !pricingInventoryVerified || !pricingScopeKnown
         ? "UNVERIFIED" : pricingVerified ? "READY" : "ACTION_REQUIRED",
-      detail: pricing === undefined || pricing.state === "UNAVAILABLE" || !pricingScopeKnown
+      detail: !pricingInventoryVerified || !pricingScopeKnown
         ? "Authorized USD branch or price-book evidence could not be verified; do not assume rates exist."
         : pricingVerified
           ? "An active price book is verified for an authorized USD branch in the current scope."
@@ -179,10 +189,10 @@ export function summarizeAutomationActivation(
       id: "quote-rule",
       title: "Publish an internal quote-accepted rule",
       status: !versionsLoaded || !pricingScopeKnown ||
-        pricing?.state !== "VERIFIED" ? "UNVERIFIED"
+        !pricingInventoryVerified ? "UNVERIFIED"
         : eligibleQuoteVersions.size > 0 ? "READY" : "ACTION_REQUIRED",
       detail: !versionsLoaded || !pricingScopeKnown ||
-        pricing?.state !== "VERIFIED"
+        !pricingInventoryVerified
         ? "Branch-scoped published rule or price-book evidence is unavailable."
         : eligibleQuoteVersions.size
           ? "A published quote rule creates internal attention in a priced, authorized USD branch."
@@ -192,9 +202,9 @@ export function summarizeAutomationActivation(
     {
       id: "accepted-quote",
       title: "Verify a real accepted cleaning quote",
-      status: !quoteRowsLoaded || !pricingScopeKnown || pricing?.state !== "VERIFIED"
+      status: !quoteRowsLoaded || !pricingScopeKnown || !pricingInventoryVerified
         ? "UNVERIFIED" : acceptedQuoteVerified ? "READY" : "ACTION_REQUIRED",
-      detail: !quoteRowsLoaded || !pricingScopeKnown || pricing?.state !== "VERIFIED"
+      detail: !quoteRowsLoaded || !pricingScopeKnown || !pricingInventoryVerified
         ? "Saved request/quote records or authorized branch pricing are unavailable; do not infer customer acceptance."
         : acceptedQuoteVerified
           ? "A saved accepted quote matches a saved request and priced, authorized USD cleaning branch. Customer-session UAT still requires independent proof."
@@ -205,10 +215,10 @@ export function summarizeAutomationActivation(
       id: "execution-proof",
       title: "Verify a saved internal execution",
       status: !executionsLoaded || !pricingScopeKnown ||
-        pricing?.state !== "VERIFIED" ? "UNVERIFIED"
+        !pricingInventoryVerified ? "UNVERIFIED"
         : internalExecutionSucceeded ? "READY" : "ACTION_REQUIRED",
       detail: !executionsLoaded || !pricingScopeKnown ||
-        pricing?.state !== "VERIFIED"
+        !pricingInventoryVerified
         ? "Authorized branch, pricing, execution or linked attention evidence is unavailable; do not claim a live result."
         : internalExecutionSucceeded
           ? "The saved LIVE execution key identifies the exact accepted quote, all required internal attention actions succeeded, and linked attention records are present. Independent customer-session UAT and provider delivery remain unverified."
