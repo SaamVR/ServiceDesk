@@ -41,6 +41,19 @@ reused=$(grep -l -x 'ALREADY_RECORDED' "$tmp"/claim-* | wc -l)
 rows=$(psql -X -At -v ON_ERROR_STOP=1 -c \
  "select count(*) from public.f15_unanswered_lead_reviews
   where request_id='$request';")
+# Independent Node SHA-256 oracle against the real PostgreSQL saved row:
+# the SQL fixture and claim must agree byte-for-byte with production JS.
+expected=$(node -e 'const c=require("node:crypto");
+const values=["SONIC_F15_UNANSWERED_LEAD_SLA_V1",process.argv[1],
+process.argv[2],process.argv[3],process.argv[4]];
+console.log(c.createHash("sha256").update(JSON.stringify(values)).digest("hex"));' "$workspace" "$branch" "$request" "$inbound")
+stored=$(psql -X -At -v ON_ERROR_STOP=1 -c \
+ "select event_key from public.f15_unanswered_lead_reviews
+  where request_id='$request' limit 1;")
+if [[ "$expected" != "$stored" ]]; then
+ echo "F15_PG17_NODE_SQL_SOURCE_EVENT_HASH_MISMATCH" >&2;exit 1
+fi
+
 if [[ "$inserted" != "1" || "$reused" != "11" || "$rows" != "1" ]]; then
   echo "F15_PG17_CONCURRENT_CLAIM_DUPLICATED inserted=$inserted reused=$reused rows=$rows" >&2
   exit 1

@@ -13,7 +13,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: f15-pg17-review-draft
+  group: f15-pg17-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
   real-disposable-postgresql-17:
