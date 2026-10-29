@@ -123,7 +123,10 @@ export async function OnboardingProductRoute({
   const activeMembers =
     ownerSettings?.members.filter((member) => member.active) ?? [];
   const businessReady = Boolean(workspace.name && workspace.timezone);
-  const servicesReady = supportedCleaningTypes > 0;
+  // Keep the established saved-commercial prerequisite AND the independent
+  // distinct supported-type count: neither source may substitute for the other.
+  const servicesReady = commercial.quoteableCleaningServices > 0 &&
+    supportedCleaningTypes > 0;
   const teamReady = activeMembers.length > 0;
   // A recorded subscription is not necessarily usable: past-due and
   // cancelled records must never count as completed owner setup.
