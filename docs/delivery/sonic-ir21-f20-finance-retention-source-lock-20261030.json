@@ -1,0 +1,70 @@
+{
+  "schema": "servicedesk.ir21.f20.owner-verified-finance-retention.v1",
+  "parentIR20": "4fbc62a16feeb1c08a8dfe7ac0a493ad9b722dfe",
+  "state": "SOURCE_ONLY_DRAFT_UNMERGED",
+  "source": [
+    {
+      "path": "src/features/operations/f20-owner-finance-review-action.ts",
+      "sha": "71bc5bf03265334ffae303ef18f2a12bc92181d8",
+      "lane": "FINANCE"
+    },
+    {
+      "path": "src/features/operations/OwnerLedgerExceptionReview.tsx",
+      "sha": "ee7a620cc326ca6fa4e31a8f9aa5c2439162ce9a",
+      "lane": "FINANCE"
+    },
+    {
+      "path": "tests/ai/f20-owner-ledger-entrypoint.test.ts",
+      "sha": "286fd96bd224c13c90510866c534ddeda6edbf7e",
+      "lane": "FINANCE"
+    },
+    {
+      "path": "src/features/operations/f20-owner-retention-review-action.ts",
+      "sha": "c7bbd8bd3dac8a9b1fb3491beb42f57160014f9a",
+      "lane": "RETENTION"
+    },
+    {
+      "path": "src/features/operations/OwnerConsentedRetentionReview.tsx",
+      "sha": "0849231e0a470787cc029c32291f97994a0edfb3",
+      "lane": "RETENTION"
+    },
+    {
+      "path": "tests/ai/f20-owner-retention-entrypoint.test.ts",
+      "sha": "dac9209cae67eac0a14097510cd07f311f679e2a",
+      "lane": "RETENTION"
+    },
+    {
+      "path": "tests/ai/f20-independent-finance-retention-critic.test.ts",
+      "sha": "fe9491b0132d04118d6e45ce712bb7acf34f0107",
+      "lane": "INDEPENDENT_CRITIC"
+    }
+  ],
+  "integration": [
+    {
+      "path": "src/features/operations/F20OwnerSourceReviewGate.tsx",
+      "before": null,
+      "after": "a1420b7ad3e3d35ab020ad418b0fb431a2e4feeb"
+    },
+    {
+      "path": "src/app/app/[workspace]/invoices/page.tsx",
+      "before": "81a41d4d25d41b3d4d83ef81f13cf47d70973702",
+      "after": "9a007164d0c089d846af5b39d090228eb85dceb5"
+    },
+    {
+      "path": "src/app/app/[workspace]/customers/page.tsx",
+      "before": "e908ee7ea1ea6a0ac62bbf8b56e7f6df42b74021",
+      "after": "8542f150d296901db067c819dd605a27b127692a"
+    }
+  ],
+  "forbidden": [
+    "CANONICAL_MERGE",
+    "PRODUCTION_DB_WRITE",
+    "AUTH_USER_CREATION",
+    "PAYMENT_SETTLEMENT",
+    "PROVIDER_SEND",
+    "MODEL_SPEND",
+    "AUTO_OUTREACH",
+    "VERCEL_DEPLOY"
+  ],
+  "releaseGate": "P02_818_OPEN_AND_P03_819_QUEUED"
+}
