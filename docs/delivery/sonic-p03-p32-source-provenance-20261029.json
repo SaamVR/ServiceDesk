@@ -41,7 +41,7 @@
       "path": "src/features/onboarding/OnboardingProductRoute.tsx",
       "sourcePr": 882,
       "status": "modified",
-      "gitBlobSha": "3a91b7fddf694336ac11b0d7a265de882bf66d09"
+      "gitBlobSha": "a67ccc578869d7d619d3f0074565979057ef91b6"
     },
     {
       "path": "src/features/operations/CatalogReadinessBanner.tsx",
@@ -120,6 +120,19 @@
       "sourcePr": 882,
       "status": "added",
       "gitBlobSha": "b6ad40940e1f8cab87414012d75e84e31ef7b3de"
+    }
+  ],
+  "composedSourceOverlays": [
+    {
+      "path": "src/features/onboarding/OnboardingProductRoute.tsx",
+      "primarySourcePr": 882,
+      "primarySourceHead": "d43bf0da3a054f662dc6cb90ec1369a1300a3525",
+      "primarySourceBlob": "3a91b7fddf694336ac11b0d7a265de882bf66d09",
+      "secondarySourcePr": 886,
+      "secondarySourceHead": "b59e9c9c257228c7a29cb12dd968a5baff686c8f",
+      "secondarySourceBlob": "6880c0cca8aaeac90d006138b0812dc34b09278b",
+      "composedGitBlobSha": "a67ccc578869d7d619d3f0074565979057ef91b6",
+      "review": "P31 distinct cleaning service message and P34 owner pricing next-action panel compose without losing either original behavior"
     }
   ]
 }
