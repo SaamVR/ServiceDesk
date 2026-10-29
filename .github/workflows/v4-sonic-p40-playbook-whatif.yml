@@ -1,0 +1,23 @@
+name: ServiceDesk P40 Playbook preview
+on:
+  pull_request:
+    branches:
+      - sonic-p03/p32-integrated-owner-journey-20261029
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run tests/e2e/v4-p40-playbook-event-whatif.test.ts
+      - run: pnpm typecheck
