@@ -29,6 +29,8 @@ describe("P38 staff quote queue cannot misstate the authoritative zoned expiry c
   it("denies ambiguous or malformed snapshot clock even when the saved quote deadline is valid",()=>{
     for(const clock of ["2026-10-17T10:00:00", "2026-10-17", "2026-02-30T10:00:00Z",
       "2026-10-17T10:00:00+99:00"]){
+      expect(needsApprovedQuoteExpiryReview(offer("APPROVED","2026-10-18T10:00:00Z"),clock)).toBe(true);
+      expect(needsSentQuoteExpiryReview(offer("SENT","2026-10-18T10:00:00Z"),clock)).toBe(true);
       const result=buildQuotePipeline([offer("APPROVED","2026-10-18T10:00:00Z"),
         offer("SENT","2026-10-18T10:00:00Z")],clock);
       expect(result.quoteClockUnverified).toBe(true);
