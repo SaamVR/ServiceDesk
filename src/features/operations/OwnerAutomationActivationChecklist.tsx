@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buildStaffModuleHref } from "./staff-modules";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
+import { planOwnerAutomationNextAction } from "./owner-automation-next-action";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import styles from "./OwnerAutomationActivationChecklist.module.css";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
@@ -27,6 +28,7 @@ export function OwnerAutomationActivationChecklist({
   const canOpenPricingForm = availableFirstRunUsdBranches(
     data.branchScope, data.ownerPricingBookProof,
   ).length > 0;
+  const nextAction = planOwnerAutomationNextAction(summary, canOpenPricingForm);
   const settingsHref = buildStaffModuleHref(workspaceSlug, "settings");
   // Only authorized branch IDs from the already-resolved owner staff snapshot
   // cross to the client. The suggestion HTTP endpoint and what-if server action
@@ -52,6 +54,19 @@ export function OwnerAutomationActivationChecklist({
           <small>Source-linked evidence</small>
         </div>
       </header>
+      <section className={styles.step} aria-label="Next safe owner action">
+        <p className={styles.eyebrow}>Suggested next safe step · {nextAction.pendingCount} evidence gap{nextAction.pendingCount === 1 ? "" : "s"}</p>
+        <h3>{nextAction.title}</h3>
+        <p>{nextAction.detail}</p>
+        {nextAction.state !== "SOURCE_READY" ? (
+          <Link href={buildStaffModuleHref(workspaceSlug, nextAction.module) +
+            (nextAction.pricingAnchor ? "#owner-first-run-pricing" : "")}>
+            {nextAction.label}<span aria-hidden="true"> ↗</span>
+          </Link>
+        ) : (
+          <p role="note">Saved internal evidence is not a live-provider or customer-session launch approval.</p>
+        )}
+      </section>
       <div className={styles.grid}>
         {summary.steps.map((step, index) => (
           <article className={styles.step} key={step.id}>
