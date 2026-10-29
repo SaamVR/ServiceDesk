@@ -4,7 +4,7 @@
   "integrationParent": "27261bc46666c2bed1c78599679485d7366fa83b",
   "canonical": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
   "sourceHeads": {
-    "895": "d00e89c649e39f2bb9a18945af9115bd85732974",
+    "895": "5b9e2f4e8fab9901d901e825cb17b84cf4b67330",
     "898": "023dc0a15fbf3becd9849b5ff1891ca51e260dda"
   },
   "files": [
@@ -21,7 +21,7 @@
     {
       "path": "tests/e2e/v4-p35-owner-pricing-revision-scope.test.ts",
       "sourcePr": 895,
-      "gitBlobSha": "c73d0126edd55ee655ddd4a632923b002723760e"
+      "gitBlobSha": "ab72ef4b2d8ea30b160f874c0c455036a7543d38"
     },
     {
       "path": "src/features/operations/OwnerAutomationActivationChecklist.tsx",
@@ -42,6 +42,11 @@
       "path": "tests/e2e/v4-p35-owner-automation-draft-recommendations.test.ts",
       "sourcePr": 898,
       "gitBlobSha": "2fa5f7c6095543175a134515e63a9a2a7040cb6f"
+    },
+    {
+      "path": "src/features/operations/OperationalProductRoute.tsx",
+      "sourcePr": 895,
+      "gitBlobSha": "ff928ec32e264d53e651c4fe38775f7f7737f5fe"
     }
   ],
   "forbiddenEffects": [
