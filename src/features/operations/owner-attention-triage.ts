@@ -76,15 +76,20 @@ export function summarizeOwnerAttentionTriage(input: {
   for (const [id, slots] of actionAttempts) {
     if (invalid.has(id)) continue;
     for (const attempts of slots.values()) {
+      const kinds = new Set(attempts.map(row => row.actionType));
+      // An independent email/WhatsApp approval slot does not invalidate a
+      // saved internal attention. But a logical slot that changes action
+      // kind between retries has no trustworthy current outcome.
+      if (!kinds.has("CREATE_ATTENTION")) continue;
       const highest = Math.max(...attempts.map(row => row.attemptNumber));
       const current = attempts.filter(row => row.attemptNumber === highest);
-      if (current.length !== 1 ||
-          attempts.some(row => row.actionType !== "CREATE_ATTENTION")) {
+      if (current.length !== 1 || kinds.size !== 1) {
         invalid.add(id);
         break;
       }
     }
     if (!invalid.has(id) && [...slots.values()].some(attempts => {
+      if (attempts[0].actionType !== "CREATE_ATTENTION") return false;
       const highest = Math.max(...attempts.map(row => row.attemptNumber));
       return attempts.find(row => row.attemptNumber === highest)?.state === "SUCCEEDED";
     })) withSavedInternalSuccess.add(id);
