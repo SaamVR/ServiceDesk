@@ -1,0 +1,266 @@
+name: P02 registration DB authorization candidate - disposable PG17 proof
+# SOURCE ONLY, no live Supabase connection and no ServiceDesk deploy
+on:
+  pull_request:
+    branches: [feat/servicedesk-v4-reconciled-qa-shell-20261012]
+    paths:
+      - "docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql"
+      - "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md"
+      - "tests/sql/p02-owner-registration-db-authorization-pg17.sql"
+      - "tests/sql/p02-registration-preflight-negative-setup-pg17.sql"
+      - "tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql"
+      - "tests/sql/p02-registration-rollback-ledger-disposable-setup-pg17.sql"
+      - "docs/engineering/security/p02-registration-postinstall-readonly-attestation.sql"
+      - "tests/sql/p02-registration-postinstall-disposable-setup-pg17.sql"
+      - "scripts/release/tests/v4-p02-postinstall-negative-pg17.sh"
+      - "scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh"
+      - "scripts/release/tests/v4-p02-registration-operator-first-pg17.sh"
+      - "docs/engineering/security/p02-registration-live-readonly-preflight.sql"
+      - "docs/engineering/security/p02-registration-migration-ledger-readonly-gate.sql"
+      - "scripts/release/tests/v4-p02-migration-ledger-negative-pg17.sh"
+      - "tests/sql/p02-registration-migration-ledger-disposable-setup-pg17.sql"
+      - "tests/db/p02-owner-registration-db-authorization-candidate.test.ts"
+      - ".github/workflows/p02-owner-registration-candidate-pg17.yml"
+permissions:
+  contents: read
+concurrency:
+  group: sd-p02-registration-candidate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  exact-head-disposable-pg17:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-p02-registration-only
+          POSTGRES_DB: servicedesk_p02_registration_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d servicedesk_p02_registration_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify exact source SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: PostgreSQL17 disposable A/B owner authorization proof
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: servicedesk_p02_registration_test
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+          psql -v ON_ERROR_STOP=1 -f tests/sql/p02-owner-registration-db-authorization-pg17.sql | tee /tmp/p02-pg17-registration-receipt.log
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-pg17-registration-receipt.log
+          grep -q 'P02_DISPOSABLE_PG17_REGISTRATION_DB_AUTHORIZATION_PASS' /tmp/p02-pg17-registration-receipt.log
+          if grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-pg17-registration-receipt.log; then
+            echo 'Read-only preflight incorrectly blocked or skipped' >&2
+            exit 1
+          fi
+          # A second run AFTER candidate installation MUST fail closed.
+          if psql -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-after-install-blocked.log 2>&1; then
+            echo 'Preflight wrongly accepted an already-changed database' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-after-install-blocked.log
+      - name: P02 two-session registration control and grant revocation race
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: servicedesk_p02_registration_test
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          bash scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh | tee /tmp/p02-registration-rowlocks-receipt.log
+          grep -q 'P02_REGISTRATION_CONCURRENCY_LOCKS_PASS' /tmp/p02-registration-rowlocks-receipt.log
+      - name: P02 operator-first revocation and CLOSED win PG17 race
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGDATABASE: servicedesk_p02_registration_test
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          bash scripts/release/tests/v4-p02-registration-operator-first-pg17.sh | tee /tmp/p02-operator-first-race.log
+          grep -q 'P02_APPROVED_PRECONDITION_PASS' /tmp/p02-operator-first-race.log
+          grep -q 'P02_OPERATOR_CLOSED_WINS_PASS' /tmp/p02-operator-first-race.log
+          grep -q 'P02_OPERATOR_REVOCATION_WINS_PASS' /tmp/p02-operator-first-race.log
+          grep -q 'P02_OPERATOR_FIRST_CONCURRENCY_PASS' /tmp/p02-operator-first-race.log
+      - name: P02 source preflight fail-closed adversarial proof
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          psql -d postgres -v ON_ERROR_STOP=1 -c 'create database servicedesk_p02_preflight_negative'
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-preflight-negative-setup-pg17.sql | tee /tmp/p02-preflight-fresh.log
+          grep -q 'P02_FRESH_BASELINE_PREFLIGHT_PASS' /tmp/p02-preflight-fresh.log
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-preflight-fresh.log
+
+          # A changed anonymous RPC permission must fail the preimage check.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'grant execute on function public.servicedesk_register_owner_workspace(text,text,text,text) to anon'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-anon-block.log 2>&1; then
+            echo 'preflight accepted anonymous registration RPC' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-anon-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'revoke execute on function public.servicedesk_register_owner_workspace(text,text,text,text) from anon'
+
+          # SECURITY INVOKER drift must be denied independently of grants.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) security invoker'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-invoker-block.log 2>&1; then
+            echo 'preflight accepted changed function security mode' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-invoker-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) security definer'
+
+          # Source fingerprint drift is independently denied even when grants
+          # and SECURITY DEFINER stay correct.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) set search_path = pg_catalog'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-source-block.log 2>&1; then
+            echo 'preflight accepted changed registration function fingerprint' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-source-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) set search_path = pg_catalog, public, pg_temp'
+
+          # An API role granted CREATE on the SECURITY DEFINER function's
+          # public search_path schema must invalidate the reviewed preimage.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'grant create on schema public to authenticated'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-public-create-block.log 2>&1; then
+            echo 'preflight accepted authenticated CREATE on privileged search_path schema' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-public-create-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'revoke create on schema public from authenticated'
+
+          # SECURITY DEFINER executes with its owner privileges. ALTER
+          # FUNCTION OWNER does not alter the reviewed function body MD5,
+          # so the preflight MUST explicitly reject owner drift.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'create role p02_shadow_definer nologin'
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) owner to p02_shadow_definer'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-owner-block.log 2>&1; then
+            echo 'preflight accepted changed registration SECURITY DEFINER owner' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-owner-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_register_owner_workspace(text,text,text,text) owner to postgres'
+
+          # The separate installed 0065 SECURITY DEFINER branch RPC also
+          # needs its expected privileged owner, even if its source is identical.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_default_branch(uuid) owner to p02_shadow_definer'
+          if psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql > /tmp/p02-preflight-branch-owner-block.log 2>&1; then
+            echo 'preflight accepted changed default-branch SECURITY DEFINER owner' >&2
+            exit 1
+          fi
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_BLOCKED' /tmp/p02-preflight-branch-owner-block.log
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'alter function public.servicedesk_default_branch(uuid) owner to postgres'
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -c 'drop role p02_shadow_definer'
+
+          # A fully restored baseline must pass; otherwise the failure tests
+          # could be falsely green from a permanently damaged test database.
+          psql -d servicedesk_p02_preflight_negative -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-live-readonly-preflight.sql | tee /tmp/p02-preflight-restored.log
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-preflight-restored.log
+      - name: P02 guarded registration fail-closed rollback rehearsal
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          psql -d postgres -v ON_ERROR_STOP=1 -c 'create database servicedesk_p02_registration_rollback'
+          psql -d servicedesk_p02_registration_rollback -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-preflight-negative-setup-pg17.sql | tee /tmp/p02-rollback-baseline.log
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-rollback-baseline.log
+          psql -d servicedesk_p02_registration_rollback -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-rollback-ledger-disposable-setup-pg17.sql | tee /tmp/p02-lifecycle-ledger-baseline.log
+          grep -q 'P02_MIGRATION_LEDGER_READONLY_PASS' /tmp/p02-lifecycle-ledger-baseline.log
+          grep -q 'P02_P22_BEFORE_INSTALL_LEDGER_PASS' /tmp/p02-lifecycle-ledger-baseline.log
+          psql -d servicedesk_p02_registration_rollback -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql | tee /tmp/p02-rollback-proof.log
+          grep -q 'P02_REGISTRATION_POSTINSTALL_CLOSED_PASS' /tmp/p02-rollback-proof.log
+          grep -q 'P02_P22_ROLLBACK_RPCRIGHTS_CLOSED_PASS' /tmp/p02-rollback-proof.log
+          grep -q 'P02_FAIL_CLOSED_REGISTRATION_ROLLBACK_PASS' /tmp/p02-rollback-proof.log
+          # Same database must retain out-of-order 0065 receipt after rollback.
+          psql -d servicedesk_p02_registration_rollback -v ON_ERROR_STOP=1 -f docs/engineering/security/p02-registration-migration-ledger-readonly-gate.sql | tee /tmp/p02-lifecycle-ledger-after.log
+          grep -q 'P02_MIGRATION_LEDGER_READONLY_PASS' /tmp/p02-lifecycle-ledger-after.log
+      - name: P02 read-only after-install CLOSED attestation + twenty negative cases
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          psql -d postgres -v ON_ERROR_STOP=1 -c 'create database servicedesk_p02_postinstall_negative'
+          psql -d servicedesk_p02_postinstall_negative -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-postinstall-disposable-setup-pg17.sql | tee /tmp/p02-postinstall-initial.log
+          grep -q 'P02_REGISTRATION_READONLY_PREIMAGE_PASS' /tmp/p02-postinstall-initial.log
+          grep -q 'P02_REGISTRATION_POSTINSTALL_CLOSED_PASS' /tmp/p02-postinstall-initial.log
+          grep -q 'P02_POSTINSTALL_DISPOSABLE_BASELINE_PASS' /tmp/p02-postinstall-initial.log
+          PGDATABASE=servicedesk_p02_postinstall_negative bash scripts/release/tests/v4-p02-postinstall-negative-pg17.sh | tee /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_MODE_OPEN' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_GRANT_PRESENT' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_ANON_RPC' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_PUBLIC_RPC' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_PRIVATE_SCHEMA' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_TABLE_DELETE' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_TABLE_MAINTAIN' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_COLUMN_SELECT' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_MODE_CHECK_DROPPED' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_MODE_CHECK_WEAKENED' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_SCHEMA_OWNER_DRIFT' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_TABLE_OWNER_DRIFT' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_EXTRA_TRIGGER' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_EXTRA_RULE' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_MODE_DEFAULT_PUBLIC' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_SINGLETON_DEFAULT_DROPPED' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_EXTRA_FUNCTION_GUC' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_RLS_OFF' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_INVOKER' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_DENIED_BODY_HASH' /tmp/p02-postinstall-negative.log
+          grep -q 'P02_POSTINSTALL_NEGATIVE_MATRIX_PASS' /tmp/p02-postinstall-negative.log
+      - name: P21 out-of-order Supabase migration ledger read-only gate, nine fail-closed cases
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: disposable-p02-registration-only
+        run: |
+          set -euo pipefail
+          psql -d postgres -v ON_ERROR_STOP=1 -c 'create database servicedesk_p02_ledger_probe'
+          psql -d servicedesk_p02_ledger_probe -v ON_ERROR_STOP=1 -f tests/sql/p02-registration-migration-ledger-disposable-setup-pg17.sql | tee /tmp/p02-ledger-initial.log
+          grep -q 'P02_MIGRATION_LEDGER_READONLY_PASS' /tmp/p02-ledger-initial.log
+          grep -q 'P02_LEDGER_DISPOSABLE_BASELINE_PASS' /tmp/p02-ledger-initial.log
+          PGDATABASE=servicedesk_p02_ledger_probe bash scripts/release/tests/v4-p02-migration-ledger-negative-pg17.sh | tee /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_MISSING_0065' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_RENAMED_0065' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_MISSING_0062' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_UNREVIEWED_0063' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_UNREVIEWED_0064' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_UNREVIEWED_0063A' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_UNREVIEWED_0064A' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_DUPLICATE_0065_NAME' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_DENIED_RENAMED_0062' /tmp/p02-ledger-negative.log
+          grep -q 'P02_LEDGER_NEGATIVE_MATRIX_PASS' /tmp/p02-ledger-negative.log
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Candidate integrity and fail-closed contract
+        run: pnpm exec vitest run tests/db/p02-owner-registration-db-authorization-candidate.test.ts

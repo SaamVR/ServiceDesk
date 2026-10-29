@@ -8,8 +8,9 @@ const WA="11111111-1111-4111-8111-111111111111";
 const WB="22222222-2222-4222-8222-222222222222";
 const BA="33333333-3333-4333-8333-333333333333";
 const BB="44444444-4444-4444-8444-444444444444";
+const RA="55555555-5555-4555-8555-555555555555", RB="66666666-6666-4666-8666-666666666666";
 function mockJwt(user){
- const payload={iss:ORIGIN+"/auth/v1",sub:user,role:"authenticated",
+ const payload={iss:ORIGIN+"/auth/v1",sub:user,role:"authenticated",aud:"authenticated",
   exp:Math.floor(Date.now()/1000)+1800};
  return [Buffer.from(JSON.stringify({alg:"HS256",typ:"JWT"})).toString("base64url"),
   Buffer.from(JSON.stringify(payload)).toString("base64url"),"fake-not-a-signed-owner"].join(".");
@@ -20,6 +21,7 @@ const env={
  SD_P02_PUBLISHABLE_KEY:"sb_publishable_local_only_no_real_credentials",
  SD_P02_OWNER_A_JWT:tokens[0],SD_P02_OWNER_B_JWT:tokens[1],
  SD_P02_OWNER_A_WORKSPACE_ID:WA,SD_P02_OWNER_B_WORKSPACE_ID:WB,
+ SD_P02_OWNER_A_REQUEST_ID:RA,SD_P02_OWNER_B_REQUEST_ID:RB,
 };
 function harness(fault){
  const calls=[];
@@ -34,7 +36,11 @@ function harness(fault){
   assert.equal(options.headers.Accept,"application/json");
   calls.push({method:options.method,path:url.pathname});
   let data;
-  if(url.pathname.endsWith("/rpc/servicedesk_default_branch")){
+  if(url.pathname==="/auth/v1/user"){
+   assert.equal(options.method,"GET");
+   assert.equal(options.body,undefined);
+   data={id:me===0?A:B,email_confirmed_at:"2026-10-01T00:00:00Z",role:"authenticated",aud:"authenticated",is_anonymous:false};
+  }else if(url.pathname.endsWith("/rpc/servicedesk_default_branch")){
    assert.equal(options.method,"POST");
    const {target_workspace}=JSON.parse(options.body);
    assert.ok([own,other].includes(target_workspace));
@@ -49,7 +55,7 @@ function harness(fault){
    assert.ok([own,other].includes(target));
    assert.equal(url.searchParams.get("limit"),"2");
    if(table==="memberships"){
-    assert.equal(url.searchParams.get("user_id"),"eq."+(me===0?A:B));
+    assert.equal(url.searchParams.get("user_id"),"eq."+(target===WA?A:B));
     assert.equal(url.searchParams.get("role"),"eq.OWNER");
     assert.equal(url.searchParams.get("status"),"eq.ACTIVE");
    }
@@ -58,12 +64,17 @@ function harness(fault){
     assert.equal(url.searchParams.get("active"),"eq.true");
    }
    const exists=target===own ||
-    (fault==="foreign-default-visible"&&target===other&&table==="workspace_branches");
-   if(!exists||table==="requests")data=[];
+    (fault==="foreign-default-visible"&&target===other&&table==="workspace_branches") ||
+    (fault==="foreign-membership-visible"&&target===other&&table==="memberships");
+   if(!exists)data=[];
+   else if(table==="requests"){
+    assert.equal(url.searchParams.get("id"),"eq."+(target===WA?RA:RB));
+    data=fault==="request-missing"?[]:[{id:target===WA?RA:RB,workspace_id:target}];
+   }
    else if(table==="workspaces")
     data=[{id:fault==="foreign-workspace-identity"?other:target}];
    else if(table==="memberships"){
-    const row={workspace_id:target,user_id:me===0?A:B,role:"OWNER",status:"ACTIVE"};
+    const row={workspace_id:target,user_id:target===WA?A:B,role:"OWNER",status:"ACTIVE"};
     if(fault==="staff-instead-of-owner")row.role="DISPATCHER";
     if(fault==="revoked-owner")row.status="INACTIVE";
     if(fault==="different-user")row.user_id=me===0?B:A;
@@ -87,12 +98,13 @@ test("requires two scoped active owners, a saved default branch, and separately 
  assert.equal(result.result,"PASS");
  assert.equal(result.noWrites,true);
  assert.equal(result.checks.length,2);
- assert.equal(h.calls.length,20);
+ assert.equal(h.calls.length,28);
  assert.equal(h.calls.filter(x=>x.method==="POST").length,4);
- assert.equal(h.calls.filter(x=>x.method==="GET").length,16);
+ assert.equal(h.calls.filter(x=>x.method==="GET").length,24);
  assert.deepEqual(new Set(h.calls.map(x=>x.method)),new Set(["POST","GET"]));
 });
 for(const [fault,expected] of [
+ ["request-missing","EXPECTED_OWNER_REQUEST_FIXTURE_MISSING"],
  ["staff-instead-of-owner","OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED"],
  ["revoked-owner","OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED"],
  ["different-user","OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED"],
@@ -102,6 +114,7 @@ for(const [fault,expected] of [
  ["inactive-branch","DEFAULT_BRANCH_SAVED_SCOPE_UNVERIFIED"],
  ["duplicate-default","DEFAULT_BRANCH_OWN_ROW_NOT_UNAMBIGUOUS"],
  ["foreign-default-visible","FOREIGN_TENANT_DATA_EXPOSED_WORKSPACE_BRANCHES"],
+ ["foreign-membership-visible","FOREIGN_TENANT_DATA_EXPOSED_MEMBERSHIPS"],
  ["wrong-rpc","DEFAULT_BRANCH_OWN_RPC_NOT_VERIFIED"],
  ["foreign-rpc-leak","FOREIGN_DEFAULT_BRANCH_DISCLOSURE"],
 ]){

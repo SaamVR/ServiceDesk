@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "kind": "P02_UNMERGED_SOURCE_REHEARSAL_LOCK",
+  "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
+  "sourceHeads": {
+    "868": "d9c53c05cf5f98bf9e5fec688e2f56cc3e42b360",
+    "869": "053bf3493d6f38e29000e06d5a3868a24442205a",
+    "875": "b0aaf768efd01dada9de6adaec4484024e01267a"
+  },
+  "sourceOnly": true,
+  "realOwnerSessionVerified": false,
+  "migrationAuthorized": false,
+  "migrationInstalled": false,
+  "liveDeploymentAuthorized": false,
+  "fileCount": 29,
+  "files": [
+    {
+      "path": ".github/workflows/p02-owner-registration-candidate-pg17.yml",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "e0975c6213e3760da5031b10bfe62554bbe19c7c"
+    },
+    {
+      "path": ".github/workflows/v4-p02-final-owner-readback-source-rc.yml",
+      "sourcePr": 868,
+      "status": "added",
+      "gitBlobSha": "47be92d21515cfa6789fc44fd584f697d52e6363"
+    },
+    {
+      "path": "docs/delivery/sonic-gap/p02-registration-guard-owner-approval-checklist-20261026.md",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "3dfa47343d3116ca34ed0199bdd6be3b8cb0c718"
+    },
+    {
+      "path": "docs/delivery/sonic-p02-end-readback-source-checkpoint-20261026.md",
+      "sourcePr": 868,
+      "status": "added",
+      "gitBlobSha": "95f76776237a77281d39562d535a669c5c72dc09"
+    },
+    {
+      "path": "docs/engineering/security/p02-owner-registration-db-authorization-candidate.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "dd5353eb95ca51a27d89f0eed179c0d0f8b659b9"
+    },
+    {
+      "path": "docs/engineering/security/p02-registration-live-readonly-preflight.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "6988e4949c2ba517addc15e47c2a22e4986307cd"
+    },
+    {
+      "path": "docs/engineering/security/p02-registration-migration-ledger-readonly-gate.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "d2851ed36cc4e4a296d63c136f05fe6195cc2f75"
+    },
+    {
+      "path": "docs/engineering/security/p02-registration-postinstall-readonly-attestation.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "62cd3c76e36d55742beba615f7d28417744bd8ef"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-mid-audit-authority-revocation.test.mjs",
+      "sourcePr": 868,
+      "status": "added",
+      "gitBlobSha": "81f7f902ceedb68cefe85f85d8d464ba4725384a"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-migration-ledger-negative-pg17.sh",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "dfb6a573695c4e69a3c4b1f68674ca2d9e540b59"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-postinstall-negative-pg17.sh",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "9f3d7f0b451dd059998bbaa8da624f718449c950"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-registration-concurrent-revocation-pg17.sh",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "dc1c6ad6b5483b992ab06d325717a5b4b6de57da"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-registration-operator-first-pg17.sh",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "1073e23c730548973b18167af72081bd20b6f6d8"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
+      "sourcePr": 868,
+      "status": "modified",
+      "gitBlobSha": "36513177db74056e13878625c59efd834e5af029"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
+      "sourcePr": 868,
+      "status": "modified",
+      "gitBlobSha": "e2c1a937d6e97417cefc4c8d24ac0424a1325ec4"
+    },
+    {
+      "path": "scripts/release/v4-p02-two-owner-readonly-acceptance.mjs",
+      "sourcePr": 868,
+      "status": "modified",
+      "gitBlobSha": "078bb4476982bdf857178dbcc1118d84f3e1a441"
+    },
+    {
+      "path": "src/app/auth/create-workspace/actions.ts",
+      "sourcePr": 875,
+      "status": "modified",
+      "gitBlobSha": "70494b20a1503ae4c57dac719782805c4f2f6fb1"
+    },
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "sourcePr": 875,
+      "status": "modified",
+      "gitBlobSha": "4ee109ed9193f8a44d6a081d161f9fab46caba4f"
+    },
+    {
+      "path": "src/features/auth/workspace-registration-error.ts",
+      "sourcePr": 875,
+      "status": "added",
+      "gitBlobSha": "935af198417ed78b81f642f070f26529b85fe6b0"
+    },
+    {
+      "path": "tests/ai/sonic-p02-end-authority-readback-critic.test.ts",
+      "sourcePr": 868,
+      "status": "added",
+      "gitBlobSha": "612fba5b3ffd09da586a9044cf528f870e3e1c9e"
+    },
+    {
+      "path": "tests/db/p02-owner-registration-db-authorization-candidate.test.ts",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "6b8d875dedb0ea87520b00528b5372a9b1961f6d"
+    },
+    {
+      "path": "tests/e2e/p02-registration-denial-action.test.ts",
+      "sourcePr": 875,
+      "status": "added",
+      "gitBlobSha": "79d82c30efa7b2c18d612c6e5ebc29c9f8c2c8ba"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "sourcePr": 875,
+      "status": "added",
+      "gitBlobSha": "3b9149f5fe3c0583724715eb8c08c25e8bb92c59"
+    },
+    {
+      "path": "tests/sql/p02-owner-registration-db-authorization-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "9911be1f416c84e2cce5abbd936b309eb3517134"
+    },
+    {
+      "path": "tests/sql/p02-registration-guard-fail-closed-rollback-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "5ba6af6e3818601e1db2585b3b5613d0533b0e03"
+    },
+    {
+      "path": "tests/sql/p02-registration-migration-ledger-disposable-setup-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "9865aee7605828dd50f21928c399cffb3cbe986c"
+    },
+    {
+      "path": "tests/sql/p02-registration-postinstall-disposable-setup-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "1157202d5224bc25dd1d7411fca947f332a71683"
+    },
+    {
+      "path": "tests/sql/p02-registration-preflight-negative-setup-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "1ef17c97ef1cff18f4a0a597060691a3e011a03a"
+    },
+    {
+      "path": "tests/sql/p02-registration-rollback-ledger-disposable-setup-pg17.sql",
+      "sourcePr": 869,
+      "status": "added",
+      "gitBlobSha": "05df46133d787415959d4c0ab286c6d9d69709ca"
+    }
+  ]
+}
