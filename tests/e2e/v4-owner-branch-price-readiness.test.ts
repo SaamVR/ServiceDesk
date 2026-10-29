@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { availableFirstRunUsdBranches, invalidExistingUsdBranches } from "../../src/features/operations/owner-pricing-readiness";
+import { availableFirstRunUsdBranches, invalidExistingUsdBranches, countQuoteableCleaningServices } from "../../src/features/operations/owner-pricing-readiness";
 import type { OperationalBranchScope } from "../../src/features/operations/operational-product-runtime";
 
 const usA = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", code: "A", name: "A", currency: "USD", timezone: "America/New_York", isDefault: true };
@@ -10,6 +10,22 @@ const gb = { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", code: "UK", name: "UK",
 const scope: OperationalBranchScope = { mode: "ALL", branches: [usA, usB, gb] };
 
 describe("Owner first-run pricing requires verified branch price books", () => {
+  it("counts distinct active supported cleaning service codes without double-counting rows", () => {
+    expect(countQuoteableCleaningServices(undefined)).toBe(0);
+    expect(countQuoteableCleaningServices([])).toBe(0);
+    expect(countQuoteableCleaningServices([
+      { code: "STANDARD", active: true },
+      { code: "STANDARD", active: true },
+      { code: "DEEP", active: false },
+      { code: "WINDOWS", active: true },
+    ])).toBe(1);
+    expect(countQuoteableCleaningServices([
+      { code: "STANDARD", active: true },
+      { code: "DEEP", active: true },
+      { code: "MOVE_OUT", active: true },
+      { code: "DEEP", active: true },
+    ])).toBe(3);
+  });
   it("offers an unpriced branch even when three cleaning catalog services already exist", () => {
     expect(availableFirstRunUsdBranches(scope,{ state:"VERIFIED",activeBranchIds:[usA.id],existingBookBranchIds:[usA.id] })).toEqual([usB]);
   });
