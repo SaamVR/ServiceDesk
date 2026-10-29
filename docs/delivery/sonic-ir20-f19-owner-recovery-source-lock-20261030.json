@@ -53,12 +53,12 @@
     "historicalQuoteTest": {
       "path": "tests/ai/f17-quote-recovery-ui.test.ts",
       "before": "90ec2ea18eb233364ba693d866a6311b0c50f991",
-      "after": null
+      "after": "3e68b1b1bd3c2feacba997d37d3581aef8e4cb2e"
     },
     "historicalCriticTest": {
       "path": "tests/ai/f17-ir18-multilane-critic.test.ts",
       "before": "e33450aab5d54c6c2543b8c781dbef5be881fa1a",
-      "after": null
+      "after": "f6198c8a6f71d2e570bcce965fc1d2bf2ccdcf35"
     }
   },
   "forbidden": [
