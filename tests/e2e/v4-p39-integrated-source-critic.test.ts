@@ -11,17 +11,17 @@ const lock=JSON.parse(readFileSync(
  files:Array<{path:string;sourcePr:number;gitBlobSha:string}>};
 
 describe("P39 independent owner setup + quote preflight + timezone expiry source critic",()=>{
- it("retains nine isolated source owners, 28 exact files and one explicitly composed onboarding route",()=>{
+ it("retains nine isolated source owners, 29 exact files and one explicitly composed onboarding route",()=>{
    expect(lock.schema).toBe("servicedesk.p39.source-integrity.v1");
    expect(lock.state).toBe("P04_SOURCE_ONLY_NOT_ACCEPTED");
-   expect(lock.fileCount).toBe(29);
-   expect(lock.files).toHaveLength(29);
-   expect(lock.exactImportedFileCount).toBe(28);
+   expect(lock.fileCount).toBe(30);
+   expect(lock.files).toHaveLength(30);
+   expect(lock.exactImportedFileCount).toBe(29);
    expect(lock.composedFileCount).toBe(1);
    expect(lock.composedSourceOverlays).toHaveLength(1);
-   expect(new Set(lock.files.map(f=>f.path)).size).toBe(29);
+   expect(new Set(lock.files.map(f=>f.path)).size).toBe(30);
    for(const [pr,count] of [["876",6],["877",2],["879",2],["880",4],
-     ["882",3],["885",3],["886",2],["888",4],["890",3]] as const){
+     ["882",3],["885",3],["886",2],["888",4],["890",4]] as const){
      expect(lock.sourceHeads[pr]).toMatch(/^[a-f0-9]{40}$/);
      expect(lock.files.filter(f=>String(f.sourcePr)===pr)).toHaveLength(count);
    }
