@@ -20,7 +20,7 @@
     },
     {
       "path": "src/features/operations/f19-quote-recovery-targets.ts",
-      "sha": "4eb306c4bc5d180b41abd6f05a044ff49ea977cb",
+      "sha": "5f480043f3a877fbfe74efea3b5f5f0388a1dd75",
       "lane": "QUOTE_RECOVERY"
     },
     {
@@ -70,5 +70,7 @@
     "DEPLOY",
     "CANONICAL_MERGE"
   ],
-  "releaseGate": "P02_818_OPEN_AND_P03_819_QUEUED"
+  "releaseGate": "P02_818_OPEN_AND_P03_819_QUEUED",
+  "priorF19TargetSha": "4eb306c4bc5d180b41abd6f05a044ff49ea977cb",
+  "quoteClockRule": "trustedQuoteInstant(loadedAt) must verify before exact source navigation"
 }
