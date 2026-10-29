@@ -32,9 +32,10 @@ describe("stored quote queue validity, no fake waiting customer", () => {
     expect(q.sentNeedsExpiryReview).toBe(1);
     expect(needsSentQuoteExpiryReview(rows[2],now)).toBe(true);
   });
-  it("does not mutate customer status or claim an expiry when snapshot clock is invalid", () => {
+  it("requires manual review without mutating customer status when snapshot clock is invalid", () => {
     const row=quote("req3-old","SENT","invalid");
-    expect(needsSentQuoteExpiryReview(row,"invalid")).toBe(false);
+    // Unknown snapshot clock is review-required, NOT a persisted EXPIRED state.
+    expect(needsSentQuoteExpiryReview(row,"invalid")).toBe(true);
     expect(row.status).toBe("SENT");
     expect(buildQuotePipeline([row]).awaitingCustomer).toBe(1);
   });
