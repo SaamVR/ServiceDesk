@@ -1,0 +1,65 @@
+{
+  "schema": "servicedesk.ir18.f17.saved-operational-journeys.v1",
+  "parentIR17": "0e5a1bf92b605d8319da83c9769ec52ebc694b65",
+  "status": "SOURCE_ONLY_DRAFT_UNMERGED",
+  "source": [
+    {
+      "path": "src/features/operations/f17-visit-quality-action.ts",
+      "sha": "f592ed87d939c4a2f356bb525497959f38ac3b6d",
+      "lane": "JOBS_QA"
+    },
+    {
+      "path": "src/features/operations/AiSavedVisitQualityReview.tsx",
+      "sha": "a1c13e842b34ad30e2464fa0b294d7a83c27c3a7",
+      "lane": "JOBS_QA"
+    },
+    {
+      "path": "src/features/operations/JobsSavedQualityPanel.tsx",
+      "sha": "7cf0d11808360e5d3a85f5a80f5e26faaf7baef2",
+      "lane": "JOBS_QA"
+    },
+    {
+      "path": "tests/ai/f17-job-quality-ui.test.ts",
+      "sha": "00850e34aa05ad26c76a64d47aa1f8a90890c4b3",
+      "lane": "JOBS_QA"
+    },
+    {
+      "path": "src/features/operations/f17-quote-recovery-guide.ts",
+      "sha": "0b5900d1999140d4081dedc0bceff7a812322540",
+      "lane": "QUOTES_RECOVERY"
+    },
+    {
+      "path": "src/features/operations/QuoteRecoveryReadinessPanel.tsx",
+      "sha": "b09faa61dec077da4ce2a018ed4852b896201a2e",
+      "lane": "QUOTES_RECOVERY"
+    },
+    {
+      "path": "tests/ai/f17-quote-recovery-ui.test.ts",
+      "sha": "9f68f9119043e9fe2277d33d4c42de8e2931b972",
+      "lane": "QUOTES_RECOVERY"
+    }
+  ],
+  "routes": [
+    {
+      "path": "src/app/app/[workspace]/jobs/page.tsx",
+      "before": "5285d30d26044e5e5798e398e75e569b66a653c9",
+      "after": "98a77792052513d1c5a9b5c682c81df9f76220f3"
+    },
+    {
+      "path": "src/app/app/[workspace]/quotes/page.tsx",
+      "before": "2843b8759d66073a6e0ecb6b11cd4789cfa461bc",
+      "after": "32fe53192dc753648bb5315616bc63f9f65961cb"
+    }
+  ],
+  "noLiveEffects": [
+    "NO_DB_AUTH_WRITE",
+    "NO_MODEL_PROVIDER_SEND",
+    "NO_VISIT_STATE_MUTATION",
+    "NO_QUOTE_SEND",
+    "NO_DEPLOY",
+    "NO_CANONICAL_MERGE",
+    "NO_PAID_PROVIDER",
+    "NO_PAYMENTS"
+  ],
+  "productionGate": "P02_818_OPEN_P03_819_QUEUED"
+}
