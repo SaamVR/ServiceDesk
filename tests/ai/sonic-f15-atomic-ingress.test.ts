@@ -3,7 +3,7 @@ import {ingestF15UnansweredLeadCandidate,type F15AtomicEventCommand}
  from "../../src/server/workflows/sonic-f15-atomic-ingress";
 const w="11111111-1111-4111-8111-111111111111",b="22222222-2222-4222-8222-222222222222",r="33333333-3333-4333-8333-333333333333";
 const input=()=>({record:{
- workspaceId:w,branchId:b,requestId:r,version:7,status:"OPEN",
+ workspaceId:w,branchId:b,requestId:r,version:7,status:"COLLECTING",
  createdAt:"2026-10-29T08:00:00.000Z",
  lastInboundAt:"2026-10-29T08:10:00.000Z",
  lastInboundMessageId:"44444444-4444-4444-8444-444444444444",

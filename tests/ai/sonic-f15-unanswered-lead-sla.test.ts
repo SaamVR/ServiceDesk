@@ -29,8 +29,10 @@ describe("F15 unanswered-lead SLA",()=>{
   expect(candidate(input({}, {observedAt:"2026-10-29T08:39:59.000Z"})).state).toBe("NO_ESCALATION_DUE");
   expect(candidate(input({}, {observedAt:"2026-10-29T08:40:00.000Z"})).state).toBe("UNPERSISTED_SLA_CANDIDATE");
   expect(candidate(input({lastStaffResponseAt:"2026-10-29T08:20:00.000Z"})).state).toBe("NO_ESCALATION_DUE");
-  for(const status of ["REPLIED","CLOSED"])
+  for(const status of ["READY","QUOTED","BOOKED","LOST","CLOSED"])
    expect(candidate(input({status})).state).toBe("NO_ESCALATION_DUE");
+  expect(candidate(input({status:"COLLECTING"})).state).toBe("UNPERSISTED_SLA_CANDIDATE");
+  expect(candidate(input({status:"NEEDS_REVIEW"})).state).toBe("UNPERSISTED_SLA_CANDIDATE");
   expect(candidate(input({lastStaffResponseAt:"2026-10-29T08:05:00.000Z"})).state)
    .toBe("UNPERSISTED_SLA_CANDIDATE");
  });

@@ -5,7 +5,8 @@ import { createHash } from "node:crypto";
  * A source record is only a claim until the atomic port re-reads it under
  * the saved workspace/branch and source-version lock.
  */
-export type F15RequestState = "NEW" | "OPEN" | "REPLIED" | "CLOSED";
+export type F15RequestState = "NEW" | "COLLECTING" | "READY" | "NEEDS_REVIEW" |
+  "QUOTED" | "BOOKED" | "LOST" | "CLOSED";
 export interface F15SavedLeadFacts {
   workspaceId: string;
   branchId: string;
@@ -79,7 +80,7 @@ export function planF15UnansweredLeadSla(input: unknown): F15SlaDecision {
     return {ok:false,code:"F15_SCOPE_INVALID"};
   if (!Number.isSafeInteger(r.version) || (r.version as number) < 1 ||
       (r.version as number) > 2147483647 ||
-      !["NEW","OPEN","REPLIED","CLOSED"].includes(r.status as string) ||
+      !["NEW","COLLECTING","READY","NEEDS_REVIEW","QUOTED","BOOKED","LOST","CLOSED"].includes(r.status as string) ||
       r.responseHistoryComplete !== true ||
       !Number.isSafeInteger(input.thresholdMinutes) ||
       (input.thresholdMinutes as number) < 15 ||
@@ -107,7 +108,11 @@ export function planF15UnansweredLeadSla(input: unknown): F15SlaDecision {
     "SONIC_F15_UNANSWERED_LEAD_SLA_V1",
     r.workspaceId, r.branchId, r.requestId, r.lastInboundMessageId,
   ])).digest("hex");
-  const state = (r.status === "NEW" || r.status === "OPEN") &&
+  // These intake/review states are the only statuses with supported
+  // unanswered-lead SLA semantics. READY/QUOTED/BOOKED are not silently
+  // treated as uncontacted just because a message row is absent.
+  const state = (r.status === "NEW" || r.status === "COLLECTING" ||
+    r.status === "NEEDS_REVIEW") &&
     (answered === null || answered < inbound) && observed >= due
     ? "UNPERSISTED_SLA_CANDIDATE" : "NO_ESCALATION_DUE";
   return {ok:true,value:{

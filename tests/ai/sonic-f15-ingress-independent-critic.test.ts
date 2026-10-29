@@ -11,6 +11,8 @@ describe("F15 independent critic: no false durable or provider claims",()=>{
   expect(sla).toContain("UNPERSISTED_SLA_CANDIDATE");
   expect(sla).toContain("lastInboundAt");
   expect(sla).toContain("lastInboundMessageId");
+  expect(sla).toContain('r.status === "NEEDS_REVIEW"');
+  expect(sla).not.toContain('"OPEN" | "REPLIED"');
   expect(ingress).toContain("F15_DURABLE_PORT_REQUIRED");
   expect(ingress).toContain("sourceRecheckedUnderLock === true");
   expect(ingress).toContain("uniqueEventKeyEnforced === true");
