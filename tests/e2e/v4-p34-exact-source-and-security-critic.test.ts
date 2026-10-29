@@ -23,6 +23,21 @@ const p42 = existsSync(join(process.cwd(), p42Path))
       base: { commit: string };
     }
   : null;
+const p44Path = "docs/delivery/sonic-p03-p44-source-provenance-20261029.json";
+const p44 = existsSync(join(process.cwd(), p44Path))
+  ? JSON.parse(read(p44Path).toString()) as {
+      files: Record<string, { gitBlobSha: string }>;
+      previousTriage: { p34: string; p42: string };
+      importedFrom: { head: string };
+    }
+  : null;
+const p43 = p44
+  ? JSON.parse(read("docs/delivery/sonic-p03-p43-attention-lineage-20261029.json").toString()) as {
+      originalP34Blob: string;
+      parent: { sourceBlob: string };
+      successor: { path: string; gitBlobSha: string };
+    }
+  : null;
 const successors: Record<string, { old: string; next: string; lane: string; head: string }> = {
   "src/features/operations/owner-attention-triage.ts": {
     old: "752543fcf25178bd6ad2da16a324f50a569a6be0",
@@ -54,7 +69,20 @@ describe("P34 independent exact-source and safety critic", () => {
       expect([891, 892]).toContain(item.sourcePr);
       expect(item.path).toMatch(/^(src\/features\/operations\/|tests\/e2e\/)/);
       const successor = p42 ? successors[item.path] : undefined;
-      if (!successor) {
+      if (p44 && item.path === "src/features/operations/owner-attention-triage.ts") {
+        // Two immutable predecessor manifests survive. This third revision
+        // must match the exact reviewed P43 Git blob, never an arbitrary file.
+        expect(item.gitBlobSha).toBe(successors[item.path].old);
+        expect(p42?.files[item.path]?.gitBlobSha).toBe(p44.previousTriage.p42);
+        expect(p43?.originalP34Blob).toBe(item.gitBlobSha);
+        expect(p43?.parent.sourceBlob).toBe(p44.previousTriage.p42);
+        expect(p43?.successor).toMatchObject({
+          path: item.path, gitBlobSha: "706f21c1b28209cc022281fdf1631dc3eb6bfa54",
+        });
+        expect(p44.importedFrom.head).toBe("2e1f44255501b9faef965a63374d80538bf59fe0");
+        expect(p44.files[item.path]?.gitBlobSha).toBe(p43?.successor.gitBlobSha);
+        expect(gitBlob(read(item.path))).toBe(p43?.successor.gitBlobSha);
+      } else if (!successor) {
         expect(gitBlob(read(item.path))).toBe(item.gitBlobSha);
       } else {
         // The original P34 hash remains frozen in the historical manifest.
@@ -76,7 +104,12 @@ describe("P34 independent exact-source and safety critic", () => {
     expect(ui).toContain("summarizeOwnerAttentionTriage(data)");
     expect(ui).toContain("data.actor?.role === \"OWNER\"");
     expect(triage).toContain('scope.mode === "BRANCH"');
-    expect(triage).toContain('row.mode === "LIVE"');
+    if (p44) {
+      expect(triage).toContain('row.mode !== "LIVE"');
+      expect(triage).toContain("duplicateLiveExecutionIds");
+    } else {
+      expect(triage).toContain('row.mode === "LIVE"');
+    }
     expect(activation).toContain("latest.length !== 1");
     for (const source of [triage, activation]) {
       expect(source).not.toMatch(/fetch\s*\(|createClient\s*\(|\.rpc\s*\(|process\.env/);
