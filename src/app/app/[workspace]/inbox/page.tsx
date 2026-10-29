@@ -1,4 +1,5 @@
 import { InboxConsentedDraftPanel } from "@/features/operations/InboxConsentedDraftPanel";
+import { InboxLeadSlaPanel } from "@/features/operations/InboxLeadSlaPanel";
 import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
 export default async function StaffInboxPage({
@@ -22,6 +23,7 @@ export default async function StaffInboxPage({
       error={query.error}
     />
     <InboxConsentedDraftPanel workspaceSlug={workspace} selectedConversationId={query.conversation}/>
+    <InboxLeadSlaPanel workspaceSlug={workspace} selectedConversationId={query.conversation}/>
     </>
   );
 }
