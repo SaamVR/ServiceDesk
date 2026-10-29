@@ -1,0 +1,91 @@
+{
+  "schema": "servicedesk.p35.p33-a18-exact-source-lock.v1",
+  "state": "P03_AND_AUTOMATION_DRAFT_SOURCE_ONLY",
+  "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
+  "p32IntegrationHead": "224f88ce76525bc0235acecb9e45a9ec34c9aaaa",
+  "p32Lock": "docs/delivery/sonic-p03-p32-source-provenance-20261029.json",
+  "sourceHeads": {
+    "896": "18f34b40f5f3d5a876ea89324dd3db3f84ae3100",
+    "905": "cad14f9a1c6237db2cb8092fd2c07694fbec4a59"
+  },
+  "sourceFileCount": 11,
+  "changesRelativeToP32": {
+    "added": 7,
+    "modified": 4
+  },
+  "sourceOnly": true,
+  "liveRegistrationGuardAuthorized": false,
+  "liveDatabaseMutationAuthorized": false,
+  "liveProviderDeliveryVerified": false,
+  "realTwoOwnerUatVerified": false,
+  "productionDeploymentAuthorized": false,
+  "canonicalMergeAuthorized": false,
+  "files": [
+    {
+      "path": "src/features/operations/OwnerAutomationActivationChecklist.module.css",
+      "sourcePr": 896,
+      "gitBlobSha": "97fb9e56c518838f802d3816a071669494f75a4a",
+      "status": "modified"
+    },
+    {
+      "path": "src/features/operations/OwnerAutomationActivationChecklist.tsx",
+      "sourcePr": 896,
+      "gitBlobSha": "e77492e54f7c43dee0616bd97fa4b5c1cb6d4b02",
+      "status": "modified"
+    },
+    {
+      "path": "src/features/operations/OwnerQuoteAcceptedAutomationControl.tsx",
+      "sourcePr": 896,
+      "gitBlobSha": "d7e68c48acaa0db1302baa28a66e23d592e64ec6",
+      "status": "modified"
+    },
+    {
+      "path": "src/features/operations/owner-activation-next-action.ts",
+      "sourcePr": 896,
+      "gitBlobSha": "cbfb64e4fcec9f0ec2c4eff17108b18ec15f1d7f",
+      "status": "added"
+    },
+    {
+      "path": "tests/e2e/v4-p33-owner-activation-next-action.test.ts",
+      "sourcePr": 896,
+      "gitBlobSha": "4b093e5af0ff4205d127c65a4ad0f02919c7cff6",
+      "status": "added"
+    },
+    {
+      "path": "src/features/operations/OperationalProductRoute.tsx",
+      "sourcePr": 905,
+      "gitBlobSha": "6d31b6a97e611be5506b2e4a37dbd100eea293eb",
+      "status": "modified"
+    },
+    {
+      "path": "src/features/operations/OwnerOverdueAttentionReview.module.css",
+      "sourcePr": 905,
+      "gitBlobSha": "cd19c1c3982d2861025c65b855056fa49db427a6",
+      "status": "added"
+    },
+    {
+      "path": "src/features/operations/OwnerOverdueAttentionReview.tsx",
+      "sourcePr": 905,
+      "gitBlobSha": "d876e61b8731d6ff0e61372941503139d918d606",
+      "status": "added"
+    },
+    {
+      "path": "src/features/operations/owner-attention-review-action.ts",
+      "sourcePr": 905,
+      "gitBlobSha": "8a511441ec4a516be406c3228d9221fcf5a790ea",
+      "status": "added"
+    },
+    {
+      "path": "src/features/operations/owner-attention-review-projection.ts",
+      "sourcePr": 905,
+      "gitBlobSha": "67cc32b8f31472f131f365a03a50621fcdaea89b",
+      "status": "added"
+    },
+    {
+      "path": "tests/ai/sonic-a18-owner-overdue-attention-review.test.ts",
+      "sourcePr": 905,
+      "gitBlobSha": "608b8f0812a2e9c12f84dc021d1a48d200b72020",
+      "status": "added"
+    }
+  ]
+}
