@@ -61,6 +61,11 @@ describe("P35 pricing revision authorization and conflict-prevention UI",()=>{
     expect(ui).toContain('name="expectedBookVersion"');
     expect(ui).toContain('name="expectedBookId"');
     expect(ui).toContain("Save verified first-run pricing");
+    const route=readFileSync("src/features/operations/OperationalProductRoute.tsx","utf8");
+    // Existing first-run path already passed scope; every owner revision
+    // must also pass its authorized selected-branch snapshot.
+    expect(route).toContain("scope={data.branchScope}");
+    expect(route).toMatch(/scope=\{data\.branchScope\}\s+repairTarget=\{book\}/);
     expect(ui).not.toContain("fetch(");
     expect(ui).not.toContain(".rpc(");
   });
