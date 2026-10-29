@@ -5,7 +5,7 @@
   "sourceHeads": {
     "868": "d9c53c05cf5f98bf9e5fec688e2f56cc3e42b360",
     "869": "053bf3493d6f38e29000e06d5a3868a24442205a",
-    "875": "908f3a731cc1eab348ee4f07f4f858fc18becbd9"
+    "875": "b0aaf768efd01dada9de6adaec4484024e01267a"
   },
   "sourceOnly": true,
   "realOwnerSessionVerified": false,
@@ -114,13 +114,13 @@
       "path": "src/app/auth/create-workspace/actions.ts",
       "sourcePr": 875,
       "status": "modified",
-      "gitBlobSha": "44fce78eaeb63d525381201fefaa0f0948a571cd"
+      "gitBlobSha": "70494b20a1503ae4c57dac719782805c4f2f6fb1"
     },
     {
       "path": "src/app/auth/create-workspace/page.tsx",
       "sourcePr": 875,
       "status": "modified",
-      "gitBlobSha": "9fb993c5df85c687e5b4fe0aa823e1ff071c1681"
+      "gitBlobSha": "4ee109ed9193f8a44d6a081d161f9fab46caba4f"
     },
     {
       "path": "src/features/auth/workspace-registration-error.ts",
@@ -144,13 +144,13 @@
       "path": "tests/e2e/p02-registration-denial-action.test.ts",
       "sourcePr": 875,
       "status": "added",
-      "gitBlobSha": "267e6f20761be1709acca9f80ad925e9f894f327"
+      "gitBlobSha": "79d82c30efa7b2c18d612c6e5ebc29c9f8c2c8ba"
     },
     {
       "path": "tests/e2e/p02-workspace-error-origin.test.ts",
       "sourcePr": 875,
       "status": "added",
-      "gitBlobSha": "64e11d3e48cbedd5c05db7f2e8036440899f4ae7"
+      "gitBlobSha": "3b9149f5fe3c0583724715eb8c08c25e8bb92c59"
     },
     {
       "path": "tests/sql/p02-owner-registration-db-authorization-pg17.sql",

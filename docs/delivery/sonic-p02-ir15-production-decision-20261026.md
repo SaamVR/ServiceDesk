@@ -9,7 +9,7 @@ Control: [#870](https://github.com/SaamVR/ServiceDesk/issues/870), main Producti
 | --- | --- | --- | ---: |
 | Post-session owner authority proof | [#868](https://github.com/SaamVR/ServiceDesk/pull/868) | `d9c53c05cf5f98bf9e5fec688e2f56cc3e42b360` | 7 |
 | Database registration authorization candidate | [#869](https://github.com/SaamVR/ServiceDesk/pull/869) | `053bf3493d6f38e29000e06d5a3868a24442205a` | 17 |
-| Registration authorization UX and trusted error source | [#875](https://github.com/SaamVR/ServiceDesk/pull/875) | `908f3a731cc1eab348ee4f07f4f858fc18becbd9` | 5 |
+| Registration authorization UX and trusted error source | [#875](https://github.com/SaamVR/ServiceDesk/pull/875) | `b0aaf768efd01dada9de6adaec4484024e01267a` | 5 |
 
 Combined rehearsal pinned over canonical `cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411`. **29 source paths, no pathname collision**: 24 additions and five modified existing source/test paths. `docs/delivery/sonic-p02-ir15-exact-source-lock-20261026.json` stores PR and Git blob object SHAs. Automated source-lock unit test rehashes **all 29 exact imported Git blob objects**; an independent release critic and this runbook are the only new integration-specific artifacts. None of the original source code bytes were altered or replaced.
 
@@ -31,6 +31,19 @@ while other foreign resource reads remain correctly denied; PASS is rejected.
 The correction changes only read-only query selection/verification and local tests,
 not any provider, database migration, Auth fixture, or deployment. Exact-source
 provenance remains pinned in the 29-file manifest and requires fresh exact-head CI.
+
+## P25 registration RPC receipt and browser validation hardening (2026-10-29)
+
+The real existing registration RPC returns `{ok:true,slug,existing:boolean}` on
+successful owner creation or idempotent owner lookup. The original client
+accepted an incomplete `{ok:true,slug}` and contradictory success/error
+responses. Source PR #875 now requires a boolean `existing` field, no error
+code on successful responses, and a valid slug; malformed receipts never
+redirect to onboarding. The HTML workspace-slug field now disallows double
+or trailing hyphens, with 3–40 character bounds matching the server.
+Focused mock action and browser/server-parity tests cover these cases.
+This is source-only: it does not claim production DB remediation, a new
+real OWNER session, or deployment.
 
 ## What combined source CI can and cannot establish
 

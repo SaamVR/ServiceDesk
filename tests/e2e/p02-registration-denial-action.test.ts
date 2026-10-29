@@ -60,7 +60,7 @@ describe("P02 owner registration: DB authority and truthful operator guidance", 
         email_confirmed_at: "2026-10-26T00:00:00Z" } }, error: null,
     });
     calls.rpc.mockReset().mockResolvedValue({
-      data: { ok: true, slug: "synthetic-team" }, error: null,
+      data: { ok: true, slug: "synthetic-team", existing: false }, error: null,
     });
   });
   afterEach(() => vi.unstubAllEnvs());
@@ -85,7 +85,13 @@ describe("P02 owner registration: DB authority and truthful operator guidance", 
       { ok: true, slug: "../other" },
       { ok: true, slug: "synthetic--team" },
       { ok: true, slug: "" },
-      { ok: true, slug: {} },
+      { ok: true, slug: {}, existing: false },
+      { ok: true, slug: "synthetic-team" },
+      { ok: true, slug: "synthetic-team", existing: "false" },
+      { ok: true, slug: "synthetic-team", existing: 1 },
+      { ok: true, slug: "synthetic-team", existing: null },
+      { ok: true, slug: "synthetic-team", existing: false, code: "SLUG_UNAVAILABLE" },
+      { ok: true, slug: "synthetic-team", existing: true, code: "UNEXPECTED_SUCCESS_CODE" },
     ]) {
       calls.rpc.mockResolvedValueOnce({ data, error: null });
       const location = await destination();
@@ -96,7 +102,7 @@ describe("P02 owner registration: DB authority and truthful operator guidance", 
 
   it("does not disclose provider errors or claim onboarding success when RPC fails", async () => {
     calls.rpc.mockResolvedValueOnce({
-      data: { ok: true, slug: "synthetic-team" },
+      data: { ok: true, slug: "synthetic-team", existing: false },
       error: { message: "Synthetic provider token or policy details" },
     });
     const location = await destination();
@@ -141,9 +147,16 @@ describe("P02 owner registration: DB authority and truthful operator guidance", 
     expect(calls.rpc).not.toHaveBeenCalled();
   });
 
+  it("accepts a complete newly-created workspace success receipt", async () => {
+    calls.rpc.mockResolvedValueOnce({
+      data: { ok: true, slug: "synthetic-team", existing: false }, error: null,
+    });
+    expect(await destination()).toBe("/onboarding/verified?workspace=synthetic-team");
+  });
+
   it("redirects only on explicit true success with a valid returned workspace slug", async () => {
     calls.rpc.mockResolvedValueOnce({
-      data: { ok: true, slug: "my-existing-team" }, error: null,
+      data: { ok: true, slug: "my-existing-team", existing: true }, error: null,
     });
     expect(await destination()).toBe("/onboarding/verified?workspace=my-existing-team");
     expect(calls.rpc).toHaveBeenCalledWith(

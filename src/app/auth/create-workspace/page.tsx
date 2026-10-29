@@ -60,8 +60,8 @@ export default async function CreateWorkspacePage({
         </div>
         <div className={styles.field}>
           <label htmlFor="business-slug">Workspace address <span style={{fontWeight:400}}>(optional)</span></label>
-          <input id="business-slug" name="slug" pattern="[a-z0-9][a-z0-9-]{2,39}" placeholder="Generated from your business name" autoCapitalize="none" maxLength={40} aria-describedby="workspace-slug-hint" />
-          <span id="workspace-slug-hint" className={styles.help}>Use lowercase letters, numbers or hyphens. You can change the suggestion if it is taken.</span>
+          <input id="business-slug" name="slug" pattern="[a-z0-9](?:[a-z0-9]|-[a-z0-9]){1,39}" placeholder="Generated from your business name" autoCapitalize="none" minLength={3} maxLength={40} aria-describedby="workspace-slug-hint" />
+          <span id="workspace-slug-hint" className={styles.help}>Use 3–40 lowercase letters, numbers or single hyphens (not at either end). You can change the suggestion if it is taken.</span>
         </div>
         <div className={styles.field}>
           <label htmlFor="workspace-timezone">Business timezone</label>

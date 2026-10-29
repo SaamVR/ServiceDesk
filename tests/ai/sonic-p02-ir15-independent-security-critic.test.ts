@@ -215,6 +215,11 @@ describe("P02 IR15 independent release-safety critic",()=>{
   const pageTest=get("tests/e2e/p02-workspace-error-origin.test.ts");
   expect(action).toContain('result?.code === "REGISTRATION_NOT_AUTHORIZED"');
   expect(action).toContain("result?.ok !== true");
+  expect(action).toContain('typeof result.existing !== "boolean"');
+  expect(action).toContain('result.code != null');
+  expect(actionTest).toContain('existing: "false"');
+  expect(actionTest).toContain('existing: false, code: "SLUG_UNAVAILABLE"');
+  expect(page).toContain('minLength={3} maxLength={40}');
   expect(action).toContain('typeof result.slug !== "string"');
   expect(page).toContain("trustedWorkspaceRegistrationError(query.error)");
   expect(page).not.toContain("{query.error}");

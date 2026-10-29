@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { trustedWorkspaceRegistrationError } from "../../src/features/auth/workspace-registration-error";
+import { validateWorkspaceFields } from "../../src/features/auth/registration";
 
 describe("P02 trusted workspace setup error presentation", () => {
   it("preserves intended server-originated registration messages", () => {
@@ -35,6 +36,24 @@ describe("P02 trusted workspace setup error presentation", () => {
       expect(trustedWorkspaceRegistrationError(value)).toBeNull();
     }
   });
+  it("aligns browser slug validation with the authoritative server validator", () => {
+    const page = readFileSync("src/app/auth/create-workspace/page.tsx", "utf8");
+    const pattern = page.match(/name="slug" pattern="([^"]+)"/)?.[1];
+    expect(pattern).toBeTruthy();
+    expect(page).toContain('minLength={3} maxLength={40}');
+    const browserPattern = new RegExp("^(?:" + pattern + ")$", "v");
+    for (const slug of [
+      "abc", "a-b", "a1-b2", "a".repeat(40),
+      "ab", "a--b", "abc-", "-abc", "abc_", "a".repeat(41),
+    ]) {
+      const browserValid = slug.length >= 3 && slug.length <= 40 && browserPattern.test(slug);
+      const serverValid = validateWorkspaceFields({
+        name: "Example Cleaning", slug, timezone: "UTC", currency: "USD",
+      }) === null;
+      expect(browserValid, slug).toBe(serverValid);
+    }
+  });
+
   it("requires the actual workspace page to use the trusted presentation result", () => {
     const page = readFileSync("src/app/auth/create-workspace/page.tsx", "utf8");
     expect(page).toContain("trustedWorkspaceRegistrationError(query.error)");
