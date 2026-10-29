@@ -8,6 +8,8 @@ begin
       'public.servicedesk_claim_f15_unanswered_lead_sla_review(jsonb)','EXECUTE')
     or has_function_privilege('authenticated',
       'public.servicedesk_claim_f15_unanswered_lead_sla_review(jsonb)','EXECUTE')
+    or has_function_privilege('authenticated',
+      'public.servicedesk_f15_lock_request(uuid,uuid)','EXECUTE')
     or not has_function_privilege('service_role',
       'public.servicedesk_claim_f15_unanswered_lead_sla_review(jsonb)','EXECUTE')
     or not (select relrowsecurity from pg_catalog.pg_class
@@ -97,6 +99,8 @@ begin
  for x in
   select jsonb_set(valid,'{eventKey}',to_jsonb(repeat('0',64))) union all
   select jsonb_set(valid,'{sourceVersion}','2'::jsonb) union all
+  select jsonb_set(valid,'{sourceVersion}','1.5'::jsonb) union all
+  select jsonb_set(valid,'{thresholdMinutes}','30.5'::jsonb) union all
   select jsonb_set(valid,'{branchId}',to_jsonb('22222222-2222-4222-8222-222222222222'::text)) union all
   select jsonb_set(valid,'{customerMessageAuthorized}','true'::jsonb) union all
   select jsonb_set(valid,'{thresholdMinutes}','10'::jsonb) union all
@@ -152,11 +156,14 @@ begin
 end $$;
 reset role;
 
--- Unknown client in any same-customer thread makes response absence ambiguous.
+-- Same-customer conversation in ANOTHER branch still invalidates proof.
+insert into public.workspace_branches values
+ ('29292929-2929-4929-8929-292929292929',
+  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',true);
 insert into public.conversations values
  ('14141414-1414-4414-8414-141414141414',
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-  '22222222-2222-4222-8222-222222222222',null,
+  '29292929-2929-4929-8929-292929292929',null,
   '99999999-9999-4999-8999-999999999999');
 set role service_role;
 do $$

@@ -56,7 +56,7 @@ revoke all on function public.servicedesk_f15_lock_request(uuid,uuid)
 -- A trigger may execute in the current writer's role, including authenticated.
 -- A minimal fixed-ID lock is permitted; it does NOT expose any saved data.
 grant execute on function public.servicedesk_f15_lock_request(uuid,uuid)
-  to authenticated,service_role;
+  to service_role;
 
 -- Message write path locking: INSERT/UPDATE/DELETE cannot COMMIT a reply
 -- or newly linked inbound for a request while a claim holds its lock.
@@ -136,6 +136,8 @@ begin
      or p_input->'financialMutationAuthorized' is distinct from 'false'::jsonb
      or jsonb_typeof(p_input->'sourceVersion') <> 'number'
      or jsonb_typeof(p_input->'thresholdMinutes') <> 'number'
+     or p_input->>'sourceVersion' !~ '^[1-9][0-9]{0,9}$'
+     or p_input->>'thresholdMinutes' !~ '^[0-9]{1,4}$'
      or (p_input->>'eventKey') !~ '^[0-9a-f]{64}$'
   then
     return jsonb_build_object('ok',false,'code','F15_INPUT_DENIED');
@@ -190,7 +192,7 @@ begin
     select 1 from public.conversations c
     where c.workspace_id=v_workspace and
       (c.request_id=v_request or (v_request_row.customer_id is not null
-        and c.customer_id=v_request_row.customer_id and c.branch_id=v_branch))
+        and c.customer_id=v_request_row.customer_id))
       and (c.request_id is distinct from v_request
         or c.branch_id is distinct from v_branch
         or c.customer_id is distinct from v_request_row.customer_id)
@@ -233,13 +235,14 @@ begin
   returning id into v_inserted;
 
   if v_inserted is null then
-    select e.request_id,e.inbound_message_id,e.source_last_inbound_at
+    select e.request_id,e.inbound_message_id,e.source_last_inbound_at,e.source_version
     into v_prior from public.f15_unanswered_lead_reviews e
     where e.workspace_id=v_workspace and e.branch_id=v_branch
       and e.event_key=v_key;
     if not found or v_prior.request_id is distinct from v_request
       or v_prior.inbound_message_id is distinct from v_message or
-      v_prior.source_last_inbound_at is distinct from v_inbound then
+      v_prior.source_last_inbound_at is distinct from v_inbound
+      or v_prior.source_version is distinct from v_version then
       return jsonb_build_object('ok',false,'code','F15_REPLAY_INCONSISTENT');
     end if;
   end if;
