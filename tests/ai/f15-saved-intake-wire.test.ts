@@ -12,7 +12,7 @@ describe("F15 saved intake actually wired to persisted versioned F01",()=>{
   expect(action).toContain("loadOperationalStaffSnapshot(workspaceSlug)");
   expect(action).toContain("expectedVersion:req.version");
   expect(action).toContain("customerContactSent:false");
-  expect(action).not.toMatch(/fetch\\(|modelTransport|sendEmail|\.rpc\\(/);
+  for(const forbidden of ["fetch(", ".rpc(", "modelTransport", "sendEmail"]) expect(action).not.toContain(forbidden);
  });
  it("client rekeys on selected record and refuses late cross-scope results",()=>{
   const ui=readFileSync("src/features/operations/AiSavedIntakeReview.tsx","utf8");
