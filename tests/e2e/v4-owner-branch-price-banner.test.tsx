@@ -55,12 +55,54 @@ describe("V4 owner-visible branch pricing readiness", () => {
     })).toContain("North cleaning");
   });
 
-  it("shows repair guidance rather than a dead first-run CTA for configured-but-invalid pricing", () => {
+  it("renders BOTH existing-book repair and missing-branch first-run CTAs without hiding either blocker", () => {
     const html=markup({
       workspaceSlug:"east-office",serviceCatalog:savedActiveCatalog,
       branchScope:scope,
       ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:[],
         existingBookBranchIds:["branch-one"]},
+    });
+    expect(html).toContain("Saved branch pricing needs correction");
+    expect(html).toContain("North cleaning");
+    expect(html).toContain("First-run setup cannot overwrite");
+    expect(html).toContain("Quoting setup incomplete");
+    expect(html).toContain("South cleaning");
+    expect(html).toContain("#owner-first-run-pricing");
+    expect(html).toContain("/app/east-office/settings");
+    expect(html).not.toContain("UK cleaning");
+  });
+
+  it("does not quietly declare readiness when a VERIFIED proof lacks independent inventory", () => {
+    const html=markup({
+      workspaceSlug:"east-office",serviceCatalog:savedActiveCatalog,
+      branchScope:scope,
+      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:["branch-one"]},
+    });
+    expect(html).toContain("Branch pricing readiness could not be verified");
+    expect(html).toContain("independent saved price-book inventory is incomplete");
+    expect(html).not.toContain("#owner-first-run-pricing");
+  });
+
+  it("restricts combined first-run and repair blockers to the selected branch", () => {
+    const pickedScope: OperationalBranchScope={...scope,mode:"BRANCH",selectedBranchId:"branch-two"};
+    const html=markup({
+      workspaceSlug:"east-office",serviceCatalog:savedActiveCatalog,
+      branchScope:pickedScope,
+      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:[],
+        existingBookBranchIds:["branch-one"]},
+    });
+    expect(html).toContain("South cleaning");
+    expect(html).not.toContain("North cleaning");
+    expect(html).not.toContain("Saved branch pricing needs correction");
+    expect(html).toContain("#owner-first-run-pricing");
+  });
+
+  it("shows repair guidance rather than a dead first-run CTA for configured-but-invalid pricing", () => {
+    const html=markup({
+      workspaceSlug:"east-office",serviceCatalog:savedActiveCatalog,
+      branchScope:scope,
+      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:["branch-two"],
+        existingBookBranchIds:["branch-one","branch-two"]},
     });
     expect(html).toContain("Saved branch pricing needs correction");
     expect(html).toContain("North cleaning");

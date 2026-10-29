@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buildStaffModuleHref } from "./staff-modules";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
+import { buildOwnerActivationNextAction } from "./owner-activation-next-action";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import styles from "./OwnerAutomationActivationChecklist.module.css";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
@@ -27,6 +28,8 @@ export function OwnerAutomationActivationChecklist({
   const canOpenPricingForm = availableFirstRunUsdBranches(
     data.branchScope, data.ownerPricingBookProof,
   ).length > 0;
+  const nextAction = buildOwnerActivationNextAction(summary, canOpenPricingForm);
+  const nextHref = buildStaffModuleHref(workspaceSlug, nextAction.module) + nextAction.anchor;
   const settingsHref = buildStaffModuleHref(workspaceSlug, "settings");
   // Only authorized branch IDs from the already-resolved owner staff snapshot
   // cross to the client. The suggestion HTTP endpoint and what-if server action
@@ -52,6 +55,15 @@ export function OwnerAutomationActivationChecklist({
           <small>Source-linked evidence</small>
         </div>
       </header>
+      <section className={styles.nextAction} aria-labelledby="owner-activation-next-action" role="region">
+        <p className={styles.eyebrow}>Next owner action · saved evidence only</p>
+        <h3 id="owner-activation-next-action">{nextAction.title}</h3>
+        <p>{nextAction.detail}</p>
+        <Link href={nextHref}>{nextAction.linkLabel}<span aria-hidden="true"> ↗</span></Link>
+        <p className={styles.nextDisclosure}>Initial owner opt-in readiness:
+          {" "}<strong>{nextAction.readyForOwnerOptIn ? "Prerequisites evidenced; separate deployment and owner approval still apply" : "Not yet evidenced"}</strong>.
+          {" "}This panel never publishes a rule, retries a job, or sends a customer message.</p>
+      </section>
       <div className={styles.grid}>
         {summary.steps.map((step, index) => (
           <article className={styles.step} key={step.id}>
@@ -69,12 +81,12 @@ export function OwnerAutomationActivationChecklist({
             <p>{step.detail}</p>
             <Link href={step.module === "settings"
               ? settingsHref +
-                (canOpenPricingForm && step.status !== "READY"
-                  ? "#owner-first-run-pricing" : "")
+                (step.id === "pricing" && step.status === "ACTION_REQUIRED" &&
+                 canOpenPricingForm ? "#owner-first-run-pricing" : "")
               : buildStaffModuleHref(workspaceSlug, step.module)}>
               {step.module === "requests" ? "Review customer requests"
                 : step.module === "automations" ? "Open Automation Studio"
-                : canOpenPricingForm && step.status !== "READY"
+                : step.id === "pricing" && step.status === "ACTION_REQUIRED" && canOpenPricingForm
                   ? "Enter actual cleaning rates" : "Open Settings"}
               <span aria-hidden="true"> ↗</span>
             </Link>

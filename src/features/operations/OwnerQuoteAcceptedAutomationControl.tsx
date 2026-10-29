@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
+import { buildOwnerActivationNextAction } from "./owner-activation-next-action";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import { buildStaffModuleHref } from "./staff-modules";
 import { StaffSubmitButton } from "@/components/product/StaffSubmitButton";
@@ -30,6 +31,7 @@ export async function OwnerQuoteAcceptedAutomationControl({
   const missingSetup = activation.steps
     .filter(step => step.id !== "execution-proof" &&
       step.id !== "accepted-quote" && step.status !== "READY");
+  const nextAction = buildOwnerActivationNextAction(activation, canOpenFirstRunPricing);
   const flag = await readOwnerQuoteAutomationSetting(workspaceSlug);
   if (!flag.ok) {
     return (
@@ -92,6 +94,15 @@ export async function OwnerQuoteAcceptedAutomationControl({
         </p>
       ) : null}
       {!enabled && missingSetup.length > 0 ? (
+        <p role="status" aria-label="First actionable owner activation step"
+          style={{ borderLeft: "4px solid #c58e49", paddingLeft: 12, marginTop: 14 }}>
+          <strong>{nextAction.title}</strong> — {nextAction.detail}
+          {" "}<Link href={buildStaffModuleHref(workspaceSlug, nextAction.module) + nextAction.anchor}>
+            {nextAction.linkLabel} →
+          </Link>
+        </p>
+      ) : null}
+      {!enabled && missingSetup.length > 0 ? (
         <div role="status" aria-label="Before enabling automatic follow-up"
           style={{ marginTop: 14, border: "1px solid #e6d5ba",
             borderRadius: 12, background: "#fffaf2", padding: 14 }}>
@@ -102,9 +113,9 @@ export async function OwnerQuoteAcceptedAutomationControl({
                 <strong>{step.title}</strong>
                 {" — "}{step.detail}{" "}
                 <Link href={buildStaffModuleHref(workspaceSlug, step.module) +
-                  (step.module === "settings" && canOpenFirstRunPricing
-                    ? "#owner-first-run-pricing" : "")}>
-                  {step.module === "settings" && canOpenFirstRunPricing
+                  (step.id === "pricing" && step.status === "ACTION_REQUIRED" &&
+                    canOpenFirstRunPricing ? "#owner-first-run-pricing" : "")}>
+                  {step.id === "pricing" && step.status === "ACTION_REQUIRED" && canOpenFirstRunPricing
                     ? "Enter actual cleaning rates" :
                     step.module === "settings" ? "Open Settings" : "Open Automation Studio"} →
                 </Link>
