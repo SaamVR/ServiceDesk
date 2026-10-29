@@ -11,6 +11,7 @@ import {
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { loadOnboardingProduct } from "./onboarding-product-runtime";
 import { summarizeOwnerCommercialSetup } from "./onboarding-commercial-readiness";
+import { OwnerCommercialActionPanel } from "./OwnerCommercialActionPanel";
 import { OnboardingOperationalEvidencePanel } from "./OnboardingOperationalEvidencePanel";
 import { availableFirstRunUsdBranches } from "@/features/operations/owner-pricing-readiness";
 import { summarizeAutomationActivation } from "@/features/operations/owner-automation-activation";
@@ -224,9 +225,11 @@ export async function OnboardingProductRoute({
               <div>
                 <h3>Branch price books</h3>
                 <p>{commercial.detail}</p>
-                {!pricingVerified ? (
-                  <Link href={realPricingHref}>Review branch pricing in Settings →</Link>
-                ) : null}
+                <OwnerCommercialActionPanel
+                  workspaceSlug={workspace.slug}
+                  evidence={commercial}
+                  canEnterFirstRunRates={canEnterFirstRunRates}
+                />
               </div>
               <div className="app-row-meta">
                 {pricingVerified
