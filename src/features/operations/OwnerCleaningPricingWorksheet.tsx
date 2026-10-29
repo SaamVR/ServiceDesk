@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { QuoteServiceCode } from "@/domain/quote";
+import {evaluateOwnerPricingScenarioMatrix, type OwnerPricingScenarioMatrix} from "./owner-pricing-scenario-matrix";
 import {
   evaluateOwnerPricingWorksheet,
   type OwnerPricingWorksheetResult,
@@ -21,6 +22,7 @@ export function OwnerCleaningPricingWorksheet() {
   const [bedrooms, setBedrooms] = useState(0);
   const [bathrooms, setBathrooms] = useState(0);
   const [oven, setOven] = useState(false);
+  const [matrix, setMatrix] = useState<OwnerPricingScenarioMatrix>({state:"INCOMPLETE",detail:"Complete your actual cleaning rates to compare scenarios."});
   const [result, setResult] = useState<OwnerPricingWorksheetResult>({
     state: "INCOMPLETE",
     detail: "Enter your actual cleaning rates and policies above to calculate a local worksheet.",
@@ -30,9 +32,11 @@ export function OwnerCleaningPricingWorksheet() {
     const form = root.current?.closest("form");
     if (!form) return;
     const recalculate = () => {
-      setResult(evaluateOwnerPricingWorksheet(new FormData(form), {
+      const values = new FormData(form);
+      setResult(evaluateOwnerPricingWorksheet(values, {
         service, bedrooms, bathrooms, oven,
       }));
+      setMatrix(evaluateOwnerPricingScenarioMatrix(values, oven));
     };
     form.addEventListener("input", recalculate);
     form.addEventListener("change", recalculate);
@@ -133,6 +137,39 @@ export function OwnerCleaningPricingWorksheet() {
           </div>
         )}
       </div>
+      <details style={{borderTop:"1px solid #cde7de",paddingTop:12}}>
+        <summary style={{minHeight:44,cursor:"pointer",fontWeight:750,color:"#155548"}}>
+          Compare nine cleaning scenarios using these unsaved owner rates
+        </summary>
+        <p style={{fontSize:".8rem",lineHeight:1.5}}>
+          Three service types × three fixed room layouts. This is local quote math
+          with your entered rates, not saved prices, a customer quote, or a branch authorization.
+          Select a row to apply its room counts to the worksheet above.
+        </p>
+        {matrix.state === "INCOMPLETE" ? <p role="status">{matrix.detail}</p> :
+          <div style={{overflowX:"auto",maxWidth:"100%"}}>
+            <table aria-label="Unsaved cleaning price scenario comparison"
+              style={{borderCollapse:"collapse",width:"100%",minWidth:575,fontSize:".79rem",textAlign:"left"}}>
+              <thead><tr>{["Service","Room layout","Calculated total","Deposit","Duration","Owner threshold","Worksheet"].map(label=>
+                <th key={label} scope="col" style={{padding:8,borderBottom:"1px solid #c6dcd1"}}>{label}</th>)}</tr></thead>
+              <tbody>{matrix.rows.map(row=><tr key={row.key}>
+                <th scope="row" style={{padding:8}}>{row.label}</th>
+                <td style={{padding:8}}>{row.bedrooms} bed · {row.bathrooms} bath{row.oven ? " · oven" : ""}</td>
+                <td style={{padding:8}}>{money(row.subtotalMinor)}</td>
+                <td style={{padding:8}}>{money(row.depositMinor)}</td>
+                <td style={{padding:8}}>{row.durationMinutes} min</td>
+                <td style={{padding:8}}>{row.approval === "REVIEW_THRESHOLD" ? "Human review" : "Within entered threshold"}</td>
+                <td style={{padding:8}}>
+                  <button type="button" style={{minHeight:44,minWidth:44,padding:"8px 12px"}}
+                    aria-label={"Use "+row.label+" with "+row.bedrooms+" bedrooms and "+row.bathrooms+" bathrooms in worksheet"}
+                    onClick={()=>{setService(row.service);setBedrooms(row.bedrooms);setBathrooms(row.bathrooms);setOven(row.oven);}}>
+                    Use
+                  </button>
+                </td>
+              </tr>)}</tbody>
+            </table>
+          </div>}
+      </details>
       <p style={{ margin: 0, fontSize: ".73rem", color: "#526e66", lineHeight: 1.45 }}>
         Worksheet only: does not verify an existing saved request, tax obligations,
         branch authorization, pricing activation or customer acceptance.
