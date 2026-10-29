@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buildStaffModuleHref } from "./staff-modules";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
+import { summarizeOwnerAttentionTriage } from "./owner-attention-triage";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import styles from "./OwnerAutomationActivationChecklist.module.css";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
@@ -21,6 +22,7 @@ export function OwnerAutomationActivationChecklist({
   workspaceSlug: string;
 }) {
   const summary = summarizeAutomationActivation(data);
+  const attention = summarizeOwnerAttentionTriage(data);
   // The real first-run pricing form is on Settings, below the general
   // configuration panels. Deep-link only when it is actually offered to
   // this authorized owner/branch; never lead to a missing or foreign form.
@@ -81,6 +83,46 @@ export function OwnerAutomationActivationChecklist({
           </article>
         ))}
       </div>
+      <section className={styles.attentionTriage} aria-labelledby="owner-attention-triage-title">
+        <div className={styles.attentionHeader}>
+          <div>
+            <p className={styles.eyebrow}>Owner operations · branch-scoped saved evidence</p>
+            <h3 id="owner-attention-triage-title">Internal attention review priorities</h3>
+          </div>
+          <Link href={buildStaffModuleHref(workspaceSlug, "automations")}>
+            Inspect workflow activity
+          </Link>
+        </div>
+        {attention.state === "UNVERIFIED" ? (
+          <p role="status" className={styles.attentionNotice}>
+            Authorized workflow, branch or attention data is unavailable.
+            This is not evidence of an empty or healthy attention queue.
+          </p>
+        ) : (
+          <>
+            <p className={styles.attentionNotice} role="status">
+              {attention.open} unresolved saved workflow attention item(s);
+              {" "}{attention.overdue} past due, {attention.critical} critical,
+              {" "}{attention.missingActionEvidence} lacking current saved internal-action success.
+              {attention.ambiguous > 0 ? ` ${attention.ambiguous} ambiguous item(s) require inspection.` : ""}
+            </p>
+            {attention.review.length ? <ol className={styles.attentionList}>
+              {attention.review.map(item => <li key={item.id}>
+                <strong>{item.severity} · {item.state.replaceAll("_", " ")}</strong>
+                <p>{item.guidance}</p>
+              </li>)}
+            </ol> : (
+              <p className={styles.attentionNotice}>No unresolved linked workflow attention
+                appears in this loaded branch-scoped sample; other queues may still require review.</p>
+            )}
+          </>
+        )}
+        <p className={styles.attentionDisclosure}>
+          Read-only snapshot, not a retry control or proof of delivery.
+          Attention records are linked to authorized LIVE executions; no customer
+          sends, provider actions, payments or rule publications occur here.
+        </p>
+      </section>
       {data.actor?.role === "OWNER" ? <OwnerWorkflowRuleAssistant
         workspaceSlug={workspaceSlug} workspaceId={data.workspace.id}
         branches={ownerRuleBranches}
