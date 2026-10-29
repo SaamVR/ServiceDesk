@@ -7,6 +7,9 @@ export function reviewFictionalPlaybookSignal(id: unknown, choice: unknown) {
   const playbook=automationPlaybooks.find(item=>item.id===id);
   if (!playbook || !/^[A-Z0-9_]{3,80}$/.test(playbook.actionDetail))
     return {ok:false as const,code:"PLAYBOOK_NOT_IN_CATALOG" as const};
+  // A future non-EQ template needs its own reviewed preview, not false certainty.
+  if (playbook.condition && playbook.condition.operator!=="EQ")
+    return {ok:false as const,code:"FICTIONAL_CONDITION_UNSUPPORTED" as const};
   if (choice!=="UNKNOWN" && choice!=="EXACT" && choice!=="DIFFERENT")
     return {ok:false as const,code:"FICTIONAL_CHOICE_INVALID" as const};
   const match=choice==="UNKNOWN"?"UNKNOWN":!playbook.condition||choice==="EXACT"?"MATCHED":"NOT_MATCHED";
