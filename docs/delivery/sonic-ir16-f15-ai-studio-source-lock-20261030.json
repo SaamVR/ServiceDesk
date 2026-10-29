@@ -1,0 +1,64 @@
+{
+  "schema": "servicedesk.ir16.ai.saved-journey.review.v1",
+  "base": "ea6613e2f30f2fc7909d30a04a513f4d7150b3c1",
+  "sourceOnly": true,
+  "files": [
+    {
+      "path": "src/features/operations/f15-saved-intake-review-action.ts",
+      "blobSha": "b2d85870a489b8c3c0d3cd1af9f18775a5f940f3",
+      "lane": "F01"
+    },
+    {
+      "path": "src/features/operations/AiSavedIntakeReview.tsx",
+      "blobSha": "4556aca835733ebf76967aba2c8d26c22980e83b",
+      "lane": "F01"
+    },
+    {
+      "path": "tests/ai/f15-saved-intake-wire.test.ts",
+      "blobSha": "fe1e326df03b1a8467012232b0a208408d762467",
+      "lane": "F01"
+    },
+    {
+      "path": "src/features/operations/f15-saved-capacity-review-action.ts",
+      "blobSha": "1d2a81800ffee7e70faca52b65ae5cdde18a22f9",
+      "lane": "F02"
+    },
+    {
+      "path": "src/features/operations/AiSavedCapacityReview.tsx",
+      "blobSha": "a50ccbb491b47ba7c975ce9de1ed3cf7b9e59edb",
+      "lane": "F02"
+    },
+    {
+      "path": "tests/ai/f15-saved-capacity-wire.test.ts",
+      "blobSha": "e1b68ff6eed52dd1f519dd0d04102c48427a8e14",
+      "lane": "F02"
+    },
+    {
+      "path": "src/features/operations/f15-saved-business-review-action.ts",
+      "blobSha": "eef99bcb7ed93042513ffd9897664a7a301a84e9",
+      "lane": "F03"
+    },
+    {
+      "path": "src/features/operations/AiSavedBusinessReview.tsx",
+      "blobSha": "f99cdaf69c2e2818b1aece08e3f1581f42e888ac",
+      "lane": "F03"
+    },
+    {
+      "path": "tests/ai/f15-saved-bi-wire.test.ts",
+      "blobSha": "bc0420c5d03ec549dfe368464199ab296d414026",
+      "lane": "F03"
+    }
+  ],
+  "integratedWorkbenchSha": "445f21423e3ca317d12842f71b99d588c3265dfa",
+  "forbidden": [
+    "DEPLOY",
+    "CANONICAL_MERGE",
+    "AUTH_USER_CREATION",
+    "DB_MUTATION",
+    "MODEL_OR_PROVIDER_CALL",
+    "CUSTOMER_SEND",
+    "PAYMENT",
+    "CREW_ASSIGNMENT"
+  ],
+  "productionGate": "P02_818_NOT_DONE"
+}
