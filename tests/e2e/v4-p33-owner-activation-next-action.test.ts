@@ -12,7 +12,7 @@ const entries = [
 ] as const;
 function summary(statuses:readonly ActivationStatus[]): AutomationActivationSummary {
   const steps=entries.map(([id,title,module],i)=>({
-    id,title,detail:"Review saved " + title,status:statuses[i],module,
+    id,title,detail:"Review saved " + title,status:statuses[i] ?? "UNVERIFIED",module,
   }));
   const readyCount=steps.filter(s=>s.status==="READY").length;
   return {readyCount,total:5,allEvidenceReady:readyCount===5,steps};

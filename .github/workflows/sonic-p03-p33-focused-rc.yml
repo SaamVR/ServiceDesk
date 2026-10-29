@@ -1,0 +1,46 @@
+name: P33 owner activation guided navigation focused source RC
+on:
+  push:
+    branches:
+      - sonic-p03/p33-owner-activation-action-routing-20261029
+    paths:
+      - 'src/features/operations/OwnerAutomationActivationChecklist.tsx'
+      - 'src/features/operations/OwnerAutomationActivationChecklist.module.css'
+      - 'src/features/operations/OwnerQuoteAcceptedAutomationControl.tsx'
+      - 'src/features/operations/owner-activation-next-action.ts'
+      - 'tests/e2e/v4-p33-owner-activation-next-action.test.ts'
+      - '.github/workflows/sonic-p03-p33-focused-rc.yml'
+  pull_request:
+    branches:
+      - sonic-p03/p32-integrated-owner-journey-20261029
+permissions:
+  contents: read
+concurrency:
+  group: sonic-p03-p33-focused-source
+  cancel-in-progress: true
+jobs:
+  focused-owner-journey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact source SHA
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: P33 focused behavior and P32 source-provenance
+        run: pnpm exec vitest run tests/e2e/v4-p33-owner-activation-next-action.test.ts tests/e2e/v4-guided-owner-automation-activation.test.tsx tests/e2e/v4-owner-automation-activation.test.ts tests/e2e/v4-p32-owner-feature-provenance.test.ts
+      - name: TypeScript source check
+        run: pnpm exec tsc --noEmit
+      - name: Focused accessible owner UI lint
+        run: pnpm exec eslint src/features/operations/owner-activation-next-action.ts src/features/operations/OwnerAutomationActivationChecklist.tsx src/features/operations/OwnerQuoteAcceptedAutomationControl.tsx tests/e2e/v4-p33-owner-activation-next-action.test.ts
