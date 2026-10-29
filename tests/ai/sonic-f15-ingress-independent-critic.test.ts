@@ -22,6 +22,17 @@ describe("F15 independent critic: no false durable or provider claims",()=>{
    expect(body).not.toContain("process.env");
   }
  });
+ it("keeps the PostgreSQL adapter narrowly delegated and unwired",()=>{
+  const adapter=read("src/server/workflows/sonic-f15-postgres-port.ts");
+  expect(adapter).toContain("F15_ATOMIC_RPC");
+  expect(adapter).toContain("sourceLastInboundAt:command.sourceLastInboundAt");
+  expect(adapter).toContain("customerMessageAuthorized:command.customerMessageAuthorized");
+  expect(adapter).toContain("F15_ATOMIC_DB_RPC_NOT_AVAILABLE");
+  expect(adapter).not.toContain("sendEmail(");
+  expect(adapter).not.toContain("setInterval(");
+  expect(adapter).not.toContain("createClient(");
+  expect(adapter).not.toContain("process.env");
+ });
  it("never equates a candidate to real persisted processing without a port",async()=>{
   const input={record:{
    workspaceId:"11111111-1111-4111-8111-111111111111",
