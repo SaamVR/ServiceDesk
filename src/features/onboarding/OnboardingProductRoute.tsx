@@ -225,11 +225,13 @@ export async function OnboardingProductRoute({
               <div>
                 <h3>Branch price books</h3>
                 <p>{commercial.detail}</p>
-                <OwnerCommercialActionPanel
-                  workspaceSlug={workspace.slug}
-                  evidence={commercial}
-                  canEnterFirstRunRates={canEnterFirstRunRates}
-                />
+                <div aria-label="Review branch pricing in Settings">
+                  <OwnerCommercialActionPanel
+                    workspaceSlug={workspace.slug}
+                    evidence={commercial}
+                    canEnterFirstRunRates={canEnterFirstRunRates}
+                  />
+                </div>
               </div>
               <div className="app-row-meta">
                 {pricingVerified
