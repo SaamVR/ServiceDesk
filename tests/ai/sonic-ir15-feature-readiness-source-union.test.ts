@@ -49,7 +49,7 @@ describe("IR15 feature integration alongside P36 production-readiness source",()
   expect((route.match(/<WorkflowExecutionInspector snapshot=\{selectWorkflowInspectorClientSnapshot\(data\)\} workspaceSlug=\{workspaceSlug\} \/>/g)??[])).toHaveLength(2);
   expect(route).not.toContain("<WorkflowExecutionInspector snapshot={data}");
   expect(route).toContain("OwnerAutomationActivationChecklist data={data}");
-  expect(route).toContain("save full pricing revision");
+  expect(route).toContain("reviseCleaningPricingAction");
  });
  it("refuses to classify frozen draft automation and pricing as live operations",()=>{
   expect(manifest.productionGate).toBe("P02_818_NOT_DONE_P03_819_BLOCKED");
