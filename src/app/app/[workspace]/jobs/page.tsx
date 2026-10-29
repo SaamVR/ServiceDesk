@@ -1,3 +1,4 @@
+import { JobsSavedQualityPanel } from "@/features/operations/JobsSavedQualityPanel";
 import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
 
 export default async function StaffJobsPage({
@@ -10,6 +11,7 @@ export default async function StaffJobsPage({
   const { workspace } = await params;
   const query = await searchParams;
   return (
+    <>
     <OperationalProductRoute
       workspaceSlug={workspace}
       module="jobs"
@@ -19,5 +21,7 @@ export default async function StaffJobsPage({
       notice={query.notice}
       error={query.error}
     />
+    <JobsSavedQualityPanel workspaceSlug={workspace} selectedJobId={query.job}/>
+    </>
   );
 }

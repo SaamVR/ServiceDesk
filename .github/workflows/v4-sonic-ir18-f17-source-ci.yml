@@ -1,0 +1,50 @@
+name: ServiceDesk IR18 F17 real Jobs and Quotes recovery
+on:
+  push:
+    branches: ["sonic-integration/ir18-f17-jobs-quotes-owner-workflows-20261030"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-ir18-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-functional:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Only F17 new business journey tests and integration critic
+        run: >-
+          pnpm exec vitest run
+          tests/ai/f17-job-quality-ui.test.ts
+          tests/ai/f17-quote-recovery-ui.test.ts
+          tests/ai/f17-ir18-multilane-critic.test.ts
+      - name: Source TypeScript
+        run: pnpm typecheck
+      - name: Lint changed product paths
+        run: >-
+          pnpm exec eslint
+          src/features/operations/f17-visit-quality-action.ts
+          src/features/operations/AiSavedVisitQualityReview.tsx
+          src/features/operations/JobsSavedQualityPanel.tsx
+          src/features/operations/f17-quote-recovery-guide.ts
+          src/features/operations/QuoteRecoveryReadinessPanel.tsx
+          src/app/app/\[workspace\]/jobs/page.tsx
+          src/app/app/\[workspace\]/quotes/page.tsx
+          tests/ai/f17-job-quality-ui.test.ts
+          tests/ai/f17-quote-recovery-ui.test.ts
+          tests/ai/f17-ir18-multilane-critic.test.ts
+      - name: Compile Next application source only; never deploy
+        run: pnpm build
