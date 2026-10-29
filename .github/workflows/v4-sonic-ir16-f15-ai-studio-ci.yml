@@ -1,0 +1,47 @@
+name: ServiceDesk IR16 saved AI Studio feature journeys
+on:
+  push:
+    branches: ["sonic-integration/ir16-f15-saved-copilot-journeys-20261030"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-ir16-f15-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  focused-functional-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: F15 newly integrated saved-record functional and safety tests
+        run: pnpm exec vitest run tests/ai/f15-saved-intake-wire.test.ts tests/ai/f15-saved-capacity-wire.test.ts tests/ai/f15-saved-bi-wire.test.ts tests/ai/f15-ai-studio-wiring.test.ts
+      - name: TypeScript safety
+        run: pnpm typecheck
+      - name: Changed-file ESLint
+        run: >-
+          pnpm exec eslint
+          src/features/operations/f15-saved-intake-review-action.ts
+          src/features/operations/AiSavedIntakeReview.tsx
+          src/features/operations/f15-saved-capacity-review-action.ts
+          src/features/operations/AiSavedCapacityReview.tsx
+          src/features/operations/f15-saved-business-review-action.ts
+          src/features/operations/AiSavedBusinessReview.tsx
+          src/features/operations/AiStudioWorkbench.tsx
+          tests/ai/f15-saved-intake-wire.test.ts
+          tests/ai/f15-saved-capacity-wire.test.ts
+          tests/ai/f15-saved-bi-wire.test.ts
+          tests/ai/f15-ai-studio-wiring.test.ts
+      - name: Build source only; never deploy
+        run: pnpm build
