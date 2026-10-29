@@ -3,6 +3,7 @@ import { buildStaffModuleHref } from "./staff-modules";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
 import { summarizeOwnerAttentionTriage } from "./owner-attention-triage";
+import { planOwnerAttentionReviewPlaybook } from "./owner-attention-review-playbook";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import styles from "./OwnerAutomationActivationChecklist.module.css";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
@@ -23,6 +24,7 @@ export function OwnerAutomationActivationChecklist({
 }) {
   const summary = summarizeAutomationActivation(data);
   const attention = summarizeOwnerAttentionTriage(data);
+  const playbook = planOwnerAttentionReviewPlaybook(attention);
   // The real first-run pricing form is on Settings, below the general
   // configuration panels. Deep-link only when it is actually offered to
   // this authorized owner/branch; never lead to a missing or foreign form.
@@ -117,6 +119,22 @@ export function OwnerAutomationActivationChecklist({
             )}
           </>
         )}
+        <section aria-labelledby="owner-attention-playbook-title">
+          <h4 id="owner-attention-playbook-title">Manual attention review playbook</h4>
+          {playbook.steps.length > 0 ? <ol className={styles.attentionList}>
+            {playbook.steps.map(step => <li key={step.id}>
+              <strong>{step.title}{step.count === null ? "" : ` · ${step.count} record(s)`}</strong>
+              <p>{step.reason}</p>
+            </li>)}
+          </ol> : <p className={styles.attentionNotice}>
+            No unresolved linked workflow attention appears in this sample. Review other
+            operational queues independently; this is not an all-clear.
+          </p>}
+          <p className={styles.attentionDisclosure}>{playbook.disclosure}</p>
+          <Link href={buildStaffModuleHref(workspaceSlug, "automations")}>
+            Review saved workflow activity
+          </Link>
+        </section>
         <p className={styles.attentionDisclosure}>
           Read-only snapshot, not a retry control or proof of delivery.
           Attention records are linked to authorized LIVE executions; no customer
