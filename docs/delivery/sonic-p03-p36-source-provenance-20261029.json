@@ -1,0 +1,63 @@
+{
+  "schema": "servicedesk.p36.exact-reviewed-source.v1",
+  "release": "P03_SOURCE_ONLY_PENDING_P02_NOT_DEPLOYED",
+  "integrationParent": "27261bc46666c2bed1c78599679485d7366fa83b",
+  "canonical": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
+  "sourceHeads": {
+    "895": "5b9e2f4e8fab9901d901e825cb17b84cf4b67330",
+    "898": "023dc0a15fbf3becd9849b5ff1891ca51e260dda"
+  },
+  "files": [
+    {
+      "path": "src/features/operations/OwnerCleaningPricingSetupForm.tsx",
+      "sourcePr": 895,
+      "gitBlobSha": "3da6365e5385ddbbf1fdf259e02f6e8fd25c4630"
+    },
+    {
+      "path": "src/features/operations/owner-pricing-revision-access.ts",
+      "sourcePr": 895,
+      "gitBlobSha": "fa38266470a49676161930f55fd0666eded3fcd6"
+    },
+    {
+      "path": "tests/e2e/v4-p35-owner-pricing-revision-scope.test.ts",
+      "sourcePr": 895,
+      "gitBlobSha": "ab72ef4b2d8ea30b160f874c0c455036a7543d38"
+    },
+    {
+      "path": "src/features/operations/OwnerAutomationActivationChecklist.tsx",
+      "sourcePr": 898,
+      "gitBlobSha": "ceebc57f7f0c253296154373b796588275ba26a1"
+    },
+    {
+      "path": "src/features/operations/OwnerAutomationActivationChecklist.module.css",
+      "sourcePr": 898,
+      "gitBlobSha": "57cbd638cf3eea8b4cdc3eff9840cdb4ff1800f8"
+    },
+    {
+      "path": "src/features/operations/owner-automation-draft-recommendations.ts",
+      "sourcePr": 898,
+      "gitBlobSha": "6469ecfd1de098663e639795c73c2c32007bf552"
+    },
+    {
+      "path": "tests/e2e/v4-p35-owner-automation-draft-recommendations.test.ts",
+      "sourcePr": 898,
+      "gitBlobSha": "2fa5f7c6095543175a134515e63a9a2a7040cb6f"
+    },
+    {
+      "path": "src/features/operations/OperationalProductRoute.tsx",
+      "sourcePr": 895,
+      "gitBlobSha": "ff928ec32e264d53e651c4fe38775f7f7737f5fe"
+    }
+  ],
+  "forbiddenEffects": [
+    "PRODUCTION_DB_MUTATION",
+    "LIVE_REGISTRATION_GUARD_INSTALL",
+    "AUTH_USER_CREATION",
+    "FICTIONAL_PRICING",
+    "PROVIDER_SEND",
+    "PAYMENT",
+    "DEPLOYMENT",
+    "CANONICAL_MERGE",
+    "DESTRUCTIVE_CLEANUP"
+  ]
+}

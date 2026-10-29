@@ -11,6 +11,24 @@ const manifest=JSON.parse(readFileSync(manifestPath,"utf8")) as {
   files:Array<{path:string; sourcePr:number; status:"added"|"modified";gitBlobSha:string}>;
 };
 
+// Preserve the historical P27/P30/P32 lock. P36 may supersede only this
+// exact reviewed pricing form blob with the approved P35 source object.
+const p36PricingSuccessor=JSON.parse(readFileSync(
+  "docs/delivery/sonic-p03-p36-source-provenance-20261029.json","utf8"
+)) as { integrationParent:string; sourceHeads:Record<string,string>;
+  files:Array<{path:string;sourcePr:number;gitBlobSha:string}> };
+const priorPricingBlob="06132ba797602c2c6fd57f851781403961cdbb3f";
+function checkedP36PricingSuccessor(path:string,oldSha:string):string|null {
+  if(path!=="src/features/operations/OwnerCleaningPricingSetupForm.tsx")return null;
+  expect(oldSha).toBe(priorPricingBlob);
+  expect(p36PricingSuccessor.integrationParent).toBe("27261bc46666c2bed1c78599679485d7366fa83b");
+  expect(p36PricingSuccessor.sourceHeads["895"]).toBe("5b9e2f4e8fab9901d901e825cb17b84cf4b67330");
+  const found=p36PricingSuccessor.files.find(item=>item.path===path);
+  expect(found?.sourcePr).toBe(895);
+  expect(found?.gitBlobSha).toMatch(/^[a-f0-9]{40}$/);
+  return found!.gitBlobSha;
+}
+
 describe("P27 independent exact-source integration and release boundary",()=>{
   it("imports exactly the eight disjoint source files from PR876 and PR877",()=>{
     expect(manifest.schema).toBe("servicedesk.p27.exact-source-lock.v1");
@@ -35,7 +53,7 @@ describe("P27 independent exact-source integration and release boundary",()=>{
       const actual=createHash("sha1")
         .update(Buffer.from("blob "+bytes.length+"\0"))
         .update(bytes).digest("hex");
-      expect(actual,item.path+" differs from pinned source").toBe(item.gitBlobSha);
+      expect(actual,item.path+" differs from pinned reviewed source").toBe(checkedP36PricingSuccessor(item.path,item.gitBlobSha) ?? item.gitBlobSha);
     }
   });
   it("does not confuse owner guidance with an executed SQL, financial or provider action",()=>{
