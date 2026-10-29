@@ -36,3 +36,14 @@ the helper and actual Studio render usage. There is no scheduling, automated
 digest dispatch, provider call, model run, replay, approval, billing mutation,
 migration, real tenant/UAT proof or deployment. This capability is a
 read-only operator handoff, not an unattended automation.
+
+### F14 independent-Critic refinement — LIVE PREVIEWED anomaly
+
+Unexpected LIVE execution rows with PREVIEWED state are now treated as
+human-reconciliation evidence, rather than silently omitted from the
+intervention queue. The operator label distinguishes this impossible-looking
+saved state from an ordinary conflicting retry slot. Review handoff event
+labels use own-property allowlisting to prevent inherited Object prototype
+names (constructor/toString/__proto__) appearing as unsafe or misleading
+display content. Offline tests and the shared inspector Critic cover both.
+No new writes, scheduling, provider sends, replay or deployment.

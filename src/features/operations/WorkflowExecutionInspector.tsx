@@ -108,12 +108,12 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
               {interventionQueue.slice(0, 6).map(({ run, kind }) =>
                 <li key={run.id}>
                   <span className={kind !== "approval" ? styles.triageFailure : styles.triageApproval}>
-                    {kind === "ambiguous" ? "Conflicting retry evidence" :
+                    {kind === "ambiguous" ? (run.state === "PREVIEWED" ? "Unexpected live preview state" : "Conflicting retry evidence") :
                       kind === "failure" ? "Recorded failure" : "Human approval required"}
                   </span>
                   <strong>{humanize(run.eventType)}</strong>
                   <small>{kind === "ambiguous"
-                    ? `${run.ambiguousActionSlots} action slot(s) have conflicting latest attempts; current outcome is unverified`
+                    ? (run.state === "PREVIEWED" ? "LIVE execution stored as PREVIEWED: verify run state before any command" : `${run.ambiguousActionSlots} action slot(s) have conflicting latest attempts; current outcome is unverified`)
                     : kind === "failure"
                     ? `${run.failedCount} current failed action(s) · ${humanize(run.state)}`
                     : `${run.approvalCount} action(s) marked APPROVAL_REQUIRED`}</small>

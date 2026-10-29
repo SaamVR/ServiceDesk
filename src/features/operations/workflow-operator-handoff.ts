@@ -88,7 +88,7 @@ export function buildWorkflowOperatorHandoff(
     "Priority examples (up to 6, without customer or tenant identifiers):",
     ...visible.map((entry, index) => (index + 1) + ". " +
       reviewLabels[entry.kind] + " / " +
-      (eventLabels[entry.run.eventType] ?? "Other recorded event")),
+      (Object.hasOwn(eventLabels, entry.run.eventType) ? eventLabels[entry.run.eventType] : "Other recorded event")),
     ...(queue.length === 0
       ? ["No intervention is evidenced in this bounded snapshot; NOT an all-clear."]
       : queue.length > visible.length

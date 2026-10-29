@@ -55,6 +55,21 @@ describe("F14 owner/staff workflow exception handoff",()=>{
     expect(result.text).not.toContain(value);
   denied(result);
  });
+ it("holds unexpected LIVE preview evidence for operator review, not as normal processing",()=>{
+  const x=buildWorkflowOperatorHandoff([make("preview",{state:"PREVIEWED"})],true,at);
+  expect(x).toMatchObject({available:true,reviewRuns:1,ambiguousRuns:1,processingRuns:0});
+  expect(x.text).toContain("Conflicting action evidence");
+  denied(x);
+ });
+ it("never interpolates prototype-inherited labels into an operator handoff",()=>{
+  for(const eventType of ["constructor","toString","__proto__"]){
+    const x=buildWorkflowOperatorHandoff([make("risk",{failedCount:1,eventType})],true,at);
+    expect(x.available).toBe(true);
+    expect(x.text).toContain("Other recorded event");
+    expect(x.text).not.toContain("function ");
+    denied(x);
+  }
+ });
  it("caps review examples at six and counts omitted runs accurately",()=>{
   const runs=Array.from({length:16},(_,i)=>make("run-"+i,{approvalCount:1}));
   const x=buildWorkflowOperatorHandoff(runs,true,at);
