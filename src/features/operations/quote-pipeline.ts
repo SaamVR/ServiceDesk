@@ -18,7 +18,9 @@ function quoteValidityUnverified(quote: QuotePipelineRecord, snapshotAt: string)
   // The display queue must agree with the authoritative staff send and
   // customer accept clock checks. A timezone-less or impossible date is
   // never an approval to send, even if Date.parse would normalize it.
-  return now !== null && (expires === null || expires <= now);
+  // A missing/invalid snapshot clock is itself a reason for manual review.
+  // Never let a direct caller treat clock uncertainty as a valid quote.
+  return now === null || expires === null || expires <= now;
 }
 
 export function needsSentQuoteExpiryReview(quote: QuotePipelineRecord, snapshotAt: string): boolean {
