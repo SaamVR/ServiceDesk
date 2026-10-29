@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AiRequestBrief } from "./AiRequestBrief";
 import { AiQuoteReview } from "./AiQuoteReview";
 import { AiSavedIntakeReview } from "./AiSavedIntakeReview";
+import { AiGroundedQuoteAlternatives } from "./AiGroundedQuoteAlternatives";
 import { AiSavedCapacityReview } from "./AiSavedCapacityReview";
 import { AiSavedBusinessReview } from "./AiSavedBusinessReview";
 import { buildStaffModuleHref } from "./staff-modules";
@@ -175,6 +176,7 @@ function ScopedStudioWorkbench({
             <AiRequestBrief
               workspaceSlug={workspaceSlug} requestId={selected.id} configured={configured} />
             <AiSavedIntakeReview workspaceSlug={workspaceSlug} requestId={selected.id} />
+            <AiGroundedQuoteAlternatives workspaceSlug={workspaceSlug} requestId={selected.id} />
           </div>
         ) : null}
         {selected && mode === "quote" ? (
