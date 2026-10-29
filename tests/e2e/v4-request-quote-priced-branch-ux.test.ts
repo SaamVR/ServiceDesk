@@ -45,13 +45,13 @@ describe("request queue saved branch-price eligibility",()=>{
   });
   it("requires the saved request branch even when the owner view selects one",()=>{
     expect(quotePriceReadiness({
-      request:{},actorRole:"OWNER",branchScope:scope,ownerPricingBookProof:verified,
+      request:{},actorRole:"OWNER",ownerPricingBookProof:verified,
       branchScope:{mode:"BRANCH",selectedBranchId:a,branches},
     }).state).toBe("BRANCH_UNRESOLVED");
   });
   it("does not let an unrelated branch-scope selection override a real request branch",()=>{
     expect(quotePriceReadiness({
-      request:{branchId:b},actorRole:"OWNER",branchScope:scope,ownerPricingBookProof:verified,
+      request:{branchId:b},actorRole:"OWNER",ownerPricingBookProof:verified,
       branchScope:{mode:"BRANCH",selectedBranchId:a,branches},
     }).state).toBe("BRANCH_UNRESOLVED");
   });
