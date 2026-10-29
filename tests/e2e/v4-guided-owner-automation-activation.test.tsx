@@ -10,7 +10,7 @@ const scope = {mode:"BRANCH" as const,selectedBranchId:"branch-1",branches:[
 const base = {
   branchScope:scope,
   serviceCatalog: [],
-  ownerPricingBookProof:{state:"VERIFIED" as const,activeBranchIds:["branch-1"]},
+  ownerPricingBookProof:{state:"VERIFIED" as const,activeBranchIds:["branch-1"],existingBookBranchIds:["branch-1"]},
   workflowAvailable:true,
   workflowRules:[],
   workflowRuleVersions:[],
@@ -33,7 +33,7 @@ describe("V4 guided owner quote automation activation",()=>{
   it("does not require an execution before the owner can first activate",()=>{
     const complete:Snapshot={
       ...base,
-      serviceCatalog:[{id:"svc-1",code:"STD",name:"Standard",active:true,requiresReview:false,updatedAt:"2026-10-13"}],
+      serviceCatalog:[{id:"svc-1",code:"STANDARD",name:"Standard",active:true,requiresReview:false,updatedAt:"2026-10-13"}],
       workflowRules:[{id:"rule-1",branchId:"branch-1",code:"FOLLOWUP",name:"Followup",
         status:"ACTIVE",publishedVersionNumber:1,version:1,updatedAt:"2026-10-13"}],
       workflowRuleVersions:[{id:"v1",ruleId:"rule-1",branchId:"branch-1",versionNumber:1,
