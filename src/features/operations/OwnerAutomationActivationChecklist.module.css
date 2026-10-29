@@ -38,3 +38,16 @@
   .progress { text-align: left; }
   .grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+.attentionTriage { margin-top: 1.25rem; border: 1px solid #cbded9; border-radius: 15px; background: #fff; padding: clamp(.85rem, 2vw, 1.2rem); }
+.attentionHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .7rem; }
+.attentionHeader h3 { margin: 0; font-size: 1rem; color: #173e39; }
+.attentionHeader a { color: #145b50; font-size: .85rem; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
+.attentionHeader a:focus-visible { outline: 3px solid #267e6b; outline-offset: 3px; }
+.attentionNotice { margin: .8rem 0; color: #314e47; line-height: 1.55; font-size: .88rem; }
+.attentionList { padding-left: 1.4rem; margin: .65rem 0; display: grid; gap: .6rem; }
+.attentionList li { padding: .55rem .65rem; border-left: 3px solid #d79851; background: #fff9f0; border-radius: 3px; }
+.attentionList strong { color: #734115; font-size: .82rem; }
+.attentionList p { margin: .25rem 0 0; color: #3b4f49; font-size: .82rem; line-height: 1.5; }
+.attentionDisclosure { margin: .6rem 0 0; color: #526b65; font-size: .78rem; line-height: 1.5; }
