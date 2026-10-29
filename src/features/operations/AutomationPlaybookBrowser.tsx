@@ -9,6 +9,7 @@ import {
   filterAutomationPlaybooks,
   type PlaybookCategoryFilter, type PlaybookSeverityFilter,
 } from "./automation-playbook-finder";
+import { reviewFictionalPlaybookSignal, type FictionalPlaybookChoice } from "./automation-playbook-event-whatif";
 import styles from "./AutomationPlaybookBrowser.module.css";
 
 const severityOptions: ReadonlyArray<{ value: PlaybookSeverityFilter; label: string }> = [
@@ -25,6 +26,7 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
   const [category, setCategory] = useState<PlaybookCategoryFilter>("All");
   const [severity, setSeverity] = useState<PlaybookSeverityFilter>("Any");
   const [previewId, setPreviewId] = useState("");
+  const [whatIf, setWhatIf] = useState<FictionalPlaybookChoice>("UNKNOWN");
   const previewTrigger = useRef<HTMLButtonElement | null>(null);
   const prefix = useId();
   const choices = filterAutomationPlaybooks(automationPlaybooks, { search, category, severity });
@@ -32,6 +34,7 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
   // Never show an exact-effect panel for a starter no longer visible under
   // the current filters. Filter changes also reset previewId below.
   const preview = choices.find(item => item.id === previewId);
+  const simulated = preview ? reviewFictionalPlaybookSignal(preview.id, whatIf) : null;
   const reset = () => {
     setSearch(""); setCategory("All"); setSeverity("Any"); setPreviewId("");
   };
@@ -122,6 +125,7 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
               onClick={event => {
                 previewTrigger.current = event.currentTarget;
                 setPreviewId(current => current === item.id ? "" : item.id);
+                setWhatIf("UNKNOWN");
               }}>
               {previewId === item.id ? "Hide exact effect" : "Inspect exact effect"}
             </button>
@@ -145,6 +149,24 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
         <div><dt>Internal action</dt><dd>CREATE_ATTENTION · {preview.actionDetail}</dd></div>
         <div><dt>Review severity</dt><dd>{preview.severity}</dd></div>
       </dl>
+      <div className={styles.fictionalPanel} aria-label="Fictional event preview">
+        <label htmlFor={prefix+"-fictional-event"}>Explore a fictional future event (no automation runs)</label>
+        <select id={prefix+"-fictional-event"} value={whatIf}
+          onChange={event=>setWhatIf(event.target.value as FictionalPlaybookChoice)}>
+          <option value="UNKNOWN">No saved event evidence available</option>
+          <option value="EXACT">Imagine an event matching the rule condition</option>
+          <option value="DIFFERENT">Imagine an event with a different field value</option>
+        </select>
+        <p role="status" aria-live="polite" aria-atomic="true">
+          {simulated?.ok && simulated.value.match==="MATCHED"
+            ? "Hypothetical match: this fixed starter would request an internal attention task after separate owner publication and a real saved future event. No task was created."
+            : simulated?.ok && simulated.value.match==="NOT_MATCHED"
+              ? "Hypothetical mismatch: no internal action would be planned for the different value."
+              : "No event evidence. Unknown cannot be treated as a match or a confirmed negative."}
+        </p>
+        {simulated?.ok ? <small>{simulated.value.conditionSummary}.
+          Internal CREATE_ATTENTION only; no model, provider, payment or persistence.</small> : null}
+      </div>
       <p>This describes a possible rule only. Selecting this starter pre-fills
         the existing owner draft form; it does not generate a persisted event,
         run an automation, publish a rule or send a customer message.</p>
