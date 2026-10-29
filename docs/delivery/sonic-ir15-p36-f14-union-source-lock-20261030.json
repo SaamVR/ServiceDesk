@@ -12,7 +12,7 @@
     861
   ],
   "status": "SOURCE_ONLY_DRAFT_UNMERGED",
-  "exactImportedCount": 78,
+  "exactImportedCount": 77,
   "sourceObjects": [
     {
       "path": "docs/delivery/f06-source-interface-request-20261025.md",
@@ -398,11 +398,6 @@
       "path": "tests/ai/sonic-ir14-integrated-security-critic.test.ts",
       "blobSha": "af9874cccf15e9ed91540fe0fd52cfd3cd453cb6",
       "source": "IR14_PR865_UNCHANGED"
-    },
-    {
-      "path": "tests/ai/sonic-ir14-integrated-source-lock.test.ts",
-      "blobSha": "3ed819ac8f4cb3a7822b5f829246acae60256112",
-      "source": "IR14_PR865_UNCHANGED"
     }
   ],
   "reconciledRoute": {
@@ -427,5 +422,19 @@
     "CREDENTIAL_EXPOSURE",
     "DESTRUCTIVE_DEVICE_CLEANUP"
   ],
-  "productionGate": "P02_818_NOT_DONE_P03_819_BLOCKED"
+  "productionGate": "P02_818_NOT_DONE_P03_819_BLOCKED",
+  "adaptedTests": [
+    {
+      "path": "tests/ai/sonic-ir14-integrated-source-lock.test.ts",
+      "originalSha": "3ed819ac8f4cb3a7822b5f829246acae60256112",
+      "integratedSha": "d583444399fe4b3a293dcd420cc2404724c3f817",
+      "source": "IR14_HISTORICAL_LOCK_REVIEWED_ROUTE_SUCCESSOR"
+    },
+    {
+      "path": "tests/e2e/v4-p36-exact-source-critic.test.ts",
+      "originalSha": "1e09dde9d8b918ca90f054d3a883453eee4667ae",
+      "integratedSha": "9e4124c9834941393687c46182fa01fc78456554",
+      "source": "P36_HISTORICAL_LOCK_REVIEWED_ROUTE_SUCCESSOR"
+    }
+  ]
 }
