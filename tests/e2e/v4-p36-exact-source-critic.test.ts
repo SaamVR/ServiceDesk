@@ -14,18 +14,18 @@ const hash = (content:Buffer) => createHash("sha1")
   .update(content).digest("hex");
 
 describe("P36 independent exact-source and production-boundary critic",()=>{
-  it("pins seven imported source objects to their exact P35 PR Git hashes",()=>{
+  it("pins eight imported source objects to their exact P35 PR Git hashes",()=>{
     expect(lock.schema).toBe("servicedesk.p36.exact-reviewed-source.v1");
     expect(lock.release).toContain("SOURCE_ONLY");
     expect(lock.integrationParent).toBe("27261bc46666c2bed1c78599679485d7366fa83b");
     expect(lock.canonical).toBe("cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411");
     expect(lock.sourceHeads).toMatchObject({
-      "895":"d00e89c649e39f2bb9a18945af9115bd85732974",
+      "895":"5b9e2f4e8fab9901d901e825cb17b84cf4b67330",
       "898":"023dc0a15fbf3becd9849b5ff1891ca51e260dda",
     });
-    expect(lock.files).toHaveLength(7);
+    expect(lock.files).toHaveLength(8);
     expect(new Set(lock.files.map(f=>f.path)).size).toBe(7);
-    expect(lock.files.filter(f=>f.sourcePr===895)).toHaveLength(3);
+    expect(lock.files.filter(f=>f.sourcePr===895)).toHaveLength(4);
     expect(lock.files.filter(f=>f.sourcePr===898)).toHaveLength(4);
     for (const f of lock.files) {
       expect(f.path).toMatch(/^(src\/features\/operations\/|tests\/e2e\/)/);
@@ -39,6 +39,8 @@ describe("P36 independent exact-source and production-boundary critic",()=>{
     expect(form).toContain("assessOwnerPricingRevisionAccess(scope, repairTarget)");
     expect(form).toContain("ownerRevisionAcknowledged");
     expect(form).toContain("expectedBookVersion");
+    const route = read("src/features/operations/OperationalProductRoute.tsx").toString();
+    expect(route).toMatch(/scope=\\{data\\.branchScope\\}\\s+repairTarget=\\{book\\}/);
     expect(helper).toContain('scope.mode === "BRANCH"');
     expect(helper).toContain('matches[0].currency !== "USD"');
     expect(helper).not.toMatch(/fetch\s*\(|\.rpc\s*\(|createClient\s*\(/);
