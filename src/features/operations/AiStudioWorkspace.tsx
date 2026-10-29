@@ -82,6 +82,13 @@ export function AiStudioWorkspace({
       </div>
 
       <WorkflowExecutionInspector snapshot={workflowInspectorSnapshot} workspaceSlug={workspaceSlug} />
+      <p className={styles.footerNote}>
+        Manage recorded failures and approval-required actions in the authoritative Automation Studio.
+        {" "}<Link href={buildStaffModuleHref(workspaceSlug,"automations")+"#workflow-evidence"}>
+          Open saved workflow evidence in Automation Studio
+        </Link>.
+        This navigation neither retries nor approves a workflow.
+      </p>
 
       <section className={styles.toolSection} aria-label="AI Studio tools and capabilities">
         <div className={styles.panelTitle}>
