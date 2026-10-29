@@ -11,6 +11,8 @@ import {
   summarizeWorkflowActivity,
 } from "./workflow-inspector-model";
 import { buildStaffModuleHref } from "./staff-modules";
+import {guideRecordedWorkflowIntervention} from "./workflow-operator-guidance";
+import {buildWorkflowOperatorHandoff} from "./workflow-operator-handoff";
 import styles from "./WorkflowExecutionInspector.module.css";
 
 type Snapshot = WorkflowInspectorClientSnapshot;
@@ -34,6 +36,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
   const runs = buildWorkflowInspector(snapshot);
   const summary = summarizeWorkflowActivity(runs);
   const interventionQueue = buildWorkflowInterventionQueue(runs);
+  const operatorHandoff = buildWorkflowOperatorHandoff(runs, snapshot.workflowAvailable === true, snapshot.loadedAt);
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedId, setSelectedId] = useState("");
   const [visibleCount, setVisibleCount] = useState(20);
@@ -50,11 +53,12 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
   const visible = selectedFromAll && !firstPage.some(run => run.id === selectedFromAll.id)
     ? [selectedFromAll, ...firstPage] : firstPage;
   const selected = selectedFromAll ?? visible[0];
+  const guidance=selected?guideRecordedWorkflowIntervention(selected):null;
   const averageDuration = summary.measuredDurationMs.length
     ? Math.round(summary.measuredDurationMs.reduce((a, b) => a + b, 0) / summary.measuredDurationMs.length / 1000)
     : null;
 
-  return <section className={styles.panel} aria-label="Recorded automation activity"
+  return <section id="workflow-evidence" className={styles.panel} aria-label="Recorded automation activity"
     data-testid="workflow-execution-inspector">
     <header className={styles.header}>
       <div>
@@ -90,6 +94,13 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
           </div>
           <span className={styles.state}>{interventionQueue.length} runs for review</span>
         </div>
+        <details className={styles.history} data-testid="workflow-operator-handoff">
+          <summary>Owner/staff review handoff · {operatorHandoff.reviewRuns} saved runs need review</summary>
+          <p className={styles.subtle}>Copyable, fixed-format summary of this loaded snapshot only.
+            No email is sent, no rule is published, no retry or approval is performed.
+            Provider delivery is not verified.</p>
+          <pre className={styles.handoffText}>{operatorHandoff.text}</pre>
+        </details>
         {!interventionQueue.length
           ? <p className={styles.notice}>No failed runs or approval-required actions
             in this loaded snapshot. This is not proof that all workflows succeeded.</p>
@@ -97,12 +108,12 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
               {interventionQueue.slice(0, 6).map(({ run, kind }) =>
                 <li key={run.id}>
                   <span className={kind !== "approval" ? styles.triageFailure : styles.triageApproval}>
-                    {kind === "ambiguous" ? "Conflicting retry evidence" :
+                    {kind === "ambiguous" ? (run.state === "PREVIEWED" ? "Unexpected live preview state" : "Conflicting retry evidence") :
                       kind === "failure" ? "Recorded failure" : "Human approval required"}
                   </span>
                   <strong>{humanize(run.eventType)}</strong>
                   <small>{kind === "ambiguous"
-                    ? `${run.ambiguousActionSlots} action slot(s) have conflicting latest attempts; current outcome is unverified`
+                    ? (run.state === "PREVIEWED" ? "LIVE execution stored as PREVIEWED: verify run state before any command" : `${run.ambiguousActionSlots} action slot(s) have conflicting latest attempts; current outcome is unverified`)
                     : kind === "failure"
                     ? `${run.failedCount} current failed action(s) · ${humanize(run.state)}`
                     : `${run.approvalCount} action(s) marked APPROVAL_REQUIRED`}</small>
@@ -167,6 +178,18 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
               <div><dt>Completion timestamp</dt><dd>{selected.completedAt ?? "Not recorded"}</dd></div>
             </dl>
 
+            {guidance?<section className={styles.notice} aria-label="Recorded workflow next-step guidance"
+               data-testid="workflow-operator-guidance">
+              <strong>{guidance.title}</strong>
+              <p>{guidance.detail}</p>
+              <p>Recommended review: {guidance.nextStep.replaceAll("_"," ").toLowerCase()}.
+                 {" "}This is read-only: retries, approvals, customer messages, payments,
+                 rule publication and provider delivery are not authorized or verified here.</p>
+              {guidance.disposition==="OWNER_APPROVAL_REQUIRED"?
+                <Link href={buildStaffModuleHref(workspaceSlug,"automations")}>
+                  Open owner workflow controls for separate review
+                </Link>:null}
+             </section>:null}
             <h4>Evidence-backed workflow stages</h4>
             <ol className={styles.stages}>
               <li><strong>Event</strong><span>{humanize(selected.eventType)} — saved</span></li>

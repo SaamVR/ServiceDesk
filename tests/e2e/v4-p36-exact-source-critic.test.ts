@@ -13,6 +13,26 @@ const hash = (content:Buffer) => createHash("sha1")
   .update(Buffer.from("blob " + content.length + "\0"))
   .update(content).digest("hex");
 
+// Historical IR14 and P36 locks remain immutable. The IR15 route joins
+// both previously reviewed owner journeys and must match one exact object.
+const integration = JSON.parse(readFileSync(
+ "docs/delivery/sonic-ir15-p36-f14-union-source-lock-20261030.json","utf8"
+)) as {
+ baseP36:string; ir14ReviewedPr:number; ir14Head:string; status:string;
+ reconciledRoute:{path:string;ir14OriginalSha:string;p36OriginalSha:string;reviewedIntegratedSha:string};
+};
+function reviewedUnionSuccessor(path:string,previousBlob:string):string {
+ const route=integration.reconciledRoute;
+ if(path!==route.path)return previousBlob;
+ expect(integration.status).toBe("SOURCE_ONLY_DRAFT_UNMERGED");
+ expect(integration.baseP36).toBe("cb28d52912c4d2b2ad4e8b663b339db3241a3c84");
+ expect(integration.ir14ReviewedPr).toBe(865);
+ expect(integration.ir14Head).toBe("5bd1d365c6afd149f3619ffe5317231fd8a7de6f");
+ expect(previousBlob).toBe("ff928ec32e264d53e651c4fe38775f7f7737f5fe");
+ expect(route.reviewedIntegratedSha).toBe("189cd79e072789fe121c24a076a0874b41dcca7e");
+ return route.reviewedIntegratedSha;
+}
+
 describe("P36 independent exact-source and production-boundary critic",()=>{
   it("pins eight imported source objects to their exact P35 PR Git hashes",()=>{
     expect(lock.schema).toBe("servicedesk.p36.exact-reviewed-source.v1");
@@ -30,7 +50,7 @@ describe("P36 independent exact-source and production-boundary critic",()=>{
     for (const f of lock.files) {
       expect(f.path).toMatch(/^(src\/features\/operations\/|tests\/e2e\/)/);
       expect(f.path).not.toContain("..");
-      expect(hash(read(f.path))).toBe(f.gitBlobSha);
+      expect(hash(read(f.path))).toBe(reviewedUnionSuccessor(f.path, f.gitBlobSha));
     }
   });
   it("confirms pricing form is conditional on selected USD branch and owned version",()=>{

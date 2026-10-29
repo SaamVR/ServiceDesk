@@ -1,0 +1,440 @@
+{
+  "schema": "servicedesk.ir15.f08-f14-p36.reviewed-union.v1",
+  "baseP36": "cb28d52912c4d2b2ad4e8b663b339db3241a3c84",
+  "ir14ReviewedPr": 865,
+  "ir14Head": "5bd1d365c6afd149f3619ffe5317231fd8a7de6f",
+  "sourcePrs": [
+    841,
+    852,
+    854,
+    857,
+    859,
+    861
+  ],
+  "status": "SOURCE_ONLY_DRAFT_UNMERGED",
+  "exactImportedCount": 77,
+  "sourceObjects": [
+    {
+      "path": "docs/delivery/f06-source-interface-request-20261025.md",
+      "blobSha": "cf5cd85ffe75e39d508e8bec4a78d4c9af9d6471",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/f07-audit-source-and-spend-controls-20261025.md",
+      "blobSha": "c4c516b55179337dbb19802494bfc450ea6663ea",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/f08-feature-freeze-manifest-20261025.json",
+      "blobSha": "0b91ac8598d2b7ed964ea7b2aaacddce145db694",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/f08-production-handoff-and-freeze-20261025.md",
+      "blobSha": "9d15f719db3cba272f7d9692af0fdf61b74708fe",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/sonic-f09-feature-wave-20261026.md",
+      "blobSha": "192c036b09cf23b9d65f6e4e1f1d797fa9886adf",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/sonic-f10-automation-wave-20261026.md",
+      "blobSha": "b0d6ced9c13ff26ffb9d4365e6c4e6d3ed72c0b1",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/sonic-f11-feature-wave-20261026.md",
+      "blobSha": "bd4f11368b81a07767cf0d0fd710508f45a7c299",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/sonic-f12-owner-opportunity-workbench-20261026.md",
+      "blobSha": "202c8997165ac8b6225317047e4bc0666e01ec33",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/sonic-f13-workflow-operator-evidence-20261026.md",
+      "blobSha": "b924e65b9abbedb2b9195d17416fc62ca702c813",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/sonic-ir14-exact-source-lock-20261026.json",
+      "blobSha": "e3006b9f1692a170d2741efcd934cd9cfeb6dd82",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "docs/delivery/sonic-ir14-production-merge-decision-20261026.md",
+      "blobSha": "47dea547a59265c1684510fbcf4a7f90aae6204d",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/app/app/[workspace]/automations/opportunities/page.tsx",
+      "blobSha": "a9f60946ad5652cc7644492fd2f5d56e373ca0ed",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/app/app/[workspace]/automations/page.tsx",
+      "blobSha": "4132eb19ea6757ae520c4167c3f4df01615f855a",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/AiStudioWorkspace.tsx",
+      "blobSha": "981534d8a807e97b2b47585dfdc637cac94b084a",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/OwnerOpportunityWorkbench.module.css",
+      "blobSha": "f48b19a17cfbbf1063c07a213424eb476df65171",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/OwnerOpportunityWorkbench.tsx",
+      "blobSha": "b98efa8e19c7e57a27af165a2310161b802bdf67",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/WorkflowExecutionInspector.module.css",
+      "blobSha": "df5a5dceb6dfac07c83cd062e74db9839d792087",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/WorkflowExecutionInspector.tsx",
+      "blobSha": "0553c4a05569f7b8e1fc5f0505421ec4a02e9aa2",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/owner-opportunity-preview-action.ts",
+      "blobSha": "ca23bcc325e4ad85b5395de28a4081ce88a4b33e",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/owner-opportunity-preview-proof.ts",
+      "blobSha": "79f4a9ab4613036b1983cae2441a5d10857c689c",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/workflow-inspector-model.ts",
+      "blobSha": "3c62103db3a5ae600a8866999f760976df5dbbe9",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/workflow-operator-guidance.ts",
+      "blobSha": "b838476b19db9a855ef22250fff9ba6cf4f3ccc8",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/features/operations/workflow-operator-handoff.ts",
+      "blobSha": "29a2d193e18a9b5c4eb5c66c9b26969936d25fcb",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f01-grounded-quote-alternatives.ts",
+      "blobSha": "412e78e01e10fb0607c85853186e615b3d1718d6",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f01-saved-intake-proposal.ts",
+      "blobSha": "4c323a9eb2dfbf756c9bde418e36f0dd731a22e8",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f02-saved-capacity-dispatch.ts",
+      "blobSha": "12e28039dd51ad19d171705f15adccaf0f3a521f",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f02-saved-visit-quality.ts",
+      "blobSha": "aad4b21fa392943e86a9a587fb7b19cb3949818f",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f03-saved-daily-weekly-intelligence.ts",
+      "blobSha": "988f765efa29ec6d367403751c21880d83eb03f1",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f03-saved-ledger-explanations.ts",
+      "blobSha": "1145065086bc1332b1113682f255637b28c909e8",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f04-consented-reply-draft.ts",
+      "blobSha": "b0b796f17cfe08ca6a36e1046280740f1f8c5938",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f04-saved-retention-review.ts",
+      "blobSha": "0fd1a4b837222542a12ca84f19f83f33e2d32e36",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f05-versioned-instruction-draft.ts",
+      "blobSha": "3e73db01a2f7efb33ddb928aaaf4b2e91871a2da",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f05-versioned-whatif.ts",
+      "blobSha": "f4546bbeb95aeb8938f317de86b78afcf7f5b9c5",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f06-internal-action-previews.ts",
+      "blobSha": "8077f47a8d70bd21df47b1dde9b150f364d3b9fc",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f06-typed-event-proposals.ts",
+      "blobSha": "85357c5f46a60c9990b58f636fd55b2d6e383b41",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f07-saved-ai-usage-review.ts",
+      "blobSha": "58df709b04b9e146d6a95fc436fe3b13bfa710ac",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/f07-saved-workflow-critic.ts",
+      "blobSha": "51e311faffc9d262776c40742336dba7b84697d9",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/sonic-f09-event-families.ts",
+      "blobSha": "51b37bd9e67707c59411ef3295400087c3f54756",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/sonic-f09-internal-actions.ts",
+      "blobSha": "47dde7776acb891064b92aee304971c1640e7033",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/sonic-f09-operational-recipes.ts",
+      "blobSha": "f4bbccdbc66e153597d2a7b02e8d292b09cffb08",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/sonic-f10-field-recovery.ts",
+      "blobSha": "a90641fc852f6e00719674888469edb7b2325e33",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/sonic-f10-lead-triage.ts",
+      "blobSha": "cba315ecd70efc7ec11d04455615c1ee8dd60ad2",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/sonic-f11-quality.ts",
+      "blobSha": "b88fa7f1a92a4845a9c23cb817e355d9751a030a",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/sonic-f11-resilience.ts",
+      "blobSha": "96c9ac9dcfb2990bbaa6aa13fccbbb6e79629ade",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "src/server/ai/sonic-f11-revenue.ts",
+      "blobSha": "a54ebfe0aeddfa2952101e38ea6f3b4588cb45b7",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f01-grounded-quote-alternatives.test.ts",
+      "blobSha": "d7fe0c4dea3db1873945b33cd29bf618ab8f8f8b",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f01-saved-intake-proposal.test.ts",
+      "blobSha": "2c2c782c3f8a00b2f747ab4e9c65e68e106f9a04",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f02-saved-capacity-dispatch.test.ts",
+      "blobSha": "a6e7c6a04ce875a73def93348413541e641e4be9",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f02-saved-visit-quality.test.ts",
+      "blobSha": "0919050c2c17d654be8dd3ccd2739c95e50f4a82",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f03-saved-daily-weekly-intelligence.test.ts",
+      "blobSha": "caaf3a874f95364b29b061398319291106d225df",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f03-saved-ledger-explanations.test.ts",
+      "blobSha": "3ef0c95b913069eb935049137ee74c82d8932fa4",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f04-consented-reply-draft.test.ts",
+      "blobSha": "8894dffabaae96c7449df5ff31f5767bac6fa017",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f04-saved-retention-review.test.ts",
+      "blobSha": "3ba0c48c26d8233917c20521ae72cebb7dcd1859",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f05-versioned-instruction-draft.test.ts",
+      "blobSha": "d8a59a8252db25c036e46472622fa03998707f46",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f05-versioned-whatif.test.ts",
+      "blobSha": "829f0135a19551f1fdb0bd99c32cc6084004096a",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f06-internal-action-previews.test.ts",
+      "blobSha": "2f8c80675cd5cc9d5eb65348c561457c72e4be7b",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f06-typed-event-proposals.test.ts",
+      "blobSha": "2b9a6cbe0ca7605c6ff74f24997a2a00b7c84cb8",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f07-saved-ai-usage-review.test.ts",
+      "blobSha": "0fa5b1ff32a2bc6ec9a0385fa8a94be345b2cc67",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f07-saved-workflow-critic.test.ts",
+      "blobSha": "243356bfdb5f652202c15a612f58d015303cfad4",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/f08-feature-freeze-combined.test.ts",
+      "blobSha": "a77a07932d4194931175bfa654e16b4ed09d5161",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f09-crosslane-critic.test.ts",
+      "blobSha": "92df7197a106e1efc4d552ab10391fcf8d5d2d01",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f09-event-families.test.ts",
+      "blobSha": "3853cde574620a675c2e37c2c340b54b0d3d5911",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f09-internal-actions.test.ts",
+      "blobSha": "e1d96bd3af20327cdf70d92c2d71edf3a7014095",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f09-operational-recipes.test.ts",
+      "blobSha": "cd95e670431358b6331bd2215e3d19729ab00d35",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f10-field-recovery.test.ts",
+      "blobSha": "8ca22acaa8f96c866d3a8a4f8de055531a6dc7d9",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f10-lead-triage.test.ts",
+      "blobSha": "0462198ca8c569b8179ed6466a9cb155b6fa138c",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f11-crosslane-critic.test.ts",
+      "blobSha": "0544e461c5812402d7b890f68a2d5733af0f80f3",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f11-quality.test.ts",
+      "blobSha": "f36e757db55c31aa4b2a04c3ba7997e56fc6e1e8",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f11-resilience.test.ts",
+      "blobSha": "be4cdce84a6a7a00902b20a1ad8eff396bb6d278",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f11-revenue.test.ts",
+      "blobSha": "135d0bb2db8d681e677deb625f33a9a1967478da",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f12-crosslane-critic.test.ts",
+      "blobSha": "a9378df376c63f1f8e38f6e918776a410112ea80",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f12-owner-opportunity-action.test.ts",
+      "blobSha": "51fae30c87fd7aa5d8b9a31f9d076d87c116cd9e",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f12-owner-opportunity-browser-proof.test.ts",
+      "blobSha": "1b4caca81f77b7d357d1ea7122f00fc78fa46a38",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f13-workflow-evidence-critic.test.ts",
+      "blobSha": "a68f9fed8b1386df1f2cbddd346c95b5f1ce7f37",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f13-workflow-operator-guidance.test.ts",
+      "blobSha": "86fba860ff2d565d30f3a5f2df2f48ac82b2f1eb",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-f14-workflow-owner-handoff.test.ts",
+      "blobSha": "0c7640944a7f7478baaab54de1d722ad1aa982ee",
+      "source": "IR14_PR865_UNCHANGED"
+    },
+    {
+      "path": "tests/ai/sonic-ir14-integrated-security-critic.test.ts",
+      "blobSha": "af9874cccf15e9ed91540fe0fd52cfd3cd453cb6",
+      "source": "IR14_PR865_UNCHANGED"
+    }
+  ],
+  "reconciledRoute": {
+    "path": "src/features/operations/OperationalProductRoute.tsx",
+    "ir14OriginalSha": "9d801e935d28a2052bd8c57e43dd93788a5a934c",
+    "p36OriginalSha": "ff928ec32e264d53e651c4fe38775f7f7737f5fe",
+    "reviewedIntegratedSha": "189cd79e072789fe121c24a076a0874b41dcca7e",
+    "keepP36PricingRouteScope": true,
+    "includeIR14DualScopedWorkflowInspector": true,
+    "requiresReview": true
+  },
+  "forbiddenEffects": [
+    "CANONICAL_MERGE",
+    "MAIN_MERGE",
+    "VERCEL_DEPLOYMENT",
+    "GIT_AUTO_PREVIEW",
+    "PRODUCTION_DB_MUTATION",
+    "AUTH_USER_CREATION",
+    "GUARD_MIGRATION",
+    "PROVIDER_MESSAGE_SEND",
+    "PAYMENT_OR_REFUND",
+    "CREDENTIAL_EXPOSURE",
+    "DESTRUCTIVE_DEVICE_CLEANUP"
+  ],
+  "productionGate": "P02_818_NOT_DONE_P03_819_BLOCKED",
+  "adaptedTests": [
+    {
+      "path": "tests/ai/sonic-ir14-integrated-source-lock.test.ts",
+      "originalSha": "3ed819ac8f4cb3a7822b5f829246acae60256112",
+      "integratedSha": "d583444399fe4b3a293dcd420cc2404724c3f817",
+      "source": "IR14_HISTORICAL_LOCK_REVIEWED_ROUTE_SUCCESSOR"
+    },
+    {
+      "path": "tests/e2e/v4-p36-exact-source-critic.test.ts",
+      "originalSha": "1e09dde9d8b918ca90f054d3a883453eee4667ae",
+      "integratedSha": "9e4124c9834941393687c46182fa01fc78456554",
+      "source": "P36_HISTORICAL_LOCK_REVIEWED_ROUTE_SUCCESSOR"
+    }
+  ]
+}

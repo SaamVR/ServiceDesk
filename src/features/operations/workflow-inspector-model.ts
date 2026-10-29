@@ -112,14 +112,14 @@ export function summarizeWorkflowActivity(runs: readonly InspectedWorkflow[]) {
 }
 
 /** Categorize persisted outcomes without inventing a required user action.
- * Processing is informational; only a failed run or an action explicitly
- * marked APPROVAL_REQUIRED belongs in the human intervention queue.
+ * Processing is informational; failed, ambiguous, unexpected LIVE preview
+ * or explicitly approval-required records need human reconciliation.
  */
 export type WorkflowInterventionKind = "failure" | "ambiguous" | "approval" | "processing";
 
 export function classifyWorkflowIntervention(run: InspectedWorkflow):
   WorkflowInterventionKind | undefined {
-  if (run.ambiguousActionSlots > 0) return "ambiguous";
+  if (run.ambiguousActionSlots > 0 || run.state === "PREVIEWED") return "ambiguous";
   if (run.failedCount > 0 || run.state === "PARTIAL_FAILED") return "failure";
   if (run.approvalCount > 0) return "approval";
   if (run.pendingCount > 0 || run.state === "ACTIONS_PENDING") return "processing";

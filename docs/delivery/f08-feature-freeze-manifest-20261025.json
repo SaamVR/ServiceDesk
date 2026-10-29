@@ -1,0 +1,272 @@
+{
+  "schemaVersion": "servicedesk-f08-freeze-manifest-v1",
+  "generatedOn": "2026-10-25",
+  "controlIssue": 808,
+  "freezeIssue": 816,
+  "canonicalBranch": "feat/servicedesk-v4-reconciled-qa-shell-20261012",
+  "canonicalHeadAtFreeze": "f745c5990b51b5ab239c789a8c8bdbb383443223",
+  "bundleBranch": "feature-factory/f08-integrated-candidate-20261025",
+  "state": "SOURCE_FROZEN_DRAFT_NOT_MERGED_NOT_RELEASED",
+  "batchCount": 7,
+  "sourceFileCount": 30,
+  "addedPathsNoOverlap": true,
+  "note": "Every blob must match exactly, or freeze manifest/test must be re-reviewed; all feature PRs remain drafts.",
+  "integrationOrder": [
+    {
+      "batch": "F01",
+      "issue": 809,
+      "pr": 830,
+      "headSha": "1d1c498e30273e3c0e9220f280afd6d86316eb0a",
+      "sourceCiRun": 40159093206,
+      "reviewStatus": "CI_PARITY_CRITIC_PASSED_SOURCE_ONLY",
+      "mergeAuthority": "PRODUCTION_CHAT_ONLY",
+      "files": [
+        {
+          "path": "src/server/ai/f01-grounded-quote-alternatives.ts",
+          "blobSha": "412e78e01e10fb0607c85853186e615b3d1718d6",
+          "change": "added"
+        },
+        {
+          "path": "src/server/ai/f01-saved-intake-proposal.ts",
+          "blobSha": "4c323a9eb2dfbf756c9bde418e36f0dd731a22e8",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f01-grounded-quote-alternatives.test.ts",
+          "blobSha": "d7fe0c4dea3db1873945b33cd29bf618ab8f8f8b",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f01-saved-intake-proposal.test.ts",
+          "blobSha": "2c2c782c3f8a00b2f747ab4e9c65e68e106f9a04",
+          "change": "added"
+        }
+      ]
+    },
+    {
+      "batch": "F02",
+      "issue": 810,
+      "pr": 831,
+      "headSha": "aa8137a84c3f8dad8184a94055f3b579d70e3266",
+      "sourceCiRun": 40165151046,
+      "reviewStatus": "CI_PARITY_CRITIC_PASSED_SOURCE_ONLY",
+      "mergeAuthority": "PRODUCTION_CHAT_ONLY",
+      "files": [
+        {
+          "path": "src/server/ai/f02-saved-capacity-dispatch.ts",
+          "blobSha": "12e28039dd51ad19d171705f15adccaf0f3a521f",
+          "change": "added"
+        },
+        {
+          "path": "src/server/ai/f02-saved-visit-quality.ts",
+          "blobSha": "aad4b21fa392943e86a9a587fb7b19cb3949818f",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f02-saved-capacity-dispatch.test.ts",
+          "blobSha": "a6e7c6a04ce875a73def93348413541e641e4be9",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f02-saved-visit-quality.test.ts",
+          "blobSha": "0919050c2c17d654be8dd3ccd2739c95e50f4a82",
+          "change": "added"
+        }
+      ]
+    },
+    {
+      "batch": "F03",
+      "issue": 811,
+      "pr": 832,
+      "headSha": "c7221e69762d62417cfc52b350a2077a8bafd09b",
+      "sourceCiRun": 40166303775,
+      "reviewStatus": "CI_PARITY_CRITIC_PASSED_SOURCE_ONLY",
+      "mergeAuthority": "PRODUCTION_CHAT_ONLY",
+      "files": [
+        {
+          "path": "src/server/ai/f03-saved-daily-weekly-intelligence.ts",
+          "blobSha": "988f765efa29ec6d367403751c21880d83eb03f1",
+          "change": "added"
+        },
+        {
+          "path": "src/server/ai/f03-saved-ledger-explanations.ts",
+          "blobSha": "1145065086bc1332b1113682f255637b28c909e8",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f03-saved-daily-weekly-intelligence.test.ts",
+          "blobSha": "caaf3a874f95364b29b061398319291106d225df",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f03-saved-ledger-explanations.test.ts",
+          "blobSha": "3ef0c95b913069eb935049137ee74c82d8932fa4",
+          "change": "added"
+        }
+      ]
+    },
+    {
+      "batch": "F04",
+      "issue": 812,
+      "pr": 833,
+      "headSha": "4a4a5793c405ce3f28d5fbb1ee56e06e0495fac4",
+      "sourceCiRun": 40167442234,
+      "reviewStatus": "CI_PARITY_CRITIC_PASSED_SOURCE_ONLY",
+      "mergeAuthority": "PRODUCTION_CHAT_ONLY",
+      "files": [
+        {
+          "path": "src/server/ai/f04-consented-reply-draft.ts",
+          "blobSha": "b0b796f17cfe08ca6a36e1046280740f1f8c5938",
+          "change": "added"
+        },
+        {
+          "path": "src/server/ai/f04-saved-retention-review.ts",
+          "blobSha": "0fd1a4b837222542a12ca84f19f83f33e2d32e36",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f04-consented-reply-draft.test.ts",
+          "blobSha": "8894dffabaae96c7449df5ff31f5767bac6fa017",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f04-saved-retention-review.test.ts",
+          "blobSha": "3ba0c48c26d8233917c20521ae72cebb7dcd1859",
+          "change": "added"
+        }
+      ]
+    },
+    {
+      "batch": "F05",
+      "issue": 813,
+      "pr": 836,
+      "headSha": "e9e46c4e1d027e752f39bd8d3725cec84d4f723a",
+      "sourceCiRun": 40172245299,
+      "reviewStatus": "CI_PARITY_CRITIC_PASSED_SOURCE_ONLY",
+      "mergeAuthority": "PRODUCTION_CHAT_ONLY",
+      "files": [
+        {
+          "path": "src/server/ai/f05-versioned-instruction-draft.ts",
+          "blobSha": "3e73db01a2f7efb33ddb928aaaf4b2e91871a2da",
+          "change": "added"
+        },
+        {
+          "path": "src/server/ai/f05-versioned-whatif.ts",
+          "blobSha": "f4546bbeb95aeb8938f317de86b78afcf7f5b9c5",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f05-versioned-instruction-draft.test.ts",
+          "blobSha": "d8a59a8252db25c036e46472622fa03998707f46",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f05-versioned-whatif.test.ts",
+          "blobSha": "829f0135a19551f1fdb0bd99c32cc6084004096a",
+          "change": "added"
+        }
+      ]
+    },
+    {
+      "batch": "F06",
+      "issue": 814,
+      "pr": 837,
+      "headSha": "f541ca22f21b18f467f89ff16003e375d2735e9e",
+      "sourceCiRun": 40177007376,
+      "reviewStatus": "CI_PARITY_CRITIC_PASSED_SOURCE_ONLY",
+      "mergeAuthority": "PRODUCTION_CHAT_ONLY",
+      "files": [
+        {
+          "path": "docs/delivery/f06-source-interface-request-20261025.md",
+          "blobSha": "cf5cd85ffe75e39d508e8bec4a78d4c9af9d6471",
+          "change": "added"
+        },
+        {
+          "path": "src/server/ai/f06-internal-action-previews.ts",
+          "blobSha": "8077f47a8d70bd21df47b1dde9b150f364d3b9fc",
+          "change": "added"
+        },
+        {
+          "path": "src/server/ai/f06-typed-event-proposals.ts",
+          "blobSha": "85357c5f46a60c9990b58f636fd55b2d6e383b41",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f06-internal-action-previews.test.ts",
+          "blobSha": "2f8c80675cd5cc9d5eb65348c561457c72e4be7b",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f06-typed-event-proposals.test.ts",
+          "blobSha": "2b9a6cbe0ca7605c6ff74f24997a2a00b7c84cb8",
+          "change": "added"
+        }
+      ]
+    },
+    {
+      "batch": "F07",
+      "issue": 815,
+      "pr": 840,
+      "headSha": "dd4db66183f467fab5ebe93e6c642f25cb532ff7",
+      "sourceCiRun": 40179526525,
+      "reviewStatus": "CI_PARITY_CRITIC_PASSED_SOURCE_ONLY",
+      "mergeAuthority": "PRODUCTION_CHAT_ONLY",
+      "files": [
+        {
+          "path": "docs/delivery/f07-audit-source-and-spend-controls-20261025.md",
+          "blobSha": "c4c516b55179337dbb19802494bfc450ea6663ea",
+          "change": "added"
+        },
+        {
+          "path": "src/server/ai/f07-saved-ai-usage-review.ts",
+          "blobSha": "58df709b04b9e146d6a95fc436fe3b13bfa710ac",
+          "change": "added"
+        },
+        {
+          "path": "src/server/ai/f07-saved-workflow-critic.ts",
+          "blobSha": "51e311faffc9d262776c40742336dba7b84697d9",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f07-saved-ai-usage-review.test.ts",
+          "blobSha": "0fa5b1ff32a2bc6ec9a0385fa8a94be345b2cc67",
+          "change": "added"
+        },
+        {
+          "path": "tests/ai/f07-saved-workflow-critic.test.ts",
+          "blobSha": "243356bfdb5f652202c15a612f58d015303cfad4",
+          "change": "added"
+        }
+      ]
+    }
+  ],
+  "sharedContractsUnchanged": true,
+  "forbiddenWithoutOwnerApproval": [
+    "canonical_merge",
+    "main_merge",
+    "production_deploy",
+    "staging_writes",
+    "migration_0063_0064_0065",
+    "provider_model_paid_calls",
+    "customer_sends",
+    "refunds_or_payments",
+    "delete_samai_or_archives",
+    "workflow_live_publish"
+  ],
+  "requiredProductionInterfaces": [
+    "P01-P12 ordered Production Readiness owns canonical merge, provider and two-tenant staging acceptance",
+    "F01 actual saved quote pricing and version source; validate live catalog and branch pricing",
+    "F02 transactional staff availability, crew holds and visit QA evidence, 300-row bounded loader cannot certify completeness",
+    "F03 authoritative ledger and historical reporting; issue #765 owner live verification",
+    "F04 independent latest verified contact, recipient, consent, purpose, suppression and quiet hours at send boundary",
+    "F05 persisted workflow version, unique rule code and authenticated owner publish with write-time concurrency",
+    "F06 approved typed shared contracts, saved booking/delay journals and invoice reconciliation; transactional idempotency + schedulers (no preview-as-live)",
+    "F07 provider delivery receipts and redacted true model token/cost ledger; AI_ACTIONS counter is not billed cost",
+    "Complete Supabase migrations 0063-0065 require explicit authorization and live tenant evidence",
+    "P12 live release requires separate domain/deploy/rollback/monitoring/payment and go-no-go permissions"
+  ],
+  "ownerReviewRequired": true,
+  "providerLiveEvidence": false,
+  "tenantStagingAccepted": false,
+  "productionReady": false
+}

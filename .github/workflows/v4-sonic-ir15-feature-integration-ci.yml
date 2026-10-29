@@ -1,0 +1,48 @@
+name: ServiceDesk IR15 source integration focused gate
+on:
+  push:
+    branches: ["sonic-integration/ir15-feature-p36-union-20261030"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-ir15-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  combined-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Integrated AI + exact-source + pricing/automation negative regressions
+        run: >-
+          pnpm exec vitest run tests/ai
+          tests/e2e/v4-p27-exact-source-lock.test.ts
+          tests/e2e/v4-p30-exact-source-governance.test.ts
+          tests/e2e/v4-p32-owner-feature-provenance.test.ts
+          tests/e2e/v4-p34-exact-source-and-security-critic.test.ts
+          tests/e2e/v4-p35-owner-pricing-revision-scope.test.ts
+          tests/e2e/v4-p35-owner-automation-draft-recommendations.test.ts
+          tests/e2e/v4-p36-exact-source-critic.test.ts
+      - name: TypeScript compile safety
+        run: pnpm typecheck
+      - name: Integration-only lint
+        run: >-
+          pnpm exec eslint
+          src/features/operations/OperationalProductRoute.tsx
+          tests/ai/sonic-ir15-feature-readiness-source-union.test.ts
+          tests/ai/sonic-ir14-integrated-source-lock.test.ts
+          tests/e2e/v4-p36-exact-source-critic.test.ts
+      - name: Production-source Next build only (never deploy)
+        run: pnpm build

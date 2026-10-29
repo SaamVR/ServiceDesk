@@ -68,6 +68,8 @@ import { buildStaffQuoteChecklist } from "./staff-quote-checklist";
 import { AiOperationsStatus } from "./AiOperationsStatus";
 import { OwnerQuoteAcceptedAutomationControl } from "./OwnerQuoteAcceptedAutomationControl";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
+import { WorkflowExecutionInspector } from "./WorkflowExecutionInspector";
+import { selectWorkflowInspectorClientSnapshot } from "./workflow-inspector-client-snapshot";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import { getAutomationPlaybook } from "./automation-playbooks";
 import { AutomationPlaybookBrowser } from "./AutomationPlaybookBrowser";
@@ -3273,6 +3275,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
         />
         {data.actor.role === "OWNER" ? <OwnerQuoteAcceptedAutomationControl workspaceSlug={workspaceSlug} snapshot={data} /> : null}
         <WorkflowEvidenceStrip executions={data.workflowExecutions ?? []} actions={data.workflowActionExecutions ?? []} />
+        <WorkflowExecutionInspector snapshot={selectWorkflowInspectorClientSnapshot(data)} workspaceSlug={workspaceSlug} />
       <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
         <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
         <header className={styles.recoveryHeader}>
@@ -3308,6 +3311,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
         />
       {data.actor.role === "OWNER" ? <OwnerQuoteAcceptedAutomationControl workspaceSlug={workspaceSlug} snapshot={data} /> : null}
       <WorkflowEvidenceStrip executions={data.workflowExecutions ?? []} actions={data.workflowActionExecutions ?? []} />
+        <WorkflowExecutionInspector snapshot={selectWorkflowInspectorClientSnapshot(data)} workspaceSlug={workspaceSlug} />
       <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
       <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
       <header className={styles.recoveryHeader}>
