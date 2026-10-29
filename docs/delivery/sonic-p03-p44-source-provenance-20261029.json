@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "mode": "SOURCE_ONLY_STACKED_DRAFT",
+  "parent": {
+    "pr": 901,
+    "head": "e42be516daf82619a6161336e6e45e63120d7549",
+    "fullCI": 40891904049
+  },
+  "importedFrom": {
+    "pr": 904,
+    "head": "2e1f44255501b9faef965a63374d80538bf59fe0",
+    "focusedCI": 40892053778
+  },
+  "files": {
+    "src/features/operations/owner-attention-triage.ts": {
+      "gitBlobSha": "706f21c1b28209cc022281fdf1631dc3eb6bfa54"
+    },
+    "tests/e2e/v4-p43-duplicate-attention-execution-identity.test.ts": {
+      "gitBlobSha": "3e008beddb035cdd7f9577a054a8f4b72aaa930d"
+    },
+    "tests/e2e/v4-p43-source-lineage-critic.test.ts": {
+      "gitBlobSha": "fd97c716acf57ba11f7f4eec25b214f65347d731"
+    },
+    "docs/delivery/sonic-p03-p43-attention-lineage-20261029.json": {
+      "gitBlobSha": "dd8ab3880ff35d5d2fb81182a9f8f234517376c0"
+    }
+  },
+  "previousTriage": {
+    "p34": "752543fcf25178bd6ad2da16a324f50a569a6be0",
+    "p42": "600c9e1d69fe22e7c7308a1901de2b056b3513c6"
+  },
+  "ownerApproval": null,
+  "independentHumanApproval": null,
+  "liveMutationAuthorized": false
+}
