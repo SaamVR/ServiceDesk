@@ -48,8 +48,9 @@ export function OwnerOverdueAttentionReview({workspaceSlug}:{workspaceSlug:strin
   }catch{if(active.current?.id===id){setStatus("error");setResult(undefined);}}
   finally{
    if(active.current?.id===id){
+    const timedOut=active.current.timedOut;
     clearTimeout(active.current.timer);active.current=null;
-    if(active.current.timedOut)setStatus("error");
+    if(timedOut)setStatus("error");
    }
   }
  }
