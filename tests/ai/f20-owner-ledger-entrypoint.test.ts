@@ -18,7 +18,7 @@ describe("F20 owner-only saved ledger exception entrypoint",()=>{
  it("owner-readable invoice ID links are record-scoped and cannot approve payments",()=>{
   const x=readFileSync("src/features/operations/OwnerLedgerExceptionReview.tsx","utf8");
   expect(x).toContain('key={workspaceSlug}');
-  expect(x).toContain("serial.current!==seq");
+  expect(x).toContain("seq!==serial.current");
   expect(x).toContain('"?invoice="+encodeURIComponent(x.invoiceId)');
   expect(x).toContain("No paid status, refund, balance write or external message was authorized.");
  });

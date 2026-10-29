@@ -15,7 +15,7 @@
     },
     {
       "path": "tests/ai/f20-owner-ledger-entrypoint.test.ts",
-      "sha": "286fd96bd224c13c90510866c534ddeda6edbf7e",
+      "sha": "1e1d2c3df60131c2f99d11a3753d9fed62105d59",
       "lane": "FINANCE"
     },
     {
@@ -35,7 +35,7 @@
     },
     {
       "path": "tests/ai/f20-independent-finance-retention-critic.test.ts",
-      "sha": "fe9491b0132d04118d6e45ce712bb7acf34f0107",
+      "sha": "52ff40772ead608da890206eb66759de826b82f6",
       "lane": "INDEPENDENT_CRITIC"
     }
   ],
@@ -66,5 +66,17 @@
     "AUTO_OUTREACH",
     "VERCEL_DEPLOY"
   ],
-  "releaseGate": "P02_818_OPEN_AND_P03_819_QUEUED"
+  "releaseGate": "P02_818_OPEN_AND_P03_819_QUEUED",
+  "originalPreCorrectionAssertions": [
+    {
+      "path": "tests/ai/f20-owner-ledger-entrypoint.test.ts",
+      "before": "286fd96bd224c13c90510866c534ddeda6edbf7e",
+      "after": "1e1d2c3df60131c2f99d11a3753d9fed62105d59"
+    },
+    {
+      "path": "tests/ai/f20-independent-finance-retention-critic.test.ts",
+      "before": "fe9491b0132d04118d6e45ce712bb7acf34f0107",
+      "after": "52ff40772ead608da890206eb66759de826b82f6"
+    }
+  ]
 }
