@@ -12,6 +12,26 @@ const root=process.cwd();
 const sourceLock=JSON.parse(readFileSync(join(root,
  "docs/delivery/sonic-ir14-exact-source-lock-20261026.json"),"utf8")) as SourceLock;
 const allowedPrs=[841,852,854,857,859,861];
+// Historical IR14 and P36 locks remain immutable. The IR15 route joins
+// both previously reviewed owner journeys and must match one exact object.
+const integration = JSON.parse(readFileSync(
+ "docs/delivery/sonic-ir15-p36-f14-union-source-lock-20261030.json","utf8"
+)) as {
+ baseP36:string; ir14ReviewedPr:number; ir14Head:string; status:string;
+ reconciledRoute:{path:string;ir14OriginalSha:string;p36OriginalSha:string;reviewedIntegratedSha:string};
+};
+function reviewedUnionSuccessor(path:string,previousBlob:string):string {
+ const route=integration.reconciledRoute;
+ if(path!==route.path)return previousBlob;
+ expect(integration.status).toBe("SOURCE_ONLY_DRAFT_UNMERGED");
+ expect(integration.baseP36).toBe("cb28d52912c4d2b2ad4e8b663b339db3241a3c84");
+ expect(integration.ir14ReviewedPr).toBe(865);
+ expect(integration.ir14Head).toBe("5bd1d365c6afd149f3619ffe5317231fd8a7de6f");
+ expect(previousBlob).toBe("9d801e935d28a2052bd8c57e43dd93788a5a934c");
+ expect(route.reviewedIntegratedSha).toBe("189cd79e072789fe121c24a076a0874b41dcca7e");
+ return route.reviewedIntegratedSha;
+}
+
 const changed=new Set([
  "src/app/app/[workspace]/automations/page.tsx",
  "src/features/operations/AiStudioWorkspace.tsx",
@@ -55,7 +75,8 @@ describe("IR14 frozen feature PR source-lock: no accidental regenerated code",()
  });
  it("checks Git's exact object hash of EVERY imported source blob",()=>{
   for(const row of sourceLock.files){
-   expect(gitBlobSha(row.path),row.path).toBe(row.blobSha);
+   const expected = reviewedUnionSuccessor(row.path, row.blobSha);
+   expect(gitBlobSha(row.path),row.path).toBe(expected);
   }
  });
  it("forbids importing migrations, secrets, deployment controls or CI workflows",()=>{
