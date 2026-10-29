@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "mode": "SOURCE_ONLY_DRAFT_UNMERGED",
+  "base": {
+    "pr": 894,
+    "commit": "27261bc46666c2bed1c78599679485d7366fa83b"
+  },
+  "sources": {
+    "P40": {
+      "pr": 897,
+      "commit": "d6b19c09fbfcd827a9aadae6f83c26e5b8d7fe8c",
+      "workflowRun": 40890412662
+    },
+    "P41": {
+      "pr": 899,
+      "commit": "0cf421a0da26b37550599aa10418a5eeb4e6aaa1",
+      "workflowRun": 40890662897
+    }
+  },
+  "files": {
+    "src/features/operations/OwnerAutomationActivationChecklist.tsx": {
+      "gitBlobSha": "33bacc933867c4c14ea933a62c52a951e9c820f6",
+      "source": "P40"
+    },
+    "src/features/operations/owner-attention-review-playbook.ts": {
+      "gitBlobSha": "4ad58f8a6062dfb960b9ede8ebd47346b9cde9d5",
+      "source": "P40"
+    },
+    "tests/e2e/v4-p40-owner-attention-review-playbook.test.ts": {
+      "gitBlobSha": "9b3eeedfe2b81f2d3aff1deb56057056a69bff4a",
+      "source": "P40"
+    },
+    "src/features/operations/owner-attention-triage.ts": {
+      "gitBlobSha": "600c9e1d69fe22e7c7308a1901de2b056b3513c6",
+      "source": "P41"
+    },
+    "tests/e2e/v4-p41-owner-attention-zoned-clock.test.ts": {
+      "gitBlobSha": "4c9b7a278d904c5f11ad956669d6dd6c502337a9",
+      "source": "P41"
+    }
+  },
+  "constraints": {
+    "databaseMutation": false,
+    "authCreation": false,
+    "providerActions": false,
+    "paymentActions": false,
+    "vercelDeployment": false,
+    "canonicalMerge": false,
+    "ownerApproval": null,
+    "independentHumanApproval": null
+  },
+  "verification": "Git blob SHA-1 over blob <byte-length>\\0<bytes> for five exact imported source paths"
+}
