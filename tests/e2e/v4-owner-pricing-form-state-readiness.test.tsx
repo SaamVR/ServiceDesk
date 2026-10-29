@@ -15,8 +15,8 @@ const markup=(proof?:OwnerPricingBookProof,branchScope=scope)=>
 
 describe("P26 owner pricing form distinguishes first-run safety states",()=>{
   it("displays unavailable evidence as an alert, not an invitation to create another branch",()=>{
-    for(const proof of [undefined,{state:"UNAVAILABLE",activeBranchIds:[],existingBookBranchIds:[]} as const,
-      {state:"VERIFIED",activeBranchIds:[]} as const]){
+    for(const proof of [undefined,{state:"UNAVAILABLE",activeBranchIds:[],existingBookBranchIds:[]} as OwnerPricingBookProof,
+      {state:"VERIFIED",activeBranchIds:[]} as OwnerPricingBookProof]){
       const html=markup(proof);
       expect(html).toContain('role="alert"');
       expect(html).toContain("Saved branch pricing could not be verified");
