@@ -25,5 +25,5 @@ jobs:
           node-version: 22.23.2
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec vitest run tests/e2e/v4-p43-duplicate-attention-execution-identity.test.ts tests/e2e/v4-p42-integrated-attention-security-critic.test.ts tests/e2e/v4-p41-owner-attention-zoned-clock.test.ts tests/e2e/v4-p33-owner-attention-triage.test.ts
+      - run: pnpm exec vitest run tests/e2e/v4-p43-duplicate-attention-execution-identity.test.ts tests/e2e/v4-p43-source-lineage-critic.test.ts tests/e2e/v4-p41-owner-attention-zoned-clock.test.ts tests/e2e/v4-p33-owner-attention-triage.test.ts
       - run: pnpm typecheck
