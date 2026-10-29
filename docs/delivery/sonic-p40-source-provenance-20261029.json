@@ -1,0 +1,55 @@
+{
+  "schema": "servicedesk.sonic.p40.source-provenance.v1",
+  "base": "224f88ce76525bc0235acecb9e45a9ec34c9aaaa",
+  "lockedSources": [
+    {
+      "path": ".github/workflows/v4-sonic-p40-owner-pricing-scenarios.yml",
+      "blobSha": "49b62bdeea90eb7d441aebad09491d4400b6e7eb",
+      "sourcePr": 902
+    },
+    {
+      "path": "src/features/operations/OwnerCleaningPricingWorksheet.tsx",
+      "blobSha": "002b002ae9834e232939dd64f7caf77ecb955f6e",
+      "sourcePr": 902
+    },
+    {
+      "path": "src/features/operations/owner-pricing-scenario-matrix.ts",
+      "blobSha": "3f952e8a67ccea3ea702b54f40ef95bf97ca526e",
+      "sourcePr": 902
+    },
+    {
+      "path": "tests/e2e/v4-p40-owner-pricing-scenario-matrix.test.ts",
+      "blobSha": "ad631c18976866ae3bf9d0a4f554bd1573601577",
+      "sourcePr": 902
+    },
+    {
+      "path": ".github/workflows/v4-sonic-p40-playbook-whatif.yml",
+      "blobSha": "69d0defd07e40f86715d1132dc62502b270bffbc",
+      "sourcePr": 903
+    },
+    {
+      "path": "src/features/operations/AutomationPlaybookBrowser.module.css",
+      "blobSha": "56fb44adc6eaeb46c8e27083065eeadea8dc6aea",
+      "sourcePr": 903
+    },
+    {
+      "path": "src/features/operations/AutomationPlaybookBrowser.tsx",
+      "blobSha": "0d024439710943cb14a615611cc776e960bc288c",
+      "sourcePr": 903
+    },
+    {
+      "path": "src/features/operations/automation-playbook-event-whatif.ts",
+      "blobSha": "8a3e78edb87d48ef137dfe90a31a8849e949b974",
+      "sourcePr": 903
+    },
+    {
+      "path": "tests/e2e/v4-p40-playbook-event-whatif.test.ts",
+      "blobSha": "5e74bb5d04729f60bc61046724647cfc54300ce3",
+      "sourcePr": 903
+    }
+  ],
+  "ownerApproval": null,
+  "productionMutation": false,
+  "canonicalMerged": false,
+  "liveTenantAccepted": false
+}
