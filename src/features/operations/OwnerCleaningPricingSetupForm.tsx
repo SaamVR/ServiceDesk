@@ -57,9 +57,27 @@ export function OwnerCleaningPricingSetupForm({
   if (repairTarget && !repairTarget.serviceNames) return (
     <p role="alert">The shared service catalog is incomplete or inactive. Restore all three cleaning services in Settings before revising this branch price book; rates were not changed.</p>
   );
-  if (branches.length === 0) return (
-    <p role="status">Create or select an authorized USD cleaning branch before configuring pricing.</p>
+  // A missing saved-book read is not evidence that a first-run SQL setup
+  // would be safe. The owner must retry the independent inventory first.
+  if (!repairTarget && (!proof || proof.state !== "VERIFIED" ||
+      !Array.isArray(proof.existingBookBranchIds) ||
+      !Array.isArray(proof.activeBranchIds))) return (
+    <p role="alert">Saved branch pricing could not be verified. Reload Settings to check the existing price books before entering any new rates. No prices were saved.</p>
   );
+  if (branches.length === 0) {
+    const selectedUsd = scope?.branches.filter(branch =>
+      branch.currency === "USD" &&
+      (scope.mode !== "BRANCH" || scope.selectedBranchId === branch.id)) ?? [];
+    const alreadyConfigured = proof?.state === "VERIFIED" &&
+      Array.isArray(proof.existingBookBranchIds) &&
+      selectedUsd.length > 0 &&
+      selectedUsd.every(branch => proof.existingBookBranchIds!.includes(branch.id));
+    return alreadyConfigured ? (
+      <p role="status">All authorized USD branches in this view already have an active saved price book. First-run setup cannot overwrite existing rates. Review or revise the saved branch pricing in Settings.</p>
+    ) : (
+      <p role="status">Create or select an authorized USD cleaning branch before configuring pricing.</p>
+    );
+  }
   const setupId = randomUUID();
   return (
     <section id={repairTarget ? "owner-pricing-revision-" + repairTarget.branch.id : undefined}
