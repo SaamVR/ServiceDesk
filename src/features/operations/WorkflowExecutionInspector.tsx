@@ -12,6 +12,7 @@ import {
 } from "./workflow-inspector-model";
 import { buildStaffModuleHref } from "./staff-modules";
 import {guideRecordedWorkflowIntervention} from "./workflow-operator-guidance";
+import {buildWorkflowOperatorHandoff} from "./workflow-operator-handoff";
 import styles from "./WorkflowExecutionInspector.module.css";
 
 type Snapshot = WorkflowInspectorClientSnapshot;
@@ -35,6 +36,7 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
   const runs = buildWorkflowInspector(snapshot);
   const summary = summarizeWorkflowActivity(runs);
   const interventionQueue = buildWorkflowInterventionQueue(runs);
+  const operatorHandoff = buildWorkflowOperatorHandoff(runs, snapshot.workflowAvailable === true, snapshot.loadedAt);
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedId, setSelectedId] = useState("");
   const [visibleCount, setVisibleCount] = useState(20);
@@ -92,6 +94,13 @@ export function WorkflowExecutionInspector({ snapshot, workspaceSlug }: {
           </div>
           <span className={styles.state}>{interventionQueue.length} runs for review</span>
         </div>
+        <details className={styles.history} data-testid="workflow-operator-handoff">
+          <summary>Owner/staff review handoff · {operatorHandoff.reviewRuns} saved runs need review</summary>
+          <p className={styles.subtle}>Copyable, fixed-format summary of this loaded snapshot only.
+            No email is sent, no rule is published, no retry or approval is performed.
+            Provider delivery is not verified.</p>
+          <pre className={styles.handoffText}>{operatorHandoff.text}</pre>
+        </details>
         {!interventionQueue.length
           ? <p className={styles.notice}>No failed runs or approval-required actions
             in this loaded snapshot. This is not proof that all workflows succeeded.</p>

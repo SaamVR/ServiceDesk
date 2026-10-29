@@ -21,3 +21,18 @@ The browser receives only existing allowlisted rule version and run/action evide
 
 ## Production conditions
 Reconcile latest canonical, reject overlapping source changes, verify true authenticated OWNER-A/B workspaces, cross-branch action exclusion, zero-row and failed-source states, mobile keyboard/focus/anchor, workflow receipt consistency, and any old legacy PR overlap before choosing a merge. Do not mark original #173 workflow tasks LIVE from a F13 source test. Feature branch remains draft unmerged and Vercel auto deploy disabled; explicit project/SHA/env permission required for any deployment.
+
+## F14 read-only owner/staff workflow handoff — 2026-10-29
+
+The existing persisted-run intervention queue now includes a bounded, copyable
+owner/staff handoff generated from the same authenticated browser evidence
+projection. It counts saved ambiguous/failure/approval review runs separately
+from processing-only runs, prioritizes conflicting evidence, and shows at most
+six safe event-label examples without customer, quote, workspace, source or
+credential identifiers. Invalid timestamps/states/counts, missing evidence and
+oversized input fail closed. A zero-review snapshot is explicitly not an
+all-clear. New adversarial tests and the independent F13 critic guard both
+the helper and actual Studio render usage. There is no scheduling, automated
+digest dispatch, provider call, model run, replay, approval, billing mutation,
+migration, real tenant/UAT proof or deployment. This capability is a
+read-only operator handoff, not an unattended automation.
