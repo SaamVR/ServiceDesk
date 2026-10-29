@@ -40,7 +40,7 @@ describe("P36 independent exact-source and production-boundary critic",()=>{
     expect(form).toContain("ownerRevisionAcknowledged");
     expect(form).toContain("expectedBookVersion");
     const route = read("src/features/operations/OperationalProductRoute.tsx").toString();
-    expect(route).toMatch(/scope=\\{data\\.branchScope\\}\\s+repairTarget=\\{book\\}/);
+    expect(route).toMatch(/scope=\{data\.branchScope\}\s+repairTarget=\{book\}/);
     expect(helper).toContain('scope.mode === "BRANCH"');
     expect(helper).toContain('matches[0].currency !== "USD"');
     expect(helper).not.toMatch(/fetch\s*\(|\.rpc\s*\(|createClient\s*\(/);
