@@ -31,3 +31,7 @@ F15 requires the immutable saved lastInboundMessageId UUID for each source. A ti
 ## Request enum reconciliation
 
 The canonical migration 0001_core.sql defines request_status as NEW, COLLECTING, READY, NEEDS_REVIEW, QUOTED, BOOKED, LOST, CLOSED. F15 only escalates NEW/COLLECTING/NEEDS_REVIEW with complete saved no-answer evidence. READY, QUOTED, BOOKED, LOST and CLOSED deliberately do not imply an unanswered-lead SLA. No nonexistent OPEN or REPLIED state may be emitted to the database.
+
+## Timestamp compatibility refinement
+
+The SLA evaluator now reuses canonical trustedQuoteInstant from quote-validity-clock.ts to parse strictly zoned, calendar-validated PostgreSQL TIMESTAMPTZ values with fractional seconds and timezone offsets. This replaces a narrower UTC-millisecond-only parser that would have rejected real saved rows. The message UUID remains the idempotency identity; exact source timestamp/version must still be rechecked by the future DB transaction.

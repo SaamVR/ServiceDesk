@@ -39,6 +39,11 @@ describe("F15 unanswered-lead SLA",()=>{
  it("keeps replay key across source versions; changes it for new inbound, tenant or branch",()=>{
   const x=candidate(input());
   expect(candidate(input({version:2})).eventKey).toBe(x.eventKey);
+  expect(candidate(input({createdAt:"2026-10-29T08:00:00+00:00",
+    lastInboundAt:"2026-10-29T08:10:00.000000+00:00"})).state)
+    .toBe("UNPERSISTED_SLA_CANDIDATE");
+  expect(candidate(input({createdAt:"2026-10-29T14:00:00+06:00"})).state)
+    .toBe("UNPERSISTED_SLA_CANDIDATE");
   expect(candidate(input({lastInboundAt:"2026-10-29T08:20:00.000Z"})).eventKey).toBe(x.eventKey);
   for(const change of [
    {lastInboundAt:"2026-10-29T08:20:00.000Z",lastInboundMessageId:"66666666-6666-4666-8666-666666666666"},
@@ -62,6 +67,8 @@ describe("F15 unanswered-lead SLA",()=>{
    input({lastInboundAt:"2026-10-29T10:00:00.000Z"}),
    input({createdAt:"2026-10-29T08:11:00.000Z"}),
    input({createdAt:"2026-02-30T08:00:00.000Z"}),
+   input({createdAt:"2026-10-29T08:00:00"}),
+   input({createdAt:"2026-10-29T08:00:00+15:00"}),
    input({}, {observedAt:"2026-10-29T08:09:00.000Z"}),
    input({}, {observedAt:"not-a-date"}),
   ]) expect(planF15UnansweredLeadSla(v).ok).toBe(false);

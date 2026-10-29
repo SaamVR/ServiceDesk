@@ -8,6 +8,7 @@ describe("F15 independent critic: no false durable or provider claims",()=>{
   const sla=read("src/server/workflows/sonic-f15-unanswered-lead-sla.ts");
   const ingress=read("src/server/workflows/sonic-f15-atomic-ingress.ts");
   expect(sla).toContain("responseHistoryComplete !== true");
+  expect(sla).toContain("trustedQuoteInstant(value)");
   expect(sla).toContain("UNPERSISTED_SLA_CANDIDATE");
   expect(sla).toContain("lastInboundAt");
   expect(sla).toContain("lastInboundMessageId");

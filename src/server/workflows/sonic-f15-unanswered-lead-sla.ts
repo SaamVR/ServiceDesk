@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { trustedQuoteInstant } from "@/features/operations/quote-validity-clock";
 
 /**
  * F15 candidate evaluator, independent of browser state and provider APIs.
@@ -55,13 +56,10 @@ function exact(value: unknown, keys: readonly string[]): value is Record<string,
         Object.hasOwn(descriptors[k], "value") && descriptors[k].enumerable);
   } catch { return false; }
 }
+// Reuse the existing canonical saved-timestamp verifier: Postgres returns
+// RFC3339 offsets and up to six fractional digits, not necessarily .000Z.
 function instant(value: unknown): number | null {
-  if (typeof value !== "string" || value.length !== 24 ||
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value))
-    return null;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value
-    ? parsed : null;
+  return trustedQuoteInstant(value);
 }
 
 /**
