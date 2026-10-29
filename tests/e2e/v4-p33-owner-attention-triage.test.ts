@@ -38,7 +38,8 @@ describe("P33 owner attention triage - scoped current evidence", () => {
       { attentionItems: undefined }, { workflowExecutions: undefined },
       { workflowActionExecutions: undefined }, { branchScope: undefined },
       { loadedAt: "invalid" },
-      { branchScope: { ...sample.branchScope, mode: "BRANCH" as const,
+      { branchScope: { mode: "BRANCH" as const,
+        branches: sample.branchScope!.branches,
         selectedBranchId: "not-authorized" } },
     ]) {
       expect(summarizeOwnerAttentionTriage({ ...sample, ...patch }).state).toBe("UNVERIFIED");
