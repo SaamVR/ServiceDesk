@@ -1,0 +1,58 @@
+name: ServiceDesk F15 disposable PG17 atomic-review source proof
+on:
+  pull_request:
+    branches:
+      - feat/servicedesk-v4-reconciled-qa-shell-20261012
+    paths:
+      - "docs/engineering/security/f15-unanswered-lead-atomic-db-candidate.sql"
+      - "tests/sql/v4-f15-atomic-pg17-*.sql"
+      - "scripts/release/v4-f15-atomic-pg17-concurrency.sh"
+      - "tests/ai/sonic-f15-*.test.ts"
+      - "src/server/workflows/sonic-f15-*.ts"
+      - ".github/workflows/v4-f15-atomic-pg17-rc.yml"
+permissions:
+  contents: read
+concurrency:
+  group: f15-pg17-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-disposable-postgresql-17:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f15-no-real-user
+          POSTGRES_DB: sd_f15_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f15_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGPASSWORD: disposable-f15-no-real-user
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      PGPORT: "5432"
+      PGDATABASE: sd_f15_disposable
+      SERVICEDESK_F15_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact head / disposable-only guard
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$PGDATABASE" = "sd_f15_disposable"
+          test "$SERVICEDESK_F15_PG17_DISPOSABLE_ONLY" = "1"
+      - name: Install isolated PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Build purely fictional schema and owner-locked candidate
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f15-unanswered-lead-atomic-db-candidate.sql
+      - name: ACL, tenant, replay, anti-forgery, same-time message and rollback proof
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-acceptance.sql
+      - name: Twelve competing sessions and real message writer lock
+        run: bash scripts/release/v4-f15-atomic-pg17-concurrency.sh
