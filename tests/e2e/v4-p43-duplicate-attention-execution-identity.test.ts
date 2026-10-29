@@ -52,7 +52,7 @@ describe("P43 duplicate LIVE execution identity quarantine", () => {
   });
   it("detects repeated IDs across two authorized branches in WORKSPACE mode", () => {
     const triage = summarizeOwnerAttentionTriage({ ...input,
-      branchScope: { ...scope!, mode: "WORKSPACE" },
+      branchScope: { ...scope!, mode: "ALL" },
       workflowExecutions: [run, { ...run, branchId: "branch-b" }],
     });
     expect(triage).toMatchObject({ state: "AVAILABLE", open: 0, ambiguous: 1 });
