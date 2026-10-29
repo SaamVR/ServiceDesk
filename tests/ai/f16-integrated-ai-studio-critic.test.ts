@@ -28,6 +28,7 @@ describe("IR17 independent critic: genuine price-book quote proposal UI",()=>{
   const action=read("src/features/operations/f16-grounded-quote-review-action.ts").toString();
   expect(action).toContain("proposeAuthorizedGroundedQuoteAlternatives");
   expect(action).toContain("expectedVersion:req.version");
+  expect(action).toContain('o.currency!=="USD"');
   expect(action).toContain("return denied()");
   expect(lock).toMatchObject({sourceOnly:true,priceBookMustExist:true,
    modelCalls:false,quoteCreated:false,paymentOrSend:false,
