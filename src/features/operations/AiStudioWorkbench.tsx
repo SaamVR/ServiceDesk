@@ -4,6 +4,9 @@ import { useId, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { AiRequestBrief } from "./AiRequestBrief";
 import { AiQuoteReview } from "./AiQuoteReview";
+import { AiSavedIntakeReview } from "./AiSavedIntakeReview";
+import { AiSavedCapacityReview } from "./AiSavedCapacityReview";
+import { AiSavedBusinessReview } from "./AiSavedBusinessReview";
 import { buildStaffModuleHref } from "./staff-modules";
 import { filterStudioRecordChoices } from "./ai-studio-records";
 import styles from "./AiStudioWorkspace.module.css";
@@ -168,8 +171,11 @@ function ScopedStudioWorkbench({
           </p>
         ) : null}
         {selected && mode === "request" ? (
-          <AiRequestBrief key={workspaceSlug + ":" + selected.id + ":" + selected.label}
-            workspaceSlug={workspaceSlug} requestId={selected.id} configured={configured} />
+          <div key={workspaceSlug + ":" + selected.id + ":" + selected.label}>
+            <AiRequestBrief
+              workspaceSlug={workspaceSlug} requestId={selected.id} configured={configured} />
+            <AiSavedIntakeReview workspaceSlug={workspaceSlug} requestId={selected.id} />
+          </div>
         ) : null}
         {selected && mode === "quote" ? (
           <AiQuoteReview key={workspaceSlug + ":" + selected.id + ":" + selected.label}
@@ -187,6 +193,13 @@ function ScopedStudioWorkbench({
           </div>
         ) : null}
       </div>
+      <section className={styles.recordPanel} aria-label="Verified model-free operations assistants">
+        <h2>Verified operational assistants</h2>
+        <p>These actions recheck signed-in saved records on demand. They do not require a model connection or create business actions.</p>
+        <AiSavedCapacityReview workspaceSlug={workspaceSlug} />
+        <AiSavedBusinessReview workspaceSlug={workspaceSlug} />
+        <p className={styles.boundary}>Crew review is limited to authorized owners or dispatchers. Daily/weekly intelligence is owner-only and will refuse other roles. All suggestions require manual verification.</p>
+      </section>
       <p className={styles.boundary}>Review source facts again whenever saved record details change.
         Visible status changes discard old client-only AI suggestions; edits that preserve
         the same status still require a fresh authorized backend check.
