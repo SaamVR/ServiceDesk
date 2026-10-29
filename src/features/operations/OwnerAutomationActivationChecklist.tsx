@@ -3,6 +3,7 @@ import { buildStaffModuleHref } from "./staff-modules";
 import type { OperationalStaffSnapshot } from "./operational-product-runtime";
 import { summarizeAutomationActivation } from "./owner-automation-activation";
 import { summarizeOwnerAttentionTriage } from "./owner-attention-triage";
+import { recommendOwnerAutomationDrafts } from "./owner-automation-draft-recommendations";
 import { availableFirstRunUsdBranches } from "./owner-pricing-readiness";
 import styles from "./OwnerAutomationActivationChecklist.module.css";
 import { readConfiguredAiRuntimeConfig } from "@/server/ai/runtime-config";
@@ -23,6 +24,14 @@ export function OwnerAutomationActivationChecklist({
 }) {
   const summary = summarizeAutomationActivation(data);
   const attention = summarizeOwnerAttentionTriage(data);
+  const draftStarters = recommendOwnerAutomationDrafts({
+    activation: summary,
+    attention,
+    authorizedBranchKnown: Boolean(data.actor?.role === "OWNER" &&
+      data.branchScope?.branches?.length &&
+      (data.branchScope.mode !== "BRANCH" ||
+        data.branchScope.branches.some(b => b.id === data.branchScope?.selectedBranchId))),
+  });
   // The real first-run pricing form is on Settings, below the general
   // configuration panels. Deep-link only when it is actually offered to
   // this authorized owner/branch; never lead to a missing or foreign form.
@@ -123,6 +132,25 @@ export function OwnerAutomationActivationChecklist({
           sends, provider actions, payments or rule publications occur here.
         </p>
       </section>
+      {data.actor?.role === "OWNER" && draftStarters.length > 0 ? (
+        <section className={styles.draftNextSteps} aria-labelledby="owner-draft-starters-title">
+          <h3 id="owner-draft-starters-title">Suggested next internal workflow drafts</h3>
+          <p>These suggestions are based on the current authorized owner snapshot.
+            They are not AI-generated rules or evidence that an automation ran.</p>
+          <ol>
+            {draftStarters.map(item => <li key={item.id}>
+              <strong>{item.name}</strong>
+              <p>{item.why}</p>
+              <Link href={buildStaffModuleHref(workspaceSlug, "automations") +
+                  "?template=" + encodeURIComponent(item.id)}>
+                Inspect draft starter
+              </Link>
+            </li>)}
+          </ol>
+          <p>Reviewing a starter never publishes a rule, sends a customer
+            message, retries an action or changes pricing.</p>
+        </section>
+      ) : null}
       {data.actor?.role === "OWNER" ? <OwnerWorkflowRuleAssistant
         workspaceSlug={workspaceSlug} workspaceId={data.workspace.id}
         branches={ownerRuleBranches}
