@@ -133,17 +133,47 @@ export function summarizeAutomationActivation(
   // Partial parent state is valid if an external email awaits owner approval
   // after all required internal attention effects are saved. One succeeded
   // action is NOT enough when a rule planned several internal actions.
-  const succeededIndexes = new Map<string, Set<number>>();
+  // Replayed actions have a durable logical slot (executionId + actionIndex).
+  // A prior SUCCEEDED attempt is historical evidence, not current proof when
+  // a later attempt failed, is pending, or is ambiguous. Activation must use
+  // only the single, unambiguous highest attempt for each required slot.
+  const slotAttempts = new Map<string, Map<number, Array<{
+    attemptNumber: number; state: string;
+  }>>>();
+  const invalidExecutions = new Set<string>();
   for (const action of data.workflowActionExecutions ?? []) {
     const verified = verifiedLiveExecutions.get(action.executionId);
-    if (!verified || action.actionType !== "CREATE_ATTENTION" ||
-        action.state !== "SUCCEEDED" ||
-        verified.branchId !== action.branchId ||
-        !Number.isSafeInteger(action.actionIndex) ||
-        !verified.requiredIndexes.includes(action.actionIndex)) continue;
-    const indexes = succeededIndexes.get(action.executionId) ?? new Set<number>();
-    indexes.add(action.actionIndex);
-    succeededIndexes.set(action.executionId, indexes);
+    if (!verified) continue;
+    if (!Number.isSafeInteger(action.actionIndex) ||
+        !verified.requiredIndexes.includes(action.actionIndex) ||
+        action.branchId !== verified.branchId ||
+        action.actionType !== "CREATE_ATTENTION" ||
+        !Number.isSafeInteger(action.attemptNumber) ||
+        action.attemptNumber < 1) {
+      invalidExecutions.add(action.executionId);
+      continue;
+    }
+    const slots = slotAttempts.get(action.executionId) ?? new Map();
+    const attempts = slots.get(action.actionIndex) ?? [];
+    attempts.push({ attemptNumber: action.attemptNumber, state: action.state });
+    slots.set(action.actionIndex, attempts);
+    slotAttempts.set(action.executionId, slots);
+  }
+  const currentSucceededIndexes = new Map<string, Set<number>>();
+  for (const [executionId, slots] of slotAttempts) {
+    const succeeded = new Set<number>();
+    for (const [index, attempts] of slots) {
+      const highest = Math.max(...attempts.map(item => item.attemptNumber));
+      const latest = attempts.filter(item => item.attemptNumber === highest);
+      // Duplicate highest attempts (including two SUCCEEDED records) cannot
+      // stand in for a single verified current action.
+      if (latest.length !== 1) {
+        invalidExecutions.add(executionId);
+        continue;
+      }
+      if (latest[0].state === "SUCCEEDED") succeeded.add(index);
+    }
+    currentSucceededIndexes.set(executionId, succeeded);
   }
   // An action SUCCEEDED status without a corresponding durable attention
   // item is not accepted as owner-facing quote-to-attention proof.
@@ -160,7 +190,8 @@ export function summarizeAutomationActivation(
   const internalExecutionSucceeded = [...verifiedLiveExecutions.entries()]
     .some(([executionId, verified]) =>
       verified.requiredIndexes.length > 0 &&
-      verified.requiredIndexes.every(index => succeededIndexes.get(executionId)?.has(index)) &&
+      !invalidExecutions.has(executionId) &&
+      verified.requiredIndexes.every(index => currentSucceededIndexes.get(executionId)?.has(index)) &&
       (linkedAttentionIds.get(executionId)?.size ?? 0) >= verified.requiredIndexes.length);
 
   const steps: ActivationStep[] = [
