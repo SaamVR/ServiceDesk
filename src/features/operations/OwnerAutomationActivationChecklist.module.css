@@ -51,3 +51,13 @@
 .attentionList strong { color: #734115; font-size: .82rem; }
 .attentionList p { margin: .25rem 0 0; color: #3b4f49; font-size: .82rem; line-height: 1.5; }
 .attentionDisclosure { margin: .6rem 0 0; color: #526b65; font-size: .78rem; line-height: 1.5; }
+
+
+.draftNextSteps { margin-top: 1rem; border: 1px solid #cce3da; background: #f8fcfa; padding: clamp(14px, 2vw, 19px); border-radius: 14px; }
+.draftNextSteps h3 { margin: 0; font-size: 1rem; color: #174d40; }
+.draftNextSteps p { margin: .55rem 0; font-size: .84rem; line-height: 1.55; color: #47695e; }
+.draftNextSteps ol { margin: .8rem 0; padding-left: 1.4rem; display: grid; gap: .75rem; }
+.draftNextSteps li { background: #fff; border: 1px solid #deeee5; border-radius: 9px; padding: .8rem 1rem; }
+.draftNextSteps strong { font-size: .9rem; color: #204c40; }
+.draftNextSteps a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 750; font-size: .85rem; color: #145b4a; text-decoration: underline; text-underline-offset: 3px; }
+.draftNextSteps a:focus-visible { outline: 3px solid #207e67; outline-offset: 3px; }
