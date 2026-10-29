@@ -1,0 +1,53 @@
+name: ServiceDesk P40 exact-source owner matrix + automation review
+on:
+  pull_request:
+    branches:
+      - sonic-p03/p32-integrated-owner-journey-20261029
+    paths:
+      - "src/features/operations/OwnerCleaningPricingWorksheet.tsx"
+      - "src/features/operations/AutomationPlaybookBrowser.tsx"
+      - "src/features/operations/owner-pricing-scenario-matrix.ts"
+      - "src/features/operations/automation-playbook-event-whatif.ts"
+      - "tests/e2e/v4-p40-*.test.ts"
+      - "docs/delivery/sonic-p40-source-provenance-20261029.json"
+      - ".github/workflows/v4-sonic-p40-composite.yml"
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-p40-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+jobs:
+  focused-independent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: {version: 10.17.1, run_install: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2, cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - name: Exact source SHA and deployment veto
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('vercel.json','utf8'));if(x.git?.deploymentEnabled!==false)process.exit(2)"
+      - name: Owner pricing, automation and independent source critic
+        run: pnpm exec vitest run tests/e2e/v4-p40-owner-pricing-scenario-matrix.test.ts tests/e2e/v4-p40-playbook-event-whatif.test.ts tests/e2e/v4-p40-integration-independent-critic.test.ts tests/e2e/v4-owner-pricing-worksheet.test.ts tests/e2e/v4-sonic-automation-playbook-finder.test.ts
+  full-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: {version: 10.17.1, run_install: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2, cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - name: Full source tests TypeScript lint and Next build on one exact head
+        run: pnpm check:rc
