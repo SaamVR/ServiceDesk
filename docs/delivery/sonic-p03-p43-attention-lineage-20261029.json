@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "releaseBoundary": "SOURCE_ONLY_DRAFT_NO_PRODUCTION",
+  "parent": {
+    "pr": 901,
+    "baseAtCreation": "9e152bfcb380bfbc3819badc93d1ffe4e788ccea",
+    "sourceBlob": "600c9e1d69fe22e7c7308a1901de2b056b3513c6"
+  },
+  "successor": {
+    "path": "src/features/operations/owner-attention-triage.ts",
+    "gitBlobSha": "706f21c1b28209cc022281fdf1631dc3eb6bfa54",
+    "reason": "Quarantine duplicate in-scope LIVE execution IDs; no Map-last-wins"
+  },
+  "originalP34Blob": "752543fcf25178bd6ad2da16a324f50a569a6be0",
+  "ownerApproval": null,
+  "independentHumanApproval": null,
+  "forbidden": [
+    "DB_AUTH_MUTATION",
+    "PROVIDER_SEND",
+    "PAYMENT",
+    "CANONICAL_MERGE",
+    "VERCEL_DEPLOY"
+  ]
+}
