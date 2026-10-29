@@ -7,7 +7,7 @@
     "877": "9ebcba822a9cf1410fdce7dbee08588b1b958c7b",
     "879": "1a301ae2a9640eb268940ccdf58194b8ba173649",
     "880": "7e9ed171a7aad14294ae90efbc589af41f25d84a",
-    "882": "170e3f8e42e9f3cfcb30e1d2e6acd96754e43835"
+    "882": "d43bf0da3a054f662dc6cb90ec1369a1300a3525"
   },
   "fileCount": 17,
   "forbiddenEffects": [
@@ -41,7 +41,7 @@
       "path": "src/features/onboarding/OnboardingProductRoute.tsx",
       "sourcePr": 882,
       "status": "modified",
-      "gitBlobSha": "a59128153adef719b78cc5afeb5456dd7946276a"
+      "gitBlobSha": "3a91b7fddf694336ac11b0d7a265de882bf66d09"
     },
     {
       "path": "src/features/operations/CatalogReadinessBanner.tsx",
