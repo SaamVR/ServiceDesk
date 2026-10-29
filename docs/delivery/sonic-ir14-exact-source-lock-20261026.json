@@ -8,13 +8,13 @@
     "854": "6b5793653e95a721de82bff7f17f08586c2f016e",
     "857": "079c13a2f561e82f2a50e828132980b382463448",
     "859": "70bf56d947ceb58d07faa7915ca24b254c254b1c",
-    "861": "7c86ac47576078bd8bdc355d9c37f97edc2980ef"
+    "861": "7b9ac773164a2cb11a2eb866efd53376309e27a0"
   },
   "liveDeploymentAuthorized": false,
   "canonicalMutationAuthorized": false,
   "modelOrProviderCalled": false,
   "sourceOnly": true,
-  "fileCount": 71,
+  "fileCount": 75,
   "files": [
     {
       "path": "docs/delivery/f06-source-interface-request-20261025.md",
@@ -67,7 +67,7 @@
     {
       "path": "docs/delivery/sonic-f13-workflow-operator-evidence-20261026.md",
       "status": "added",
-      "blobSha": "4805ff5c29fdf795ef7e341f9faa2bcc7593d803",
+      "blobSha": "b924e65b9abbedb2b9195d17416fc62ca702c813",
       "sourcePr": 861
     },
     {
@@ -119,15 +119,33 @@
       "sourcePr": 859
     },
     {
+      "path": "src/features/operations/workflow-inspector-model.ts",
+      "status": "modified",
+      "blobSha": "3c62103db3a5ae600a8866999f760976df5dbbe9",
+      "sourcePr": 861
+    },
+    {
       "path": "src/features/operations/workflow-operator-guidance.ts",
       "status": "added",
       "blobSha": "b838476b19db9a855ef22250fff9ba6cf4f3ccc8",
       "sourcePr": 861
     },
     {
+      "path": "src/features/operations/workflow-operator-handoff.ts",
+      "status": "added",
+      "blobSha": "29a2d193e18a9b5c4eb5c66c9b26969936d25fcb",
+      "sourcePr": 861
+    },
+    {
+      "path": "src/features/operations/WorkflowExecutionInspector.module.css",
+      "status": "modified",
+      "blobSha": "df5a5dceb6dfac07c83cd062e74db9839d792087",
+      "sourcePr": 861
+    },
+    {
       "path": "src/features/operations/WorkflowExecutionInspector.tsx",
       "status": "modified",
-      "blobSha": "abf7da2bd43966b9a62cf9c8b4b42dbaa92a9589",
+      "blobSha": "0553c4a05569f7b8e1fc5f0505421ec4a02e9aa2",
       "sourcePr": 861
     },
     {
@@ -433,13 +451,19 @@
     {
       "path": "tests/ai/sonic-f13-workflow-evidence-critic.test.ts",
       "status": "added",
-      "blobSha": "548f055c0789915dba0c9f61fa195e684c7d2649",
+      "blobSha": "a68f9fed8b1386df1f2cbddd346c95b5f1ce7f37",
       "sourcePr": 861
     },
     {
       "path": "tests/ai/sonic-f13-workflow-operator-guidance.test.ts",
       "status": "added",
       "blobSha": "86fba860ff2d565d30f3a5f2df2f48ac82b2f1eb",
+      "sourcePr": 861
+    },
+    {
+      "path": "tests/ai/sonic-f14-workflow-owner-handoff.test.ts",
+      "status": "added",
+      "blobSha": "0c7640944a7f7478baaab54de1d722ad1aa982ee",
       "sourcePr": 861
     }
   ]

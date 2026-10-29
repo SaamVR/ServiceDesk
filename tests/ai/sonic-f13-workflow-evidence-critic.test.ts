@@ -18,6 +18,14 @@ describe("F13 independent critic: genuine saved workflow evidence and no unsafe 
   const studio=read("src/features/operations/AiStudioWorkspace.tsx");
   expect(inspector).toContain('id="workflow-evidence"');
   expect(inspector).toContain("guideRecordedWorkflowIntervention(selected)");
+  expect(inspector).toContain("buildWorkflowOperatorHandoff(runs, snapshot.workflowAvailable === true, snapshot.loadedAt)");
+  expect(inspector).toContain('data-testid="workflow-operator-handoff"');
+  expect(inspector).toContain("{operatorHandoff.text}");
+  expect(inspector).toContain("Unexpected live preview state");
+  const model=read("src/features/operations/workflow-inspector-model.ts");
+  expect(model).toContain('run.state === "PREVIEWED") return "ambiguous"');
+  const handoff=read("src/features/operations/workflow-operator-handoff.ts");
+  expect(handoff).toContain("Object.hasOwn(eventLabels, entry.run.eventType)");
   expect(inspector).toContain("This is read-only: retries, approvals, customer messages, payments,");
   expect(studio).toContain('"automations")+"#workflow-evidence"');
   expect(studio).toContain("selectWorkflowInspectorClientSnapshot(data)");

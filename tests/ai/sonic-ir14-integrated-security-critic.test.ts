@@ -45,6 +45,19 @@ describe("IR14 independent source critic — reviewer authority stays with Produ
   const client=text("src/features/operations/workflow-inspector-client-snapshot.ts");
   expect(client).toContain("PUBLIC_WORKFLOW_ERROR_CODES");
  });
+ it("includes F14 read-only owner handoff and anomaly source evidence",()=>{
+  const ui=text("src/features/operations/WorkflowExecutionInspector.tsx");
+  const helper=text("src/features/operations/workflow-operator-handoff.ts");
+  const model=text("src/features/operations/workflow-inspector-model.ts");
+  expect(ui).toContain('data-testid="workflow-operator-handoff"');
+  expect(ui).toContain("buildWorkflowOperatorHandoff(runs, snapshot.workflowAvailable === true, snapshot.loadedAt)");
+  expect(helper).toContain("providerDeliveryVerified: false");
+  expect(helper).toContain("canRetryOrApprove: false");
+  expect(helper).toContain("Object.hasOwn(eventLabels, entry.run.eventType)");
+  expect(model).toContain('run.state === "PREVIEWED") return "ambiguous"');
+  expect(lock.files.filter(x=>x.sourcePr===861)).toHaveLength(11);
+  expect(lock.files.some(x=>x.path==="tests/ai/sonic-f14-workflow-owner-handoff.test.ts")).toBe(true);
+ });
  it("preserves explicit deployment veto",()=>{
   const v=JSON.parse(text("vercel.json")) as {git?:{deploymentEnabled?:boolean}};
   expect(v.git?.deploymentEnabled).toBe(false);

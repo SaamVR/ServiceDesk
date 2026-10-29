@@ -17,9 +17,9 @@ Six prior drafts contain substantial verified source but remain unmerged. Their 
 | Lead triage and field review | #854 | `6b5793653e95a721de82bff7f17f08586c2f016e` | 5 | `sonic-rehearsal/f10-source-20261026` |
 | Revenue/quality/resilience review | #857 | `079c13a2f561e82f2a50e828132980b382463448` | 8 | `sonic-rehearsal/f11-source-20261026` |
 | Owner saved-workday opportunity UI | #859 | `70bf56d947ceb58d07faa7915ca24b254c254b1c` | 10 | `sonic-rehearsal/f12-source-20261026` |
-| Persisted workflow operator evidence | #861 | `7c86ac47576078bd8bdc355d9c37f97edc2980ef` | 7 | `sonic-rehearsal/f13-source-20261026` |
+| Persisted workflow operator evidence + F14 read-only handoff | #861 | `7b9ac773164a2cb11a2eb866efd53376309e27a0` | 11 | `sonic-rehearsal/f13-source-20261026` |
 
-**Provenance:** `docs/delivery/sonic-ir14-exact-source-lock-20261026.json` records source PR, HEAD and Git blob SHA for all **71** file paths. Of these **67 are additive and four are existing UI modifications**, across six disjoint filename sets. Canonical's full tree was independently checked for unexpected filename collisions or missing modifications (none; tree not truncated). The QA lane independently hashes every checked-out source file as a Git object. The critic checks no released workflows, hidden provider claims, branch/tenant bypass, or Git auto-deployment.
+**Provenance:** `docs/delivery/sonic-ir14-exact-source-lock-20261026.json` records source PR, HEAD and Git blob SHA for all **75** file paths. Of these **69 are additive and six are existing UI modifications**, across six disjoint filename sets. Canonical's full tree was independently checked for unexpected filename collisions or missing modifications (none; tree not truncated). The QA lane independently hashes every checked-out source file as a Git object. The critic checks no released workflows, hidden provider claims, branch/tenant bypass, or Git auto-deployment.
 
 ## Production merge decision, NOT authorization
 
@@ -37,10 +37,21 @@ Six prior drafts contain substantial verified source but remain unmerged. Their 
 
 ## Source gates and CI accounting
 
-Source result is acceptable for Production *review* only after all at the exact rehearsal SHA: (1) Git hash lock of all 71 original blobs, (2) original F01–F13 suites all pass together, (3) TypeScript, ESLint and Next production build, (4) review merge-tree parity, (5) independent critic integrity, (6) no scope escape in diff. GitHub Actions on draft PR can validate this with no deployment. Fail closed and repair isolated rehearsal wiring only if any run fails; do not rewrite original PR blobs without a separate explicit proposal.
+Source result is acceptable for Production *review* only after all at the exact rehearsal SHA: (1) Git hash lock of all 75 original blobs, (2) original F01–F13 suites all pass together, (3) TypeScript, ESLint and Next production build, (4) review merge-tree parity, (5) independent critic integrity, (6) no scope escape in diff. GitHub Actions on draft PR can validate this with no deployment. Fail closed and repair isolated rehearsal wiring only if any run fails; do not rewrite original PR blobs without a separate explicit proposal.
 
-**NEXT_BATCH:** Production selects source merge option after P02 readiness; Feature Chat must not open another speculative F14+ feature simply to accumulate source count.
+**NEXT_BATCH:** Production selects source merge option after P02 readiness; the owner-directed F14 handoff is review-only and not a live automation or release authorization.
 
 ## Concurrent P02 canonical advance verified at rehearsal completion
 
-After initial combined source acceptance, Production merged [P02 #864](https://github.com/SaamVR/ServiceDesk/pull/864) into canonical `6064e971431e06920ba5e9d72715f5a71e0f5710`. Its only changed paths are `src/features/auth/authorized-workspace-access.ts` and `tests/e2e/v3-authorized-workspace-access.test.ts`, neither owned by the 71 feature files or IR14 QA docs. Original exact F08–F13 Git blob objects remain unchanged. Integration prepares a two-parent **isolated draft** source commit incorporating those two P02 changes plus the same locked 71 blobs and four IR14 QA docs/tests, with a fresh exact-head run. This is not permission to merge or deploy and is not live two-tenant P02 acceptance.
+After initial combined source acceptance, Production merged [P02 #864](https://github.com/SaamVR/ServiceDesk/pull/864) into canonical `6064e971431e06920ba5e9d72715f5a71e0f5710`. Its only changed paths are `src/features/auth/authorized-workspace-access.ts` and `tests/e2e/v3-authorized-workspace-access.test.ts`, neither owned by the 75 feature files or IR14 QA docs. Original exact F08–F13 Git blob objects remain unchanged. Integration prepares a two-parent **isolated draft** source commit incorporating those two P02 changes plus the same locked 75 blobs and four IR14 QA docs/tests, with a fresh exact-head run. This is not permission to merge or deploy and is not live two-tenant P02 acceptance.
+
+## F14 exact-source amendment — 2026-10-29
+
+The new F13 source head imports a bounded saved-workflow owner/staff
+handoff, negative privacy/validation tests, and a LIVE/PREVIEWED anomaly
+reconciliation fix. The revised bundle locks **75 imported exact Git blob
+paths plus four integration-specific artifacts (79 changed paths)**; F13
+contributes 11 paths rather than seven. All other five F08–F12 source
+heads and blobs remain unchanged. This is not scheduled dispatch,
+provider delivery, saved workflow publication, two-owner UAT, or
+permission to merge the draft branches.
