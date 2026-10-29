@@ -5,6 +5,7 @@ import { OwnerPricingCompletionGuide } from "./OwnerPricingCompletionGuide";
 import type { OperationalBranchScope } from "./operational-product-runtime";
 import type { OwnerExistingPricingBook } from "@/server/core/owner-cleaning-pricing-revision";
 import { availableFirstRunUsdBranches, type OwnerPricingBookProof } from "./owner-pricing-readiness";
+import { assessOwnerPricingRevisionAccess } from "./owner-pricing-revision-access";
 
 type PriceService = {
   label: string;
@@ -54,6 +55,14 @@ export function OwnerCleaningPricingSetupForm({
   const branches = repairTarget
     ? [repairTarget.branch]
     : availableFirstRunUsdBranches(scope, proof);
+  // The original revision target can outlive a branch selection change.
+  // Do not render writable hidden identifiers until their authorized,
+  // selected USD scope and optimistic-concurrency book version agree.
+  const revisionAccess = repairTarget
+    ? assessOwnerPricingRevisionAccess(scope, repairTarget) : null;
+  if (revisionAccess && revisionAccess.state !== "READY_FOR_OWNER_REVIEW") return (
+    <p role="alert">{revisionAccess.detail} No pricing changes were submitted.</p>
+  );
   if (repairTarget && !repairTarget.serviceNames) return (
     <p role="alert">The shared service catalog is incomplete or inactive. Restore all three cleaning services in Settings before revising this branch price book; rates were not changed.</p>
   );
@@ -191,7 +200,28 @@ export function OwnerCleaningPricingSetupForm({
             <MoneyField label="Max quote eligible for automatic approval" name="autoApprovalMax" />
           </div>
         </fieldset>
-        {!repairTarget ? <OwnerPricingCompletionGuide /> : null}
+        {repairTarget ? (
+          <fieldset style={{ border: "1px solid #c9ded6", borderRadius: 10, padding: 14 }}>
+            <legend style={{ fontWeight: 750, color: "#245548" }}>
+              Confirm this exact saved price-book revision
+            </legend>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10,
+              lineHeight: 1.55, fontSize: ".86rem" }}>
+              <input type="checkbox" name="ownerRevisionAcknowledged"
+                value="yes" required style={{ marginTop: 5, flexShrink: 0 }} />
+              <span>I have reviewed saved book version {repairTarget.bookVersion} for
+                {" "}{repairTarget.branch.name}. I am entering a full replacement
+                of all rates, durations and policies for this USD branch, not editing
+                individual price lines. The server will reject a stale version.</span>
+            </label>
+            <p style={{ margin: "8px 0 0", fontSize: ".8rem", lineHeight: 1.5 }}>
+              If someone else saved a revision, stop and reload Settings. Never
+              resubmit a stale form or reuse its idempotency key; first inspect
+              the newly saved version. A successful submission still requires
+              independent persisted readback.
+            </p>
+          </fieldset>
+        ) : <OwnerPricingCompletionGuide />}
         <OwnerCleaningPricingWorksheet />
         <StaffSubmitButton className="app-button-primary" style={{ justifySelf: "start" }}
           pendingLabel="Saving pricing…">
