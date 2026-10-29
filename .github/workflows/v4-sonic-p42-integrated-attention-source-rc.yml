@@ -1,0 +1,31 @@
+name: ServiceDesk P42 integrated attention playbook exact source RC
+on:
+  push:
+    branches: [sonic-p03/p42-integrated-owner-attention-playbook-20261029]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-p42-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  integrated-source-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Independent P42 exact-byte critic plus P40 and P41 adversarial regressions
+        run: pnpm exec vitest run tests/e2e/v4-p42-integrated-attention-security-critic.test.ts tests/e2e/v4-p40-owner-attention-review-playbook.test.ts tests/e2e/v4-p41-owner-attention-zoned-clock.test.ts tests/e2e/v4-p33-owner-attention-triage.test.ts tests/e2e/v4-p33-activation-replay-integrity.test.ts
+      - name: Full source RC, TypeScript, lint, test and Next build
+        run: pnpm check:rc

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -12,6 +12,29 @@ type Provenance = {
 };
 const read = (name: string) => readFileSync(join(process.cwd(), name));
 const lock = JSON.parse(read("docs/delivery/sonic-p03-p34-source-provenance-20261029.json").toString()) as Provenance;
+// Preserve the original P34 source journal unchanged. A later reviewed P42
+// composite may supersede ONLY these two presentation/triage files, and only
+// with the explicitly proven P40/P41 Git blobs and source commit identities.
+const p42Path = "docs/delivery/sonic-p03-p42-source-provenance-20261029.json";
+const p42 = existsSync(join(process.cwd(), p42Path))
+  ? JSON.parse(read(p42Path).toString()) as {
+      files: Record<string, { gitBlobSha: string; source: string }>;
+      sources: Record<string, { commit: string }>;
+      base: { commit: string };
+    }
+  : null;
+const successors: Record<string, { old: string; next: string; lane: string; head: string }> = {
+  "src/features/operations/owner-attention-triage.ts": {
+    old: "752543fcf25178bd6ad2da16a324f50a569a6be0",
+    next: "600c9e1d69fe22e7c7308a1901de2b056b3513c6",
+    lane: "P41", head: "0cf421a0da26b37550599aa10418a5eeb4e6aaa1",
+  },
+  "src/features/operations/OwnerAutomationActivationChecklist.tsx": {
+    old: "7fa644c26d915a3abf9968d563a44c2906c72e48",
+    next: "33bacc933867c4c14ea933a62c52a951e9c820f6",
+    lane: "P40", head: "d6b19c09fbfcd827a9aadae6f83c26e5b8d7fe8c",
+  },
+};
 const gitBlob = (bytes: Buffer) => createHash("sha1")
   .update(Buffer.from(`blob ${bytes.length}\\0`.replace("\\0", "\u0000")))
   .update(bytes).digest("hex");
@@ -30,7 +53,20 @@ describe("P34 independent exact-source and safety critic", () => {
     for (const item of lock.files) {
       expect([891, 892]).toContain(item.sourcePr);
       expect(item.path).toMatch(/^(src\/features\/operations\/|tests\/e2e\/)/);
-      expect(gitBlob(read(item.path))).toBe(item.gitBlobSha);
+      const successor = p42 ? successors[item.path] : undefined;
+      if (!successor) {
+        expect(gitBlob(read(item.path))).toBe(item.gitBlobSha);
+      } else {
+        // The original P34 hash remains frozen in the historical manifest.
+        // Only reviewed, exact-object P42 successors may replace it.
+        expect(item.gitBlobSha).toBe(successor.old);
+        expect(p42?.base.commit).toBe("27261bc46666c2bed1c78599679485d7366fa83b");
+        expect(p42?.files[item.path]).toMatchObject({
+          gitBlobSha: successor.next, source: successor.lane,
+        });
+        expect(p42?.sources[successor.lane]?.commit).toBe(successor.head);
+        expect(gitBlob(read(item.path))).toBe(successor.next);
+      }
     }
   });
   it("keeps owner attention diagnostics inside existing authorized owner UI", () => {
