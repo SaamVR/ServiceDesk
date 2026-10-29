@@ -1,0 +1,172 @@
+{
+  "schema": "servicedesk.p35.source-integrity.v1",
+  "state": "P03_SOURCE_ONLY_NOT_ACCEPTED",
+  "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
+  "sourceHeads": {
+    "876": "ad9072d58bdba7f7238ec4cb92ac3d2e7467a174",
+    "877": "9ebcba822a9cf1410fdce7dbee08588b1b958c7b",
+    "879": "1a301ae2a9640eb268940ccdf58194b8ba173649",
+    "880": "7e9ed171a7aad14294ae90efbc589af41f25d84a",
+    "882": "d43bf0da3a054f662dc6cb90ec1369a1300a3525",
+    "885": "66d824028d907d443cf20f71c01ac55047152b8c",
+    "886": "b59e9c9c257228c7a29cb12dd968a5baff686c8f"
+  },
+  "fileCount": 22,
+  "exactImportedFileCount": 21,
+  "composedFileCount": 1,
+  "forbiddenEffects": [
+    "DATABASE_DDL",
+    "QA_AUTH_MUTATION",
+    "PROVIDER_SEND",
+    "PAYMENT",
+    "DEPLOYMENT",
+    "MERGE"
+  ],
+  "composedSourceOverlays": [
+    {
+      "path": "src/features/onboarding/OnboardingProductRoute.tsx",
+      "primarySourcePr": 882,
+      "primarySourceHead": "d43bf0da3a054f662dc6cb90ec1369a1300a3525",
+      "primarySourceBlob": "3a91b7fddf694336ac11b0d7a265de882bf66d09",
+      "secondarySourcePr": 886,
+      "secondarySourceHead": "b59e9c9c257228c7a29cb12dd968a5baff686c8f",
+      "secondarySourceBlob": "6880c0cca8aaeac90d006138b0812dc34b09278b",
+      "composedGitBlobSha": "a67ccc578869d7d619d3f0074565979057ef91b6",
+      "review": "P31 distinct cleaning service message and P34 owner pricing next-action panel compose without losing either original behavior"
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/delivery/sonic-gap/p25-owner-pricing-mixed-readiness-handoff-20261029.md",
+      "sourcePr": 876,
+      "status": "added",
+      "gitBlobSha": "2384110fc1b27feb41cd981cb9b1609759d17847"
+    },
+    {
+      "path": "src/features/onboarding/onboarding-cleaning-catalog-copy.ts",
+      "sourcePr": 882,
+      "status": "added",
+      "gitBlobSha": "5ff7b84f6e20f8c9ccb8974d2f47897409383e2c"
+    },
+    {
+      "path": "src/features/onboarding/onboarding-commercial-readiness.ts",
+      "sourcePr": 879,
+      "status": "modified",
+      "gitBlobSha": "aacaaf9a390226809162de2a8c094c4fcd14b32b"
+    },
+    {
+      "path": "src/features/onboarding/OnboardingProductRoute.tsx",
+      "sourcePr": 882,
+      "status": "modified",
+      "gitBlobSha": "a67ccc578869d7d619d3f0074565979057ef91b6"
+    },
+    {
+      "path": "src/features/onboarding/OwnerCommercialActionPanel.tsx",
+      "sourcePr": 886,
+      "status": "added",
+      "gitBlobSha": "f9e185624189c740feca480371b4c95194d3ab69"
+    },
+    {
+      "path": "src/features/operations/CatalogReadinessBanner.tsx",
+      "sourcePr": 876,
+      "status": "modified",
+      "gitBlobSha": "ca26cce99e82f71448609a1e027319776fe88949"
+    },
+    {
+      "path": "src/features/operations/owner-automation-activation.ts",
+      "sourcePr": 880,
+      "status": "modified",
+      "gitBlobSha": "5c24ee15b057d2157d527e7d7ae87973887753ad"
+    },
+    {
+      "path": "src/features/operations/owner-automation-next-action.ts",
+      "sourcePr": 885,
+      "status": "added",
+      "gitBlobSha": "cad65e8ed60728f9a6e590d8b419f6ca0bb8188a"
+    },
+    {
+      "path": "src/features/operations/owner-pricing-readiness.ts",
+      "sourcePr": 876,
+      "status": "modified",
+      "gitBlobSha": "254b5098ae6f8f68a3178b2dc840929a932d2af2"
+    },
+    {
+      "path": "src/features/operations/OwnerAutomationActivationChecklist.tsx",
+      "sourcePr": 885,
+      "status": "modified",
+      "gitBlobSha": "254805b815561f579e869fdc7084008e2efa5590"
+    },
+    {
+      "path": "src/features/operations/OwnerCleaningPricingSetupForm.tsx",
+      "sourcePr": 877,
+      "status": "modified",
+      "gitBlobSha": "06132ba797602c2c6fd57f851781403961cdbb3f"
+    },
+    {
+      "path": "tests/e2e/v4-guided-owner-automation-activation.test.tsx",
+      "sourcePr": 880,
+      "status": "modified",
+      "gitBlobSha": "bf3e89133af000ba01e9fbe421a0dc6a7f6a7df7"
+    },
+    {
+      "path": "tests/e2e/v4-owner-automation-activation.test.ts",
+      "sourcePr": 880,
+      "status": "modified",
+      "gitBlobSha": "ebeaf6dea40a359844f3da585df5e6a0e85150a0"
+    },
+    {
+      "path": "tests/e2e/v4-owner-branch-price-banner.test.tsx",
+      "sourcePr": 876,
+      "status": "modified",
+      "gitBlobSha": "ef8f165bfde3908160b6e61c62234ea39791ea62"
+    },
+    {
+      "path": "tests/e2e/v4-owner-branch-price-readiness.test.ts",
+      "sourcePr": 876,
+      "status": "modified",
+      "gitBlobSha": "bd129816852f4d6193320f804b5061d36574cd1c"
+    },
+    {
+      "path": "tests/e2e/v4-owner-pricing-form-state-readiness.test.tsx",
+      "sourcePr": 877,
+      "status": "added",
+      "gitBlobSha": "18641be5aa2d130fdc23f737ca3789e5c8c5b7a8"
+    },
+    {
+      "path": "tests/e2e/v4-owner-pricing-mixed-readiness-critic.test.tsx",
+      "sourcePr": 876,
+      "status": "added",
+      "gitBlobSha": "2b8167b57460430014e673b7b27176f37eb0a8b0"
+    },
+    {
+      "path": "tests/e2e/v4-p28-owner-commercial-branch-readiness.test.ts",
+      "sourcePr": 879,
+      "status": "added",
+      "gitBlobSha": "462f71326a0d9e3dcbf6c7872373e1ba1279bad3"
+    },
+    {
+      "path": "tests/e2e/v4-p29-automation-commercial-gates.test.ts",
+      "sourcePr": 880,
+      "status": "added",
+      "gitBlobSha": "66b5486221837e117f7099f3320f0ebe7dce4aa4"
+    },
+    {
+      "path": "tests/e2e/v4-p31-owner-supported-cleaning-copy.test.ts",
+      "sourcePr": 882,
+      "status": "added",
+      "gitBlobSha": "b6ad40940e1f8cab87414012d75e84e31ef7b3de"
+    },
+    {
+      "path": "tests/e2e/v4-p33-owner-next-action-plan.test.ts",
+      "sourcePr": 885,
+      "status": "added",
+      "gitBlobSha": "9aaaec3467daa0517b5bf6affaf0400afd74ecee"
+    },
+    {
+      "path": "tests/e2e/v4-p34-onboarding-pricing-next-actions.test.tsx",
+      "sourcePr": 886,
+      "status": "added",
+      "gitBlobSha": "ed0c70bd908dcf8481759c2c18f6db2a50cb060c"
+    }
+  ]
+}
