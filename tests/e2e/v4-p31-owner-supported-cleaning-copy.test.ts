@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { describeSavedCleaningCatalog } from "../../src/features/onboarding/onboarding-cleaning-catalog-copy";
-import { countQuoteableCleaningServices } from "../../src/features/operations/owner-pricing-readiness";
+import { describeSavedCleaningCatalog, countDistinctSupportedCleaningTypes } from "../../src/features/onboarding/onboarding-cleaning-catalog-copy";
 
 describe("P31 owner saved-catalog communication integrity",()=>{
   it("does not claim NO service exists when only unrelated active products exist",()=>{
@@ -18,7 +17,7 @@ describe("P31 owner saved-catalog communication integrity",()=>{
     expect(message).not.toContain("sample");
   });
   it("reports supported service types distinctly from total active catalog rows",()=>{
-    const count=countQuoteableCleaningServices([
+    const count=countDistinctSupportedCleaningTypes([
       {active:true,code:"STANDARD"},{active:true,code:"STANDARD"},
       {active:true,code:"WINDOWS"},{active:true,code:"DEEP"},
       {active:false,code:"MOVE_OUT"},
@@ -38,8 +37,9 @@ describe("P31 owner saved-catalog communication integrity",()=>{
   it("wires the grounded helper into actual owner onboarding, no provider or DB write",()=>{
     const route=readFileSync("src/features/onboarding/OnboardingProductRoute.tsx","utf8");
     expect(route).toContain("describeSavedCleaningCatalog(");
-    expect(route).toContain("enabledServices.length, commercial.quoteableCleaningServices");
+    expect(route).toContain("enabledServices.length, supportedCleaningTypes");
     expect(route).toContain('label: "Cleaning service types"');
+    expect(route).toContain("countDistinctSupportedCleaningTypes(serviceCatalog)");
     expect(route).not.toContain("No active service is saved.");
     const helper=readFileSync("src/features/onboarding/onboarding-cleaning-catalog-copy.ts","utf8");
     expect(helper).not.toContain(".rpc(");
