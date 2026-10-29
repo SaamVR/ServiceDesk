@@ -11,6 +11,8 @@ import {
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { loadOnboardingProduct } from "./onboarding-product-runtime";
 import { summarizeOwnerCommercialSetup } from "./onboarding-commercial-readiness";
+import { OwnerCommercialActionPanel } from "./OwnerCommercialActionPanel";
+import { describeSavedCleaningCatalog, countDistinctSupportedCleaningTypes } from "./onboarding-cleaning-catalog-copy";
 import { OnboardingOperationalEvidencePanel } from "./OnboardingOperationalEvidencePanel";
 import { availableFirstRunUsdBranches } from "@/features/operations/owner-pricing-readiness";
 import { summarizeAutomationActivation } from "@/features/operations/owner-automation-activation";
@@ -118,10 +120,14 @@ export async function OnboardingProductRoute({
   const commercial = summarizeOwnerCommercialSetup({
     catalog: serviceCatalog, scope: branchScope, proof: ownerPricingBookProof,
   });
+  const supportedCleaningTypes = countDistinctSupportedCleaningTypes(serviceCatalog);
   const activeMembers =
     ownerSettings?.members.filter((member) => member.active) ?? [];
   const businessReady = Boolean(workspace.name && workspace.timezone);
-  const servicesReady = commercial.quoteableCleaningServices > 0;
+  // Keep the established saved-commercial prerequisite AND the independent
+  // distinct supported-type count: neither source may substitute for the other.
+  const servicesReady = commercial.quoteableCleaningServices > 0 &&
+    supportedCleaningTypes > 0;
   const teamReady = activeMembers.length > 0;
   // A recorded subscription is not necessarily usable: past-due and
   // cancelled records must never count as completed owner setup.
@@ -163,9 +169,9 @@ export async function OnboardingProductRoute({
             detail: "Not a launch approval",
           },
           {
-            label: "Services",
-            value: enabledServices.length,
-            detail: "Enabled services",
+            label: "Cleaning service types",
+            value: supportedCleaningTypes,
+            detail: `${enabledServices.length} active catalog item${enabledServices.length === 1 ? "" : "s"} total; not pricing proof`,
           },
           {
             label: "Branch pricing",
@@ -207,14 +213,9 @@ export async function OnboardingProductRoute({
             <article className="app-row">
               <div>
                 <h3>Service catalog</h3>
-                <p>
-                  {servicesReady
-                    ? String(enabledServices.length) +
-                      " active service" +
-                      (enabledServices.length === 1 ? "" : "s") +
-                      " saved in the operational catalog."
-                    : "No active service is saved. Set up the real cleaning catalog and owner-entered prices."}
-                </p>
+                <p>{describeSavedCleaningCatalog(
+                  enabledServices.length, supportedCleaningTypes,
+                )}</p>
                 {!servicesReady ? <Link href={realPricingHref}>Configure actual services →</Link> : null}
               </div>
               <div className="app-row-meta">{setupState(servicesReady)}</div>
@@ -224,9 +225,13 @@ export async function OnboardingProductRoute({
               <div>
                 <h3>Branch price books</h3>
                 <p>{commercial.detail}</p>
-                {!pricingVerified ? (
-                  <Link href={realPricingHref}>Review branch pricing in Settings →</Link>
-                ) : null}
+                <div aria-label="Review branch pricing in Settings">
+                  <OwnerCommercialActionPanel
+                    workspaceSlug={workspace.slug}
+                    evidence={commercial}
+                    canEnterFirstRunRates={canEnterFirstRunRates}
+                  />
+                </div>
               </div>
               <div className="app-row-meta">
                 {pricingVerified

@@ -68,14 +68,14 @@ const acceptedQuote: NonNullable<Input["quotes"]>[number] = {
 
 const priced: Input = {
   ...empty,
-  ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+  ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"], existingBookBranchIds: ["branch-1"] },
 };
 
 describe("owner automation activation evidence", () => {
   it("credits source-key-verified quote identity and linked internal attention, not branch coincidence", () => {
     const summary = summarizeAutomationActivation({
       ...priced,
-      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
       requests: [acceptedRequest], quotes: [acceptedQuote],
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention],
@@ -92,7 +92,7 @@ describe("owner automation activation evidence", () => {
 
   it("rejects same-branch but different-quote executions and missing saved attention items", () => {
     const base: Input = {
-      ...priced, serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ...priced, serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
       workflowRules: [activeRule], workflowRuleVersions: [published],
       requests: [acceptedRequest], quotes: [acceptedQuote],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention],
@@ -123,7 +123,7 @@ describe("owner automation activation evidence", () => {
       actions: [{ type: "CREATE_ATTENTION" }, { type: "CREATE_ATTENTION" }] };
     const actionTwo = { ...completedAttention, id: "action-2", actionIndex: 1 };
     const ready = {
-      ...priced, serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
+      ...priced, serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
       workflowRules: [activeRule], workflowRuleVersions: [multiRule],
       requests: [acceptedRequest], quotes: [acceptedQuote],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention, actionTwo],
@@ -148,14 +148,14 @@ describe("owner automation activation evidence", () => {
   it("requires active catalog and verified price-book evidence independently", () => {
     const input: Input = {
       ...empty,
-      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"], existingBookBranchIds: ["branch-1"] },
     };
     const summary = summarizeAutomationActivation(input);
     expect(summary.readyCount).toBe(2);
     expect(summary.steps.slice(0,2).map(s => s.status)).toEqual(["READY", "READY"]);
     expect(summarizeAutomationActivation({
-      ...input, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: [] },
+      ...input, ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: [], existingBookBranchIds: [] },
     }).steps[1].status).toBe("ACTION_REQUIRED");
   });
 
@@ -221,8 +221,8 @@ describe("owner automation activation evidence", () => {
   it("credits only matching persisted LIVE internal attention success", () => {
     const summary = summarizeAutomationActivation({
       ...empty,
-      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"], existingBookBranchIds: ["branch-1"] },
       workflowRules: [activeRule],
       workflowRuleVersions: [published],
       workflowExecutions: [live],
@@ -237,8 +237,8 @@ describe("owner automation activation evidence", () => {
   it("credits saved internal attention when external email approval remains pending", () => {
     const data: Input = {
       ...empty,
-      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"], existingBookBranchIds: ["branch-1"] },
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [{ ...live, state: "ACTIONS_PENDING" }],
       attentionItems: [persistedAttention],
@@ -273,8 +273,8 @@ describe("owner automation activation evidence", () => {
       actionIndex: 2, state: "PENDING" as const };
     const data: Input = {
       ...empty,
-      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"], existingBookBranchIds: ["branch-1"] },
       workflowRules: [activeRule],
       workflowRuleVersions: [{ ...published, maxActionsPerEvent: 3, actions: [
         { type: "CREATE_ATTENTION" },
@@ -303,8 +303,8 @@ describe("owner automation activation evidence", () => {
   it("requires an accepted saved quote, not merely a published rule and internal action", () => {
     const data: Input = {
       ...empty, requests: [], quotes: [],
-      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"], existingBookBranchIds: ["branch-1"] },
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention],
     };
@@ -352,11 +352,11 @@ describe("owner automation activation evidence", () => {
         {id:"branch-2",code:"US-S",name:"South",currency:"USD",
           timezone:"America/Chicago",isDefault:false},
       ]},
-      ownerPricingBookProof: {state:"VERIFIED",activeBranchIds:["branch-1"]},
+      ownerPricingBookProof: {state:"VERIFIED",activeBranchIds: ["branch-1"], existingBookBranchIds: ["branch-1"]},
     };
     expect(summarizeAutomationActivation(twoBranches).steps[3].status).toBe("ACTION_REQUIRED");
     expect(summarizeAutomationActivation({
-      ...twoBranches, ownerPricingBookProof: {state:"VERIFIED",activeBranchIds:["branch-2"]},
+      ...twoBranches, ownerPricingBookProof: {state:"VERIFIED",activeBranchIds: ["branch-2"], existingBookBranchIds: ["branch-2"]},
     }).steps[3].status).toBe("READY");
   });
 
@@ -376,8 +376,8 @@ describe("owner automation activation evidence", () => {
     const base: Input = {
       ...empty,
       branchScope: { mode: "ALL", branches: [...empty.branchScope!.branches, south] },
-      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1", "branch-2"] },
+      serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1", "branch-2"], existingBookBranchIds: ["branch-1", "branch-2"] },
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention],
       requests: [{ ...acceptedRequest, branchId: "branch-2" }],
@@ -401,8 +401,8 @@ describe("owner automation activation evidence", () => {
   it("fails closed when selected branch is not the priced branch, even when some branch is ready", () => {
     const readyElsewhere: Input = {
       ...empty,
-      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-2"] },
+      serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-2"], existingBookBranchIds: ["branch-2"] },
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention],
     };
@@ -419,8 +419,8 @@ describe("owner automation activation evidence", () => {
     const mixed: Input = {
       ...empty,
       branchScope: { mode: "ALL", branches: [...empty.branchScope!.branches, branchTwo] },
-      serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-2"] },
+      serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-2"], existingBookBranchIds: ["branch-2"] },
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention],
     };
@@ -433,8 +433,8 @@ describe("owner automation activation evidence", () => {
 
   it("does not credit an attention action from a foreign branch even if execution ID matches", () => {
     const result = summarizeAutomationActivation({
-      ...empty, serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      ...empty, serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"], existingBookBranchIds: ["branch-1"] },
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live],
       workflowActionExecutions: [{ ...completedAttention, branchId: "branch-2" }],
@@ -445,8 +445,8 @@ describe("owner automation activation evidence", () => {
 
   it("does not credit another currency or unavailable branch scope as real USD readiness", () => {
     const data: Input = {
-      ...empty, serviceCatalog: [{ active: true } as Input["serviceCatalog"][number]],
-      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"] },
+      ...empty, serviceCatalog: [{ active: true, code: "STANDARD" } as Input["serviceCatalog"][number]],
+      ownerPricingBookProof: { state: "VERIFIED", activeBranchIds: ["branch-1"], existingBookBranchIds: ["branch-1"] },
       workflowRules: [activeRule], workflowRuleVersions: [published],
       workflowExecutions: [live], workflowActionExecutions: [completedAttention],
     };
