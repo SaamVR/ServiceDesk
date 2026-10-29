@@ -1,3 +1,13 @@
+/** Counts distinct quote-engine-supported active cleaning types, not rows. */
+export function countDistinctSupportedCleaningTypes(
+  catalog?: readonly { active: boolean; code: string }[],
+): number {
+  if (!catalog) return 0;
+  return new Set(catalog.filter(item => item.active &&
+    (item.code === "STANDARD" || item.code === "DEEP" || item.code === "MOVE_OUT"))
+    .map(item => item.code)).size;
+}
+
 /** Safe owner-facing explanation based only on the active saved catalog. */
 export function describeSavedCleaningCatalog(
   activeCatalogItems: number,
