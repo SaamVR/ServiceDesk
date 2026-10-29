@@ -1,0 +1,30 @@
+name: ServiceDesk P40 — Owner Unsaved Pricing Scenario Matrix
+on:
+  pull_request:
+    branches: [sonic-p03/p32-integrated-owner-journey-20261029]
+    paths:
+      - "src/features/operations/OwnerCleaningPricingWorksheet.tsx"
+      - "src/features/operations/owner-pricing-scenario-matrix.ts"
+      - "tests/e2e/v4-p40-owner-pricing-scenario-matrix.test.ts"
+      - ".github/workflows/v4-sonic-p40-owner-pricing-scenarios.yml"
+permissions:
+  contents: read
+jobs:
+  focused-matrix:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: {version: 10.17.1, run_install: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22.23.2, cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - name: Real owner-form matrix + existing canonical quote math
+        run: pnpm exec vitest run tests/e2e/v4-p40-owner-pricing-scenario-matrix.test.ts tests/e2e/v4-owner-pricing-worksheet.test.ts
+      - name: TypeScript source contract
+        run: pnpm typecheck
