@@ -20,7 +20,27 @@ describe("IR18 critic: two real accessible review journeys, no live source mutat
   for(const row of lock.source){
    expect(row.path).toMatch(/^(src\/features\/operations\/|tests\/ai\/)/);
    expect(row.path).not.toContain("..");
-   expect(sha(read(row.path)),row.path).toBe(row.sha);
+   // Historical IR18 source lock is immutable. Only the exact
+   // IR20 selected-quote recovery successor may replace this one source blob.
+   if(row.path==="src/features/operations/QuoteRecoveryReadinessPanel.tsx"){
+    const successor=JSON.parse(read("docs/delivery/sonic-ir20-f19-owner-recovery-source-lock-20261030.json").toString()) as {
+     parentIR19:string;state:string;modified:{quotePanel:{path:string;before:string;after:string}};
+    };
+    expect(successor.parentIR19).toBe("2f348199f8cd769cdde9c9ded543200f4388b5ef");
+    expect(successor.state).toBe("SOURCE_ONLY_DRAFT_UNMERGED");
+    expect(successor.modified.quotePanel.path).toBe(row.path);
+    expect(successor.modified.quotePanel.before).toBe(row.sha);
+    expect(successor.modified.quotePanel.after).toBe("ca9de364d2d66bd8a7024775092e81e71292cde1");
+    expect(sha(read(row.path)),row.path).toBe(successor.modified.quotePanel.after);
+   }else if(row.path==="tests/ai/f17-quote-recovery-ui.test.ts"){
+    const successor=JSON.parse(read("docs/delivery/sonic-ir20-f19-owner-recovery-source-lock-20261030.json").toString()) as {
+     modified:{historicalQuoteTest:{path:string;before:string;after:string|null}};
+    };
+    expect(successor.modified.historicalQuoteTest.path).toBe(row.path);
+    expect(successor.modified.historicalQuoteTest.before).toBe(row.sha);
+    expect(successor.modified.historicalQuoteTest.after).toBe("3e68b1b1bd3c2feacba997d37d3581aef8e4cb2e");
+    expect(sha(read(row.path)),row.path).toBe(successor.modified.historicalQuoteTest.after);
+   }else expect(sha(read(row.path)),row.path).toBe(row.sha);
   }
  });
  it("adds quality workflow to existing Jobs, quote triage to existing Quotes",()=>{
