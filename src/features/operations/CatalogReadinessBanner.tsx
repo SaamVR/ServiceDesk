@@ -55,30 +55,48 @@ export function CatalogReadinessBanner({
     );
   }
 
-  const invalidSaved = invalidExistingUsdBranches(branchScope, ownerPricingBookProof);
-  if (invalidSaved.length > 0) {
+  // Even a VERIFIED label is not a quote-readiness receipt unless the
+  // independent saved-book inventory was returned. Otherwise a missing read
+  // would silently look like zero blockers.
+  if (!Array.isArray(ownerPricingBookProof.existingBookBranchIds) ||
+      !Array.isArray(ownerPricingBookProof.activeBranchIds)) {
     return (
       <FeedbackBanner
-        title="Saved branch pricing needs correction"
-        description={invalidSaved.length === 1
-          ? `The USD branch “${invalidSaved[0].name}” already has an active saved price book, but its current rates cannot be verified for an actual quote. First-run setup cannot overwrite it. Review the existing rates and effective dates in Settings before issuing customer quotes.`
-          : `${invalidSaved.length} USD branches have existing active price books that cannot be verified for actual customer quotes. First-run setup cannot overwrite these records; review saved rates and effective dates in Settings.`}
+        title="Branch pricing readiness could not be verified"
+        description="The independent saved price-book inventory is incomplete. Do not treat an empty or missing proof as confirmation that branches can quote. Refresh Settings and verify saved rate books before first-run setup."
         tone="warning"
         action={settingsLink}
       />
     );
   }
 
+  const invalidSaved = invalidExistingUsdBranches(branchScope, ownerPricingBookProof);
   const unconfigured = availableFirstRunUsdBranches(branchScope, ownerPricingBookProof);
-  if (unconfigured.length === 0) return null;
+  if (invalidSaved.length === 0 && unconfigured.length === 0) return null;
+  // Repair and initial setup are different owner workflows. Show both when
+  // both are blocked; previously the early return hid unconfigured branches.
   return (
-    <FeedbackBanner
-      title="Quoting setup incomplete · branch pricing"
-      description={unconfigured.length === 1
-        ? `The USD branch “${unconfigured[0].name}” has no verified active branch price book. An authorized owner must configure its actual rates before treating its customer quotes as ready. Other branches may already be configured.`
-        : `${unconfigured.length} USD branches in this owner view have no verified active branch price book. An authorized owner must configure actual rates before treating quotes for those branches as ready. Other branches may already be configured.`}
-      tone="warning"
-      action={rateSetupLink}
-    />
+    <>
+      {invalidSaved.length > 0 ? (
+        <FeedbackBanner
+          title="Saved branch pricing needs correction"
+          description={invalidSaved.length === 1
+            ? `The USD branch “${invalidSaved[0].name}” already has an active saved price book, but its current rates cannot be verified for an actual quote. First-run setup cannot overwrite it. Review the existing rates and effective dates in Settings before issuing customer quotes.`
+            : `${invalidSaved.length} USD branches have existing active price books that cannot be verified for actual customer quotes. First-run setup cannot overwrite these records; review saved rates and effective dates in Settings.`}
+          tone="warning"
+          action={settingsLink}
+        />
+      ) : null}
+      {unconfigured.length > 0 ? (
+        <FeedbackBanner
+          title="Quoting setup incomplete · branch pricing"
+          description={unconfigured.length === 1
+            ? `The USD branch “${unconfigured[0].name}” has no verified active branch price book. An authorized owner must configure its actual rates before treating its customer quotes as ready. Other branches may already be configured.`
+            : `${unconfigured.length} USD branches in this owner view have no verified active branch price book. An authorized owner must configure actual rates before treating quotes for those branches as ready. Other branches may already be configured.`}
+          tone="warning"
+          action={rateSetupLink}
+        />
+      ) : null}
+    </>
   );
 }
