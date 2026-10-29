@@ -1,0 +1,126 @@
+{
+  "schema": "servicedesk.f15.ir21.reviewed-atomic-owner-manual-source.v1",
+  "state": "SOURCE_IMPLEMENTED_NOT_INSTALLED",
+  "productionEffect": "NONE",
+  "parentIR21": "aa7484fee74025b7e0db4fd67fcff234b2edcdec",
+  "candidatePr": 915,
+  "candidateBranch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "importedPr": 884,
+  "importedHead": "8a46e5f3d74f2cc4c7e5676993f90e2b58c627c7",
+  "importedExactBlobs": [
+    {
+      "path": ".github/workflows/v4-f15-atomic-pg17-rc.yml",
+      "blob": "1ef9211966d60ff03e0b62d627e46c7df6a19990"
+    },
+    {
+      "path": "docs/delivery/sonic-f15-atomic-sla-source-batch-20261029.md",
+      "blob": "bf6d4a76eac8cfadfcc44daa39a9a51b5247a7ca"
+    },
+    {
+      "path": "docs/delivery/sonic-f15-pg17-dba-review-20261029.md",
+      "blob": "82bd11a15a6466336e697bfeae10a0b3d137c9e6"
+    },
+    {
+      "path": "docs/engineering/security/f15-unanswered-lead-atomic-db-candidate.sql",
+      "blob": "041429e469f1c491353b24cb266abc41d3643570"
+    },
+    {
+      "path": "scripts/release/v4-f15-atomic-pg17-concurrency.sh",
+      "blob": "08be7bfda6e826363c029d6b62e64bf1edbd4e59"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-atomic-ingress.ts",
+      "blob": "73da5f26534163f60e981c7a50b4e17bc245ba73"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-postgres-port.ts",
+      "blob": "a25f7d3de6a2c140477626f270072819e9edb687"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-unanswered-lead-sla.ts",
+      "blob": "7614e27f1ca80a0203ae16984fe393f68a4e621d"
+    },
+    {
+      "path": "tests/ai/sonic-f15-atomic-ingress.test.ts",
+      "blob": "272d03fa5252a91711e381797dd795260c1d441e"
+    },
+    {
+      "path": "tests/ai/sonic-f15-ingress-independent-critic.test.ts",
+      "blob": "f68171bde9a522a53fdf58b7512ccc061f0ec9a4"
+    },
+    {
+      "path": "tests/ai/sonic-f15-pg17-candidate-independent-critic.test.ts",
+      "blob": "88323c04e3fa278d05c73197d85410f9b69299e7"
+    },
+    {
+      "path": "tests/ai/sonic-f15-postgres-port.test.ts",
+      "blob": "8db477f46f52fcac72c01e6d8c4e6a100e6478c6"
+    },
+    {
+      "path": "tests/ai/sonic-f15-unanswered-lead-sla.test.ts",
+      "blob": "c73c2f771eb5d0fdee65faf4292dd90ce71ed7b4"
+    },
+    {
+      "path": "tests/sql/v4-f15-atomic-pg17-acceptance.sql",
+      "blob": "67e07152458c6fd35c0035559d22167ee039e447"
+    },
+    {
+      "path": "tests/sql/v4-f15-atomic-pg17-fixture.sql",
+      "blob": "5607536e51330f8313c7db2ce3f4c350a8111138"
+    }
+  ],
+  "newIntegratedBlobs": [
+    {
+      "path": "src/server/workflows/sonic-f15-complete-saved-source.ts",
+      "blob": "b32f905cb40b967c2bc344b59c079930fcb517a6"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-owner-manual-escalation.ts",
+      "blob": "00cb462725692607241974e7abbd42ab63e0bb3b"
+    },
+    {
+      "path": "src/features/operations/f15-owner-lead-sla-action.ts",
+      "blob": "67c1c800dd1eb12c9be10065feb82ab3756883f1"
+    },
+    {
+      "path": "src/features/operations/OwnerUnansweredLeadReview.tsx",
+      "blob": "f315ddf5606d99a38f1943a9b06c7d93797e5d4e"
+    },
+    {
+      "path": "src/features/operations/InboxProtectedLeadReviewPanel.tsx",
+      "blob": "5fa0538d745c664a9e35bd9f5ef3523662160e19"
+    },
+    {
+      "path": "src/app/app/[workspace]/inbox/page.tsx",
+      "blob": "56516b7aa63750d5a46446e160e507d7481ac1ba"
+    },
+    {
+      "path": "tests/ai/sonic-f15-owner-manual-journey.test.ts",
+      "blob": "fc753d7e740c3af34f188a2fdbc39e285ce18428"
+    },
+    {
+      "path": "tests/ai/sonic-f15-complete-source-reader.test.ts",
+      "blob": "bbd77199a33da6df40e382110428896d1f56f916"
+    }
+  ],
+  "priorInboxBlob": "1dbdc5fede5b5b21d7a488934c5f0151e0e5a672",
+  "verifiedSqlProof": "https://github.com/SaamVR/ServiceDesk/actions/runs/40886885799",
+  "sourceRequirements": [
+    "P02_AUTH_ACCEPTED",
+    "F15_ATOMIC_SQL_OWNER_DBA_APPROVED_AND_APPLIED",
+    "SERVER_FEATURE_OPT_IN",
+    "SIGNED_IN_OWNER_ALL_BRANCH",
+    "COMPLETE_SAVED_RESPONSE_HISTORY",
+    "DATABASE_ATOMIC_CLAIM_RECHECK"
+  ],
+  "forbidden": [
+    "AUTO_PROVIDER_SEND",
+    "AUTO_FINANCIAL_MUTATION",
+    "AUTO_WORKFLOW_DISPATCH",
+    "PUBLIC_RPC",
+    "UNAPPROVED_DB_MIGRATION",
+    "UNAPPROVED_DEPLOYMENT",
+    "CANONICAL_MERGE"
+  ],
+  "notes": "Old IR21 manifest immutable. Source imported verbatim from PR884 including an UNAPPLIED separate SQL review document, not a Supabase migration. New owner-selected Inbox action defaults off and reports only a verified atomic journal receipt."
+}
