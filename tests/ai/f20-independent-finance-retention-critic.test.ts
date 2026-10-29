@@ -26,7 +26,7 @@ describe("F20 independent finance and consent-journey critic",()=>{
   const b=read("src/features/operations/OwnerConsentedRetentionReview.tsx");
   expect(a).toContain('key={workspaceSlug}');
   expect(b).toContain('key={workspaceSlug}');
-  expect(a).toContain("serial.current!==seq");
+  expect(a).toContain("seq!==serial.current");
   expect(b).toContain("seq.current!==sequence");
   expect(a).toContain("No payment, refund or customer communication occurred.");
   expect(b).toContain("No outreach, automated follow-up, payment change");
