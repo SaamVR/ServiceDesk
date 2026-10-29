@@ -2,6 +2,7 @@ import type {
   OperationalAttention, OperationalBranchScope, OperationalWorkflowExecution,
   OperationalWorkflowActionExecution,
 } from "./operational-product-runtime";
+import { trustedQuoteInstant } from "./quote-validity-clock";
 
 export type OwnerAttentionTriage = {
   state: "UNVERIFIED" | "AVAILABLE";
@@ -37,9 +38,9 @@ export function summarizeOwnerAttentionTriage(input: {
     missingActionEvidence: 0, ambiguous: 0, closed: 0, review: [],
   };
   const scope = input.branchScope;
-  const checkedAt = Date.parse(input.loadedAt);
+  const checkedAt = trustedQuoteInstant(input.loadedAt);
   if (input.workflowAvailable !== true ||
-      !Number.isFinite(checkedAt) ||
+      checkedAt === null ||
       !scope || scope.mode === "LEGACY" || !Array.isArray(scope.branches) ||
       !scope.branches.length || !Array.isArray(input.workflowExecutions) ||
       !Array.isArray(input.workflowActionExecutions) ||
@@ -117,9 +118,17 @@ export function summarizeOwnerAttentionTriage(input: {
       result.ambiguous++;
       continue;
     }
+    // A malformed or timezone-free deadline is not proof that an item is
+    // safely not overdue. Quarantine this record for manual investigation.
+    // Missing dueAt is different: unscheduled attention remains open.
+    const hasDueAt = item.dueAt !== undefined;
+    const time = hasDueAt ? trustedQuoteInstant(item.dueAt) : null;
+    if (hasDueAt && time === null) {
+      result.ambiguous++;
+      continue;
+    }
     result.open++;
-    const time = item.dueAt ? Date.parse(item.dueAt) : NaN;
-    const overdue = Number.isFinite(time) && time < checkedAt;
+    const overdue = time !== null && time < checkedAt;
     if (overdue) result.overdue++;
     if (item.severity === "CRITICAL") result.critical++;
     const evidenceGap = !withSavedInternalSuccess.has(item.resourceId);
