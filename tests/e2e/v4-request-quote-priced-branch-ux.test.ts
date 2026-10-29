@@ -6,49 +6,54 @@ import { quotePriceReadiness } from
 
 const a="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const b="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-const verified={state:"VERIFIED" as const,activeBranchIds:[a]};
+const branches=[
+  {id:a,code:"A",name:"North",currency:"USD",timezone:"UTC",isDefault:true},
+  {id:b,code:"B",name:"South",currency:"USD",timezone:"UTC",isDefault:false},
+];
+const scope={mode:"ALL" as const,branches};
+const verified={state:"VERIFIED" as const,activeBranchIds:[a],existingBookBranchIds:[a]};
 
 describe("request queue saved branch-price eligibility",()=>{
   it("permits a verified owner branch and still requires server validation",()=>{
     expect(quotePriceReadiness({
-      request:{branchId:a},actorRole:"OWNER",ownerPricingBookProof:verified,
+      request:{branchId:a},actorRole:"OWNER",branchScope:scope,ownerPricingBookProof:verified,
     })).toMatchObject({state:"VERIFIED",branchId:a});
   });
   it("keeps owners blocked for another branch even if some other branch is priced",()=>{
     expect(quotePriceReadiness({
-      request:{branchId:b},actorRole:"OWNER",ownerPricingBookProof:verified,
+      request:{branchId:b},actorRole:"OWNER",branchScope:scope,ownerPricingBookProof:verified,
     })).toMatchObject({state:"OWNER_SETUP_REQUIRED"});
   });
   it("never mistakes an unavailable owner snapshot for a verified empty list",()=>{
     for(const proof of [undefined,{state:"UNAVAILABLE" as const,activeBranchIds:[]}]){
       expect(quotePriceReadiness({
-        request:{branchId:a},actorRole:"OWNER",ownerPricingBookProof:proof,
+        request:{branchId:a},actorRole:"OWNER",branchScope:scope,ownerPricingBookProof:proof,
       }).state).toBe("EVIDENCE_UNAVAILABLE");
     }
   });
   it("reports missing real prices separately from unknown pricing",()=>{
     expect(quotePriceReadiness({
-      request:{branchId:a},actorRole:"OWNER",
-      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:[]},
+      request:{branchId:a},actorRole:"OWNER",branchScope:scope,
+      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:[],existingBookBranchIds:[]},
     }).state).toBe("OWNER_SETUP_REQUIRED");
   });
   it("does not invent a branch from multiple eligible branches",()=>{
     expect(quotePriceReadiness({
-      request:{},actorRole:"OWNER",
-      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:[a,b]},
+      request:{},actorRole:"OWNER",branchScope:scope,
+      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:[a,b],existingBookBranchIds:[a,b]},
     }).state).toBe("BRANCH_UNRESOLVED");
   });
-  it("supports the owner-selected branch when the request has no explicit branch",()=>{
+  it("requires the saved request branch even when the owner view selects one",()=>{
     expect(quotePriceReadiness({
-      request:{},actorRole:"OWNER",ownerPricingBookProof:verified,
-      branchScope:{mode:"BRANCH",selectedBranchId:a,branches:[]},
-    })).toMatchObject({state:"VERIFIED",branchId:a});
+      request:{},actorRole:"OWNER",branchScope:scope,ownerPricingBookProof:verified,
+      branchScope:{mode:"BRANCH",selectedBranchId:a,branches},
+    }).state).toBe("BRANCH_UNRESOLVED");
   });
   it("does not let an unrelated branch-scope selection override a real request branch",()=>{
     expect(quotePriceReadiness({
-      request:{branchId:b},actorRole:"OWNER",ownerPricingBookProof:verified,
-      branchScope:{mode:"BRANCH",selectedBranchId:a,branches:[]},
-    }).state).toBe("OWNER_SETUP_REQUIRED");
+      request:{branchId:b},actorRole:"OWNER",branchScope:scope,ownerPricingBookProof:verified,
+      branchScope:{mode:"BRANCH",selectedBranchId:a,branches},
+    }).state).toBe("BRANCH_UNRESOLVED");
   });
   it("keeps staff without owner-only price-book proof on server-validated route",()=>{
     expect(quotePriceReadiness({
