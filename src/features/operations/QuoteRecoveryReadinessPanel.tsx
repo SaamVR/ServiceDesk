@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {loadOperationalStaffSnapshot} from "./operational-product-runtime";
-import {guideSavedQuoteRecovery} from "./f17-quote-recovery-guide";
+import {resolveF19QuoteRecoveryTarget} from "./f19-quote-recovery-targets";
 import {buildStaffModuleHref} from "./staff-modules";
 const labels={
  SOURCE_UNVERIFIED:"Saved quote or snapshot cannot be verified",
@@ -32,25 +32,53 @@ export async function QuoteRecoveryReadinessPanel({workspaceSlug,selectedQuoteId
  const result=await loadOperationalStaffSnapshot(workspaceSlug);
  if(!result.ok||result.value.workspace.slug!==workspaceSlug||
     !["OWNER","DISPATCHER"].includes(result.value.actor.role))return null;
- const snapshot=result.value;
- const allowed=new Set(snapshot.requests.map(r=>r.id));
- const quotes=snapshot.quotes.filter(q=>allowed.has(q.requestId));
+ const snapshot=result.value,scope=snapshot.branchScope;
+ if(!scope||!["ALL","BRANCH"].includes(scope.mode))return null;
+ const allowedBranchIds=new Set(scope.branches.map(x=>x.id));
+ // Only a request in the actor's current authorized branch scope can
+ // authorize a quote review, even if a previously loaded quote survives.
+ const requests=snapshot.requests.filter(req=>
+   typeof req.branchId==="string"&&allowedBranchIds.has(req.branchId)&&
+   (scope.mode==="ALL"||req.branchId===scope.selectedBranchId));
+ const authorized=new Set(requests.map(x=>x.id));
+ const quotes=snapshot.quotes.filter(q=>authorized.has(q.requestId));
  if(!quotes.length)return null;
- const selected=quotes.find(q=>q.id===selectedQuoteId)??quotes[0];
- const outcome=guideSavedQuoteRecovery(quotes,selected.id,snapshot.loadedAt);
  const quoteHref=buildStaffModuleHref(workspaceSlug,"quotes");
- const href=outcome.action==="REVIEW_REQUEST_AND_PRICING"
-  ? buildStaffModuleHref(workspaceSlug,"settings")+"?section=services"
-  : outcome.action==="OPEN_CURRENT_QUOTE"||outcome.action==="REFRESH_SAVED_RECORDS"
-    ? quoteHref
-    : quoteHref+"?quote="+encodeURIComponent(selected.id);
+ const selected=selectedQuoteId?quotes.find(q=>q.id===selectedQuoteId):undefined;
+ if(!selected)return <section className="app-panel" aria-label="Select saved quote for recovery"
+   data-testid="f19-quote-source-recovery">
+  <h2>Quote version and source recovery</h2>
+  <p>Choose an authorized saved quote to inspect its exact version, request and renewal path. No quote was selected.</p>
+  <ul>{quotes.slice(0,25).map((q,i)=><li key={q.id}>
+    <Link href={quoteHref+"?quote="+encodeURIComponent(q.id)}>
+     Quote {i+1} · revision {q.version} · {q.status.replaceAll("_"," ").toLowerCase()}</Link>
+  </li>)}</ul>
+  <p>Only the first 25 authorized quote records are shown in this additional review list.</p>
+ </section>;
+ const plan=resolveF19QuoteRecoveryTarget({
+   slug:workspaceSlug,selectedId:selected.id,
+   quotes,requests,loadedAt:snapshot.loadedAt,
+ });
+ if(!plan)return <section className="app-panel" role="alert"
+   aria-label="Saved quote recovery unavailable">
+  <p>Quote/request authority or saved version could not be reconciled.
+   Reload the authorized Quotes page before taking action.</p>
+ </section>;
+ const outcome=plan.guidance;
  return <section className="app-panel" aria-label="Saved quote recovery guidance"
   data-testid="f17-quote-recovery-panel">
-  <h2>Quote readiness and recovery</h2>
-  <p>Saved-row, version and charge checks only. This is not an invoice, customer delivery proof or permission to send.</p>
-  <p><strong>{labels[outcome.reason]}</strong></p>
+  <h2>Quote readiness and exact-record recovery</h2>
+  <p>Selected quote revision {selected.version} · read-only source proof. No delivery, renewal or charge can be initiated here.</p>
+  <p role="status"><strong>{labels[outcome.reason]}</strong></p>
   <p>{advice[outcome.action]}</p>
-  <Link href={href}>Open authoritative source or recovery step</Link>
-  <p>No quote was issued, renewed, sent or charged. Fresh authorization and concurrency checks remain mandatory for any business action.</p>
+  <div>
+   <Link href={plan.sourceRequestHref}>Open originating saved request</Link>
+   {plan.currentQuoteHref ? <p><Link href={plan.currentQuoteHref}>
+    Open exact current saved quote revision</Link></p>:
+    <p role="alert">Current quote revision is ambiguous or unavailable. Refresh and resolve competing versions before sending.</p>}
+   {outcome.action==="REVIEW_REQUEST_AND_PRICING"||outcome.action==="RENEW_QUOTE"?
+     <p><Link href={plan.pricingHref}>Review owner branch pricing before renewal</Link></p>:null}
+  </div>
+  <p>Recalculate, approve or send only using separate authorized, version-checked business commands. No quote was issued, renewed, sent or charged.</p>
  </section>;
 }
