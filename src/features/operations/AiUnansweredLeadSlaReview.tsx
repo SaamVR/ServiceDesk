@@ -16,7 +16,7 @@ function ScopedLeadReview({workspaceSlug,conversationId}:{
  const [error,setError]=useState("");
  const [busy,setBusy]=useState(false);
  const mounted=useRef(true),serial=useRef(0),pending=useRef(false);
- useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;serial.current++;};},[]);
+ useEffect(()=>{const m=mounted,s=serial;m.current=true;return()=>{m.current=false;s.current++;};},[]);
  async function check(){
   if(pending.current)return;
   pending.current=true;setBusy(true);setError("");setResult(undefined);

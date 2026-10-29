@@ -34,10 +34,10 @@ function fixture(options:{secondConversation?:boolean;replied?:boolean;foreignSi
  });
  const calls:string[]=[];
  const service={from:(table:string)=>({
-  select:(_fields:string)=>{
+  select:()=>{
    const equals:Record<string,unknown>={};
    let amount=100;
-   let orderings:Array<{field:string;ascending:boolean}>=[];
+   const orderings:Array<{field:string;ascending:boolean}>=[];
    const materialize=()=>{
     let selected=(rows[table]??[]).filter(row=>
       Object.entries(equals).every(([k,v])=>row[k]===v));
