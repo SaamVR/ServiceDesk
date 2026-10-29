@@ -101,8 +101,8 @@ describe("V4 owner-visible branch pricing readiness", () => {
     const html=markup({
       workspaceSlug:"east-office",serviceCatalog:savedActiveCatalog,
       branchScope:scope,
-      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:[],
-        existingBookBranchIds:["branch-one"]},
+      ownerPricingBookProof:{state:"VERIFIED",activeBranchIds:["branch-two"],
+        existingBookBranchIds:["branch-one","branch-two"]},
     });
     expect(html).toContain("Saved branch pricing needs correction");
     expect(html).toContain("North cleaning");
