@@ -1,0 +1,31 @@
+name: ServiceDesk P34 integrated owner automation and attention source
+on:
+  push:
+    branches: ["sonic-p03/p34-integrated-attention-evidence-20261029"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-p34-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-head-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Independent source provenance, activation replay and owner attention critic
+        run: pnpm exec vitest run tests/e2e/v4-p34-exact-source-and-security-critic.test.ts tests/e2e/v4-p33-activation-replay-integrity.test.ts tests/e2e/v4-p33-owner-attention-triage.test.ts tests/e2e/v4-owner-automation-activation.test.ts tests/e2e/v4-owner-automation-activation-first-run-link.test.tsx
+      - name: Integrated full source RC - tests types lint Next build
+        run: pnpm check:rc

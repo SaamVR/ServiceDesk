@@ -1,0 +1,54 @@
+{
+  "schema": "servicedesk.p34.reviewed-source-objects.v1",
+  "releaseBoundary": "P03_SOURCE_ONLY_PENDING_P02_NO_PRODUCTION_MUTATIONS",
+  "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
+  "integrationParent": "224f88ce76525bc0235acecb9e45a9ec34c9aaaa",
+  "upstreamCompositePr": 883,
+  "sourceHeads": {
+    "891": "cc0ba17bb70f635f8ffbd32055d3bdd82bfd29bb",
+    "892": "c7dd8fc7d8501aae2989a412da16d619b2cf172a"
+  },
+  "files": [
+    {
+      "path": "src/features/operations/owner-automation-activation.ts",
+      "sourcePr": 891,
+      "gitBlobSha": "87f25cd7c2e7668223c7730061e992edfebd970c"
+    },
+    {
+      "path": "tests/e2e/v4-p33-activation-replay-integrity.test.ts",
+      "sourcePr": 891,
+      "gitBlobSha": "fcb5bd3f17e3b4478ecdf528516a90a9bdd9a6a1"
+    },
+    {
+      "path": "src/features/operations/owner-attention-triage.ts",
+      "sourcePr": 892,
+      "gitBlobSha": "752543fcf25178bd6ad2da16a324f50a569a6be0"
+    },
+    {
+      "path": "src/features/operations/OwnerAutomationActivationChecklist.tsx",
+      "sourcePr": 892,
+      "gitBlobSha": "7fa644c26d915a3abf9968d563a44c2906c72e48"
+    },
+    {
+      "path": "src/features/operations/OwnerAutomationActivationChecklist.module.css",
+      "sourcePr": 892,
+      "gitBlobSha": "06b5a1746b7fd342b86e1c3d37bae594f05ede74"
+    },
+    {
+      "path": "tests/e2e/v4-p33-owner-attention-triage.test.ts",
+      "sourcePr": 892,
+      "gitBlobSha": "e692f4b2f76bee1c54fcb32a8b93607b28a2f265"
+    }
+  ],
+  "forbiddenEffects": [
+    "LIVE_DATABASE_MUTATION",
+    "LIVE_REGISTRATION_GUARD_INSTALL",
+    "AUTH_FIXTURE_CREATION",
+    "PROVIDER_SEND",
+    "PAYMENT",
+    "DEPLOYMENT",
+    "CANONICAL_MERGE",
+    "DESTRUCTIVE_CLEANUP"
+  ],
+  "readiness": "DRAFT_NOT_PRODUCTION_ACCEPTED"
+}

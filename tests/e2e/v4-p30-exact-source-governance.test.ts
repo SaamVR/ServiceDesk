@@ -11,6 +11,28 @@ const lock=JSON.parse(readFileSync(
   files:Array<{path:string;sourcePr:number;gitBlobSha:string;status:string}>;
 };
 
+// Historical P30/P32 source locks remain immutable. A later source-only
+// composite may supersede one exact blob only when the P34 successor lock
+// names the reviewed source PR, pinned head, and the same file path.
+const p34Successor=JSON.parse(readFileSync(
+  "docs/delivery/sonic-p03-p34-source-provenance-20261029.json","utf8"
+)) as {
+  integrationParent:string;
+  sourceHeads:Record<string,string>;
+  files:Array<{path:string;sourcePr:number;gitBlobSha:string}>;
+};
+const expectedPriorActivationBlob="5c24ee15b057d2157d527e7d7ae87973887753ad";
+function currentOrReviewedSuccessor(path:string, historicalSha:string):string {
+  const successor=p34Successor.files.find(file=>file.path===path);
+  if (!successor) return historicalSha;
+  expect(path).toBe("src/features/operations/owner-automation-activation.ts");
+  expect(historicalSha).toBe(expectedPriorActivationBlob);
+  expect(p34Successor.integrationParent).toBe("224f88ce76525bc0235acecb9e45a9ec34c9aaaa");
+  expect(successor.sourcePr).toBe(891);
+  expect(p34Successor.sourceHeads["891"]).toBe("cc0ba17bb70f635f8ffbd32055d3bdd82bfd29bb");
+  return successor.gitBlobSha;
+}
+
 describe("P30 independently reviewed source-only pricing/onboarding/automation integration",()=>{
   it("pins four disjoint owner branches and all 14 expected source blobs",()=>{
     expect(lock.schema).toBe("servicedesk.p30.exact-source-lock.v1");
@@ -34,7 +56,7 @@ describe("P30 independently reviewed source-only pricing/onboarding/automation i
       const actual=createHash("sha1")
         .update(Buffer.from("blob "+bytes.length+"\0"))
         .update(bytes).digest("hex");
-      expect(actual,file.path+" exact source mismatch").toBe(file.gitBlobSha);
+      expect(actual,file.path+" exact reviewed source mismatch").toBe(currentOrReviewedSuccessor(file.path,file.gitBlobSha));
     }
   });
   it("retains meaningful saved-data guardrails without injecting provider or mutation paths",()=>{
