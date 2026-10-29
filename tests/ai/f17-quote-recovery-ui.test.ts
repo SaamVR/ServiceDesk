@@ -3,7 +3,7 @@ import {readFileSync} from "node:fs";
 import {guideSavedQuoteRecovery} from "../../src/features/operations/f17-quote-recovery-guide";
 const baseline={id:"q1",requestId:"r1",version:2,status:"APPROVED",currency:"USD",
  totalMinor:10000,depositMinor:2000,balanceMinor:8000,subtotalMinor:10000,
- taxMinor:0,durationMinutes:60,lineItems:null,validUntil:"2026-11-02T00:00:00Z"};
+ taxMinor:0,durationMinutes:60,bufferMinutes:0,lineItems:null,validUntil:"2026-11-02T00:00:00Z"};
 describe("F17 quote-specific recovery from saved version + preflight",()=>{
  it("never treats conflicting highest version as current or sendable",()=>{
   const q=guideSavedQuoteRecovery([baseline,{...baseline,id:"q2"}],"q1","2026-10-30T00:00:00Z");
