@@ -54,7 +54,11 @@ export function invalidExistingUsdBranches(
 export function countQuoteableCleaningServices(
   catalog?: readonly Pick<OperationalServiceCatalogItem, "active" | "code">[],
 ): number {
-  return catalog?.filter(item =>
+  // A duplicated catalog read must not inflate the number of supported
+  // service TYPES (3 copies of STANDARD are still only one quotable type).
+  // This is a UI-readiness count, not an authorization or saved-rate proof.
+  if (!catalog) return 0;
+  return new Set(catalog.filter(item =>
     item.active && (item.code === "STANDARD" || item.code === "DEEP" || item.code === "MOVE_OUT")
-  ).length ?? 0;
+  ).map(item => item.code)).size;
 }
