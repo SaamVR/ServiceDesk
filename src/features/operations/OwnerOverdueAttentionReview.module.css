@@ -1,0 +1,14 @@
+.panel{display:grid;gap:12px;background:#f6fbf8;border:1px solid #c7ddd0;color:#224f3d;border-radius:14px;padding:clamp(14px,2vw,23px);margin:16px 0}
+.panel h3{font-size:1.12rem;margin:.25rem 0}
+.panel p{font-size:.88rem;line-height:1.6;margin:.3rem 0;color:#426357}
+.eyebrow{font-weight:800;text-transform:uppercase;letter-spacing:.075em;font-size:.72rem!important;color:#267352!important}
+.load{justify-self:start;min-height:44px;padding:11px 16px;border-radius:8px;border:1px solid #186447;background:#186447;color:white;font-weight:750;cursor:pointer}
+.load:disabled{opacity:.58;cursor:not-allowed}
+.panel :is(a,button):focus-visible{outline:3px solid #0d9b70;outline-offset:4px}
+.warning{background:#fff4eb;border:1px solid #e9c4a1;border-radius:7px;padding:10px}
+.output{display:grid;gap:10px;background:white;border:1px solid #dae9de;padding:13px;border-radius:10px}
+.output ol{display:grid;gap:9px;margin:0;padding:0;list-style:none}
+.output li{display:grid;gap:5px;border-left:3px solid #c18b4c;padding:9px;background:#fcfaf5}
+.output li span,.output small{font-size:.79rem;color:#4b6359;overflow-wrap:anywhere}
+.output a{color:#12684d;font-weight:750;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:540px){.load{width:100%}}

@@ -67,6 +67,7 @@ import { StaffQuoteChecklist } from "./StaffQuoteChecklist";
 import { buildStaffQuoteChecklist } from "./staff-quote-checklist";
 import { AiOperationsStatus } from "./AiOperationsStatus";
 import { OwnerQuoteAcceptedAutomationControl } from "./OwnerQuoteAcceptedAutomationControl";
+import { OwnerOverdueAttentionReview } from "./OwnerOverdueAttentionReview";
 import { WorkflowEvidenceStrip } from "./WorkflowEvidenceStrip";
 import { CatalogReadinessBanner } from "./CatalogReadinessBanner";
 import { getAutomationPlaybook } from "./automation-playbooks";
@@ -3272,6 +3273,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
           allowOwnerModelTest={data.actor.role === "OWNER"}
         />
         {data.actor.role === "OWNER" ? <OwnerQuoteAcceptedAutomationControl workspaceSlug={workspaceSlug} snapshot={data} /> : null}
+        {data.actor.role === "OWNER" ? <OwnerOverdueAttentionReview workspaceSlug={workspaceSlug} /> : null}
         <WorkflowEvidenceStrip executions={data.workflowExecutions ?? []} actions={data.workflowActionExecutions ?? []} />
       <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
         <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
@@ -3307,6 +3309,7 @@ function AutomationsView({ data, workspaceSlug, automationTemplate }: { data: Op
           allowOwnerModelTest={data.actor.role === "OWNER"}
         />
       {data.actor.role === "OWNER" ? <OwnerQuoteAcceptedAutomationControl workspaceSlug={workspaceSlug} snapshot={data} /> : null}
+        {data.actor.role === "OWNER" ? <OwnerOverdueAttentionReview workspaceSlug={workspaceSlug} /> : null}
       <WorkflowEvidenceStrip executions={data.workflowExecutions ?? []} actions={data.workflowActionExecutions ?? []} />
       <WorkflowBuilderPanel data={data} workspaceSlug={workspaceSlug} automationTemplate={automationTemplate} />
       <section className={styles.recoveryWorkspace} aria-label="Operational recovery workspace">
