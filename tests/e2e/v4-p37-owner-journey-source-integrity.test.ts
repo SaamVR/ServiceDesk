@@ -14,18 +14,18 @@ const lock=JSON.parse(readFileSync(
 };
 
 describe("P37 independent source guardian for owner setup → quote preflight",()=>{
- it("pins 25 current source blobs, including one explicitly reviewed P31+P34 composition",()=>{
+ it("pins 26 current source blobs, including one explicitly reviewed P31+P34 composition",()=>{
   expect(lock.schema).toBe("servicedesk.p37.source-integrity.v1");
   expect(lock.state).toBe("P04_SOURCE_ONLY_NOT_ACCEPTED");
-  expect(lock.fileCount).toBe(25);
-  expect(lock.files).toHaveLength(25);
-  expect(lock.exactImportedFileCount).toBe(24);
+  expect(lock.fileCount).toBe(26);
+  expect(lock.files).toHaveLength(26);
+  expect(lock.exactImportedFileCount).toBe(25);
   expect(lock.composedFileCount).toBe(1);
-  expect(new Set(lock.files.map(x=>x.path)).size).toBe(25);
+  expect(new Set(lock.files.map(x=>x.path)).size).toBe(26);
   expect(lock.composedSourceOverlays).toHaveLength(1);
   expect(lock.composedSourceOverlays[0].path).toBe("src/features/onboarding/OnboardingProductRoute.tsx");
   for(const [pr,count] of [["876",6],["877",2],["879",2],["880",4],
-      ["882",3],["885",3],["886",2],["888",3]] as const){
+      ["882",3],["885",3],["886",2],["888",4]] as const){
     expect(lock.sourceHeads[pr]).toMatch(/^[a-f0-9]{40}$/);
     expect(lock.files.filter(x=>String(x.sourcePr)===pr)).toHaveLength(count);
   }
