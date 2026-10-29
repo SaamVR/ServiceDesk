@@ -68,6 +68,18 @@ describe("P33 owner attention triage - scoped current evidence", () => {
       ...sample, workflowActionExecutions: actions,
     }).missingActionEvidence).toBe(1);
   });
+  it("preserves internal success while independently approved external actions remain pending", () => {
+    const email = { ...action, id: "external-approval", actionIndex: 1,
+      actionType: "SEND_EMAIL_TEMPLATE" as const,
+      state: "APPROVAL_REQUIRED" as const };
+    expect(summarizeOwnerAttentionTriage({
+      ...sample, workflowActionExecutions: [action, email],
+    }).missingActionEvidence).toBe(0);
+    expect(summarizeOwnerAttentionTriage({
+      ...sample, workflowActionExecutions: [action,
+        { ...email, actionIndex: 0, attemptNumber: 2 }],
+    }).missingActionEvidence).toBe(1);
+  });
   it("quarantines duplicate IDs, unsupported statuses and closes resolved rows", () => {
     expect(summarizeOwnerAttentionTriage({
       ...sample, attentionItems: [attention, { ...attention }],
