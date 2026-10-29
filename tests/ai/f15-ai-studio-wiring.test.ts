@@ -22,7 +22,16 @@ describe("F15 visible saved-record AI Studio integration",()=>{
  });
  it("renders all three genuinely callable actions on the existing saved-record workbench",()=>{
   const source=read("src/features/operations/AiStudioWorkbench.tsx").toString();
-  expect(hash(read("src/features/operations/AiStudioWorkbench.tsx"))).toBe(lock.integratedWorkbenchSha);
+  const f16=JSON.parse(read("docs/delivery/sonic-ir17-f16-grounded-quote-source-lock-20261030.json").toString()) as {
+   baseIR16:string;priorWorkbenchSha:string;integratedWorkbenchSha:string;
+   sourceOnly:boolean;quoteCreated:boolean;
+  };
+  expect(f16.baseIR16).toBe("fe4d69b6d618e7c13172da832fca7309c11c65d5");
+  expect(f16.priorWorkbenchSha).toBe(lock.integratedWorkbenchSha);
+  expect(f16.sourceOnly).toBe(true);
+  expect(f16.quoteCreated).toBe(false);
+  expect(f16.integratedWorkbenchSha).toBe("6b7502ac0ddb7f5210ad16ed389f59a944527638");
+  expect(hash(read("src/features/operations/AiStudioWorkbench.tsx"))).toBe(f16.integratedWorkbenchSha);
   expect(source).toContain("<AiSavedIntakeReview workspaceSlug={workspaceSlug} requestId={selected.id} />");
   expect(source).toContain("<AiSavedCapacityReview workspaceSlug={workspaceSlug} />");
   expect(source).toContain("<AiSavedBusinessReview workspaceSlug={workspaceSlug} />");
