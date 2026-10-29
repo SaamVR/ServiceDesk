@@ -1,0 +1,74 @@
+{
+  "schema": "servicedesk.ir20.f19.authoritative-quality-quote.v1",
+  "parentIR19": "2f348199f8cd769cdde9c9ded543200f4388b5ef",
+  "state": "SOURCE_ONLY_DRAFT_UNMERGED",
+  "source": [
+    {
+      "path": "src/features/operations/f19-quality-case-guidance.ts",
+      "sha": "08997239b45ba7b738f058c1859a443d8ec4f3f2",
+      "lane": "QUALITY_CASE"
+    },
+    {
+      "path": "src/features/operations/QualityCaseFollowthroughPanel.tsx",
+      "sha": "880c77785c848d763168f9c250dd257561b16ff0",
+      "lane": "QUALITY_CASE"
+    },
+    {
+      "path": "tests/ai/f19-quality-case-followthrough.test.ts",
+      "sha": "bda584012ce0ccc244e5f5e6126c82030a85e21e",
+      "lane": "QUALITY_CASE"
+    },
+    {
+      "path": "src/features/operations/f19-quote-recovery-targets.ts",
+      "sha": "4eb306c4bc5d180b41abd6f05a044ff49ea977cb",
+      "lane": "QUOTE_RECOVERY"
+    },
+    {
+      "path": "src/features/operations/QuoteRecoveryReadinessPanel.tsx",
+      "sha": "ca9de364d2d66bd8a7024775092e81e71292cde1",
+      "lane": "QUOTE_RECOVERY"
+    },
+    {
+      "path": "tests/ai/f19-quote-deep-recovery.test.ts",
+      "sha": "54962df2e8ded53d31b488ffea5ad27531ad72bf",
+      "lane": "QUOTE_RECOVERY"
+    },
+    {
+      "path": "tests/ai/f19-independent-risk-critic.test.ts",
+      "sha": "dc970f5d48209050d779d2883332c64ceb169fa7",
+      "lane": "INDEPENDENT_CRITIC"
+    }
+  ],
+  "modified": {
+    "qualityRoute": {
+      "path": "src/app/app/[workspace]/quality/page.tsx",
+      "before": "d7d409c205c3ad7c3ef7e5e7e921ef64dcf49084",
+      "after": "160a461d7d7b0dcda1fb3c2eba35f6b9c37daad1"
+    },
+    "quotePanel": {
+      "path": "src/features/operations/QuoteRecoveryReadinessPanel.tsx",
+      "before": "b09faa61dec077da4ce2a018ed4852b896201a2e",
+      "after": "ca9de364d2d66bd8a7024775092e81e71292cde1"
+    },
+    "historicalQuoteTest": {
+      "path": "tests/ai/f17-quote-recovery-ui.test.ts",
+      "before": "90ec2ea18eb233364ba693d866a6311b0c50f991",
+      "after": null
+    },
+    "historicalCriticTest": {
+      "path": "tests/ai/f17-ir18-multilane-critic.test.ts",
+      "before": "e33450aab5d54c6c2543b8c781dbef5be881fa1a",
+      "after": null
+    }
+  },
+  "forbidden": [
+    "DB_AUTH_MUTATION",
+    "PROVIDER_SEND",
+    "AI_SPEND",
+    "AUTO_RESOLVE",
+    "AUTO_QUOTE_ISSUE",
+    "DEPLOY",
+    "CANONICAL_MERGE"
+  ],
+  "releaseGate": "P02_818_OPEN_AND_P03_819_QUEUED"
+}
