@@ -48,7 +48,7 @@ export async function requestF16GroundedQuoteReview(
   for(const o of v.options){
    if(!["STANDARD","DEEP","MOVE_OUT"].includes(o.serviceCode)||
       !["BASE","OPTIONAL_OVEN"].includes(o.variant)||
-      !/^[A-Z]{3}$/.test(o.currency)||!safeMoney(o.totalMinor)||
+      o.currency!=="USD"||!safeMoney(o.totalMinor)||
       !safeMoney(o.depositMinor)||!safeMoney(o.balanceMinor)||
       o.totalMinor<1||o.depositMinor+o.balanceMinor!==o.totalMinor||
       !Number.isSafeInteger(o.durationMinutes)||o.durationMinutes<1||
