@@ -10,10 +10,10 @@
     "882": "d43bf0da3a054f662dc6cb90ec1369a1300a3525",
     "885": "66d824028d907d443cf20f71c01ac55047152b8c",
     "886": "b59e9c9c257228c7a29cb12dd968a5baff686c8f",
-    "888": "8c93553b9a9cb3f71a225445ae88215b84160455"
+    "888": "2465149b10ceb5edc4aa265f7343a29f5be2f1ab"
   },
-  "fileCount": 25,
-  "exactImportedFileCount": 24,
+  "fileCount": 26,
+  "exactImportedFileCount": 25,
   "composedFileCount": 1,
   "forbiddenEffects": [
     "DATABASE_DDL",
@@ -186,6 +186,12 @@
       "sourcePr": 888,
       "status": "added",
       "gitBlobSha": "8fab2975191bc15049025d82bf6e43d2da0c6dcb"
+    },
+    {
+      "path": "tests/e2e/v4-request-quote-priced-branch-ux.test.ts",
+      "sourcePr": 888,
+      "status": "modified",
+      "gitBlobSha": "ffd6f104c0f157d88c49c7c579797881a204f5c9"
     }
   ]
 }
