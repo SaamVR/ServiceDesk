@@ -2,8 +2,8 @@
   "schema": "servicedesk.p39.source-integrity.v1",
   "state": "P04_SOURCE_ONLY_NOT_ACCEPTED",
   "canonicalBase": "cd218fcf196b7046c0bf6d7c0b990bb8d6bf9411",
-  "fileCount": 29,
-  "exactImportedFileCount": 28,
+  "fileCount": 30,
+  "exactImportedFileCount": 29,
   "composedFileCount": 1,
   "sourceHeads": {
     "876": "ad9072d58bdba7f7238ec4cb92ac3d2e7467a174",
@@ -14,7 +14,7 @@
     "885": "66d824028d907d443cf20f71c01ac55047152b8c",
     "886": "b59e9c9c257228c7a29cb12dd968a5baff686c8f",
     "888": "8eada331b297675d06a847c6c55c9cde553f2e9a",
-    "890": "04957ee7c054526f7533b672a5e45fe5c86ae017"
+    "890": "6eacc58cc316e6402a379c8e0840a8b79bdb9a67"
   },
   "forbiddenEffects": [
     "DATABASE_DDL",
@@ -115,6 +115,12 @@
       "sourcePr": 888,
       "status": "modified",
       "gitBlobSha": "c5d74529f376d7fd048ef17f175e8813dcf6d2b6"
+    },
+    {
+      "path": "tests/e2e/v4-expired-sent-quote-workqueue.test.ts",
+      "sourcePr": 890,
+      "status": "modified",
+      "gitBlobSha": "3dabc62502edabdcddd3f80948b9f13ee0b16b87"
     },
     {
       "path": "tests/e2e/v4-guided-owner-automation-activation.test.tsx",
