@@ -24,7 +24,17 @@ describe("F17 quote-specific recovery from saved version + preflight",()=>{
   const p=readFileSync("src/features/operations/QuoteRecoveryReadinessPanel.tsx","utf8");
   expect(p).toContain("loadOperationalStaffSnapshot(workspaceSlug)");
   expect(p).toContain('["OWNER","DISPATCHER"]');
-  expect(p).toContain("guideSavedQuoteRecovery(quotes,selected.id,snapshot.loadedAt)");
+  expect(p).toContain("resolveF19QuoteRecoveryTarget({");
+  const successor=JSON.parse(readFileSync("docs/delivery/sonic-ir20-f19-owner-recovery-source-lock-20261030.json","utf8")) as {
+   modified:{historicalQuoteTest:{before:string;after:string|null};
+    quotePanel:{before:string;after:string}};
+  };
+  expect(successor.modified.historicalQuoteTest.before)
+   .toBe("90ec2ea18eb233364ba693d866a6311b0c50f991");
+  expect(successor.modified.quotePanel.before)
+   .toBe("b09faa61dec077da4ce2a018ed4852b896201a2e");
+  expect(successor.modified.quotePanel.after)
+   .toBe("ca9de364d2d66bd8a7024775092e81e71292cde1");
   expect(p).not.toContain("sendOperationalQuote(");
  });
 });
