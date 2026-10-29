@@ -76,7 +76,7 @@
     },
     {
       "path": "src/server/workflows/sonic-f15-owner-manual-escalation.ts",
-      "blob": "00cb462725692607241974e7abbd42ab63e0bb3b"
+      "blob": "93c5f692bc9a056b22ee95cf7a081137e8d9dd47"
     },
     {
       "path": "src/features/operations/f15-owner-lead-sla-action.ts",
@@ -122,5 +122,6 @@
     "UNAPPROVED_DEPLOYMENT",
     "CANONICAL_MERGE"
   ],
-  "notes": "Old IR21 manifest immutable. Source imported verbatim from PR884 including an UNAPPLIED separate SQL review document, not a Supabase migration. New owner-selected Inbox action defaults off and reports only a verified atomic journal receipt."
+  "notes": "Old IR21 manifest immutable. Source imported verbatim from PR884 including an UNAPPLIED separate SQL review document, not a Supabase migration. New owner-selected Inbox action defaults off and reports only a verified atomic journal receipt.",
+  "earlierOptionalActorTypeBlob": "00cb462725692607241974e7abbd42ab63e0bb3b"
 }
