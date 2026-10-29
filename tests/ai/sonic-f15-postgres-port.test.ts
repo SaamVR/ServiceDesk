@@ -7,12 +7,14 @@ const w="11111111-1111-4111-8111-111111111111",b="22222222-2222-4222-8222-222222
 const evidence=()=>({record:{workspaceId:w,branchId:b,requestId:r,version:9,
  status:"NEW",createdAt:"2026-10-29T08:00:00.000Z",
  lastInboundAt:"2026-10-29T08:10:00.000Z",
+ lastInboundMessageId:"44444444-4444-4444-8444-444444444444",
  lastStaffResponseAt:null,responseHistoryComplete:true,
 },observedAt:"2026-10-29T09:00:00.000Z",thresholdMinutes:30});
 const safeReceipt=(cmd:Readonly<F15AtomicEventCommand>)=>({
  state:"INSERTED",eventKey:cmd.eventKey,workspaceId:cmd.workspaceId,
  branchId:cmd.branchId,requestId:cmd.requestId,sourceVersion:cmd.sourceVersion,
- sourceLastInboundAt:cmd.sourceLastInboundAt,transactionCommitted:true,
+ sourceLastInboundAt:cmd.sourceLastInboundAt,
+ sourceLastInboundMessageId:cmd.sourceLastInboundMessageId,transactionCommitted:true,
  sourceRecheckedUnderLock:true,uniqueEventKeyEnforced:true,
  externalSideEffects:false,savedRowsInserted:1,
 });
@@ -24,7 +26,7 @@ describe("F15 PostgreSQL adapter — source only / not installed",()=>{
    const p=args.p_input as Record<string,unknown>;
    expect(Object.keys(p).sort()).toEqual([
     "workspaceId","branchId","requestId","sourceVersion",
-    "sourceLastInboundAt","eventType","eventKey","observedAt","dueAt",
+    "sourceLastInboundAt","sourceLastInboundMessageId","eventType","eventKey","observedAt","dueAt",
     "thresholdMinutes","transactionalSourceRecheckRequired",
     "uniqueEventKeyRequired","requiresOwnerReview",
     "customerMessageAuthorized","financialMutationAuthorized",

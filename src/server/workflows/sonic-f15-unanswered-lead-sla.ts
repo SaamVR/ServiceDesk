@@ -14,6 +14,7 @@ export interface F15SavedLeadFacts {
   status: F15RequestState;
   createdAt: string;
   lastInboundAt: string;
+  lastInboundMessageId: string;
   lastStaffResponseAt: string | null;
   responseHistoryComplete: true;
 }
@@ -28,6 +29,7 @@ export type F15SlaDecision =
     state: "NO_ESCALATION_DUE" | "UNPERSISTED_SLA_CANDIDATE";
     workspaceId: string; branchId: string; requestId: string;
     sourceVersion: number; sourceLastInboundAt: string;
+    sourceLastInboundMessageId: string;
     observedAt: string; dueAt: string; thresholdMinutes: number;
     eventKey: string; eventType: "UNANSWERED_LEAD_SLA_REVIEW";
     approvalRequired: true; durableEventRecorded: false;
@@ -37,7 +39,7 @@ export type F15SlaDecision =
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const savedKeys = ["workspaceId","branchId","requestId","version","status",
-  "createdAt","lastInboundAt","lastStaffResponseAt","responseHistoryComplete"] as const;
+  "createdAt","lastInboundAt","lastInboundMessageId","lastStaffResponseAt","responseHistoryComplete"] as const;
 const inputKeys = ["record","observedAt","thresholdMinutes"] as const;
 
 function exact(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
@@ -70,10 +72,10 @@ export function planF15UnansweredLeadSla(input: unknown): F15SlaDecision {
   if (!exact(input, inputKeys) || !exact(input.record, savedKeys))
     return {ok:false,code:"F15_EVIDENCE_INVALID"};
   const r = input.record;
-  if (![r.workspaceId,r.branchId,r.requestId].every(v =>
+  if (![r.workspaceId,r.branchId,r.requestId,r.lastInboundMessageId].every(v =>
       typeof v === "string" && uuid.test(v)) ||
       r.workspaceId === r.branchId || r.requestId === r.workspaceId ||
-      r.requestId === r.branchId)
+      r.requestId === r.branchId || r.lastInboundMessageId === r.requestId)
     return {ok:false,code:"F15_SCOPE_INVALID"};
   if (!Number.isSafeInteger(r.version) || (r.version as number) < 1 ||
       (r.version as number) > 2147483647 ||
@@ -98,12 +100,12 @@ export function planF15UnansweredLeadSla(input: unknown): F15SlaDecision {
   const due = inbound + threshold * 60_000;
   if (!Number.isSafeInteger(due))
     return {ok:false,code:"F15_CLOCK_INVALID"};
-  // Include the LAST inbound time, but not the mutable request version, so
-  // replay of the same message remains stable while a genuinely new inbound
-  // after an earlier escalation can produce a distinct review event.
+  // Include the SAVED inbound message ID (not just timestamp: simultaneous
+  // messages can share one millisecond). Exclude mutable request version,
+  // so replay and timestamp corrections for the SAME inbound deduplicate.
   const eventKey = createHash("sha256").update(JSON.stringify([
     "SONIC_F15_UNANSWERED_LEAD_SLA_V1",
-    r.workspaceId, r.branchId, r.requestId, r.lastInboundAt,
+    r.workspaceId, r.branchId, r.requestId, r.lastInboundMessageId,
   ])).digest("hex");
   const state = (r.status === "NEW" || r.status === "OPEN") &&
     (answered === null || answered < inbound) && observed >= due
@@ -111,7 +113,9 @@ export function planF15UnansweredLeadSla(input: unknown): F15SlaDecision {
   return {ok:true,value:{
     state,workspaceId:r.workspaceId as string,branchId:r.branchId as string,
     requestId:r.requestId as string,sourceVersion:r.version as number,
-    sourceLastInboundAt:r.lastInboundAt as string,observedAt:input.observedAt as string,
+    sourceLastInboundAt:r.lastInboundAt as string,
+    sourceLastInboundMessageId:r.lastInboundMessageId as string,
+    observedAt:input.observedAt as string,
     dueAt:new Date(due).toISOString(),thresholdMinutes:threshold,eventKey,
     eventType:"UNANSWERED_LEAD_SLA_REVIEW",approvalRequired:true,
     durableEventRecorded:false,providerCalled:false,customerMessageSent:false,

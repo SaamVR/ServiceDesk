@@ -29,6 +29,7 @@ export class PostgresF15AtomicIngressPort implements F15AtomicIngressPort {
       requestId:command.requestId,
       sourceVersion:command.sourceVersion,
       sourceLastInboundAt:command.sourceLastInboundAt,
+      sourceLastInboundMessageId:command.sourceLastInboundMessageId,
       eventType:command.eventType,
       eventKey:command.eventKey,
       observedAt:command.observedAt,

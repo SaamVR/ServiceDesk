@@ -6,12 +6,14 @@ const input=()=>({record:{
  workspaceId:w,branchId:b,requestId:r,version:7,status:"OPEN",
  createdAt:"2026-10-29T08:00:00.000Z",
  lastInboundAt:"2026-10-29T08:10:00.000Z",
+ lastInboundMessageId:"44444444-4444-4444-8444-444444444444",
  lastStaffResponseAt:null,responseHistoryComplete:true,
 },observedAt:"2026-10-29T09:00:00.000Z",thresholdMinutes:30});
 function receipt(cmd:Readonly<F15AtomicEventCommand>,state:"INSERTED"|"ALREADY_RECORDED"){
  return {state,eventKey:cmd.eventKey,workspaceId:cmd.workspaceId,branchId:cmd.branchId,
  requestId:cmd.requestId,sourceVersion:cmd.sourceVersion,
- sourceLastInboundAt:cmd.sourceLastInboundAt,transactionCommitted:true,
+ sourceLastInboundAt:cmd.sourceLastInboundAt,
+ sourceLastInboundMessageId:cmd.sourceLastInboundMessageId,transactionCommitted:true,
  sourceRecheckedUnderLock:true,uniqueEventKeyEnforced:true,
  externalSideEffects:false,savedRowsInserted:state==="INSERTED"?1:0};
 }
@@ -67,6 +69,7 @@ describe("F15 source-only atomic ingress port",()=>{
    (x:ReturnType<typeof receipt>)=>({...x,externalSideEffects:true}),
    (x:ReturnType<typeof receipt>)=>({...x,sourceVersion:6}),
    (x:ReturnType<typeof receipt>)=>({...x,sourceLastInboundAt:"2026-10-29T08:09:00.000Z"}),
+   (x:ReturnType<typeof receipt>)=>({...x,sourceLastInboundMessageId:"66666666-6666-4666-8666-666666666666"}),
    (x:ReturnType<typeof receipt>)=>({...x,workspaceId:b}),
    (x:ReturnType<typeof receipt>)=>({...x,branchId:w}),
    (x:ReturnType<typeof receipt>)=>({...x,requestId:b}),

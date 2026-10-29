@@ -10,11 +10,13 @@ describe("F15 independent critic: no false durable or provider claims",()=>{
   expect(sla).toContain("responseHistoryComplete !== true");
   expect(sla).toContain("UNPERSISTED_SLA_CANDIDATE");
   expect(sla).toContain("lastInboundAt");
+  expect(sla).toContain("lastInboundMessageId");
   expect(ingress).toContain("F15_DURABLE_PORT_REQUIRED");
   expect(ingress).toContain("sourceRecheckedUnderLock === true");
   expect(ingress).toContain("uniqueEventKeyEnforced === true");
   expect(ingress).toContain("externalSideEffects === false");
   expect(ingress).toContain("transactionCommitted === true");
+  expect(ingress).toContain("receipt.sourceLastInboundMessageId === planned.sourceLastInboundMessageId");
   for(const body of [sla,ingress]){
    expect(body).not.toContain("service_role");
    expect(body).not.toContain("sendEmail(");
@@ -26,6 +28,7 @@ describe("F15 independent critic: no false durable or provider claims",()=>{
   const adapter=read("src/server/workflows/sonic-f15-postgres-port.ts");
   expect(adapter).toContain("F15_ATOMIC_RPC");
   expect(adapter).toContain("sourceLastInboundAt:command.sourceLastInboundAt");
+  expect(adapter).toContain("sourceLastInboundMessageId:command.sourceLastInboundMessageId");
   expect(adapter).toContain("customerMessageAuthorized:command.customerMessageAuthorized");
   expect(adapter).toContain("F15_ATOMIC_DB_RPC_NOT_AVAILABLE");
   expect(adapter).not.toContain("sendEmail(");
@@ -40,6 +43,7 @@ describe("F15 independent critic: no false durable or provider claims",()=>{
    requestId:"33333333-3333-4333-8333-333333333333",
    version:3,status:"NEW",createdAt:"2026-10-29T08:00:00.000Z",
    lastInboundAt:"2026-10-29T08:10:00.000Z",
+   lastInboundMessageId:"44444444-4444-4444-8444-444444444444",
    lastStaffResponseAt:null,responseHistoryComplete:true,
   },observedAt:"2026-10-29T09:00:00.000Z",thresholdMinutes:30};
   expect(planF15UnansweredLeadSla(input)).toMatchObject({ok:true,value:{

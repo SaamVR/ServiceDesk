@@ -3,6 +3,7 @@ import {planF15UnansweredLeadSla} from "../../src/server/workflows/sonic-f15-una
 const w="11111111-1111-4111-8111-111111111111",b="22222222-2222-4222-8222-222222222222",r="33333333-3333-4333-8333-333333333333";
 const record=()=>({workspaceId:w,branchId:b,requestId:r,version:1,status:"NEW",
  createdAt:"2026-10-29T08:00:00.000Z",lastInboundAt:"2026-10-29T08:10:00.000Z",
+ lastInboundMessageId:"44444444-4444-4444-8444-444444444444",
  lastStaffResponseAt:null,responseHistoryComplete:true});
 const input=(change:Record<string,unknown>={},outer:Record<string,unknown>={})=>({
  record:{...record(),...change},observedAt:"2026-10-29T09:00:00.000Z",thresholdMinutes:30,...outer,
@@ -36,8 +37,10 @@ describe("F15 unanswered-lead SLA",()=>{
  it("keeps replay key across source versions; changes it for new inbound, tenant or branch",()=>{
   const x=candidate(input());
   expect(candidate(input({version:2})).eventKey).toBe(x.eventKey);
+  expect(candidate(input({lastInboundAt:"2026-10-29T08:20:00.000Z"})).eventKey).toBe(x.eventKey);
   for(const change of [
-   {lastInboundAt:"2026-10-29T08:20:00.000Z"},
+   {lastInboundAt:"2026-10-29T08:20:00.000Z",lastInboundMessageId:"66666666-6666-4666-8666-666666666666"},
+   {lastInboundMessageId:"66666666-6666-4666-8666-666666666666"},
    {workspaceId:"55555555-5555-4555-8555-555555555555"},
    {branchId:"44444444-4444-4444-8444-444444444444"},
   ]) expect(candidate(input(change)).eventKey).not.toBe(x.eventKey);
@@ -46,6 +49,7 @@ describe("F15 unanswered-lead SLA",()=>{
   for(const v of [
    input({responseHistoryComplete:false}),input({responseHistoryComplete:null}),
    input({workspaceId:b}),input({requestId:w}),input({status:"CHARGED"}),
+   input({lastInboundMessageId:"not-uuid"}), input({lastInboundMessageId:r}),
    input({version:0}),input({version:1.5}),
    input({}, {thresholdMinutes:14}),input({}, {thresholdMinutes:1441}),
   ]) expect(planF15UnansweredLeadSla(v).ok).toBe(false);

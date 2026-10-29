@@ -13,6 +13,7 @@ export interface F15AtomicEventCommand {
   requestId: string;
   sourceVersion: number;
   sourceLastInboundAt: string;
+  sourceLastInboundMessageId: string;
   thresholdMinutes: number;
   dueAt: string;
   observedAt: string;
@@ -30,6 +31,7 @@ export interface F15AtomicEventReceipt {
   requestId: string;
   sourceVersion: number;
   sourceLastInboundAt: string;
+  sourceLastInboundMessageId: string;
   transactionCommitted: true;
   sourceRecheckedUnderLock: true;
   uniqueEventKeyEnforced: true;
@@ -60,7 +62,7 @@ export type F15IngressResult =
 
 const receiptKeys = [
   "state","eventKey","workspaceId","branchId","requestId","sourceVersion",
-  "sourceLastInboundAt","transactionCommitted","sourceRecheckedUnderLock",
+  "sourceLastInboundAt","sourceLastInboundMessageId","transactionCommitted","sourceRecheckedUnderLock",
   "uniqueEventKeyEnforced","externalSideEffects","savedRowsInserted",
 ] as const;
 
@@ -84,6 +86,7 @@ function checkedReceipt(receipt: unknown, planned: Candidate): receipt is F15Ato
     receipt.requestId === planned.requestId &&
     receipt.sourceVersion === planned.sourceVersion &&
     receipt.sourceLastInboundAt === planned.sourceLastInboundAt &&
+    receipt.sourceLastInboundMessageId === planned.sourceLastInboundMessageId &&
     receipt.transactionCommitted === true &&
     receipt.sourceRecheckedUnderLock === true &&
     receipt.uniqueEventKeyEnforced === true &&
@@ -110,6 +113,7 @@ export async function ingestF15UnansweredLeadCandidate(
     workspaceId:planned.workspaceId,branchId:planned.branchId,
     requestId:planned.requestId,sourceVersion:planned.sourceVersion,
     sourceLastInboundAt:planned.sourceLastInboundAt,
+    sourceLastInboundMessageId:planned.sourceLastInboundMessageId,
     thresholdMinutes:planned.thresholdMinutes,
     dueAt:planned.dueAt,observedAt:planned.observedAt,
     transactionalSourceRecheckRequired:true,uniqueEventKeyRequired:true,
