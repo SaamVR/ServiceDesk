@@ -17,13 +17,16 @@ describe("IR19 critic: genuine consent-checked Inbox but no automatic contact",(
   expect(new Set(lock.source.map(x=>x.path)).size).toBe(4);
   for(const item of lock.source)expect(blob(read(item.path)),item.path).toBe(item.sha);
   expect(lock.route.priorSha).toBe("32b7b90471b4b6b9aa0e53fce5f885fe7bce274f");
-  expect(blob(read(lock.route.path))).toBe(lock.route.integratedSha);
+  // Preserve the historical F18 manifest while pinning the reviewed F15 route successor.
+  expect(lock.route.integratedSha).toBe("1dbdc5fede5b5b21d7a488934c5f0151e0e5a672");
+  expect(blob(read(lock.route.path))).toBe("be59455de02e17b9b00cc8fe72f27a463dbad4ac");
   expect(lock.status).toBe("SOURCE_ONLY_DRAFT_UNMERGED");
  });
  it("uses existing authenticated Inbox route with explicit selected server-only owner panel",()=>{
   const route=read(lock.route.path).toString();
   expect(route).toContain('module="inbox"');
   expect(route).toContain("<InboxConsentedDraftPanel workspaceSlug={workspace} selectedConversationId={query.conversation}/>");
+  expect(route).toContain("<InboxLeadSlaPanel workspaceSlug={workspace} selectedConversationId={query.conversation}/>");
   const action=read("src/features/operations/f18-consented-reply-action.ts").toString();
   expect(action).toContain("proposeF04ConsentedReplyDraft(workspaceSlug,conversationId)");
   expect(action).toContain("messageSent:false");

@@ -24,3 +24,6 @@ The existing authenticated Inbox now renders an owner-only saved request convers
 **Acceptance:** source route and user-controlled button compile, focused security negatives pass, exact successor head has green focused CI, independent reviewer approves. No operational two-owner/browser acceptance until P02 #818 receives separately authorized real staging/tenant/deploy. F15 atomic SQL #884 is **still NOT INSTALLED**; the on-demand check does not claim unattended escalation.
 
 **NEXT_BATCH:** Production Chat make explicit one-stack integration decision for #909→#913, then verify real signed-in owner Inbox + cross-tenant denial under separately approved P02 setup; Feature Chat continue only disjoint functionality that closes actual customer journey, not more draft composites.
+## IR19 historic Critic continuity
+
+The previous F18 immutable route pin remains 1dbdc5fede5b5b21d7a488934c5f0151e0e5a672; the deliberate new Inbox route Git blob is be59455de02e17b9b00cc8fe72f27a463dbad4ac. The IR19 source manifest is kept unchanged. The successor Critic checks both F18 provenance and the reviewed route without rewriting historical SHA evidence. The existing IR19 workflow now covers the new F15 suites and changed-file lint without an extra full-history test fan-out.

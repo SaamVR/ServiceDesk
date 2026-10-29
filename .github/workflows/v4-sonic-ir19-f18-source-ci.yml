@@ -30,6 +30,8 @@ jobs:
           pnpm exec vitest run
           tests/ai/f18-consented-inbox-draft.test.ts
           tests/ai/f18-ir19-critic.test.ts
+          tests/ai/f15-inbox-owner-sla-review.test.ts
+          tests/ai/f15-inbox-saved-query.test.ts
       - run: pnpm typecheck
       - name: Changed-file lint
         run: >-
@@ -40,5 +42,12 @@ jobs:
           src/app/app/\[workspace\]/inbox/page.tsx
           tests/ai/f18-consented-inbox-draft.test.ts
           tests/ai/f18-ir19-critic.test.ts
+          tests/ai/f15-inbox-owner-sla-review.test.ts
+          tests/ai/f15-inbox-saved-query.test.ts
+          src/features/operations/f15-inbox-sla-review-action.ts
+          src/features/operations/AiUnansweredLeadSlaReview.tsx
+          src/features/operations/InboxLeadSlaPanel.tsx
+          src/server/ai/owner-inbox-f15-sla-review.ts
+          src/server/workflows/sonic-f15-unanswered-lead-sla.ts
       - name: Compile application only; no Vercel preview or deployment
         run: pnpm build
