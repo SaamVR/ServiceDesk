@@ -1,0 +1,30 @@
+name: ServiceDesk P35 saved owner automation draft recommendations
+on:
+  push:
+    branches: ["sonic-p03/p35-automation-playbook-nextsteps-20261029"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Focused source and denial tests
+        run: pnpm exec vitest run tests/e2e/v4-p35-owner-automation-draft-recommendations.test.ts tests/e2e/v4-owner-automation-activation.test.ts tests/e2e/v4-sonic-automation-playbook-finder.test.ts
+      - name: TypeScript source check
+        run: pnpm typecheck
+      - name: Changed-file lint
+        run: pnpm exec eslint src/features/operations/owner-automation-draft-recommendations.ts src/features/operations/OwnerAutomationActivationChecklist.tsx tests/e2e/v4-p35-owner-automation-draft-recommendations.test.ts
