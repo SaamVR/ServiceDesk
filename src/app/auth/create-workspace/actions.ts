@@ -57,15 +57,16 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
     fail("Workspace setup is unavailable. Contact the administrator to complete deployment.");
   }
 
-  const result = data as {ok?: unknown; slug?: unknown; code?: string} | null;
+  const result = data as {ok?: unknown; slug?: unknown; existing?: unknown; code?: unknown} | null;
   // The database is authoritative for QA account approval. A server-side
   // email allowlist alone cannot grant access to the registration RPC.
   if (result?.code === "REGISTRATION_NOT_AUTHORIZED") {
     fail("Workspace creation is not approved for this account. Contact the administrator.");
   }
-  // Refuse malformed/truthy-only RPC success objects and untrusted slugs;
-  // never redirect to onboarding without a well-formed success receipt.
-  if (result?.ok !== true || typeof result.slug !== "string" ||
+  // The database contract returns {ok:true, slug, existing:boolean}.
+  // Reject incomplete or contradictory success receipts before redirecting.
+  if (result?.ok !== true || typeof result.existing !== "boolean" ||
+      result.code != null || typeof result.slug !== "string" ||
       !/^[a-z0-9][a-z0-9-]{2,39}$/.test(result.slug) ||
       result.slug.includes("--") || result.slug.endsWith("-")) {
     if (result?.code === "SLUG_UNAVAILABLE") fail("This workspace address is taken. Try another.");
