@@ -144,9 +144,14 @@ export function summarizeAutomationActivation(
   for (const action of data.workflowActionExecutions ?? []) {
     const verified = verifiedLiveExecutions.get(action.executionId);
     if (!verified) continue;
-    if (!Number.isSafeInteger(action.actionIndex) ||
-        !verified.requiredIndexes.includes(action.actionIndex) ||
-        action.branchId !== verified.branchId ||
+    if (!Number.isSafeInteger(action.actionIndex) || action.actionIndex < 0) {
+      invalidExecutions.add(action.executionId);
+      continue;
+    }
+    // A quote rule may also include independent external actions that await
+    // explicit approval. They are not required internal attention slots.
+    if (!verified.requiredIndexes.includes(action.actionIndex)) continue;
+    if (action.branchId !== verified.branchId ||
         action.actionType !== "CREATE_ATTENTION" ||
         !Number.isSafeInteger(action.attemptNumber) ||
         action.attemptNumber < 1) {
