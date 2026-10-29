@@ -36,10 +36,10 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
   const preview = choices.find(item => item.id === previewId);
   const simulated = preview ? reviewFictionalPlaybookSignal(preview.id, whatIf) : null;
   const reset = () => {
-    setSearch(""); setCategory("All"); setSeverity("Any"); setPreviewId("");
+    setSearch(""); setCategory("All"); setSeverity("Any"); setPreviewId(""); setWhatIf("UNKNOWN");
   };
   const closePreview = () => {
-    setPreviewId("");
+    setPreviewId(""); setWhatIf("UNKNOWN");
     // Return focus to the originating action, not an element removed
     // by React when the review panel collapses.
     previewTrigger.current?.focus();
@@ -63,14 +63,14 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
       <label htmlFor={prefix + "-search"}>Search starters
         <input id={prefix + "-search"} type="search" autoComplete="off"
           value={search} maxLength={80}
-          onChange={event => { setSearch(event.target.value); setPreviewId(""); }}
+          onChange={event => { setSearch(event.target.value); setPreviewId(""); setWhatIf("UNKNOWN"); }}
           placeholder="Try quote, incident, deep clean…" />
       </label>
       <label htmlFor={prefix + "-category"}>Workflow area
         <select id={prefix + "-category"} value={category}
           onChange={event => {
             setCategory(event.target.value as PlaybookCategoryFilter);
-            setPreviewId("");
+            setPreviewId(""); setWhatIf("UNKNOWN");
           }}>
           <option value="All">All categories</option>
           {automationPlaybookCategories.map(category =>
@@ -81,7 +81,7 @@ export function AutomationPlaybookBrowser({ selectedId }: { selectedId?: string 
         <select id={prefix + "-severity"} value={severity}
           onChange={event => {
             setSeverity(event.target.value as PlaybookSeverityFilter);
-            setPreviewId("");
+            setPreviewId(""); setWhatIf("UNKNOWN");
           }}>
           {severityOptions.map(option =>
             <option key={option.value} value={option.value}>{option.label}</option>)}
