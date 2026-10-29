@@ -11,7 +11,7 @@ import {
 import { FeedbackBanner } from "@/components/product/FeedbackPrimitives";
 import { loadOnboardingProduct } from "./onboarding-product-runtime";
 import { summarizeOwnerCommercialSetup } from "./onboarding-commercial-readiness";
-import { describeSavedCleaningCatalog } from "./onboarding-cleaning-catalog-copy";
+import { describeSavedCleaningCatalog, countDistinctSupportedCleaningTypes } from "./onboarding-cleaning-catalog-copy";
 import { OnboardingOperationalEvidencePanel } from "./OnboardingOperationalEvidencePanel";
 import { availableFirstRunUsdBranches } from "@/features/operations/owner-pricing-readiness";
 import { summarizeAutomationActivation } from "@/features/operations/owner-automation-activation";
@@ -119,10 +119,11 @@ export async function OnboardingProductRoute({
   const commercial = summarizeOwnerCommercialSetup({
     catalog: serviceCatalog, scope: branchScope, proof: ownerPricingBookProof,
   });
+  const supportedCleaningTypes = countDistinctSupportedCleaningTypes(serviceCatalog);
   const activeMembers =
     ownerSettings?.members.filter((member) => member.active) ?? [];
   const businessReady = Boolean(workspace.name && workspace.timezone);
-  const servicesReady = commercial.quoteableCleaningServices > 0;
+  const servicesReady = supportedCleaningTypes > 0;
   const teamReady = activeMembers.length > 0;
   // A recorded subscription is not necessarily usable: past-due and
   // cancelled records must never count as completed owner setup.
@@ -165,7 +166,7 @@ export async function OnboardingProductRoute({
           },
           {
             label: "Cleaning service types",
-            value: commercial.quoteableCleaningServices,
+            value: supportedCleaningTypes,
             detail: `${enabledServices.length} active catalog item${enabledServices.length === 1 ? "" : "s"} total; not pricing proof`,
           },
           {
@@ -209,7 +210,7 @@ export async function OnboardingProductRoute({
               <div>
                 <h3>Service catalog</h3>
                 <p>{describeSavedCleaningCatalog(
-                  enabledServices.length, commercial.quoteableCleaningServices,
+                  enabledServices.length, supportedCleaningTypes,
                 )}</p>
                 {!servicesReady ? <Link href={realPricingHref}>Configure actual services →</Link> : null}
               </div>
