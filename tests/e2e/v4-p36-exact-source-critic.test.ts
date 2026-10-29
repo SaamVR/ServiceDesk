@@ -24,7 +24,7 @@ describe("P36 independent exact-source and production-boundary critic",()=>{
       "898":"023dc0a15fbf3becd9849b5ff1891ca51e260dda",
     });
     expect(lock.files).toHaveLength(8);
-    expect(new Set(lock.files.map(f=>f.path)).size).toBe(7);
+    expect(new Set(lock.files.map(f=>f.path)).size).toBe(8);
     expect(lock.files.filter(f=>f.sourcePr===895)).toHaveLength(4);
     expect(lock.files.filter(f=>f.sourcePr===898)).toHaveLength(4);
     for (const f of lock.files) {
