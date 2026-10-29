@@ -1,4 +1,5 @@
 import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
+import { F20OwnerSourceReviewGate } from "@/features/operations/F20OwnerSourceReviewGate";
 
 export default async function StaffInvoicesPage({
   params,
@@ -10,6 +11,7 @@ export default async function StaffInvoicesPage({
   const { workspace } = await params;
   const query = await searchParams;
   return (
+    <>
     <OperationalProductRoute
       workspaceSlug={workspace}
       module="invoices"
@@ -17,5 +19,7 @@ export default async function StaffInvoicesPage({
       notice={query.notice}
       error={query.error}
     />
+    <F20OwnerSourceReviewGate workspaceSlug={workspace} surface="invoices"/>
+    </>
   );
 }
