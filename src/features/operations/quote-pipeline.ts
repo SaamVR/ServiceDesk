@@ -1,4 +1,5 @@
 import { indexAmbiguousCurrentQuoteRequests, indexCurrentQuoteByRequest } from "./staff-snapshot-index";
+import { trustedQuoteInstant } from "./quote-validity-clock";
 
 export interface QuotePipelineRecord {
   id: string;
@@ -12,12 +13,12 @@ export interface QuotePipelineRecord {
  * accept the quote. Invalid or elapsed deadlines require staff review, not
  * a fabricated response or an automatic status mutation. */
 function quoteValidityUnverified(quote: QuotePipelineRecord, snapshotAt: string): boolean {
-  const now = Date.parse(snapshotAt);
-  const expires = typeof quote.validUntil === "string"
-    ? Date.parse(quote.validUntil) : NaN;
-  // An invalid snapshot clock cannot establish expiry or freshness.
-  // The aggregate queue separately fails closed on clock uncertainty.
-  return Number.isFinite(now) && (!Number.isFinite(expires) || expires <= now);
+  const now = trustedQuoteInstant(snapshotAt);
+  const expires = trustedQuoteInstant(quote.validUntil);
+  // The display queue must agree with the authoritative staff send and
+  // customer accept clock checks. A timezone-less or impossible date is
+  // never an approval to send, even if Date.parse would normalize it.
+  return now !== null && (expires === null || expires <= now);
 }
 
 export function needsSentQuoteExpiryReview(quote: QuotePipelineRecord, snapshotAt: string): boolean {
@@ -51,7 +52,8 @@ export function buildQuotePipeline<T extends QuotePipelineRecord>(
       || left.id.localeCompare(right.id);
   });
   const currentQuotes = [...currentQuoteByRequest.values()];
-  const clockValid = snapshotAt === undefined || (snapshotAt.trim().length > 0 && Number.isFinite(Date.parse(snapshotAt)));
+  const clockValid = snapshotAt === undefined ||
+    trustedQuoteInstant(snapshotAt) !== null;
   return {
     currentQuoteByRequest,
     orderedQuotes,
