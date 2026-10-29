@@ -1,4 +1,4 @@
-name: ServiceDesk IR21 F20 owner Finance and Retention source
+name: ServiceDesk IR21 Owner journeys plus F15 atomic Inbox integration
 on:
   push:
     branches: ["sonic-integration/ir21-f20-real-finance-retention-20261030"]
@@ -25,13 +25,32 @@ jobs:
           node-version: 22.23.2
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Focused F20 owner finance and retention functional/source-critic tests
+      - name: Single focused owner journeys, F15 atomic ingress and exact-source critic
         run: >-
           pnpm exec vitest run
           tests/ai/f20-owner-ledger-entrypoint.test.ts
           tests/ai/f20-owner-retention-entrypoint.test.ts
           tests/ai/f20-independent-finance-retention-critic.test.ts
           tests/ai/f20-ir21-exact-source-critic.test.ts
+          src/server/workflows/sonic-f15-atomic-ingress.ts
+          src/server/workflows/sonic-f15-postgres-port.ts
+          src/server/workflows/sonic-f15-unanswered-lead-sla.ts
+          src/server/workflows/sonic-f15-complete-saved-source.ts
+          src/server/workflows/sonic-f15-owner-manual-escalation.ts
+          src/features/operations/f15-owner-lead-sla-action.ts
+          src/features/operations/OwnerUnansweredLeadReview.tsx
+          src/features/operations/InboxProtectedLeadReviewPanel.tsx
+          src/app/app/\[workspace\]/inbox/page.tsx
+          tests/ai/sonic-f15-owner-manual-journey.test.ts
+          tests/ai/sonic-f15-complete-source-reader.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
+          tests/ai/sonic-f15-unanswered-lead-sla.test.ts
+          tests/ai/sonic-f15-atomic-ingress.test.ts
+          tests/ai/sonic-f15-postgres-port.test.ts
+          tests/ai/sonic-f15-ingress-independent-critic.test.ts
+          tests/ai/sonic-f15-owner-manual-journey.test.ts
+          tests/ai/sonic-f15-complete-source-reader.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
       - name: TypeScript
         run: pnpm typecheck
       - name: Changed-file lint
