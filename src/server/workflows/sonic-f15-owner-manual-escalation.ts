@@ -28,13 +28,14 @@ async function verifiedOwner(workspaceSlug:string):Promise<TrustedOwner|null>{
   const x=await resolveStaffActor(workspaceSlug);
   if(!x.ok)return null;
   const {actor,workspace,branchScope,service,rpc}=x.value;
+  const actorId=actor.userId;
   if(actor.role!=="OWNER"||actor.workspaceId!==workspace.id||
-     !uuid.test(actor.userId)||!uuid.test(workspace.id)||
+     typeof actorId!=="string"||!uuid.test(actorId)||!uuid.test(workspace.id)||
      workspace.slug!==workspaceSlug||branchScope.mode!=="ALL")return null;
   const branchIds=branchScope.branches.map(b=>b.id);
   if(!branchIds.length||new Set(branchIds).size!==branchIds.length||
      branchIds.some(b=>!uuid.test(b)))return null;
-  return {workspaceId:workspace.id,userId:actor.userId,branchIds,service,rpc};
+  return {workspaceId:workspace.id,userId:actorId,branchIds,service,rpc};
  }catch{return null;}
 }
 export interface F15OwnerEscalationDependencies {
