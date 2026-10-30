@@ -192,9 +192,10 @@
     },
     "acceptance": {
       "path": "tests/sql/v4-f15-atomic-pg17-acceptance-v3.sql",
-      "blob": "b63c1f602fe7bf0f73717e8845f605d32941d639",
+      "blob": "e2dfb7882fbb6cc0fd54791f2f1c049c63997c0a",
       "previousBlob": "1ffb442188554ce4ff662767f9e9cfa405a6bb9f",
-      "priorBroadReadBlob": "e66ec8228528b0121b970817af42f341e274d722"
+      "priorBroadReadBlob": "e66ec8228528b0121b970817af42f341e274d722",
+      "oldDelimiterBlob": "b63c1f602fe7bf0f73717e8845f605d32941d639"
     },
     "attentionResourceType": "f15_unanswered_lead_review",
     "attentionType": "UNANSWERED_LEAD_SLA",

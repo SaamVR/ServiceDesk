@@ -110,7 +110,7 @@ reset role;
 -- must veto forged F15 attention insertion, mutation and deletion while
 -- an ordinary non-F15 staff item remains writable.
 set role authenticated;
-do $
+do $f15guard$
 declare changed integer; prevented boolean;
 begin
  insert into public.attention_items(
@@ -153,12 +153,12 @@ begin
  exception when insufficient_privilege then prevented:=true;
  end;
  if not prevented then raise exception 'F15_STAFF_CONVERTED_UNRELATED_ATTENTION';end if;
-end $;
+end $f15guard$;
 reset role;
 
 -- Canonical 0004's original unique index only covers OPEN. Confirm V3's
 -- new F15-specific index rejects a second OPEN attention after human ACK.
-do $
+do $f15index$
 declare source_review uuid; prevented boolean:=false; linked_count integer;
 begin
  select id into source_review from public.f15_unanswered_lead_reviews
@@ -177,7 +177,7 @@ begin
  select count(*) into linked_count from public.attention_items
  where resource_type='f15_unanswered_lead_review' and resource_id=source_review;
  if linked_count<>1 then raise exception 'F15_ACK_DUPLICATE_ATTENTION_PERSISTED';end if;
-end $;
+end $f15index$;
 
 select 'PG17_F15_V3_RESTRICTIVE_RLS_ACK_UNIQUENESS_PASS' as receipt;
 
