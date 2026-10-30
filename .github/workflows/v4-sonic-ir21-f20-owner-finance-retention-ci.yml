@@ -32,6 +32,11 @@ jobs:
           tests/ai/f20-owner-retention-entrypoint.test.ts
           tests/ai/f20-independent-finance-retention-critic.test.ts
           tests/ai/f20-ir21-exact-source-critic.test.ts
+          tests/ai/f19-inbox-request-rules.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
+          tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
+          tests/ai/sonic-f15-owner-manual-journey.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-atomic-ingress.ts
           src/server/workflows/sonic-f15-postgres-port.ts
           src/server/workflows/sonic-f15-unanswered-lead-sla.ts
@@ -69,6 +74,16 @@ jobs:
           tests/ai/f20-owner-retention-entrypoint.test.ts
           tests/ai/f20-independent-finance-retention-critic.test.ts
           tests/ai/f20-ir21-exact-source-critic.test.ts
+          src/features/operations/InboxRequestRulesPanel.tsx
+          src/features/operations/AiInboxRequestRules.tsx
+          src/features/operations/f19-inbox-request-rules-action.ts
+          src/features/operations/inbox-request-rule-gate.ts
+          src/server/ai/owner-inbox-request-rules.ts
+          src/app/app/\[workspace\]/inbox/page.tsx
+          tests/ai/f19-inbox-request-rules.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
+          tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
       - name: Source build only, no deployment
         run: pnpm build
 

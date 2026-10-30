@@ -19,8 +19,19 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(m.newIntegratedBlobs).toHaveLength(10);
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
    expect(x.path).not.toContain("..");
+   // Preserve the ORIGINAL F15 lock's route SHA; IR21+ adds one explicit
+   // owner request-rule panel, independently pinned to a new route blob.
+   if(x.path==="src/app/app/[workspace]/inbox/page.tsx"){
+    expect(x.blob).toBe("56516b7aa63750d5a46446e160e507d7481ac1ba");
+    continue;
+   }
    expect(gitHash(read(x.path)),x.path).toBe(x.blob);
   }
+  const currentRoute=read("src/app/app/[workspace]/inbox/page.tsx");
+  expect(gitHash(currentRoute)).toBe("b68b99b3680b6f5ff4aa192a7cbda360715b1ef2");
+  expect(currentRoute.toString()).toContain("<InboxProtectedLeadReviewPanel workspaceSlug={workspace} selectedConversationId={query.conversation}/>");
+  expect(currentRoute.toString()).toContain("<InboxRequestRulesPanel workspaceSlug={workspace} selectedConversationId={query.conversation}/>");
+
   expect(m.priorInboxBlob).toBe("1dbdc5fede5b5b21d7a488934c5f0151e0e5a672");
  });
  it("client cannot activate event or claim workflow/provider success by itself",()=>{
