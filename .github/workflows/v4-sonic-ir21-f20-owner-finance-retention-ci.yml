@@ -43,6 +43,10 @@ jobs:
           src/server/workflows/sonic-f15-complete-saved-source.ts
           src/server/workflows/sonic-f15-owner-manual-escalation.ts
           src/server/workflows/sonic-f15-owner-review-evidence.ts
+          src/server/workflows/sonic-f15-owner-linked-attention.ts
+          src/features/operations/f15-owner-linked-attention-action.ts
+          src/features/operations/OwnerLinkedAttentionReview.tsx
+          tests/ai/sonic-f15-linked-attention.test.ts
           src/features/operations/f15-owner-lead-sla-action.ts
           src/features/operations/OwnerUnansweredLeadReview.tsx
           src/features/operations/InboxProtectedLeadReviewPanel.tsx
@@ -51,6 +55,7 @@ jobs:
           tests/ai/sonic-f15-complete-source-reader.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           tests/ai/sonic-f15-owner-review-evidence.test.ts
+          tests/ai/sonic-f15-linked-attention.test.ts
           tests/ai/sonic-f15-unanswered-lead-sla.test.ts
           tests/ai/sonic-f15-atomic-ingress.test.ts
           tests/ai/sonic-f15-postgres-port.test.ts

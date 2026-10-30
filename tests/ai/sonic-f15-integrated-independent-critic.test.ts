@@ -16,7 +16,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(m.importedHead).toBe("8a46e5f3d74f2cc4c7e5676993f90e2b58c627c7");
   expect(m.state).toBe("SOURCE_IMPLEMENTED_NOT_INSTALLED");
   expect(m.importedExactBlobs).toHaveLength(15);
-  expect(m.newIntegratedBlobs).toHaveLength(10);
+  expect(m.newIntegratedBlobs).toHaveLength(14);
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
    expect(x.path).not.toContain("..");
    // Preserve the ORIGINAL F15 lock's route SHA; IR21+ adds one explicit
@@ -45,6 +45,9 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(a).toContain("workflowExecuted:false");
   expect(u).toContain("This cannot send messages or run rules.");
   expect(u).toContain("Read saved owner-review journal");
+  const linked=read("src/server/workflows/sonic-f15-owner-linked-attention.ts").toString();
+  expect(linked).toContain('row.resource_type!=="f15_unanswered_lead_review"');
+  expect(linked).toContain("humanReviewRequired:true");
   expect(a).toContain("readF15CompleteSavedLeadFacts");
   expect(u).toContain("seq.current");
   for(const forbidden of ["sendEmail(","sendWhatsApp(","chargeCard(","publishWorkflow("])
