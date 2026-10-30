@@ -257,7 +257,12 @@ begin
   -- The internal Attention Center is the actual owner-facing durable
   -- effect. This is NOT a workflow rule execution and cannot dispatch a
   -- provider. Each unique review can have ONE linked attention item.
-  v_review_id := coalesce(v_inserted,v_prior.id);
+  if v_inserted is not null then
+    v_review_id := v_inserted;
+  else
+    -- v_prior is assigned only by the duplicate/replay branch.
+    v_review_id := v_prior.id;
+  end if;
   if v_review_id is null then
     raise exception 'F15_REVIEW_SOURCE_NOT_VERIFIED';
   end if;
