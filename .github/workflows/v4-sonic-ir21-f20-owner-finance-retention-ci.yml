@@ -1,0 +1,196 @@
+name: ServiceDesk IR21 Owner journeys plus F15 atomic Inbox integration
+on:
+  push:
+    branches: ["sonic-integration/ir21-f20-real-finance-retention-20261030"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-ir21-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  owner-finance-retention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Single focused owner journeys, F15 atomic ingress and exact-source critic
+        run: >-
+          pnpm exec vitest run
+          tests/ai/f20-owner-ledger-entrypoint.test.ts
+          tests/ai/f20-owner-retention-entrypoint.test.ts
+          tests/ai/f20-independent-finance-retention-critic.test.ts
+          tests/ai/f20-ir21-exact-source-critic.test.ts
+          tests/ai/f19-inbox-request-rules.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
+          tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
+          tests/ai/f21-inbox-first-quote.test.ts
+          tests/ai/f21-inbox-first-quote-critic.test.ts
+          tests/ai/sonic-f15-owner-manual-journey.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
+          src/server/workflows/sonic-f15-atomic-ingress.ts
+          src/server/workflows/sonic-f15-postgres-port.ts
+          src/server/workflows/sonic-f15-unanswered-lead-sla.ts
+          src/server/workflows/sonic-f15-complete-saved-source.ts
+          src/server/workflows/sonic-f15-owner-manual-escalation.ts
+          src/server/workflows/sonic-f15-owner-review-evidence.ts
+          src/server/workflows/sonic-f15-owner-linked-attention.ts
+          src/features/operations/f15-owner-linked-attention-action.ts
+          src/features/operations/OwnerLinkedAttentionReview.tsx
+          tests/ai/sonic-f15-linked-attention.test.ts
+          src/features/operations/f15-owner-lead-sla-action.ts
+          src/features/operations/OwnerUnansweredLeadReview.tsx
+          src/features/operations/InboxProtectedLeadReviewPanel.tsx
+          src/app/app/\[workspace\]/inbox/page.tsx
+          tests/ai/sonic-f15-owner-manual-journey.test.ts
+          tests/ai/sonic-f15-complete-source-reader.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
+          tests/ai/sonic-f15-owner-review-evidence.test.ts
+          tests/ai/sonic-f15-owner-acknowledge.test.ts
+          tests/ai/sonic-f15-v3-release-security-critic.test.ts
+          tests/ai/sonic-f15-linked-attention.test.ts
+          tests/ai/sonic-f15-unanswered-lead-sla.test.ts
+          tests/ai/sonic-f15-atomic-ingress.test.ts
+          tests/ai/sonic-f15-postgres-port.test.ts
+          tests/ai/sonic-f15-ingress-independent-critic.test.ts
+          tests/ai/sonic-f15-owner-manual-journey.test.ts
+          tests/ai/sonic-f15-complete-source-reader.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
+      - name: TypeScript
+        run: pnpm typecheck
+      - name: Changed-file lint
+        run: >-
+          pnpm exec eslint
+          src/features/operations/f20-owner-finance-review-action.ts
+          src/features/operations/OwnerLedgerExceptionReview.tsx
+          src/features/operations/f20-owner-retention-review-action.ts
+          src/features/operations/OwnerConsentedRetentionReview.tsx
+          src/features/operations/F20OwnerSourceReviewGate.tsx
+          src/app/app/\[workspace\]/invoices/page.tsx
+          src/app/app/\[workspace\]/customers/page.tsx
+          tests/ai/f20-owner-ledger-entrypoint.test.ts
+          tests/ai/f20-owner-retention-entrypoint.test.ts
+          tests/ai/f20-independent-finance-retention-critic.test.ts
+          tests/ai/f20-ir21-exact-source-critic.test.ts
+          src/features/operations/InboxRequestRulesPanel.tsx
+          src/features/operations/AiInboxRequestRules.tsx
+          src/features/operations/f19-inbox-request-rules-action.ts
+          src/features/operations/inbox-request-rule-gate.ts
+          src/server/ai/owner-inbox-request-rules.ts
+          src/app/app/\[workspace\]/inbox/page.tsx
+          tests/ai/f19-inbox-request-rules.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
+          tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
+          tests/ai/f21-inbox-first-quote.test.ts
+          tests/ai/f21-inbox-first-quote-critic.test.ts
+          src/server/ai/owner-inbox-first-quote.ts
+          src/features/operations/inbox-first-quote-action.ts
+          src/features/operations/InboxFirstQuoteAction.tsx
+          src/features/operations/inbox-first-quote-gate.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
+          src/server/workflows/sonic-f15-owner-acknowledge.ts
+          src/features/operations/f15-owner-acknowledge-action.ts
+          src/features/operations/OwnerLinkedAttentionReview.tsx
+          tests/ai/sonic-f15-owner-acknowledge.test.ts
+          tests/ai/sonic-f15-v3-release-security-critic.test.ts
+      - name: Source build only, no deployment
+        run: pnpm build
+
+  native-pg17-f15-atomic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f15-no-real-user
+          POSTGRES_DB: sd_f15_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f15_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: sd_f15_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable-f15-no-real-user
+      SERVICEDESK_F15_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Enforce disposable database and exact source head
+        run: |
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "sd_f15_disposable"
+          test "$SERVICEDESK_F15_PG17_DISPOSABLE_ONLY" = "1"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Install isolated PG client if absent
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Create fictional baseline with NO pgcrypto, load reviewed V2 candidate
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-fixture-v2.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f15-unanswered-lead-atomic-db-candidate-v2.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+      - name: Real PostgreSQL 17 ACL, rollback, two-tenant and replay checks
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-acceptance.sql
+      - name: Twelve real concurrent claims and writer lock
+        run: bash scripts/release/v4-f15-atomic-pg17-concurrency.sh
+
+  native-pg17-f15-attention-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f15-no-real-user
+          POSTGRES_DB: sd_f15_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f15_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: sd_f15_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable-f15-no-real-user
+      SERVICEDESK_F15_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact head and local-only database guard
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "sd_f15_disposable"
+          test "$SERVICEDESK_F15_PG17_DISPOSABLE_ONLY" = "1"
+      - name: Install PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Isolated fictional Attention Center, core SHA-256 V3 candidate
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-fixture-v3.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f15-unanswered-lead-atomic-attention-v3.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+      - name: Real source journal plus attention lineage and forced rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-acceptance-v3.sql
+      - name: Twelve competing SLA claims plus message-writer lock
+        run: bash scripts/release/v4-f15-atomic-pg17-concurrency.sh
