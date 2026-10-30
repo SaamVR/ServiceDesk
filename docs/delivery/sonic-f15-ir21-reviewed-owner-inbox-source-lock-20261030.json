@@ -169,7 +169,8 @@
     },
     "fixture": {
       "path": "tests/sql/v4-f15-atomic-pg17-fixture-v3.sql",
-      "blob": "833aad026a809f60e68ec5a15f24adc3c633794b"
+      "blob": "25af06cdb38f475c34b1e0d49344e192deba32c6",
+      "previousBlob": "833aad026a809f60e68ec5a15f24adc3c633794b"
     },
     "acceptance": {
       "path": "tests/sql/v4-f15-atomic-pg17-acceptance-v3.sql",

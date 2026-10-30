@@ -28,7 +28,8 @@ create unique index attention_open_dedupe_idx
  where status='OPEN';
 alter table public.attention_items enable row level security;
 revoke all on public.attention_items from public,anon,authenticated;
-grant select,insert on public.attention_items to service_role;
+-- Fixture simulates Supabase service-role ability to acknowledge a review.
+grant select,insert,update on public.attention_items to service_role;
 
 create table public.requests(
  id uuid primary key,workspace_id uuid not null references public.workspaces(id),
