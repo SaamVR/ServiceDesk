@@ -1,0 +1,63 @@
+name: ServiceDesk IR19 consent-checked owner Inbox
+on:
+  push:
+    branches: ["sonic-integration/ir19-f18-consented-inbox-owner-20261030"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-ir19-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  inbox-feature-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: New Inbox functional denial and exact-source tests only
+        run: >-
+          pnpm exec vitest run
+          tests/ai/f18-consented-inbox-draft.test.ts
+          tests/ai/f18-ir19-critic.test.ts
+          tests/ai/f15-inbox-owner-sla-review.test.ts
+          tests/ai/f15-inbox-saved-query.test.ts
+          tests/ai/f19-inbox-request-rules.test.ts
+          tests/ai/f19-inbox-request-rules-critic.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
+      - run: pnpm typecheck
+      - name: Changed-file lint
+        run: >-
+          pnpm exec eslint
+          src/features/operations/f18-consented-reply-action.ts
+          src/features/operations/AiConsentedInboxDraft.tsx
+          src/features/operations/InboxConsentedDraftPanel.tsx
+          src/app/app/\[workspace\]/inbox/page.tsx
+          tests/ai/f18-consented-inbox-draft.test.ts
+          tests/ai/f18-ir19-critic.test.ts
+          tests/ai/f15-inbox-owner-sla-review.test.ts
+          tests/ai/f15-inbox-saved-query.test.ts
+          tests/ai/f19-inbox-request-rules.test.ts
+          tests/ai/f19-inbox-request-rules-critic.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
+          src/features/operations/f15-inbox-sla-review-action.ts
+          src/features/operations/AiUnansweredLeadSlaReview.tsx
+          src/features/operations/InboxLeadSlaPanel.tsx
+          src/server/ai/owner-inbox-f15-sla-review.ts
+          src/server/workflows/sonic-f15-unanswered-lead-sla.ts
+          src/features/operations/f19-inbox-request-rules-action.ts
+          src/features/operations/AiInboxRequestRules.tsx
+          src/server/ai/owner-inbox-request-rules.ts
+          src/features/operations/inbox-request-rule-gate.ts
+      - name: Compile application only; no Vercel preview or deployment
+        run: pnpm build

@@ -1,0 +1,40 @@
+{
+  "schema": "servicedesk.ir19.f18.consent-reviewed-inbox.v1",
+  "parentIR18": "72c69a0f907ebf7b4503ff0b6a0c6f4d49e61201",
+  "status": "SOURCE_ONLY_DRAFT_UNMERGED",
+  "source": [
+    {
+      "path": "src/features/operations/f18-consented-reply-action.ts",
+      "sha": "f5620737b56d95e2a8c4afcb1deb97bac05b58e5"
+    },
+    {
+      "path": "src/features/operations/AiConsentedInboxDraft.tsx",
+      "sha": "62b38ca6f7a5ad3e71a969e3a97afa8814687ea1"
+    },
+    {
+      "path": "src/features/operations/InboxConsentedDraftPanel.tsx",
+      "sha": "71eb180140a3e634aa083c0afad078985593890d"
+    },
+    {
+      "path": "tests/ai/f18-consented-inbox-draft.test.ts",
+      "sha": "b1cb0b746568961dacee7cc3df2d86b4bd1b1a24"
+    }
+  ],
+  "route": {
+    "path": "src/app/app/[workspace]/inbox/page.tsx",
+    "priorSha": "32b7b90471b4b6b9aa0e53fce5f885fe7bce274f",
+    "integratedSha": "1dbdc5fede5b5b21d7a488934c5f0151e0e5a672"
+  },
+  "constraints": [
+    "OWNER_ONLY",
+    "ALL_BRANCH_ONLY",
+    "TWICE_AUTH_SAVED_CONSENT",
+    "NO_DELIVERY",
+    "NO_PROVIDER",
+    "NO_MODEL",
+    "NO_DB_AUTH_MUTATION",
+    "NO_DEPLOY",
+    "NO_MAIN_OR_CANONICAL_MERGE"
+  ],
+  "releaseGate": "P02_OPEN_P03_QUEUED"
+}
