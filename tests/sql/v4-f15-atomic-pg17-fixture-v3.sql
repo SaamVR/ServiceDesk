@@ -30,6 +30,14 @@ alter table public.attention_items enable row level security;
 revoke all on public.attention_items from public,anon,authenticated;
 -- Fixture simulates Supabase service-role ability to acknowledge a review.
 grant select,insert,update on public.attention_items to service_role;
+-- Simulate canonical 0004's existing broad OWNER/DISPATCHER attention policy.
+-- F15's restrictive policies must still block unauthorized SLA modifications,
+-- without disabling ordinary Attention Center staff work.
+grant usage on schema public to authenticated;
+grant select,insert,update,delete on public.attention_items to authenticated;
+create policy f15_fixture_staff_all on public.attention_items
+ for all to authenticated using(true) with check(true);
+
 
 create table public.requests(
  id uuid primary key,workspace_id uuid not null references public.workspaces(id),
