@@ -52,7 +52,7 @@ insert into public.messages values
   'INBOUND','CUSTOMER',clock_timestamp()-interval '2 hours');
 
 alter table public.attention_items add constraint f15_forced_attention_denial
- check (type<>'UNANSWERED_LEAD_SLA');
+ check (type<>'UNANSWERED_LEAD_SLA') not valid;
 set role service_role;
 do $$
 declare rejected boolean:=false;
