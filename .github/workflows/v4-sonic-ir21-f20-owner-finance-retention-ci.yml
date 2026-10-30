@@ -130,3 +130,47 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-acceptance.sql
       - name: Twelve real concurrent claims and writer lock
         run: bash scripts/release/v4-f15-atomic-pg17-concurrency.sh
+
+  native-pg17-f15-attention-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f15-no-real-user
+          POSTGRES_DB: sd_f15_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f15_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: sd_f15_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable-f15-no-real-user
+      SERVICEDESK_F15_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact head and local-only database guard
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "sd_f15_disposable"
+          test "$SERVICEDESK_F15_PG17_DISPOSABLE_ONLY" = "1"
+      - name: Install PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Isolated fictional Attention Center, core SHA-256 V3 candidate
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-fixture-v3.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f15-unanswered-lead-atomic-attention-v3.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+      - name: Real source journal plus attention lineage and forced rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-acceptance-v3.sql
+      - name: Twelve competing SLA claims plus message-writer lock
+        run: bash scripts/release/v4-f15-atomic-pg17-concurrency.sh
