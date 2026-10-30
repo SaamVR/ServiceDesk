@@ -33,7 +33,7 @@ function ScopedFirstQuote({slug,conversationId}:{slug:string;conversationId:stri
  return <section aria-label="Inbox saved first cleaning quote" data-testid="f21-inbox-first-quote"
    style={{border:"1px solid #d5e3dd",borderRadius:12,padding:16,marginBlock:14}}>
   <h3>Calculate initial cleaning quote</h3>
-  <p>The request's saved service and room counts must be complete, and its branch must have
+  <p>The request&apos;s saved service and room counts must be complete, and its branch must have
    real approved prices. This creates only an initial DRAFT/PENDING_APPROVAL quote using the
    existing pricing engine. No extra oven charge is included and no customer is contacted.</p>
   <button type="button" disabled={busy||Boolean(receipt)} aria-busy={busy}
