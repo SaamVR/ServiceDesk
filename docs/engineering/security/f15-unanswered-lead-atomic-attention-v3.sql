@@ -242,7 +242,7 @@ begin
   returning id into v_inserted;
 
   if v_inserted is null then
-    select e.request_id,e.inbound_message_id,e.source_last_inbound_at,e.source_version
+    select e.id,e.request_id,e.inbound_message_id,e.source_last_inbound_at,e.source_version
     into v_prior from public.f15_unanswered_lead_reviews e
     where e.workspace_id=v_workspace and e.branch_id=v_branch
       and e.event_key=v_key;
@@ -273,7 +273,7 @@ begin
   end if;
   -- A replay MUST verify that its exact existing review still owns a saved
   -- attention, even when a human acknowledged or resolved the item.
-  select count(*),min(a.id) into v_attentions,v_attention_id
+  select count(*),min(a.id::text)::uuid into v_attentions,v_attention_id
   from public.attention_items a
   where a.workspace_id=v_workspace
     and a.type='UNANSWERED_LEAD_SLA'
