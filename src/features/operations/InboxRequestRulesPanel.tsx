@@ -3,6 +3,8 @@ import {loadOperationalStaffSnapshot} from "./operational-product-runtime";
 import {operationalDatabaseMode} from "@/features/auth/operational-preview-mode";
 import {canProcessSavedInboxRequestRules} from "./inbox-request-rule-gate";
 import {AiInboxRequestRules} from "./AiInboxRequestRules";
+import {InboxFirstQuoteAction} from "./InboxFirstQuoteAction";
+import {canOfferFirstInboxQuote} from "./inbox-first-quote-gate";
 import {buildStaffModuleHref} from "./staff-modules";
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -38,6 +40,11 @@ export async function InboxRequestRulesPanel({workspaceSlug,selectedConversation
   workflowAvailable:s.value.workflowAvailable,
   rules:s.value.workflowRules,versions:s.value.workflowRuleVersions,
  });
+ const firstQuoteAvailable=canOfferFirstInboxQuote({
+  request,quotes:s.value.quotes,
+  ownerPricingBookProof:s.value.ownerPricingBookProof,
+  serviceRole:operationalDatabaseMode()==="SERVICE_ROLE",
+ });
  return <section className="app-panel" aria-label="Owner saved Inbox request workflow"
    data-testid="ir21-owner-inbox-request-rules">
   <h2>Request workflow · internal attention</h2>
@@ -50,5 +57,11 @@ export async function InboxRequestRulesPanel({workspaceSlug,selectedConversation
     or the trusted backend is not available.{" "}
     <Link href={buildStaffModuleHref(workspaceSlug,"automations")}>
      Review automation rules</Link>. The protected F15 review above is unaffected.</p>}
+  {firstQuoteAvailable?
+   <InboxFirstQuoteAction workspaceSlug={workspaceSlug} conversationId={conversation.id}/>:
+   <p>Initial quotation requires confirmed request details and saved owner-approved branch prices,
+    with no earlier quote for this request.{" "}
+    <Link href={buildStaffModuleHref(workspaceSlug,"settings")+"#owner-first-run-pricing"}>
+     Review saved branch pricing</Link>. Existing or renewed offers belong in Quotes.</p>}
  </section>;
 }

@@ -35,6 +35,8 @@ jobs:
           tests/ai/f19-inbox-request-rules.test.ts
           tests/ai/f19-inbox-request-rule-gate.test.ts
           tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
+          tests/ai/f21-inbox-first-quote.test.ts
+          tests/ai/f21-inbox-first-quote-critic.test.ts
           tests/ai/sonic-f15-owner-manual-journey.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-atomic-ingress.ts
@@ -88,6 +90,12 @@ jobs:
           tests/ai/f19-inbox-request-rules.test.ts
           tests/ai/f19-inbox-request-rule-gate.test.ts
           tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
+          tests/ai/f21-inbox-first-quote.test.ts
+          tests/ai/f21-inbox-first-quote-critic.test.ts
+          src/server/ai/owner-inbox-first-quote.ts
+          src/features/operations/inbox-first-quote-action.ts
+          src/features/operations/InboxFirstQuoteAction.tsx
+          src/features/operations/inbox-first-quote-gate.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
       - name: Source build only, no deployment
         run: pnpm build
