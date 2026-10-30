@@ -6,7 +6,7 @@ const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[0-9a-f]
 const slug=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 type Owner={workspaceId:string;actorId:string;branches:string[];service:Pick<SupabaseClient,"from">};
 type Candidate={attentionId:string;reviewId:string;workspaceId:string;branchId:string;requestId:string};
-type Lookup={state:"NONE"|"AMBIGUOUS"}|{state:"ONE";candidate:Candidate};
+type Lookup={state:"NONE"}|{state:"AMBIGUOUS"}|{state:"ONE";candidate:Candidate};
 export type F15AcknowledgeResult={state:
   "NOT_ACTIVATED"|"UNAVAILABLE"|"NO_OPEN_REVIEW"|"AMBIGUOUS_OPEN_REVIEWS"|
   "ACKNOWLEDGED_VERIFIED";providerSent:false;workflowExecuted:false};
