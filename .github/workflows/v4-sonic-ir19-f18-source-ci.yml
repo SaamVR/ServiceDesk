@@ -34,6 +34,7 @@ jobs:
           tests/ai/f15-inbox-saved-query.test.ts
           tests/ai/f19-inbox-request-rules.test.ts
           tests/ai/f19-inbox-request-rules-critic.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
       - run: pnpm typecheck
       - name: Changed-file lint
         run: >-
@@ -48,6 +49,7 @@ jobs:
           tests/ai/f15-inbox-saved-query.test.ts
           tests/ai/f19-inbox-request-rules.test.ts
           tests/ai/f19-inbox-request-rules-critic.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
           src/features/operations/f15-inbox-sla-review-action.ts
           src/features/operations/AiUnansweredLeadSlaReview.tsx
           src/features/operations/InboxLeadSlaPanel.tsx
@@ -56,5 +58,6 @@ jobs:
           src/features/operations/f19-inbox-request-rules-action.ts
           src/features/operations/AiInboxRequestRules.tsx
           src/server/ai/owner-inbox-request-rules.ts
+          src/features/operations/inbox-request-rule-gate.ts
       - name: Compile application only; no Vercel preview or deployment
         run: pnpm build

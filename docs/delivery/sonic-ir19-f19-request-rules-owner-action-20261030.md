@@ -25,3 +25,7 @@ This is a **source-implemented and UI-callable** manually triggered internal wri
 No canonical/main merge, SQL install, tenant/Auth fixture creation, provider call/spend, Vercel preview/deploy, external messaging or device changes. Production Chat owns canonical integration and live UAT after explicit approvals. Avoid merging #909–#913 sources and a composite twice.
 
 **Next batch:** Production Chat chooses the exact #913 successor and #884 SQL candidate independently, verifies P02 two-owner authorization and real saved request→published rule→attention readback. Feature Chat may improve next authenticated business journey within existing stack only after source integration decision, no extra F20+ draft.
+
+## Owner-facing activation gate
+
+The action now only renders when the selected request exists in the authorized owner snapshot with a supported status/branch, trusted SERVICE_ROLE backend mode is configured, and an ACTIVE rule has a matching exact PUBLISHED REQUEST_CREATED version. No rule / QA-session / incomplete snapshot shows a clear route to Automations instead of a misleading write button. This is UX preflight only; the server action independently reauthorizes and checks saved facts. Focused gate tests cover disabled mode, stale/foreign version, rule pause, branch mismatch and request status, and source-size caps.

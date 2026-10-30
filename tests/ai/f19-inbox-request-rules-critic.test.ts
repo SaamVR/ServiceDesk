@@ -29,6 +29,12 @@ describe("F19 independent security Critic: authenticated Inbox → request execu
   expect(ui).toContain('key={workspaceSlug+":"+conversationId}');
   expect(ui).toContain("externalMessagesSent!==0");
   expect(panel).toContain("<AiInboxRequestRules workspaceSlug={workspaceSlug} conversationId={selected.id}/>");
+  expect(panel).toContain("canProcessSavedInboxRequestRules({");
+  expect(panel).toContain('mode:operationalDatabaseMode()');
+  expect(panel).toContain('Review automation rules');
+  const gate=file("src/features/operations/inbox-request-rule-gate.ts");
+  expect(gate).toContain('mode!=="SERVICE_ROLE"');
+  expect(gate).toContain('version.state==="PUBLISHED"&&version.eventType==="REQUEST_CREATED"');
   for(const s of [action,ui]){
    expect(s).not.toContain("fetch(");
    expect(s).not.toContain(".insert(");
