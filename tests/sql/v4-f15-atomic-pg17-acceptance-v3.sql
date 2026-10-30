@@ -25,7 +25,7 @@ begin
      or a.summary<>'Saved unanswered customer lead needs owner review'
  ) then raise exception 'F15_V3_ATOMIC_ATTENTION_LINEAGE_UNVERIFIED'; end if;
  if has_table_privilege('anon','public.attention_items','INSERT')
-    or has_table_privilege('authenticated','public.attention_items','SELECT')
+    or not has_table_privilege('authenticated','public.attention_items','SELECT')
     or not (select relrowsecurity from pg_catalog.pg_class
       where oid='public.attention_items'::regclass)
  then raise exception 'F15_V3_ATTENTION_ACL_RLS_DENIAL_FAILED';end if;
