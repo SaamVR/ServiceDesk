@@ -1,5 +1,6 @@
 import {loadOperationalStaffSnapshot} from "./operational-product-runtime";
 import {OwnerUnansweredLeadReview} from "./OwnerUnansweredLeadReview";
+import {OwnerLinkedAttentionReview} from "./OwnerLinkedAttentionReview";
 /** Strict, explicit conversation selection. A bounded UI snapshot only selects
  * a candidate; it is never used to assert that no staff reply exists. */
 export async function InboxProtectedLeadReviewPanel({
@@ -20,6 +21,10 @@ export async function InboxProtectedLeadReviewPanel({
  const branches=new Set(s.value.branchScope.branches.map(x=>x.id));
  if(!req||!req.branchId||!branches.has(req.branchId)||
     !Number.isSafeInteger(req.version)||req.version<1)return null;
- return <OwnerUnansweredLeadReview workspaceSlug={workspaceSlug}
-   requestId={req.id} branchId={req.branchId}/>;
+ return <div>
+   <OwnerUnansweredLeadReview workspaceSlug={workspaceSlug}
+     requestId={req.id} branchId={req.branchId}/>
+   <OwnerLinkedAttentionReview workspaceSlug={workspaceSlug}
+     requestId={req.id} branchId={req.branchId}/>
+ </div>;
 }
