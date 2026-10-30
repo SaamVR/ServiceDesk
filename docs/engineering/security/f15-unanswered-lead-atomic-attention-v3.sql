@@ -111,6 +111,40 @@ create trigger servicedesk_f15_conversation_source_lock
 after insert or update or delete on public.conversations
 for each row execute function public.servicedesk_f15_conversation_source_lock();
 
+-- 0004 grants OWNER/DISPATCHER a broad staff FOR ALL attention policy.
+-- V3's internal review is a trusted-transaction outcome, not a client-owned
+-- task. RESTRICTIVE policies combine with existing permissive staff policies,
+-- forbidding fake inserts, alteration and deletion of F15 linked attention
+-- while leaving unrelated attention actions available to the staff console.
+-- A service-role backend is the ONLY issuer of F15 internal attention rows.
+create policy f15_attention_no_client_insert
+  on public.attention_items as restrictive for insert to authenticated
+  with check (
+    type is distinct from 'UNANSWERED_LEAD_SLA'
+    and resource_type is distinct from 'f15_unanswered_lead_review');
+create policy f15_attention_no_client_update
+  on public.attention_items as restrictive for update to authenticated
+  using (
+    type is distinct from 'UNANSWERED_LEAD_SLA'
+    and resource_type is distinct from 'f15_unanswered_lead_review')
+  with check (
+    type is distinct from 'UNANSWERED_LEAD_SLA'
+    and resource_type is distinct from 'f15_unanswered_lead_review');
+create policy f15_attention_no_client_delete
+  on public.attention_items as restrictive for delete to authenticated
+  using (
+    type is distinct from 'UNANSWERED_LEAD_SLA'
+    and resource_type is distinct from 'f15_unanswered_lead_review');
+
+-- The existing 0004 uniqueness protects OPEN only. Once a person ACKs or
+-- RESOLVES that record, a second OPEN copy would otherwise be legal.
+-- Enforce exact one-row lineage across every status; production DBA must
+-- preflight historical rows before an explicitly approved installation.
+create unique index f15_review_attention_all_states_unique
+  on public.attention_items(workspace_id,resource_id)
+  where type='UNANSWERED_LEAD_SLA'
+    and resource_type='f15_unanswered_lead_review';
+
 -- Only a trusted SERVICE ROLE backend may invoke. SECURITY INVOKER keeps
 -- privileges visible and auditable; no user-supplied actor/role bypass.
 create or replace function public.servicedesk_claim_f15_unanswered_lead_sla_review(p_input jsonb)
