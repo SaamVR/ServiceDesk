@@ -16,7 +16,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(m.importedHead).toBe("8a46e5f3d74f2cc4c7e5676993f90e2b58c627c7");
   expect(m.state).toBe("SOURCE_IMPLEMENTED_NOT_INSTALLED");
   expect(m.importedExactBlobs).toHaveLength(15);
-  expect(m.newIntegratedBlobs).toHaveLength(8);
+  expect(m.newIntegratedBlobs).toHaveLength(10);
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
    expect(x.path).not.toContain("..");
    expect(gitHash(read(x.path)),x.path).toBe(x.blob);
@@ -33,6 +33,8 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(a).toContain("PostgresF15AtomicIngressPort");
   expect(a).toContain("workflowExecuted:false");
   expect(u).toContain("This cannot send messages or run rules.");
+  expect(u).toContain("Read saved owner-review journal");
+  expect(a).toContain("readF15CompleteSavedLeadFacts");
   expect(u).toContain("seq.current");
   for(const forbidden of ["sendEmail(","sendWhatsApp(","chargeCard(","publishWorkflow("])
    expect(a+u).not.toContain(forbidden);

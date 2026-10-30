@@ -80,11 +80,11 @@
     },
     {
       "path": "src/features/operations/f15-owner-lead-sla-action.ts",
-      "blob": "67c1c800dd1eb12c9be10065feb82ab3756883f1"
+      "blob": "2f17fcd73715b00fd2c6806d8752f7b6401e4130"
     },
     {
       "path": "src/features/operations/OwnerUnansweredLeadReview.tsx",
-      "blob": "f315ddf5606d99a38f1943a9b06c7d93797e5d4e"
+      "blob": "22d993cc170f40ffe27b65219907047a07c40f96"
     },
     {
       "path": "src/features/operations/InboxProtectedLeadReviewPanel.tsx",
@@ -101,6 +101,14 @@
     {
       "path": "tests/ai/sonic-f15-complete-source-reader.test.ts",
       "blob": "bbd77199a33da6df40e382110428896d1f56f916"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-owner-review-evidence.ts",
+      "blob": "745b0ef28aca40a63b667c8b1623138023457271"
+    },
+    {
+      "path": "tests/ai/sonic-f15-owner-review-evidence.test.ts",
+      "blob": "4f747919f1e92bebe3b8c81147c20234b1059487"
     }
   ],
   "priorInboxBlob": "1dbdc5fede5b5b21d7a488934c5f0151e0e5a672",
@@ -123,5 +131,17 @@
     "CANONICAL_MERGE"
   ],
   "notes": "Old IR21 manifest immutable. Source imported verbatim from PR884 including an UNAPPLIED separate SQL review document, not a Supabase migration. New owner-selected Inbox action defaults off and reports only a verified atomic journal receipt.",
-  "earlierOptionalActorTypeBlob": "00cb462725692607241974e7abbd42ab63e0bb3b"
+  "earlierOptionalActorTypeBlob": "00cb462725692607241974e7abbd42ab63e0bb3b",
+  "v2NativePg17Candidate": {
+    "sqlPath": "docs/engineering/security/f15-unanswered-lead-atomic-db-candidate-v2.sql",
+    "sqlBlob": "40d5b27a62272ad3d91af4b82305436e4f2ce0f6",
+    "fixturePath": "tests/sql/v4-f15-atomic-pg17-fixture-v2.sql",
+    "fixtureBlob": "333c5fbf35e6fa29cab03d8bc9aeeb9a8fa87008",
+    "sourceHead": "d8f0618817d316a8ed7fd54f25f0875cbcc7bc71",
+    "noPgcrypto": true,
+    "disposableCiRun": 40979952743
+  },
+  "readbackScope": "OWNER_ALL_BRANCH_REQUEST_ONLY_JOURNAL_COUNTS_NO_CUSTOMER_DATA",
+  "priorOwnerReadbackUiBlob": "f315ddf5606d99a38f1943a9b06c7d93797e5d4e",
+  "priorOwnerActionBlob": "67c1c800dd1eb12c9be10065feb82ab3756883f1"
 }
