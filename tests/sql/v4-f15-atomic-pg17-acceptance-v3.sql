@@ -105,4 +105,80 @@ begin
 end $$;
 reset role;
 
+
+-- Simulate 0004's permissive attention staff RLS. V3 restrictive policies
+-- must veto forged F15 attention insertion, mutation and deletion while
+-- an ordinary non-F15 staff item remains writable.
+set role authenticated;
+do $
+declare changed integer; prevented boolean;
+begin
+ insert into public.attention_items(
+  id,workspace_id,type,resource_type,resource_id,severity,summary
+ ) values (
+  '01010101-0101-4101-8101-010101010101',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'SAVED_REQUEST_REVIEW','request','33333333-3333-4333-8333-333333333333',
+  'INFO','Staff attention non-F15 fixture');
+ update public.attention_items set summary='Ordinary staff update permitted'
+ where id='01010101-0101-4101-8101-010101010101';
+ get diagnostics changed=row_count;
+ if changed<>1 then raise exception 'F15_RESTRICTIVE_POLICY_BLOCKED_NORMAL_STAFF';end if;
+
+ prevented:=false;
+ begin
+  insert into public.attention_items(
+   workspace_id,type,resource_type,resource_id,severity,summary
+  ) values (
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'UNANSWERED_LEAD_SLA','f15_unanswered_lead_review',
+   'abababab-abab-4bab-8bab-abababababab','WARNING','Forged staff escalation');
+ exception when insufficient_privilege then prevented:=true;
+ end;
+ if not prevented then raise exception 'F15_STAFF_FORGED_INSERT_ALLOWED';end if;
+
+ update public.attention_items set summary='Staff tampered'
+ where type='UNANSWERED_LEAD_SLA';
+ get diagnostics changed=row_count;
+ if changed<>0 then raise exception 'F15_STAFF_EDITED_INTERNAL_REVIEW';end if;
+ delete from public.attention_items where type='UNANSWERED_LEAD_SLA';
+ get diagnostics changed=row_count;
+ if changed<>0 then raise exception 'F15_STAFF_DELETED_INTERNAL_REVIEW';end if;
+
+ prevented:=false;
+ begin
+  update public.attention_items
+   set type='UNANSWERED_LEAD_SLA',resource_type='f15_unanswered_lead_review'
+   where id='01010101-0101-4101-8101-010101010101';
+ exception when insufficient_privilege then prevented:=true;
+ end;
+ if not prevented then raise exception 'F15_STAFF_CONVERTED_UNRELATED_ATTENTION';end if;
+end $;
+reset role;
+
+-- Canonical 0004's original unique index only covers OPEN. Confirm V3's
+-- new F15-specific index rejects a second OPEN attention after human ACK.
+do $
+declare source_review uuid; prevented boolean:=false; linked_count integer;
+begin
+ select id into source_review from public.f15_unanswered_lead_reviews
+ where request_id='abababab-abab-4bab-8bab-abababababab';
+ if source_review is null then raise exception 'F15_ACK_REVIEW_MISSING';end if;
+ begin
+  insert into public.attention_items(
+   workspace_id,type,resource_type,resource_id,severity,summary
+  ) values (
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'UNANSWERED_LEAD_SLA','f15_unanswered_lead_review',
+   source_review,'WARNING','Duplicate open attention after acknowledgement');
+ exception when unique_violation then prevented:=true;
+ end;
+ if not prevented then raise exception 'F15_ACK_DUPLICATE_ATTENTION_ALLOWED';end if;
+ select count(*) into linked_count from public.attention_items
+ where resource_type='f15_unanswered_lead_review' and resource_id=source_review;
+ if linked_count<>1 then raise exception 'F15_ACK_DUPLICATE_ATTENTION_PERSISTED';end if;
+end $;
+
+select 'PG17_F15_V3_RESTRICTIVE_RLS_ACK_UNIQUENESS_PASS' as receipt;
+
 select 'PG17_F15_V3_REVIEW_ATTENTION_ATOMIC_ROLLBACK_REPLAY_PASS' as receipt;
