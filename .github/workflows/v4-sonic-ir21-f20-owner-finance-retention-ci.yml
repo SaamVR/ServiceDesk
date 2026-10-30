@@ -69,3 +69,47 @@ jobs:
           tests/ai/f20-ir21-exact-source-critic.test.ts
       - name: Source build only, no deployment
         run: pnpm build
+
+  native-pg17-f15-atomic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f15-no-real-user
+          POSTGRES_DB: sd_f15_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f15_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: sd_f15_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable-f15-no-real-user
+      SERVICEDESK_F15_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Enforce disposable database and exact source head
+        run: |
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "sd_f15_disposable"
+          test "$SERVICEDESK_F15_PG17_DISPOSABLE_ONLY" = "1"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Install isolated PG client if absent
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Create fictional baseline with NO pgcrypto, load reviewed V2 candidate
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-fixture-v2.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f15-unanswered-lead-atomic-db-candidate-v2.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+      - name: Real PostgreSQL 17 ACL, rollback, two-tenant and replay checks
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-acceptance.sql
+      - name: Twelve real concurrent claims and writer lock
+        run: bash scripts/release/v4-f15-atomic-pg17-concurrency.sh
