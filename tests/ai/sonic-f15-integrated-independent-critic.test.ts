@@ -16,7 +16,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(m.importedHead).toBe("8a46e5f3d74f2cc4c7e5676993f90e2b58c627c7");
   expect(m.state).toBe("SOURCE_IMPLEMENTED_NOT_INSTALLED");
   expect(m.importedExactBlobs).toHaveLength(15);
-  expect(m.newIntegratedBlobs).toHaveLength(14);
+  expect(m.newIntegratedBlobs).toHaveLength(18);
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
    expect(x.path).not.toContain("..");
    // Preserve the ORIGINAL F15 lock's route SHA; IR21+ adds one explicit

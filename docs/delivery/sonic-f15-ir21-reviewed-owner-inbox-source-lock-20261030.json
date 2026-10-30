@@ -120,11 +120,27 @@
     },
     {
       "path": "src/features/operations/OwnerLinkedAttentionReview.tsx",
-      "blob": "7a7a20af8749b63ecb79b61a784cfaec4672656f"
+      "blob": "80927abfee80a1d6c1f928811ff36d35426bfd78"
     },
     {
       "path": "tests/ai/sonic-f15-linked-attention.test.ts",
       "blob": "3a316c949ff1bf276b4f670b9a497227b149d19c"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-owner-acknowledge.ts",
+      "blob": "8f3c5e9153c2b79a3b6efffdcc5b919b14b6fe01"
+    },
+    {
+      "path": "src/features/operations/f15-owner-acknowledge-action.ts",
+      "blob": "024309b9e6e9ebe5283e189c927848e912c5578b"
+    },
+    {
+      "path": "tests/ai/sonic-f15-owner-acknowledge.test.ts",
+      "blob": "bd83aba3f0d9689fb852bf147e7f19b80cbc1b2c"
+    },
+    {
+      "path": "tests/ai/sonic-f15-v3-release-security-critic.test.ts",
+      "blob": "0b58fd7233ed541361280eec55f29c4efc6e04f2"
     }
   ],
   "priorInboxBlob": "1dbdc5fede5b5b21d7a488934c5f0151e0e5a672",
@@ -165,20 +181,27 @@
     "status": "SOURCE_ONLY_UNAPPLIED_NO_ROLLOUT",
     "sql": {
       "path": "docs/engineering/security/f15-unanswered-lead-atomic-attention-v3.sql",
-      "blob": "659638764b247db347c931f7a53f59931b072a31"
+      "blob": "1bc7247c0a988621a287967c641ef4faae85bdbb",
+      "previousBlob": "659638764b247db347c931f7a53f59931b072a31"
     },
     "fixture": {
       "path": "tests/sql/v4-f15-atomic-pg17-fixture-v3.sql",
-      "blob": "25af06cdb38f475c34b1e0d49344e192deba32c6",
-      "previousBlob": "833aad026a809f60e68ec5a15f24adc3c633794b"
+      "blob": "4df7add9fa43bb8942cbfaf4dfc9337b53873988",
+      "previousBlob": "833aad026a809f60e68ec5a15f24adc3c633794b",
+      "previousPreRlsBlob": "25af06cdb38f475c34b1e0d49344e192deba32c6"
     },
     "acceptance": {
       "path": "tests/sql/v4-f15-atomic-pg17-acceptance-v3.sql",
-      "blob": "1ffb442188554ce4ff662767f9e9cfa405a6bb9f"
+      "blob": "e66ec8228528b0121b970817af42f341e274d722",
+      "previousBlob": "1ffb442188554ce4ff662767f9e9cfa405a6bb9f"
     },
     "attentionResourceType": "f15_unanswered_lead_review",
     "attentionType": "UNANSWERED_LEAD_SLA",
     "internalOnly": true,
-    "noPublicProviderSend": true
-  }
+    "noPublicProviderSend": true,
+    "restrictiveAuthenticatedRls": true,
+    "uniqueAcrossAttentionStatuses": true
+  },
+  "priorLinkedAttentionUiBlob": "7a7a20af8749b63ecb79b61a784cfaec4672656f",
+  "ownerAcknowledge": "OWNER_ALL_BRANCH_ONE_OPEN_CAS_SAVED_READBACK_FEATURE_SWITCH_OFF"
 }

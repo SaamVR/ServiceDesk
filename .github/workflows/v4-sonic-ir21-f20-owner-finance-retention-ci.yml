@@ -57,6 +57,8 @@ jobs:
           tests/ai/sonic-f15-complete-source-reader.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           tests/ai/sonic-f15-owner-review-evidence.test.ts
+          tests/ai/sonic-f15-owner-acknowledge.test.ts
+          tests/ai/sonic-f15-v3-release-security-critic.test.ts
           tests/ai/sonic-f15-linked-attention.test.ts
           tests/ai/sonic-f15-unanswered-lead-sla.test.ts
           tests/ai/sonic-f15-atomic-ingress.test.ts
@@ -97,6 +99,11 @@ jobs:
           src/features/operations/InboxFirstQuoteAction.tsx
           src/features/operations/inbox-first-quote-gate.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
+          src/server/workflows/sonic-f15-owner-acknowledge.ts
+          src/features/operations/f15-owner-acknowledge-action.ts
+          src/features/operations/OwnerLinkedAttentionReview.tsx
+          tests/ai/sonic-f15-owner-acknowledge.test.ts
+          tests/ai/sonic-f15-v3-release-security-critic.test.ts
       - name: Source build only, no deployment
         run: pnpm build
 
