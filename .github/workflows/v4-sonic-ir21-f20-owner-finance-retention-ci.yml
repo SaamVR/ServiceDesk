@@ -37,6 +37,8 @@ jobs:
           tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
           tests/ai/f21-inbox-first-quote.test.ts
           tests/ai/f21-inbox-first-quote-critic.test.ts
+          tests/ai/f22-verified-quote-slot-hold.test.ts
+          tests/ai/f22-verified-quote-slot-critic.test.ts
           tests/ai/sonic-f15-owner-manual-journey.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-atomic-ingress.ts
@@ -94,10 +96,17 @@ jobs:
           tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
           tests/ai/f21-inbox-first-quote.test.ts
           tests/ai/f21-inbox-first-quote-critic.test.ts
+          tests/ai/f22-verified-quote-slot-hold.test.ts
+          tests/ai/f22-verified-quote-slot-critic.test.ts
           src/server/ai/owner-inbox-first-quote.ts
           src/features/operations/inbox-first-quote-action.ts
           src/features/operations/InboxFirstQuoteAction.tsx
           src/features/operations/inbox-first-quote-gate.ts
+          src/server/workflows/owner-verified-quote-slot-hold.ts
+          src/features/operations/verified-quote-slot-action.ts
+          src/features/operations/VerifiedQuoteSlotHoldControls.tsx
+          src/features/operations/OwnerQuoteCapacityHoldPanel.tsx
+          src/app/app/\[workspace\]/quotes/page.tsx
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-owner-acknowledge.ts
           src/features/operations/f15-owner-acknowledge-action.ts
