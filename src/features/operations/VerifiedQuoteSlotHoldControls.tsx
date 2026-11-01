@@ -38,7 +38,7 @@ function SelectedQuoteHolds({slug,quoteId,candidates}:{
    Only a click can request a temporary hold. A hold is not a booking or payment.</p>
   {candidates.length? <ul>{candidates.map(c=><li key={c.slotId}>
    <span>{new Date(c.startAt).toUTCString()} – {new Date(c.endAt).toUTCString()}</span>{" "}
-   <button type="button" disabled={busy||done.current} aria-busy={busy}
+   <button type="button" disabled={busy||error||Boolean(result)} aria-busy={busy}
      onClick={()=>void hold(c.slotId)}>
     {busy?"Checking saved hold…":"Hold this slot"}
    </button>

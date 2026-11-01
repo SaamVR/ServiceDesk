@@ -67,6 +67,7 @@ function fixture(opts:FixtureOptions={}){
   }};
  });
  const calc=vi.fn(async(_slug:string,_id:string,_extras?:{oven?:boolean})=>{
+  void _slug;void _id;void _extras;
   if(!opts.badResult) saved.quotes.push(row());
   else saved.quotes.push({...row(),...opts.badResult});
   return {ok:true,message:"Real server calculated and saved quote"};
