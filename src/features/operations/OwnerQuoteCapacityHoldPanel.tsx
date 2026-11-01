@@ -18,11 +18,13 @@ export async function OwnerQuoteCapacityHoldPanel({workspaceSlug,selectedQuoteId
  if(!loaded.ok||loaded.value.workspace.slug!==workspaceSlug||
     loaded.value.actor.role!=="OWNER"||
     loaded.value.actor.workspaceId!==loaded.value.workspace.id||
-    loaded.value.branchScope.mode!=="ALL"||
+    loaded.value.branchScope?.mode!=="ALL"||
     operationalDatabaseMode()!=="SERVICE_ROLE")return null;
  const data=loaded.value;
+ const scope=data.branchScope;
+ if(!scope||scope.mode!=="ALL")return null;
  const requests=new Map(data.requests.filter(r=>typeof r.branchId==="string"&&
-    data.branchScope.branches.some(b=>b.id===r.branchId)).map(r=>[r.id,r]));
+    scope.branches.some(b=>b.id===r.branchId)).map(r=>[r.id,r]));
  const ambiguous=indexAmbiguousCurrentQuoteRequests(data.quotes);
  const current=indexCurrentQuoteByRequest(data.quotes);
  const accepted=data.quotes.filter(q=>q.status==="ACCEPTED"&&

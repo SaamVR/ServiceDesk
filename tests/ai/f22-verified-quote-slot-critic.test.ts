@@ -30,7 +30,7 @@ describe("F22 independent Critic: accepted-quote temporary hold business boundar
   expect(ui).toContain("onClick={()=>void hold(c.slotId)");
   expect(ui).toContain("A hold is not a booking or payment.");
   expect(ui).toContain("no automatic retry was attempted");
-  expect(panel).toContain('loaded.value.branchScope.mode!=="ALL"');
+  expect(panel).toContain('loaded.value.branchScope?.mode!=="ALL"');
   expect(panel).toContain('q.status==="ACCEPTED"');
   expect(panel).toContain("indexAmbiguousCurrentQuoteRequests");
   expect(panel).toContain("new Set(data.crews.filter(c=>c.active&&c.branchId===request.branchId)");
