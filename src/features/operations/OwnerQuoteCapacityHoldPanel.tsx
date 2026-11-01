@@ -48,7 +48,8 @@ export async function OwnerQuoteCapacityHoldPanel({workspaceSlug,selectedQuoteId
  const request=requests.get(quote.requestId);
  if(!request?.branchId)return null;
  const alreadyVisited=data.visits.some(v=>v.quoteId===quote.id&&v.status!=="CANCELLED");
- const now=Date.now();
+ const now=Date.parse(data.loadedAt);
+ if(!Number.isFinite(now))return null;
  const activeHold=data.slotHolds.some(h=>h.quoteId===quote.id&&
   (h.status==="CONFIRMED"||h.status==="HELD"&&Date.parse(h.expiresAt)>now));
  const crewIds=new Set(data.crews.filter(c=>c.active&&c.branchId===request.branchId).map(c=>c.id));
