@@ -1,4 +1,5 @@
 import { OperationalProductRoute } from "@/features/operations/OperationalProductRoute";
+import { QualityCaseFollowthroughPanel } from "@/features/operations/QualityCaseFollowthroughPanel";
 
 export default async function StaffQualityPage({
   params,
@@ -10,6 +11,7 @@ export default async function StaffQualityPage({
   const { workspace } = await params;
   const query = await searchParams;
   return (
+    <>
     <OperationalProductRoute
       workspaceSlug={workspace}
       module="quality"
@@ -19,5 +21,7 @@ export default async function StaffQualityPage({
       notice={query.notice}
       error={query.error}
     />
+    <QualityCaseFollowthroughPanel workspaceSlug={workspace} selectedCaseId={query.case}/>
+    </>
   );
 }
