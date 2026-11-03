@@ -8,7 +8,7 @@
   "files": [
     {
       "path": "src/server/workflows/owner-verified-quote-hold-release.ts",
-      "sha": "0e9b399851733b061b3b4bfbdc4459d50621467a"
+      "sha": "336bd7290481e2cf68054a64183d7ec435964fdf"
     },
     {
       "path": "src/features/operations/verified-hold-release-action.ts",
@@ -28,7 +28,7 @@
     },
     {
       "path": "tests/ai/f23-owner-held-slot-release.test.ts",
-      "sha": "ed9c999ad118166405e272c0fdd6d084d8245d58"
+      "sha": "9f8d462711065faaf23d89f8fc058392c7cbd22b"
     },
     {
       "path": "tests/ai/f23-owner-hold-release-critic.test.ts",
@@ -42,8 +42,8 @@
     "ACCEPTED uniquely-current quote",
     "tenant+branch+crew match",
     "unexpired HELD slot",
-    "zero visits referencing hold",
-    "zero verified payment applications referencing hold",
+    "zero visits referencing quote",
+    "zero verified payment applications referencing quote",
     "two consistent current source reads",
     "HELD-to-RELEASED compare-and-set",
     "third owner reauthorization and independent readback"
@@ -65,5 +65,9 @@
     "P02 #818 real-owner tenant authorization",
     "P03 #819 genuine branch catalog and pricing",
     "Production release/security approval"
-  ]
+  ],
+  "historicalExclusionBlobs": {
+    "backend": "0e9b399851733b061b3b4bfbdc4459d50621467a",
+    "test": "ed9c999ad118166405e272c0fdd6d084d8245d58"
+  }
 }
