@@ -83,9 +83,9 @@ async function checkSource(ctx:Actor,quoteId:string,holdId:string,now:number):Pr
  // unsafe, even when an application is described as declined or pending.
  const [visits,payments]=await Promise.all([
   service.from("visits").select("id")
-   .eq("workspace_id",workspace.id).eq("hold_id",holdId).limit(2),
+   .eq("workspace_id",workspace.id).eq("quote_id",quoteId).limit(2),
   service.from("verified_payment_applications").select("id")
-   .eq("workspace_id",workspace.id).eq("hold_id",holdId).limit(2),
+   .eq("workspace_id",workspace.id).eq("quote_id",quoteId).limit(2),
  ]);
  if(visits.error||payments.error||!rowsValid(visits.data,2)||
     !rowsValid(payments.data,2)||visits.data.length||payments.data.length)
