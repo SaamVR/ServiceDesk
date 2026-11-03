@@ -39,6 +39,8 @@ jobs:
           tests/ai/f21-inbox-first-quote-critic.test.ts
           tests/ai/f22-verified-quote-slot-hold.test.ts
           tests/ai/f22-verified-quote-slot-critic.test.ts
+          tests/ai/f23-owner-held-slot-release.test.ts
+          tests/ai/f23-owner-hold-release-critic.test.ts
           tests/ai/sonic-f15-owner-manual-journey.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-atomic-ingress.ts
@@ -98,6 +100,12 @@ jobs:
           tests/ai/f21-inbox-first-quote-critic.test.ts
           tests/ai/f22-verified-quote-slot-hold.test.ts
           tests/ai/f22-verified-quote-slot-critic.test.ts
+          tests/ai/f23-owner-held-slot-release.test.ts
+          tests/ai/f23-owner-hold-release-critic.test.ts
+          src/server/workflows/owner-verified-quote-hold-release.ts
+          src/features/operations/verified-hold-release-action.ts
+          src/features/operations/OwnerSavedHoldReleaseControls.tsx
+          src/features/operations/OwnerQuoteHoldReleasePanel.tsx
           src/server/ai/owner-inbox-first-quote.ts
           src/features/operations/inbox-first-quote-action.ts
           src/features/operations/InboxFirstQuoteAction.tsx
