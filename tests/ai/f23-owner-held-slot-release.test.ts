@@ -30,8 +30,8 @@ function fixture(opt:Opt={}){
   requests:[reqRow],
   capacity_slots:[{id:slot,workspace_id:ws,crew_id:crew,starts_at:"2027-01-03T10:00:00.000Z"}],
   crews:[{id:crew,workspace_id:ws,branch_id:opt.foreignCrew?foreign:branch,active:true}],
-  visits:opt.hasVisit?[{id:foreign,workspace_id:ws,hold_id:hold}]:[],
-  verified_payment_applications:opt.hasPayment?[{id:foreign,workspace_id:ws,hold_id:hold}]:[],
+  visits:opt.hasVisit?[{id:foreign,workspace_id:ws,quote_id:quote,hold_id:foreign}]:[],
+  verified_payment_applications:opt.hasPayment?[{id:foreign,workspace_id:ws,quote_id:quote,hold_id:foreign}]:[],
  };
  let ownerCalls=0,reqReads=0,mutations=0;
  const from=vi.fn((table:string)=>{
