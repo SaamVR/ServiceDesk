@@ -100,7 +100,7 @@ async function checkSource(ctx:Actor,quoteId:string,holdId:string,now:number):Pr
 async function compareAndRelease(ctx:Actor,input:{holdId:string;quoteId:string;
  slotId:string;expiresAt:string;now:string}):Promise<boolean>{
  const {data,error}=await ctx.service.from("slot_holds")
-  .update({status:"RELEASED"})
+  .update({status:"RELEASED",updated_at:input.now})
   .eq("workspace_id",ctx.workspace.id).eq("id",input.holdId)
   .eq("quote_id",input.quoteId).eq("slot_id",input.slotId)
   .eq("status","HELD").gt("expires_at",input.now)
