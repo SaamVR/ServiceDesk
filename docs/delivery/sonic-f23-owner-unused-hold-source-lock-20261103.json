@@ -1,0 +1,69 @@
+{
+  "schema": "servicedesk.f23.owner-unused-hold-release.v1",
+  "integrationPr": 915,
+  "parentSha": "0b910cb10f6b16d9b4f874063a1e726797179f91",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "sourceOnly": true,
+  "status": "SOURCE_ONLY_NOT_DEPLOYED",
+  "files": [
+    {
+      "path": "src/server/workflows/owner-verified-quote-hold-release.ts",
+      "sha": "0e9b399851733b061b3b4bfbdc4459d50621467a"
+    },
+    {
+      "path": "src/features/operations/verified-hold-release-action.ts",
+      "sha": "3fe511743527f553f49ac7394c66a5f12b43acb5"
+    },
+    {
+      "path": "src/features/operations/OwnerSavedHoldReleaseControls.tsx",
+      "sha": "35e64b3773dae2def93e2d74149c03c8e465a5c2"
+    },
+    {
+      "path": "src/features/operations/OwnerQuoteHoldReleasePanel.tsx",
+      "sha": "bac748ed6b7fae742fa395626e301d9c8747c3e5"
+    },
+    {
+      "path": "src/app/app/[workspace]/quotes/page.tsx",
+      "sha": "badafd8ba0d46d931c68ffb4d143cd91a53da8e2"
+    },
+    {
+      "path": "tests/ai/f23-owner-held-slot-release.test.ts",
+      "sha": "ed9c999ad118166405e272c0fdd6d084d8245d58"
+    },
+    {
+      "path": "tests/ai/f23-owner-hold-release-critic.test.ts",
+      "sha": "c23e6a54aad9ce4bd2599538fa1f9207d0f6a7e5"
+    }
+  ],
+  "guard": "SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED",
+  "guardDefault": "OFF",
+  "preconditions": [
+    "OWNER/ALL current membership",
+    "ACCEPTED uniquely-current quote",
+    "tenant+branch+crew match",
+    "unexpired HELD slot",
+    "zero visits referencing hold",
+    "zero verified payment applications referencing hold",
+    "two consistent current source reads",
+    "HELD-to-RELEASED compare-and-set",
+    "third owner reauthorization and independent readback"
+  ],
+  "sideEffects": [
+    "slot_holds.status becomes RELEASED on a separately authorized user click after deployment",
+    "slot_holds.updated_at changed"
+  ],
+  "forbidden": [
+    "NO_CUSTOMER_MESSAGE",
+    "NO_PAYMENT_APPLY_OR_REFUND",
+    "NO_VISIT_CREATION_OR_CANCELLATION",
+    "NO_AUTO_RELEASE",
+    "NO_DEPLOY",
+    "NO_PRODUCTION_DB_MUTATION_IN_THIS_SOURCE_RUN",
+    "NO_CANONICAL_MERGE"
+  ],
+  "dependencies": [
+    "P02 #818 real-owner tenant authorization",
+    "P03 #819 genuine branch catalog and pricing",
+    "Production release/security approval"
+  ]
+}
