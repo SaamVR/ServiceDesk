@@ -145,7 +145,7 @@ describe("F23 accepted quote -> manually verified unused HELD slot release",()=>
   const ui=readFileSync("src/features/operations/OwnerSavedHoldReleaseControls.tsx","utf8");
   const route=readFileSync("src/app/app/[workspace]/quotes/page.tsx","utf8");
   expect(backend).toContain('.eq("status","HELD").gt("expires_at",input.now)');
-  expect(backend).toContain('.update({status:"RELEASED"})');
+  expect(backend).toContain('.update({status:"RELEASED",updated_at:input.now})');
   expect(backend).toContain('service.from("verified_payment_applications")');
   expect(backend).toContain('service.from("visits")');
   expect(action).toContain('"use server"');
