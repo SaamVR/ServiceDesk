@@ -44,6 +44,8 @@ jobs:
           tests/db/visits.test.ts
           tests/db/visit-repository-adapter.test.ts
           tests/db/f24-atomic-visit-critic.test.ts
+          tests/ai/f25-owner-saved-booking-receipt.test.ts
+          tests/ai/f25-owner-booking-receipt-critic.test.ts
           tests/ai/sonic-f15-owner-manual-journey.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-atomic-ingress.ts
@@ -108,6 +110,11 @@ jobs:
           tests/db/visits.test.ts
           tests/db/visit-repository-adapter.test.ts
           tests/db/f24-atomic-visit-critic.test.ts
+          tests/ai/f25-owner-saved-booking-receipt.test.ts
+          tests/ai/f25-owner-booking-receipt-critic.test.ts
+          src/server/ai/owner-saved-booking-receipt.ts
+          src/features/operations/OwnerSavedBookingReceiptPanel.tsx
+          src/app/app/\[workspace\]/quotes/page.tsx
           src/server/core/visits.ts
           src/server/core/visit-repository.ts
           src/server/workflows/owner-verified-quote-hold-release.ts
