@@ -41,6 +41,9 @@ jobs:
           tests/ai/f22-verified-quote-slot-critic.test.ts
           tests/ai/f23-owner-held-slot-release.test.ts
           tests/ai/f23-owner-hold-release-critic.test.ts
+          tests/db/visits.test.ts
+          tests/db/visit-repository-adapter.test.ts
+          tests/db/f24-atomic-visit-critic.test.ts
           tests/ai/sonic-f15-owner-manual-journey.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-atomic-ingress.ts
@@ -102,6 +105,11 @@ jobs:
           tests/ai/f22-verified-quote-slot-critic.test.ts
           tests/ai/f23-owner-held-slot-release.test.ts
           tests/ai/f23-owner-hold-release-critic.test.ts
+          tests/db/visits.test.ts
+          tests/db/visit-repository-adapter.test.ts
+          tests/db/f24-atomic-visit-critic.test.ts
+          src/server/core/visits.ts
+          src/server/core/visit-repository.ts
           src/server/workflows/owner-verified-quote-hold-release.ts
           src/features/operations/verified-hold-release-action.ts
           src/features/operations/OwnerSavedHoldReleaseControls.tsx

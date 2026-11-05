@@ -51,8 +51,13 @@ export interface VisitTableGateway {
   nextVisitId(): string;
   findHoldById(workspaceId: string, holdId: string): Promise<VisitTableResult<SlotHoldRow | null>>;
   findSlotById(workspaceId: string, slotId: string): Promise<VisitTableResult<CapacitySlotRow | null>>;
-  confirmHold(workspaceId: string, holdId: string, meta: CommandMeta): Promise<VisitTableResult<null>>;
-  insertVisit(row: VisitRow, meta: CommandMeta): Promise<VisitTableResult<VisitRow>>;
+  /** Legacy two-write methods are retained for old gateways but NEVER used
+   * by the scheduling adapter. A gateway must supply an atomic operation. */
+  confirmHold?(workspaceId: string, holdId: string, meta: CommandMeta): Promise<VisitTableResult<null>>;
+  insertVisit?(row: VisitRow, meta: CommandMeta): Promise<VisitTableResult<VisitRow>>;
+  /** Implement with ONE trusted database transaction and verified payment. */
+  commitScheduledVisit?(row: VisitRow, verifiedPaymentApplicationId: string, meta: CommandMeta):
+    Promise<VisitTableResult<{ visit: VisitRow; hold: SlotHoldRow }>>;
 }
 
 function repositoryError(error: VisitTableError): Result<never> {
@@ -141,17 +146,44 @@ export function createPostgresVisitRepository(gateway: VisitTableGateway): Visit
       return { ok: true, value: mapCapacitySlotRowToRecord(result.data) };
     },
 
-    async confirmHold(workspaceId, holdId, meta) {
-      const result = await gateway.confirmHold(workspaceId, holdId, meta);
+    async commitScheduledVisit(visit, verifiedPaymentApplicationId, meta): Promise<Result<AtomicScheduledVisitReceipt>> {
+      if (!gateway.commitScheduledVisit) return {
+        ok: false, code: "ATOMIC_VISIT_UNAVAILABLE",
+        message: "A trusted transaction-backed visit gateway is required.",
+      };
+      // Never replace this port with separate confirmHold / insertVisit calls.
+      // In particular, an RPC acknowledgement alone is not a visit receipt.
+      const result = await gateway.commitScheduledVisit(
+        mapVisitRecordToRow(visit), verifiedPaymentApplicationId, meta,
+      );
       if (result.error) return repositoryError(result.error);
-      return { ok: true, value: true };
-    },
-
-    async insertVisit(visit, meta) {
-      const result = await gateway.insertVisit(mapVisitRecordToRow(visit), meta);
-      if (result.error) return repositoryError(result.error);
-      if (!result.data) return notFound("VISIT_NOT_CREATED", "Visit was not created.");
-      return { ok: true, value: mapVisitRowToRecord(result.data) };
+      if (!result.data?.visit || !result.data.hold) return {
+        ok: false, code: "ATOMIC_VISIT_READBACK_INVALID",
+        message: "Atomic visit transaction returned no confirmed rows.",
+      };
+      const saved = mapVisitRowToRecord(result.data.visit);
+      const confirmed = mapSlotHoldRowToRecord(result.data.hold);
+      if (confirmed.status !== "CONFIRMED" ||
+          confirmed.workspaceId !== visit.workspaceId ||
+          confirmed.id !== visit.holdId ||
+          confirmed.quoteId !== visit.quoteId ||
+          confirmed.slotId !== visit.slotId ||
+          saved.id !== visit.id ||
+          saved.workspaceId !== visit.workspaceId ||
+          saved.requestId !== visit.requestId ||
+          saved.quoteId !== visit.quoteId ||
+          saved.holdId !== visit.holdId ||
+          saved.slotId !== visit.slotId ||
+          saved.crewId !== visit.crewId ||
+          saved.status !== "SCHEDULED" ||
+          saved.startsAt !== visit.startsAt ||
+          saved.endsAt !== visit.endsAt ||
+          saved.version !== visit.version ||
+          saved.timezone !== visit.timezone) return {
+        ok: false, code: "ATOMIC_VISIT_READBACK_INVALID",
+        message: "Atomic visit receipt did not match the intended hold or slot.",
+      };
+      return { ok: true, value: { visit: saved, confirmedHold: confirmed } };
     },
   };
 }
