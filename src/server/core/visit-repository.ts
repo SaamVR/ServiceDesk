@@ -1,6 +1,6 @@
 import type { CommandMeta, Result } from "../../contracts";
 import type { CapacitySlot, SlotHold, SlotHoldStatus } from "../../domain/capacity";
-import type { VisitRecord, VisitRepository, VisitStatus } from "./visits";
+import type { AtomicScheduledVisitReceipt, VisitRecord, VisitRepository, VisitStatus } from "./visits";
 
 export interface CapacitySlotRow {
   id: string;
