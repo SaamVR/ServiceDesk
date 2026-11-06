@@ -26,6 +26,13 @@ const race=JSON.parse(read("docs/delivery/sonic-f23-owner-revocation-race-succes
  workflow:{path:string;oldSha:string;newSha:string};
  testScript:string;testScriptSha:string;requiredReceipts:string[];
 };
+const authFeedbackRaw=read("docs/delivery/sonic-p02-auth-feedback-surface-successor-20261107.json");
+const authFeedback=JSON.parse(authFeedbackRaw.toString()) as {
+ schema:string;precursor:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;blob:string}>;
+};
+
 const m=JSON.parse(read("docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json").toString()) as {
  schema:string;state:string;parentIR21:string;importedHead:string;
  importedExactBlobs:Array<{path:string;blob:string}>;
@@ -70,6 +77,18 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(race.workflow.path).toBe(f23.workflowSuccessor.path);
   expect(race.workflow.oldSha).toBe(f23.workflowSuccessor.currentBlob);
   expect(race.workflow.newSha).toBe("85f48bcb08d99531e889ad0936db8268e2e4aedc");
+  expect(gitHash(authFeedbackRaw)).toBe("cc0c2d4e18777def4db57e8e15c0d73119cb64f3");
+  expect(authFeedback.schema).toBe("servicedesk.p02.auth-feedback-url-surface-successor.v1");
+  expect(authFeedback.precursor.path).toBe("docs/delivery/sonic-f23-owner-revocation-race-successor-20261107.json");
+  expect(authFeedback.precursor.unchanged).toBe(true);
+  expect(authFeedback.precursor.blob).toBe(gitHash(read(authFeedback.precursor.path)));
+  expect(authFeedback.workflowSuccessor.previousBlob).toBe(race.workflow.newSha);
+  expect(authFeedback.workflowSuccessor.path).toBe(race.workflow.path);
+  expect(authFeedback.changedSource).toHaveLength(6);
+  for(const source of authFeedback.changedSource){
+   expect(source.path).not.toContain("..");
+   expect(gitHash(read(source.path)),source.path).toBe(source.blob);
+  }
   expect(race.testScript).toBe("scripts/release/v4-f23-pg17-owner-revocation-race.sh");
   expect(race.testScriptSha).toBe("16de03429be8f4474a1f582e78eb749143723f33");
   expect(gitHash(read(race.testScript))).toBe(race.testScriptSha);
@@ -83,14 +102,14 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   const reviewed=f.path===race.workflow.path?race.workflow.newSha:f.blob;
+   const reviewed=f.path===race.workflow.path?authFeedback.workflowSuccessor.currentBlob:f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const f of overlay.changedFiles){
    const expected=f.path===p02.workflowSuccessor.path
-    ? race.workflow.newSha : f.blob;
+    ? authFeedback.workflowSuccessor.currentBlob : f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(expected);
   }
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
