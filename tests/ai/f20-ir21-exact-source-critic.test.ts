@@ -8,6 +8,18 @@ const lock=JSON.parse(read("docs/delivery/sonic-ir21-f20-finance-retention-sourc
  integration:Array<{path:string;before:string|null;after:string}>;
  forbidden:string[];releaseGate:string;
 };
+const successorPath="docs/delivery/sonic-ir21-f15-f20-ui-lifecycle-successor-lock-20261106.json";
+const successorRaw=read(successorPath);
+const successor=JSON.parse(successorRaw.toString()) as {
+ schema:string;historicManifestsUnchanged:string[];
+ overrides:Array<{path:string;historicSha:string;currentSha:string;gate:string}>;
+};
+function expectedReviewedBlob(path:string,historicSha:string):string {
+ const entry=successor.overrides.find(item=>item.path===path);
+ if(!entry)return historicSha;
+ expect(entry.historicSha,path+" must preserve the original source lock").toBe(historicSha);
+ return entry.currentSha;
+}
 describe("IR21 exact owner finance + retention source integration",()=>{
  it("pins seven independent finance, retention and critic Git objects",()=>{
   expect(lock.schema).toBe("servicedesk.ir21.f20.owner-verified-finance-retention.v1");
@@ -16,9 +28,27 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(lock.source).toHaveLength(7);
   expect(new Set(lock.source.map(x=>x.path)).size).toBe(7);
   expect(new Set(lock.source.map(x=>x.lane)).size).toBe(3);
+  expect(hash(successorRaw)).toBe("89f1f701fa901988322eb2d250c49d89cea0b2e6");
+  expect(successor.schema).toBe("servicedesk.sonic.ir21.f15-f20.ui-lifecycle-successor.v1");
+  expect(successor.historicManifestsUnchanged).toContain(
+    "docs/delivery/sonic-ir21-f20-finance-retention-source-lock-20261030.json");
+  expect(successor.overrides).toHaveLength(3);
+  expect(successor.overrides.filter(x=>x.path.startsWith("src/features/operations/Owner")))
+    .toHaveLength(3);
   for(const f of lock.source){
    expect(f.path).not.toContain("..");
-   expect(hash(read(f.path)),f.path).toBe(f.sha);
+   expect(hash(read(f.path)),f.path).toBe(expectedReviewedBlob(f.path,f.sha));
+  }
+  for(const path of ["src/features/operations/OwnerLedgerExceptionReview.tsx",
+    "src/features/operations/OwnerConsentedRetentionReview.tsx"]){
+   const entry=successor.overrides.find(item=>item.path===path);
+   expect(entry).toBeDefined();
+   expect(entry?.gate).toContain("F20_");
+   const source=read(path).toString();
+   expect(source).toContain("pending.current");
+   expect(source).toContain("useCallback");
+   expect(source).not.toContain("sendEmail(");
+   expect(source).not.toContain("chargeCard(");
   }
  });
  it("confines new on-screen review buttons to signed-in authorized ALL-branch owner",()=>{
