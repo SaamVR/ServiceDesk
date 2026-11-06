@@ -5,6 +5,7 @@ describe("F23 independent critic: owner release is not booking or payment",()=>{
  it("protects the money/booking boundary from temporary capacity release",()=>{
   const core=read("src/server/workflows/owner-verified-quote-hold-release.ts");
   expect(core).toContain('q.status!=="ACCEPTED"');
+  expect(core).toContain('SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED');
   expect(core).toContain('current.length!==1');
   expect(core).toContain('crew.branch_id!==req.branch_id');
   expect(core).toContain('service.from("verified_payment_applications")');
@@ -25,6 +26,7 @@ describe("F23 independent critic: owner release is not booking or payment",()=>{
   expect(panel).toContain('snapshot.value.actor.role!=="OWNER"');
   expect(panel).toContain('snapshot.value.branchScope?.mode!=="ALL"');
   expect(panel).toContain('SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED');
+  expect(panel).toContain('SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED');
   expect(panel).toContain('indexAmbiguousCurrentQuoteRequests');
   expect(panel).toContain('current.get(q.requestId)?.id!==q.id');
   expect(panel).toContain('active.length!==1');
