@@ -15,6 +15,11 @@ const p02=JSON.parse(p02Raw.toString()) as {
  workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
  changedSource:Array<{path:string;blob:string;intent:string}>;
 };
+const f23=JSON.parse(read("docs/delivery/sonic-f23-atomic-release-transactional-source-lock-20261107.json").toString()) as {
+ schema:string;historicP02ManifestBlob:string;
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;blob:string}>;
+};
 const m=JSON.parse(read("docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json").toString()) as {
  schema:string;state:string;parentIR21:string;importedHead:string;
  importedExactBlobs:Array<{path:string;blob:string}>;
@@ -46,11 +51,20 @@ describe("F15 independent critic: no new composite, exact source and default-den
    expect(source.path).not.toContain("..");
    expect(gitHash(read(source.path)),source.path).toBe(source.blob);
   }
+  expect(f23.schema).toBe("servicedesk.f23.atomic-hold-release.transactional-source.v1");
+  expect(f23.historicP02ManifestBlob).toBe(gitHash(p02Raw));
+  expect(f23.workflowSuccessor.previousBlob).toBe(p02.workflowSuccessor.currentBlob);
+  expect(f23.workflowSuccessor.path).toBe(p02.workflowSuccessor.path);
+  expect(f23.changedSource).toHaveLength(9);
+  for(const f of f23.changedSource){
+   expect(f.path).not.toContain("..");
+   expect(gitHash(read(f.path)),f.path).toBe(f.blob);
+  }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const f of overlay.changedFiles){
    const expected=f.path===p02.workflowSuccessor.path
-    ? p02.workflowSuccessor.currentBlob : f.blob;
+    ? f23.workflowSuccessor.currentBlob : f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(expected);
   }
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
