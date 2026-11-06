@@ -15,6 +15,12 @@ const overlay=JSON.parse(overlayRaw.toString()) as {
  replacements:Array<{path:string;priorBlob:string;newBlob:string}>;
  changedFiles:Array<{path:string;blob:string}>;
 };
+const p02Raw=read("docs/delivery/sonic-p02-registered-owner-ui-source-successor-20261106.json");
+const p02=JSON.parse(p02Raw.toString()) as {
+ schema:string; originalF15F20Overlay:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;blob:string;intent:string}>;
+};
 function expectedReviewedBlob(path:string,historicSha:string):string {
  const entry=overlay.replacements.find(item=>item.path===path);
  if(!entry)return historicSha;
@@ -37,8 +43,22 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   });
   expect(overlay.replacements).toHaveLength(6);
   expect(overlay.changedFiles).toHaveLength(8);
-  for(const file of overlay.changedFiles)
-   expect(hash(read(file.path)),file.path).toBe(file.blob);
+  expect(hash(p02Raw)).toBe("daedeb155f8d11dfb245b3cca709b20205e400d3");
+  expect(p02.schema).toBe("servicedesk.p02.registered-owner-ui-source-successor.v1");
+  expect(p02.originalF15F20Overlay.blob).toBe(hash(overlayRaw));
+  expect(p02.originalF15F20Overlay.unchanged).toBe(true);
+  expect(p02.changedSource).toHaveLength(5);
+  for(const source of p02.changedSource){
+   expect(source.path).not.toContain("..");
+   expect(hash(read(source.path)),source.path).toBe(source.blob);
+  }
+  const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
+  expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
+  for(const file of overlay.changedFiles){
+   const reviewedSha=file.path===p02.workflowSuccessor.path
+    ? p02.workflowSuccessor.currentBlob : file.blob;
+   expect(hash(read(file.path)),file.path).toBe(reviewedSha);
+  }
   for(const f of lock.source){
    expect(f.path).not.toContain("..");
    expect(hash(read(f.path)),f.path).toBe(expectedReviewedBlob(f.path,f.sha));
