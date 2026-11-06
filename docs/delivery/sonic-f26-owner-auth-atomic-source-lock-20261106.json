@@ -1,0 +1,56 @@
+{
+  "schema": "servicedesk.f26.owner-authority-lock.v1",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "base": "d79712f39b91a86da663ae35072149a5e5a6ab63",
+  "sourceOnly": true,
+  "productionInstalled": false,
+  "noNewPR": true,
+  "historicRpcBlob": "4a6d93d2b729be235490c1d39b86e7c6f97f41b2",
+  "requiresCrewTrigger": {
+    "path": "docs/engineering/security/f26-atomic-crew-assign-trigger-candidate-v1.sql",
+    "sha": "0deeed123b57046aa2d11be1d210b34a722005b0"
+  },
+  "files": [
+    {
+      "path": "docs/engineering/security/f26-owner-role-atomic-assign-rpc-candidate.sql",
+      "sha": "e084ec62d67811c2a038009cad5c84184c73654f"
+    },
+    {
+      "path": "tests/sql/v4-f26-owner-jwt-pg17-auth-fixture.sql",
+      "sha": "f6be875d7001596f8533b7b99ef116e6cc1d8e00"
+    },
+    {
+      "path": "tests/sql/v4-f26-owner-atomic-pg17-acceptance.sql",
+      "sha": "fe48e88fe24975fb59ac4f1e5176fc24485b004b"
+    },
+    {
+      "path": "scripts/release/v4-f26-pg17-owner-revocation-race.sh",
+      "sha": "64b0c1e4d05156f17cad42bc4764e7291f504982"
+    },
+    {
+      "path": "tests/ai/f26-owner-actor-lock-critic.test.ts",
+      "sha": "aad97b1601440a4182f48d5f923991990e344631"
+    },
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "sha": "542c965654986c1dab9b387c568285035a49dbe9"
+    }
+  ],
+  "securityGuarantees": [
+    "anon denied",
+    "authenticated actor JWT sub equal JSON actorUserId",
+    "same OWNER/DISPATCHER membership checked FOR SHARE in ASSIGN transaction",
+    "crew trigger unchanged",
+    "visit+calendar outbox atomic original semantics"
+  ],
+  "flagsDefaultOff": [
+    "SERVICEDESK_F26_OWNER_DISPATCH_ENABLED",
+    "SERVICEDESK_F26_ATOMIC_GUARD_APPROVED"
+  ],
+  "releaseBlocked": [
+    "Supabase inactive",
+    "P02 live owner A/B",
+    "P03 genuine pricing",
+    "DBA approved two SQL candidates and migration rollback"
+  ]
+}

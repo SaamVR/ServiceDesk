@@ -50,6 +50,7 @@ jobs:
           tests/ai/f26-owner-verified-booking-dispatch-critic.test.ts
           tests/ai/f26-active-crew-readiness.test.ts
           tests/ai/f26-atomic-crew-pg17-critic.test.ts
+          tests/ai/f26-owner-actor-lock-critic.test.ts
           tests/ai/sonic-f15-owner-manual-journey.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-atomic-ingress.ts
@@ -120,6 +121,7 @@ jobs:
           tests/ai/f26-owner-verified-booking-dispatch-critic.test.ts
           tests/ai/f26-active-crew-readiness.test.ts
           tests/ai/f26-atomic-crew-pg17-critic.test.ts
+          tests/ai/f26-owner-actor-lock-critic.test.ts
           src/server/workflows/f26-active-crew-readiness.ts
           src/server/workflows/owner-verified-booking-dispatch.ts
           src/features/operations/owner-verified-dispatch-action.ts
@@ -276,10 +278,16 @@ jobs:
       - name: Build fictional baseline and extract exact original 0011 RPC
         run: |
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-atomic-crew-pg17-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-owner-jwt-pg17-auth-fixture.sql
           python3 -c 'from pathlib import Path; s=Path("supabase/migrations/0011_visit_field_runtime.sql").read_text(); i=s.index("create or replace function public.servicedesk_transition_visit(p_input jsonb)"); j=s.index("\n$$;",i)+4; Path("/tmp/f26-original-0011-rpc.sql").write_text(s[i:j]+"\n")'
           psql -X -v ON_ERROR_STOP=1 -f /tmp/f26-original-0011-rpc.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f26-atomic-crew-assign-trigger-candidate-v1.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f26-owner-role-atomic-assign-rpc-candidate.sql
       - name: Native PG17 rejected rows and original 0011 positive compatibility
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-atomic-crew-pg17-acceptance.sql
       - name: Real parallel membership revocation and ASSIGN row locks
         run: bash scripts/release/v4-f26-pg17-crew-revocation-race.sh
+      - name: Source-only owner actor JWT spoof + role-revocation denial in PG17
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-owner-atomic-pg17-acceptance.sql
+      - name: Real owner row revocation races before and after ASSIGN
+        run: bash scripts/release/v4-f26-pg17-owner-revocation-race.sh
