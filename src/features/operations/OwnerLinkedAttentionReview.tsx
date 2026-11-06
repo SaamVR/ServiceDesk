@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import {requestF15LinkedAttentionProof} from "./f15-owner-linked-attention-action";
 import {requestF15OwnerAcknowledge} from "./f15-owner-acknowledge-action";
 import type {F15AttentionProof} from "@/server/workflows/sonic-f15-owner-linked-attention";
+import {isF15AcknowledgementProgressVerified} from "./f15-owner-acknowledgement-readback";
 export function OwnerLinkedAttentionReview({workspaceSlug,branchId,requestId}:{
  workspaceSlug:string;branchId:string;requestId:string;
 }){
@@ -46,7 +47,7 @@ function ScopedAttention({slug,branchId,requestId}:{
    const saved=await requestF15LinkedAttentionProof(slug,branchId,requestId);
    if(!mounted.current||seq!==serial.current)return;
    setProof(saved);
-   setAckMessage(saved.state==="LINKED_INTERNAL_ATTENTION_VERIFIED"?
+   setAckMessage(isF15AcknowledgementProgressVerified(proof,saved)?
      "Human acknowledgement saved and independently verified; no customer message was sent.":
      "The acknowledgement write returned success, but the independent saved proof is unavailable. Review the source.");
   }catch{if(mounted.current&&seq===serial.current)setAckMessage("Owner acknowledgement unavailable; no success is claimed.");}
