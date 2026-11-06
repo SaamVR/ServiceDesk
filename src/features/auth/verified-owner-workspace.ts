@@ -107,6 +107,50 @@ export async function loadVerifiedOwnerWorkspace(
   } };
 }
 
+/**
+ * Verify a creation RPC against the caller's *saved*, RLS-visible owner row.
+ * An existing=true response is the idempotent route of migration 0059: it
+ * legitimately returns the owner's prior workspace rather than a new slug.
+ * No response field alone is authoritative, including the existing flag.
+ */
+export async function verifyOwnerWorkspaceCreationReadback(
+  auth: SupabaseClient,
+  userId: string,
+  requested: VerifiedOwnerWorkspace,
+  response: unknown,
+): Promise<
+  | { ok: true; workspace: VerifiedOwnerWorkspace; existing: boolean }
+  | { ok: false; reason: "RPC_UNVERIFIED" | "PERSISTENCE_UNVERIFIED" }
+> {
+  if (!response || typeof response !== "object" || Array.isArray(response)) {
+    return { ok: false, reason: "RPC_UNVERIFIED" };
+  }
+  const receipt = response as Record<string, unknown>;
+  if (receipt.ok !== true || typeof receipt.slug !== "string" ||
+      receipt.slug.length < 3 || receipt.slug.length > 40 ||
+      !slugPattern.test(receipt.slug) ||
+      (receipt.existing !== true && receipt.existing !== false)) {
+    return { ok: false, reason: "RPC_UNVERIFIED" };
+  }
+  // A newly created business must have the exact submitted address. Only the
+  // atomic RPC's existing=true path may legitimately point to an older one.
+  if (receipt.existing === false && receipt.slug !== requested.slug) {
+    return { ok: false, reason: "RPC_UNVERIFIED" };
+  }
+
+  const readback = await loadVerifiedOwnerWorkspace(auth, userId, receipt.slug);
+  if (!readback.ok) return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  if (receipt.existing === false && (
+    readback.workspace.slug !== requested.slug ||
+    readback.workspace.name !== requested.name ||
+    readback.workspace.timezone !== requested.timezone ||
+    readback.workspace.currency !== requested.currency
+  )) {
+    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  }
+  return { ok: true, workspace: readback.workspace, existing: receipt.existing };
+}
+
 /** Login never silently sends an owner into a staff backend without its key. */
 export function ownerAfterLoginHref(
   workspace: { slug: string; role: string; href: string },
