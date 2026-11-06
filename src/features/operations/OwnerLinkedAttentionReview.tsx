@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useRef,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import {requestF15LinkedAttentionProof} from "./f15-owner-linked-attention-action";
 import {requestF15OwnerAcknowledge} from "./f15-owner-acknowledge-action";
 import type {F15AttentionProof} from "@/server/workflows/sonic-f15-owner-linked-attention";
@@ -17,7 +17,10 @@ function ScopedAttention({slug,branchId,requestId}:{
  const [ackMessage,setAckMessage]=useState("");
  const [busy,setBusy]=useState(false),mounted=useRef(true),
    pending=useRef(false),serial=useRef(0);
- useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;serial.current++;};},[]);
+ const invalidate=useCallback(()=>{serial.current++;},[]);
+ useEffect(()=>{mounted.current=true;return()=>{
+  mounted.current=false;pending.current=false;invalidate();
+ };},[invalidate]);
  async function check(){
   if(pending.current)return;
   pending.current=true;setBusy(true);setProof(null);setAckMessage("");
@@ -26,7 +29,9 @@ function ScopedAttention({slug,branchId,requestId}:{
    const read=await requestF15LinkedAttentionProof(slug,branchId,requestId);
    if(mounted.current&&seq===serial.current)setProof(read);
   }catch{if(mounted.current&&seq===serial.current)setProof({state:"UNAVAILABLE"});}
-  finally{pending.current=false;if(mounted.current&&seq===serial.current)setBusy(false);}
+  finally{if(mounted.current&&seq===serial.current){
+   pending.current=false;setBusy(false);
+  }}
  }
  async function acknowledge(){
   if(pending.current||proof?.state!=="LINKED_INTERNAL_ATTENTION_VERIFIED"||
