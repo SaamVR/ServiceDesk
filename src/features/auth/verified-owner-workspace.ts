@@ -116,7 +116,7 @@ export async function loadVerifiedOwnerWorkspace(
 export async function verifyOwnerWorkspaceCreationReadback(
   auth: SupabaseClient,
   userId: string,
-  requested: VerifiedOwnerWorkspace,
+  requested: Omit<VerifiedOwnerWorkspace, "id">,
   response: unknown,
 ): Promise<
   | { ok: true; workspace: VerifiedOwnerWorkspace; existing: boolean }
