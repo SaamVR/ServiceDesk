@@ -17,7 +17,7 @@ type Row=Record<string,unknown>;
 type Opt={role?:string;scope?:string;holdStatus?:string;expired?:boolean;
  quoteStatus?:string;quoteNewer?:boolean;foreignCrew?:boolean;hasVisit?:boolean;
  hasPayment?:boolean;drift?:boolean;actorChange?:boolean;afterChange?:boolean;
- rejectUpdate?:boolean;readbackBad?:boolean;extendBeforeRelease?:boolean};
+ rejectUpdate?:boolean;readbackBad?:boolean;extendBeforeRelease?:boolean;forgedRpc?:boolean};
 function fixture(opt:Opt={}){
  const holdRow:Row={id:hold,workspace_id:ws,quote_id:quote,slot_id:slot,
   status:opt.holdStatus??"HELD",expires_at:opt.expired?"2026-01-01T00:00:00.000Z":expiry};
@@ -72,11 +72,29 @@ function fixture(opt:Opt={}){
    };
    return query;
   };
-  return {select(_columns:string){return make();},update(patch:Row){
-   if(table==="slot_holds"&&opt.extendBeforeRelease)
-    holdRow.expires_at="2027-01-02T06:00:00.000Z";
-   return make(patch);
-  }};
+  return {select(_columns:string){return make();},update(patch:Row){return make(patch);}};
+ });
+ // The installed candidate RPC owns the quote/hold transaction; this mock
+ // simulates its exact checked commit, not a direct service-role table UPDATE.
+ let rpcCalls=0;
+ const rpc=vi.fn(async(fn:string,args:{p_input:Record<string,unknown>})=>{
+  rpcCalls++;
+  if(fn!=="servicedesk_release_held_slot_atomic")throw Error("Unexpected RPC");
+  const input=args.p_input;
+  if(opt.extendBeforeRelease)
+   holdRow.expires_at="2027-01-02T06:00:00.000Z";
+  if(opt.rejectUpdate||holdRow.status!=="HELD"||
+     input.workspaceId!==ws||input.actorUserId!==owner||
+     input.holdId!==hold||input.quoteId!==quote||input.slotId!==slot||
+     input.expiresAt!==holdRow.expires_at)
+    return {data:{ok:false,code:"HOLD_NOT_ELIGIBLE"},error:null};
+  mutations++;
+  holdRow.status="RELEASED";
+  return {data:opt.forgedRpc?{ok:true,state:"HOLD_RELEASED",
+   holdId:foreign,quoteId:quote,slotId:slot,
+   newCapacityVerified:false,paymentChanged:false,customerMessaged:false}:{
+   ok:true,state:"HOLD_RELEASED",holdId:hold,quoteId:quote,slotId:slot,
+   newCapacityVerified:false,paymentChanged:false,customerMessaged:false},error:null};
  });
  const resolver=vi.fn(async()=>{
   ownerCalls++;
@@ -85,12 +103,12 @@ function fixture(opt:Opt={}){
     actor:{role:opt.role??"OWNER",workspaceId:ws,
       userId:(opt.actorChange&&ownerCalls===2)||(opt.afterChange&&ownerCalls===3)?foreign:owner},
     branchScope:{mode:opt.scope??"ALL",branches:[{id:branch}]},
-    service:{from},
+    service:{from,rpc},
   }};
  });
  const deps={enabled:()=>true,atomicReady:()=>true,mode:()=> "SERVICE_ROLE" as const,
   resolve:resolver as never,now:()=>now};
- return {source,holdRow,from,resolver,deps,mutations:()=>mutations};
+ return {source,holdRow,from,rpc,resolver,deps,mutations:()=>mutations,rpcCalls:()=>rpcCalls};
 }
 describe("F23 accepted quote -> manually verified unused HELD slot release",()=>{
  it("requires explicit opt-in before actor lookup or mutation",async()=>{
@@ -140,9 +158,9 @@ describe("F23 accepted quote -> manually verified unused HELD slot release",()=>
   const f=fixture({extendBeforeRelease:true});
   expect(await releaseOwnerVerifiedQuoteHold("test-workspace",quote,hold,f.deps))
    .toMatchObject({ok:false,code:"RELEASE_UNVERIFIED"});
-  // The conditional UPDATE was attempted, but its compare-and-swap
-  // matched no row after expiry changed; the saved hold stays HELD.
-  expect(f.mutations()).toBe(1);
+  // The database RPC rejects the stale CAS before writing.
+  expect(f.rpcCalls()).toBe(1);
+  expect(f.mutations()).toBe(0);
   expect(f.holdRow.status).toBe("HELD");
   expect(f.holdRow.expires_at).toBe("2027-01-02T06:00:00.000Z");
  });
@@ -154,10 +172,11 @@ describe("F23 accepted quote -> manually verified unused HELD slot release",()=>
   }
  });
  it("refuses stale CAS, post-write owner revocation and unverifiable readback",async()=>{
-  for(const options of [{rejectUpdate:true},{afterChange:true},{readbackBad:true}]){
+  for(const options of [{rejectUpdate:true},{afterChange:true},{readbackBad:true},{forgedRpc:true}]){
    const f=fixture(options);
    expect((await releaseOwnerVerifiedQuoteHold("test-workspace",quote,hold,f.deps)).ok).toBe(false);
-   expect(f.mutations()).toBe(1);
+   expect(f.rpcCalls()).toBe(1);
+   expect(f.mutations()).toBe(options.rejectUpdate?0:1);
   }
  });
  it("has real action + authorizing Quotes panel, no provider or visit creation",()=>{
@@ -166,9 +185,9 @@ describe("F23 accepted quote -> manually verified unused HELD slot release",()=>
   const panel=readFileSync("src/features/operations/OwnerQuoteHoldReleasePanel.tsx","utf8");
   const ui=readFileSync("src/features/operations/OwnerSavedHoldReleaseControls.tsx","utf8");
   const route=readFileSync("src/app/app/[workspace]/quotes/page.tsx","utf8");
-  expect(backend).toContain('.eq("status","HELD").eq("expires_at",input.expiresAt)');
-  expect(backend).toContain('.gt("expires_at",input.now)');
-  expect(backend).toContain('.update({status:"RELEASED",updated_at:input.now})');
+  expect(backend).toContain('ctx.service.rpc("servicedesk_release_held_slot_atomic"');
+  expect(backend).toContain('input.expiresAt');
+  expect(backend).not.toContain('.update({status:"RELEASED"');
   expect(backend).toContain('service.from("verified_payment_applications")');
   expect(backend).toContain('service.from("visits")');
   expect(action).toContain('"use server"');
