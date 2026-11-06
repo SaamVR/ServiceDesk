@@ -32,6 +32,12 @@ const authFeedback=JSON.parse(authFeedbackRaw.toString()) as {
  workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
  changedSource:Array<{path:string;blob:string}>;
 };
+const qaProofRaw=read("docs/delivery/sonic-p02-qa-seed-saved-proof-successor-20261107.json");
+const qaProof=JSON.parse(qaProofRaw.toString()) as {
+ schema:string;previousAcceptedSource:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;blob:string;lane:string}>;
+};
 
 const m=JSON.parse(read("docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json").toString()) as {
  schema:string;state:string;parentIR21:string;importedHead:string;
@@ -89,6 +95,19 @@ describe("F15 independent critic: no new composite, exact source and default-den
    expect(source.path).not.toContain("..");
    expect(gitHash(read(source.path)),source.path).toBe(source.blob);
   }
+  expect(gitHash(qaProofRaw)).toBe("963c2e44e8e5a28fcc326460840657fcbe3401af");
+  expect(qaProof.schema).toBe("servicedesk.p02.qa-seed-saved-proof-successor.v1");
+  expect(qaProof.previousAcceptedSource.path)
+    .toBe("docs/delivery/sonic-p02-auth-feedback-surface-successor-20261107.json");
+  expect(qaProof.previousAcceptedSource.unchanged).toBe(true);
+  expect(qaProof.previousAcceptedSource.blob).toBe(gitHash(authFeedbackRaw));
+  expect(qaProof.workflowSuccessor.path).toBe(authFeedback.workflowSuccessor.path);
+  expect(qaProof.workflowSuccessor.previousBlob).toBe(authFeedback.workflowSuccessor.currentBlob);
+  expect(qaProof.changedSource).toHaveLength(3);
+  for(const source of qaProof.changedSource){
+   expect(source.path).not.toContain("..");
+   expect(gitHash(read(source.path)),source.path).toBe(source.blob);
+  }
   expect(race.testScript).toBe("scripts/release/v4-f23-pg17-owner-revocation-race.sh");
   expect(race.testScriptSha).toBe("16de03429be8f4474a1f582e78eb749143723f33");
   expect(gitHash(read(race.testScript))).toBe(race.testScriptSha);
@@ -102,14 +121,14 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   const reviewed=f.path===race.workflow.path?authFeedback.workflowSuccessor.currentBlob:f.blob;
+   const reviewed=f.path===race.workflow.path?qaProof.workflowSuccessor.currentBlob:f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const f of overlay.changedFiles){
    const expected=f.path===p02.workflowSuccessor.path
-    ? authFeedback.workflowSuccessor.currentBlob : f.blob;
+    ? qaProof.workflowSuccessor.currentBlob : f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(expected);
   }
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
