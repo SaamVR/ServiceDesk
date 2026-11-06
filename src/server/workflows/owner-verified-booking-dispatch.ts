@@ -68,8 +68,12 @@ export async function dispatchOwnerVerifiedBookedVisit(
   // A second source read prevents a different saved booking state being
   // selected between the owner click and the privileged visit transition.
   const checked=await load(workspaceSlug,quoteId);
-  if(!checked.ok||checked.value.visitStatus!=="SCHEDULED"||
+  if(!checked.ok||checked.value.state!=="SAVED_BOOKING_WITH_APPLIED_DEPOSIT"||
+     checked.value.quoteId!==quoteId||
      checked.value.visitId!==visitId||
+     checked.value.visitStatus!=="SCHEDULED"||
+     checked.value.recordedDepositApplication!==true||
+     checked.value.bookingRecordPresent!==true||
      checked.value.invoiceId!==before.value.invoiceId||
      checked.value.quoteVersion!==before.value.quoteVersion||
      checked.value.startsAt!==before.value.startsAt)

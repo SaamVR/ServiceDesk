@@ -10,6 +10,12 @@ describe("F26 independent critic: paid visit dispatch vs booked payment and cale
   expect(backend).toContain("transitionOperationalVisit");
   expect(backend).toContain('"ASSIGN"');
   expect(backend).toContain('before.value.recordedDepositApplication!==true');
+  // The second saved source read must retain the FULL F25 paid-booking
+  // evidence; matching only visit/invoice identifiers is not sufficient.
+  expect(backend).toContain('checked.value.state!=="SAVED_BOOKING_WITH_APPLIED_DEPOSIT"');
+  expect(backend).toContain('checked.value.quoteId!==quoteId');
+  expect(backend).toContain('checked.value.recordedDepositApplication!==true');
+  expect(backend).toContain('checked.value.bookingRecordPresent!==true');
   expect(backend).toContain('after.value.visitStatus!=="ASSIGNED"');
   expect(backend).toContain('third.value.actor.userId!==first.value.actor.userId');
   expect(payment).toContain("insert into public.visits(");

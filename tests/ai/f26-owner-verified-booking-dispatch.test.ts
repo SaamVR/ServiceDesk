@@ -18,7 +18,9 @@ const saved=(status="SCHEDULED")=>({
  }});
 function fixture(options:{role?:string;changedSecond?:boolean;changedThird?:boolean;
  failedTransition?:boolean;preStatus?:string;postStatus?:string;
- changedPostInvoice?:boolean;missingPrePayment?:boolean}={}){
+ changedPostInvoice?:boolean;missingPrePayment?:boolean;
+ secondProof?: "wrong_quote"|"wrong_state"|"no_applied_deposit"|"no_saved_booking";
+ }={}){
  let ownerReads=0,receiptReads=0,transitioned=false;
  const resolve=vi.fn(async()=>{
   ownerReads++;
@@ -34,7 +36,18 @@ function fixture(options:{role?:string;changedSecond?:boolean;changedThird?:bool
   receiptReads++;
   if(receiptReads<3){
    if(options.missingPrePayment)return {ok:false,code:"SAVED_BOOKING_UNVERIFIED"};
-   return saved(options.preStatus??"SCHEDULED");
+   const original=saved(options.preStatus??"SCHEDULED");
+   if(receiptReads===2&&options.secondProof){
+    if(options.secondProof==="wrong_quote")
+     return {ok:true,value:{...original.value,quoteId:other}};
+    if(options.secondProof==="wrong_state")
+     return {ok:true,value:{...original.value,state:"UNVERIFIED_BOOKING"}};
+    if(options.secondProof==="no_applied_deposit")
+     return {ok:true,value:{...original.value,recordedDepositApplication:false}};
+    if(options.secondProof==="no_saved_booking")
+     return {ok:true,value:{...original.value,bookingRecordPresent:false}};
+   }
+   return original;
   }
   return {ok:true,value:{...saved(options.postStatus??(transitioned?"ASSIGNED":"SCHEDULED")).value,
     invoiceId:options.changedPostInvoice?other:invoice}};
@@ -90,6 +103,16 @@ describe("F26 owner paid booked visit -> persisted ASSIGNED transition",()=>{
    const f=fixture(o);
    expect((await dispatchOwnerVerifiedBookedVisit("demo-workspace",quote,visit,f.deps)).ok).toBe(false);
    expect(f.transition).not.toHaveBeenCalled();
+  }
+ });
+ it("vetoes revoked saved-booking proof on the second pre-write read",async()=>{
+  for(const secondProof of ["wrong_quote","wrong_state",
+    "no_applied_deposit","no_saved_booking"] as const){
+   const f=fixture({secondProof});
+   expect(await dispatchOwnerVerifiedBookedVisit("demo-workspace",quote,visit,f.deps))
+    .toMatchObject({ok:false,code:"SOURCE_CHANGED"});
+   expect(f.transition,secondProof).not.toHaveBeenCalled();
+   expect(f.loadBooking).toHaveBeenCalledTimes(2);
   }
  });
  it("stops on changed current actor or failed visit command",async()=>{
