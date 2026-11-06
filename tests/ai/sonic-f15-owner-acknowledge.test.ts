@@ -1,5 +1,6 @@
 import {describe,it,expect,vi} from "vitest";
 import {readFileSync} from "node:fs";
+import {isF15AcknowledgementProgressVerified} from "../../src/features/operations/f15-owner-acknowledgement-readback";
 import {acknowledgeF15OneSavedInternalAttention} from "../../src/server/workflows/sonic-f15-owner-acknowledge";
 const workspaceId="11111111-1111-4111-8111-111111111111";
 const branchId="22222222-2222-4222-8222-222222222222";
@@ -97,3 +98,52 @@ describe("F15 explicit owner-only saved attention acknowledgement",()=>{
   }
  });
 });
+
+describe("F15 client independent acknowledgement progression evidence",()=>{
+ const prior=(count=1,acknowledged=0,resolved=0)=>({
+  state:"LINKED_INTERNAL_ATTENTION_VERIFIED" as const,count,open:1,
+  acknowledged,resolved,humanReviewRequired:true as const,
+  workflowExecuted:false as const,customerMessaged:false as const,
+ });
+ it("requires exactly one formerly open row to become ACKNOWLEDGED",()=>{
+  const before=prior();
+  expect(isF15AcknowledgementProgressVerified(before,{
+   ...before,open:0,acknowledged:1})).toBe(true);
+  const multiple=prior(3,1,1);
+  expect(isF15AcknowledgementProgressVerified(multiple,{
+   ...multiple,open:0,acknowledged:2})).toBe(true);
+ });
+ it("rejects a linked but still open or stale saved record after a success receipt",()=>{
+  const before=prior();
+  expect(isF15AcknowledgementProgressVerified(before,before)).toBe(false);
+  expect(isF15AcknowledgementProgressVerified(before,{
+   ...before,open:1,acknowledged:1})).toBe(false);
+  expect(isF15AcknowledgementProgressVerified(before,{
+   ...before,open:0,acknowledged:0})).toBe(false);
+  expect(isF15AcknowledgementProgressVerified(before,{
+   ...before,open:0,acknowledged:1,count:2})).toBe(false);
+  expect(isF15AcknowledgementProgressVerified(before,{
+   state:"UNAVAILABLE"})).toBe(false);
+  expect(isF15AcknowledgementProgressVerified(before,{
+   state:"NO_REVIEW_RECORDED"})).toBe(false);
+ });
+ it("rejects ambiguous, inconsistent or already-cleared starting proof",()=>{
+  const before=prior();
+  expect(isF15AcknowledgementProgressVerified({
+   ...before,open:0}, {...before,open:0,acknowledged:1})).toBe(false);
+  expect(isF15AcknowledgementProgressVerified({
+   ...before,open:1,count:2}, {...before,open:0,count:2,acknowledged:1})).toBe(false);
+  expect(isF15AcknowledgementProgressVerified({
+   ...before,open:1,count:0}, {...before,open:0,acknowledged:1})).toBe(false);
+  expect(isF15AcknowledgementProgressVerified({
+   ...before,open:1,count:2,acknowledged:1}, {
+   ...before,open:0,count:2,acknowledged:1,resolved:1})).toBe(false);
+ });
+ it("client success copy is guarded by the independent progression predicate",()=>{
+  const ui=readFileSync("src/features/operations/OwnerLinkedAttentionReview.tsx","utf8");
+  expect(ui).toContain("isF15AcknowledgementProgressVerified(proof,saved)");
+  expect(ui).not.toContain('setAckMessage(saved.state==="LINKED_INTERNAL_ATTENTION_VERIFIED"?');
+  expect(ui).toContain("The acknowledgement write returned success, but the independent saved proof is unavailable.");
+ });
+});
+
