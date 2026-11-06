@@ -3,6 +3,12 @@ import {readFileSync} from "node:fs";
 import {describe,expect,it} from "vitest";
 const read=(p:string)=>readFileSync(p);
 const gitHash=(b:Buffer)=>createHash("sha1").update("blob "+b.length+"\0").update(b).digest("hex");
+const overlay=JSON.parse(read("docs/delivery/sonic-f15-f20-post-lock-ui-guard-20261106.json").toString()) as {
+ schema:string; baseHead:string;
+ originalLocks:Array<{path:string;blob:string}>;
+ replacements:Array<{path:string;priorBlob:string;newBlob:string}>;
+ changedFiles:Array<{path:string;blob:string}>;
+};
 const m=JSON.parse(read("docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json").toString()) as {
  schema:string;state:string;parentIR21:string;importedHead:string;
  importedExactBlobs:Array<{path:string;blob:string}>;
@@ -31,6 +37,16 @@ describe("F15 independent critic: no new composite, exact source and default-den
     x.path==="src/features/operations/OwnerLinkedAttentionReview.tsx");
   expect(attention?.historicSha).toBe("80927abfee80a1d6c1f928811ff36d35426bfd78");
   expect(attention?.gate).toBe("F15_PERSISTED_ACK_READBACK_NO_PROVIDER");
+  expect(overlay.schema).toBe("servicedesk.f15-f20.post-lock-ui-guard.v1");
+  expect(overlay.baseHead).toBe("6e3d27e64517255a582ddceed5df9321542c504b");
+  expect(overlay.originalLocks).toContainEqual({
+   path:"docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json",
+   blob:"c11e87a63e0a13b8c873548675b8c3cc79e08315"});
+  expect(overlay.replacements).toHaveLength(6);
+  expect(overlay.changedFiles).toHaveLength(8);
+  expect(new Set(overlay.changedFiles.map(x=>x.path)).size).toBe(8);
+  for(const f of overlay.changedFiles)
+   expect(gitHash(read(f.path)),f.path).toBe(f.blob);
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
    expect(x.path).not.toContain("..");
    // Preserve the ORIGINAL F15 lock's route SHA; IR21+ adds one explicit
@@ -44,7 +60,11 @@ describe("F15 independent critic: no new composite, exact source and default-den
     expect(gitHash(read(x.path)),x.path).toBe(attention.currentSha);
     continue;
    }
-   expect(gitHash(read(x.path)),x.path).toBe(x.blob);
+   const next=overlay.replacements.find(y=>y.path===x.path);
+   if(next){
+    expect(next.priorBlob,x.path).toBe(x.blob);
+    expect(gitHash(read(x.path)),x.path).toBe(next.newBlob);
+   }else expect(gitHash(read(x.path)),x.path).toBe(x.blob);
   }
   const currentRoute=read("src/app/app/[workspace]/inbox/page.tsx");
   expect(gitHash(currentRoute)).toBe("b68b99b3680b6f5ff4aa192a7cbda360715b1ef2");
