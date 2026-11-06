@@ -24,7 +24,7 @@ export type OwnerHoldReleaseResult=
    slotId:string;bookingCreated:false;paymentChanged:false;
    customerNotified:false;newCapacityUnverified:true};
 export interface OwnerHoldReleaseDeps {
- enabled?:()=>boolean;mode?:typeof operationalDatabaseMode;
+ enabled?:()=>boolean;atomicReady?:()=>boolean;mode?:typeof operationalDatabaseMode;
  resolve?:Resolver;now?:()=>number;
  release?:(ctx:Actor,input:{holdId:string;quoteId:string;slotId:string;
    expiresAt:string;now:string})=>Promise<boolean>;
@@ -122,6 +122,11 @@ export async function releaseOwnerVerifiedQuoteHold(
  workspaceSlug:string,quoteId:string,holdId:string,deps:OwnerHoldReleaseDeps={},
 ):Promise<OwnerHoldReleaseResult>{
  if(!(deps.enabled??(()=>process.env.SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED==="true"))())
+  return deny("NOT_ACTIVATED");
+ // Owner UI activation alone cannot authorize an unsafe cross-transaction
+ // payment/hold release. Independent DBA must approve the exact installed
+ // atomic transaction guard before this separate default-OFF flag is set.
+ if(!(deps.atomicReady??(()=>process.env.SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED==="true"))())
   return deny("NOT_ACTIVATED");
  if(!slug(workspaceSlug)||!uuid(quoteId)||!uuid(holdId)||quoteId===holdId)
   return deny("INVALID_SELECTION");
