@@ -1,0 +1,43 @@
+{
+  "schema": "servicedesk.sonic.ir21.f15-f20.ui-lifecycle-successor.v1",
+  "predecessorCommit": "e43d3cf7a05cb19ea6bdf8a386830e09ac473954",
+  "currentReviewedCommit": "cf7c59b8c2dbed19ad7157dd6b9692833901ffe0",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "scope": "SOURCE_ONLY_UI_ASYNC_CLEANUP_NO_DEPLOYMENT",
+  "historicManifestsUnchanged": [
+    "docs/delivery/sonic-ir21-f20-finance-retention-source-lock-20261030.json",
+    "docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json"
+  ],
+  "overrides": [
+    {
+      "path": "src/features/operations/OwnerLedgerExceptionReview.tsx",
+      "historicSha": "ee7a620cc326ca6fa4e31a8f9aa5c2439162ce9a",
+      "currentSha": "7fb302dc271789cccd06fd7fde5a748a8e3660bd",
+      "gate": "F20_FINANCE_OWNER_ALL_BRANCH_NO_FINANCIAL_WRITE"
+    },
+    {
+      "path": "src/features/operations/OwnerConsentedRetentionReview.tsx",
+      "historicSha": "0849231e0a470787cc029c32291f97994a0edfb3",
+      "currentSha": "b87a67e2ae265bf568c76842fcd573bba89a4891",
+      "gate": "F20_CONSENT_RECHECK_NO_OUTBOUND"
+    },
+    {
+      "path": "src/features/operations/OwnerLinkedAttentionReview.tsx",
+      "historicSha": "80927abfee80a1d6c1f928811ff36d35426bfd78",
+      "currentSha": "bea83cd6640e4dda4dd0e160f41bedea166593a7",
+      "gate": "F15_PERSISTED_ACK_READBACK_NO_PROVIDER"
+    }
+  ],
+  "preserved": {
+    "originalFeatureSourceLocks": true,
+    "noNewFeature": true,
+    "noNewPR": true,
+    "noConnectedDatabaseWrites": true,
+    "noAuthUserChanges": true,
+    "noCustomerProviderSends": true,
+    "noPaymentWrites": true,
+    "noDeployment": true,
+    "f15FeatureFlagsDefaultOff": true,
+    "p02P03RemainOpen": true
+  }
+}
