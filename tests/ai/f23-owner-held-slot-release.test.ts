@@ -140,7 +140,9 @@ describe("F23 accepted quote -> manually verified unused HELD slot release",()=>
   const f=fixture({extendBeforeRelease:true});
   expect(await releaseOwnerVerifiedQuoteHold("test-workspace",quote,hold,f.deps))
    .toMatchObject({ok:false,code:"RELEASE_UNVERIFIED"});
-  expect(f.mutations()).toBe(0);
+  // The conditional UPDATE was attempted, but its compare-and-swap
+  // matched no row after expiry changed; the saved hold stays HELD.
+  expect(f.mutations()).toBe(1);
   expect(f.holdRow.status).toBe("HELD");
   expect(f.holdRow.expires_at).toBe("2027-01-02T06:00:00.000Z");
  });
@@ -164,7 +166,8 @@ describe("F23 accepted quote -> manually verified unused HELD slot release",()=>
   const panel=readFileSync("src/features/operations/OwnerQuoteHoldReleasePanel.tsx","utf8");
   const ui=readFileSync("src/features/operations/OwnerSavedHoldReleaseControls.tsx","utf8");
   const route=readFileSync("src/app/app/[workspace]/quotes/page.tsx","utf8");
-  expect(backend).toContain('.eq("status","HELD").gt("expires_at",input.now)');
+  expect(backend).toContain('.eq("status","HELD").eq("expires_at",input.expiresAt)');
+  expect(backend).toContain('.gt("expires_at",input.now)');
   expect(backend).toContain('.update({status:"RELEASED",updated_at:input.now})');
   expect(backend).toContain('service.from("verified_payment_applications")');
   expect(backend).toContain('service.from("visits")');
