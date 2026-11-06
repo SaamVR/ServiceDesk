@@ -32,6 +32,13 @@ const race=JSON.parse(read("docs/delivery/sonic-f23-owner-revocation-race-succes
  workflow:{path:string;oldSha:string;newSha:string};
  testScript:string;testScriptSha:string;requiredReceipts:string[];
 };
+const authFeedbackRaw=read("docs/delivery/sonic-p02-auth-feedback-surface-successor-20261107.json");
+const authFeedback=JSON.parse(authFeedbackRaw.toString()) as {
+ schema:string;precursor:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;blob:string}>;
+};
+
 function expectedReviewedBlob(path:string,historicSha:string):string {
  const entry=overlay.replacements.find(item=>item.path===path);
  if(!entry)return historicSha;
@@ -76,6 +83,18 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(race.workflow.path).toBe(f23.workflowSuccessor.path);
   expect(race.workflow.oldSha).toBe(f23.workflowSuccessor.currentBlob);
   expect(race.workflow.newSha).toBe("85f48bcb08d99531e889ad0936db8268e2e4aedc");
+  expect(hash(authFeedbackRaw)).toBe("cc0c2d4e18777def4db57e8e15c0d73119cb64f3");
+  expect(authFeedback.schema).toBe("servicedesk.p02.auth-feedback-url-surface-successor.v1");
+  expect(authFeedback.precursor.path).toBe("docs/delivery/sonic-f23-owner-revocation-race-successor-20261107.json");
+  expect(authFeedback.precursor.unchanged).toBe(true);
+  expect(authFeedback.precursor.blob).toBe(hash(read(authFeedback.precursor.path)));
+  expect(authFeedback.workflowSuccessor.previousBlob).toBe(race.workflow.newSha);
+  expect(authFeedback.workflowSuccessor.path).toBe(race.workflow.path);
+  expect(authFeedback.changedSource).toHaveLength(6);
+  for(const source of authFeedback.changedSource){
+   expect(source.path).not.toContain("..");
+   expect(hash(read(source.path)),source.path).toBe(source.blob);
+  }
   expect(race.testScript).toBe("scripts/release/v4-f23-pg17-owner-revocation-race.sh");
   expect(race.testScriptSha).toBe("16de03429be8f4474a1f582e78eb749143723f33");
   expect(hash(read(race.testScript))).toBe(race.testScriptSha);
@@ -89,14 +108,14 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   const reviewed=f.path===race.workflow.path?race.workflow.newSha:f.blob;
+   const reviewed=f.path===race.workflow.path?authFeedback.workflowSuccessor.currentBlob:f.blob;
    expect(hash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const file of overlay.changedFiles){
    const reviewedSha=file.path===p02.workflowSuccessor.path
-    ? race.workflow.newSha : file.blob;
+    ? authFeedback.workflowSuccessor.currentBlob : file.blob;
    expect(hash(read(file.path)),file.path).toBe(reviewedSha);
   }
   for(const f of lock.source){
