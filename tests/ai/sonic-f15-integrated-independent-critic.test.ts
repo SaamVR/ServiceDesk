@@ -9,6 +9,11 @@ const m=JSON.parse(read("docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-sourc
  newIntegratedBlobs:Array<{path:string;blob:string}>;
  priorInboxBlob:string;sourceRequirements:string[];forbidden:string[];
 };
+const uiSuccessorRaw=read("docs/delivery/sonic-ir21-f15-f20-ui-lifecycle-successor-lock-20261106.json");
+const uiSuccessor=JSON.parse(uiSuccessorRaw.toString()) as {
+ schema:string;historicManifestsUnchanged:string[];
+ overrides:Array<{path:string;historicSha:string;currentSha:string;gate:string}>;
+};
 describe("F15 independent critic: no new composite, exact source and default-denied owner escalation",()=>{
  it("proves unchanged reviewed atomic source from #884 and only pinned added UI files",()=>{
   expect(m.schema).toBe("servicedesk.f15.ir21.reviewed-atomic-owner-manual-source.v1");
@@ -17,12 +22,26 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(m.state).toBe("SOURCE_IMPLEMENTED_NOT_INSTALLED");
   expect(m.importedExactBlobs).toHaveLength(15);
   expect(m.newIntegratedBlobs).toHaveLength(18);
+  expect(gitHash(uiSuccessorRaw)).toBe("89f1f701fa901988322eb2d250c49d89cea0b2e6");
+  expect(uiSuccessor.schema).toBe("servicedesk.sonic.ir21.f15-f20.ui-lifecycle-successor.v1");
+  expect(uiSuccessor.historicManifestsUnchanged).toContain(
+    "docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json");
+  expect(uiSuccessor.overrides).toHaveLength(3);
+  const attention=uiSuccessor.overrides.find(x=>
+    x.path==="src/features/operations/OwnerLinkedAttentionReview.tsx");
+  expect(attention?.historicSha).toBe("80927abfee80a1d6c1f928811ff36d35426bfd78");
+  expect(attention?.gate).toBe("F15_PERSISTED_ACK_READBACK_NO_PROVIDER");
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
    expect(x.path).not.toContain("..");
    // Preserve the ORIGINAL F15 lock's route SHA; IR21+ adds one explicit
    // owner request-rule panel, independently pinned to a new route blob.
    if(x.path==="src/app/app/[workspace]/inbox/page.tsx"){
     expect(x.blob).toBe("56516b7aa63750d5a46446e160e507d7481ac1ba");
+    continue;
+   }
+   if(x.path===attention?.path){
+    expect(attention.historicSha).toBe(x.blob);
+    expect(gitHash(read(x.path)),x.path).toBe(attention.currentSha);
     continue;
    }
    expect(gitHash(read(x.path)),x.path).toBe(x.blob);
@@ -45,6 +64,12 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(a).toContain("workflowExecuted:false");
   expect(u).toContain("This cannot send messages or run rules.");
   expect(u).toContain("Read saved owner-review journal");
+  const ui=read("src/features/operations/OwnerLinkedAttentionReview.tsx").toString();
+  expect(ui).toContain("useCallback");
+  expect(ui).toContain("pending.current");
+  expect(ui).toContain("isF15AcknowledgementProgressVerified");
+  expect(ui).not.toContain("sendEmail(");
+  expect(ui).not.toContain("chargeCard(");
   const linked=read("src/server/workflows/sonic-f15-owner-linked-attention.ts").toString();
   expect(linked).toContain('row.resource_type!=="f15_unanswered_lead_review"');
   expect(linked).toContain("humanReviewRequired:true");
