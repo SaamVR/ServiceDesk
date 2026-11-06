@@ -16,6 +16,9 @@ describe("F26 independent critic: owner actor authenticity and revocation lock",
   expect(sql).toContain("staff.role in ('OWNER','DISPATCHER')");
   expect(sql).toContain("current_user = 'authenticated'");
   expect(sql).toContain("auth.uid() is distinct from v_actor_user");
+  for(const role of ["public","anon","authenticated"])
+   expect(sql).toContain(`revoke all on function public.servicedesk_transition_visit(jsonb) from ${role};`);
+  expect(sql).toContain("grant execute on function public.servicedesk_transition_visit(jsonb) to service_role;");
   expect(sql).toContain("current_user = 'anon'");
   expect(sql).toContain("v_visit.version <> v_expected");
   expect(sql).toContain("calendar.visit.upsert");
@@ -42,6 +45,10 @@ describe("F26 independent critic: owner actor authenticity and revocation lock",
   expect(acceptance).toContain("F26_ANON_OWNER_ID_SPOOF_ALLOWED");
   expect(acceptance).toContain("F26_REVOKED_OWNER_ASSIGNED");
   expect(acceptance).toContain("F26_OWNER_ROLE_CHANGED_ASSIGNED");
+  expect(acceptance).toContain("F26_VISIT_RPC_SERVICE_ROLE_ONLY_ACL_MISMATCH");
+  expect(acceptance).toContain("F26_AUTHENTICATED_DEFAULT_RPC_EXECUTE_ALLOWED");
+  expect(acceptance).toContain("F26_ANON_DEFAULT_RPC_EXECUTE_ALLOWED");
+  expect(acceptance).toContain("F26_RPC_TEST_ACL_RESTORATION_FAILED");
  });
  it("two real competing PostgreSQL sessions prove owner-row lock in both orders",()=>{
   const script=read("scripts/release/v4-f26-pg17-owner-revocation-race.sh");
