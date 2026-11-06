@@ -71,16 +71,5 @@ insert into public.crews values
  ('66666666-6666-4666-8666-666666666666',
  '11111111-1111-4111-8111-111111111111',
  '22222222-2222-4222-8222-222222222222',true);
--- Fixture-only call helper; uses REAL candidate SQL, not a fake substitute.
-create or replace function public.sd_f23_release_fixture()
-returns jsonb language sql security invoker set search_path=public,pg_temp as $$
- select public.servicedesk_release_held_slot_atomic(jsonb_build_object(
- 'workspaceId','11111111-1111-4111-8111-111111111111',
- 'actorUserId','77777777-7777-4777-8777-777777777777',
- 'quoteId','33333333-3333-4333-8333-333333333333',
- 'holdId','88888888-8888-4888-8888-888888888888',
- 'slotId','55555555-5555-4555-8555-555555555555',
- 'expiresAt','2100-01-02T00:00:00Z'
- ))
-$$;
--- The helper itself isn't the security boundary: test the function ACL below.
+-- The real RPC candidate is installed NEXT by the disposable CI, then the
+-- acceptance file creates its convenience caller. No mock replacement.
