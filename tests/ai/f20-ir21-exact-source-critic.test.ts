@@ -8,18 +8,18 @@ const lock=JSON.parse(read("docs/delivery/sonic-ir21-f20-finance-retention-sourc
  integration:Array<{path:string;before:string|null;after:string}>;
  forbidden:string[];releaseGate:string;
 };
-const successorPath="docs/delivery/sonic-ir21-f15-f20-ui-lifecycle-successor-lock-20261106.json";
-const successorRaw=read(successorPath);
-const successor=JSON.parse(successorRaw.toString()) as {
- schema:string;historicManifestsUnchanged:string[];
- overrides:Array<{path:string;historicSha:string;currentSha:string;gate:string}>;
- additionalReviewedSource:Array<{path:string;historicSha:string|null;currentSha:string;gate:string}>;
+const overlayRaw=read("docs/delivery/sonic-f15-f20-post-lock-ui-guard-20261106.json");
+const overlay=JSON.parse(overlayRaw.toString()) as {
+ schema:string;baseHead:string;
+ originalLocks:Array<{path:string;blob:string}>;
+ replacements:Array<{path:string;priorBlob:string;newBlob:string}>;
+ changedFiles:Array<{path:string;blob:string}>;
 };
 function expectedReviewedBlob(path:string,historicSha:string):string {
- const entry=[...successor.overrides,...successor.additionalReviewedSource].find(item=>item.path===path);
+ const entry=overlay.replacements.find(item=>item.path===path);
  if(!entry)return historicSha;
- expect(entry.historicSha,path+" must preserve the original source lock").toBe(historicSha);
- return entry.currentSha;
+ expect(entry.priorBlob,path+" must preserve original source provenance").toBe(historicSha);
+ return entry.newBlob;
 }
 describe("IR21 exact owner finance + retention source integration",()=>{
  it("pins seven independent finance, retention and critic Git objects",()=>{
@@ -29,26 +29,25 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(lock.source).toHaveLength(7);
   expect(new Set(lock.source.map(x=>x.path)).size).toBe(7);
   expect(new Set(lock.source.map(x=>x.lane)).size).toBe(3);
-  expect(hash(successorRaw)).toBe("08d4e07b7ee3aff7f9f0b7cce7e6d7b24b793442");
-  expect(successor.schema).toBe("servicedesk.sonic.ir21.f15-f20.ui-lifecycle-successor.v1");
-  expect(successor.historicManifestsUnchanged).toContain(
-    "docs/delivery/sonic-ir21-f20-finance-retention-source-lock-20261030.json");
-  expect(successor.overrides).toHaveLength(3);
-  expect(successor.additionalReviewedSource).toHaveLength(4);
-  for(const x of successor.additionalReviewedSource){
-   expect(hash(read(x.path)),x.path).toBe(x.currentSha);
-  }
-  expect(successor.overrides.filter(x=>x.path.startsWith("src/features/operations/Owner")))
-    .toHaveLength(3);
+  expect(hash(overlayRaw)).toBe("73f0dad66c31dc676b83b58ae17cd2f9f611f688");
+  expect(overlay.schema).toBe("servicedesk.f15-f20.post-lock-ui-guard.v1");
+  expect(overlay.originalLocks).toContainEqual({
+   path:"docs/delivery/sonic-ir21-f20-finance-retention-source-lock-20261030.json",
+   blob:"0f1a19568e70fd0209a353876f74d79ad4db0952",
+  });
+  expect(overlay.replacements).toHaveLength(6);
+  expect(overlay.changedFiles).toHaveLength(8);
+  for(const file of overlay.changedFiles)
+   expect(hash(read(file.path)),file.path).toBe(file.blob);
   for(const f of lock.source){
    expect(f.path).not.toContain("..");
    expect(hash(read(f.path)),f.path).toBe(expectedReviewedBlob(f.path,f.sha));
   }
   for(const path of ["src/features/operations/OwnerLedgerExceptionReview.tsx",
     "src/features/operations/OwnerConsentedRetentionReview.tsx"]){
-   const entry=successor.overrides.find(item=>item.path===path);
+   const entry=overlay.replacements.find(item=>item.path===path);
    expect(entry).toBeDefined();
-   expect(entry?.gate).toContain("F20_");
+   expect(entry?.priorBlob).toMatch(/^[a-f0-9]{40}$/);
    const source=read(path).toString();
    expect(source).toContain("pending.current");
    expect(source).toContain("useCallback");
