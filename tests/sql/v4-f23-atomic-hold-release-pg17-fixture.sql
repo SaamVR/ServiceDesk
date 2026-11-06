@@ -42,10 +42,9 @@ create table public.verified_payment_applications (
  hold_id uuid not null,state text not null
 );
 grant usage on schema public to service_role;
-grant select on all tables in schema public to service_role;
--- FOR UPDATE on quotes requires UPDATE privilege even without a write.
-grant update on public.quotes to service_role;
-grant update(status,updated_at) on public.slot_holds to service_role;
+-- Row locks (including FOR SHARE on memberships/request/slot/crew) require
+-- UPDATE privilege in PostgreSQL; this is a disposable service-role fixture.
+grant select,update on all tables in schema public to service_role;
 insert into public.memberships values
  ('11111111-1111-4111-8111-111111111111','77777777-7777-4777-8777-777777777777','ACTIVE','OWNER');
 insert into public.requests values
