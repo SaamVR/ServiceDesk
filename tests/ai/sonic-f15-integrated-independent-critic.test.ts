@@ -9,6 +9,12 @@ const overlay=JSON.parse(read("docs/delivery/sonic-f15-f20-post-lock-ui-guard-20
  replacements:Array<{path:string;priorBlob:string;newBlob:string}>;
  changedFiles:Array<{path:string;blob:string}>;
 };
+const p02Raw=read("docs/delivery/sonic-p02-registered-owner-ui-source-successor-20261106.json");
+const p02=JSON.parse(p02Raw.toString()) as {
+ schema:string; originalF15F20Overlay:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;blob:string;intent:string}>;
+};
 const m=JSON.parse(read("docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json").toString()) as {
  schema:string;state:string;parentIR21:string;importedHead:string;
  importedExactBlobs:Array<{path:string;blob:string}>;
@@ -31,8 +37,22 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(overlay.replacements).toHaveLength(6);
   expect(overlay.changedFiles).toHaveLength(8);
   expect(new Set(overlay.changedFiles.map(x=>x.path)).size).toBe(8);
-  for(const f of overlay.changedFiles)
-   expect(gitHash(read(f.path)),f.path).toBe(f.blob);
+  expect(gitHash(p02Raw)).toBe("daedeb155f8d11dfb245b3cca709b20205e400d3");
+  expect(p02.schema).toBe("servicedesk.p02.registered-owner-ui-source-successor.v1");
+  expect(p02.originalF15F20Overlay.blob).toBe(gitHash(read(p02.originalF15F20Overlay.path)));
+  expect(p02.originalF15F20Overlay.unchanged).toBe(true);
+  expect(p02.changedSource).toHaveLength(5);
+  for(const source of p02.changedSource){
+   expect(source.path).not.toContain("..");
+   expect(gitHash(read(source.path)),source.path).toBe(source.blob);
+  }
+  const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
+  expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
+  for(const f of overlay.changedFiles){
+   const expected=f.path===p02.workflowSuccessor.path
+    ? p02.workflowSuccessor.currentBlob : f.blob;
+   expect(gitHash(read(f.path)),f.path).toBe(expected);
+  }
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
    expect(x.path).not.toContain("..");
    // Preserve the ORIGINAL F15 lock's route SHA; IR21+ adds one explicit
