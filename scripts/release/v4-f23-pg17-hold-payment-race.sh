@@ -71,7 +71,7 @@ locker="$!"
 barrier 'F23_DEPOSIT_FIRST_QUOTE_HOLD_LOCKED'
 expect_row_lock 'set role service_role; select public.sd_f23_release_fixture();'
 wait "$locker";locker=''
-if [[ "$(psql -X -At -v ON_ERROR_STOP=1 -c  "set role service_role; select public.sd_f23_release_fixture()->>'code';")" != "HOLD_NOT_ELIGIBLE" ]];then
+if ! psql -X -At -v ON_ERROR_STOP=1 -c "set role service_role; select public.sd_f23_release_fixture()->>'code';" | grep -qx 'HOLD_NOT_ELIGIBLE';then
  echo "F23_RELEASE_AFTER_DEPOSIT_CONFIRMATION_ALLOWED" >&2;exit 1
 fi
 if [[ "$(state)" != "CONFIRMED:0:0" ]];then
@@ -96,7 +96,7 @@ wait "$locker";locker=''
 if [[ "$(state)" != "HELD:0:0" ]];then
  echo "F23_ROLLED_BACK_RELEASE_LEFT_WRITES" >&2;exit 1
 fi
-if [[ "$(psql -X -At -v ON_ERROR_STOP=1 -c  "set role service_role; select public.sd_f23_release_fixture()->>'state';")" != "HOLD_RELEASED" ]];then
+if ! psql -X -At -v ON_ERROR_STOP=1 -c "set role service_role; select public.sd_f23_release_fixture()->>'state';" | grep -qx 'HOLD_RELEASED';then
  echo "F23_NORMAL_RELEASE_FAILED_AFTER_ROLLBACK" >&2;exit 1
 fi
 if [[ "$(state)" != "RELEASED:0:0" ]];then
