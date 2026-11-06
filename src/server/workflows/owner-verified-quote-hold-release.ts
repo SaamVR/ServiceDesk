@@ -99,20 +99,21 @@ async function checkSource(ctx:Actor,quoteId:string,holdId:string,now:number):Pr
 }
 async function compareAndRelease(ctx:Actor,input:{holdId:string;quoteId:string;
  slotId:string;expiresAt:string;now:string}):Promise<boolean>{
- // Compare the exact expiry the owner reviewed: an extension may occur
- // after both readbacks, without changing the HELD state. This CAS is
- // defense-in-depth, not a substitute for independently reviewed payment
- // and hold transactional guards before production enablement.
- const {data,error}=await ctx.service.from("slot_holds")
-  .update({status:"RELEASED",updated_at:input.now})
-  .eq("workspace_id",ctx.workspace.id).eq("id",input.holdId)
-  .eq("quote_id",input.quoteId).eq("slot_id",input.slotId)
-  .eq("status","HELD").eq("expires_at",input.expiresAt)
-  .gt("expires_at",input.now)
-  .select("id,workspace_id,quote_id,slot_id,status").maybeSingle();
- return !error&&data?.id===input.holdId&&data.workspace_id===ctx.workspace.id&&
-   data.quote_id===input.quoteId&&data.slot_id===input.slotId&&
-   data.status==="RELEASED";
+ // There is deliberately no table UPDATE fallback. The transaction must
+ // run inside the reviewed, separately installed atomic RPC that locks
+ // the quote before the hold, matching historical deposit application.
+ const {data,error}=await ctx.service.rpc("servicedesk_release_held_slot_atomic",{
+  p_input:{
+   workspaceId:ctx.workspace.id,actorUserId:ctx.actor.userId,
+   holdId:input.holdId,quoteId:input.quoteId,slotId:input.slotId,
+   expiresAt:input.expiresAt,
+  },
+ });
+ return !error&&data!==null&&typeof data==="object"&&!Array.isArray(data)&&
+  data.ok===true&&data.state==="HOLD_RELEASED"&&
+  data.holdId===input.holdId&&data.quoteId===input.quoteId&&
+  data.slotId===input.slotId&&data.newCapacityVerified===false&&
+  data.paymentChanged===false&&data.customerMessaged===false;
 }
 /** A human owner releases exactly one current HELD capacity claim.
  * The feature is disabled by default. No payment, visit, provider, booking,
