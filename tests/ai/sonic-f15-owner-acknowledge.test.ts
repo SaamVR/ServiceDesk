@@ -142,6 +142,9 @@ describe("F15 client independent acknowledgement progression evidence",()=>{
  it("client success copy is guarded by the independent progression predicate",()=>{
   const ui=readFileSync("src/features/operations/OwnerLinkedAttentionReview.tsx","utf8");
   expect(ui).toContain("isF15AcknowledgementProgressVerified(proof,saved)");
+  expect(ui).toContain("pending.current=false;setBusy(false);");
+  expect(ui).not.toContain("finally{pending.current=false;if(");
+  expect(ui).toContain("pending.current=false;invalidate();");
   expect(ui).not.toContain('setAckMessage(saved.state==="LINKED_INTERNAL_ATTENTION_VERIFIED"?');
   expect(ui).toContain("The acknowledgement write returned success, but the independent saved proof is unavailable.");
  });
