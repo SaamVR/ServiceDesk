@@ -50,6 +50,11 @@ describe("F26 native PostgreSQL crew/revocation Critic",()=>{
  it("keeps F26 owner-action rollout OFF and P02 deployment gate unchanged",()=>{
   const backend=read("src/server/workflows/owner-verified-booking-dispatch.ts");
   expect(backend).toContain("SERVICEDESK_F26_OWNER_DISPATCH_ENABLED");
+  expect(backend).toContain("SERVICEDESK_F26_ATOMIC_GUARD_APPROVED");
+  expect(read("src/features/operations/OwnerSavedBookingReceiptPanel.tsx"))
+   .toContain("SERVICEDESK_F26_ATOMIC_GUARD_APPROVED");
+  expect(read("src/server/workflows/f26-active-crew-readiness.ts"))
+   .toContain('row.role!=="CREW"');
   expect(backend).toContain("readActiveBookedVisitCrew");
   const sql=read("docs/engineering/security/f26-atomic-crew-assign-trigger-candidate-v1.sql");
   expect(sql).toContain("NOT INSTALLED");

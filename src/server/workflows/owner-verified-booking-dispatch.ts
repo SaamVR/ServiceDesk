@@ -21,6 +21,7 @@ export type OwnerDispatchResult=
 
 export interface OwnerDispatchDeps{
  enabled?:()=>boolean;
+ atomicReady?:()=>boolean;
  mode?:typeof operationalDatabaseMode;
  resolve?:ActorResolver;
  loadBooking?:ReceiptLoader;
@@ -46,6 +47,11 @@ export async function dispatchOwnerVerifiedBookedVisit(
  workspaceSlug:string,quoteId:string,visitId:string,deps:OwnerDispatchDeps={},
 ):Promise<OwnerDispatchResult>{
  if(!(deps.enabled??(()=>process.env.SERVICEDESK_F26_OWNER_DISPATCH_ENABLED==="true"))())
+  return fail("NOT_ACTIVATED");
+ // Defense in depth: F26 rollout alone must never activate a database
+ // transaction until the reviewed active-crew trigger is installed and
+ // separately approved in the exact target environment.
+ if(!(deps.atomicReady??(()=>process.env.SERVICEDESK_F26_ATOMIC_GUARD_APPROVED==="true"))())
   return fail("NOT_ACTIVATED");
  if(!slug(workspaceSlug)||!uuid(quoteId)||!uuid(visitId)||quoteId===visitId)
   return fail("INVALID_SELECTION");

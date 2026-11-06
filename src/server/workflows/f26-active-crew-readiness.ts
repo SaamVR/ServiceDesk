@@ -62,14 +62,14 @@ export async function readActiveBookedVisitCrew(
   }
   const memberships=await db.from("memberships")
    .select("user_id,workspace_id,role,status")
-   .eq("workspace_id",ws).eq("status","ACTIVE")
+   .eq("workspace_id",ws).eq("status","ACTIVE").eq("role","CREW")
    .in("user_id",Array.from(ids)).limit(51);
   if(memberships.error||!safeRows(memberships.data,51))return null;
   const live=new Set<string>();
   for(const row of memberships.data){
    if(!uuid(row.user_id)||!ids.has(row.user_id)||live.has(row.user_id)||
       row.workspace_id!==ws||row.status!=="ACTIVE"||
-      !["CREW","OWNER","DISPATCHER"].includes(String(row.role)))
+      row.role!=="CREW")
      return null;
    live.add(row.user_id);
   }

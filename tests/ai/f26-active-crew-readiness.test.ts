@@ -60,6 +60,7 @@ describe("F26 real active booked-visit crew source (not mock receipt)",()=>{
    ["capacity_slots","crew_id",foreign],["visits","status","CANCELLED"],
    ["crew_members","active",false],["memberships","status","REVOKED"],
    ["memberships","workspace_id",foreign],["memberships","role","GUEST"],
+   ["memberships","role","OWNER"],["memberships","role","DISPATCHER"],
   ];
   for(const [table,key,value] of changes){
    const f=fixture();f.tables[table][0][key]=value;

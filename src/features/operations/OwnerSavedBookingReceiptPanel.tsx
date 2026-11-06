@@ -28,7 +28,8 @@ export async function OwnerSavedBookingReceiptPanel({workspaceSlug,selectedQuote
    match. No customer message or payment was triggered by this review.
    Check with the payment provider independently when required.</p>
   {v.visitStatus==="SCHEDULED"&&
-    process.env.SERVICEDESK_F26_OWNER_DISPATCH_ENABLED==="true"?
+    process.env.SERVICEDESK_F26_OWNER_DISPATCH_ENABLED==="true"&&
+    process.env.SERVICEDESK_F26_ATOMIC_GUARD_APPROVED==="true"?
      <OwnerVerifiedBookingDispatchControls workspaceSlug={workspaceSlug}
        quoteId={v.quoteId} visitId={v.visitId}/>:null}
   <p><Link href={buildStaffModuleHref(workspaceSlug,"schedule")}>

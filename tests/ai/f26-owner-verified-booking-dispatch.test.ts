@@ -67,7 +67,7 @@ function fixture(options:{role?:string;changedSecond?:boolean;changedThird?:bool
     visitVersion:2,activeMemberCount:1,
     fingerprint:options.crewChanged&&crewReads===2?"crew-revoked":"crew-active"};
  });
- const deps={enabled:()=>true,mode:()=> "SERVICE_ROLE" as const,
+ const deps={enabled:()=>true,atomicReady:()=>true,mode:()=> "SERVICE_ROLE" as const,
   resolve:resolve as never,loadBooking:loadBooking as never,
   transition:transition as never,verifyCrew:verifyCrew as never};
  return {deps,resolve,loadBooking,transition,verifyCrew};
@@ -79,6 +79,15 @@ describe("F26 owner paid booked visit -> persisted ASSIGNED transition",()=>{
    ...f.deps,enabled:()=>false,
   })).toEqual({ok:false,code:"NOT_ACTIVATED"});
   expect(f.resolve).not.toHaveBeenCalled();
+  expect(f.transition).not.toHaveBeenCalled();
+ });
+ it("never dispatches when only the feature flag is on but the atomic database guard is not approved",async()=>{
+  const f=fixture();
+  expect(await dispatchOwnerVerifiedBookedVisit("demo-workspace",quote,visit,{
+   ...f.deps,atomicReady:()=>false,
+  })).toEqual({ok:false,code:"NOT_ACTIVATED"});
+  expect(f.resolve).not.toHaveBeenCalled();
+  expect(f.verifyCrew).not.toHaveBeenCalled();
   expect(f.transition).not.toHaveBeenCalled();
  });
  it("uses exact paid-booking preproof, two same-owner checks, command and independent postproof",async()=>{

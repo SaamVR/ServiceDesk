@@ -15,6 +15,8 @@ describe("F26 independent critic: paid visit dispatch vs booked payment and cale
     expect(crew).toContain(table);
   expect(crew).toContain('crew.data?.active!==true');
   expect(crew).toContain('row.status!=="ACTIVE"');
+  expect(crew).toContain('row.role!=="CREW"');
+  expect(crew).toContain('.eq("role","CREW")');
 
   expect(backend).toContain("transitionOperationalVisit");
   expect(backend).toContain('"ASSIGN"');
@@ -42,6 +44,8 @@ describe("F26 independent critic: paid visit dispatch vs booked payment and cale
   const component=read("src/features/operations/OwnerVerifiedBookingDispatchControls.tsx");
   const parent=read("src/features/operations/OwnerSavedBookingReceiptPanel.tsx");
   expect(backend).toContain('SERVICEDESK_F26_OWNER_DISPATCH_ENABLED');
+  expect(backend).toContain('SERVICEDESK_F26_ATOMIC_GUARD_APPROVED');
+  expect(parent).toContain('process.env.SERVICEDESK_F26_ATOMIC_GUARD_APPROVED==="true"');
   expect(backend).toContain('actor.role==="OWNER"');
   expect(backend).toContain('branchScope.mode==="ALL"');
   expect(backend).toContain('value.visitStatus!=="SCHEDULED"');
