@@ -56,7 +56,9 @@ function ScopedAttention({slug,branchId,requestId}:{
      "Human acknowledgement saved and independently verified; no customer message was sent.":
      "The acknowledgement write returned success, but the independent saved proof is unavailable. Review the source.");
   }catch{if(mounted.current&&seq===serial.current)setAckMessage("Owner acknowledgement unavailable; no success is claimed.");}
-  finally{pending.current=false;if(mounted.current&&seq===serial.current)setBusy(false);}
+  finally{if(mounted.current&&seq===serial.current){
+   pending.current=false;setBusy(false);
+  }}
  }
  return <section aria-label="Saved F15 internal attention proof"
    data-testid="f15-owner-saved-attention-proof">
