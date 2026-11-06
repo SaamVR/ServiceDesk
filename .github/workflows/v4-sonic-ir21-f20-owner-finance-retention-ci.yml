@@ -31,6 +31,7 @@ jobs:
           tests/e2e/p02-owner-registration-persisted-receipt.test.ts
           tests/e2e/p02-registration-denial-action.test.ts
           tests/e2e/p02-workspace-error-origin.test.ts
+          tests/e2e/p02-auth-url-feedback-integrity.test.ts
           tests/e2e/v4-owner-pricing-form-state-readiness.test.tsx
           tests/ai/f20-owner-ledger-entrypoint.test.ts
           tests/ai/f20-owner-retention-entrypoint.test.ts
@@ -90,6 +91,11 @@ jobs:
       - name: Changed-file lint
         run: >-
           pnpm exec eslint
+          src/features/auth/verified-auth-feedback.ts
+          src/app/auth/sign-in/page.tsx
+          src/app/auth/sign-up/page.tsx
+          src/app/auth/forgot-password/page.tsx
+          src/app/auth/reset-password/page.tsx
           tests/e2e/p02-owner-registration-persisted-receipt.test.ts
           tests/e2e/p02-registration-denial-action.test.ts
           tests/e2e/p02-workspace-error-origin.test.ts
