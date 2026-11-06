@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { businessSlug, validateWorkspaceFields } from "@/features/auth/registration";
 import { ownerRegistrationAvailable, ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
+import { verifyOwnerWorkspaceCreationReadback } from "@/features/auth/verified-owner-workspace";
 
 function fail(code: string): never {
   redirect("/auth/create-workspace?error=" + encodeURIComponent(code));
@@ -65,5 +66,16 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
     fail("Workspace could not be created. Check your details and try again.");
   }
 
-  redirect("/onboarding/verified?workspace=" + encodeURIComponent(result.slug));
+  // The registration RPC is atomic but its JSON success is not independently
+  // verified owner access. RLS-read the saved membership and workspace before
+  // presenting a creation receipt. A transport failure can occur after commit;
+  // do not suggest blindly submitting a second non-idempotent setup.
+  const readback = await verifyOwnerWorkspaceCreationReadback(
+    auth, actor.user.id, { slug, name, timezone, currency }, result,
+  );
+  if (!readback.ok) {
+    fail("Workspace registration may have committed, but saved owner access could not be verified. Use your authorized workspaces to check before trying again.");
+  }
+
+  redirect("/onboarding/verified?workspace=" + encodeURIComponent(readback.workspace.slug));
 }
