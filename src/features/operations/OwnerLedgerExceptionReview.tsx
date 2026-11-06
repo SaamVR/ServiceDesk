@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import {useEffect,useRef,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import {requestF20OwnerFinanceReview,type F20FinanceReply} from "./f20-owner-finance-review-action";
 import {buildStaffModuleHref} from "./staff-modules";
 export function OwnerLedgerExceptionReview({workspaceSlug}:{workspaceSlug:string}){
@@ -10,7 +10,10 @@ function ScopedLedger({slug}:{slug:string}){
  const [result,setResult]=useState<Extract<F20FinanceReply,{ok:true}>>();
  const [error,setError]=useState(""),[busy,setBusy]=useState(false);
  const mounted=useRef(true),pending=useRef(false),serial=useRef(0);
- useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;serial.current++;};},[]);
+ const invalidate=useCallback(()=>{serial.current++;},[]);
+ useEffect(()=>{mounted.current=true;return()=>{
+  mounted.current=false;pending.current=false;invalidate();
+ };},[invalidate]);
  async function inspect(){
   if(pending.current)return;
   pending.current=true;setBusy(true);setResult(undefined);setError("");
@@ -26,7 +29,9 @@ function ScopedLedger({slug}:{slug:string}){
    }
    setResult(x);
   }catch{if(mounted.current&&seq===serial.current)setError("Saved finance review is unavailable. No payment, refund or customer communication occurred.");}
-  finally{pending.current=false;if(mounted.current&&seq===serial.current)setBusy(false);}
+  finally{if(mounted.current&&seq===serial.current){
+   pending.current=false;setBusy(false);
+  }}
  }
  return <section className="app-panel" aria-label="Owner saved invoice exception explanations"
    data-testid="f20-ledger-exceptions">
