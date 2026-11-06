@@ -20,8 +20,10 @@ function fixture(options:{role?:string;changedSecond?:boolean;changedThird?:bool
  failedTransition?:boolean;preStatus?:string;postStatus?:string;
  changedPostInvoice?:boolean;missingPrePayment?:boolean;
  secondProof?: "wrong_quote"|"wrong_state"|"no_applied_deposit"|"no_saved_booking";
+ crewUnavailable?:boolean;crewChanged?:boolean;
  }={}){
  let ownerReads=0,receiptReads=0,transitioned=false;
+ let crewReads=0;
  const resolve=vi.fn(async()=>{
   ownerReads++;
   const actorId=options.changedSecond&&ownerReads===2||
@@ -56,10 +58,19 @@ function fixture(options:{role?:string;changedSecond?:boolean;changedThird?:bool
   if(options.failedTransition)return {ok:false,message:"visit moved"};
   transitioned=true;return {ok:true,message:"assigned"};
  });
+ const verifyCrew=vi.fn(async()=>{
+   crewReads++;
+   if(options.crewUnavailable)return null;
+   return {workspaceId:workspace,branchId:other,quoteId:quote,visitId:visit,
+    crewId:"77777777-7777-4777-8777-777777777777",
+    slotId:"88888888-8888-4888-8888-888888888888",
+    visitVersion:2,activeMemberCount:1,
+    fingerprint:options.crewChanged&&crewReads===2?"crew-revoked":"crew-active"};
+ });
  const deps={enabled:()=>true,mode:()=> "SERVICE_ROLE" as const,
   resolve:resolve as never,loadBooking:loadBooking as never,
-  transition:transition as never};
- return {deps,resolve,loadBooking,transition};
+  transition:transition as never,verifyCrew:verifyCrew as never};
+ return {deps,resolve,loadBooking,transition,verifyCrew};
 }
 describe("F26 owner paid booked visit -> persisted ASSIGNED transition",()=>{
  it("does no source read or write when feature flag off",async()=>{
@@ -81,6 +92,7 @@ describe("F26 owner paid booked visit -> persisted ASSIGNED transition",()=>{
   expect(f.loadBooking).toHaveBeenCalledTimes(3);
   expect(f.transition).toHaveBeenCalledTimes(1);
   expect(f.transition).toHaveBeenCalledWith("demo-workspace",visit,"ASSIGN");
+  expect(f.verifyCrew).toHaveBeenCalledTimes(2);
  });
  it("rejects invalid selection, backend mode, nonowner before any visit transition",async()=>{
   const f=fixture();
@@ -113,6 +125,15 @@ describe("F26 owner paid booked visit -> persisted ASSIGNED transition",()=>{
     .toMatchObject({ok:false,code:"SOURCE_CHANGED"});
    expect(f.transition,secondProof).not.toHaveBeenCalled();
    expect(f.loadBooking).toHaveBeenCalledTimes(2);
+  }
+ });
+ it("refuses inactive or changed crew readiness BEFORE ASSIGN, including crew revocation",async()=>{
+  for(const options of [{crewUnavailable:true},{crewChanged:true}]){
+   const f=fixture(options);
+   const result=await dispatchOwnerVerifiedBookedVisit("demo-workspace",quote,visit,f.deps);
+   expect(result.ok).toBe(false);
+   expect(f.transition).not.toHaveBeenCalled();
+   expect(f.verifyCrew).toHaveBeenCalledTimes(options.crewChanged?2:1);
   }
  });
  it("stops on changed current actor or failed visit command",async()=>{
