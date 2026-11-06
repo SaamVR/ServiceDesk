@@ -15,7 +15,8 @@ export async function OwnerQuoteHoldReleasePanel({workspaceSlug,selectedQuoteId}
     workspaceSlug.length>40||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(workspaceSlug)||
     !selectedQuoteId||!uuid.test(selectedQuoteId))return null;
  if(operationalDatabaseMode()!=="SERVICE_ROLE"||
-    process.env.SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED!=="true")return null;
+    process.env.SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED!=="true"||
+    process.env.SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED!=="true")return null;
  const snapshot=await loadOperationalStaffSnapshot(workspaceSlug);
  if(!snapshot.ok||snapshot.value.workspace.slug!==workspaceSlug||
     snapshot.value.actor.role!=="OWNER"||
