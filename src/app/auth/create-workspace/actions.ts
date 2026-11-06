@@ -58,8 +58,15 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
     fail("Workspace setup is unavailable. Contact the administrator to complete deployment.");
   }
 
-  const result = data as {ok?: boolean; slug?: string; code?: string} | null;
-  if (!result?.ok || !result.slug) {
+  const result = data as {ok?: unknown; slug?: unknown; existing?: unknown; code?: unknown} | null;
+  // A server-only QA email allowlist is insufficient for direct PostgREST
+  // callers; a reviewed database gate can deny an otherwise signed-in actor.
+  if (result?.code === "REGISTRATION_NOT_AUTHORIZED") {
+    fail("Workspace creation is not approved for this account. Contact the administrator.");
+  }
+  // A contradictory success response must not reach the saved-state reader.
+  if (result?.ok !== true || typeof result.slug !== "string" ||
+      typeof result.existing !== "boolean" || result.code != null) {
     if (result?.code === "SLUG_UNAVAILABLE") fail("This workspace address is taken. Try another.");
     if (result?.code === "EMAIL_VERIFICATION_REQUIRED") fail("Verify your email before creating a workspace.");
     if (result?.code === "TIMEZONE_INVALID") fail("Select another business timezone.");
