@@ -347,3 +347,5 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f23-atomic-hold-release-pg17-acceptance.sql
       - name: Native F23 two-session deposit-first and release-first quote row locking
         run: bash scripts/release/v4-f23-pg17-hold-payment-race.sh
+      - name: Native F23 owner role revocation-first and release-first row locking
+        run: bash scripts/release/v4-f23-pg17-owner-revocation-race.sh
