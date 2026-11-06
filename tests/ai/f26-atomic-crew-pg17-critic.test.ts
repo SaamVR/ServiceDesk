@@ -70,6 +70,19 @@ describe("F26 native PostgreSQL crew/revocation Critic",()=>{
   expect(race).not.toContain("supabase.co");
   expect(race).not.toContain("wrangler");
  });
+ it("proves assignment-first row locking and a full transaction rollback",()=>{
+  const race=read("scripts/release/v4-f26-pg17-crew-revocation-race.sh");
+  expect(race).toContain("F26_ASSIGN_TXN_ROW_LOCK_HELD");
+  expect(race).toContain("PG17_F26_REVERSE_ASSIGN_TXN_ROLLBACK_LOCK_PROOF");
+  expect(race).toContain('printf "rollback;\\n"');
+  expect(race).toContain("SCHEDULED:1:0:ACTIVE");
+  expect(race).toContain('update public.memberships set status=\'REVOKED\'');
+  expect(race).toContain("55P03");
+  expect(race).toContain("23514");
+  // Positive 0011 RPC and its calendar outbox must be fully rolled back.
+  expect(race).toContain('select public.sd_f26_rpc_assign();');
+  expect(race).toContain('from public.outbox_events');
+ });
  it("keeps F26 owner-action rollout OFF and P02 deployment gate unchanged",()=>{
   const backend=read("src/server/workflows/owner-verified-booking-dispatch.ts");
   expect(backend).toContain("SERVICEDESK_F26_OWNER_DISPATCH_ENABLED");

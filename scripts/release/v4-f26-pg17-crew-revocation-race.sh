@@ -112,3 +112,63 @@ run_locked_revocation "SLOT_MOVED_BRANCH" \
  "update public.capacity_slots set branch_id='$foreign' where id='$slot'" \
  "F26_SLOT_BRANCH_ROW_LOCK_HELD"
 echo "PG17_F26_REAL_REVOCATION_RACE_DENIED_AND_NO_OUTBOX"
+# Inverse ordering: ASSIGN gets its lock FIRST. Membership revocation must
+# wait on its FOR SHARE row lock. ROLLBACK must unwind visit AND outbox.
+reset_disposable
+: > "$lock_log"; : > "$race_log"; : > "$post_log"
+{
+ printf "begin;\n"
+ printf "select public.sd_f26_rpc_assign();\n"
+ printf "select 'F26_ASSIGN_TXN_ROW_LOCK_HELD' as marker;\n"
+ sleep 4
+ printf "rollback;\n"
+} | psql -X -v ON_ERROR_STOP=1 > "$lock_log" 2>&1 &
+locker="$!"
+ready=0
+for _ in $(seq 1 45); do
+ if grep -q F26_ASSIGN_TXN_ROW_LOCK_HELD "$lock_log"; then ready=1; break; fi
+ if ! kill -0 "$locker" 2>/dev/null; then
+  echo "F26 reverse-lock assignment exited early"; cat "$lock_log"; exit 1
+ fi
+ sleep 0.1
+done
+if [ "$ready" != 1 ]; then
+ echo "F26 reverse-lock barrier not observed"; cat "$lock_log"; exit 1
+fi
+if PGOPTIONS="-c lock_timeout=800ms" \
+ psql -X -v VERBOSITY=verbose -v ON_ERROR_STOP=1 -c \
+ "update public.memberships set status='REVOKED' where user_id='$member';" > "$race_log" 2>&1; then
+ echo "F26 membership revoked while ASSIGN held the source row lock";cat "$race_log";exit 1
+fi
+if ! grep -q "55P03" "$race_log"; then
+ echo "F26 inverse direction expected row lock 55P03";cat "$race_log";exit 1
+fi
+wait "$locker"
+locker=""
+if ! grep -q "ROLLBACK" "$lock_log"; then
+ echo "F26 reverse ASSIGN transaction did not roll back";cat "$lock_log";exit 1
+fi
+rollback_state="$(psql -X -At -v ON_ERROR_STOP=1 -c \
+ "select v.status::text||':'||v.version||':'||(select count(*) from public.outbox_events)
+ ||':'||(select status::text from public.memberships where user_id='$member')
+ from public.visits v where v.id='$visit';")"
+if [ "$rollback_state" != "SCHEDULED:1:0:ACTIVE" ]; then
+ echo "F26 reverse rollback left partial visit/outbox/membership effects: $rollback_state";exit 1
+fi
+psql -X -q -v ON_ERROR_STOP=1 -c \
+ "update public.memberships set status='REVOKED' where user_id='$member';"
+if psql -X -v VERBOSITY=verbose -v ON_ERROR_STOP=1 -c \
+ "select public.sd_f26_rpc_assign();" > "$post_log" 2>&1; then
+ echo "F26 ASSIGN succeeded after reverse-lock test committed revocation";cat "$post_log";exit 1
+fi
+if ! grep -q "23514" "$post_log"; then
+ echo "F26 reverse-lock post-revocation guard did not reject (23514)"
+ cat "$post_log";exit 1
+fi
+state="$(psql -X -At -v ON_ERROR_STOP=1 -c \
+ "select status::text||':'||version||':'||(select count(*) from public.outbox_events)
+ from public.visits where id='$visit';")"
+if [ "$state" != "SCHEDULED:1:0" ]; then
+ echo "F26 reverse-lock changed visit/outbox despite denial: $state";exit 1
+fi
+echo "PG17_F26_REVERSE_ASSIGN_TXN_ROLLBACK_LOCK_PROOF"

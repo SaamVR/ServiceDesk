@@ -14,6 +14,14 @@ The original isolated PostgreSQL 17 acceptance exercised one real two-session ro
 
 **Integrator/QA lane:** Existing `native-pg17-f26-atomic-crew` job already runs this same script in a localhost Postgres 17 service, seeded with fictional data. CI workflow is reused unchanged, preserving the F15 two native PG17 jobs and the application source test/type/lint/build lanes. Never use a connected Supabase project for this script.
 
+## Complementary reverse-lock and rollback proof
+
+**Assignment first, revocation second:** After resetting the disposable source, session A begins a transaction, invokes the **original 0011** ASSIGN RPC (including its calendar outbox insert), and keeps the transaction open. Session B attempts to change the selected eligible workspace membership to REVOKED with a bounded PostgreSQL lock timeout. It MUST fail with `55P03`; this proves ASSIGN's shared lock is held while the visit and outbox are in-flight.
+
+Session A then ROLLBACKs. The source must return to **SCHEDULED/version 1**, membership **ACTIVE**, and **zero outbox events**, establishing atomic rollback of the visit and its internal calendar notification. Only then does session B commit its revocation. A fresh ASSIGN must fail with `23514` and leave those same visit/outbox counters unchanged. CI prints `PG17_F26_REVERSE_ASSIGN_TXN_ROLLBACK_LOCK_PROOF` only after all conditions hold.
+
+These are **seven** observed two-session orderings total (six revocation-first, one assignment-first rollback) from one existing strict disposable CI job. They do **not** prove installed Supabase grants/RLS, a live calendar send, or continuity of crew membership after a successful commit.
+
 ## Operational release boundary
 
 The new race evidence only supports **atomic row-lock behavior in disposable PostgreSQL 17 against extracted 0011 SQL plus the reviewed source-only trigger**. It does not prove installation, grants/RLS under Supabase, JWT owner A/B isolation, provider calendar delivery, active crew after commit, or production booking/dispatch. The two F26 rollout environment switches remain default OFF. Connected Supabase ServiceDesk project was last observed INACTIVE; P02 #818 and P03 #819 remain OPEN.
