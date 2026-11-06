@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import {useEffect,useRef,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import {requestF20RetentionReview,type F20RetentionReply} from "./f20-owner-retention-review-action";
 import {buildStaffModuleHref} from "./staff-modules";
 export function OwnerConsentedRetentionReview({workspaceSlug}:{workspaceSlug:string}){
@@ -10,7 +10,10 @@ function ScopedRetention({slug}:{slug:string}){
  const [result,setResult]=useState<Extract<F20RetentionReply,{ok:true}>>();
  const [error,setError]=useState(""),[busy,setBusy]=useState(false);
  const active=useRef(true),pending=useRef(false),seq=useRef(0);
- useEffect(()=>{active.current=true;return()=>{active.current=false;seq.current++;};},[]);
+ const invalidate=useCallback(()=>{seq.current++;},[]);
+ useEffect(()=>{active.current=true;return()=>{
+  active.current=false;pending.current=false;invalidate();
+ };},[invalidate]);
  async function review(){
   if(pending.current)return;
   pending.current=true;setBusy(true);setResult(undefined);setError("");
@@ -27,7 +30,9 @@ function ScopedRetention({slug}:{slug:string}){
    }
    setResult(x);
   }catch{if(active.current&&seq.current===sequence)setError("Saved retention review unavailable; no customer message was queued.");}
-  finally{pending.current=false;if(active.current&&seq.current===sequence)setBusy(false);}
+  finally{if(active.current&&seq.current===sequence){
+   pending.current=false;setBusy(false);
+  }}
  }
  return <section className="app-panel" aria-label="Owner consent-aware repeat-service review"
   data-testid="f20-customer-retention">
