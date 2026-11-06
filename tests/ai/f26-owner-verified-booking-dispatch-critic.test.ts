@@ -7,6 +7,15 @@ describe("F26 independent critic: paid visit dispatch vs booked payment and cale
   const payment=read("supabase/migrations/0010_e03_verified_payment_rpc.sql");
   const transition=read("supabase/migrations/0011_visit_field_runtime.sql");
   expect(backend).toContain("loadOwnerSavedBookingReceipt");
+  expect(backend).toContain("readActiveBookedVisitCrew");
+  expect(backend).toContain("recheckedCrew.fingerprint!==ready.fingerprint");
+  const crew=read("src/server/workflows/f26-active-crew-readiness.ts");
+  for(const table of ['.from("crews")','.from("crew_members")','.from("memberships")',
+    '.from("capacity_slots")','.from("requests")'])
+    expect(crew).toContain(table);
+  expect(crew).toContain('crew.data?.active!==true');
+  expect(crew).toContain('row.status!=="ACTIVE"');
+
   expect(backend).toContain("transitionOperationalVisit");
   expect(backend).toContain('"ASSIGN"');
   expect(backend).toContain('before.value.recordedDepositApplication!==true');

@@ -48,6 +48,7 @@ jobs:
           tests/ai/f25-owner-booking-receipt-critic.test.ts
           tests/ai/f26-owner-verified-booking-dispatch.test.ts
           tests/ai/f26-owner-verified-booking-dispatch-critic.test.ts
+          tests/ai/f26-active-crew-readiness.test.ts
           tests/ai/sonic-f15-owner-manual-journey.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-atomic-ingress.ts
@@ -116,6 +117,8 @@ jobs:
           tests/ai/f25-owner-booking-receipt-critic.test.ts
           tests/ai/f26-owner-verified-booking-dispatch.test.ts
           tests/ai/f26-owner-verified-booking-dispatch-critic.test.ts
+          tests/ai/f26-active-crew-readiness.test.ts
+          src/server/workflows/f26-active-crew-readiness.ts
           src/server/workflows/owner-verified-booking-dispatch.ts
           src/features/operations/owner-verified-dispatch-action.ts
           src/features/operations/OwnerVerifiedBookingDispatchControls.tsx
