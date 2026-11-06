@@ -28,7 +28,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(m.state).toBe("SOURCE_IMPLEMENTED_NOT_INSTALLED");
   expect(m.importedExactBlobs).toHaveLength(15);
   expect(m.newIntegratedBlobs).toHaveLength(18);
-  expect(gitHash(uiSuccessorRaw)).toBe("89f1f701fa901988322eb2d250c49d89cea0b2e6");
+  expect(gitHash(uiSuccessorRaw)).toBe("08d4e07b7ee3aff7f9f0b7cce7e6d7b24b793442");
   expect(uiSuccessor.schema).toBe("servicedesk.sonic.ir21.f15-f20.ui-lifecycle-successor.v1");
   expect(uiSuccessor.historicManifestsUnchanged).toContain(
     "docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json");
