@@ -151,3 +151,10 @@ begin
   );
 end;
 $$;
+
+-- Preserve the 0011 service-role-only RPC boundary even when existing ACLs drift.
+-- JWT binding is defense-in-depth, NOT permission for direct PostgREST callers.
+revoke all on function public.servicedesk_transition_visit(jsonb) from public;
+revoke all on function public.servicedesk_transition_visit(jsonb) from anon;
+revoke all on function public.servicedesk_transition_visit(jsonb) from authenticated;
+grant execute on function public.servicedesk_transition_visit(jsonb) to service_role;
