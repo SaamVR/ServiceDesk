@@ -39,5 +39,31 @@
     "noDeployment": true,
     "f15FeatureFlagsDefaultOff": true,
     "p02P03RemainOpen": true
-  }
+  },
+  "additionalReviewedSource": [
+    {
+      "path": "tests/ai/f20-owner-ledger-entrypoint.test.ts",
+      "historicSha": "1e1d2c3df60131c2f99d11a3753d9fed62105d59",
+      "currentSha": "d621deddb849442ffffa79dfdb6f943f580ed4b5",
+      "gate": "FINANCE_STALE_OWNER_RESULT_REJECTED"
+    },
+    {
+      "path": "tests/ai/f20-owner-retention-entrypoint.test.ts",
+      "historicSha": "dac9209cae67eac0a14097510cd07f311f679e2a",
+      "currentSha": "6532646ad0e09dcf4051e5840fd21dbcba0fb485",
+      "gate": "RETENTION_STALE_OWNER_RESULT_REJECTED"
+    },
+    {
+      "path": "tests/ai/sonic-f15-owner-acknowledge.test.ts",
+      "historicSha": "bd83aba3f0d9689fb852bf147e7f19b80cbc1b2c",
+      "currentSha": "1dc58a692be9a6a0787ede5263b442307e247c4b",
+      "gate": "ACK_PROGRESS_REQUIRES_INDEPENDENT_SAVED_READBACK"
+    },
+    {
+      "path": "src/features/operations/f15-owner-acknowledgement-readback.ts",
+      "historicSha": null,
+      "currentSha": "7ee6ced077d98d296d167413379f250b0a31b8c3",
+      "gate": "PURE_SAVED_ATTENTION_PROGRESS_PREDICATE"
+    }
+  ]
 }
