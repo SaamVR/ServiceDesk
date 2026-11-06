@@ -1,0 +1,69 @@
+{
+  "schema": "servicedesk.p02.auth-feedback-url-surface-successor.v1",
+  "batch": "SONIC-P02-AUTH-FEEDBACK-SURFACE-20261107",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "state": "SOURCE_ONLY_PENDING_EXACT_HEAD_CI",
+  "authorizedActions": [
+    "REVIEWED_SOURCE_FIX",
+    "DISPOSABLE_CI",
+    "ADVERSARIAL_TESTS"
+  ],
+  "precursor": {
+    "path": "docs/delivery/sonic-f23-owner-revocation-race-successor-20261107.json",
+    "blob": "6ff37f38086877d751dd2b6651bf21700eb89483",
+    "unchanged": true
+  },
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousBlob": "85f48bcb08d99531e889ad0936db8268e2e4aedc",
+    "currentBlob": "c905e462f94594e8d70de10141ab2a872c8443ea"
+  },
+  "changedSource": [
+    {
+      "path": "src/features/auth/verified-auth-feedback.ts",
+      "blob": "378c354b22b9225d01faa042f720ce8896501632"
+    },
+    {
+      "path": "src/app/auth/sign-in/page.tsx",
+      "blob": "36ff05d090bb81e2e8cb20d04304ab942e352dcf"
+    },
+    {
+      "path": "src/app/auth/sign-up/page.tsx",
+      "blob": "a47be6a9235138b0c74a7b0d811ec681f4191bd2"
+    },
+    {
+      "path": "src/app/auth/forgot-password/page.tsx",
+      "blob": "2910a040118972a110bf18b275f3bfb46cce4d5b"
+    },
+    {
+      "path": "src/app/auth/reset-password/page.tsx",
+      "blob": "fb083303fdd46154d0535684ebdaefb1e8472695"
+    },
+    {
+      "path": "tests/e2e/p02-auth-url-feedback-integrity.test.ts",
+      "blob": "9e7d4cf6436084b99284b5da23b26181460df93f"
+    }
+  ],
+  "preserved": [
+    "docs/delivery/sonic-f15-f20-post-lock-ui-guard-20261106.json",
+    "docs/delivery/sonic-p02-registered-owner-ui-source-successor-20261106.json",
+    "docs/delivery/sonic-f23-atomic-release-transactional-source-lock-20261107.json"
+  ],
+  "securityAssertions": [
+    "Do not display arbitrary URL-controlled authentication instructions",
+    "A supplied URL notice must never prove sign-out or a password update",
+    "Authentication callback and owner membership remain server-authoritative",
+    "All connected Supabase/production operations remain blocked until P02 owner authorization"
+  ],
+  "noClaims": [
+    "NO_DB_RESTORE",
+    "NO_AUTH_USER_MUTATION",
+    "NO_CONNECTED_DB_WRITE",
+    "NO_VERCEL_DEPLOY",
+    "NO_PROVIDER_MESSAGE",
+    "NO_PAYMENT",
+    "NO_CANONICAL_MERGE",
+    "NO_NEW_PR",
+    "NO_TWO_OWNER_UAT"
+  ]
+}
