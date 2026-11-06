@@ -43,6 +43,8 @@ create table public.verified_payment_applications (
 );
 grant usage on schema public to service_role;
 grant select on all tables in schema public to service_role;
+-- FOR UPDATE on quotes requires UPDATE privilege even without a write.
+grant update on public.quotes to service_role;
 grant update(status,updated_at) on public.slot_holds to service_role;
 insert into public.memberships values
  ('11111111-1111-4111-8111-111111111111','77777777-7777-4777-8777-777777777777','ACTIVE','OWNER');
