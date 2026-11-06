@@ -9,6 +9,7 @@ import { operationalDatabaseMode } from "@/features/auth/operational-preview-mod
 import { ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
 import { qaFixtureWritesAllowedForWorkspace } from "@/features/auth/qa-fixture-write-authority";
 import { seedVerifiedQaWorkspace } from "./qa-seed-actions";
+import { verifiedSavedQaSample } from "@/features/auth/qa-sample-readback";
 import { RegistrationSubmitButton } from "@/features/auth/RegistrationSubmitButton";
 
 export const dynamic = "force-dynamic";
@@ -58,14 +59,24 @@ export default async function VerifiedOwnerWorkspacePage({
   const canSeed = operationalMode === "QA_SESSION_RLS" &&
     qaFixtureWritesAllowedForWorkspace(workspace.slug) &&
     ownerRegistrationEmailAllowed(data.user.email);
-  const seedNotice = ({
-    created: "Fictional sample customer, property and enquiry saved in your real test workspace.",
-    "already-exists": "Sample records already exist. No duplicate records were created.",
-    "write-failed": "Sample data was not fully saved. Confirm workspace permissions and retry; earlier steps are resumable.",
-    "not-enabled": "Sample data is only available in an authorized QA environment.",
-    "not-configured": "The test database is not configured.",
-    "not-authorized": "This test account is not authorized to seed workspace records.",
-  } as Record<string, string>)[query.qaSeed ?? ""];
+  // A ?qaSeed=created URL is NOT a database receipt. Re-read the exact
+  // saved synthetic customer, property and enquiry with this owner's live
+  // RLS session before reporting any successful fixture persistence.
+  const claimedSeedSuccess = query.qaSeed === "created" ||
+    query.qaSeed === "already-exists";
+  const savedSeedVerified = canSeed && claimedSeedSuccess
+    ? await verifiedSavedQaSample(auth, data.user.id, workspace.id)
+    : false;
+  const seedNotice = claimedSeedSuccess
+    ? savedSeedVerified
+      ? "Saved fictional customer, MAIN-branch property and enquiry were independently verified in this workspace."
+      : "Saved QA sample records could not be verified. Check your workspace records before retrying; earlier steps may have committed."
+    : ({
+      "write-failed": "If you attempted QA seeding, earlier steps may have committed. Verify your saved workspace records before retrying.",
+      "not-enabled": "QA sample data is only available when this workspace is explicitly authorized.",
+      "not-configured": "QA data requires an authorized database connection.",
+      "not-authorized": "QA fixture writes require an active owner membership and separately approved workspace.",
+    } as Record<string, string>)[query.qaSeed ?? ""];
   return <RegistrationShell
     eyebrow="Account verified · workspace registered"
     title="Your business workspace is ready."
