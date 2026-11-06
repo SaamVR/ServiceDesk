@@ -19,6 +19,9 @@ describe("F20 owner-only saved ledger exception entrypoint",()=>{
   const x=readFileSync("src/features/operations/OwnerLedgerExceptionReview.tsx","utf8");
   expect(x).toContain('key={workspaceSlug}');
   expect(x).toContain("seq!==serial.current");
+  expect(x).toContain("mounted.current=false;pending.current=false;invalidate();");
+  expect(x).toContain("finally{if(mounted.current&&seq===serial.current)");
+  expect(x).not.toContain("finally{pending.current=false;if(");
   expect(x).toContain('"?invoice="+encodeURIComponent(x.invoiceId)');
   expect(x).toContain("No paid status, refund, balance write or external message was authorized.");
  });
