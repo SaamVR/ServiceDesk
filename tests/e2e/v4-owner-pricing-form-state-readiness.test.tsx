@@ -40,6 +40,31 @@ describe("P26 owner pricing form distinguishes first-run safety states",()=>{
     expect(html).toContain('name="setupId"');
     expect(html).toContain("Enter actual price");
   });
+  it("requires positive base prices and base minutes while permitting zero add-ons",()=>{
+    const html=markup({state:"VERIFIED",activeBranchIds:[],existingBookBranchIds:[]});
+    const input=(name:string)=>{
+      const tag=html.match(new RegExp('<input[^>]*name="'+name+'"[^>]*>'))?.[0];
+      expect(tag,name).toBeDefined();
+      return tag!;
+    };
+    const accepts=(tag:string,value:string)=>{
+      const pattern=tag.match(/pattern="([^"]+)"/)?.[1];
+      expect(pattern).toBeDefined();
+      return new RegExp("^(?:"+pattern+")$").test(value);
+    };
+    for(const prefix of ["standard","deep","moveOut"]){
+      const base=input(prefix+"Base");
+      expect(accepts(base,"0")).toBe(false);
+      expect(accepts(base,"0.00")).toBe(false);
+      expect(accepts(base,"0.01")).toBe(true);
+      expect(accepts(base,"125.25")).toBe(true);
+      expect(input(prefix+"BaseMinutes")).toContain('min="1"');
+      expect(accepts(input(prefix+"Bedroom"),"0")).toBe(true);
+      expect(input(prefix+"BedroomMinutes")).toContain('min="0"');
+    }
+    expect(accepts(input("moveOutOven"),"0")).toBe(true);
+  });
+
   it("does not invent an eligible branch when the owner has only unsupported currency",()=>{
     const other:OperationalBranchScope={mode:"ALL",branches:[gb]};
     const html=markup({state:"VERIFIED",activeBranchIds:[],existingBookBranchIds:[]},other);
