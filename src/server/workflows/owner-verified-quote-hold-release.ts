@@ -99,11 +99,16 @@ async function checkSource(ctx:Actor,quoteId:string,holdId:string,now:number):Pr
 }
 async function compareAndRelease(ctx:Actor,input:{holdId:string;quoteId:string;
  slotId:string;expiresAt:string;now:string}):Promise<boolean>{
+ // Compare the exact expiry the owner reviewed: an extension may occur
+ // after both readbacks, without changing the HELD state. This CAS is
+ // defense-in-depth, not a substitute for independently reviewed payment
+ // and hold transactional guards before production enablement.
  const {data,error}=await ctx.service.from("slot_holds")
   .update({status:"RELEASED",updated_at:input.now})
   .eq("workspace_id",ctx.workspace.id).eq("id",input.holdId)
   .eq("quote_id",input.quoteId).eq("slot_id",input.slotId)
-  .eq("status","HELD").gt("expires_at",input.now)
+  .eq("status","HELD").eq("expires_at",input.expiresAt)
+  .gt("expires_at",input.now)
   .select("id,workspace_id,quote_id,slot_id,status").maybeSingle();
  return !error&&data?.id===input.holdId&&data.workspace_id===ctx.workspace.id&&
    data.quote_id===input.quoteId&&data.slot_id===input.slotId&&
