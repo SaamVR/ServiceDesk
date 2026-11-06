@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {loadOwnerSavedBookingReceipt} from "@/server/ai/owner-saved-booking-receipt";
 import {buildStaffModuleHref} from "./staff-modules";
+import {OwnerVerifiedBookingDispatchControls} from "./OwnerVerifiedBookingDispatchControls";
 /**
  * Source-only owner receipt. A temporary hold, provider intent, invoice
  * balance or isolated SCHEDULED row can never independently trigger it.
@@ -26,6 +27,10 @@ export async function OwnerSavedBookingReceiptPanel({workspaceSlug,selectedQuote
   <p>The saved deposit application, confirmed hold, scheduled visit and invoice
    match. No customer message or payment was triggered by this review.
    Check with the payment provider independently when required.</p>
+  {v.visitStatus==="SCHEDULED"&&
+    process.env.SERVICEDESK_F26_OWNER_DISPATCH_ENABLED==="true"?
+     <OwnerVerifiedBookingDispatchControls workspaceSlug={workspaceSlug}
+       quoteId={v.quoteId} visitId={v.visitId}/>:null}
   <p><Link href={buildStaffModuleHref(workspaceSlug,"schedule")}>
    Open saved visit in Schedule</Link>{" · "}
    <Link href={buildStaffModuleHref(workspaceSlug,"invoices")}>
