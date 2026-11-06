@@ -12,9 +12,20 @@ describe("F23 independent critic: owner release is not booking or payment",()=>{
   expect(core).toContain('.eq("workspace_id",workspace.id).eq("quote_id",quoteId).limit(2)');
   expect(core).toContain('service.from("visits")');
   expect(core).toContain('h.status!=="HELD"');
-  expect(core).toContain('.eq("status","HELD").eq("expires_at",input.expiresAt)');
-  expect(core).toContain('.gt("expires_at",input.now)');
-  expect(core).toContain('status:"RELEASED",updated_at:input.now');
+  const candidate=read("docs/engineering/security/f23-atomic-hold-release-rpc-candidate.sql");
+  expect(core).toContain('ctx.service.rpc("servicedesk_release_held_slot_atomic"');
+  expect(core).toContain("data.holdId===input.holdId");
+  expect(core).not.toContain('.update({status:"RELEASED"');
+  expect(candidate).toContain("security invoker");
+  expect(candidate).toContain("current_user <> 'service_role'");
+  expect(candidate).toContain("v_hold.expires_at is distinct from v_original_expiry");
+  expect(candidate).toContain("select * into v_quote from public.quotes");
+  expect(candidate).toContain("select * into v_hold from public.slot_holds");
+  expect(candidate).toContain("and q.status <> 'SUPERSEDED'");
+  expect(candidate).toContain("v_quote.status <> 'ACCEPTED'");
+  expect(candidate).toContain("public.verified_payment_applications");
+  expect(candidate).toContain("for share of m");
+  expect(candidate).toContain("grant execute on function public.servicedesk_release_held_slot_atomic(jsonb) to service_role;");
   expect(core).toContain('third.value.actor.userId!==first.value.actor.userId');
   expect(core).toContain('result.error||!h');
   for(const word of ["insert into public.visits","servicedesk_apply_verified_payment",
@@ -39,6 +50,8 @@ describe("F23 independent critic: owner release is not booking or payment",()=>{
   const route=read("src/app/app/[workspace]/quotes/page.tsx");
   expect(payment).toContain("insert into public.visits(");
   expect(payment).toContain("update public.slot_holds set status = 'CONFIRMED'");
+  expect(payment).toContain("select * into v_quote from public.quotes where workspace_id = v_workspace and id = v_quote_id for update;");
+  expect(payment).toContain("select * into v_hold from public.slot_holds where workspace_id = v_workspace and id = v_hold_id for update;");
   expect(release).toContain('state:"HOLD_RELEASED_VERIFIED"');
   expect(release).toContain("bookingCreated:false");
   expect(ui).toContain("Releasing it");
