@@ -49,6 +49,7 @@ jobs:
           tests/ai/f26-owner-verified-booking-dispatch.test.ts
           tests/ai/f26-owner-verified-booking-dispatch-critic.test.ts
           tests/ai/f26-active-crew-readiness.test.ts
+          tests/ai/f26-atomic-crew-pg17-critic.test.ts
           tests/ai/sonic-f15-owner-manual-journey.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
           src/server/workflows/sonic-f15-atomic-ingress.ts
@@ -118,6 +119,7 @@ jobs:
           tests/ai/f26-owner-verified-booking-dispatch.test.ts
           tests/ai/f26-owner-verified-booking-dispatch-critic.test.ts
           tests/ai/f26-active-crew-readiness.test.ts
+          tests/ai/f26-atomic-crew-pg17-critic.test.ts
           src/server/workflows/f26-active-crew-readiness.ts
           src/server/workflows/owner-verified-booking-dispatch.ts
           src/features/operations/owner-verified-dispatch-action.ts
@@ -237,3 +239,47 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-acceptance-v3.sql
       - name: Twelve competing SLA claims plus message-writer lock
         run: bash scripts/release/v4-f15-atomic-pg17-concurrency.sh
+
+  native-pg17-f26-atomic-crew:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f26-no-real-user
+          POSTGRES_DB: sd_f26_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f26_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: sd_f26_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable-f26-no-real-user
+      SERVICEDESK_F26_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact source and disposable localhost guard
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "sd_f26_disposable"
+          test "$SERVICEDESK_F26_PG17_DISPOSABLE_ONLY" = "1"
+      - name: Install local PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Build fictional baseline and extract exact original 0011 RPC
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-atomic-crew-pg17-fixture.sql
+          python3 -c 'from pathlib import Path; s=Path("supabase/migrations/0011_visit_field_runtime.sql").read_text(); i=s.index("create or replace function public.servicedesk_transition_visit(p_input jsonb)"); j=s.index("\n$$;",i)+4; Path("/tmp/f26-original-0011-rpc.sql").write_text(s[i:j]+"\n")'
+          psql -X -v ON_ERROR_STOP=1 -f /tmp/f26-original-0011-rpc.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f26-atomic-crew-assign-trigger-candidate-v1.sql
+      - name: Native PG17 rejected rows and original 0011 positive compatibility
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-atomic-crew-pg17-acceptance.sql
+      - name: Real parallel membership revocation and ASSIGN row locks
+        run: bash scripts/release/v4-f26-pg17-crew-revocation-race.sh
