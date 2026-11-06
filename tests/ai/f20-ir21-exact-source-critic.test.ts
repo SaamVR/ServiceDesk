@@ -13,9 +13,10 @@ const successorRaw=read(successorPath);
 const successor=JSON.parse(successorRaw.toString()) as {
  schema:string;historicManifestsUnchanged:string[];
  overrides:Array<{path:string;historicSha:string;currentSha:string;gate:string}>;
+ additionalReviewedSource:Array<{path:string;historicSha:string|null;currentSha:string;gate:string}>;
 };
 function expectedReviewedBlob(path:string,historicSha:string):string {
- const entry=successor.overrides.find(item=>item.path===path);
+ const entry=[...successor.overrides,...successor.additionalReviewedSource].find(item=>item.path===path);
  if(!entry)return historicSha;
  expect(entry.historicSha,path+" must preserve the original source lock").toBe(historicSha);
  return entry.currentSha;
@@ -28,11 +29,15 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(lock.source).toHaveLength(7);
   expect(new Set(lock.source.map(x=>x.path)).size).toBe(7);
   expect(new Set(lock.source.map(x=>x.lane)).size).toBe(3);
-  expect(hash(successorRaw)).toBe("89f1f701fa901988322eb2d250c49d89cea0b2e6");
+  expect(hash(successorRaw)).toBe("08d4e07b7ee3aff7f9f0b7cce7e6d7b24b793442");
   expect(successor.schema).toBe("servicedesk.sonic.ir21.f15-f20.ui-lifecycle-successor.v1");
   expect(successor.historicManifestsUnchanged).toContain(
     "docs/delivery/sonic-ir21-f20-finance-retention-source-lock-20261030.json");
   expect(successor.overrides).toHaveLength(3);
+  expect(successor.additionalReviewedSource).toHaveLength(4);
+  for(const x of successor.additionalReviewedSource){
+   expect(hash(read(x.path)),x.path).toBe(x.currentSha);
+  }
   expect(successor.overrides.filter(x=>x.path.startsWith("src/features/operations/Owner")))
     .toHaveLength(3);
   for(const f of lock.source){
