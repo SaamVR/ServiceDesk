@@ -11,7 +11,8 @@ describe("F23 independent critic: owner release is not booking or payment",()=>{
   expect(core).toContain('.eq("workspace_id",workspace.id).eq("quote_id",quoteId).limit(2)');
   expect(core).toContain('service.from("visits")');
   expect(core).toContain('h.status!=="HELD"');
-  expect(core).toContain('.eq("status","HELD").gt("expires_at",input.now)');
+  expect(core).toContain('.eq("status","HELD").eq("expires_at",input.expiresAt)');
+  expect(core).toContain('.gt("expires_at",input.now)');
   expect(core).toContain('status:"RELEASED",updated_at:input.now');
   expect(core).toContain('third.value.actor.userId!==first.value.actor.userId');
   expect(core).toContain('result.error||!h');
