@@ -20,21 +20,21 @@ const services: readonly PriceService[] = [
   { label: "Move-out clean", prefix: "moveOut", nameField: "nameMoveOut", defaultName: "Move-out cleaning", oven: true },
 ];
 
-function MoneyField({ label, name }: { label: string; name: string }) {
+function MoneyField({ label, name, positive = false }: { label: string; name: string; positive?: boolean }) {
   return (
     <label style={{ display: "grid", gap: 5, fontSize: ".82rem" }}>
       <span>{label} ($ USD)</span>
       <input className="app-input" name={name} type="text" inputMode="decimal"
-        placeholder="Enter actual price" pattern="(0|[1-9][0-9]{0,5})(\\.[0-9]{1,2})?"
+        placeholder="Enter actual price" pattern={positive ? String.raw`([1-9][0-9]{0,5}(\.[0-9]{1,2})?|0\.(0[1-9]|[1-9][0-9]?))` : String.raw`(0|[1-9][0-9]{0,5})(\.[0-9]{1,2})?`}
         maxLength={10} required />
     </label>
   );
 }
-function MinutesField({ label, name }: { label: string; name: string }) {
+function MinutesField({ label, name, min = 0 }: { label: string; name: string; min?: number }) {
   return (
     <label style={{ display: "grid", gap: 5, fontSize: ".82rem" }}>
       <span>{label} (minutes)</span>
-      <input className="app-input" name={name} type="number" min={0} max={1440} step={1}
+      <input className="app-input" name={name} type="number" min={min} max={1440} step={1}
         placeholder="Minutes" required />
     </label>
   );
@@ -172,8 +172,8 @@ export function OwnerCleaningPricingSetupForm({
                 readOnly={Boolean(repairTarget)} minLength={3} maxLength={120} required />
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
-              <MoneyField label="Base service price" name={service.prefix + "Base"} />
-              <MinutesField label="Base service time" name={service.prefix + "BaseMinutes"} />
+              <MoneyField label="Base service price" name={service.prefix + "Base"} positive />
+              <MinutesField label="Base service time" name={service.prefix + "BaseMinutes"} min={1} />
               <MoneyField label="Price per bedroom" name={service.prefix + "Bedroom"} />
               <MinutesField label="Time per bedroom" name={service.prefix + "BedroomMinutes"} />
               <MoneyField label="Price per bathroom" name={service.prefix + "Bathroom"} />
