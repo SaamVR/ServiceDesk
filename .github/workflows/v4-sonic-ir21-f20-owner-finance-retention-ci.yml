@@ -29,6 +29,8 @@ jobs:
         run: >-
           pnpm exec vitest run
           tests/e2e/p02-owner-registration-persisted-receipt.test.ts
+          tests/e2e/p02-registration-denial-action.test.ts
+          tests/e2e/p02-workspace-error-origin.test.ts
           tests/e2e/v4-owner-pricing-form-state-readiness.test.tsx
           tests/ai/f20-owner-ledger-entrypoint.test.ts
           tests/ai/f20-owner-retention-entrypoint.test.ts
@@ -89,6 +91,10 @@ jobs:
         run: >-
           pnpm exec eslint
           tests/e2e/p02-owner-registration-persisted-receipt.test.ts
+          tests/e2e/p02-registration-denial-action.test.ts
+          tests/e2e/p02-workspace-error-origin.test.ts
+          src/features/auth/workspace-registration-error.ts
+          src/app/auth/create-workspace/page.tsx
           src/features/auth/verified-owner-workspace.ts
           src/app/auth/create-workspace/actions.ts
           src/features/operations/OwnerCleaningPricingSetupForm.tsx
