@@ -1,6 +1,7 @@
 import {resolveStaffActor,transitionOperationalVisit} from "@/features/operations/operational-product-runtime";
 import {operationalDatabaseMode} from "@/features/auth/operational-preview-mode";
 import {loadOwnerSavedBookingReceipt} from "@/server/ai/owner-saved-booking-receipt";
+import {readActiveBookedVisitCrew} from "./f26-active-crew-readiness";
 
 type ActorResolver=typeof resolveStaffActor;
 type ReceiptLoader=typeof loadOwnerSavedBookingReceipt;
@@ -12,7 +13,7 @@ const slug=(v:unknown):v is string=>typeof v==="string"&&
 export type OwnerDispatchResult=
  | {ok:false;code:"NOT_ACTIVATED"|"INVALID_SELECTION"|"OWNER_REQUIRED"|
   "BOOKING_UNVERIFIED"|"VISIT_NOT_SCHEDULED"|"SOURCE_CHANGED"|
-  "DISPATCH_REJECTED"|"POST_WRITE_UNVERIFIED"}
+  "CREW_NOT_READY"|"DISPATCH_REJECTED"|"POST_WRITE_UNVERIFIED"}
  | {ok:true;state:"SAVED_VISIT_ASSIGNED_VERIFIED";quoteId:string;visitId:string;
   invoiceId:string;visitStatus:"ASSIGNED";providerDeliveryVerified:false;
   customerMessaged:false;paymentProcessed:false;newBookingCreated:false;
@@ -24,6 +25,7 @@ export interface OwnerDispatchDeps{
  resolve?:ActorResolver;
  loadBooking?:ReceiptLoader;
  transition?:VisitTransition;
+ verifyCrew?:typeof readActiveBookedVisitCrew;
 }
 const fail=(code:Extract<OwnerDispatchResult,{ok:false}>["code"]):OwnerDispatchResult=>({ok:false,code});
 type Owner=Extract<Awaited<ReturnType<ActorResolver>>,{ok:true}>;
@@ -60,6 +62,15 @@ export async function dispatchOwnerVerifiedBookedVisit(
     before.value.recordedDepositApplication!==true||
     before.value.bookingRecordPresent!==true)return fail("BOOKING_UNVERIFIED");
   if(before.value.visitStatus!=="SCHEDULED")return fail("VISIT_NOT_SCHEDULED");
+  // A paid booking is not sufficient permission to dispatch an inactive
+  // or empty crew. Check the saved crew+membership source independently.
+  const crewRead=deps.verifyCrew??readActiveBookedVisitCrew;
+  const ready=await crewRead(first.value,quoteId,visitId);
+  if(!ready||ready.workspaceId!==first.value.workspace.id||
+     ready.quoteId!==quoteId||ready.visitId!==visitId||
+     ready.activeMemberCount<1||
+     !first.value.branchScope.branches.some(b=>b.id===ready.branchId))
+    return fail("CREW_NOT_READY");
   const second=await resolve(workspaceSlug);
   if(!authorized(second,workspaceSlug)||
      first.value.workspace.id!==second.value.workspace.id||
@@ -78,6 +89,14 @@ export async function dispatchOwnerVerifiedBookedVisit(
      checked.value.quoteVersion!==before.value.quoteVersion||
      checked.value.startsAt!==before.value.startsAt)
    return fail("SOURCE_CHANGED");
+  const recheckedCrew=await crewRead(second.value,quoteId,visitId);
+  if(!recheckedCrew||recheckedCrew.fingerprint!==ready.fingerprint||
+     recheckedCrew.workspaceId!==ready.workspaceId||
+     !second.value.branchScope.branches.some(b=>b.id===recheckedCrew.branchId))
+    return fail("SOURCE_CHANGED");
+  // Race boundary: active crew may still be revoked after this read.
+  // Production activation requires a separate reviewed SQL transaction
+  // guard inside servicedesk_transition_visit('ASSIGN').
   const action=await (deps.transition??transitionOperationalVisit)(
    workspaceSlug,visitId,"ASSIGN");
   if(!action.ok)return fail("DISPATCH_REJECTED");
