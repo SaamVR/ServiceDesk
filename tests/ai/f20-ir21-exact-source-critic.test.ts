@@ -21,6 +21,11 @@ const p02=JSON.parse(p02Raw.toString()) as {
  workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
  changedSource:Array<{path:string;blob:string;intent:string}>;
 };
+const f23=JSON.parse(read("docs/delivery/sonic-f23-atomic-release-transactional-source-lock-20261107.json").toString()) as {
+ schema:string;historicP02ManifestBlob:string;
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;blob:string}>;
+};
 function expectedReviewedBlob(path:string,historicSha:string):string {
  const entry=overlay.replacements.find(item=>item.path===path);
  if(!entry)return historicSha;
@@ -52,11 +57,20 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    expect(source.path).not.toContain("..");
    expect(hash(read(source.path)),source.path).toBe(source.blob);
   }
+  expect(f23.schema).toBe("servicedesk.f23.atomic-hold-release.transactional-source.v1");
+  expect(f23.historicP02ManifestBlob).toBe(hash(p02Raw));
+  expect(f23.workflowSuccessor.previousBlob).toBe(p02.workflowSuccessor.currentBlob);
+  expect(f23.workflowSuccessor.path).toBe(p02.workflowSuccessor.path);
+  expect(f23.changedSource).toHaveLength(9);
+  for(const f of f23.changedSource){
+   expect(f.path).not.toContain("..");
+   expect(hash(read(f.path)),f.path).toBe(f.blob);
+  }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const file of overlay.changedFiles){
    const reviewedSha=file.path===p02.workflowSuccessor.path
-    ? p02.workflowSuccessor.currentBlob : file.blob;
+    ? f23.workflowSuccessor.currentBlob : file.blob;
    expect(hash(read(file.path)),file.path).toBe(reviewedSha);
   }
   for(const f of lock.source){
