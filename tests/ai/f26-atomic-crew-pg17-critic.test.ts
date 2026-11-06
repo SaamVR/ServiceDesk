@@ -47,6 +47,29 @@ describe("F26 native PostgreSQL crew/revocation Critic",()=>{
   expect(race).toContain("23514");
   expect(race).toContain("SERVICEDESK_F26_PG17_DISPOSABLE_ONLY");
  });
+ it("proves six independent locked revocation races using the original 0011 RPC",()=>{
+  const race=read("scripts/release/v4-f26-pg17-crew-revocation-race.sh");
+  for(const label of ["MEMBERSHIP_REVOKED","MEMBERSHIP_ROLE_CHANGED",
+    "CREW_DEACTIVATED","CREW_MEMBER_REVOKED",
+    "REQUEST_MOVED_BRANCH","SLOT_MOVED_BRANCH"]){
+    expect(race).toContain('run_locked_revocation "'+label+'"');
+  }
+  expect((race.match(/run_locked_revocation "/g)||[])).toHaveLength(6);
+  expect(race).toContain('sleep 4');
+  expect(race).toContain("55P03");
+  expect(race).toContain("23514");
+  expect(race).toContain('select public.sd_f26_rpc_assign();');
+  expect(race).toContain('SCHEDULED:1:0');
+  expect(race).toContain('reset_disposable');
+  expect(race).toContain('test "${PGHOST:-}" = "127.0.0.1"');
+  expect(race).toContain('test "${PGDATABASE:-}" = "sd_f26_disposable"');
+  expect(race).toContain('test "$(git rev-parse HEAD)"');
+  const workflow=read(".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml");
+  expect(workflow).toContain("bash scripts/release/v4-f26-pg17-crew-revocation-race.sh");
+  expect(workflow).toContain('SERVICEDESK_F26_PG17_DISPOSABLE_ONLY: "1"');
+  expect(race).not.toContain("supabase.co");
+  expect(race).not.toContain("wrangler");
+ });
  it("keeps F26 owner-action rollout OFF and P02 deployment gate unchanged",()=>{
   const backend=read("src/server/workflows/owner-verified-booking-dispatch.ts");
   expect(backend).toContain("SERVICEDESK_F26_OWNER_DISPATCH_ENABLED");
