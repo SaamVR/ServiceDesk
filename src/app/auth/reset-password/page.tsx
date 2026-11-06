@@ -5,11 +5,13 @@ import { redirect } from "next/navigation";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { updateRecoveredPassword } from "./actions";
 import styles from "../sign-in/page.module.css";
+import { trustedAuthFeedback } from "@/features/auth/verified-auth-feedback";
 
 export default async function ResetPasswordPage({
   searchParams,
 }: { searchParams: Promise<{ error?: string }> }) {
   const query = await searchParams;
+  const errorMessage = trustedAuthFeedback("reset-password", "error", query.error);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
@@ -41,7 +43,7 @@ export default async function ResetPasswordPage({
       asideTitle="A safer fresh start."
       asideItems={["Your existing business data remains unchanged", "Use a password manager to create a unique secret", "Sign in again after the update"]}
     >
-      {query.error ? <p className={styles.error} role="alert">{query.error}</p> : null}
+      {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
       <form action={updateRecoveredPassword} className={styles.form}>
         <div className={styles.field}>
           <label htmlFor="new-password">New password</label>
