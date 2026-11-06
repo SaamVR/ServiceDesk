@@ -26,6 +26,12 @@ const f23=JSON.parse(read("docs/delivery/sonic-f23-atomic-release-transactional-
  workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
  changedSource:Array<{path:string;blob:string}>;
 };
+const race=JSON.parse(read("docs/delivery/sonic-f23-owner-revocation-race-successor-20261107.json").toString()) as {
+ schema:string;
+ historicalLock:{path:string;sha:string;unchanged:boolean};
+ workflow:{path:string;oldSha:string;newSha:string};
+ testScript:string;testScriptSha:string;requiredReceipts:string[];
+};
 function expectedReviewedBlob(path:string,historicSha:string):string {
  const entry=overlay.replacements.find(item=>item.path===path);
  if(!entry)return historicSha;
@@ -62,15 +68,35 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(f23.workflowSuccessor.previousBlob).toBe(p02.workflowSuccessor.currentBlob);
   expect(f23.workflowSuccessor.path).toBe(p02.workflowSuccessor.path);
   expect(f23.changedSource).toHaveLength(9);
+  expect(race.schema).toBe("servicedesk.f23.owner-revocation-race-successor.v1");
+  expect(race.historicalLock.path).toBe("docs/delivery/sonic-f23-atomic-release-transactional-source-lock-20261107.json");
+  expect(race.historicalLock.sha).toBe("15e909b7abcd4e7ee571646d0b8314dfed1c0a60");
+  expect(race.historicalLock.unchanged).toBe(true);
+  expect(hash(read(race.historicalLock.path))).toBe(race.historicalLock.sha);
+  expect(race.workflow.path).toBe(f23.workflowSuccessor.path);
+  expect(race.workflow.oldSha).toBe(f23.workflowSuccessor.currentBlob);
+  expect(race.workflow.newSha).toBe("85f48bcb08d99531e889ad0936db8268e2e4aedc");
+  expect(race.testScript).toBe("scripts/release/v4-f23-pg17-owner-revocation-race.sh");
+  expect(race.testScriptSha).toBe("16de03429be8f4474a1f582e78eb749143723f33");
+  expect(hash(read(race.testScript))).toBe(race.testScriptSha);
+  expect(race.requiredReceipts).toEqual([
+   "PG17_F23_OWNER_REVOKE_FIRST_FOR_SHARE_DENIED_NO_WRITE_PASS",
+   "PG17_F23_OWNER_RELEASE_FIRST_LOCK_ROLLBACK_AND_POSITIVE_PASS",
+  ]);
+  const raceScript=read(race.testScript).toString();
+  for(const receipt of race.requiredReceipts)expect(raceScript).toContain(receipt);
+  const wf=read(race.workflow.path).toString();
+  expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   expect(hash(read(f.path)),f.path).toBe(f.blob);
+   const reviewed=f.path===race.workflow.path?race.workflow.newSha:f.blob;
+   expect(hash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const file of overlay.changedFiles){
    const reviewedSha=file.path===p02.workflowSuccessor.path
-    ? f23.workflowSuccessor.currentBlob : file.blob;
+    ? race.workflow.newSha : file.blob;
    expect(hash(read(file.path)),file.path).toBe(reviewedSha);
   }
   for(const f of lock.source){
