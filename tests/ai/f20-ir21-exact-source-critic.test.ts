@@ -38,6 +38,12 @@ const authFeedback=JSON.parse(authFeedbackRaw.toString()) as {
  workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
  changedSource:Array<{path:string;blob:string}>;
 };
+const qaProofRaw=read("docs/delivery/sonic-p02-qa-seed-saved-proof-successor-20261107.json");
+const qaProof=JSON.parse(qaProofRaw.toString()) as {
+ schema:string;previousAcceptedSource:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;blob:string;lane:string}>;
+};
 
 function expectedReviewedBlob(path:string,historicSha:string):string {
  const entry=overlay.replacements.find(item=>item.path===path);
@@ -95,6 +101,19 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    expect(source.path).not.toContain("..");
    expect(hash(read(source.path)),source.path).toBe(source.blob);
   }
+  expect(hash(qaProofRaw)).toBe("963c2e44e8e5a28fcc326460840657fcbe3401af");
+  expect(qaProof.schema).toBe("servicedesk.p02.qa-seed-saved-proof-successor.v1");
+  expect(qaProof.previousAcceptedSource.path)
+    .toBe("docs/delivery/sonic-p02-auth-feedback-surface-successor-20261107.json");
+  expect(qaProof.previousAcceptedSource.unchanged).toBe(true);
+  expect(qaProof.previousAcceptedSource.blob).toBe(hash(authFeedbackRaw));
+  expect(qaProof.workflowSuccessor.path).toBe(authFeedback.workflowSuccessor.path);
+  expect(qaProof.workflowSuccessor.previousBlob).toBe(authFeedback.workflowSuccessor.currentBlob);
+  expect(qaProof.changedSource).toHaveLength(3);
+  for(const source of qaProof.changedSource){
+   expect(source.path).not.toContain("..");
+   expect(hash(read(source.path)),source.path).toBe(source.blob);
+  }
   expect(race.testScript).toBe("scripts/release/v4-f23-pg17-owner-revocation-race.sh");
   expect(race.testScriptSha).toBe("16de03429be8f4474a1f582e78eb749143723f33");
   expect(hash(read(race.testScript))).toBe(race.testScriptSha);
@@ -108,14 +127,14 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   const reviewed=f.path===race.workflow.path?authFeedback.workflowSuccessor.currentBlob:f.blob;
+   const reviewed=f.path===race.workflow.path?qaProof.workflowSuccessor.currentBlob:f.blob;
    expect(hash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const file of overlay.changedFiles){
    const reviewedSha=file.path===p02.workflowSuccessor.path
-    ? authFeedback.workflowSuccessor.currentBlob : file.blob;
+    ? qaProof.workflowSuccessor.currentBlob : file.blob;
    expect(hash(read(file.path)),file.path).toBe(reviewedSha);
   }
   for(const f of lock.source){
