@@ -20,6 +20,9 @@ describe("F20 owner consent-aware repeat cleaning source",()=>{
   const ui=readFileSync("src/features/operations/OwnerConsentedRetentionReview.tsx","utf8");
   expect(ui).toContain("key={workspaceSlug}");
   expect(ui).toContain("seq.current!==sequence");
+  expect(ui).toContain("active.current=false;pending.current=false;invalidate();");
+  expect(ui).toContain("finally{if(active.current&&seq.current===sequence)");
+  expect(ui).not.toContain("finally{pending.current=false;if(");
   expect(ui).toContain('"?customer="+encodeURIComponent(c.customerId)');
   expect(ui).toContain("service gap is not proof of churn");
   expect(ui).not.toContain('type="email"');
