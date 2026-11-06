@@ -88,7 +88,7 @@ function fixture(opt:Opt={}){
     service:{from},
   }};
  });
- const deps={enabled:()=>true,mode:()=> "SERVICE_ROLE" as const,
+ const deps={enabled:()=>true,atomicReady:()=>true,mode:()=> "SERVICE_ROLE" as const,
   resolve:resolver as never,now:()=>now};
  return {source,holdRow,from,resolver,deps,mutations:()=>mutations};
 }
@@ -97,6 +97,14 @@ describe("F23 accepted quote -> manually verified unused HELD slot release",()=>
   const f=fixture();
   expect(await releaseOwnerVerifiedQuoteHold("test-workspace",quote,hold,{
    ...f.deps,enabled:()=>false,
+  })).toMatchObject({ok:false,code:"NOT_ACTIVATED"});
+  expect(f.resolver).not.toHaveBeenCalled();
+  expect(f.mutations()).toBe(0);
+ });
+ it("second independent atomic-install approval gate defaults to denial before any DB access",async()=>{
+  const f=fixture();
+  expect(await releaseOwnerVerifiedQuoteHold("test-workspace",quote,hold,{
+   ...f.deps,atomicReady:()=>false,
   })).toMatchObject({ok:false,code:"NOT_ACTIVATED"});
   expect(f.resolver).not.toHaveBeenCalled();
   expect(f.mutations()).toBe(0);
