@@ -28,6 +28,7 @@ jobs:
       - name: Single focused owner journeys, F15 atomic ingress and exact-source critic
         run: >-
           pnpm exec vitest run
+          tests/e2e/p02-owner-registration-persisted-receipt.test.ts
           tests/e2e/v4-owner-pricing-form-state-readiness.test.tsx
           tests/ai/f20-owner-ledger-entrypoint.test.ts
           tests/ai/f20-owner-retention-entrypoint.test.ts
@@ -87,6 +88,9 @@ jobs:
       - name: Changed-file lint
         run: >-
           pnpm exec eslint
+          tests/e2e/p02-owner-registration-persisted-receipt.test.ts
+          src/features/auth/verified-owner-workspace.ts
+          src/app/auth/create-workspace/actions.ts
           src/features/operations/OwnerCleaningPricingSetupForm.tsx
           tests/e2e/v4-owner-pricing-form-state-readiness.test.tsx
           src/features/operations/f20-owner-finance-review-action.ts
