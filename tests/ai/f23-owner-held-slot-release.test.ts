@@ -17,7 +17,7 @@ type Row=Record<string,unknown>;
 type Opt={role?:string;scope?:string;holdStatus?:string;expired?:boolean;
  quoteStatus?:string;quoteNewer?:boolean;foreignCrew?:boolean;hasVisit?:boolean;
  hasPayment?:boolean;drift?:boolean;actorChange?:boolean;afterChange?:boolean;
- rejectUpdate?:boolean;readbackBad?:boolean};
+ rejectUpdate?:boolean;readbackBad?:boolean;extendBeforeRelease?:boolean};
 function fixture(opt:Opt={}){
  const holdRow:Row={id:hold,workspace_id:ws,quote_id:quote,slot_id:slot,
   status:opt.holdStatus??"HELD",expires_at:opt.expired?"2026-01-01T00:00:00.000Z":expiry};
@@ -72,7 +72,11 @@ function fixture(opt:Opt={}){
    };
    return query;
   };
-  return {select(_columns:string){return make();},update(patch:Row){return make(patch);}};
+  return {select(_columns:string){return make();},update(patch:Row){
+   if(table==="slot_holds"&&opt.extendBeforeRelease)
+    holdRow.expires_at="2027-01-02T06:00:00.000Z";
+   return make(patch);
+  }};
  });
  const resolver=vi.fn(async()=>{
   ownerCalls++;
@@ -123,6 +127,14 @@ describe("F23 accepted quote -> manually verified unused HELD slot release",()=>
    expect((await releaseOwnerVerifiedQuoteHold(slug,q,h,f.deps)).ok).toBe(false);
   }
   expect(f.resolver).not.toHaveBeenCalled();
+ });
+ it("refuses to release a hold whose expiry was extended after both owner source reads",async()=>{
+  const f=fixture({extendBeforeRelease:true});
+  expect(await releaseOwnerVerifiedQuoteHold("test-workspace",quote,hold,f.deps))
+   .toMatchObject({ok:false,code:"RELEASE_UNVERIFIED"});
+  expect(f.mutations()).toBe(0);
+  expect(f.holdRow.status).toBe("HELD");
+  expect(f.holdRow.expires_at).toBe("2027-01-02T06:00:00.000Z");
  });
  it("blocks source drift and owner revocation before CAS mutation",async()=>{
   for(const options of [{drift:true},{actorChange:true}]){
