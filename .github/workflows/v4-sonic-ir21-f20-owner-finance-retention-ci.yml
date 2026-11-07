@@ -88,6 +88,11 @@ jobs:
           tests/ai/sonic-f15-owner-manual-journey.test.ts
           tests/ai/sonic-f15-complete-source-reader.test.ts
           tests/ai/sonic-f15-integrated-independent-critic.test.ts
+      - name: P02 offline two-owner RLS leak-detection critic (no live JWTs)
+        run: |
+          node --check scripts/release/v4-p02-two-owner-readonly-acceptance.mjs
+          node --check scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs
+          node --test scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs
       - name: TypeScript
         run: pnpm typecheck
       - name: Changed-file lint
