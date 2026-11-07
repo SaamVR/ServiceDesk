@@ -84,6 +84,14 @@ const writerAudit=JSON.parse(writerAuditRaw.toString()) as {
  requiredReadOnlyPreflightFields:string[];releaseVeto:string[];
  activationFlagsDefaultOff:string[];notClaims:string[];
 };
+const literalCriticRaw=read("docs/delivery/sonic-f23-readonly-literal-critic-successor-20261107.json");
+const literalCritic=JSON.parse(literalCriticRaw.toString()) as {
+ schema:string;scope:string;
+ priorReviewed:{path:string;blob:string;unchanged:boolean};
+ reviewedReplacement:{path:string;previousBlob:string;currentBlob:string;intent:string};
+ securityPreflight:{path:string;blob:string;unchanged:boolean};
+ activationFlagsRemainOff:string[];veto:string[];
+};
 const prototypeBridgeRaw=read("docs/delivery/sonic-p02-f23-prototype-integration-bridge-20261107.json");
 const prototypeBridge=JSON.parse(prototypeBridgeRaw.toString()) as {
  schema:string;
@@ -211,12 +219,32 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(writerAudit.workflowSuccessor.path).toBe(f23Veto.workflowSuccessor.path);
   expect(writerAudit.workflowSuccessor.previousBlob).toBe(f23Veto.workflowSuccessor.currentBlob);
   expect(writerAudit.workflowSuccessor.currentBlob).toBe("634d35b6eb34025df560b78f0dfbe3354988238c");
+  expect(gitHash(literalCriticRaw)).toBe("960f9b9a03f104f7a68f60e316c734d7a128a95e");
+  expect(literalCritic.schema).toBe("servicedesk.f23.readonly-sql-literal-critic-successor.v1");
+  expect(literalCritic.priorReviewed.path).toBe("docs/delivery/sonic-f23-quote-writer-compatibility-source-successor-20261107.json");
+  expect(literalCritic.priorReviewed.unchanged).toBe(true);
+  expect(literalCritic.priorReviewed.blob).toBe(gitHash(writerAuditRaw));
+  expect(literalCritic.reviewedReplacement.path).toBe("tests/ai/f23-current-quote-schema-compatibility-veto.test.ts");
+  expect(literalCritic.reviewedReplacement.previousBlob).toBe("7b51bef9c828705a75bf8cc0a915a983550b638f");
+  expect(literalCritic.reviewedReplacement.currentBlob).toBe("11b477ec83b4fca7038e649c6272089121ebb85d");
+  expect(gitHash(read(literalCritic.reviewedReplacement.path))).toBe(literalCritic.reviewedReplacement.currentBlob);
+  expect(literalCritic.securityPreflight.path).toBe(writerAudit.changedSource[0].path);
+  expect(literalCritic.securityPreflight.unchanged).toBe(true);
+  expect(literalCritic.securityPreflight.blob).toBe(writerAudit.changedSource[0].blob);
+  expect(gitHash(read(literalCritic.securityPreflight.path))).toBe(literalCritic.securityPreflight.blob);
+  expect(literalCritic.activationFlagsRemainOff).toEqual(writerAudit.activationFlagsDefaultOff);
+  expect(literalCritic.veto).toContain("F23_SIBLING_QUOTE_PHANTOM_UNRESOLVED");
   expect(writerAudit.changedSource).toHaveLength(3);
   expect(new Set(writerAudit.changedSource.map(x=>x.path)).size).toBe(3);
   for(const f of writerAudit.changedSource){
    expect(f.path).not.toContain("..");
    expect(f.isProductionApproved).toBe(false);
-   expect(gitHash(read(f.path)),f.path).toBe(f.blob);
+   if(f.path===literalCritic.reviewedReplacement.path){
+    expect(f.blob).toBe(literalCritic.reviewedReplacement.previousBlob);
+   }
+   const current=f.path===literalCritic.reviewedReplacement.path
+    ?literalCritic.reviewedReplacement.currentBlob:f.blob;
+   expect(gitHash(read(f.path)),f.path).toBe(current);
   }
   expect(writerAudit.sourcePreimagesUnchanged).toHaveLength(4);
   for(const f of writerAudit.sourcePreimagesUnchanged){
