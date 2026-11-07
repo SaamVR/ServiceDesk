@@ -48,6 +48,7 @@ jobs:
           tests/ai/f22-verified-quote-slot-critic.test.ts
           tests/ai/f23-owner-held-slot-release.test.ts
           tests/ai/f23-owner-hold-release-critic.test.ts
+          tests/ai/f23-current-quote-schema-compatibility-veto.test.ts
           tests/db/visits.test.ts
           tests/db/visit-repository-adapter.test.ts
           tests/db/f24-atomic-visit-critic.test.ts
@@ -362,6 +363,8 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f23-atomic-hold-release-pg17-fixture.sql
           psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f23-atomic-hold-release-rpc-candidate.sql
+      - name: DBA aggregate-only read-only F23 schema preflight before witness
+        run: psql -X -v ON_ERROR_STOP=1 -f scripts/release/v4-f23-current-quote-readonly-preflight.sql
       - name: Native F23 ACL, revocation, payment, quote, expiry and positive checks
         run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f23-atomic-hold-release-pg17-acceptance.sql
       - name: Native F23 two-session deposit-first and release-first quote row locking
@@ -376,3 +379,5 @@ jobs:
         run: bash scripts/release/v4-f23-pg17-sibling-quote-phantom-witness.sh
       - name: DBA review ONLY - prototype partial unique current-quote index on disposable PG17
         run: bash scripts/release/v4-f23-pg17-unique-current-quote-remedy-prototype.sh
+      - name: DBA aggregate-only read-only F23 schema preflight after disposable index
+        run: psql -X -v ON_ERROR_STOP=1 -f scripts/release/v4-f23-current-quote-readonly-preflight.sql
