@@ -62,6 +62,16 @@ const quoteCrew=JSON.parse(quoteCrewRaw.toString()) as {
 };
 const resetRaw=read("docs/delivery/sonic-p02-reset-session-closure-successor-20261107.json");
 const resetRetryRaw=read("docs/delivery/sonic-p02-reset-retry-form-suppression-20261107.json");
+
+const signInAuditRaw=read("docs/delivery/sonic-p02-signin-verified-session-successor-20261107.json");
+const signInAudit=JSON.parse(signInAuditRaw.toString()) as {
+ schema:string;batch:string;sourceOnly:boolean;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ sourceChange:{path:string;previousBlob:string;currentBlob:string};
+ newAdversarialTest:{path:string;blob:string;cases:number};
+ focusedWorkflow:{path:string;previousBlob:string;currentBlob:string};
+ requiredGuards:string[];
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -380,7 +390,23 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(hash(read(resetRetry.reviewedPage.path))).toBe(resetRetry.reviewedPage.newBlob);
   expect(hash(read(resetRetry.reviewedTest.path))).toBe(resetRetry.reviewedTest.newBlob);
   expect(resetRetry.focusedWorkflow.oldBlob).toBe("0e1ba6155a55182e25c3831b2f46093037d71dc3");
-  expect(hash(read(resetRetry.focusedWorkflow.path))).toBe(resetRetry.focusedWorkflow.newBlob);
+  expect(hash(signInAuditRaw)).toBe("355217845c497dd3199ebc0cd3bdac58779ff53f");
+  expect(signInAudit.schema).toBe("servicedesk.p02.sign-in-verified-returned-session.v1");
+  expect(signInAudit.predecessor.path).toBe("docs/delivery/sonic-p02-reset-retry-form-suppression-20261107.json");
+  expect(signInAudit.predecessor.unchanged).toBe(true);
+  expect(signInAudit.predecessor.blob).toBe(hash(resetRetryRaw));
+  expect(signInAudit.sourceChange.path).toBe("src/app/auth/sign-in/actions.ts");
+  expect(signInAudit.sourceChange.previousBlob).toBe("17bccf3e88b0935f5fa184fc7e9ffa2225423498");
+  expect(hash(read(signInAudit.sourceChange.path))).toBe(signInAudit.sourceChange.currentBlob);
+  expect(signInAudit.newAdversarialTest.cases).toBe(7);
+  expect(hash(read(signInAudit.newAdversarialTest.path))).toBe(signInAudit.newAdversarialTest.blob);
+  expect(signInAudit.focusedWorkflow.path).toBe(resetRetry.focusedWorkflow.path);
+  expect(signInAudit.focusedWorkflow.previousBlob).toBe(resetRetry.focusedWorkflow.newBlob);
+  expect(hash(read(signInAudit.focusedWorkflow.path))).toBe(signInAudit.focusedWorkflow.currentBlob);
+  expect(read(signInAudit.focusedWorkflow.path).toString())
+    .toContain("tests/e2e/p02-signin-session-outcome.test.ts");
+  expect(signInAudit.requiredGuards).toContain("NO_SUCCESSFUL_AUTH_REDIRECT_WITHOUT_USER_AND_SESSION");
+  expect(signInAudit.requiredGuards).toContain("NO_CONNECTED_SUPABASE_AUTH_WRITE");
   expect(read(resetRetry.focusedWorkflow.path).toString()).toContain("src/app/auth/reset-password/page.tsx");
   expect(resetRetry.guards).toContain("HIDE_REPEAT_PASSWORD_UPDATE_FORM_AFTER_SIGNOUT_FAILURE");
   expect(resetRetry.guards).toContain("NO_DEPLOY");
