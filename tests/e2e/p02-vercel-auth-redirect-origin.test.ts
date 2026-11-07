@@ -4,6 +4,10 @@ import {
   trustedAuthDestination,
   verifiedEmailRedirectOrigin,
 } from "../../src/features/auth/email-origin";
+import {
+  ownerRegistrationMode,
+  ownerRegistrationEmailAllowed,
+} from "../../src/features/auth/owner-registration-readiness";
 
 const previousRender = "https://legacy-servicedesk.onrender.com";
 const approved = "https://approved-servicedesk.vercel.app";
@@ -51,6 +55,42 @@ describe("P02 Vercel auth-origin migration guard", () => {
     expect(trustedAuthDestination("https://attacker.example",env)).toBeNull();
   });
 
+  it("signup readiness must use its injected Vercel runtime, not process-wide fallback", () => {
+    const base = {
+      NEXT_PUBLIC_SUPABASE_URL:"https://fictional-project.supabase.co",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:"sb_publishable_synthetic_only",
+      SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED:"true",
+      SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED:"true",
+      SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS:"owner-qa@example.test",
+      RENDER_EXTERNAL_URL:previousRender,
+    };
+    const onVercel = { ...base, VERCEL:"1" };
+    // An old Render host must not mark a new Vercel owner journey ready.
+    expect(ownerRegistrationMode(onVercel)).toBe("DISABLED");
+    expect(ownerRegistrationEmailAllowed("owner-qa@example.test",onVercel)).toBe(false);
+    expect(ownerRegistrationMode({ ...onVercel,
+      SERVICEDESK_OWNER_REGISTRATION_ENABLED:"true",
+    })).toBe("DISABLED");
+    const approvedVercel = { ...onVercel, SERVICEDESK_AUTH_REDIRECT_ORIGIN:approved };
+    expect(ownerRegistrationMode(approvedVercel)).toBe("QA_ONLY");
+    expect(ownerRegistrationEmailAllowed("owner-qa@example.test",approvedVercel)).toBe(true);
+    expect(ownerRegistrationMode({ ...base, VERCEL:"0" })).toBe("QA_ONLY");
+  });
+
+  it("rejects a bad explicit origin on Vercel even with a legacy Render fallback", () => {
+    const env = {
+      NEXT_PUBLIC_SUPABASE_URL:"https://fictional-project.supabase.co",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:"sb_publishable_synthetic_only",
+      SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED:"true",
+      SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED:"true",
+      SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS:"owner-qa@example.test",
+      VERCEL:"1",
+      RENDER_EXTERNAL_URL:previousRender,
+      SERVICEDESK_AUTH_REDIRECT_ORIGIN:"http://unsafe.example.test",
+    };
+    expect(ownerRegistrationMode(env)).toBe("DISABLED");
+  });
+
   it("both signup and password recovery reuse the same validated origin helper", () => {
     const files=["src/app/auth/sign-up/actions.ts",
       "src/app/auth/forgot-password/actions.ts",
@@ -64,5 +104,8 @@ describe("P02 Vercel auth-origin migration guard", () => {
     expect(origin).toContain('vercelRuntime === "1"');
     expect(origin).toContain("env.VERCEL");
     expect(origin).not.toContain("req.headers.host");
+    const readiness=readFileSync("src/features/auth/owner-registration-readiness.ts","utf8");
+    expect(readiness).toContain("env.VERCEL");
+
   });
 });
