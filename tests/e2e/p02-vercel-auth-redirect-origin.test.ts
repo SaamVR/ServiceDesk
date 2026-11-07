@@ -7,6 +7,8 @@ import {
 import {
   ownerRegistrationMode,
   ownerRegistrationEmailAllowed,
+  ownerRegistrationAvailable,
+  ownerRegistrationPubliclyAvailable,
 } from "../../src/features/auth/owner-registration-readiness";
 
 const previousRender = "https://legacy-servicedesk.onrender.com";
@@ -76,6 +78,30 @@ describe("P02 Vercel auth-origin migration guard", () => {
     expect(ownerRegistrationMode(approvedVercel)).toBe("QA_ONLY");
     expect(ownerRegistrationEmailAllowed("owner-qa@example.test",approvedVercel)).toBe(true);
     expect(ownerRegistrationMode({ ...base, VERCEL:"0" })).toBe("QA_ONLY");
+  });
+
+  it("denies conflicting public and QA-only enable flags before any sign-up", () => {
+    const base = {
+      NODE_ENV:"test" as const,
+      NEXT_PUBLIC_SUPABASE_URL:"https://fictional-project.supabase.co",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:"sb_publishable_synthetic_only",
+      SERVICEDESK_AUTH_REDIRECT_ORIGIN:approved,
+      SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED:"true",
+      SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS:"owner-qa@example.test",
+      VERCEL:"1",
+    };
+    const qa = {...base, SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED:"true"};
+    const publicOnly = {...base, SERVICEDESK_OWNER_REGISTRATION_ENABLED:"true"};
+    const contradictory = {...qa, SERVICEDESK_OWNER_REGISTRATION_ENABLED:"true"};
+    expect(ownerRegistrationMode(qa)).toBe("QA_ONLY");
+    expect(ownerRegistrationMode(publicOnly)).toBe("PUBLIC");
+    expect(ownerRegistrationMode(contradictory)).toBe("DISABLED");
+    expect(ownerRegistrationAvailable(contradictory)).toBe(false);
+    expect(ownerRegistrationPubliclyAvailable(contradictory)).toBe(false);
+    expect(ownerRegistrationEmailAllowed("owner-qa@example.test",contradictory)).toBe(false);
+    expect(ownerRegistrationEmailAllowed("stranger@example.test",contradictory)).toBe(false);
+    expect(ownerRegistrationMode({...contradictory, SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS:""}))
+      .toBe("DISABLED");
   });
 
   it("rejects a bad explicit origin on Vercel even with a legacy Render fallback", () => {
