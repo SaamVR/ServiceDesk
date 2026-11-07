@@ -1,5 +1,7 @@
 import {readFileSync} from "node:fs";
 import {describe,expect,it} from "vitest";
+import {createQuoteSnapshot,defaultRateCard,type QuoteSnapshot} from "../../src/domain/quote";
+import {createQuoteDraftWithRepository} from "../../src/server/core/quotes";
 
 const read=(file:string)=>readFileSync(file,"utf8");
 
@@ -34,6 +36,38 @@ describe("F23 independent DBA critic: current quote uniqueness must be proven, n
   const gateway=read("src/server/core/quote-repository.ts");
   expect(gateway).toContain("async supersedeQuote(");
   expect(gateway).toContain("async saveQuote(");
+ });
+ it("reproduces a legacy split-write failure without pretending it was a database transaction",async()=>{
+  const now="2026-10-04T06:00:00.000Z";
+  const prior=createQuoteSnapshot({
+   id:"quote-existing",workspaceId:"fictional-workspace",requestId:"fictional-request",
+   serviceCode:"STANDARD",bedrooms:1,bathrooms:1,now,
+  },defaultRateCard);
+  let priorSavedStatus:QuoteSnapshot["status"]="APPROVED";
+  let successorSaved=false;
+  const repo={
+   nextQuoteId:()=>"quote-successor",
+   findById:async()=>undefined,
+   findLatestByRequest:async()=>({...prior,status:priorSavedStatus}),
+   supersedeQuote:async(id:string)=>{
+    expect(id).toBe("quote-existing");
+    priorSavedStatus="SUPERSEDED";
+   },
+   saveQuote:async()=>{
+    // Simulate the SECOND independent repository operation failing.
+    successorSaved=false;
+    throw new Error("FICTIONAL_SUCCESSOR_INSERT_FAILED");
+   },
+   updateQuoteStatus:async()=>undefined,
+  };
+  await expect(createQuoteDraftWithRepository(repo,{
+   workspaceId:"fictional-workspace",requestId:"fictional-request",
+   serviceCode:"STANDARD",bedrooms:2,bathrooms:1,now,
+  })).rejects.toThrow("FICTIONAL_SUCCESSOR_INSERT_FAILED");
+  expect(priorSavedStatus).toBe("SUPERSEDED");
+  expect(successorSaved).toBe(false);
+  // This intentionally demonstrates the unrolled-back OLD quote state of
+  // the legacy interface. NO real DB mutated; this is a RELEASE VETO witness.
  });
  it("preserves the F23 sibling-insert veto and keeps proposed index out of migrations",()=>{
   const candidate=read("docs/engineering/security/f23-atomic-hold-release-rpc-candidate.sql");
