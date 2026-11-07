@@ -72,7 +72,7 @@ export default async function CreateWorkspacePage({
         </div>
         <div className={styles.field}>
           <label htmlFor="workspace-currency">Invoice currency</label>
-          <select id="workspace-currency" name="currency" defaultValue="USD" required>
+          <select id="workspace-currency" name="currency" defaultValue="USD" required aria-describedby="workspace-currency-hint">
             <option value="USD">USD · US Dollar</option>
             <option value="GBP">GBP · British Pound</option>
             <option value="EUR">EUR · Euro</option>
@@ -80,6 +80,12 @@ export default async function CreateWorkspacePage({
             <option value="AUD">AUD · Australian Dollar</option>
             <option value="BDT">BDT · Bangladeshi Taka</option>
           </select>
+          <p id="workspace-currency-hint" className={styles.help} role="note">
+            First-run cleaning pricing currently supports USD branches only.
+            Choosing another billing currency is permitted, but does not enable
+            first-run cleaning rates or certify quote readiness for that currency.
+            Do not choose USD unless your business actually bills in USD.
+          </p>
         </div>
         <button className={styles.submit} type="submit">Create my workspace <span aria-hidden="true">→</span></button>
       </form>
