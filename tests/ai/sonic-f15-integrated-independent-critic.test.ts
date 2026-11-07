@@ -173,7 +173,11 @@ const malformedOwnerSlug=JSON.parse(malformedOwnerSlugRaw.toString()) as {
 };
 // Historical source bytes remain compared against their exact reviewed blob.
 // Only the two named current paths can advance by this reviewed successor.
-const expectedCurrentOwnerSlugBlob=(path:string,previous:string):string=>{
+const expectedCurrentOwnerSlugBlob=(path:string,previous:string|undefined):string=>{
+ // Optional historical expression must resolve to a reviewed SHA; fail closed
+ // instead of treating an absent pin as an acceptable successor.
+ if (typeof previous !== "string" || !/^[a-f0-9]{40}$/.test(previous))
+   throw new Error("Missing reviewed P02 source SHA: " + path);
  const successor=malformedOwnerSlug.changedSource.find(item=>item.path===path);
  if (!successor) return previous;
  expect(successor.previousBlob,path).toBe(previous);
