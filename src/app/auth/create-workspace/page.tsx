@@ -68,7 +68,7 @@ export default async function CreateWorkspacePage({
           Do not submit another workspace registration until you check the saved result.{" "}
           <Link href="/auth/continue">Check your authorized workspaces</Link> before trying again.
         </p>
-      ) : null
+      ) : null}
       <form className={styles.form} action={createOwnerWorkspace}>
         <div className={styles.field}>
           <label htmlFor="business-name">Business name</label>

@@ -114,6 +114,16 @@ const uncertainRegistration=JSON.parse(uncertainRegistrationRaw.toString()) as {
  workflowUnchanged:{path:string;blob:string;unchanged:boolean};
  requiredGuards:string[];acceptanceState:string;
 };
+const recoveryJsxRaw=read("docs/delivery/sonic-p02-uncertain-registration-jsx-correction-20261108.json");
+const recoveryJsx=JSON.parse(recoveryJsxRaw.toString()) as {
+ schema:string;batchId:string;sourceOnly:boolean;parentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;fix:string}>;
+ qaSourceUnchanged:{path:string;blob:string;unchanged:boolean};
+ guardSourceUnchanged:{path:string;blob:string;unchanged:boolean};
+ workflowUnchanged:{path:string;blob:string;unchanged:boolean};
+ mustRetain:string[];acceptance:string;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -234,12 +244,14 @@ describe("F15 independent critic: no new composite, exact source and default-den
    // The historical P02/P03 pins remain true; only this additive successor can supersede.
    const navSuccessor=postConfirmNavigation.changedSource.find(x=>x.path===source.path);
    const recoverySuccessor=uncertainRegistration.changedSource.find(x=>x.path===source.path);
+   const pageCorrection=recoveryJsx.changedSource.find(x=>x.path===source.path);
    if(navSuccessor)expect(navSuccessor.previousBlob,source.path)
      .toBe(transport?.currentBlob??replacement?.currentBlob??source.blob);
    if(recoverySuccessor)expect(recoverySuccessor.previousBlob,source.path)
      .toBe(navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
+   if(pageCorrection)expect(pageCorrection.previousBlob,source.path).toBe(recoverySuccessor?.currentBlob);
    expect(gitHash(read(source.path)),source.path)
-     .toBe(recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
+     .toBe(pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
   }
   // Separate independent source successor for actual post-confirm owner routing.
    expect(postConfirmNavigation.schema).toBe("servicedesk.p02.post-confirm-owner-navigation-transport-successor.v1");
@@ -275,8 +287,10 @@ describe("F15 independent critic: no new composite, exact source and default-den
    for(const change of postConfirmNavigation.changedSource){
      expect(change.path).not.toContain("..");
      const recovery=uncertainRegistration.changedSource.find(item=>item.path===change.path);
+     const corrected=recoveryJsx.changedSource.find(item=>item.path===change.path);
      if(recovery)expect(recovery.previousBlob,change.path).toBe(change.currentBlob);
-     expect(gitHash(read(change.path)),change.path).toBe(recovery?.currentBlob??change.currentBlob);
+     if(corrected)expect(corrected.previousBlob,change.path).toBe(recovery?.currentBlob);
+     expect(gitHash(read(change.path)),change.path).toBe(corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
    }
    expect(postConfirmNavigation.tests).toEqual({"path":"tests/e2e/p02-workspace-error-origin.test.ts","newCases":13,"totalCases":19,"scope":"SYNTHETIC_POST_CONFIRMATION_ENTRYPOINT_NO_LIVE_JWT"});
    expect(postConfirmNavigation.unchangedAuthorizationHelper).toEqual({"path":"src/features/auth/authorized-workspace-access.ts","blob":"9fb078e8be2d75491d2ff630e99857cdec391ee2","unchanged":true});
@@ -312,7 +326,9 @@ describe("F15 independent critic: no new composite, exact source and default-den
    ]);
    for(const source of uncertainRegistration.changedSource) {
      expect(source.path).not.toContain("..");
-     expect(gitHash(read(source.path)),source.path).toBe(source.currentBlob);
+     const corrected=recoveryJsx.changedSource.find(item=>item.path===source.path);
+     if(corrected)expect(corrected.previousBlob,source.path).toBe(source.currentBlob);
+     expect(gitHash(read(source.path)),source.path).toBe(corrected?.currentBlob??source.currentBlob);
    }
    expect(uncertainRegistration.testCases).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",prior:19,current:21,newCases:2,scope:"SYNTHETIC_UI_RECOVERY_NO_CONNECTED_DB"});
    expect(uncertainRegistration.actionUnchanged.path).toBe("src/app/auth/create-workspace/actions.ts");
@@ -324,6 +340,27 @@ describe("F15 independent critic: no new composite, exact source and default-den
    for(const guard of ["NO_SECOND_REGISTRATION_RPC","NO_CONNECTED_AUTH_OR_DB_WRITE","NO_DEPLOY","P02_REMAINS_2_OF_7"])
       expect(uncertainRegistration.requiredGuards).toContain(guard);
    expect(uncertainRegistration.acceptanceState).toBe("INTEGRATED_SOURCE_ONLY_NOT_REAL_TWO_OWNER_AUTHENTICATED_ACCEPTANCE");
+   // Failed build's source is retained exactly; corrected page has a new
+   // reviewed successor rather than a rewritten predecessor or weaker critic.
+   expect(gitHash(uncertainRegistrationRaw)).toBe("f7ecb97302c8b0bba90ed9c0bf5350ad744077f5");
+   expect(recoveryJsx.schema).toBe("servicedesk.p02.uncertain-registration-jsx-verified-successor.v1");
+   expect(recoveryJsx.batchId).toBe("P02-UNKNOWN-RPC-RECOVERY-JSX-SYNTAX-CORRECTION-20261108");
+   expect(recoveryJsx.sourceOnly).toBe(true);
+   expect(recoveryJsx.parentHead).toBe("8ec0894a7b643f1da10a02b6a0cab6f4c67f9023");
+   expect(recoveryJsx.predecessor).toEqual({path:"docs/delivery/sonic-p02-uncertain-registration-recovery-successor-20261108.json",blob:"f7ecb97302c8b0bba90ed9c0bf5350ad744077f5",unchanged:true});
+   expect(recoveryJsx.predecessor.blob).toBe(gitHash(uncertainRegistrationRaw));
+   expect(recoveryJsx.changedSource).toEqual([{
+     path:"src/app/auth/create-workspace/page.tsx",previousBlob:"49499b2cbb7e230765b7097f1f67b5f12578156e",currentBlob:"6d424726cd36e6c6bef7b36e174019235a72004c",
+     fix:"CLOSE_JSX_CONDITIONAL_WITHOUT_CHANGING_OWNER_RECOVERY_COPY"
+   }]);
+   for(const check of [recoveryJsx.qaSourceUnchanged,recoveryJsx.guardSourceUnchanged,recoveryJsx.workflowUnchanged]){
+     expect(gitHash(read(check.path)),check.path).toBe(check.blob);
+   }
+   expect(recoveryJsx.mustRetain).toContain("P02_OPEN_2_OF_7");
+   expect(recoveryJsx.mustRetain).toContain("NO_CONNECTED_DB_WRITE");
+   expect(recoveryJsx.mustRetain).toContain("NO_DEPLOY");
+   expect(recoveryJsx.acceptance).toBe("PENDING_EXACT_HEAD_CI_SOURCE_ONLY");
+
 
   const pricingGuard=p03Currency.safetySourceUnchanged;
   expect(gitHash(read(pricingGuard.path))).toBe(pricingGuard.blob);
