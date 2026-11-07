@@ -40,8 +40,16 @@ export default async function CreateWorkspacePage({
   const client = createServerClient(url, key, {
     cookies: { getAll() { return store.getAll(); }, setAll() {} },
   });
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user?.email_confirmed_at) {
+  // Page render is only a form preview, never an authorization grant. Still,
+  // an Auth outage must fail closed instead of crashing the owner setup step.
+  let identity: Awaited<ReturnType<typeof client.auth.getUser>> | null = null;
+  try {
+    identity = await client.auth.getUser();
+  } catch {
+    identity = null;
+  }
+  if (!identity || identity.error || !identity.data?.user?.id ||
+      !identity.data.user.email_confirmed_at) {
     redirect("/auth/sign-in?next=" + encodeURIComponent("/auth/create-workspace"));
   }
 

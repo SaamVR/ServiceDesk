@@ -1,7 +1,47 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { trustedWorkspaceRegistrationError } from "../../src/features/auth/workspace-registration-error";
 import { validateWorkspaceFields } from "../../src/features/auth/registration";
+import { GET as continueOwnerJourney } from "../../src/app/auth/continue/route";
+import CreateWorkspacePage from "../../src/app/auth/create-workspace/page";
+
+const ownerNavigation = vi.hoisted(() => ({
+  getUser: vi.fn(), membership: vi.fn(), workspace: vi.fn(), customers: vi.fn(),
+}));
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ getAll: () => [], setAll: () => undefined }),
+}));
+vi.mock("next/navigation", () => ({
+  redirect: (path: string): never => { throw Error("MOCK_REDIRECT:" + path); },
+}));
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: () => ({
+    auth: { getUser: ownerNavigation.getUser },
+    from(table: string) {
+      return {
+        select() { return this; },
+        eq() { return this; },
+        in() { return this; },
+        limit(count: number) {
+          if (table === "memberships") {
+            expect(count).toBe(101);
+            return ownerNavigation.membership();
+          }
+          if (table === "workspaces") {
+            expect(count).toBe(101);
+            return ownerNavigation.workspace();
+          }
+          if (table === "customers") {
+            expect(count).toBe(1);
+            return ownerNavigation.customers();
+          }
+          throw Error("UNEXPECTED_TABLE");
+        },
+      };
+    },
+  }),
+}));
+
 
 describe("P02 bounded workspace setup error presentation", () => {
   it("preserves intended server-originated registration messages", () => {
@@ -79,4 +119,148 @@ describe("P02 bounded workspace setup error presentation", () => {
     expect(page).not.toContain('name="currency" type="hidden"');
   });
 
+});
+
+const syntheticOwner = "11111111-1111-4111-8111-111111111111";
+const syntheticWorkspace = "33333333-3333-4333-8333-333333333333";
+const expectedHost = "https://approved-preview.example.test";
+
+function ownerTarget(response: Response) {
+  expect(response.status).toBe(303);
+  expect(response.headers.get("cache-control")).toBe("private, no-store");
+  const url = new URL(response.headers.get("location")!);
+  expect(url.origin).toBe(expectedHost);
+  return url;
+}
+
+describe("P02 post-confirmation owner navigation: real entrypoints fail closed", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic-project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_synthetic_only");
+    vi.stubEnv("SERVICEDESK_AUTH_REDIRECT_ORIGIN", expectedHost);
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("RENDER_EXTERNAL_URL", "https://legacy-preview.onrender.com");
+    vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED", "true");
+    vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED", "true");
+    vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_ENABLED", "false");
+    vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS", "approved@example.test");
+    ownerNavigation.getUser.mockReset().mockResolvedValue({
+      data: { user: { id: syntheticOwner, email: "approved@example.test",
+        email_confirmed_at: "2026-11-07T00:00:00Z" } }, error: null,
+    });
+    ownerNavigation.membership.mockReset().mockResolvedValue({ data: [], error: null });
+    ownerNavigation.workspace.mockReset().mockResolvedValue({ data: [], error: null });
+    ownerNavigation.customers.mockReset().mockResolvedValue({ data: [], error: null });
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("routes a thrown Auth identity response to a bounded login error, never a 500", async () => {
+    ownerNavigation.getUser.mockRejectedValueOnce(Error("PRIVATE_AUTH_TRANSPORT_TOKEN"));
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/sign-in");
+    expect(target.searchParams.get("error")).toBe("Sign in is temporarily unavailable.");
+    expect(target.href).not.toContain("PRIVATE_AUTH_TRANSPORT_TOKEN");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("refuses an error-free but userless session without navigating to registration", async () => {
+    ownerNavigation.getUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+    expect(ownerTarget(await continueOwnerJourney()).pathname).toBe("/auth/sign-in");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+  });
+
+  it("routes an unconfirmed identity back to verification rather than owner setup", async () => {
+    ownerNavigation.getUser.mockResolvedValueOnce({
+      data: { user: { id: syntheticOwner, email_confirmed_at: null } }, error: null,
+    });
+    expect(ownerTarget(await continueOwnerJourney()).pathname).toBe("/auth/sign-up/check-email");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+  });
+
+  it("denies a thrown tenant membership RLS transport read without customer or workspace fallback", async () => {
+    ownerNavigation.membership.mockRejectedValueOnce(Error("PRIVATE_MEMBERSHIP_TRANSPORT"));
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/sign-in");
+    expect(target.searchParams.get("error")).toBe("Workspace lookup unavailable");
+    expect(target.href).not.toContain("PRIVATE");
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("denies a thrown workspace RLS query for an otherwise confirmed owner", async () => {
+    ownerNavigation.membership.mockResolvedValueOnce({
+      data: [{ workspace_id: syntheticWorkspace, user_id: syntheticOwner,
+        role: "OWNER", status: "ACTIVE" }], error: null,
+    });
+    ownerNavigation.workspace.mockRejectedValueOnce(Error("PRIVATE_WORKSPACE_TRANSPORT"));
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/sign-in");
+    expect(target.searchParams.get("error")).toBe("Workspace lookup unavailable");
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("refuses a thrown customer lookup, never inferring the owner needs a new workspace", async () => {
+    ownerNavigation.customers.mockRejectedValueOnce(Error("PRIVATE_CUSTOMER_NETWORK"));
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/sign-in");
+    expect(target.searchParams.get("error")).toBe("Account lookup unavailable");
+    expect(target.pathname).not.toBe("/auth/create-workspace");
+  });
+
+  it("refuses an error-free but unverified customer-row shape", async () => {
+    ownerNavigation.customers.mockResolvedValueOnce({ data: null, error: null });
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/sign-in");
+    expect(target.searchParams.get("error")).toBe("Account lookup unavailable");
+  });
+
+  it("preserves genuine first-time owner setup after verified absence of workspace and customer rows", async () => {
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/create-workspace");
+    expect(ownerNavigation.membership).toHaveBeenCalledTimes(1);
+    expect(ownerNavigation.customers).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves the authenticated customer portal path without owner registration", async () => {
+    ownerNavigation.customers.mockResolvedValueOnce({
+      data: [{ id: "44444444-4444-4444-8444-444444444444" }], error: null,
+    });
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/portal");
+  });
+
+  it("preserves already-authorized owner navigation ahead of customer lookup", async () => {
+    ownerNavigation.membership.mockResolvedValueOnce({
+      data: [{ workspace_id: syntheticWorkspace, user_id: syntheticOwner,
+        role: "OWNER", status: "ACTIVE" }], error: null,
+    });
+    ownerNavigation.workspace.mockResolvedValueOnce({
+      data: [{ id: syntheticWorkspace, slug: "synthetic-cleaning", name: "Synthetic Cleaning" }],
+      error: null,
+    });
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).not.toBe("/auth/create-workspace");
+    expect(target.pathname).not.toBe("/auth/sign-in");
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("denies workspace setup page when Auth identity lookup throws", async () => {
+    ownerNavigation.getUser.mockRejectedValueOnce(Error("PRIVATE_PAGE_AUTH"));
+    await expect(CreateWorkspacePage({ searchParams: Promise.resolve({}) }))
+      .rejects.toThrow("MOCK_REDIRECT:/auth/sign-in?next=%2Fauth%2Fcreate-workspace");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+  });
+
+  it("denies workspace setup page for a null/partial identity", async () => {
+    ownerNavigation.getUser.mockResolvedValueOnce({ data: null, error: null });
+    await expect(CreateWorkspacePage({ searchParams: Promise.resolve({}) }))
+      .rejects.toThrow("MOCK_REDIRECT:/auth/sign-in?next=%2Fauth%2Fcreate-workspace");
+  });
+
+  it("preserves the approved, verified owner workspace form and currency warning", async () => {
+    const form = await CreateWorkspacePage({ searchParams: Promise.resolve({}) });
+    expect(form.props.title).toBe("Make it yours.");
+    expect(form.props.children).toBeTruthy();
+    expect(ownerNavigation.getUser).toHaveBeenCalledTimes(1);
+  });
 });

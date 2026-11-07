@@ -93,6 +93,17 @@ const signupUserReceipt=JSON.parse(signupUserReceiptRaw.toString()) as {
   unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
   requiredGuards:string[];acceptanceState:string;
 };
+const postConfirmNavigationRaw=read("docs/delivery/sonic-p02-post-confirm-navigation-transport-successor-20261107.json");
+const postConfirmNavigation=JSON.parse(postConfirmNavigationRaw.toString()) as {
+ schema:string;batchId:string;chat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ historicCurrencyUx:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ tests:{path:string;newCases:number;totalCases:number;scope:string};
+ unchangedAuthorizationHelper:{path:string;blob:string;unchanged:boolean};
+ unchangedIntegratedWorkflow:{path:string;blob:string;unchanged:boolean};
+ requiredGuards:string[];acceptanceState:string;nextBatch:string;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -210,10 +221,65 @@ describe("F15 independent critic: no new composite, exact source and default-den
    if(replacement)expect(replacement.previousBlob,source.path).toBe(source.blob);
    const transport=workspaceTransport.changedSource.find(x=>x.path===source.path);
    if(transport)expect(transport.previousBlob,source.path).toBe(replacement?.currentBlob??source.blob);
-   expect(gitHash(read(source.path)),source.path)
+   // The historical P02/P03 pins remain true; only this additive successor can supersede.
+   const navSuccessor=postConfirmNavigation.changedSource.find(x=>x.path===source.path);
+   if(navSuccessor)expect(navSuccessor.previousBlob,source.path)
      .toBe(transport?.currentBlob??replacement?.currentBlob??source.blob);
+   expect(gitHash(read(source.path)),source.path)
+     .toBe(navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
   }
-  expect(workspaceTransport.invariants).toContain("NO_AUTOMATIC_SECOND_REGISTRATION_ATTEMPT");
+  // Separate independent source successor for actual post-confirm owner routing.
+   expect(postConfirmNavigation.schema).toBe("servicedesk.p02.post-confirm-owner-navigation-transport-successor.v1");
+   expect(postConfirmNavigation.batchId).toBe("P02-AUTH-CONTINUE-OWNER-SETUP-NETWORK-FAIL-CLOSED-20261107");
+   expect(postConfirmNavigation.sourceOnly).toBe(true);
+   expect(postConfirmNavigation.chat).toBe("PRODUCTION");
+   expect(postConfirmNavigation.reviewedParentHead).toBe("e28e069879f463f91757ebb83b632dfc13f48ff0");
+   expect(postConfirmNavigation.predecessor).toEqual({"path":"docs/delivery/sonic-p02-signup-user-receipt-successor-20261107.json","blob":"96a70397dbbf60f8ab3f8a6ab5617e754b2d0b83","unchanged":true});
+   expect(postConfirmNavigation.predecessor.blob).toBe(gitHash(signupUserReceiptRaw));
+   expect(postConfirmNavigation.historicCurrencyUx).toEqual({"path":"docs/delivery/sonic-p03-currency-first-run-ux-source-successor-20261107.json","blob":"d7648d1fd14e3e58f584cb0f03e5a386e4c3087d","unchanged":true});
+   expect(postConfirmNavigation.historicCurrencyUx.blob).toBe(gitHash(p03CurrencyRaw));
+   expect(postConfirmNavigation.changedSource).toEqual([
+  {
+    "path": "src/app/auth/continue/route.ts",
+    "previousBlob": "1c015d329feb08f2c260b40715b8b3a5bb154cca",
+    "currentBlob": "4bb3d1fa077393ff67fe759a24fd651aeb563ab1",
+    "lane": "AUTH_ENGINEERING"
+  },
+  {
+    "path": "src/app/auth/create-workspace/page.tsx",
+    "previousBlob": "9c02eee0f20cc9711b37176d95eef7caf6c285c0",
+    "currentBlob": "18219d81539c44883e7ea856cf12dbafc8a97c70",
+    "lane": "ONBOARDING_UI"
+  },
+  {
+    "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+    "previousBlob": "7a429027bb8f9d854727de567115be9b8fa6c820",
+    "currentBlob": "d27a237c19ad5029816d2c0d4b23888026f3b1e6",
+    "lane": "QA_INDEPENDENT_NEGATIVES"
+  }
+]);
+   expect(new Set(postConfirmNavigation.changedSource.map(x=>x.path)).size).toBe(3);
+   for(const change of postConfirmNavigation.changedSource){
+     expect(change.path).not.toContain("..");
+     expect(gitHash(read(change.path)),change.path).toBe(change.currentBlob);
+   }
+   expect(postConfirmNavigation.tests).toEqual({"path":"tests/e2e/p02-workspace-error-origin.test.ts","newCases":13,"totalCases":19,"scope":"SYNTHETIC_POST_CONFIRMATION_ENTRYPOINT_NO_LIVE_JWT"});
+   expect(postConfirmNavigation.unchangedAuthorizationHelper).toEqual({"path":"src/features/auth/authorized-workspace-access.ts","blob":"9fb078e8be2d75491d2ff630e99857cdec391ee2","unchanged":true});
+   expect(gitHash(read(postConfirmNavigation.unchangedAuthorizationHelper.path)))
+     .toBe(postConfirmNavigation.unchangedAuthorizationHelper.blob);
+   expect(postConfirmNavigation.unchangedIntegratedWorkflow).toEqual({"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true});
+   expect(gitHash(read(postConfirmNavigation.unchangedIntegratedWorkflow.path)))
+     .toBe(postConfirmNavigation.unchangedIntegratedWorkflow.blob);
+   for(const guard of ["NO_SERVER_500_ON_THROWN_AUTH_GETUSER",
+     "NO_WORKSPACE_ROUTE_AFTER_MEMBERSHIP_TRANSPORT_ERROR",
+     "NO_OWNER_REGISTRATION_AFTER_CUSTOMER_LOOKUP_TRANSPORT_ERROR",
+     "NO_WORKSPACE_FORM_WITHOUT_VERIFIED_USER",
+     "NO_CONNECTED_AUTH_OR_DB_WRITE","NO_VERCEL_DEPLOY_OR_CANONICAL_MERGE"])
+     expect(postConfirmNavigation.requiredGuards).toContain(guard);
+   expect(postConfirmNavigation.acceptanceState)
+     .toBe("INTEGRATION_SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_JWT_RLS_ACCEPTANCE");
+   expect(postConfirmNavigation.nextBatch).toBe("P02_818_TWO_OWNER_SIGNED_IN_ACCEPTANCE_PERMISSION_BLOCKED");
+   expect(workspaceTransport.invariants).toContain("NO_AUTOMATIC_SECOND_REGISTRATION_ATTEMPT");
   expect(workspaceTransport.invariants).toContain("P02_REMAINS_OPEN");
   const pricingGuard=p03Currency.safetySourceUnchanged;
   expect(gitHash(read(pricingGuard.path))).toBe(pricingGuard.blob);
