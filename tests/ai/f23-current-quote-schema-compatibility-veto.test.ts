@@ -79,7 +79,7 @@ describe("F23 independent DBA critic: current quote uniqueness must be proven, n
   expect(witness).toContain("F23_KNOWN_UNSAFE_SIBLING_QUOTE_PHANTOM_REPRODUCED_RELEASE_VETO");
   expect(prototype).toContain("create unique index sd_f23_review_only_one_current_quote");
   expect(review).toContain("REVIEW ONLY");
-  expect(review).toContain("existing quotes");
+  expect(review).toContain("existing duplicates");
   expect(review).toContain("super");
   expect(read("src/server/workflows/owner-verified-quote-hold-release.ts"))
    .toContain('SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED');
