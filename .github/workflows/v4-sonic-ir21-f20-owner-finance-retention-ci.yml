@@ -367,3 +367,5 @@ jobs:
         run: bash scripts/release/v4-f23-pg17-quote-supersession-race.sh
       - name: Native F23 crew branch reassignment/release lock races
         run: bash scripts/release/v4-f23-pg17-crew-branch-race.sh
+      - name: SECURITY VETO evidence - witness sibling quote phantom (NOT acceptance)
+        run: bash scripts/release/v4-f23-pg17-sibling-quote-phantom-witness.sh
