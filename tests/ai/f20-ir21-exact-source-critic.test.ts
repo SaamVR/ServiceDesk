@@ -160,6 +160,14 @@ const ownerQaWitness=JSON.parse(ownerQaWitnessRaw.toString()) as {
  testCount:number;productionSourceUnchanged:Array<{path:string;blob:string;unchanged:boolean}>;
  guard:string[];state:string;
 };
+const qaFixtureScopeRaw=read("docs/delivery/sonic-p02-owner-navigation-fixture-scope-correction-20261108.json");
+const qaFixtureScope=JSON.parse(qaFixtureScopeRaw.toString()) as {
+ schema:string;batchId:string;sourceOnly:boolean;parentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;reason:string}>;
+ testCount:number;productionSourceUnchanged:Array<{path:string;blob:string;unchanged:boolean}>;
+ guards:string[];acceptance:string;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -284,6 +292,7 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    const ownerRlsVeto=activeOwnerRls.changedSource.find(x=>x.path===source.path);
    const ownerNavigation=ownerNavigationGuard.changedSource.find(x=>x.path===source.path);
    const qaWitness=ownerQaWitness.changedSource.find(x=>x.path===source.path);
+   const fixtureFix=qaFixtureScope.changedSource.find(x=>x.path===source.path);
    if(navSuccessor)expect(navSuccessor.previousBlob,source.path)
      .toBe(transport?.currentBlob??replacement?.currentBlob??source.blob);
    if(recoverySuccessor)expect(recoverySuccessor.previousBlob,source.path)
@@ -294,8 +303,9 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    if(ownerNavigation)expect(ownerNavigation.previousBlob,source.path)
      .toBe(ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
    if(qaWitness)expect(qaWitness.previousBlob,source.path).toBe(ownerNavigation?.currentBlob);
+   if(fixtureFix)expect(fixtureFix.previousBlob,source.path).toBe(qaWitness?.currentBlob);
    expect(hash(read(source.path)),source.path)
-     .toBe(qaWitness?.currentBlob??ownerNavigation?.currentBlob??ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
+     .toBe(fixtureFix?.currentBlob??qaWitness?.currentBlob??ownerNavigation?.currentBlob??ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
   }
   // Separate independent source successor for actual post-confirm owner routing.
    expect(postConfirmNavigation.schema).toBe("servicedesk.p02.post-confirm-owner-navigation-transport-successor.v1");
@@ -335,14 +345,16 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      const ownerVeto=activeOwnerRls.changedSource.find(item=>item.path===change.path);
      const latestNav=ownerNavigationGuard.changedSource.find(item=>item.path===change.path);
      const qaWitness=ownerQaWitness.changedSource.find(item=>item.path===change.path);
+     const fixtureFix=qaFixtureScope.changedSource.find(item=>item.path===change.path);
      if(recovery)expect(recovery.previousBlob,change.path).toBe(change.currentBlob);
      if(corrected)expect(corrected.previousBlob,change.path).toBe(recovery?.currentBlob);
      if(ownerVeto)expect(ownerVeto.previousBlob,change.path).toBe(corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
      if(latestNav)expect(latestNav.previousBlob,change.path)
        .toBe(ownerVeto?.currentBlob??corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
      if(qaWitness)expect(qaWitness.previousBlob,change.path).toBe(latestNav?.currentBlob);
+     if(fixtureFix)expect(fixtureFix.previousBlob,change.path).toBe(qaWitness?.currentBlob);
      expect(hash(read(change.path)),change.path)
-       .toBe(qaWitness?.currentBlob??latestNav?.currentBlob??ownerVeto?.currentBlob??corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
+       .toBe(fixtureFix?.currentBlob??qaWitness?.currentBlob??latestNav?.currentBlob??ownerVeto?.currentBlob??corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
    }
    expect(postConfirmNavigation.tests).toEqual({"path":"tests/e2e/p02-workspace-error-origin.test.ts","newCases":13,"totalCases":19,"scope":"SYNTHETIC_POST_CONFIRMATION_ENTRYPOINT_NO_LIVE_JWT"});
    expect(postConfirmNavigation.unchangedAuthorizationHelper).toEqual({"path":"src/features/auth/authorized-workspace-access.ts","blob":"9fb078e8be2d75491d2ff630e99857cdec391ee2","unchanged":true});
@@ -384,12 +396,14 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      const ownerVeto=activeOwnerRls.changedSource.find(item=>item.path===source.path);
      const latestNav=ownerNavigationGuard.changedSource.find(item=>item.path===source.path);
      const qaWitness=ownerQaWitness.changedSource.find(item=>item.path===source.path);
+     const fixtureFix=qaFixtureScope.changedSource.find(item=>item.path===source.path);
      if(corrected)expect(corrected.previousBlob,source.path).toBe(source.currentBlob);
      if(ownerVeto)expect(ownerVeto.previousBlob,source.path).toBe(corrected?.currentBlob??source.currentBlob);
      if(latestNav)expect(latestNav.previousBlob,source.path).toBe(ownerVeto?.currentBlob??corrected?.currentBlob??source.currentBlob);
      if(qaWitness)expect(qaWitness.previousBlob,source.path).toBe(latestNav?.currentBlob);
+     if(fixtureFix)expect(fixtureFix.previousBlob,source.path).toBe(qaWitness?.currentBlob);
      expect(hash(read(source.path)),source.path)
-       .toBe(qaWitness?.currentBlob??latestNav?.currentBlob??ownerVeto?.currentBlob??corrected?.currentBlob??source.currentBlob);
+       .toBe(fixtureFix?.currentBlob??qaWitness?.currentBlob??latestNav?.currentBlob??ownerVeto?.currentBlob??corrected?.currentBlob??source.currentBlob);
    }
    expect(uncertainRegistration.testCases).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",prior:19,current:21,newCases:2,scope:"SYNTHETIC_UI_RECOVERY_NO_CONNECTED_DB"});
    expect(uncertainRegistration.actionUnchanged.path).toBe("src/app/auth/create-workspace/actions.ts");
@@ -418,10 +432,12 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      const ownerVeto=activeOwnerRls.changedSource.find(item=>item.path===check.path);
      const latestNav=ownerNavigationGuard.changedSource.find(item=>item.path===check.path);
      const qaWitness=ownerQaWitness.changedSource.find(item=>item.path===check.path);
+     const fixtureFix=qaFixtureScope.changedSource.find(item=>item.path===check.path);
      if(ownerVeto)expect(ownerVeto.previousBlob,check.path).toBe(check.blob);
      if(latestNav)expect(latestNav.previousBlob,check.path).toBe(ownerVeto?.currentBlob??check.blob);
      if(qaWitness)expect(qaWitness.previousBlob,check.path).toBe(latestNav?.currentBlob);
-     expect(hash(read(check.path)),check.path).toBe(qaWitness?.currentBlob??latestNav?.currentBlob??ownerVeto?.currentBlob??check.blob);
+     if(fixtureFix)expect(fixtureFix.previousBlob,check.path).toBe(qaWitness?.currentBlob);
+     expect(hash(read(check.path)),check.path).toBe(fixtureFix?.currentBlob??qaWitness?.currentBlob??latestNav?.currentBlob??ownerVeto?.currentBlob??check.blob);
    }
    expect(recoveryJsx.mustRetain).toContain("P02_OPEN_2_OF_7");
    expect(recoveryJsx.mustRetain).toContain("NO_CONNECTED_DB_WRITE");
@@ -447,7 +463,9 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      if(latestNav)expect(latestNav.previousBlob,changed.path).toBe(changed.currentBlob);
      const qaWitness=ownerQaWitness.changedSource.find(item=>item.path===changed.path);
      if(qaWitness)expect(qaWitness.previousBlob,changed.path).toBe(latestNav?.currentBlob);
-     expect(hash(read(changed.path)),changed.path).toBe(qaWitness?.currentBlob??latestNav?.currentBlob??changed.currentBlob);
+     const fixtureFix=qaFixtureScope.changedSource.find(item=>item.path===changed.path);
+     if(fixtureFix)expect(fixtureFix.previousBlob,changed.path).toBe(qaWitness?.currentBlob);
+     expect(hash(read(changed.path)),changed.path).toBe(fixtureFix?.currentBlob??qaWitness?.currentBlob??latestNav?.currentBlob??changed.currentBlob);
    }
    expect(activeOwnerRls.tests.route).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",previousCases:21,currentCases:23,added:2});
    expect(activeOwnerRls.tests.unit).toEqual({path:"tests/e2e/v3-authorized-workspace-access.test.ts",previousCases:8,currentCases:9,changedExpectation:"ACTIVE_HIDDEN_OWNER_DENIED"});
@@ -475,7 +493,9 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      expect(changed.path).not.toContain("..");
      const qaWitness=ownerQaWitness.changedSource.find(item=>item.path===changed.path);
      if(qaWitness)expect(qaWitness.previousBlob,changed.path).toBe(changed.currentBlob);
-     expect(hash(read(changed.path)),changed.path).toBe(qaWitness?.currentBlob??changed.currentBlob);
+     const fixtureFix=qaFixtureScope.changedSource.find(item=>item.path===changed.path);
+     if(fixtureFix)expect(fixtureFix.previousBlob,changed.path).toBe(qaWitness?.currentBlob);
+     expect(hash(read(changed.path)),changed.path).toBe(fixtureFix?.currentBlob??qaWitness?.currentBlob??changed.currentBlob);
    }
    expect(ownerNavigationGuard.regressionTests).toEqual({
      path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:23,current:29,added:6,
@@ -499,8 +519,11 @@ describe("IR21 exact owner finance + retention source integration",()=>{
        reason:"RECURSIVE_JXS_TREE_TRAVERSAL_CORRECTS_SHALLOW_TEST_FALSE_FAILURE"}
    ]);
    expect(ownerQaWitness.testCount).toBe(29);
-   for(const source of ownerQaWitness.changedSource)
-     expect(hash(read(source.path)),source.path).toBe(source.currentBlob);
+   for(const source of ownerQaWitness.changedSource){
+     const fixtureFix=qaFixtureScope.changedSource.find(item=>item.path===source.path);
+     if(fixtureFix)expect(fixtureFix.previousBlob,source.path).toBe(source.currentBlob);
+     expect(hash(read(source.path)),source.path).toBe(fixtureFix?.currentBlob??source.currentBlob);
+   }
    expect(ownerQaWitness.productionSourceUnchanged).toEqual([
      {path:"src/app/auth/create-workspace/page.tsx",blob:"2ed68d7a1ae4449e43dfb852fd8e210640664e56",unchanged:true},
      {path:"src/app/auth/select-workspace/page.tsx",blob:"d49858992d78fcb0a84bbd84d24bb1ebf681896e",unchanged:true},
@@ -511,6 +534,32 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    expect(ownerQaWitness.guard).toContain("NO_AUTH_OR_DB_WRITE");
    expect(ownerQaWitness.guard).toContain("NO_DEPLOY");
    expect(ownerQaWitness.state).toBe("PENDING_EXACT_HEAD_SOURCE_CI");
+   // Separate source successor only corrects test fixture scope; production source is identical.
+   expect(hash(ownerQaWitnessRaw)).toBe("1d26bb853f703f62b456cd9fca506e2aca58ea51");
+   expect(qaFixtureScope.schema).toBe("servicedesk.p02.owner-navigation-preview-fixture-scope-successor.v1");
+   expect(qaFixtureScope.batchId).toBe("P02-OWNER_PREVIEW_FIXTURE_SCOPE_OF_FORM_RENDER_20261108");
+   expect(qaFixtureScope.sourceOnly).toBe(true);
+   expect(qaFixtureScope.parentHead).toBe("bada02c370cf2c2879515f2072342d38be4f29fb");
+   expect(qaFixtureScope.predecessor).toEqual({path:"docs/delivery/sonic-p02-owner-navigation-qa-witness-correction-20261108.json",blob:"1d26bb853f703f62b456cd9fca506e2aca58ea51",unchanged:true});
+   expect(qaFixtureScope.predecessor.blob).toBe(hash(ownerQaWitnessRaw));
+   expect(qaFixtureScope.changedSource).toEqual([
+     {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"2469e781c54f285d94b63d22ddd4471da0b4e974",currentBlob:"6aaad27365257fed0fa33d2b6c1a008f87ed3542",
+      reason:"MOVE_RENDER_TEST_UNDER_VERIFIED_OWNER_QA_ENV_FIXTURE"}
+   ]);
+   expect(qaFixtureScope.testCount).toBe(29);
+   for(const source of qaFixtureScope.changedSource)
+     expect(hash(read(source.path)),source.path).toBe(source.currentBlob);
+   expect(qaFixtureScope.productionSourceUnchanged).toEqual([
+     {path:"src/app/auth/create-workspace/page.tsx",blob:"2ed68d7a1ae4449e43dfb852fd8e210640664e56",unchanged:true},
+     {path:"src/app/auth/select-workspace/page.tsx",blob:"d49858992d78fcb0a84bbd84d24bb1ebf681896e",unchanged:true},
+     {path:"src/app/onboarding/verified/page.tsx",blob:"12eafdfa355d0c2fe59c3fa72a6533993627f60c",unchanged:true}
+   ]);
+   for(const source of qaFixtureScope.productionSourceUnchanged)
+     expect(hash(read(source.path)),source.path).toBe(source.blob);
+   for(const guard of ["P02_OPEN_2_OF_7","NO_CONNECTED_AUTH_OR_DB_WRITE","NO_DEPLOY","PRESERVE_ALL_SOURCE_LOCKS"])
+     expect(qaFixtureScope.guards).toContain(guard);
+   expect(qaFixtureScope.acceptance).toBe("SOURCE_ONLY_UNTIL_AUTHENTICATED_OWNER_A_B_RLS");
+
 
 
 
@@ -861,8 +910,10 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    if(later)expect(later.previousBlob,source.path).toBe(source.blob);
    const qaWitness=ownerQaWitness.changedSource.find(item=>item.path===source.path);
    if(qaWitness)expect(qaWitness.previousBlob,source.path).toBe(later?.currentBlob??source.blob);
+   const fixtureFix=qaFixtureScope.changedSource.find(item=>item.path===source.path);
+   if(fixtureFix)expect(fixtureFix.previousBlob,source.path).toBe(qaWitness?.currentBlob);
    expect(hash(read(source.path)),source.path)
-     .toBe(qaWitness?.currentBlob??later?.currentBlob??source.blob);
+     .toBe(fixtureFix?.currentBlob??qaWitness?.currentBlob??later?.currentBlob??source.blob);
   }
   expect(race.testScript).toBe("scripts/release/v4-f23-pg17-owner-revocation-race.sh");
   expect(race.testScriptSha).toBe("16de03429be8f4474a1f582e78eb749143723f33");

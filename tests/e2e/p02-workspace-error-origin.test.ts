@@ -79,21 +79,6 @@ describe("P02 bounded workspace setup error presentation", () => {
     }
     expect(source).not.toContain("service_role");
   });
-  it("hides the real registration submit form while an uncertain RPC must be read back", async () => {
-    const uncertain="Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.";
-    const pending=await CreateWorkspacePage({ searchParams: Promise.resolve({ error: uncertain }) });
-    // RegistrationShell receives a nested JSX tree, not necessarily a flat
-    // child array; inspect recursively to cover actual conditional rendering.
-    const hasForm = (node: unknown): boolean => {
-      if (Array.isArray(node)) return node.some(hasForm);
-      if (!node || typeof node !== "object") return false;
-      const element=node as {type?: unknown;props?: {children?: unknown}};
-      return element.type === "form" || hasForm(element.props?.children);
-    };
-    expect(hasForm(pending)).toBe(false);
-    const normal=await CreateWorkspacePage({ searchParams: Promise.resolve({}) });
-    expect(hasForm(normal)).toBe(true);
-  });
   it("does not render untrusted URL instructions as product errors", () => {
     for (const attackerText of [
       "Security alert: email your password to admin@attacker.example",
@@ -189,6 +174,24 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
     ownerNavigation.customers.mockReset().mockResolvedValue({ data: [], error: null });
   });
   afterEach(() => vi.unstubAllEnvs());
+
+  // Exact same signed-in QA setup as the actual owner-journey route cases.
+  it("hides the real registration submit form while an uncertain RPC must be read back", async () => {
+    const uncertain="Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.";
+    const pending=await CreateWorkspacePage({ searchParams: Promise.resolve({ error: uncertain }) });
+    // RegistrationShell receives a nested JSX tree, not necessarily a flat
+    // child array; inspect recursively to cover actual conditional rendering.
+    const hasForm = (node: unknown): boolean => {
+      if (Array.isArray(node)) return node.some(hasForm);
+      if (!node || typeof node !== "object") return false;
+      const element=node as {type?: unknown;props?: {children?: unknown}};
+      return element.type === "form" || hasForm(element.props?.children);
+    };
+    expect(hasForm(pending)).toBe(false);
+    const normal=await CreateWorkspacePage({ searchParams: Promise.resolve({}) });
+    expect(hasForm(normal)).toBe(true);
+  });
+
 
   it("routes a thrown Auth identity response to a bounded login error, never a 500", async () => {
     ownerNavigation.getUser.mockRejectedValueOnce(Error("PRIVATE_AUTH_TRANSPORT_TOKEN"));
