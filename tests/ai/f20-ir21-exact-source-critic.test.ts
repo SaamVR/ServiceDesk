@@ -62,6 +62,16 @@ const reset=JSON.parse(resetRaw.toString()) as {
  overrides:Array<{path:string;previousBlob:string;currentBlob:string}>;
  addedSource:Array<{path:string;blob:string}>;
 };
+const negativeRlsRaw=read("docs/delivery/sonic-p02-foreign-rls-negative-probe-successor-20261107.json");
+const negativeRls=JSON.parse(negativeRlsRaw.toString()) as {
+ schema:string;
+ priorReviewed:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousReviewedBlob:string;f23WitnessInterimBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;previousBlob:string|null;currentBlob:string;purpose:string}>;
+ simultaneousF23Veto:{path:string;blob:string;testScope:string;witnessMarker:string;isAcceptance:boolean;releasePermission:boolean};
+ guards:string[];
+};
+
 
 function expectedReviewedBlob(path:string,historicSha:string):string {
  const entry=overlay.replacements.find(item=>item.path===path);
@@ -148,6 +158,36 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(reset.historicAuthFeedback.unchanged).toBe(true);
   expect(reset.workflowSuccessor.path).toBe(quoteCrew.workflowSuccessor.path);
   expect(reset.workflowSuccessor.previousBlob).toBe(quoteCrew.workflowSuccessor.currentBlob);
+  expect(hash(negativeRlsRaw)).toBe("efdebce4aab449dbf804805ea202653f19279dd7");
+  expect(negativeRls.schema).toBe("servicedesk.p02.foreign-rls-negative-probe-and-f23-veto.v1");
+  expect(negativeRls.priorReviewed.path).toBe("docs/delivery/sonic-p02-reset-session-closure-successor-20261107.json");
+  expect(negativeRls.priorReviewed.unchanged).toBe(true);
+  expect(negativeRls.priorReviewed.blob).toBe(hash(resetRaw));
+  expect(negativeRls.workflowSuccessor.path).toBe(reset.workflowSuccessor.path);
+  expect(negativeRls.workflowSuccessor.previousReviewedBlob).toBe(reset.workflowSuccessor.currentBlob);
+  expect(negativeRls.workflowSuccessor.f23WitnessInterimBlob).toBe("122a1afcc1f05624e62408551b5054944967e6eb");
+  expect(negativeRls.changedSource).toHaveLength(2);
+  for(const source of negativeRls.changedSource){
+   expect(source.path).not.toContain("..");
+   expect(hash(read(source.path)),source.path).toBe(source.currentBlob);
+  }
+  expect(negativeRls.changedSource[0].previousBlob).toBe("e5998a74c176172653fa9782ace23eaadfcbc7a8");
+  expect(negativeRls.changedSource[1].previousBlob).toBeNull();
+  const negativeScript=read(negativeRls.changedSource[0].path).toString();
+  expect(negativeScript).toContain("table === \"memberships\" && ownScope");
+  expect(negativeScript).toContain("table === \"workspace_branches\" && ownScope");
+  expect(negativeRls.guards).toContain("FOREIGN_ANY_ROW_IS_RLS_VETO");
+  expect(negativeRls.simultaneousF23Veto.testScope).toBe("PG17_DISPOSABLE_ONLY");
+  expect(negativeRls.simultaneousF23Veto.isAcceptance).toBe(false);
+  expect(negativeRls.simultaneousF23Veto.releasePermission).toBe(false);
+  expect(hash(read(negativeRls.simultaneousF23Veto.path)))
+    .toBe(negativeRls.simultaneousF23Veto.blob);
+  const witnessText=read(negativeRls.simultaneousF23Veto.path).toString();
+  expect(witnessText).toContain(negativeRls.simultaneousF23Veto.witnessMarker);
+  const combinedWorkflow=read(negativeRls.workflowSuccessor.path).toString();
+  expect(combinedWorkflow).toContain("node --test scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs");
+  expect(combinedWorkflow).toContain("bash "+negativeRls.simultaneousF23Veto.path);
+
   expect(reset.overrides).toHaveLength(2);
   expect(reset.overrides.map(x=>x.path).sort()).toEqual([
    "src/app/auth/reset-password/page.tsx",
@@ -197,14 +237,14 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   const reviewed=f.path===race.workflow.path?reset.workflowSuccessor.currentBlob:f.blob;
+   const reviewed=f.path===race.workflow.path?negativeRls.workflowSuccessor.currentBlob:f.blob;
    expect(hash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const file of overlay.changedFiles){
    const reviewedSha=file.path===p02.workflowSuccessor.path
-    ? reset.workflowSuccessor.currentBlob : file.blob;
+    ? negativeRls.workflowSuccessor.currentBlob : file.blob;
    expect(hash(read(file.path)),file.path).toBe(reviewedSha);
   }
   for(const f of lock.source){
