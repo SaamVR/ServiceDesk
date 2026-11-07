@@ -71,6 +71,15 @@ const negativeRls=JSON.parse(negativeRlsRaw.toString()) as {
  simultaneousF23Veto:{path:string;blob:string;testScope:string;witnessMarker:string;isAcceptance:boolean;releasePermission:boolean};
  guards:string[];
 };
+const f23VetoRaw=read("docs/delivery/sonic-f23-sibling-quote-phantom-veto-successor-20261107.json");
+const f23Veto=JSON.parse(f23VetoRaw.toString()) as {
+ schema:string;classification:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ reviewedCandidate:{path:string;blob:string;installed:boolean;unsafeSiblingPhantom:boolean};
+ sources:Array<{path:string;blob:string;type:string;receipt?:string;passedMeansSafe:boolean}>;
+ additionalPrototypeReceipts:string[];flagsDefaultOff:string[];unresolved:string[];nonActions:string[];
+};
 const prototypeBridgeRaw=read("docs/delivery/sonic-p02-f23-prototype-integration-bridge-20261107.json");
 const prototypeBridge=JSON.parse(prototypeBridgeRaw.toString()) as {
  schema:string;
@@ -188,6 +197,40 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(negativeScript).toContain("table === \"workspace_branches\" && ownScope");
   expect(negativeRls.guards).toContain("FOREIGN_ANY_ROW_IS_RLS_VETO");
   expect(hash(prototypeBridgeRaw)).toBe("47b9619a854b29f9f3d3bf560d11d734b7effb8c");
+  expect(hash(f23VetoRaw)).toBe("f8f8431210cbcaea474dd729b127629176a9c568");
+  expect(f23Veto.schema).toBe("servicedesk.f23.sibling-quote-phantom-veto-and-review-prototype.v1");
+  expect(f23Veto.classification).toBe("SECURITY_VETO_CONFIRMED_ON_DISPOSABLE_PG17__NO_PRODUCTION_APPROVAL");
+  expect(f23Veto.predecessor.path).toBe("docs/delivery/sonic-p02-foreign-rls-negative-probe-successor-20261107.json");
+  expect(f23Veto.predecessor.blob).toBe(hash(negativeRlsRaw));
+  expect(f23Veto.predecessor.unchanged).toBe(true);
+  expect(f23Veto.workflowSuccessor.path).toBe(negativeRls.workflowSuccessor.path);
+  expect(f23Veto.workflowSuccessor.previousBlob).toBe(negativeRls.workflowSuccessor.currentBlob);
+  expect(f23Veto.workflowSuccessor.currentBlob).toBe(prototypeBridge.workflowSuccessor.currentBlob);
+  expect(f23Veto.reviewedCandidate.installed).toBe(false);
+  expect(f23Veto.reviewedCandidate.unsafeSiblingPhantom).toBe(true);
+  expect(hash(read(f23Veto.reviewedCandidate.path))).toBe(f23Veto.reviewedCandidate.blob);
+  expect(f23Veto.sources).toHaveLength(3);
+  expect(new Set(f23Veto.sources.map(f=>f.path)).size).toBe(3);
+  const newF23Workflow=read(f23Veto.workflowSuccessor.path).toString();
+  for(const source of f23Veto.sources){
+   expect(source.path).not.toContain("..");
+   expect(hash(read(source.path)),source.path).toBe(source.blob);
+   expect(source.passedMeansSafe).toBe(false);
+   if(source.path.endsWith(".sh")){
+    expect(newF23Workflow).toContain("bash "+source.path);
+    expect(read(source.path).toString()).toContain(source.receipt??"");
+   }
+  }
+  expect(f23Veto.sources[0].type).toBe("UNSAFE_GAP_WITNESS");
+  expect(f23Veto.sources[0].receipt).toBe("F23_KNOWN_UNSAFE_SIBLING_QUOTE_PHANTOM_REPRODUCED_RELEASE_VETO");
+  expect(f23Veto.sources[1].type).toBe("DISPOSABLE_INDEX_PROTOTYPE");
+  expect(f23Veto.sources[2].type).toBe("DBA_VETO_AND_REMEDIATION_OPTIONS");
+  expect(f23Veto.flagsDefaultOff).toEqual([
+   "SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED",
+   "SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED",
+  ]);
+  expect(f23Veto.unresolved).toContain("DUPLICATE_EXISTING_QUOTES_READ_ONLY_PREFLIGHT");
+  expect(f23Veto.nonActions).toContain("NO_SUPABASE_MIGRATION");
   expect(prototypeBridge.schema).toBe("servicedesk.p02-f23.review-only-prototype-source-bridge.v1");
   expect(prototypeBridge.predecessor.path).toBe("docs/delivery/sonic-p02-foreign-rls-negative-probe-successor-20261107.json");
   expect(prototypeBridge.predecessor.unchanged).toBe(true);
