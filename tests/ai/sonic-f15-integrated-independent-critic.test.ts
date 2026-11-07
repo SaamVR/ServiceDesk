@@ -65,6 +65,16 @@ const negativeRls=JSON.parse(negativeRlsRaw.toString()) as {
  simultaneousF23Veto:{path:string;blob:string;testScope:string;witnessMarker:string;isAcceptance:boolean;releasePermission:boolean};
  guards:string[];
 };
+const prototypeBridgeRaw=read("docs/delivery/sonic-p02-f23-prototype-integration-bridge-20261107.json");
+const prototypeBridge=JSON.parse(prototypeBridgeRaw.toString()) as {
+ schema:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ externalF23ReviewOnly:{path:string;blob:string;disposablePg17Only:boolean;productionInstallApproved:boolean};
+ existingF23VetoUnchanged:{path:string;blob:string;marker:string};
+ integrationRules:string[];
+};
+
 
 
 const m=JSON.parse(read("docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json").toString()) as {
@@ -171,6 +181,27 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(negativeScript).toContain("table === \"memberships\" && ownScope");
   expect(negativeScript).toContain("table === \"workspace_branches\" && ownScope");
   expect(negativeRls.guards).toContain("FOREIGN_ANY_ROW_IS_RLS_VETO");
+  expect(gitHash(prototypeBridgeRaw)).toBe("47b9619a854b29f9f3d3bf560d11d734b7effb8c");
+  expect(prototypeBridge.schema).toBe("servicedesk.p02-f23.review-only-prototype-source-bridge.v1");
+  expect(prototypeBridge.predecessor.path).toBe("docs/delivery/sonic-p02-foreign-rls-negative-probe-successor-20261107.json");
+  expect(prototypeBridge.predecessor.unchanged).toBe(true);
+  expect(prototypeBridge.predecessor.blob).toBe(gitHash(negativeRlsRaw));
+  expect(prototypeBridge.workflowSuccessor.previousBlob).toBe(negativeRls.workflowSuccessor.currentBlob);
+  expect(prototypeBridge.workflowSuccessor.path).toBe(negativeRls.workflowSuccessor.path);
+  expect(prototypeBridge.externalF23ReviewOnly.disposablePg17Only).toBe(true);
+  expect(prototypeBridge.externalF23ReviewOnly.productionInstallApproved).toBe(false);
+  expect(prototypeBridge.integrationRules).toContain("F23_KNOWN_UNSAFE_SIBLING_QUOTE_VETO_RETAINED");
+  expect(gitHash(read(prototypeBridge.externalF23ReviewOnly.path)))
+    .toBe(prototypeBridge.externalF23ReviewOnly.blob);
+  expect(prototypeBridge.existingF23VetoUnchanged.path).toBe(negativeRls.simultaneousF23Veto.path);
+  expect(prototypeBridge.existingF23VetoUnchanged.blob).toBe(negativeRls.simultaneousF23Veto.blob);
+  expect(gitHash(read(prototypeBridge.existingF23VetoUnchanged.path)))
+    .toBe(prototypeBridge.existingF23VetoUnchanged.blob);
+  expect(prototypeBridge.existingF23VetoUnchanged.marker)
+    .toBe(negativeRls.simultaneousF23Veto.witnessMarker);
+  expect(read(prototypeBridge.workflowSuccessor.path).toString())
+    .toContain("bash "+prototypeBridge.externalF23ReviewOnly.path);
+
   expect(negativeRls.simultaneousF23Veto.testScope).toBe("PG17_DISPOSABLE_ONLY");
   expect(negativeRls.simultaneousF23Veto.isAcceptance).toBe(false);
   expect(negativeRls.simultaneousF23Veto.releasePermission).toBe(false);
@@ -231,14 +262,14 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   const reviewed=f.path===race.workflow.path?negativeRls.workflowSuccessor.currentBlob:f.blob;
+   const reviewed=f.path===race.workflow.path?prototypeBridge.workflowSuccessor.currentBlob:f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const f of overlay.changedFiles){
    const expected=f.path===p02.workflowSuccessor.path
-    ? negativeRls.workflowSuccessor.currentBlob : f.blob;
+    ? prototypeBridge.workflowSuccessor.currentBlob : f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(expected);
   }
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
