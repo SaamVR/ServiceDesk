@@ -1,0 +1,83 @@
+{
+  "schema": "servicedesk.f23.quote-writer-compatibility-and-readonly-dba-preflight.v1",
+  "batch": "F23-DBA-SOURCE-QUOTE-WRITER-VETO-20261107",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "classification": "SOURCE_AUDIT_AND_DISPOSABLE_PG17_ONLY_NOT_PRODUCTION_READY",
+  "priorVerifiedVeto": {
+    "path": "docs/delivery/sonic-f23-sibling-quote-phantom-veto-successor-20261107.json",
+    "blob": "f8f8431210cbcaea474dd729b127629176a9c568",
+    "unchanged": true
+  },
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousBlob": "e1794d1e00866ea3daa7ed592869d5828cc7fcd8",
+    "currentBlob": "634d35b6eb34025df560b78f0dfbe3354988238c"
+  },
+  "changedSource": [
+    {
+      "path": "scripts/release/v4-f23-current-quote-readonly-preflight.sql",
+      "blob": "ad861d3b43ccdfda0000193b9ad338745469ff54",
+      "lane": "DBA_AGGREGATE_READ_ONLY_SCHEMA_PREFLIGHT",
+      "isProductionApproved": false
+    },
+    {
+      "path": "tests/ai/f23-current-quote-schema-compatibility-veto.test.ts",
+      "blob": "05dec50591020465a9c72024baaf9bc636617515",
+      "lane": "ADVERSARIAL_QUOTE_WRITER_NONATOMICITY_CRITIC",
+      "isProductionApproved": false
+    },
+    {
+      "path": "docs/engineering/security/f23-quote-writer-compatibility-source-audit-20261107.md",
+      "blob": "203ea3b069f07a432831e869374865921b811336",
+      "lane": "INDEPENDENT_SOURCE_REVIEW",
+      "isProductionApproved": false
+    }
+  ],
+  "sourcePreimagesUnchanged": [
+    {
+      "path": "supabase/migrations/0002_quotes.sql",
+      "blob": "bb8548664bbf1047df8392132010e23e4b108e8c"
+    },
+    {
+      "path": "src/server/core/quotes.ts",
+      "blob": "8090c4ce4ef3dd16723bc604a97e7bee7475b961"
+    },
+    {
+      "path": "src/server/core/quote-repository.ts",
+      "blob": "bc91ca38788555326be1ba176c55db6026b22bf7"
+    },
+    {
+      "path": "src/server/ai/owner-inbox-first-quote.ts",
+      "blob": "4c584211c6aff41c9421845619eaddd56a5f51dc"
+    }
+  ],
+  "requiredReadOnlyPreflightFields": [
+    "identifiersReturned",
+    "requestGroupsWithTwoOrMoreNonSupersededQuotes",
+    "largestNonSupersededSiblingCount",
+    "indexDefinitionCandidatesToReview",
+    "safeToEnableF23"
+  ],
+  "releaseVeto": [
+    "SIBLING_QUOTE_PHANTOM_WITNESSED",
+    "LEGACY_TWO_CALL_QUOTE_REVISION_NOT_PROVEN_ATOMIC",
+    "QUOTES_INDEX_NOT_VERIFIED_ON_DEPLOYED_SCHEMA",
+    "PROVIDER_PAYMENT_IN_TRANSIT_UNVERIFIED",
+    "P02_TWO_REAL_OWNER_UAT_MISSING",
+    "P03_SAVED_PRICE_READBACK_MISSING"
+  ],
+  "activationFlagsDefaultOff": [
+    "SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED",
+    "SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED"
+  ],
+  "notClaims": [
+    "NOT_INSTALLED",
+    "NOT_DEPLOYED",
+    "NOT_AUTHORIZED",
+    "NO_NEW_PR",
+    "NO_TENANT_DATA",
+    "NO_LIVE_OWNER_SESSIONS",
+    "NO_MIGRATION",
+    "NO_PAYMENT_OR_PROVIDER"
+  ]
+}
