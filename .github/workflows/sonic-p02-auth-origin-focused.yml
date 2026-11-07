@@ -10,6 +10,7 @@ on:
       - src/features/auth/owner-registration-readiness.ts
       - src/app/auth/sign-up/actions.ts
       - src/app/auth/forgot-password/actions.ts
+      - src/app/auth/reset-password/page.tsx
       - tests/e2e/p02-vercel-auth-redirect-origin.test.ts
       - .github/workflows/v4-l4-authenticated-uat.yml
       - tests/e2e/p02-manual-auth-uat-guard.test.ts

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { requestPasswordReset } from "../../src/app/auth/forgot-password/actions";
 import { trustedAuthFeedback } from "../../src/features/auth/verified-auth-feedback";
@@ -73,4 +74,12 @@ describe("P02 recovery request truth: no misleading email receipt", () => {
     expect(await destination()).toBe("/auth/forgot-password?error=" + generic);
     expect(calls.send).not.toHaveBeenCalled();
   });
+  it("does not offer another password change when global sign-out is unverified", () => {
+    const page = readFileSync("src/app/auth/reset-password/page.tsx", "utf8");
+    expect(page).toContain('action="/auth/sign-out" method="post"');
+    expect(page).toContain("{!sessionClosureUnverified ? (");
+    expect(page).toContain("<form action={updateRecoveredPassword}");
+    expect(page).not.toContain("{query.error}");
+  });
+
 });

@@ -51,7 +51,8 @@ export default async function ResetPasswordPage({
           <button type="submit" className={styles.submit}>Try to sign out now →</button>
         </form>
       ) : null}
-      <form action={updateRecoveredPassword} className={styles.form}>
+      {!sessionClosureUnverified ? (
+        <form action={updateRecoveredPassword} className={styles.form}>
         <div className={styles.field}>
           <label htmlFor="new-password">New password</label>
           <input id="new-password" name="password" type="password" autoComplete="new-password" minLength={12} maxLength={128} required/>
@@ -61,7 +62,8 @@ export default async function ResetPasswordPage({
           <input id="confirm-password" name="confirmation" type="password" autoComplete="new-password" minLength={12} maxLength={128} required/>
         </div>
         <button className={styles.submit} type="submit">Update password →</button>
-      </form>
+        </form>
+      ) : null}
     </RegistrationShell>
   );
 }

@@ -55,6 +55,15 @@ const quoteCrew=JSON.parse(quoteCrewRaw.toString()) as {
  flagsDefaultOff:string[];releaseVeto:string[];
 };
 const resetRaw=read("docs/delivery/sonic-p02-reset-session-closure-successor-20261107.json");
+const resetRetryRaw=read("docs/delivery/sonic-p02-reset-retry-form-suppression-20261107.json");
+const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
+ schema:string;scope:string;
+ previousReviewed:{path:string;blob:string;unchanged:boolean};
+ reviewedPage:{path:string;oldBlob:string;newBlob:string};
+ reviewedTest:{path:string;oldBlob:string;newBlob:string};
+ focusedWorkflow:{path:string;oldBlob:string;newBlob:string};
+ guards:string[];
+};
 const reset=JSON.parse(resetRaw.toString()) as {
  schema:string;
  priorVerifiedSource:{path:string;blob:string;unchanged:boolean};
@@ -185,8 +194,11 @@ describe("F15 independent critic: no new composite, exact source and default-den
    expect(source.path).not.toContain("..");
    const successor=reset.overrides.find(x=>x.path===source.path);
    if(successor)expect(successor.previousBlob,source.path).toBe(source.blob);
+   if(source.path===resetRetry.reviewedPage.path)
+     expect(resetRetry.reviewedPage.oldBlob).toBe(successor?.currentBlob);
    expect(gitHash(read(source.path)),source.path)
-     .toBe(successor?.currentBlob??source.blob);
+     .toBe(source.path===resetRetry.reviewedPage.path
+       ?resetRetry.reviewedPage.newBlob:successor?.currentBlob??source.blob);
   }
   expect(gitHash(qaProofRaw)).toBe("963c2e44e8e5a28fcc326460840657fcbe3401af");
   expect(qaProof.schema).toBe("servicedesk.p02.qa-seed-saved-proof-successor.v1");
@@ -352,6 +364,20 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(combinedWorkflow).toContain("node --test scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs");
   expect(combinedWorkflow).toContain("bash "+negativeRls.simultaneousF23Veto.path);
 
+  expect(gitHash(resetRetryRaw)).toBe("96b3557377f5fc364fee6682045224116f9c2acd");
+  expect(resetRetry.schema).toBe("servicedesk.p02.reset-signout-uncertain-form-suppression.v1");
+  expect(resetRetry.previousReviewed.path).toBe("docs/delivery/sonic-p02-reset-session-closure-successor-20261107.json");
+  expect(resetRetry.previousReviewed.blob).toBe(gitHash(resetRaw));
+  expect(resetRetry.previousReviewed.unchanged).toBe(true);
+  expect(resetRetry.reviewedPage.path).toBe("src/app/auth/reset-password/page.tsx");
+  expect(resetRetry.reviewedPage.oldBlob).toBe(reset.overrides.find(x=>x.path===resetRetry.reviewedPage.path)?.currentBlob);
+  expect(gitHash(read(resetRetry.reviewedPage.path))).toBe(resetRetry.reviewedPage.newBlob);
+  expect(gitHash(read(resetRetry.reviewedTest.path))).toBe(resetRetry.reviewedTest.newBlob);
+  expect(resetRetry.focusedWorkflow.oldBlob).toBe("0e1ba6155a55182e25c3831b2f46093037d71dc3");
+  expect(gitHash(read(resetRetry.focusedWorkflow.path))).toBe(resetRetry.focusedWorkflow.newBlob);
+  expect(read(resetRetry.focusedWorkflow.path).toString()).toContain("src/app/auth/reset-password/page.tsx");
+  expect(resetRetry.guards).toContain("HIDE_REPEAT_PASSWORD_UPDATE_FORM_AFTER_SIGNOUT_FAILURE");
+  expect(resetRetry.guards).toContain("NO_DEPLOY");
   expect(reset.overrides).toHaveLength(2);
   expect(reset.overrides.map(x=>x.path).sort()).toEqual([
    "src/app/auth/reset-password/page.tsx",
@@ -360,7 +386,9 @@ describe("F15 independent critic: no new composite, exact source and default-den
   for(const change of reset.overrides){
    const before=authFeedback.changedSource.find(x=>x.path===change.path);
    expect(change.previousBlob,change.path).toBe(before?.blob);
-   expect(gitHash(read(change.path)),change.path).toBe(change.currentBlob);
+   expect(gitHash(read(change.path)),change.path)
+     .toBe(change.path===resetRetry.reviewedPage.path
+       ?resetRetry.reviewedPage.newBlob:change.currentBlob);
   }
   expect(reset.addedSource).toHaveLength(2);
   for(const source of reset.addedSource){
