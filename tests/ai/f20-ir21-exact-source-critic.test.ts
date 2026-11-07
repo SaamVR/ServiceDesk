@@ -53,6 +53,16 @@ const quoteCrew=JSON.parse(quoteCrewRaw.toString()) as {
  newRaces:Array<{path:string;blob:string;expectedReceipts:string[];scope:string}>;
  flagsDefaultOff:string[];releaseVeto:string[];
 };
+const resetRaw=read("docs/delivery/sonic-p02-reset-session-closure-successor-20261107.json");
+const reset=JSON.parse(resetRaw.toString()) as {
+ schema:string;
+ priorVerifiedSource:{path:string;blob:string;unchanged:boolean};
+ historicAuthFeedback:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ overrides:Array<{path:string;previousBlob:string;currentBlob:string}>;
+ addedSource:Array<{path:string;blob:string}>;
+};
+
 function expectedReviewedBlob(path:string,historicSha:string):string {
  const entry=overlay.replacements.find(item=>item.path===path);
  if(!entry)return historicSha;
@@ -107,7 +117,10 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(authFeedback.changedSource).toHaveLength(6);
   for(const source of authFeedback.changedSource){
    expect(source.path).not.toContain("..");
-   expect(hash(read(source.path)),source.path).toBe(source.blob);
+   const successor=reset.overrides.find(x=>x.path===source.path);
+   if(successor)expect(successor.previousBlob,source.path).toBe(source.blob);
+   expect(hash(read(source.path)),source.path)
+     .toBe(successor?.currentBlob??source.blob);
   }
   expect(hash(qaProofRaw)).toBe("963c2e44e8e5a28fcc326460840657fcbe3401af");
   expect(qaProof.schema).toBe("servicedesk.p02.qa-seed-saved-proof-successor.v1");
@@ -126,6 +139,30 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(quoteCrew.workflowSuccessor.path).toBe(qaProof.workflowSuccessor.path);
   expect(quoteCrew.workflowSuccessor.previousBlob).toBe(qaProof.workflowSuccessor.currentBlob);
   expect(quoteCrew.workflowSuccessor.currentBlob).toBe("8c2cab1749d363309d5c89cce9a6980084019202");
+  expect(hash(resetRaw)).toBe("a50e9f4b61f0b0481aae9bf7e377faa839b7b944");
+  expect(reset.schema).toBe("servicedesk.p02.password-reset-session-closure-successor.v1");
+  expect(reset.priorVerifiedSource.path).toBe("docs/delivery/sonic-f23-quote-crew-lock-races-successor-20261107.json");
+  expect(reset.priorVerifiedSource.unchanged).toBe(true);
+  expect(reset.priorVerifiedSource.blob).toBe(hash(quoteCrewRaw));
+  expect(reset.historicAuthFeedback.blob).toBe(hash(authFeedbackRaw));
+  expect(reset.historicAuthFeedback.unchanged).toBe(true);
+  expect(reset.workflowSuccessor.path).toBe(quoteCrew.workflowSuccessor.path);
+  expect(reset.workflowSuccessor.previousBlob).toBe(quoteCrew.workflowSuccessor.currentBlob);
+  expect(reset.overrides).toHaveLength(2);
+  expect(reset.overrides.map(x=>x.path).sort()).toEqual([
+   "src/app/auth/reset-password/page.tsx",
+   "src/features/auth/verified-auth-feedback.ts",
+  ]);
+  for(const change of reset.overrides){
+   const before=authFeedback.changedSource.find(x=>x.path===change.path);
+   expect(change.previousBlob,change.path).toBe(before?.blob);
+   expect(hash(read(change.path)),change.path).toBe(change.currentBlob);
+  }
+  expect(reset.addedSource).toHaveLength(2);
+  for(const source of reset.addedSource){
+   expect(source.path).not.toContain("..");
+   expect(hash(read(source.path)),source.path).toBe(source.blob);
+  }
   expect(quoteCrew.newRaces).toHaveLength(2);
   expect(new Set(quoteCrew.newRaces.map(r=>r.path)).size).toBe(2);
   expect(quoteCrew.flagsDefaultOff).toEqual([
@@ -160,14 +197,14 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   const reviewed=f.path===race.workflow.path?quoteCrew.workflowSuccessor.currentBlob:f.blob;
+   const reviewed=f.path===race.workflow.path?reset.workflowSuccessor.currentBlob:f.blob;
    expect(hash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const file of overlay.changedFiles){
    const reviewedSha=file.path===p02.workflowSuccessor.path
-    ? quoteCrew.workflowSuccessor.currentBlob : file.blob;
+    ? reset.workflowSuccessor.currentBlob : file.blob;
    expect(hash(read(file.path)),file.path).toBe(reviewedSha);
   }
   for(const f of lock.source){
