@@ -148,6 +148,54 @@ export async function verifyOwnerWorkspaceCreationReadback(
   )) {
     return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
   }
+  // Migration 0059 creates both MAIN and its owner branch membership in the
+  // same transaction. RLS-visible workspace + OWNER rows alone cannot prove
+  // first-run branch readiness. Never trust the registration JSON to certify it.
+  const savedBranches = await (async () => await auth.from("workspace_branches")
+    .select("id,workspace_id,code,timezone,currency,is_default,active")
+    .eq("workspace_id", readback.workspace.id)
+    .eq("is_default", true)
+    .eq("active", true)
+    .limit(2))().catch(() => null);
+  if (!savedBranches || savedBranches.error ||
+      !Array.isArray(savedBranches.data) || savedBranches.data.length !== 1) {
+    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  }
+  const branch = savedBranches.data[0];
+  if (!branch || typeof branch.id !== "string" || !UUID.test(branch.id) ||
+      branch.workspace_id !== readback.workspace.id ||
+      branch.is_default !== true || branch.active !== true ||
+      typeof branch.code !== "string" ||
+      !/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(branch.code) ||
+      typeof branch.timezone !== "string" || typeof branch.currency !== "string") {
+    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  }
+  // A new business requires its actual saved MAIN branch with matching billing
+  // fields. Existing=true is an idempotent return to an older owned business,
+  // whose default branch code/timezone/currency may legitimately have changed.
+  if (receipt.existing === false &&
+      (branch.code !== "MAIN" || branch.timezone !== requested.timezone ||
+       branch.currency !== requested.currency)) {
+    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  }
+  const savedBranchOwner = await (async () => await auth.from("branch_memberships")
+    .select("workspace_id,branch_id,user_id,status")
+    .eq("workspace_id", readback.workspace.id)
+    .eq("branch_id", branch.id)
+    .eq("user_id", userId)
+    .eq("status", "ACTIVE")
+    .limit(2))().catch(() => null);
+  if (!savedBranchOwner || savedBranchOwner.error ||
+      !Array.isArray(savedBranchOwner.data) || savedBranchOwner.data.length !== 1) {
+    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  }
+  const assigned = savedBranchOwner.data[0];
+  if (!assigned || assigned.workspace_id !== readback.workspace.id ||
+      assigned.branch_id !== branch.id || assigned.user_id !== userId ||
+      assigned.status !== "ACTIVE") {
+    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  }
+
   return { ok: true, workspace: readback.workspace, existing: receipt.existing };
 }
 

@@ -189,6 +189,17 @@ const expectedCurrentOwnerSlugBlob=(path:string,previous:string|undefined):strin
  expect(successor.previousBlob,path).toBe(previous);
  return successor.currentBlob;
 };
+const ownerMainBranchRaw=read("docs/delivery/sonic-p02-owner-main-branch-saved-readback-successor-20261108.json");
+const ownerMainBranch=JSON.parse(ownerMainBranchRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;parentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ dbSourceUnchanged:Array<{path:string;blob:string;unchanged:boolean}>;
+ workflowUnchanged:{path:string;blob:string;unchanged:boolean};
+ expectedNewCases:{readbackSuite:{previous:number;current:number};serverActionSuite:{previous:number;current:number}};
+ checkedNewBranchFields:string[];checkedOwnerBranchMembershipFields:string[];
+ invariants:string[];acceptance:string;nextBatch:string;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -300,6 +311,73 @@ describe("IR21 exact owner finance + retention source integration",()=>{
     "src/app/auth/create-workspace/actions.ts",
     "tests/e2e/p02-registration-denial-action.test.ts",
   ]);
+  // P02 MAIN-branch independent readback is an additive successor: never rewrite
+  // earlier registration, P03 currency, F15 or navigation source pins.
+  expect(ownerMainBranch.schema).toBe("servicedesk.p02.owner-main-branch-saved-rsls-readback.v1");
+  expect(ownerMainBranch.batchId).toBe("P02-OWNER_REGISTRATION_MAIN_BRANCH_PERSISTENCE_READBACK-20261108");
+  expect(ownerMainBranch.sourceOnly).toBe(true);
+  expect(ownerMainBranch.ownerChat).toBe("PRODUCTION");
+  expect(ownerMainBranch.parentHead).toBe("69f51b69af73fc9846ffd3a871e56386f4e20e47");
+  expect(ownerMainBranch.predecessor).toEqual({"path":"docs/delivery/sonic-p02-active-owner-malformed-slug-veto-20261108.json","blob":"746c0779c9edbda494d3fe466584c0797e87f152","unchanged":true});
+  expect(ownerMainBranch.predecessor.blob).toBe(hash(malformedOwnerSlugRaw));
+  expect(ownerMainBranch.changedSource).toEqual([
+  {
+    "path": "src/features/auth/verified-owner-workspace.ts",
+    "previousBlob": "1983ddf2bdca7c1015c84933b59b29a81a6b21d3",
+    "currentBlob": "c1720bdc1f144357126352f54b19699739d5e612",
+    "lane": "AUTH_RLS_SAVED_BRANCH_READBACK"
+  },
+  {
+    "path": "tests/e2e/p02-owner-registration-persisted-receipt.test.ts",
+    "previousBlob": "c3ae8c36b4e59e8a4362eeaaa651442079a1d8b3",
+    "currentBlob": "33a3ea21d41d6553b8cdd716465777e02d106d25",
+    "lane": "INDEPENDENT_SAVED_BRANCH_QA"
+  },
+  {
+    "path": "tests/e2e/p02-registration-denial-action.test.ts",
+    "previousBlob": "37ecfaba9c14a442b2a9beccf77d2aa850673622",
+    "currentBlob": "d5c288aa516ae3e9b2c2f84302de22942748085f",
+    "lane": "SERVER_ACTION_DENIAL_QA"
+  }
+]);
+  for(const x of ownerMainBranch.changedSource){
+    expect(x.path).not.toContain("..");
+    expect(hash(read(x.path)),x.path).toBe(x.currentBlob);
+  }
+  expect(ownerMainBranch.dbSourceUnchanged).toEqual([
+  {
+    "path": "supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql",
+    "blob": "ee237941a371bf36ac39641fe8c1b65ae516ebe3",
+    "unchanged": true
+  },
+  {
+    "path": "supabase/migrations/0065_v4_default_branch_membership_authority.sql",
+    "blob": "a1d1097c1c31ae258ec4151b7d208bb3c415c21a",
+    "unchanged": true
+  }
+]);
+  for(const x of ownerMainBranch.dbSourceUnchanged){
+    expect(x.unchanged).toBe(true);
+    expect(hash(read(x.path)),x.path).toBe(x.blob);
+  }
+  expect(ownerMainBranch.workflowUnchanged).toEqual({"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true});
+  expect(hash(read(ownerMainBranch.workflowUnchanged.path)))
+    .toBe(ownerMainBranch.workflowUnchanged.blob);
+  expect(ownerMainBranch.expectedNewCases).toEqual({readbackSuite:{previous:6,current:8},serverActionSuite:{previous:11,current:12}});
+  expect(ownerMainBranch.checkedNewBranchFields).toEqual(["id","workspace_id","code","timezone","currency","is_default","active"]);
+  expect(ownerMainBranch.checkedOwnerBranchMembershipFields).toEqual(["workspace_id","branch_id","user_id","status"]);
+  for(const rule of [
+    "NO_ONBOARDING_SUCCESS_WITHOUT_RLS_SAVED_MAIN_BRANCH",
+    "NO_ONBOARDING_SUCCESS_WITHOUT_ACTIVE_OWNER_BRANCH_MEMBERSHIP",
+    "NO_CROSS_TENANT_OR_FOREIGN_BRANCH_RECEIPT",
+    "NO_CONNECTED_AUTH_DB_WRITES",
+    "NO_MIGRATION_INSTALL",
+    "NO_VERCEL_DEPLOY",
+    "P02_2_OF_7",
+    "P03_0_OF_6",
+  ])expect(ownerMainBranch.invariants).toContain(rule);
+  expect(ownerMainBranch.acceptance).toBe("SOURCE_ONLY_NOT_TWO_REAL_OWNER_SIGNED_IN_BROWSER_JWT_RLS");
+  expect(ownerMainBranch.nextBatch).toBe("P02_818_REAL_OWNER_A_B_APPROVALS");
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
    const replacement=p03Currency.changedSource.find(x=>x.path===source.path);
@@ -325,8 +403,10 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      .toBe(ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
    if(qaWitness)expect(qaWitness.previousBlob,source.path).toBe(ownerNavigation?.currentBlob);
    if(fixtureFix)expect(fixtureFix.previousBlob,source.path).toBe(qaWitness?.currentBlob);
-   expect(hash(read(source.path)),source.path)
-     .toBe(expectedCurrentOwnerSlugBlob(source.path,fixtureFix?.currentBlob??qaWitness?.currentBlob??ownerNavigation?.currentBlob??ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob));
+   const branchSuccessor=ownerMainBranch.changedSource.find(x=>x.path===source.path);
+   const reviewedPreBranch=expectedCurrentOwnerSlugBlob(source.path,fixtureFix?.currentBlob??qaWitness?.currentBlob??ownerNavigation?.currentBlob??ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
+   if(branchSuccessor)expect(branchSuccessor.previousBlob,source.path).toBe(reviewedPreBranch);
+   expect(hash(read(source.path)),source.path).toBe(branchSuccessor?.currentBlob??reviewedPreBranch);
   }
   // Separate independent source successor for actual post-confirm owner routing.
    expect(postConfirmNavigation.schema).toBe("servicedesk.p02.post-confirm-owner-navigation-transport-successor.v1");

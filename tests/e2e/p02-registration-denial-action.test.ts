@@ -32,6 +32,11 @@ const saved = {
 const membership = {
   workspace_id: workspaceId, user_id: ownerId, role: "OWNER", status: "ACTIVE",
 };
+const branchId = "55555555-5555-4555-8555-555555555555";
+const savedBranch = { id: branchId, workspace_id: workspaceId, code: "MAIN",
+  timezone: saved.timezone, currency: saved.currency, is_default: true, active: true };
+const savedBranchMembership = { workspace_id: workspaceId, branch_id: branchId,
+  user_id: ownerId, status: "ACTIVE" };
 
 function form() {
   const data = new FormData();
@@ -57,6 +62,10 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
   let workspaceRow: unknown;
   let memberError: boolean;
   let workspaceError: boolean;
+  let branchRows: unknown;
+  let branchMembershipRows: unknown;
+  let branchError: boolean;
+  let branchMembershipError: boolean;
 
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic.supabase.co");
@@ -71,6 +80,10 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
     workspaceRow = saved;
     memberError = false;
     workspaceError = false;
+    branchRows = [savedBranch];
+    branchMembershipRows = [savedBranchMembership];
+    branchError = false;
+    branchMembershipError = false;
     calls.getUser.mockReset().mockResolvedValue({
       data: { user: {
         id: ownerId, email: "approved@example.test",
@@ -97,6 +110,23 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
           return { data: workspaceRow, error: workspaceError ? { code: "42501" } : null };
         },
       };
+      if (table === "workspace_branches") return {
+        select() { return this; },
+        eq() { return this; },
+        async limit(value: number) {
+          expect(value).toBe(2);
+          return { data: branchRows, error: branchError ? { code: "42501" } : null };
+        },
+      };
+      if (table === "branch_memberships") return {
+        select() { return this; },
+        eq() { return this; },
+        async limit(value: number) {
+          expect(value).toBe(2);
+          return { data: branchMembershipRows,
+            error: branchMembershipError ? { code: "42501" } : null };
+        },
+      };
       throw new Error("UNEXPECTED_TABLE");
     });
   });
@@ -106,7 +136,7 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
     expect(await destination()).toBe("/onboarding/verified?workspace=synthetic-team");
     expect(calls.getUser).toHaveBeenCalledTimes(2);
     expect(calls.from.mock.calls.map(([table]) => table)).toEqual([
-      "memberships", "workspaces",
+      "memberships", "workspaces", "workspace_branches", "branch_memberships",
     ]);
     expect(calls.rpc).toHaveBeenCalledWith(
       "servicedesk_register_owner_workspace",
@@ -120,7 +150,7 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
       data: { ok: true, slug: "earlier-team", existing: true }, error: null,
     });
     expect(await destination()).toBe("/onboarding/verified?workspace=earlier-team");
-    expect(calls.from).toHaveBeenCalledTimes(2);
+    expect(calls.from).toHaveBeenCalledTimes(4);
   });
 
   it("explains database-controlled QA registration denial without a false success", async () => {
@@ -180,6 +210,22 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
     workspaceRow = saved;
     memberError = true;
     expect(await destination()).toContain("saved owner access could not be verified");
+  });
+
+  it("never reports owner onboarding as ready when the MAIN branch or its assignment is missing", async () => {
+    branchRows = [];
+    let href = await destination();
+    expect(href).toContain("saved owner access could not be verified");
+    expect(href).not.toContain("/onboarding/verified");
+    expect(calls.from.mock.calls.map(([table]) => table)).toEqual([
+      "memberships", "workspaces", "workspace_branches",
+    ]);
+    branchRows = [savedBranch];
+    branchMembershipRows = [{ ...savedBranchMembership, user_id: attackerId }];
+    href = await destination();
+    expect(href).toContain("saved owner access could not be verified");
+    expect(href).not.toContain("/onboarding/verified");
+    expect(calls.rpc).toHaveBeenCalledTimes(2); // One explicit action per owner submission; no implicit retry.
   });
 
   it("never leaks raw provider failures or treats them as successful setup", async () => {

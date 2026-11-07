@@ -14,6 +14,11 @@ const requested = {
 };
 const saved = { id: workspaceId, ...requested };
 const membership = { workspace_id: workspaceId, user_id: userId, role: "OWNER", status: "ACTIVE" };
+const branchId = "55555555-5555-4555-8555-555555555555";
+const defaultBranch = { id: branchId, workspace_id: workspaceId, code: "MAIN",
+  timezone: requested.timezone, currency: requested.currency, is_default: true, active: true };
+const branchOwner = { workspace_id: workspaceId, branch_id: branchId,
+  user_id: userId, status: "ACTIVE" };
 
 function signedInRlsReadback(options: {
   signedInId?: string | null;
@@ -21,6 +26,10 @@ function signedInRlsReadback(options: {
   workspace?: unknown;
   memberError?: boolean;
   workspaceError?: boolean;
+  branchRows?: unknown;
+  branchOwnerRows?: unknown;
+  branchError?: boolean;
+  branchOwnerError?: boolean;
 } = {}) {
   const reads: string[] = [];
   const auth = {
@@ -48,6 +57,24 @@ function signedInRlsReadback(options: {
             error: options.workspaceError ? { code: "PERMISSION_DENIED" } : null };
         },
       };
+      if (table === "workspace_branches") return {
+        select() { return this; },
+        eq() { return this; },
+        async limit(count: number) {
+          expect(count).toBe(2);
+          return { data: options.branchRows === undefined ? [defaultBranch] : options.branchRows,
+            error: options.branchError ? { code: "PERMISSION_DENIED" } : null };
+        },
+      };
+      if (table === "branch_memberships") return {
+        select() { return this; },
+        eq() { return this; },
+        async limit(count: number) {
+          expect(count).toBe(2);
+          return { data: options.branchOwnerRows === undefined ? [branchOwner] : options.branchOwnerRows,
+            error: options.branchOwnerError ? { code: "PERMISSION_DENIED" } : null };
+        },
+      };
       throw Error("Unexpected RLS source");
     },
   } as unknown as SupabaseClient;
@@ -60,7 +87,9 @@ describe("P02 signed-in owner workspace registration has durable readback", () =
     expect(await verifyOwnerWorkspaceCreationReadback(
       input.auth, userId, requested, { ok: true, slug: requested.slug, existing: false },
     )).toEqual({ ok: true, workspace: saved, existing: false });
-    expect(input.reads).toEqual(["verified-user", "memberships", "workspaces"]);
+    expect(input.reads).toEqual([
+      "verified-user", "memberships", "workspaces", "workspace_branches", "branch_memberships",
+    ]);
   });
 
   it("accepts the RPC's legitimate idempotent existing-owner path without inventing a new workspace", async () => {
@@ -113,6 +142,48 @@ describe("P02 signed-in owner workspace registration has durable readback", () =
       stub.auth, userId, requested, { ok: true, slug: "foreign-business", existing: true },
     )).toEqual({ ok: false, reason: "PERSISTENCE_UNVERIFIED" });
     expect(stub.reads).not.toContain("workspaces");
+  });
+
+  it("refuses a registration receipt without a saved active MAIN branch and owner assignment", async () => {
+    for (const options of [
+      { branchRows: [] },
+      { branchRows: null },
+      { branchRows: [defaultBranch, defaultBranch] },
+      { branchRows: [{ ...defaultBranch, id: attackerId }] },
+      { branchRows: [{ ...defaultBranch, workspace_id: attackerId }] },
+      { branchRows: [{ ...defaultBranch, active: false }] },
+      { branchRows: [{ ...defaultBranch, is_default: false }] },
+      { branchRows: [{ ...defaultBranch, code: "OTHER" }] },
+      { branchRows: [{ ...defaultBranch, timezone: "UTC" }] },
+      { branchRows: [{ ...defaultBranch, currency: "BDT" }] },
+      { branchError: true },
+      { branchOwnerRows: [] },
+      { branchOwnerRows: null },
+      { branchOwnerRows: [branchOwner, branchOwner] },
+      { branchOwnerRows: [{ ...branchOwner, workspace_id: attackerId }] },
+      { branchOwnerRows: [{ ...branchOwner, branch_id: attackerId }] },
+      { branchOwnerRows: [{ ...branchOwner, user_id: attackerId }] },
+      { branchOwnerRows: [{ ...branchOwner, status: "REVOKED" }] },
+      { branchOwnerError: true },
+    ]) {
+      const stub = signedInRlsReadback(options);
+      expect(await verifyOwnerWorkspaceCreationReadback(
+        stub.auth, userId, requested,
+        { ok: true, slug: requested.slug, existing: false },
+      ), JSON.stringify(options)).toEqual({ ok: false, reason: "PERSISTENCE_UNVERIFIED" });
+    }
+  });
+
+  it("accepts an idempotent existing-owner branch with legitimate changed currency and code", async () => {
+    const previous = { ...saved, slug: "older-team", currency: "BDT" };
+    const stub = signedInRlsReadback({
+      workspace: previous,
+      branchRows: [{ ...defaultBranch, code: "OPS", timezone: "UTC", currency: "BDT" }],
+    });
+    expect(await verifyOwnerWorkspaceCreationReadback(
+      stub.auth, userId, requested, { ok: true, slug: "older-team", existing: true },
+    )).toEqual({ ok: true, workspace: previous, existing: true });
+    expect(stub.reads).toContain("branch_memberships");
   });
 
   it("wires post-RPC readback into the real server action without external side effects", () => {
