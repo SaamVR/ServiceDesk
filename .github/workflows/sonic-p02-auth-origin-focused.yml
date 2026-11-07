@@ -13,7 +13,6 @@ on:
       - src/app/auth/reset-password/page.tsx
       - tests/e2e/p02-vercel-auth-redirect-origin.test.ts
       - .github/workflows/v4-l4-authenticated-uat.yml
-      - .github/workflows/v4-l3-rls-real-session.yml
       - tests/e2e/p02-manual-auth-uat-guard.test.ts
       - tests/e2e/p02-registration-denial-action.test.ts
       - tests/e2e/p02-auth-url-feedback-integrity.test.ts
