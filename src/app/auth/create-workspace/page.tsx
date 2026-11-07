@@ -6,7 +6,7 @@ import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { createOwnerWorkspace } from "./actions";
 import styles from "../sign-in/page.module.css";
 import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
-import { trustedWorkspaceRegistrationError } from "@/features/auth/workspace-registration-error";
+import { trustedWorkspaceRegistrationError, workspaceRegistrationNeedsReadback } from "@/features/auth/workspace-registration-error";
 
 const timezones = [
   { value: "UTC", label: "UTC" },
@@ -24,6 +24,7 @@ export default async function CreateWorkspacePage({
   const query = await searchParams;
   // A query parameter is untrusted and cannot supply arbitrary error copy.
   const trustedError = trustedWorkspaceRegistrationError(query.error);
+  const uncertainRegistration = workspaceRegistrationNeedsReadback(query.error);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
@@ -62,6 +63,12 @@ export default async function CreateWorkspacePage({
       asideItems={["Create your private business workspace", "Add services and invite your team", "Connect approved channels when ready"]}
     >
       {trustedError ? <p className={styles.error} role="alert">{trustedError}</p> : null}
+      {uncertainRegistration ? (
+        <p className={styles.help} role="status">
+          Do not submit another workspace registration until you check the saved result.{" "}
+          <Link href="/auth/continue">Check your authorized workspaces</Link> before trying again.
+        </p>
+      ) : null
       <form className={styles.form} action={createOwnerWorkspace}>
         <div className={styles.field}>
           <label htmlFor="business-name">Business name</label>

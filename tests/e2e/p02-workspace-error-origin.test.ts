@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { trustedWorkspaceRegistrationError } from "../../src/features/auth/workspace-registration-error";
+import { trustedWorkspaceRegistrationError, workspaceRegistrationNeedsReadback } from "../../src/features/auth/workspace-registration-error";
 import { validateWorkspaceFields } from "../../src/features/auth/registration";
 import { GET as continueOwnerJourney } from "../../src/app/auth/continue/route";
 import CreateWorkspacePage from "../../src/app/auth/create-workspace/page";
@@ -57,6 +57,25 @@ describe("P02 bounded workspace setup error presentation", () => {
     ]) {
       expect(trustedWorkspaceRegistrationError(message)).toBe(message);
     }
+  });
+  it("keeps ambiguous RPC completion messages from the real action visible and advisory", () => {
+    const server = readFileSync("src/app/auth/create-workspace/actions.ts", "utf8");
+    for (const message of ["Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.", "Workspace registration may have committed, but saved owner access could not be verified. Use your authorized workspaces to check before trying again."]) {
+      expect(server).toContain('fail("' + message + '")');
+      expect(trustedWorkspaceRegistrationError(message)).toBe(message);
+      expect(workspaceRegistrationNeedsReadback(message)).toBe(true);
+    }
+  });
+  it("links only bounded uncertain registration feedback to saved-workspace verification", () => {
+    const source = readFileSync("src/app/auth/create-workspace/page.tsx", "utf8");
+    expect(source).toContain("workspaceRegistrationNeedsReadback(query.error)");
+    expect(source).toContain('<Link href="/auth/continue">Check your authorized workspaces</Link>');
+    expect(source).toContain("Do not submit another workspace registration");
+    for (const raw of [null, {}, [], "Unknown", "<script>alert(1)</script>",
+      "This workspace address is taken. Try another.", "Please send your password"]) {
+      expect(workspaceRegistrationNeedsReadback(raw)).toBe(false);
+    }
+    expect(source).not.toContain("service_role");
   });
   it("does not render untrusted URL instructions as product errors", () => {
     for (const attackerText of [

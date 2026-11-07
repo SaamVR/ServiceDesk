@@ -104,6 +104,16 @@ const postConfirmNavigation=JSON.parse(postConfirmNavigationRaw.toString()) as {
  unchangedIntegratedWorkflow:{path:string;blob:string;unchanged:boolean};
  requiredGuards:string[];acceptanceState:string;nextBatch:string;
 };
+const uncertainRegistrationRaw=read("docs/delivery/sonic-p02-uncertain-registration-recovery-successor-20261108.json");
+const uncertainRegistration=JSON.parse(uncertainRegistrationRaw.toString()) as {
+ schema:string;batchId:string;chat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string}>;
+ testCases:{path:string;prior:number;current:number;newCases:number;scope:string};
+ actionUnchanged:{path:string;blob:string;unchanged:boolean;mayHaveCommittedMessages:string[]};
+ workflowUnchanged:{path:string;blob:string;unchanged:boolean};
+ requiredGuards:string[];acceptanceState:string;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -223,10 +233,13 @@ describe("F15 independent critic: no new composite, exact source and default-den
    if(transport)expect(transport.previousBlob,source.path).toBe(replacement?.currentBlob??source.blob);
    // The historical P02/P03 pins remain true; only this additive successor can supersede.
    const navSuccessor=postConfirmNavigation.changedSource.find(x=>x.path===source.path);
+   const recoverySuccessor=uncertainRegistration.changedSource.find(x=>x.path===source.path);
    if(navSuccessor)expect(navSuccessor.previousBlob,source.path)
      .toBe(transport?.currentBlob??replacement?.currentBlob??source.blob);
-   expect(gitHash(read(source.path)),source.path)
+   if(recoverySuccessor)expect(recoverySuccessor.previousBlob,source.path)
      .toBe(navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
+   expect(gitHash(read(source.path)),source.path)
+     .toBe(recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
   }
   // Separate independent source successor for actual post-confirm owner routing.
    expect(postConfirmNavigation.schema).toBe("servicedesk.p02.post-confirm-owner-navigation-transport-successor.v1");
@@ -261,7 +274,9 @@ describe("F15 independent critic: no new composite, exact source and default-den
    expect(new Set(postConfirmNavigation.changedSource.map(x=>x.path)).size).toBe(3);
    for(const change of postConfirmNavigation.changedSource){
      expect(change.path).not.toContain("..");
-     expect(gitHash(read(change.path)),change.path).toBe(change.currentBlob);
+     const recovery=uncertainRegistration.changedSource.find(item=>item.path===change.path);
+     if(recovery)expect(recovery.previousBlob,change.path).toBe(change.currentBlob);
+     expect(gitHash(read(change.path)),change.path).toBe(recovery?.currentBlob??change.currentBlob);
    }
    expect(postConfirmNavigation.tests).toEqual({"path":"tests/e2e/p02-workspace-error-origin.test.ts","newCases":13,"totalCases":19,"scope":"SYNTHETIC_POST_CONFIRMATION_ENTRYPOINT_NO_LIVE_JWT"});
    expect(postConfirmNavigation.unchangedAuthorizationHelper).toEqual({"path":"src/features/auth/authorized-workspace-access.ts","blob":"9fb078e8be2d75491d2ff630e99857cdec391ee2","unchanged":true});
@@ -281,6 +296,35 @@ describe("F15 independent critic: no new composite, exact source and default-den
    expect(postConfirmNavigation.nextBatch).toBe("P02_818_TWO_OWNER_SIGNED_IN_ACCEPTANCE_PERMISSION_BLOCKED");
    expect(workspaceTransport.invariants).toContain("NO_AUTOMATIC_SECOND_REGISTRATION_ATTEMPT");
   expect(workspaceTransport.invariants).toContain("P02_REMAINS_OPEN");
+   // Previous locks are immutable; only this additive reviewed successor
+   // pins the current bounded recovery UI and adversarial negative coverage.
+   expect(gitHash(postConfirmNavigationRaw)).toBe("08a3748c1cbefd7c3f82b013d28e9646154edfee");
+   expect(uncertainRegistration.schema).toBe("servicedesk.p02.uncertain-registration-saved-readback-ui-successor.v1");
+   expect(uncertainRegistration.batchId).toBe("P02-UNKNOWN-RPC-COMMIT-OWNER-VISIBLE-READBACK-20261108");
+   expect(uncertainRegistration.sourceOnly).toBe(true);
+   expect(uncertainRegistration.reviewedParentHead).toBe("baf7742b6e89348cbf2f2d11e6f886a079222fd5");
+   expect(uncertainRegistration.predecessor).toEqual({path:"docs/delivery/sonic-p02-post-confirm-navigation-transport-successor-20261107.json",blob:"08a3748c1cbefd7c3f82b013d28e9646154edfee",unchanged:true});
+   expect(uncertainRegistration.predecessor.blob).toBe(gitHash(postConfirmNavigationRaw));
+   expect(uncertainRegistration.changedSource).toEqual([
+    {path:"src/features/auth/workspace-registration-error.ts",previousBlob:"77c1c0f5c2abf940edb6517e34e721ebd250e684",currentBlob:"73e200d522da5bf4dabe0275f97860379f53637f"},
+    {path:"src/app/auth/create-workspace/page.tsx",previousBlob:"18219d81539c44883e7ea856cf12dbafc8a97c70",currentBlob:"49499b2cbb7e230765b7097f1f67b5f12578156e"},
+    {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"d27a237c19ad5029816d2c0d4b23888026f3b1e6",currentBlob:"826f1e67c2570b0fcc6c8298558b1b663b254d2d"}
+   ]);
+   for(const source of uncertainRegistration.changedSource) {
+     expect(source.path).not.toContain("..");
+     expect(gitHash(read(source.path)),source.path).toBe(source.currentBlob);
+   }
+   expect(uncertainRegistration.testCases).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",prior:19,current:21,newCases:2,scope:"SYNTHETIC_UI_RECOVERY_NO_CONNECTED_DB"});
+   expect(uncertainRegistration.actionUnchanged.path).toBe("src/app/auth/create-workspace/actions.ts");
+   expect(uncertainRegistration.actionUnchanged.blob).toBe("8e3a6e0572c38680141ce86b5d7f5f84cf5d6dfd");
+   expect(gitHash(read(uncertainRegistration.actionUnchanged.path))).toBe(uncertainRegistration.actionUnchanged.blob);
+   expect(uncertainRegistration.actionUnchanged.mayHaveCommittedMessages).toEqual(["Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.","Workspace registration may have committed, but saved owner access could not be verified. Use your authorized workspaces to check before trying again."]);
+   expect(uncertainRegistration.workflowUnchanged.blob).toBe("634d35b6eb34025df560b78f0dfbe3354988238c");
+   expect(gitHash(read(uncertainRegistration.workflowUnchanged.path))).toBe(uncertainRegistration.workflowUnchanged.blob);
+   for(const guard of ["NO_SECOND_REGISTRATION_RPC","NO_CONNECTED_AUTH_OR_DB_WRITE","NO_DEPLOY","P02_REMAINS_2_OF_7"])
+      expect(uncertainRegistration.requiredGuards).toContain(guard);
+   expect(uncertainRegistration.acceptanceState).toBe("INTEGRATED_SOURCE_ONLY_NOT_REAL_TWO_OWNER_AUTHENTICATED_ACCEPTANCE");
+
   const pricingGuard=p03Currency.safetySourceUnchanged;
   expect(gitHash(read(pricingGuard.path))).toBe(pricingGuard.blob);
   expect(read(pricingGuard.path).toString()).toContain(pricingGuard.guard);
