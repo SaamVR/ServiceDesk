@@ -374,3 +374,5 @@ jobs:
         run: bash scripts/release/v4-f23-pg17-crew-branch-race.sh
       - name: SECURITY VETO evidence - witness sibling quote phantom (NOT acceptance)
         run: bash scripts/release/v4-f23-pg17-sibling-quote-phantom-witness.sh
+      - name: DBA review ONLY - prototype partial unique current-quote index on disposable PG17
+        run: bash scripts/release/v4-f23-pg17-unique-current-quote-remedy-prototype.sh
