@@ -33,6 +33,7 @@ jobs:
           tests/e2e/p02-workspace-error-origin.test.ts
           tests/e2e/p02-auth-url-feedback-integrity.test.ts
           tests/e2e/p02-qa-seed-url-saved-proof.test.ts
+          tests/e2e/p02-reset-password-session-closure.test.ts
           tests/e2e/v4-owner-pricing-form-state-readiness.test.tsx
           tests/ai/f20-owner-ledger-entrypoint.test.ts
           tests/ai/f20-owner-retention-entrypoint.test.ts
@@ -92,8 +93,10 @@ jobs:
       - name: Changed-file lint
         run: >-
           pnpm exec eslint
+          src/app/auth/reset-password/actions.ts
           tests/e2e/p02-auth-url-feedback-integrity.test.ts
           tests/e2e/p02-qa-seed-url-saved-proof.test.ts
+          tests/e2e/p02-reset-password-session-closure.test.ts
           src/features/auth/verified-auth-feedback.ts
           src/features/auth/qa-sample-readback.ts
           src/app/onboarding/verified/page.tsx
