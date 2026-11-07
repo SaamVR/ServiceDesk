@@ -24,7 +24,7 @@ describe("P02 Vercel auth-origin migration guard", () => {
 
   it("preserves historical Render fallback outside Vercel without changing old host operation", () => {
     expect(verifiedEmailRedirectOrigin(undefined, previousRender, "0")).toBe(previousRender);
-    expect(verifiedEmailRedirectOrigin(undefined, previousRender, "0")).toBe(previousRender);
+    expect(verifiedEmailRedirectOrigin("  ", previousRender, "0")).toBe(previousRender);
     expect(verifiedEmailRedirectOrigin(approved, previousRender, "0")).toBe(approved);
   });
 
