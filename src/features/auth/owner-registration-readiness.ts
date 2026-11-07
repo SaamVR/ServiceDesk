@@ -17,6 +17,7 @@ function hasValidAuthConfig(env: NodeJS.ProcessEnv): boolean {
   const origin = verifiedEmailRedirectOrigin(
     env.SERVICEDESK_AUTH_REDIRECT_ORIGIN,
     env.RENDER_EXTERNAL_URL,
+    env.VERCEL,
   );
   return Boolean(url && key && origin);
 }
