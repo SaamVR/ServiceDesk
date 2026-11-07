@@ -15,6 +15,7 @@ on:
       - tests/e2e/p02-manual-auth-uat-guard.test.ts
       - tests/e2e/p02-registration-denial-action.test.ts
       - tests/e2e/p02-auth-url-feedback-integrity.test.ts
+      - tests/e2e/p02-recovery-request-outcome.test.ts
   workflow_dispatch:
 
 permissions:
@@ -54,6 +55,7 @@ jobs:
             tests/e2e/p02-vercel-auth-redirect-origin.test.ts \
             tests/e2e/p02-manual-auth-uat-guard.test.ts \
             tests/e2e/p02-registration-denial-action.test.ts \
-            tests/e2e/p02-auth-url-feedback-integrity.test.ts
+            tests/e2e/p02-auth-url-feedback-integrity.test.ts \
+            tests/e2e/p02-recovery-request-outcome.test.ts
       - name: Confirm source TypeScript without opening or deploying a Vercel project
         run: pnpm typecheck
