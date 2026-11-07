@@ -22,7 +22,7 @@
     },
     {
       "path": "tests/ai/f23-current-quote-schema-compatibility-veto.test.ts",
-      "blob": "05dec50591020465a9c72024baaf9bc636617515",
+      "blob": "7b51bef9c828705a75bf8cc0a915a983550b638f",
       "lane": "ADVERSARIAL_QUOTE_WRITER_NONATOMICITY_CRITIC",
       "isProductionApproved": false
     },
