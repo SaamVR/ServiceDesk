@@ -1,0 +1,59 @@
+{
+  "schema": "servicedesk.p02.password-reset-session-closure-successor.v1",
+  "batch": "SONIC-P02-RESET-SIGNOUT-FAIL-CLOSED-20261107",
+  "scope": "SOURCE_ONLY_UNDEPLOYED",
+  "priorVerifiedSource": {
+    "path": "docs/delivery/sonic-f23-quote-crew-lock-races-successor-20261107.json",
+    "blob": "e77c6661c19eca10e7e5e57f34b28c2c2362ed91",
+    "unchanged": true
+  },
+  "historicAuthFeedback": {
+    "path": "docs/delivery/sonic-p02-auth-feedback-surface-successor-20261107.json",
+    "blob": "cc0c2d4e18777def4db57e8e15c0d73119cb64f3",
+    "unchanged": true
+  },
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousBlob": "8c2cab1749d363309d5c89cce9a6980084019202",
+    "currentBlob": "0dd43d0a63369c6c08cce1db951b4cdd23144418"
+  },
+  "overrides": [
+    {
+      "path": "src/features/auth/verified-auth-feedback.ts",
+      "previousBlob": "378c354b22b9225d01faa042f720ce8896501632",
+      "currentBlob": "cd689d192e816ccd9a1d0f0a1851f5ef97d7f728"
+    },
+    {
+      "path": "src/app/auth/reset-password/page.tsx",
+      "previousBlob": "fb083303fdd46154d0535684ebdaefb1e8472695",
+      "currentBlob": "e352402f1b5176a94c02133987b765a001899cd1"
+    }
+  ],
+  "addedSource": [
+    {
+      "path": "src/app/auth/reset-password/actions.ts",
+      "blob": "833aa5e9a09d4153faea12aa7178bf7d7f1f9c94"
+    },
+    {
+      "path": "tests/e2e/p02-reset-password-session-closure.test.ts",
+      "blob": "d6bc935818c6f33a45301840b4e0b04dbe256eb6"
+    }
+  ],
+  "veto": [
+    "NO_FALSE_FRESH_SIGNIN_ON_SIGNOUT_ERROR",
+    "NO_REPEATED_PASSWORD_MUTATION_ON_SESSION_FAILURE",
+    "NO_PRIVILEGED_AUTH_API",
+    "NO_LIVE_SUPABASE_WRITES",
+    "NO_DB_MIGRATION",
+    "NO_VERCEL_DEPLOY",
+    "NO_PAYMENT",
+    "P02_P03_OPEN"
+  ],
+  "reviewedBy": [
+    "P02_AUTH",
+    "QA_ADVERSARIAL",
+    "F15_INDEPENDENT_CRITIC",
+    "F20_INDEPENDENT_CRITIC"
+  ],
+  "releaseStatus": "CI_UNVERIFIED_PENDING_EXACT_SHA"
+}
