@@ -74,6 +74,16 @@ const f23Veto=JSON.parse(f23VetoRaw.toString()) as {
  sources:Array<{path:string;blob:string;type:string;receipt?:string;passedMeansSafe:boolean}>;
  additionalPrototypeReceipts:string[];flagsDefaultOff:string[];unresolved:string[];nonActions:string[];
 };
+const writerAuditRaw=read("docs/delivery/sonic-f23-quote-writer-compatibility-source-successor-20261107.json");
+const writerAudit=JSON.parse(writerAuditRaw.toString()) as {
+ schema:string;classification:string;
+ priorVerifiedVeto:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ changedSource:Array<{path:string;blob:string;lane:string;isProductionApproved:boolean}>;
+ sourcePreimagesUnchanged:Array<{path:string;blob:string}>;
+ requiredReadOnlyPreflightFields:string[];releaseVeto:string[];
+ activationFlagsDefaultOff:string[];notClaims:string[];
+};
 const prototypeBridgeRaw=read("docs/delivery/sonic-p02-f23-prototype-integration-bridge-20261107.json");
 const prototypeBridge=JSON.parse(prototypeBridgeRaw.toString()) as {
  schema:string;
@@ -192,6 +202,39 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(negativeRls.guards).toContain("FOREIGN_ANY_ROW_IS_RLS_VETO");
   expect(gitHash(prototypeBridgeRaw)).toBe("47b9619a854b29f9f3d3bf560d11d734b7effb8c");
   expect(gitHash(f23VetoRaw)).toBe("f8f8431210cbcaea474dd729b127629176a9c568");
+  expect(gitHash(writerAuditRaw)).toBe("3844882993a074b6c722e2c2391cc9da1e196c9f");
+  expect(writerAudit.schema).toBe("servicedesk.f23.quote-writer-compatibility-and-readonly-dba-preflight.v1");
+  expect(writerAudit.classification).toBe("SOURCE_AUDIT_AND_DISPOSABLE_PG17_ONLY_NOT_PRODUCTION_READY");
+  expect(writerAudit.priorVerifiedVeto.path).toBe("docs/delivery/sonic-f23-sibling-quote-phantom-veto-successor-20261107.json");
+  expect(writerAudit.priorVerifiedVeto.blob).toBe(gitHash(f23VetoRaw));
+  expect(writerAudit.priorVerifiedVeto.unchanged).toBe(true);
+  expect(writerAudit.workflowSuccessor.path).toBe(f23Veto.workflowSuccessor.path);
+  expect(writerAudit.workflowSuccessor.previousBlob).toBe(f23Veto.workflowSuccessor.currentBlob);
+  expect(writerAudit.workflowSuccessor.currentBlob).toBe("634d35b6eb34025df560b78f0dfbe3354988238c");
+  expect(writerAudit.changedSource).toHaveLength(3);
+  expect(new Set(writerAudit.changedSource.map(x=>x.path)).size).toBe(3);
+  for(const f of writerAudit.changedSource){
+   expect(f.path).not.toContain("..");
+   expect(f.isProductionApproved).toBe(false);
+   expect(gitHash(read(f.path)),f.path).toBe(f.blob);
+  }
+  expect(writerAudit.sourcePreimagesUnchanged).toHaveLength(4);
+  for(const f of writerAudit.sourcePreimagesUnchanged){
+   expect(f.path).not.toContain("..");
+   expect(gitHash(read(f.path)),f.path).toBe(f.blob);
+  }
+  expect(writerAudit.releaseVeto).toContain("LEGACY_TWO_CALL_QUOTE_REVISION_NOT_PROVEN_ATOMIC");
+  expect(writerAudit.activationFlagsDefaultOff).toEqual([
+   "SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED",
+   "SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED",
+  ]);
+  expect(writerAudit.notClaims).toContain("NO_MIGRATION");
+  const preflight=read(writerAudit.changedSource[0].path).toString();
+  expect(preflight).toContain("repeatable read read only");
+  expect(preflight).toContain("'identifiersReturned',false");
+  const workflowNow=read(writerAudit.workflowSuccessor.path).toString();
+  expect(workflowNow).toContain("tests/ai/f23-current-quote-schema-compatibility-veto.test.ts");
+  expect(workflowNow.split("scripts/release/v4-f23-current-quote-readonly-preflight.sql").length-1).toBe(2);
   expect(f23Veto.schema).toBe("servicedesk.f23.sibling-quote-phantom-veto-and-review-prototype.v1");
   expect(f23Veto.classification).toBe("SECURITY_VETO_CONFIRMED_ON_DISPOSABLE_PG17__NO_PRODUCTION_APPROVAL");
   expect(f23Veto.predecessor.path).toBe("docs/delivery/sonic-p02-foreign-rls-negative-probe-successor-20261107.json");
@@ -305,14 +348,14 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   const reviewed=f.path===race.workflow.path?prototypeBridge.workflowSuccessor.currentBlob:f.blob;
+   const reviewed=f.path===race.workflow.path?writerAudit.workflowSuccessor.currentBlob:f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const f of overlay.changedFiles){
    const expected=f.path===p02.workflowSuccessor.path
-    ? prototypeBridge.workflowSuccessor.currentBlob : f.blob;
+    ? writerAudit.workflowSuccessor.currentBlob : f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(expected);
   }
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
