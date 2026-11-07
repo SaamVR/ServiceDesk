@@ -212,4 +212,26 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
     expect(await destination()).toContain("not enabled on this environment");
     expect(calls.rpc).not.toHaveBeenCalled();
   });
+
+  it("does not invoke workspace registration when Auth identity verification throws", async () => {
+    calls.getUser.mockRejectedValueOnce(Error("PRIVATE_AUTH_TRANSPORT"));
+    const href = await destination();
+    expect(href).toContain("/auth/sign-in?notice=");
+    expect(href).not.toContain("PRIVATE_AUTH_TRANSPORT");
+    expect(calls.rpc).not.toHaveBeenCalled();
+    expect(calls.from).not.toHaveBeenCalled();
+  });
+
+  it("does not claim success or blindly resubmit after a possibly committed RPC times out", async () => {
+    calls.rpc.mockRejectedValueOnce(Error("PRIVATE_POST_COMMIT_NETWORK_FAILURE"));
+    const href = await destination();
+    expect(href).toContain("/auth/create-workspace?error=");
+    expect(href).toContain("may have committed");
+    expect(href).toContain("authorized workspaces before trying again");
+    expect(href).not.toContain("PRIVATE_POST_COMMIT_NETWORK_FAILURE");
+    expect(href).not.toContain("/onboarding/verified");
+    expect(calls.rpc).toHaveBeenCalledTimes(1);
+    expect(calls.from).not.toHaveBeenCalled();
+  });
+
 });

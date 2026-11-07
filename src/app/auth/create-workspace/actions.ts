@@ -39,8 +39,16 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
     },
   });
 
-  const { data: actor, error: actorError } = await auth.auth.getUser();
-  if (actorError || !actor.user || !actor.user.email_confirmed_at) {
+  // A thrown Auth transport error is not proof of an authorized owner.
+  // No registration RPC may run until the identity was actually verified.
+  let identity: Awaited<ReturnType<typeof auth.auth.getUser>> | null = null;
+  try {
+    identity = await auth.auth.getUser();
+  } catch {
+    identity = null;
+  }
+  const actor = identity?.data;
+  if (!identity || identity.error || !actor?.user || !actor.user.email_confirmed_at) {
     redirect("/auth/sign-in?notice=" + encodeURIComponent("Verify your email and sign in to create a workspace."));
   }
 
@@ -48,9 +56,22 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
     fail("Workspace creation is limited to approved test accounts on this preview.");
   }
 
-  const { data, error } = await auth.rpc("servicedesk_register_owner_workspace", {
-    p_name: name, p_slug: slug, p_timezone: timezone, p_currency: currency,
-  });
+  // A timeout/transport exception can occur AFTER an atomic registration RPC
+  // committed. Do not emit a 500 or encourage another non-idempotent setup.
+  // The owner must verify existing saved workspaces before any retry.
+  const rpcResponse = await (async () => {
+    try {
+      return await auth.rpc("servicedesk_register_owner_workspace", {
+        p_name: name, p_slug: slug, p_timezone: timezone, p_currency: currency,
+      });
+    } catch {
+      return null;
+    }
+  })();
+  if (!rpcResponse) {
+    fail("Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.");
+  }
+  const { data, error } = rpcResponse;
 
   if (error) {
     // An unapplied migration, missing EXECUTE permission or DB outage must

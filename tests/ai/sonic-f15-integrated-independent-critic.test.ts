@@ -16,6 +16,15 @@ const p02=JSON.parse(p02Raw.toString()) as {
  changedSource:Array<{path:string;blob:string;intent:string}>;
 };
 const p03CurrencyRaw=read("docs/delivery/sonic-p03-currency-first-run-ux-source-successor-20261107.json");
+const workspaceTransportRaw=read("docs/delivery/sonic-p02-workspace-rpc-transport-uncertainty-successor-20261107.json");
+const workspaceTransport=JSON.parse(workspaceTransportRaw.toString()) as {
+  schema:string;batchId:string;
+  predecessor:{path:string;blob:string;unchanged:boolean};
+  p03CurrencyPredecessor:{path:string;blob:string;unchanged:boolean};
+  changedSource:Array<{path:string;previousBlob:string;currentBlob:string}>;
+  acceptance:string;invariants:string[];
+};
+
 const p03Currency=JSON.parse(p03CurrencyRaw.toString()) as {
  schema:string;predecessor:{path:string;blob:string;unchanged:boolean};
  changedSource:Array<{path:string;previousBlob:string;currentBlob:string;purpose:string}>;
@@ -166,12 +175,28 @@ describe("F15 independent critic: no new composite, exact source and default-den
    "src/app/auth/create-workspace/page.tsx",
    "tests/e2e/p02-workspace-error-origin.test.ts",
   ]);
+  expect(gitHash(workspaceTransportRaw)).toBe("2e0c0fd319fce1b72ea679768181af3207dba9b4");
+  expect(workspaceTransport.schema).toBe("servicedesk.p02.owner-workspace-transport-uncertainty.v1");
+  expect(workspaceTransport.predecessor.path).toBe("docs/delivery/sonic-p02-registered-owner-ui-source-successor-20261106.json");
+  expect(workspaceTransport.predecessor.blob).toBe(gitHash(p02Raw));
+  expect(workspaceTransport.predecessor.unchanged).toBe(true);
+  expect(workspaceTransport.p03CurrencyPredecessor.blob).toBe(gitHash(p03CurrencyRaw));
+  expect(workspaceTransport.p03CurrencyPredecessor.unchanged).toBe(true);
+  expect(workspaceTransport.changedSource.map(x=>x.path)).toEqual([
+    "src/app/auth/create-workspace/actions.ts",
+    "tests/e2e/p02-registration-denial-action.test.ts",
+  ]);
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
    const replacement=p03Currency.changedSource.find(x=>x.path===source.path);
    if(replacement)expect(replacement.previousBlob,source.path).toBe(source.blob);
-   expect(gitHash(read(source.path)),source.path).toBe(replacement?.currentBlob??source.blob);
+   const transport=workspaceTransport.changedSource.find(x=>x.path===source.path);
+   if(transport)expect(transport.previousBlob,source.path).toBe(replacement?.currentBlob??source.blob);
+   expect(gitHash(read(source.path)),source.path)
+     .toBe(transport?.currentBlob??replacement?.currentBlob??source.blob);
   }
+  expect(workspaceTransport.invariants).toContain("NO_AUTOMATIC_SECOND_REGISTRATION_ATTEMPT");
+  expect(workspaceTransport.invariants).toContain("P02_REMAINS_OPEN");
   const pricingGuard=p03Currency.safetySourceUnchanged;
   expect(gitHash(read(pricingGuard.path))).toBe(pricingGuard.blob);
   expect(read(pricingGuard.path).toString()).toContain(pricingGuard.guard);
