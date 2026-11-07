@@ -218,6 +218,36 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
     expect(ownerNavigation.customers).not.toHaveBeenCalled();
   });
 
+  it("does not offer a new workspace when ACTIVE OWNER membership has no RLS-visible workspace", async () => {
+    ownerNavigation.membership.mockResolvedValueOnce({
+      data: [{ workspace_id: syntheticWorkspace, user_id: syntheticOwner,
+        role: "OWNER", status: "ACTIVE" }], error: null,
+    });
+    ownerNavigation.workspace.mockResolvedValueOnce({ data: [], error: null });
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/sign-in");
+    expect(target.searchParams.get("error")).toBe("Workspace lookup unavailable");
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("refuses partial workspace RLS visibility across multiple ACTIVE staff memberships", async () => {
+    ownerNavigation.membership.mockResolvedValueOnce({
+      data: [
+        { workspace_id: syntheticWorkspace, user_id: syntheticOwner, role: "OWNER", status: "ACTIVE" },
+        { workspace_id: "55555555-5555-4555-8555-555555555555",
+          user_id: syntheticOwner, role: "DISPATCHER", status: "ACTIVE" },
+      ], error: null,
+    });
+    ownerNavigation.workspace.mockResolvedValueOnce({
+      data: [{ id: syntheticWorkspace, slug: "synthetic-cleaning", name: "Synthetic Cleaning" }],
+      error: null,
+    });
+    const target = ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/sign-in");
+    expect(target.searchParams.get("error")).toBe("Workspace lookup unavailable");
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
   it("refuses a thrown customer lookup, never inferring the owner needs a new workspace", async () => {
     ownerNavigation.customers.mockRejectedValueOnce(Error("PRIVATE_CUSTOMER_NETWORK"));
     const target = ownerTarget(await continueOwnerJourney());

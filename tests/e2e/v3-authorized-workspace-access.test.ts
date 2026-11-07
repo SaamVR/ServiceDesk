@@ -99,10 +99,20 @@ describe("verified authenticated RLS workspace discovery", () => {
     }
   });
 
-  it("never enters a staff workspace hidden by RLS", async () => {
+  it("denies an RLS-hidden active owner workspace instead of falsely classifying a new owner", async () => {
     const { client } = fakeRlsClient([member("secret", "OWNER")], []);
     expect(await loadAuthorizedWorkspaceDecision(client, "verified-user")).toEqual({
-      ok: true, decision: { kind: "NONE" },
+      ok: false, code: "WORKSPACE_LOOKUP",
+    });
+  });
+
+  it("denies partially visible owner/dispatcher workspaces rather than silently dropping a membership", async () => {
+    const { client } = fakeRlsClient(
+      [member("one", "OWNER"), member("two", "DISPATCHER")],
+      [workspace("one", "north-office")],
+    );
+    expect(await loadAuthorizedWorkspaceDecision(client, "verified-user")).toEqual({
+      ok: false, code: "WORKSPACE_LOOKUP",
     });
   });
 

@@ -130,6 +130,17 @@ const recoveryJsx=JSON.parse(recoveryJsxRaw.toString()) as {
  workflowUnchanged:{path:string;blob:string;unchanged:boolean};
  mustRetain:string[];acceptance:string;
 };
+const activeOwnerRlsRaw=read("docs/delivery/sonic-p02-active-owner-hidden-workspace-veto-20261108.json");
+const activeOwnerRls=JSON.parse(activeOwnerRlsRaw.toString()) as {
+ schema:string;batchId:string;sourceOnly:boolean;parentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string}>;
+ tests:{route:{path:string;previousCases:number;currentCases:number;added:number};
+ unit:{path:string;previousCases:number;currentCases:number;changedExpectation:string}};
+ unchangedAuthRoute:{path:string;blob:string;unchanged:boolean};
+ unchangedWorkflow:{path:string;blob:string;unchanged:boolean};
+ requiredGuards:string[];acceptance:string;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -251,13 +262,16 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    const navSuccessor=postConfirmNavigation.changedSource.find(x=>x.path===source.path);
    const recoverySuccessor=uncertainRegistration.changedSource.find(x=>x.path===source.path);
    const pageCorrection=recoveryJsx.changedSource.find(x=>x.path===source.path);
+   const ownerRlsVeto=activeOwnerRls.changedSource.find(x=>x.path===source.path);
    if(navSuccessor)expect(navSuccessor.previousBlob,source.path)
      .toBe(transport?.currentBlob??replacement?.currentBlob??source.blob);
    if(recoverySuccessor)expect(recoverySuccessor.previousBlob,source.path)
      .toBe(navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
    if(pageCorrection)expect(pageCorrection.previousBlob,source.path).toBe(recoverySuccessor?.currentBlob);
-   expect(hash(read(source.path)),source.path)
+   if(ownerRlsVeto)expect(ownerRlsVeto.previousBlob,source.path)
      .toBe(pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
+   expect(hash(read(source.path)),source.path)
+     .toBe(ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
   }
   // Separate independent source successor for actual post-confirm owner routing.
    expect(postConfirmNavigation.schema).toBe("servicedesk.p02.post-confirm-owner-navigation-transport-successor.v1");
@@ -294,14 +308,19 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      expect(change.path).not.toContain("..");
      const recovery=uncertainRegistration.changedSource.find(item=>item.path===change.path);
      const corrected=recoveryJsx.changedSource.find(item=>item.path===change.path);
+     const ownerVeto=activeOwnerRls.changedSource.find(item=>item.path===change.path);
      if(recovery)expect(recovery.previousBlob,change.path).toBe(change.currentBlob);
      if(corrected)expect(corrected.previousBlob,change.path).toBe(recovery?.currentBlob);
-     expect(hash(read(change.path)),change.path).toBe(corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
+     if(ownerVeto)expect(ownerVeto.previousBlob,change.path).toBe(corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
+     expect(hash(read(change.path)),change.path)
+       .toBe(ownerVeto?.currentBlob??corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
    }
    expect(postConfirmNavigation.tests).toEqual({"path":"tests/e2e/p02-workspace-error-origin.test.ts","newCases":13,"totalCases":19,"scope":"SYNTHETIC_POST_CONFIRMATION_ENTRYPOINT_NO_LIVE_JWT"});
    expect(postConfirmNavigation.unchangedAuthorizationHelper).toEqual({"path":"src/features/auth/authorized-workspace-access.ts","blob":"9fb078e8be2d75491d2ff630e99857cdec391ee2","unchanged":true});
+   const correctedAuthorizer=activeOwnerRls.changedSource.find(item=>item.path===postConfirmNavigation.unchangedAuthorizationHelper.path);
+   expect(correctedAuthorizer?.previousBlob).toBe(postConfirmNavigation.unchangedAuthorizationHelper.blob);
    expect(hash(read(postConfirmNavigation.unchangedAuthorizationHelper.path)))
-     .toBe(postConfirmNavigation.unchangedAuthorizationHelper.blob);
+     .toBe(correctedAuthorizer?.currentBlob);
    expect(postConfirmNavigation.unchangedIntegratedWorkflow).toEqual({"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true});
    expect(hash(read(postConfirmNavigation.unchangedIntegratedWorkflow.path)))
      .toBe(postConfirmNavigation.unchangedIntegratedWorkflow.blob);
@@ -333,8 +352,10 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    for(const source of uncertainRegistration.changedSource) {
      expect(source.path).not.toContain("..");
      const corrected=recoveryJsx.changedSource.find(item=>item.path===source.path);
+     const ownerVeto=activeOwnerRls.changedSource.find(item=>item.path===source.path);
      if(corrected)expect(corrected.previousBlob,source.path).toBe(source.currentBlob);
-     expect(hash(read(source.path)),source.path).toBe(corrected?.currentBlob??source.currentBlob);
+     if(ownerVeto)expect(ownerVeto.previousBlob,source.path).toBe(corrected?.currentBlob??source.currentBlob);
+     expect(hash(read(source.path)),source.path).toBe(ownerVeto?.currentBlob??corrected?.currentBlob??source.currentBlob);
    }
    expect(uncertainRegistration.testCases).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",prior:19,current:21,newCases:2,scope:"SYNTHETIC_UI_RECOVERY_NO_CONNECTED_DB"});
    expect(uncertainRegistration.actionUnchanged.path).toBe("src/app/auth/create-workspace/actions.ts");
@@ -360,12 +381,40 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      fix:"CLOSE_JSX_CONDITIONAL_WITHOUT_CHANGING_OWNER_RECOVERY_COPY"
    }]);
    for(const check of [recoveryJsx.qaSourceUnchanged,recoveryJsx.guardSourceUnchanged,recoveryJsx.workflowUnchanged]){
-     expect(hash(read(check.path)),check.path).toBe(check.blob);
+     const ownerVeto=activeOwnerRls.changedSource.find(item=>item.path===check.path);
+     if(ownerVeto)expect(ownerVeto.previousBlob,check.path).toBe(check.blob);
+     expect(hash(read(check.path)),check.path).toBe(ownerVeto?.currentBlob??check.blob);
    }
    expect(recoveryJsx.mustRetain).toContain("P02_OPEN_2_OF_7");
    expect(recoveryJsx.mustRetain).toContain("NO_CONNECTED_DB_WRITE");
    expect(recoveryJsx.mustRetain).toContain("NO_DEPLOY");
    expect(recoveryJsx.acceptance).toBe("PENDING_EXACT_HEAD_CI_SOURCE_ONLY");
+   // Existing trusted page, test and authorization-handoff provenance stays pinned.
+   // The new reviewed successor only closes incomplete RLS staff visibility.
+   expect(hash(recoveryJsxRaw)).toBe("c86c71df734e38a8e894bf590e4386001c3ef832");
+   expect(activeOwnerRls.schema).toBe("servicedesk.p02.active-owner-missing-workspace-rls-veto-successor.v1");
+   expect(activeOwnerRls.batchId).toBe("P02-ACTIVE_OWNER_RLS_HIDDEN_WORKSPACE_MUST_NOT_REGISTER-20261108");
+   expect(activeOwnerRls.sourceOnly).toBe(true);
+   expect(activeOwnerRls.parentHead).toBe("ab7da89207fa9ae8c07b775a07a3b4bba018c18e");
+   expect(activeOwnerRls.predecessor).toEqual({path:"docs/delivery/sonic-p02-uncertain-registration-jsx-correction-20261108.json",blob:"c86c71df734e38a8e894bf590e4386001c3ef832",unchanged:true});
+   expect(activeOwnerRls.predecessor.blob).toBe(hash(recoveryJsxRaw));
+   expect(activeOwnerRls.changedSource).toEqual([
+     {path:"src/features/auth/authorized-workspace-access.ts",previousBlob:"9fb078e8be2d75491d2ff630e99857cdec391ee2",currentBlob:"432490ce986695d418b7f2cf0f7bcdac27806102"},
+     {path:"tests/e2e/v3-authorized-workspace-access.test.ts",previousBlob:"50d42e6543e5b4241f43f5683b3ee99b53f91772",currentBlob:"cb795a6dfa929e6019f0d9d190e6d90d0897aa6c"},
+     {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"826f1e67c2570b0fcc6c8298558b1b663b254d2d",currentBlob:"8c3e470ba2f74441b4441c448928573f7a163007"}
+   ]);
+   for(const changed of activeOwnerRls.changedSource){
+     expect(changed.path).not.toContain("..");
+     expect(hash(read(changed.path)),changed.path).toBe(changed.currentBlob);
+   }
+   expect(activeOwnerRls.tests.route).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",previousCases:21,currentCases:23,added:2});
+   expect(activeOwnerRls.tests.unit).toEqual({path:"tests/e2e/v3-authorized-workspace-access.test.ts",previousCases:8,currentCases:9,changedExpectation:"ACTIVE_HIDDEN_OWNER_DENIED"});
+   for(const oldSource of [activeOwnerRls.unchangedAuthRoute,activeOwnerRls.unchangedWorkflow])
+     expect(hash(read(oldSource.path)),oldSource.path).toBe(oldSource.blob);
+   for(const guard of ["ACTIVE_OWNER_MISSING_WORKSPACE_DENY_NOT_NEW_OWNER","PARTIAL_STAFF_RLS_READBACK_DENY","NO_CONNECTED_JWT_OR_DB_OPERATION","NO_DEPLOY","P02_OPEN_2_OF_7"])
+     expect(activeOwnerRls.requiredGuards).toContain(guard);
+   expect(activeOwnerRls.acceptance).toBe("SOURCE_ONLY_PENDING_TWO_REAL_OWNER_JWT_RLS");
+
 
 
   const pricingGuard=p03Currency.safetySourceUnchanged;
