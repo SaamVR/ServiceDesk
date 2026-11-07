@@ -1,0 +1,155 @@
+{
+  "schemaVersion": "sonic72-lane-v1",
+  "lane": "OWNER_CONTROL_PROVIDER_AI",
+  "canonicalHead": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
+  "issue": 173,
+  "sourceTaskNumbers": [
+    61,
+    72
+  ],
+  "authority": "AUDIT_ONLY",
+  "items": [
+    {
+      "number": 61,
+      "title": "Owner daily exception digest",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/owner-operations-brief.ts"
+      ],
+      "sourceCaveat": "Owner operations briefing exists; internal digest persistence and scheduled delivery not verified",
+      "nextGate": "P10",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 62,
+      "title": "Provider connection-health check",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/owner-provider-connection-test.ts"
+      ],
+      "sourceCaveat": "Owner-scoped connection probe exists, not continuous provider health monitoring or paid acceptance",
+      "nextGate": "P08",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 63,
+      "title": "Webhook signature anomaly",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/api-handlers/provider-whatsapp-http.ts"
+      ],
+      "sourceCaveat": "Inbound provider handler exists; dedicated signature-anomaly alert/journal not evidenced",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 64,
+      "title": "Idempotency replay monitor",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/automation-failure-triage.ts"
+      ],
+      "sourceCaveat": "Failure triage classifier exists; sustained replay anomaly monitoring and dedupe not proven",
+      "nextGate": "P05",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 65,
+      "title": "Outbox retry/dead-letter alert",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/jobs/outbox-retry.ts"
+      ],
+      "sourceCaveat": "Outbox retry source exists; dead-letter operational alert and provider callbacks not accepted",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 66,
+      "title": "Automation execution audit",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/action-audit.ts"
+      ],
+      "sourceCaveat": "Redacted action claim audit exists; complete current tenant execution receipts unavailable",
+      "nextGate": "P08",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 67,
+      "title": "Permission/RLS violation alert",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "RLS and permission-denial tests exist, but a durable owner alerting job is not evidenced",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 68,
+      "title": "AI intake-summary draft",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/request-brief.ts"
+      ],
+      "sourceCaveat": "AI intake brief source exists; source binding/owner approval required before save",
+      "nextGate": "P08",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 69,
+      "title": "AI reply-composer review",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/reply-safety.ts"
+      ],
+      "sourceCaveat": "Draft reply guardrail exists; owner consent/recipient validation and send remain separate",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 70,
+      "title": "AI dispatch suggestion",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/dispatch-review.ts"
+      ],
+      "sourceCaveat": "Dispatch suggestion source exists; slot/crew assignment authority remains human-owned",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 71,
+      "title": "AI quote exception explanation",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/quote-review.ts"
+      ],
+      "sourceCaveat": "Price claim-safe quote review exists; actual branch price book and owner confirmation required",
+      "nextGate": "P04",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 72,
+      "title": "AI QA pattern analysis",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/visit-qa-assessment.ts"
+      ],
+      "sourceCaveat": "Single saved visit QA review exists; multi-visit privacy-safe pattern analysis job not verified",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    }
+  ]
+}

@@ -1,0 +1,363 @@
+{
+  "schemaVersion": "sonic72-lane-v1",
+  "lane": "FIELD_QUALITY_FINANCE_RETENTION",
+  "canonicalHead": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
+  "issue": 173,
+  "sourceTaskNumbers": [
+    31,
+    60
+  ],
+  "authority": "AUDIT_ONLY",
+  "items": [
+    {
+      "number": 31,
+      "title": "Check-in overdue escalation",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "Field check-in primitives exist but no validated timed no-show escalation automation is evidenced",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 32,
+      "title": "Arrival evidence check",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/features/crew/field-evidence-boundary.ts"
+      ],
+      "sourceCaveat": "Evidence boundary exists; real arrival authenticated coordinates/photo and QA UAT are outstanding",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 33,
+      "title": "Pre-work photo review",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/core/request-photo-retention.ts"
+      ],
+      "sourceCaveat": "Photo storage/retention exists; dedicated pre-work photo owner-review automation not proven",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 34,
+      "title": "Crew checklist completeness",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/quality/view-models.ts"
+      ],
+      "sourceCaveat": "Quality checklist UI models exist, no source-bound automatic checklist completeness journal acceptance",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 35,
+      "title": "Add-on request approval",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "No specific owner-approved add-on request writer/price-variance rule shown",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 36,
+      "title": "Incident escalation",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/dispatch/operational-exceptions.ts"
+      ],
+      "sourceCaveat": "Operational exceptions source exists; durable incident event and escalation action incomplete",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 37,
+      "title": "Evidence privacy/retention review",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/core/request-photo-retention.ts"
+      ],
+      "sourceCaveat": "Photo lifecycle/retention source exists; actual consent and storage callback evidence pending",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 38,
+      "title": "Completed-visit QA",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/visit-qa-assessment.ts"
+      ],
+      "sourceCaveat": "AI QA assessment source exists; final saved pass/fail and media authenticity unverified",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 39,
+      "title": "Rework assignment suggestion",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/visit-qa-assessment.ts"
+      ],
+      "sourceCaveat": "QA assessment can inform human review; dedicated rework assignment journal not shown",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 40,
+      "title": "Handover closeout confirmation",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/operations/quality-queue.ts"
+      ],
+      "sourceCaveat": "Quality work queue exists, no authenticated service handover acceptance receipt",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 41,
+      "title": "Approved deposit request",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/integrations/payments/sandbox-checkout-command.ts"
+      ],
+      "sourceCaveat": "Sandbox checkout source exists; deposit and owner payment authorization need real approval",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 42,
+      "title": "Sandbox payment webhook reconciliation",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/integrations/payments/verified-payment-compatibility.ts"
+      ],
+      "sourceCaveat": "Payment compatibility checks exist; approved sandbox webhook+ledger reconciled event not accepted",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 43,
+      "title": "Payment receipt verification",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/integrations/payments/proof.ts"
+      ],
+      "sourceCaveat": "Payment proof guard source exists; verified sandbox provider receipt + invoice linkage pending",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 44,
+      "title": "Unallocated payment review",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/core/payment-application.ts"
+      ],
+      "sourceCaveat": "Payment application/reconciliation source exists; unapplied balance queue not independently proven",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 45,
+      "title": "Invoice issued event",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/invoices/server-boundary.ts"
+      ],
+      "sourceCaveat": "Invoice server workflow exists, but INVOICE_ISSUED is not a shipped rule trigger",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 46,
+      "title": "Due invoice reminder review",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/features/operations/staff-invoice-manual-reminder.ts"
+      ],
+      "sourceCaveat": "Manual invoice reminder review exists; no autonomous due-date send",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 47,
+      "title": "Overdue collections escalation",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/features/operations/invoice-collection-queue.ts"
+      ],
+      "sourceCaveat": "Collection queue exists; overdue trigger and provider escalation not accepted",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 48,
+      "title": "Partial-payment follow-up",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/core/payment-application.ts"
+      ],
+      "sourceCaveat": "Partial balance application exists; outreach and ledger receipt require consent",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 49,
+      "title": "Refund exception review",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/invoice-exception-review.ts"
+      ],
+      "sourceCaveat": "Invoice exception review exists; automatic refund action deliberately not authorized",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 50,
+      "title": "Paid invoice ledger reconciliation",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/features/operations/sandbox-payment-ledger-proof.ts"
+      ],
+      "sourceCaveat": "Sandbox ledger proof component exists; real provider/tenant evidence not provided",
+      "nextGate": "P07",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 51,
+      "title": "Consent-aware completion follow-up",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/aftercare-review.ts"
+      ],
+      "sourceCaveat": "Aftercare consent review source exists; real completed visit and verified contact must be rechecked",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 52,
+      "title": "Quality score review",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/visit-qa-assessment.ts"
+      ],
+      "sourceCaveat": "Quality review model exists; no end-to-end QA score acceptance",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 53,
+      "title": "Review-request approval",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "No owner-approved review-request workflow connected to verified customer/provider journal identified",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 54,
+      "title": "Complaint recovery case",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "Complaint case persistence and dedicated recovery escalation receipt not identified",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 55,
+      "title": "Repeat-clean proposal",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/ai/aftercare-batch-planner.ts"
+      ],
+      "sourceCaveat": "Aftercare repeat-clean proposal helper exists; not an autonomous recurrence booking",
+      "nextGate": "P06",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 56,
+      "title": "Subscription renewal review",
+      "status": "MISSING_AUTOMATION",
+      "canonicalEvidence": [],
+      "sourceCaveat": "No source-evidenced subscription-renewal review job with authenticated renewal ledger",
+      "nextGate": "CHANGE_ORDER",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 57,
+      "title": "Referral attribution review",
+      "status": "BUILT_COMPONENT",
+      "canonicalEvidence": [
+        "src/server/core/retention-attribution-postgres.ts"
+      ],
+      "sourceCaveat": "Attribution storage source exists; referral/commission event acceptance unverified",
+      "nextGate": "P10",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 58,
+      "title": "Loyalty/retention opportunity",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/ai/aftercare-review.ts"
+      ],
+      "sourceCaveat": "Retention opportunity reviewer exists; deterministic loyalty benefit/award job not proven",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 59,
+      "title": "Dormant customer re-engagement",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/integrations/outbox/retention-campaign-intent.ts"
+      ],
+      "sourceCaveat": "Retention outbound intent exists; dormancy threshold and consented delivery not approved",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    },
+    {
+      "number": 60,
+      "title": "Campaign unsubscribe enforcement",
+      "status": "PARTIAL",
+      "canonicalEvidence": [
+        "src/server/integrations/whatsapp/outbound-policy.ts"
+      ],
+      "sourceCaveat": "Outbound consent/policy guard exists; complete campaign unsubscribe propagation not proven",
+      "nextGate": "P09",
+      "acceptedOperationalReceipt": false,
+      "liveAutonomousExecutionVerified": false
+    }
+  ]
+}
