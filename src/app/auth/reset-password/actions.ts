@@ -30,19 +30,31 @@ export async function updateRecoveredPassword(formData: FormData): Promise<never
       },
     },
   });
-  const { data, error } = await auth.auth.getUser();
-  if (error || !data.user?.email_confirmed_at) {
+  // A thrown or incomplete Auth response is never a recovery session.
+  let identity: Awaited<ReturnType<typeof auth.auth.getUser>> | null = null;
+  try {
+    identity = await auth.auth.getUser();
+  } catch {
+    identity = null;
+  }
+  const verifiedUser = identity?.data?.user;
+  if (!identity || identity.error || !verifiedUser?.id || !verifiedUser.email_confirmed_at) {
     redirect("/auth/forgot-password?error=" + encodeURIComponent("Your reset link is invalid or expired. Request another link."));
   }
 
   // A provider transport exception is not a successful password reset.
-  let changed: Awaited<ReturnType<typeof auth.auth.updateUser>>;
+  // A transport exception may happen after a password update committed.
+  // Never show a second update form or claim a new credential was saved.
+  let changed: Awaited<ReturnType<typeof auth.auth.updateUser>> | null = null;
   try {
     changed = await auth.auth.updateUser({ password });
   } catch {
-    resetError("Password could not be updated. Please request a fresh recovery link.");
+    resetError("Password update status could not be confirmed. Sign out before requesting a new reset link.");
   }
-  if (changed.error) resetError("Password could not be updated. Please request a fresh recovery link.");
+  if (!changed || changed.error) resetError("Password could not be updated. Please request a fresh recovery link.");
+  if (!changed.data?.user?.id || changed.data.user.id !== verifiedUser.id) {
+    resetError("Password update status could not be confirmed. Sign out before requesting a new reset link.");
+  }
 
   // Default global signOut() may leave the current session intact when its
   // revocation request fails. Do not claim fresh sign-in if closure is unknown.

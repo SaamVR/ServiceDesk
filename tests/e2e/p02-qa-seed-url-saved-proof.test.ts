@@ -1,8 +1,30 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifiedSavedQaSample } from "../../src/features/auth/qa-sample-readback";
 import { QA_SEED_FIELDS, QA_SEED_LABEL, QA_SEED_SOURCE } from "../../src/features/auth/qa-sample-seed";
+import { seedVerifiedQaWorkspace } from "../../src/app/onboarding/verified/qa-seed-actions";
+
+const qaAction = vi.hoisted(() => ({
+  getUser: vi.fn(), readOwner: vi.fn(), seed: vi.fn(), from: vi.fn(),
+}));
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: () => ({ auth: { getUser: qaAction.getUser }, from: qaAction.from }),
+}));
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ getAll: () => [], set: () => undefined }),
+}));
+vi.mock("next/navigation", () => ({
+  redirect: (href: string): never => { throw Error("MOCK_REDIRECT:" + href); },
+}));
+vi.mock("../../src/features/auth/verified-owner-workspace", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../src/features/auth/verified-owner-workspace")>(),
+  loadVerifiedOwnerWorkspace: qaAction.readOwner,
+}));
+vi.mock("../../src/features/auth/qa-sample-seed", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../src/features/auth/qa-sample-seed")>(),
+  seedQaWorkspaceData: qaAction.seed,
+}));
 
 const actor = "11111111-1111-4111-8111-111111111111";
 const workspace = "22222222-2222-4222-8222-222222222222";
@@ -154,5 +176,85 @@ describe("P02 QA saved receipt must never be supplied by ?qaSeed URL", () => {
     for (const bad of [".insert(", ".update(", ".delete(", "service_role", "sendEmail(", "createPayment("]) {
       expect(source).not.toContain(bad);
     }
+  });
+});
+
+
+const qaSlug="fictional-qa-cleaning";
+const qaWorkspace="88888888-8888-4888-8888-888888888888";
+async function submitQaSeed(slug=qaSlug): Promise<string> {
+  const data=new FormData();
+  data.set("workspace",slug);
+  try {
+    await seedVerifiedQaWorkspace(data);
+  } catch (error) {
+    const message=error instanceof Error?error.message:String(error);
+    expect(message).toMatch(/^MOCK_REDIRECT:/);
+    return decodeURIComponent(message.slice("MOCK_REDIRECT:".length));
+  }
+  throw Error("QA_SEED_ACTION_RETURNED_WITHOUT_REDIRECT");
+}
+describe("P02 authorized QA seed action handles uncertain provider transport", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL","https://synthetic-project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY","sb_publishable_synthetic");
+    vi.stubEnv("SERVICEDESK_AUTH_REDIRECT_ORIGIN","https://qa-approved.example.test");
+    vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_ENABLED","false");
+    vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED","true");
+    vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED","true");
+    vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS","approved@example.test");
+    vi.stubEnv("SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED","true");
+    vi.stubEnv("SERVICEDESK_QA_FIXTURE_WRITES_APPROVED","true");
+    vi.stubEnv("SERVICEDESK_QA_FIXTURE_WORKSPACE_SLUGS",qaSlug);
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY","");
+    vi.stubEnv("RENDER_EXTERNAL_URL","");
+    qaAction.getUser.mockReset().mockResolvedValue({data:{user:{
+      id:actor,email:"approved@example.test",email_confirmed_at:"2026-11-07T00:00:00Z",
+    }},error:null});
+    qaAction.readOwner.mockReset().mockResolvedValue({ok:true,workspace:{
+      id:qaWorkspace,slug:qaSlug,name:"Synthetic QA Cleaning",timezone:"UTC",currency:"USD",
+    }});
+    qaAction.seed.mockReset().mockResolvedValue({ok:true,reused:false,customerId:customer,requestId:request});
+    qaAction.from.mockReset();
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("denies thrown Auth identity transport before any owner lookup or database seed", async () => {
+    qaAction.getUser.mockRejectedValueOnce(Error("PRIVATE_QA_AUTH_TRANSPORT"));
+    const href=await submitQaSeed();
+    expect(href).toContain("/auth/sign-in?next=");
+    expect(href).not.toContain("PRIVATE_QA_AUTH_TRANSPORT");
+    expect(qaAction.readOwner).not.toHaveBeenCalled();
+    expect(qaAction.seed).not.toHaveBeenCalled();
+  });
+
+  it("denies userless and unconfirmed QA Auth identities without seeding", async () => {
+    qaAction.getUser.mockResolvedValueOnce({data:{user:null},error:null});
+    expect(await submitQaSeed()).toContain("/auth/sign-in?next=");
+    qaAction.getUser.mockResolvedValueOnce({data:{user:{id:actor,email:"approved@example.test",email_confirmed_at:null}},error:null});
+    expect(await submitQaSeed()).toContain("qaSeed=not-authorized");
+    expect(qaAction.seed).not.toHaveBeenCalled();
+  });
+
+  it("reports a potentially partial commit as write-failed when the authorized seed transport throws", async () => {
+    qaAction.seed.mockRejectedValueOnce(Error("PRIVATE_POST_COMMIT_REST_FAILURE"));
+    const href=await submitQaSeed();
+    expect(href).toContain("qaSeed=write-failed");
+    expect(href).not.toContain("PRIVATE_POST_COMMIT_REST_FAILURE");
+    expect(href).not.toContain("qaSeed=created");
+    expect(qaAction.seed).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves existing denied and approved receipt routes without claiming a URL flag is saved proof", async () => {
+    qaAction.seed.mockResolvedValueOnce({ok:false,stage:"request"});
+    expect(await submitQaSeed()).toContain("qaSeed=write-failed");
+    expect(await submitQaSeed()).toContain("qaSeed=created");
+    expect(qaAction.seed).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses an otherwise approved tester targeting a workspace not on the exact QA slug allowlist", async () => {
+    vi.stubEnv("SERVICEDESK_QA_FIXTURE_WORKSPACE_SLUGS","other-fake-workspace");
+    expect(await submitQaSeed()).toContain("qaSeed=not-authorized");
+    expect(qaAction.seed).not.toHaveBeenCalled();
   });
 });

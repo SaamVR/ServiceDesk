@@ -31,6 +31,7 @@ const errorMessages: Record<AuthFeedbackPage, ReadonlySet<string>> = {
     "The two passwords do not match.",
     "Password recovery is unavailable in this environment.",
     "Password could not be updated. Please request a fresh recovery link.",
+    "Password update status could not be confirmed. Sign out before requesting a new reset link.",
     "Password updated, but ending this session could not be confirmed. Sign out before leaving this device.",
   ]),
 };

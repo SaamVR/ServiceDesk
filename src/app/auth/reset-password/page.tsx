@@ -13,7 +13,8 @@ export default async function ResetPasswordPage({
   const query = await searchParams;
   const errorMessage = trustedAuthFeedback("reset-password", "error", query.error);
   const sessionClosureUnverified = errorMessage ===
-    "Password updated, but ending this session could not be confirmed. Sign out before leaving this device.";
+    "Password updated, but ending this session could not be confirmed. Sign out before leaving this device." ||
+    errorMessage === "Password update status could not be confirmed. Sign out before requesting a new reset link.";
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
@@ -34,8 +35,15 @@ export default async function ResetPasswordPage({
       setAll() { /* Session refresh is middleware-owned. */ },
     },
   });
-  const { data, error } = await auth.auth.getUser();
-  if (error || !data.user?.email_confirmed_at) redirect("/auth/forgot-password");
+  let identity: Awaited<ReturnType<typeof auth.auth.getUser>> | null = null;
+  try {
+    identity = await auth.auth.getUser();
+  } catch {
+    identity = null;
+  }
+  const user = identity?.data?.user;
+  if (!identity || identity.error || !user?.id || !user.email_confirmed_at)
+    redirect("/auth/forgot-password");
 
   return (
     <RegistrationShell

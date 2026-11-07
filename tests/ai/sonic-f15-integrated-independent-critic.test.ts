@@ -194,6 +194,23 @@ const ownerMainBranch=JSON.parse(ownerMainBranchRaw.toString()) as {
  checkedNewBranchFields:string[];checkedOwnerBranchMembershipFields:string[];
  invariants:string[];acceptance:string;nextBatch:string;
 };
+const recoveryQaTransportRaw=read("docs/delivery/sonic-p02-recovery-qa-transport-uncertain-successor-20261108.json");
+const recoveryQaTransport=JSON.parse(recoveryQaTransportRaw.toString()) as {
+ schema:string;batchId:string;chat:string;sourceOnly:boolean;parentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ regressionTests:Array<{path:string;previous:number;current:number;added:number}>;
+ unchangedIntegrationWorkflow:{path:string;blob:string;unchanged:boolean};
+ guards:string[];acceptance:string;
+};
+const currentRecoveryQaSource=(path:string,previous:string|undefined):string=>{
+ if(typeof previous!=="string" || !/^[a-f0-9]{40}$/.test(previous))
+   throw new Error("Missing reviewed recovery/QA source SHA: "+path);
+ const successor=recoveryQaTransport.changedSource.find(item=>item.path===path);
+ if(!successor)return previous;
+ expect(successor.previousBlob,path).toBe(previous);
+ return successor.currentBlob;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -372,6 +389,42 @@ describe("F15 independent critic: no new composite, exact source and default-den
   ])expect(ownerMainBranch.invariants).toContain(rule);
   expect(ownerMainBranch.acceptance).toBe("SOURCE_ONLY_NOT_TWO_REAL_OWNER_SIGNED_IN_BROWSER_JWT_RLS");
   expect(ownerMainBranch.nextBatch).toBe("P02_818_REAL_OWNER_A_B_APPROVALS");
+  // Additional reviewed source successor; all owner MAIN-branch and older
+  // registration, reset, F23 and F26 manifests remain byte-identical.
+  expect(gitHash(ownerMainBranchRaw)).toBe("d881bf6a90a3387cff6465798342138aa7106479");
+  expect(recoveryQaTransport.schema).toBe("servicedesk.p02.recovery-and-qa-transport-uncertain-successor.v1");
+  expect(recoveryQaTransport.batchId).toBe("P02-RECOVERY_AND_QA_SEED_DENY_RAW_500_OR_FALSE_POST_COMMIT_RECEIPT-20261108");
+  expect(recoveryQaTransport.chat).toBe("PRODUCTION_SOURCE");
+  expect(recoveryQaTransport.sourceOnly).toBe(true);
+  expect(recoveryQaTransport.parentHead).toBe("e98e4ff0048f283a2272a00924e5f27feee635f5");
+  expect(recoveryQaTransport.predecessor).toEqual({path:"docs/delivery/sonic-p02-owner-main-branch-saved-readback-successor-20261108.json",blob:"d881bf6a90a3387cff6465798342138aa7106479",unchanged:true});
+  expect(recoveryQaTransport.predecessor.blob).toBe(gitHash(ownerMainBranchRaw));
+  expect(recoveryQaTransport.changedSource).toEqual([
+    {path:"src/app/auth/reset-password/actions.ts",previousBlob:"833aa5e9a09d4153faea12aa7178bf7d7f1f9c94",currentBlob:"5c9919850e8ddadfb5b361d8cb942c4f7785d945",lane:"RECOVERY_ACTION"},
+    {path:"src/app/auth/reset-password/page.tsx",previousBlob:"9a771cc40a68b8c5c50aaaf00ea346b1603fef45",currentBlob:"905c32bf18e1658a1ab88f6c437bf58a8c6c4fc3",lane:"RECOVERY_UI"},
+    {path:"src/features/auth/verified-auth-feedback.ts",previousBlob:"cd689d192e816ccd9a1d0f0a1851f5ef97d7f728",currentBlob:"334b7b1aa396a5608ab89839071632880bc805ce",lane:"TRUSTED_FEEDBACK"},
+    {path:"src/app/onboarding/verified/qa-seed-actions.ts",previousBlob:"5828d942a092d300a03f54ca751525f67a7c7056",currentBlob:"132e72cd4ea64e6c89fdc8cba3c2ae1c78aa71d9",lane:"QA_SEED_ACTION"},
+    {path:"tests/e2e/p02-reset-password-session-closure.test.ts",previousBlob:"d6bc935818c6f33a45301840b4e0b04dbe256eb6",currentBlob:"f6d1ac6a027823e0b4fb8d6ddbf605cf175164f6",lane:"RECOVERY_ADVERSARIAL_QA"},
+    {path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",previousBlob:"55ab5017788b95128e2f5a7982f744f7e3fd6277",currentBlob:"0795016afdc513196fecb9b802ec9710a3720968",lane:"QA_FIXTURE_ADVERSARIAL_QA"}
+  ]);
+  expect(new Set(recoveryQaTransport.changedSource.map(source=>source.path)).size).toBe(6);
+  for(const source of recoveryQaTransport.changedSource){
+    expect(source.path).not.toContain("..");
+    expect(gitHash(read(source.path)),source.path).toBe(source.currentBlob);
+  }
+  expect(recoveryQaTransport.regressionTests).toEqual([
+    {path:"tests/e2e/p02-reset-password-session-closure.test.ts",previous:7,current:11,added:4},
+    {path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",previous:6,current:11,added:5}
+  ]);
+  expect(recoveryQaTransport.unchangedIntegrationWorkflow).toEqual({
+    path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true
+  });
+  expect(gitHash(read(recoveryQaTransport.unchangedIntegrationWorkflow.path)))
+    .toBe(recoveryQaTransport.unchangedIntegrationWorkflow.blob);
+  for(const guard of ["NO_PASSWORD_UPDATE_ON_THROWN_OR_USERLESS_AUTH","NO_RESET_SUCCESS_ON_PARTIAL_OR_FOREIGN_UPDATED_USER","NO_SECOND_RESET_FORM_ON_UNCERTAIN_POST_UPDATE_RESULT","NO_QA_SEED_SUCCESS_ON_PARTIALLY_COMMITTED_TRANSPORT","NO_CONNECTED_SUPABASE_DB_OR_AUTH_WRITE","NO_DEPLOY_OR_PROVIDER_SEND","P02_REMAINS_OPEN_2_OF_7"])
+    expect(recoveryQaTransport.guards).toContain(guard);
+  expect(recoveryQaTransport.acceptance).toBe("SOURCE_ONLY_PENDING_REAL_TWO_OWNER_JWT_RLS_UAT");
+
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
    const replacement=p03Currency.changedSource.find(x=>x.path===source.path);
@@ -719,8 +772,9 @@ describe("F15 independent critic: no new composite, exact source and default-den
    if(source.path===resetRetry.reviewedPage.path)
      expect(resetRetry.reviewedPage.oldBlob).toBe(successor?.currentBlob);
    expect(gitHash(read(source.path)),source.path)
-     .toBe(source.path===resetRetry.reviewedPage.path
-       ?resetRetry.reviewedPage.newBlob:successor?.currentBlob??source.blob);
+     .toBe(currentRecoveryQaSource(source.path,
+       source.path===resetRetry.reviewedPage.path
+         ?resetRetry.reviewedPage.newBlob:successor?.currentBlob??source.blob));
   }
   expect(gitHash(qaProofRaw)).toBe("963c2e44e8e5a28fcc326460840657fcbe3401af");
   expect(qaProof.schema).toBe("servicedesk.p02.qa-seed-saved-proof-successor.v1");
@@ -893,7 +947,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(resetRetry.previousReviewed.unchanged).toBe(true);
   expect(resetRetry.reviewedPage.path).toBe("src/app/auth/reset-password/page.tsx");
   expect(resetRetry.reviewedPage.oldBlob).toBe(reset.overrides.find(x=>x.path===resetRetry.reviewedPage.path)?.currentBlob);
-  expect(gitHash(read(resetRetry.reviewedPage.path))).toBe(resetRetry.reviewedPage.newBlob);
+  expect(gitHash(read(resetRetry.reviewedPage.path))).toBe(currentRecoveryQaSource(resetRetry.reviewedPage.path,resetRetry.reviewedPage.newBlob));
   expect(gitHash(read(resetRetry.reviewedTest.path))).toBe(resetRetry.reviewedTest.newBlob);
   expect(resetRetry.focusedWorkflow.oldBlob).toBe("0e1ba6155a55182e25c3831b2f46093037d71dc3");
   expect(gitHash(signInAuditRaw)).toBe("355217845c497dd3199ebc0cd3bdac58779ff53f");
@@ -998,13 +1052,14 @@ describe("F15 independent critic: no new composite, exact source and default-den
    const before=authFeedback.changedSource.find(x=>x.path===change.path);
    expect(change.previousBlob,change.path).toBe(before?.blob);
    expect(gitHash(read(change.path)),change.path)
-     .toBe(change.path===resetRetry.reviewedPage.path
-       ?resetRetry.reviewedPage.newBlob:change.currentBlob);
+     .toBe(currentRecoveryQaSource(change.path,
+       change.path===resetRetry.reviewedPage.path
+         ?resetRetry.reviewedPage.newBlob:change.currentBlob));
   }
   expect(reset.addedSource).toHaveLength(2);
   for(const source of reset.addedSource){
    expect(source.path).not.toContain("..");
-   expect(gitHash(read(source.path)),source.path).toBe(source.blob);
+   expect(gitHash(read(source.path)),source.path).toBe(currentRecoveryQaSource(source.path,source.blob));
   }
   expect(quoteCrew.newRaces).toHaveLength(2);
   expect(new Set(quoteCrew.newRaces.map(r=>r.path)).size).toBe(2);
@@ -1032,7 +1087,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
    const fixtureFix=qaFixtureScope.changedSource.find(item=>item.path===source.path);
    if(fixtureFix)expect(fixtureFix.previousBlob,source.path).toBe(qaWitness?.currentBlob);
    expect(gitHash(read(source.path)),source.path)
-     .toBe(expectedCurrentOwnerSlugBlob(source.path,fixtureFix?.currentBlob??qaWitness?.currentBlob??later?.currentBlob??source.blob));
+     .toBe(currentRecoveryQaSource(source.path,expectedCurrentOwnerSlugBlob(source.path,fixtureFix?.currentBlob??qaWitness?.currentBlob??later?.currentBlob??source.blob)));
   }
   expect(race.testScript).toBe("scripts/release/v4-f23-pg17-owner-revocation-race.sh");
   expect(race.testScriptSha).toBe("16de03429be8f4474a1f582e78eb749143723f33");
