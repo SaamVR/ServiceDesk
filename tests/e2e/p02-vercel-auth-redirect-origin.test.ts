@@ -57,6 +57,7 @@ describe("P02 Vercel auth-origin migration guard", () => {
 
   it("signup readiness must use its injected Vercel runtime, not process-wide fallback", () => {
     const base = {
+      NODE_ENV:"test" as const,
       NEXT_PUBLIC_SUPABASE_URL:"https://fictional-project.supabase.co",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:"sb_publishable_synthetic_only",
       SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED:"true",
@@ -79,6 +80,7 @@ describe("P02 Vercel auth-origin migration guard", () => {
 
   it("rejects a bad explicit origin on Vercel even with a legacy Render fallback", () => {
     const env = {
+      NODE_ENV:"test" as const,
       NEXT_PUBLIC_SUPABASE_URL:"https://fictional-project.supabase.co",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:"sb_publishable_synthetic_only",
       SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED:"true",
