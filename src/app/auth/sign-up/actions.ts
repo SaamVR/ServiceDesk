@@ -46,12 +46,15 @@ export async function signUpWithPassword(formData: FormData): Promise<never> {
   // A transport failure may be reported without an Auth response. Never
   // imply confirmation email delivery or expose a provider's raw error.
   let signUpError: { message: string } | null = null;
+  let acceptedAuthUser = false;
   try {
     const result = await auth.auth.signUp({
       email, password,
       options: { emailRedirectTo: redirectOrigin + "/auth/confirm" },
     });
     signUpError = result.error;
+    // Supabase signup success returns a user, even when email confirmation leaves session null.
+    acceptedAuthUser = Boolean(result.data?.user?.id);
   } catch {
     signupError("We could not start account registration. Try again shortly.");
   }
@@ -61,6 +64,9 @@ export async function signUpWithPassword(formData: FormData): Promise<never> {
     if (/rate.limit|too.many/i.test(signUpError.message)) signupError("Please wait before requesting another confirmation email.");
     signupError("We could not start account registration. Try again shortly.");
   }
+
+  // An error-free but userless/partial provider response is NOT proof of accepted signup.
+  if (!acceptedAuthUser) signupError("We could not start account registration. Try again shortly.");
 
   redirect("/auth/sign-up/check-email");
 }

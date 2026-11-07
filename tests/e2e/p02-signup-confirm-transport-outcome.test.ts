@@ -59,7 +59,7 @@ describe("P02 Auth signup/confirmation transport outcomes are fail-closed", () =
     vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_ENABLED", "false");
     vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED", "true");
     vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS", "fictional.owner@example.test");
-    auth.signUp.mockReset().mockResolvedValue({ data: {}, error: null });
+    auth.signUp.mockReset().mockResolvedValue({ data: { user: { id: "synthetic-owner-id" } }, error: null });
     auth.exchangeCodeForSession.mockReset().mockResolvedValue(confirmed);
     auth.verifyOtp.mockReset().mockResolvedValue(confirmed);
   });
@@ -82,6 +82,13 @@ describe("P02 Auth signup/confirmation transport outcomes are fail-closed", () =
     auth.signUp.mockRejectedValueOnce(Error("PRIVATE_TIMEOUT_OR_MAIL_STATUS"));
     expect(await signupTarget()).toBe("/auth/sign-up?error=" + genericSignup);
     expect(auth.signUp).toHaveBeenCalledTimes(1);
+  });
+  it("denies error-free but userless/partial provider responses without false check-email success", async () => {
+    for (const data of [null, {}, { user: null, session: null }, { user: { id: "" } }]) {
+      auth.signUp.mockResolvedValueOnce({ data, error: null });
+      expect(await signupTarget()).toBe("/auth/sign-up?error=" + genericSignup);
+    }
+    expect(auth.signUp).toHaveBeenCalledTimes(4);
   });
   it("preserves bounded rate-limit feedback without exposing account existence", async () => {
     auth.signUp.mockResolvedValueOnce({ error: { message: "Rate limit exceeded" } });

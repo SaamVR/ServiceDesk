@@ -75,13 +75,23 @@ const signInAudit=JSON.parse(signInAuditRaw.toString()) as {
  focusedWorkflow:{path:string;previousBlob:string;currentBlob:string};
  requiredGuards:string[];
 };
-const signupConfirmTransport=JSON.parse(read("docs/delivery/sonic-p02-signup-confirm-transport-successor-20261107.json").toString()) as {
+const signupConfirmTransportRaw=read("docs/delivery/sonic-p02-signup-confirm-transport-successor-20261107.json");
+const signupConfirmTransport=JSON.parse(signupConfirmTransportRaw.toString()) as {
  schema:string;batchId:string;sourceOnly:boolean;parentHead:string;reviewedSourceHead:string;
  predecessor:{path:string;blob:string;unchanged:boolean};
  changedSource:Array<{path:string;previousBlob:string;currentBlob:string}>;
  addedAdversarialTest:{path:string;previousBlob:null;currentBlob:string;cases:number};
  focusedWorkflow:{path:string;previousBlob:string;currentBlob:string};
  requiredGuards:string[];acceptanceState:string;releaseGate:string;
+};
+const signupUserReceiptRaw=read("docs/delivery/sonic-p02-signup-user-receipt-successor-20261107.json");
+const signupUserReceipt=JSON.parse(signupUserReceiptRaw.toString()) as {
+  schema:string;batchId:string;sourceOnly:boolean;parentHead:string;
+  predecessor:{path:string;blob:string;unchanged:boolean};
+  changedSource:Array<{path:string;previousBlob:string;currentBlob:string}>;
+  testCases:number;
+  unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
+  requiredGuards:string[];acceptanceState:string;
 };
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
@@ -446,14 +456,15 @@ describe("F15 independent critic: no new composite, exact source and default-den
    ]);
    for(const source of signupConfirmTransport.changedSource){
      expect(source.path).not.toContain("..");
-     expect(gitHash(read(source.path)),source.path).toBe(source.currentBlob);
+     const successor=signupUserReceipt.changedSource.find(entry=>entry.path===source.path);
+      expect(gitHash(read(source.path)),source.path).toBe(successor?.currentBlob??source.currentBlob);
    }
    expect(signupConfirmTransport.addedAdversarialTest).toEqual({
      path:"tests/e2e/p02-signup-confirm-transport-outcome.test.ts",previousBlob:null,
      currentBlob:"f6659f118c343173b12767c102afc312053a32ff",cases:11,
    });
    expect(gitHash(read(signupConfirmTransport.addedAdversarialTest.path)))
-     .toBe(signupConfirmTransport.addedAdversarialTest.currentBlob);
+     .toBe(signupUserReceipt.changedSource.find(entry=>entry.path===signupConfirmTransport.addedAdversarialTest.path)?.currentBlob);
    expect(signupConfirmTransport.focusedWorkflow).toEqual({
      path:signInAudit.focusedWorkflow.path,
      previousBlob:"720495c3087c369249fe19495cb86c2461a0abca",
@@ -469,6 +480,38 @@ describe("F15 independent critic: no new composite, exact source and default-den
    expect(signupConfirmTransport.requiredGuards).toContain("NO_SUCCESSFUL_CONFIRM_WITHOUT_VERIFIED_USER_SESSION");
    expect(signupConfirmTransport.requiredGuards).toContain("NO_VERCEL_DEPLOY");
    expect(signupConfirmTransport.acceptanceState).toBe("SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_ACCEPTANCE");
+    // Follow-on source lock: neither original historical blob nor its manifest is altered.
+    expect(gitHash(signupConfirmTransportRaw)).toBe("a25c45beaee878113757e59310ba480fc9e81c59");
+    expect(signupUserReceipt.schema).toBe("servicedesk.p02.signup-provider-user-receipt-successor.v1");
+    expect(signupUserReceipt.batchId).toBe("P02-SIGNUP-PARTIAL-PROVIDER-RECEIPT-DENIAL-20261107");
+    expect(signupUserReceipt.sourceOnly).toBe(true);
+    expect(signupUserReceipt.parentHead).toBe("13f72c92b19e524d06f1fa97563386d5ebc64cd6");
+    expect(signupUserReceipt.predecessor).toEqual({
+      path:"docs/delivery/sonic-p02-signup-confirm-transport-successor-20261107.json",
+      blob:"a25c45beaee878113757e59310ba480fc9e81c59",unchanged:true,
+    });
+    expect(signupUserReceipt.predecessor.blob).toBe(gitHash(signupConfirmTransportRaw));
+    expect(signupUserReceipt.changedSource).toEqual([
+      {path:"src/app/auth/sign-up/actions.ts",previousBlob:"3e925d4ec220f7264e5c6407c42e2670be5cebef",currentBlob:"e08615dda66c6b7068c92ac56fe60364e6188ec4"},
+      {path:"tests/e2e/p02-signup-confirm-transport-outcome.test.ts",previousBlob:"f6659f118c343173b12767c102afc312053a32ff",currentBlob:"6d5d988a535039b03df8fcf7082caeea8f3f3b42"},
+    ]);
+    expect(signupUserReceipt.testCases).toBe(12);
+    for(const changed of signupUserReceipt.changedSource){
+      expect(changed.path).not.toContain("..");
+      expect(gitHash(read(changed.path)),changed.path).toBe(changed.currentBlob);
+    }
+    expect(signupUserReceipt.unchangedSource).toEqual([
+      {path:"src/app/auth/confirm/route.ts",blob:"4ab0f387ded6284c9af9b403c178e5869dbe8a33",unchanged:true},
+      {path:".github/workflows/sonic-p02-auth-origin-focused.yml",blob:"42e200cdfe166ebb0e2f5eb187b182ab81c24490",unchanged:true},
+    ]);
+    for(const unchanged of signupUserReceipt.unchangedSource){
+      expect(gitHash(read(unchanged.path)),unchanged.path).toBe(unchanged.blob);
+    }
+    expect(signupUserReceipt.requiredGuards).toContain("NO_CHECK_EMAIL_WITHOUT_RETURNED_SIGNUP_USER_ID");
+    expect(signupUserReceipt.requiredGuards).toContain("NO_CONNECTED_AUTH_WRITE");
+    expect(signupUserReceipt.requiredGuards).toContain("NO_DEPLOY");
+    expect(signupUserReceipt.acceptanceState).toBe("SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_ACCEPTANCE");
+
   
   expect(read(signInAudit.focusedWorkflow.path).toString())
     .toContain("tests/e2e/p02-signin-session-outcome.test.ts");
