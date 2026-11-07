@@ -1,0 +1,68 @@
+name: ServiceDesk P02 Auth Origin Focused Source Gate
+
+on:
+  push:
+    branches:
+      - sonic-integration/ir21-f20-real-finance-retention-20261030
+    paths:
+      - .github/workflows/sonic-p02-auth-origin-focused.yml
+      - src/features/auth/email-origin.ts
+      - src/features/auth/owner-registration-readiness.ts
+      - src/app/auth/sign-up/actions.ts
+      - src/app/auth/confirm/route.ts
+      - tests/e2e/p02-signup-confirm-transport-outcome.test.ts
+      - src/app/auth/sign-in/actions.ts
+      - tests/e2e/p02-signin-session-outcome.test.ts
+      - src/app/auth/forgot-password/actions.ts
+      - src/app/auth/reset-password/page.tsx
+      - tests/e2e/p02-vercel-auth-redirect-origin.test.ts
+      - .github/workflows/v4-l4-authenticated-uat.yml
+      - tests/e2e/p02-manual-auth-uat-guard.test.ts
+      - tests/e2e/p02-registration-denial-action.test.ts
+      - tests/e2e/p02-auth-url-feedback-integrity.test.ts
+      - tests/e2e/p02-recovery-request-outcome.test.ts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonic-p02-auth-origin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p02-auth-origin-source:
+    name: P02 fail-closed auth origin, QA registration and denied path
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      # No Supabase connection, customer identity, credentials or deployment.
+      SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false"
+      SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: P02 Vercel origin, registration and forged-feedback regression
+        run: |
+          pnpm exec vitest run \
+            tests/e2e/p02-vercel-auth-redirect-origin.test.ts \
+            tests/e2e/p02-manual-auth-uat-guard.test.ts \
+            tests/e2e/p02-registration-denial-action.test.ts \
+            tests/e2e/p02-auth-url-feedback-integrity.test.ts \
+            tests/e2e/p02-recovery-request-outcome.test.ts \
+            tests/e2e/p02-signin-session-outcome.test.ts \
+            tests/e2e/p02-signup-confirm-transport-outcome.test.ts
+      - name: Confirm source TypeScript without opening or deploying a Vercel project
+        run: pnpm typecheck

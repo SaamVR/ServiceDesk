@@ -1,0 +1,210 @@
+{
+  "schema": "servicedesk.f15.ir21.reviewed-atomic-owner-manual-source.v1",
+  "state": "SOURCE_IMPLEMENTED_NOT_INSTALLED",
+  "productionEffect": "NONE",
+  "parentIR21": "aa7484fee74025b7e0db4fd67fcff234b2edcdec",
+  "candidatePr": 915,
+  "candidateBranch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "importedPr": 884,
+  "importedHead": "8a46e5f3d74f2cc4c7e5676993f90e2b58c627c7",
+  "importedExactBlobs": [
+    {
+      "path": ".github/workflows/v4-f15-atomic-pg17-rc.yml",
+      "blob": "1ef9211966d60ff03e0b62d627e46c7df6a19990"
+    },
+    {
+      "path": "docs/delivery/sonic-f15-atomic-sla-source-batch-20261029.md",
+      "blob": "bf6d4a76eac8cfadfcc44daa39a9a51b5247a7ca"
+    },
+    {
+      "path": "docs/delivery/sonic-f15-pg17-dba-review-20261029.md",
+      "blob": "82bd11a15a6466336e697bfeae10a0b3d137c9e6"
+    },
+    {
+      "path": "docs/engineering/security/f15-unanswered-lead-atomic-db-candidate.sql",
+      "blob": "041429e469f1c491353b24cb266abc41d3643570"
+    },
+    {
+      "path": "scripts/release/v4-f15-atomic-pg17-concurrency.sh",
+      "blob": "08be7bfda6e826363c029d6b62e64bf1edbd4e59"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-atomic-ingress.ts",
+      "blob": "73da5f26534163f60e981c7a50b4e17bc245ba73"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-postgres-port.ts",
+      "blob": "a25f7d3de6a2c140477626f270072819e9edb687"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-unanswered-lead-sla.ts",
+      "blob": "7614e27f1ca80a0203ae16984fe393f68a4e621d"
+    },
+    {
+      "path": "tests/ai/sonic-f15-atomic-ingress.test.ts",
+      "blob": "272d03fa5252a91711e381797dd795260c1d441e"
+    },
+    {
+      "path": "tests/ai/sonic-f15-ingress-independent-critic.test.ts",
+      "blob": "f68171bde9a522a53fdf58b7512ccc061f0ec9a4"
+    },
+    {
+      "path": "tests/ai/sonic-f15-pg17-candidate-independent-critic.test.ts",
+      "blob": "88323c04e3fa278d05c73197d85410f9b69299e7"
+    },
+    {
+      "path": "tests/ai/sonic-f15-postgres-port.test.ts",
+      "blob": "8db477f46f52fcac72c01e6d8c4e6a100e6478c6"
+    },
+    {
+      "path": "tests/ai/sonic-f15-unanswered-lead-sla.test.ts",
+      "blob": "c73c2f771eb5d0fdee65faf4292dd90ce71ed7b4"
+    },
+    {
+      "path": "tests/sql/v4-f15-atomic-pg17-acceptance.sql",
+      "blob": "67e07152458c6fd35c0035559d22167ee039e447"
+    },
+    {
+      "path": "tests/sql/v4-f15-atomic-pg17-fixture.sql",
+      "blob": "5607536e51330f8313c7db2ce3f4c350a8111138"
+    }
+  ],
+  "newIntegratedBlobs": [
+    {
+      "path": "src/server/workflows/sonic-f15-complete-saved-source.ts",
+      "blob": "b32f905cb40b967c2bc344b59c079930fcb517a6"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-owner-manual-escalation.ts",
+      "blob": "93c5f692bc9a056b22ee95cf7a081137e8d9dd47"
+    },
+    {
+      "path": "src/features/operations/f15-owner-lead-sla-action.ts",
+      "blob": "2f17fcd73715b00fd2c6806d8752f7b6401e4130"
+    },
+    {
+      "path": "src/features/operations/OwnerUnansweredLeadReview.tsx",
+      "blob": "22d993cc170f40ffe27b65219907047a07c40f96"
+    },
+    {
+      "path": "src/features/operations/InboxProtectedLeadReviewPanel.tsx",
+      "blob": "d15d21e65a1fe5d6612e5e9518f0b32a98d44b07"
+    },
+    {
+      "path": "src/app/app/[workspace]/inbox/page.tsx",
+      "blob": "56516b7aa63750d5a46446e160e507d7481ac1ba"
+    },
+    {
+      "path": "tests/ai/sonic-f15-owner-manual-journey.test.ts",
+      "blob": "fc753d7e740c3af34f188a2fdbc39e285ce18428"
+    },
+    {
+      "path": "tests/ai/sonic-f15-complete-source-reader.test.ts",
+      "blob": "bbd77199a33da6df40e382110428896d1f56f916"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-owner-review-evidence.ts",
+      "blob": "745b0ef28aca40a63b667c8b1623138023457271"
+    },
+    {
+      "path": "tests/ai/sonic-f15-owner-review-evidence.test.ts",
+      "blob": "4f747919f1e92bebe3b8c81147c20234b1059487"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-owner-linked-attention.ts",
+      "blob": "74e3faad1c6e5ecd435d2ee12374d5507692fbdf"
+    },
+    {
+      "path": "src/features/operations/f15-owner-linked-attention-action.ts",
+      "blob": "5198d87e1a10259c0387d565db32d9962d90833b"
+    },
+    {
+      "path": "src/features/operations/OwnerLinkedAttentionReview.tsx",
+      "blob": "80927abfee80a1d6c1f928811ff36d35426bfd78"
+    },
+    {
+      "path": "tests/ai/sonic-f15-linked-attention.test.ts",
+      "blob": "3a316c949ff1bf276b4f670b9a497227b149d19c"
+    },
+    {
+      "path": "src/server/workflows/sonic-f15-owner-acknowledge.ts",
+      "blob": "e97d6adac812289c91d1300d914f5da49f7c9dac"
+    },
+    {
+      "path": "src/features/operations/f15-owner-acknowledge-action.ts",
+      "blob": "024309b9e6e9ebe5283e189c927848e912c5578b"
+    },
+    {
+      "path": "tests/ai/sonic-f15-owner-acknowledge.test.ts",
+      "blob": "bd83aba3f0d9689fb852bf147e7f19b80cbc1b2c"
+    },
+    {
+      "path": "tests/ai/sonic-f15-v3-release-security-critic.test.ts",
+      "blob": "0b58fd7233ed541361280eec55f29c4efc6e04f2"
+    }
+  ],
+  "priorInboxBlob": "1dbdc5fede5b5b21d7a488934c5f0151e0e5a672",
+  "verifiedSqlProof": "https://github.com/SaamVR/ServiceDesk/actions/runs/40886885799",
+  "sourceRequirements": [
+    "P02_AUTH_ACCEPTED",
+    "F15_ATOMIC_SQL_OWNER_DBA_APPROVED_AND_APPLIED",
+    "SERVER_FEATURE_OPT_IN",
+    "SIGNED_IN_OWNER_ALL_BRANCH",
+    "COMPLETE_SAVED_RESPONSE_HISTORY",
+    "DATABASE_ATOMIC_CLAIM_RECHECK"
+  ],
+  "forbidden": [
+    "AUTO_PROVIDER_SEND",
+    "AUTO_FINANCIAL_MUTATION",
+    "AUTO_WORKFLOW_DISPATCH",
+    "PUBLIC_RPC",
+    "UNAPPROVED_DB_MIGRATION",
+    "UNAPPROVED_DEPLOYMENT",
+    "CANONICAL_MERGE"
+  ],
+  "notes": "Old IR21 manifest immutable. Source imported verbatim from PR884 including an UNAPPLIED separate SQL review document, not a Supabase migration. New owner-selected Inbox action defaults off and reports only a verified atomic journal receipt.",
+  "earlierOptionalActorTypeBlob": "00cb462725692607241974e7abbd42ab63e0bb3b",
+  "v2NativePg17Candidate": {
+    "sqlPath": "docs/engineering/security/f15-unanswered-lead-atomic-db-candidate-v2.sql",
+    "sqlBlob": "40d5b27a62272ad3d91af4b82305436e4f2ce0f6",
+    "fixturePath": "tests/sql/v4-f15-atomic-pg17-fixture-v2.sql",
+    "fixtureBlob": "333c5fbf35e6fa29cab03d8bc9aeeb9a8fa87008",
+    "sourceHead": "d8f0618817d316a8ed7fd54f25f0875cbcc7bc71",
+    "noPgcrypto": true,
+    "disposableCiRun": 40979952743
+  },
+  "readbackScope": "OWNER_ALL_BRANCH_REQUEST_ONLY_JOURNAL_COUNTS_NO_CUSTOMER_DATA",
+  "priorOwnerReadbackUiBlob": "f315ddf5606d99a38f1943a9b06c7d93797e5d4e",
+  "priorOwnerActionBlob": "67c1c800dd1eb12c9be10065feb82ab3756883f1",
+  "previousProtectedPanelBlob": "5fa0538d745c664a9e35bd9f5ef3523662160e19",
+  "v3AtomicAttentionCandidate": {
+    "status": "SOURCE_ONLY_UNAPPLIED_NO_ROLLOUT",
+    "sql": {
+      "path": "docs/engineering/security/f15-unanswered-lead-atomic-attention-v3.sql",
+      "blob": "1bc7247c0a988621a287967c641ef4faae85bdbb",
+      "previousBlob": "659638764b247db347c931f7a53f59931b072a31"
+    },
+    "fixture": {
+      "path": "tests/sql/v4-f15-atomic-pg17-fixture-v3.sql",
+      "blob": "4df7add9fa43bb8942cbfaf4dfc9337b53873988",
+      "previousBlob": "833aad026a809f60e68ec5a15f24adc3c633794b",
+      "previousPreRlsBlob": "25af06cdb38f475c34b1e0d49344e192deba32c6"
+    },
+    "acceptance": {
+      "path": "tests/sql/v4-f15-atomic-pg17-acceptance-v3.sql",
+      "blob": "e2dfb7882fbb6cc0fd54791f2f1c049c63997c0a",
+      "previousBlob": "1ffb442188554ce4ff662767f9e9cfa405a6bb9f",
+      "priorBroadReadBlob": "e66ec8228528b0121b970817af42f341e274d722",
+      "oldDelimiterBlob": "b63c1f602fe7bf0f73717e8845f605d32941d639"
+    },
+    "attentionResourceType": "f15_unanswered_lead_review",
+    "attentionType": "UNANSWERED_LEAD_SLA",
+    "internalOnly": true,
+    "noPublicProviderSend": true,
+    "restrictiveAuthenticatedRls": true,
+    "uniqueAcrossAttentionStatuses": true
+  },
+  "priorLinkedAttentionUiBlob": "7a7a20af8749b63ecb79b61a784cfaec4672656f",
+  "ownerAcknowledge": "OWNER_ALL_BRANCH_ONE_OPEN_CAS_SAVED_READBACK_FEATURE_SWITCH_OFF",
+  "priorAckUnionBlob": "8f3c5e9153c2b79a3b6efffdcc5b919b14b6fe01"
+}

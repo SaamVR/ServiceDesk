@@ -1,0 +1,34 @@
+{
+  "schema": "servicedesk.f23.readonly-sql-literal-critic-successor.v1",
+  "batch": "F23-SQL-READONLY-CRITIC-PRECISION-20261107",
+  "scope": "SOURCE_ONLY_DISPOSABLE_PG17_UNDEPLOYED",
+  "priorReviewed": {
+    "path": "docs/delivery/sonic-f23-quote-writer-compatibility-source-successor-20261107.json",
+    "blob": "3844882993a074b6c722e2c2391cc9da1e196c9f",
+    "unchanged": true
+  },
+  "reviewedReplacement": {
+    "path": "tests/ai/f23-current-quote-schema-compatibility-veto.test.ts",
+    "previousBlob": "7b51bef9c828705a75bf8cc0a915a983550b638f",
+    "currentBlob": "11b477ec83b4fca7038e649c6272089121ebb85d",
+    "intent": "Ignore quoted SQL data literals and comments when rejecting executable INSERT/UPDATE/DELETE/CREATE INDEX etc; include injected real DML/DDL negative tests"
+  },
+  "securityPreflight": {
+    "path": "scripts/release/v4-f23-current-quote-readonly-preflight.sql",
+    "blob": "ad861d3b43ccdfda0000193b9ad338745469ff54",
+    "unchanged": true
+  },
+  "activationFlagsRemainOff": [
+    "SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED",
+    "SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED"
+  ],
+  "veto": [
+    "F23_SIBLING_QUOTE_PHANTOM_UNRESOLVED",
+    "F23_QUOTE_WRITER_TRANSACTIONAL_ATOMICITY_UNPROVEN",
+    "NO_CONNECTED_DB_SCHEMA_PREIMAGE",
+    "NO_TWO_OWNER_LIVE_RLS",
+    "NO_SQL_MIGRATION",
+    "NO_VERCEL_DEPLOY"
+  ],
+  "acceptanceStatus": "AWAIT_EXACT_HEAD_CI_SOURCE_VERIFICATION"
+}

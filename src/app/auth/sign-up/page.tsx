@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signUpWithPassword } from "./actions";
 import styles from "../sign-in/page.module.css";
+import { trustedAuthFeedback } from "@/features/auth/verified-auth-feedback";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { RegistrationSubmitButton } from "@/features/auth/RegistrationSubmitButton";
 import { ownerRegistrationAvailable, ownerRegistrationMode } from "@/features/auth/owner-registration-readiness";
@@ -11,6 +12,7 @@ export default async function SignUpPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const query = await searchParams;
+  const errorMessage = trustedAuthFeedback("sign-up", "error", query.error);
   const registrationEnabled = ownerRegistrationAvailable();
   const qaOnly = ownerRegistrationMode() === "QA_ONLY";
   return (
@@ -21,7 +23,7 @@ export default async function SignUpPage({
       asideTitle="Your entire operation, one place."
       asideItems={["Receive and qualify new enquiries", "Send clear quotes and schedule your crews", "Keep jobs, payments and follow-ups in sync"]}
     >
-      {query.error ? <p className={styles.error} role="alert">{query.error}</p> : null}
+      {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
       {qaOnly ? (
         <p className={styles.notice} role="status">QA registration is limited to approved test email addresses. Test data may use the existing ServiceDesk database; no demo records are inserted unless separately approved. Real payments and outbound messaging remain disabled.</p>
       ) : null}

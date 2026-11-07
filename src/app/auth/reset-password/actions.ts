@@ -35,11 +35,27 @@ export async function updateRecoveredPassword(formData: FormData): Promise<never
     redirect("/auth/forgot-password?error=" + encodeURIComponent("Your reset link is invalid or expired. Request another link."));
   }
 
-  const changed = await auth.auth.updateUser({ password });
+  // A provider transport exception is not a successful password reset.
+  let changed: Awaited<ReturnType<typeof auth.auth.updateUser>>;
+  try {
+    changed = await auth.auth.updateUser({ password });
+  } catch {
+    resetError("Password could not be updated. Please request a fresh recovery link.");
+  }
   if (changed.error) resetError("Password could not be updated. Please request a fresh recovery link.");
 
-  // Require fresh sign-in after resetting a password. No implicit workspace
-  // ownership/session roles are issued by this endpoint.
-  await auth.auth.signOut();
+  // Default global signOut() may leave the current session intact when its
+  // revocation request fails. Do not claim fresh sign-in if closure is unknown.
+  // Never retry the password mutation after an already-committed update.
+  let signedOut = false;
+  try {
+    const result = await auth.auth.signOut();
+    signedOut = !result.error;
+  } catch {
+    signedOut = false;
+  }
+  if (!signedOut) {
+    resetError("Password updated, but ending this session could not be confirmed. Sign out before leaving this device.");
+  }
   redirect("/auth/sign-in?notice=" + encodeURIComponent("Password updated. Sign in with your new password."));
 }

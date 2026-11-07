@@ -1,0 +1,33 @@
+{
+  "schema": "servicedesk.p02.reset-signout-uncertain-form-suppression.v1",
+  "scope": "SOURCE_ONLY_NOT_LIVE_UAT",
+  "previousReviewed": {
+    "path": "docs/delivery/sonic-p02-reset-session-closure-successor-20261107.json",
+    "blob": "a50e9f4b61f0b0481aae9bf7e377faa839b7b944",
+    "unchanged": true
+  },
+  "reviewedPage": {
+    "path": "src/app/auth/reset-password/page.tsx",
+    "oldBlob": "e352402f1b5176a94c02133987b765a001899cd1",
+    "newBlob": "9a771cc40a68b8c5c50aaaf00ea346b1603fef45"
+  },
+  "reviewedTest": {
+    "path": "tests/e2e/p02-recovery-request-outcome.test.ts",
+    "oldBlob": "9f4ef1001236d182e635b0659d8843c1f308b787",
+    "newBlob": "688f996011e1ce11469a43b9bac310fe0b7b9615"
+  },
+  "focusedWorkflow": {
+    "path": ".github/workflows/sonic-p02-auth-origin-focused.yml",
+    "oldBlob": "0e1ba6155a55182e25c3831b2f46093037d71dc3",
+    "newBlob": "7a13aa9845d5e3ef295a51c248b02f4e3f887e71"
+  },
+  "guards": [
+    "HIDE_REPEAT_PASSWORD_UPDATE_FORM_AFTER_SIGNOUT_FAILURE",
+    "KEEP_EXPLICIT_POST_SIGNOUT_RETRY",
+    "NO_CONNECTED_SUPABASE_CALL",
+    "NO_DB_WRITE",
+    "NO_DEPLOY",
+    "NO_REAL_OWNER_UAT",
+    "F23_SECURITY_VETO_ACTIVE"
+  ]
+}

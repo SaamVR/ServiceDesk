@@ -1,0 +1,61 @@
+import {describe,it,expect} from "vitest";
+import {readFileSync} from "node:fs";
+const read=(path:string)=>readFileSync(path,"utf8");
+describe("F23 independent critic: owner release is not booking or payment",()=>{
+ it("protects the money/booking boundary from temporary capacity release",()=>{
+  const core=read("src/server/workflows/owner-verified-quote-hold-release.ts");
+  expect(core).toContain('q.status!=="ACCEPTED"');
+  expect(core).toContain('SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED');
+  expect(core).toContain('current.length!==1');
+  expect(core).toContain('crew.branch_id!==req.branch_id');
+  expect(core).toContain('service.from("verified_payment_applications")');
+  expect(core).toContain('.eq("workspace_id",workspace.id).eq("quote_id",quoteId).limit(2)');
+  expect(core).toContain('service.from("visits")');
+  expect(core).toContain('h.status!=="HELD"');
+  const candidate=read("docs/engineering/security/f23-atomic-hold-release-rpc-candidate.sql");
+  expect(core).toContain('ctx.service.rpc("servicedesk_release_held_slot_atomic"');
+  expect(core).toContain("data.holdId===input.holdId");
+  expect(core).not.toContain('.update({status:"RELEASED"');
+  expect(candidate).toContain("security invoker");
+  expect(candidate).toContain("current_user <> 'service_role'");
+  expect(candidate).toContain("v_hold.expires_at is distinct from v_original_expiry");
+  expect(candidate).toContain("select * into v_quote from public.quotes");
+  expect(candidate).toContain("select * into v_hold from public.slot_holds");
+  expect(candidate).toContain("and q.status <> 'SUPERSEDED'");
+  expect(candidate).toContain("v_quote.status <> 'ACCEPTED'");
+  expect(candidate).toContain("public.verified_payment_applications");
+  expect(candidate).toContain("for share of m");
+  expect(candidate).toContain("grant execute on function public.servicedesk_release_held_slot_atomic(jsonb) to service_role;");
+  expect(core).toContain('third.value.actor.userId!==first.value.actor.userId');
+  expect(core).toContain('result.error||!h');
+  for(const word of ["insert into public.visits","servicedesk_apply_verified_payment",
+    "capturePayment(","payment_intent","sendEmail(","sendWhatsApp(","createVisit("])
+   expect(core).not.toContain(word);
+ });
+ it("cannot appear on other tenants, staff role, non-current quotes or without server activation",()=>{
+  const panel=read("src/features/operations/OwnerQuoteHoldReleasePanel.tsx");
+  expect(panel).toContain('snapshot.value.actor.role!=="OWNER"');
+  expect(panel).toContain('snapshot.value.branchScope?.mode!=="ALL"');
+  expect(panel).toContain('SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED');
+  expect(panel).toContain('SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED');
+  expect(panel).toContain('indexAmbiguousCurrentQuoteRequests');
+  expect(panel).toContain('current.get(q.requestId)?.id!==q.id');
+  expect(panel).toContain('active.length!==1');
+  expect(panel).toContain('OwnerSavedHoldReleaseControls');
+ });
+ it("existing payment-confirmed booking creation is not replaced or spoofed",()=>{
+  const payment=read("supabase/migrations/0010_e03_verified_payment_rpc.sql");
+  const release=read("src/features/operations/verified-hold-release-action.ts");
+  const ui=read("src/features/operations/OwnerSavedHoldReleaseControls.tsx");
+  const route=read("src/app/app/[workspace]/quotes/page.tsx");
+  expect(payment).toContain("insert into public.visits(");
+  expect(payment).toContain("update public.slot_holds set status = 'CONFIRMED'");
+  expect(payment).toContain("select * into v_quote from public.quotes where workspace_id = v_workspace and id = v_quote_id for update;");
+  expect(payment).toContain("select * into v_hold from public.slot_holds where workspace_id = v_workspace and id = v_hold_id for update;");
+  expect(release).toContain('state:"HOLD_RELEASED_VERIFIED"');
+  expect(release).toContain("bookingCreated:false");
+  expect(ui).toContain("Releasing it");
+  expect(ui).toContain("no automatic retry was attempted.");
+  expect(route).toContain("<OwnerQuoteHoldReleasePanel workspaceSlug={workspace}");
+ });
+});

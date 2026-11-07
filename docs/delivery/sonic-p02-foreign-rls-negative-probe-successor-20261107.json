@@ -1,0 +1,52 @@
+{
+  "schema": "servicedesk.p02.foreign-rls-negative-probe-and-f23-veto.v1",
+  "batch": "SONIC-P02-TWO-OWNER-RLS-NEGATIVE-INTEGRITY-20261107",
+  "classification": "SOURCE_ONLY_INTEGRATION_NOT_LIVE_OWNER_UAT",
+  "priorReviewed": {
+    "path": "docs/delivery/sonic-p02-reset-session-closure-successor-20261107.json",
+    "blob": "a50e9f4b61f0b0481aae9bf7e377faa839b7b944",
+    "unchanged": true
+  },
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousReviewedBlob": "0dd43d0a63369c6c08cce1db951b4cdd23144418",
+    "f23WitnessInterimBlob": "122a1afcc1f05624e62408551b5054944967e6eb",
+    "currentBlob": "d7a157dfe6f6ea7af5408558255b7289ea6b0db4"
+  },
+  "changedSource": [
+    {
+      "path": "scripts/release/v4-p02-two-owner-readonly-acceptance.mjs",
+      "previousBlob": "e5998a74c176172653fa9782ace23eaadfcbc7a8",
+      "currentBlob": "f2d619d2c445a2045d1ccb31426de71a3ffcccda",
+      "purpose": "foreign memberships and foreign default/nondefault branches unfiltered; fail on ANY visible row"
+    },
+    {
+      "path": "scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs",
+      "previousBlob": null,
+      "currentBlob": "9dba110b6d186f73b8d184f04c8307f8337ffa50",
+      "purpose": "offline adversarial mock only; no real JWT or DB connected"
+    }
+  ],
+  "simultaneousF23Veto": {
+    "path": "scripts/release/v4-f23-pg17-sibling-quote-phantom-witness.sh",
+    "blob": "d2349471ffb3ed78f5826442d480bd2a9b54cac3",
+    "testScope": "PG17_DISPOSABLE_ONLY",
+    "witnessMarker": "F23_KNOWN_UNSAFE_SIBLING_QUOTE_PHANTOM_REPRODUCED_RELEASE_VETO",
+    "isAcceptance": false,
+    "releasePermission": false
+  },
+  "guards": [
+    "FOREIGN_MEMBERSHIP_READ_MUST_NOT_FILTER_CALLER_USER_ID",
+    "FOREIGN_BRANCH_READ_MUST_NOT_FILTER_DEFAULT_OR_ACTIVE",
+    "FOREIGN_ANY_ROW_IS_RLS_VETO",
+    "BOTH_OWN_AND_FOREIGN_SESSION_QUERY_RESULTS_REQUIRED",
+    "NO_LIVE_JWT_USED_BY_CI",
+    "NO_SQL_INSTALL",
+    "NO_CUSTOMER_CONTACT",
+    "NO_PAYMENT",
+    "NO_VERCEL_DEPLOY",
+    "NO_MAIN_OR_CANONICAL_MERGE",
+    "P02_818_OPEN_P03_819_OPEN"
+  ],
+  "nextBatch": "P02_SIGNED_IN_TWO_OWNER_REAL_RLS_STAGING_ONLY_AFTER_OWNER_APPROVAL"
+}

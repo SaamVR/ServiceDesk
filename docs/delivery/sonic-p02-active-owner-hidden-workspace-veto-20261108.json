@@ -1,0 +1,63 @@
+{
+  "schema": "servicedesk.p02.active-owner-missing-workspace-rls-veto-successor.v1",
+  "batchId": "P02-ACTIVE_OWNER_RLS_HIDDEN_WORKSPACE_MUST_NOT_REGISTER-20261108",
+  "sourceOnly": true,
+  "parentHead": "ab7da89207fa9ae8c07b775a07a3b4bba018c18e",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-uncertain-registration-jsx-correction-20261108.json",
+    "blob": "c86c71df734e38a8e894bf590e4386001c3ef832",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/features/auth/authorized-workspace-access.ts",
+      "previousBlob": "9fb078e8be2d75491d2ff630e99857cdec391ee2",
+      "currentBlob": "432490ce986695d418b7f2cf0f7bcdac27806102"
+    },
+    {
+      "path": "tests/e2e/v3-authorized-workspace-access.test.ts",
+      "previousBlob": "50d42e6543e5b4241f43f5683b3ee99b53f91772",
+      "currentBlob": "cb795a6dfa929e6019f0d9d190e6d90d0897aa6c"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "826f1e67c2570b0fcc6c8298558b1b663b254d2d",
+      "currentBlob": "8c3e470ba2f74441b4441c448928573f7a163007"
+    }
+  ],
+  "tests": {
+    "route": {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousCases": 21,
+      "currentCases": 23,
+      "added": 2
+    },
+    "unit": {
+      "path": "tests/e2e/v3-authorized-workspace-access.test.ts",
+      "previousCases": 8,
+      "currentCases": 9,
+      "changedExpectation": "ACTIVE_HIDDEN_OWNER_DENIED"
+    }
+  },
+  "unchangedAuthRoute": {
+    "path": "src/app/auth/continue/route.ts",
+    "blob": "4bb3d1fa077393ff67fe759a24fd651aeb563ab1",
+    "unchanged": true
+  },
+  "unchangedWorkflow": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "requiredGuards": [
+    "ACTIVE_OWNER_MISSING_WORKSPACE_DENY_NOT_NEW_OWNER",
+    "PARTIAL_STAFF_RLS_READBACK_DENY",
+    "TRUE_NEW_OWNER_STILL_ALLOWED",
+    "CREW_ONLY_ROUTE_UNCHANGED",
+    "NO_CONNECTED_JWT_OR_DB_OPERATION",
+    "NO_DEPLOY",
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6"
+  ],
+  "acceptance": "SOURCE_ONLY_PENDING_TWO_REAL_OWNER_JWT_RLS"
+}

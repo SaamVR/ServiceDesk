@@ -6,8 +6,13 @@
 export function verifiedEmailRedirectOrigin(
   preferred: string | undefined,
   renderUrl: string | undefined,
+  vercelRuntime: string | undefined = process.env.VERCEL,
 ): string | null {
-  const value = preferred?.trim() || renderUrl?.trim();
+  // Under a Vercel deployment, stale Render environment variables MUST NOT
+  // silently redirect email verification/recovery to the former host.
+  // Require an explicit trusted HTTPS origin instead of guessing from Host.
+  const value = preferred?.trim() ||
+    (vercelRuntime === "1" ? undefined : renderUrl?.trim());
   if (!value) return null;
   try {
     const url = new URL(value);
@@ -39,6 +44,7 @@ export function trustedAuthDestination(
   const origin = verifiedEmailRedirectOrigin(
     env.SERVICEDESK_AUTH_REDIRECT_ORIGIN,
     env.RENDER_EXTERNAL_URL,
+    env.VERCEL,
   );
   if (!origin || !path.startsWith("/") || path.startsWith("//")) return null;
   try {

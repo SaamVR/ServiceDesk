@@ -6,6 +6,7 @@ import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { createOwnerWorkspace } from "./actions";
 import styles from "../sign-in/page.module.css";
 import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import { trustedWorkspaceRegistrationError, workspaceRegistrationNeedsReadback } from "@/features/auth/workspace-registration-error";
 
 const timezones = [
   { value: "UTC", label: "UTC" },
@@ -21,6 +22,9 @@ export default async function CreateWorkspacePage({
   searchParams,
 }: { searchParams: Promise<{ error?: string }> }) {
   const query = await searchParams;
+  // A query parameter is untrusted and cannot supply arbitrary error copy.
+  const trustedError = trustedWorkspaceRegistrationError(query.error);
+  const uncertainRegistration = workspaceRegistrationNeedsReadback(query.error);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
@@ -37,8 +41,16 @@ export default async function CreateWorkspacePage({
   const client = createServerClient(url, key, {
     cookies: { getAll() { return store.getAll(); }, setAll() {} },
   });
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user?.email_confirmed_at) {
+  // Page render is only a form preview, never an authorization grant. Still,
+  // an Auth outage must fail closed instead of crashing the owner setup step.
+  let identity: Awaited<ReturnType<typeof client.auth.getUser>> | null = null;
+  try {
+    identity = await client.auth.getUser();
+  } catch {
+    identity = null;
+  }
+  if (!identity || identity.error || !identity.data?.user?.id ||
+      !identity.data.user.email_confirmed_at) {
     redirect("/auth/sign-in?next=" + encodeURIComponent("/auth/create-workspace"));
   }
 
@@ -50,7 +62,13 @@ export default async function CreateWorkspacePage({
       asideTitle="Your business. Your workflow."
       asideItems={["Create your private business workspace", "Add services and invite your team", "Connect approved channels when ready"]}
     >
-      {query.error ? <p className={styles.error} role="alert">{query.error}</p> : null}
+      {trustedError ? <p className={styles.error} role="alert">{trustedError}</p> : null}
+      {uncertainRegistration ? (
+        <p className={styles.help} role="status">
+          Do not submit another workspace registration until you check the saved result.{" "}
+          <Link href="/auth/continue">Check your authorized workspaces</Link> before trying again.
+        </p>
+      ) : null}
       <form className={styles.form} action={createOwnerWorkspace}>
         <div className={styles.field}>
           <label htmlFor="business-name">Business name</label>
@@ -58,7 +76,7 @@ export default async function CreateWorkspacePage({
         </div>
         <div className={styles.field}>
           <label htmlFor="business-slug">Workspace address <span style={{fontWeight:400}}>(optional)</span></label>
-          <input id="business-slug" name="slug" pattern="[a-z0-9][a-z0-9-]{2,39}" placeholder="Generated from your business name" autoCapitalize="none" maxLength={40} aria-describedby="workspace-slug-hint" />
+          <input id="business-slug" name="slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="Generated from your business name" autoCapitalize="none" minLength={3} maxLength={40} aria-describedby="workspace-slug-hint" />
           <span id="workspace-slug-hint" className={styles.help}>Use lowercase letters, numbers or hyphens. You can change the suggestion if it is taken.</span>
         </div>
         <div className={styles.field}>
@@ -69,7 +87,7 @@ export default async function CreateWorkspacePage({
         </div>
         <div className={styles.field}>
           <label htmlFor="workspace-currency">Invoice currency</label>
-          <select id="workspace-currency" name="currency" defaultValue="USD" required>
+          <select id="workspace-currency" name="currency" defaultValue="USD" required aria-describedby="workspace-currency-hint">
             <option value="USD">USD · US Dollar</option>
             <option value="GBP">GBP · British Pound</option>
             <option value="EUR">EUR · Euro</option>
@@ -77,6 +95,12 @@ export default async function CreateWorkspacePage({
             <option value="AUD">AUD · Australian Dollar</option>
             <option value="BDT">BDT · Bangladeshi Taka</option>
           </select>
+          <p id="workspace-currency-hint" className={styles.help} role="note">
+            First-run cleaning pricing currently supports USD branches only.
+            Choosing another billing currency is permitted, but does not enable
+            first-run cleaning rates or certify quote readiness for that currency.
+            Do not choose USD unless your business actually bills in USD.
+          </p>
         </div>
         <button className={styles.submit} type="submit">Create my workspace <span aria-hidden="true">→</span></button>
       </form>

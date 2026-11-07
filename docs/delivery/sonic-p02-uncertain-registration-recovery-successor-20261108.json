@@ -1,0 +1,62 @@
+{
+  "schema": "servicedesk.p02.uncertain-registration-saved-readback-ui-successor.v1",
+  "batchId": "P02-UNKNOWN-RPC-COMMIT-OWNER-VISIBLE-READBACK-20261108",
+  "chat": "FEATURE_SOURCE",
+  "sourceOnly": true,
+  "reviewedParentHead": "baf7742b6e89348cbf2f2d11e6f886a079222fd5",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-post-confirm-navigation-transport-successor-20261107.json",
+    "blob": "08a3748c1cbefd7c3f82b013d28e9646154edfee",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/features/auth/workspace-registration-error.ts",
+      "previousBlob": "77c1c0f5c2abf940edb6517e34e721ebd250e684",
+      "currentBlob": "73e200d522da5bf4dabe0275f97860379f53637f"
+    },
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "previousBlob": "18219d81539c44883e7ea856cf12dbafc8a97c70",
+      "currentBlob": "49499b2cbb7e230765b7097f1f67b5f12578156e"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "d27a237c19ad5029816d2c0d4b23888026f3b1e6",
+      "currentBlob": "826f1e67c2570b0fcc6c8298558b1b663b254d2d"
+    }
+  ],
+  "testCases": {
+    "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+    "prior": 19,
+    "current": 21,
+    "newCases": 2,
+    "scope": "SYNTHETIC_UI_RECOVERY_NO_CONNECTED_DB"
+  },
+  "actionUnchanged": {
+    "path": "src/app/auth/create-workspace/actions.ts",
+    "blob": "8e3a6e0572c38680141ce86b5d7f5f84cf5d6dfd",
+    "unchanged": true,
+    "mayHaveCommittedMessages": [
+      "Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.",
+      "Workspace registration may have committed, but saved owner access could not be verified. Use your authorized workspaces to check before trying again."
+    ]
+  },
+  "workflowUnchanged": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "requiredGuards": [
+    "NO_SILENT_GENERIC_RETRY_AFTER_AMBIGUOUS_RPC",
+    "LINK_TO_RLS_AUTHORIZED_WORKSPACE_READBACK",
+    "NO_IMPLIED_SUCCESS_FROM_QUERY_PARAM",
+    "NO_SECOND_REGISTRATION_RPC",
+    "NO_CONNECTED_AUTH_OR_DB_WRITE",
+    "NO_MIGRATION_INSTALL",
+    "NO_DEPLOY",
+    "P02_REMAINS_2_OF_7",
+    "P03_REMAINS_0_OF_6"
+  ],
+  "acceptanceState": "INTEGRATED_SOURCE_ONLY_NOT_REAL_TWO_OWNER_AUTHENTICATED_ACCEPTANCE"
+}

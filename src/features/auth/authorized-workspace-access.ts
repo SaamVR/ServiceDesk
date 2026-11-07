@@ -66,6 +66,12 @@ export async function loadAuthorizedWorkspaceDecision(
         typeof row.name !== "string") ||
         new Set(workspaceRows.map(row => row.id)).size !== workspaceRows.length)
       return { ok: false, code: "WORKSPACE_LOOKUP" };
+    // A genuine ACTIVE staff membership with an RLS-hidden workspace is
+    // an authorization/readback inconsistency, NOT proof of a new owner.
+    // Otherwise /auth/continue would incorrectly offer another registration.
+    const visibleStaffIds = new Set(workspaceRows.map(row => row.id));
+    if (staffIds.some(id => !visibleStaffIds.has(id)))
+      return { ok: false, code: "WORKSPACE_LOOKUP" };
   }
 
   const workspaceById = new Map<string, WorkspaceRow[]>();

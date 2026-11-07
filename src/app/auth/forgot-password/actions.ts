@@ -35,8 +35,21 @@ export async function requestPasswordReset(formData: FormData): Promise<never> {
   });
 
   // Generic response for registered and unknown addresses: no user enumeration.
-  await auth.auth.resetPasswordForEmail(email, {
-    redirectTo: origin + "/auth/confirm?flow=recovery",
-  });
+  // A returned Auth error is not a queued recovery email. Do not leak
+  // provider details or account existence through distinct responses.
+  // A thrown transport failure must also fail closed without any fake receipt.
+  let requestAccepted = false;
+  try {
+    const result = await auth.auth.resetPasswordForEmail(email, {
+      redirectTo: origin + "/auth/confirm?flow=recovery",
+    });
+    requestAccepted = !result.error;
+  } catch {
+    requestAccepted = false;
+  }
+  if (!requestAccepted) {
+    redirect("/auth/forgot-password?error=" +
+      encodeURIComponent("Password recovery is unavailable in this environment."));
+  }
   redirect("/auth/forgot-password/check-email");
 }
