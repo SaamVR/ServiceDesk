@@ -39,6 +39,14 @@ const qaProof=JSON.parse(qaProofRaw.toString()) as {
  changedSource:Array<{path:string;blob:string;lane:string}>;
 };
 
+const quoteCrewRaw=read("docs/delivery/sonic-f23-quote-crew-lock-races-successor-20261107.json");
+const quoteCrew=JSON.parse(quoteCrewRaw.toString()) as {
+ schema:string;
+ priorVerifiedSource:{path:string;blob:string;unchanged:boolean};
+ workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
+ newRaces:Array<{path:string;blob:string;expectedReceipts:string[];scope:string}>;
+ flagsDefaultOff:string[];releaseVeto:string[];
+};
 const m=JSON.parse(read("docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json").toString()) as {
  schema:string;state:string;parentIR21:string;importedHead:string;
  importedExactBlobs:Array<{path:string;blob:string}>;
@@ -104,6 +112,31 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(qaProof.workflowSuccessor.path).toBe(authFeedback.workflowSuccessor.path);
   expect(qaProof.workflowSuccessor.previousBlob).toBe(authFeedback.workflowSuccessor.currentBlob);
   expect(qaProof.changedSource).toHaveLength(3);
+  expect(gitHash(quoteCrewRaw)).toBe("e77c6661c19eca10e7e5e57f34b28c2c2362ed91");
+  expect(quoteCrew.schema).toBe("servicedesk.f23.quote-crew-lock-races-successor.v1");
+  expect(quoteCrew.priorVerifiedSource.path).toBe("docs/delivery/sonic-p02-qa-seed-saved-proof-successor-20261107.json");
+  expect(quoteCrew.priorVerifiedSource.blob).toBe(gitHash(qaProofRaw));
+  expect(quoteCrew.priorVerifiedSource.unchanged).toBe(true);
+  expect(quoteCrew.workflowSuccessor.path).toBe(qaProof.workflowSuccessor.path);
+  expect(quoteCrew.workflowSuccessor.previousBlob).toBe(qaProof.workflowSuccessor.currentBlob);
+  expect(quoteCrew.workflowSuccessor.currentBlob).toBe("8c2cab1749d363309d5c89cce9a6980084019202");
+  expect(quoteCrew.newRaces).toHaveLength(2);
+  expect(new Set(quoteCrew.newRaces.map(r=>r.path)).size).toBe(2);
+  expect(quoteCrew.flagsDefaultOff).toEqual([
+   "SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED",
+   "SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED",
+  ]);
+  expect(quoteCrew.releaseVeto).toContain("QUOTE_PHANTOM_WHOLE_REQUEST_UNPROVEN");
+  const workflowText=read(quoteCrew.workflowSuccessor.path).toString();
+  for(const lane of quoteCrew.newRaces){
+   expect(lane.path).not.toContain("..");
+   expect(gitHash(read(lane.path)),lane.path).toBe(lane.blob);
+   expect(lane.expectedReceipts).toHaveLength(2);
+   expect(workflowText).toContain("bash "+lane.path);
+   const script=read(lane.path).toString();
+   for(const receipt of lane.expectedReceipts)expect(script).toContain(receipt);
+  }
+
   for(const source of qaProof.changedSource){
    expect(source.path).not.toContain("..");
    expect(gitHash(read(source.path)),source.path).toBe(source.blob);
@@ -121,14 +154,14 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(wf).toContain("bash "+race.testScript);
   for(const f of f23.changedSource){
    expect(f.path).not.toContain("..");
-   const reviewed=f.path===race.workflow.path?qaProof.workflowSuccessor.currentBlob:f.blob;
+   const reviewed=f.path===race.workflow.path?quoteCrew.workflowSuccessor.currentBlob:f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(reviewed);
   }
   const priorWorkflow=overlay.changedFiles.find(x=>x.path===p02.workflowSuccessor.path);
   expect(priorWorkflow?.blob).toBe(p02.workflowSuccessor.previousBlob);
   for(const f of overlay.changedFiles){
    const expected=f.path===p02.workflowSuccessor.path
-    ? qaProof.workflowSuccessor.currentBlob : f.blob;
+    ? quoteCrew.workflowSuccessor.currentBlob : f.blob;
    expect(gitHash(read(f.path)),f.path).toBe(expected);
   }
   for(const x of [...m.importedExactBlobs,...m.newIntegratedBlobs]){
