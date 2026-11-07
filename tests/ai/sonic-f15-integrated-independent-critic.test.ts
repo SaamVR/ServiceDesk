@@ -135,6 +135,17 @@ const activeOwnerRls=JSON.parse(activeOwnerRlsRaw.toString()) as {
  unchangedWorkflow:{path:string;blob:string;unchanged:boolean};
  requiredGuards:string[];acceptance:string;
 };
+const ownerNavigationGuardRaw=read("docs/delivery/sonic-p02-owner-navigation-transient-denial-successor-20261108.json");
+const ownerNavigationGuard=JSON.parse(ownerNavigationGuardRaw.toString()) as {
+ schema:string;batchId:string;sourceOnly:boolean;chat:string;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ regressionTests:{path:string;previous:number;current:number;added:number;scope:string};
+ unchangedServerAction:{path:string;blob:string;unchanged:boolean};
+ unchangedAuthorizer:{path:string;blob:string;unchanged:boolean};
+ unchangedWorkflow:{path:string;blob:string;unchanged:boolean};
+ requiredGuards:string[];acceptance:string;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -257,6 +268,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
    const recoverySuccessor=uncertainRegistration.changedSource.find(x=>x.path===source.path);
    const pageCorrection=recoveryJsx.changedSource.find(x=>x.path===source.path);
    const ownerRlsVeto=activeOwnerRls.changedSource.find(x=>x.path===source.path);
+   const ownerNavigation=ownerNavigationGuard.changedSource.find(x=>x.path===source.path);
    if(navSuccessor)expect(navSuccessor.previousBlob,source.path)
      .toBe(transport?.currentBlob??replacement?.currentBlob??source.blob);
    if(recoverySuccessor)expect(recoverySuccessor.previousBlob,source.path)
@@ -264,8 +276,10 @@ describe("F15 independent critic: no new composite, exact source and default-den
    if(pageCorrection)expect(pageCorrection.previousBlob,source.path).toBe(recoverySuccessor?.currentBlob);
    if(ownerRlsVeto)expect(ownerRlsVeto.previousBlob,source.path)
      .toBe(pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
-   expect(gitHash(read(source.path)),source.path)
+   if(ownerNavigation)expect(ownerNavigation.previousBlob,source.path)
      .toBe(ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
+   expect(gitHash(read(source.path)),source.path)
+     .toBe(ownerNavigation?.currentBlob??ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
   }
   // Separate independent source successor for actual post-confirm owner routing.
    expect(postConfirmNavigation.schema).toBe("servicedesk.p02.post-confirm-owner-navigation-transport-successor.v1");
@@ -303,11 +317,14 @@ describe("F15 independent critic: no new composite, exact source and default-den
      const recovery=uncertainRegistration.changedSource.find(item=>item.path===change.path);
      const corrected=recoveryJsx.changedSource.find(item=>item.path===change.path);
      const ownerVeto=activeOwnerRls.changedSource.find(item=>item.path===change.path);
+     const latestNav=ownerNavigationGuard.changedSource.find(item=>item.path===change.path);
      if(recovery)expect(recovery.previousBlob,change.path).toBe(change.currentBlob);
      if(corrected)expect(corrected.previousBlob,change.path).toBe(recovery?.currentBlob);
      if(ownerVeto)expect(ownerVeto.previousBlob,change.path).toBe(corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
-     expect(gitHash(read(change.path)),change.path)
+     if(latestNav)expect(latestNav.previousBlob,change.path)
        .toBe(ownerVeto?.currentBlob??corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
+     expect(gitHash(read(change.path)),change.path)
+       .toBe(latestNav?.currentBlob??ownerVeto?.currentBlob??corrected?.currentBlob??recovery?.currentBlob??change.currentBlob);
    }
    expect(postConfirmNavigation.tests).toEqual({"path":"tests/e2e/p02-workspace-error-origin.test.ts","newCases":13,"totalCases":19,"scope":"SYNTHETIC_POST_CONFIRMATION_ENTRYPOINT_NO_LIVE_JWT"});
    expect(postConfirmNavigation.unchangedAuthorizationHelper).toEqual({"path":"src/features/auth/authorized-workspace-access.ts","blob":"9fb078e8be2d75491d2ff630e99857cdec391ee2","unchanged":true});
@@ -347,9 +364,12 @@ describe("F15 independent critic: no new composite, exact source and default-den
      expect(source.path).not.toContain("..");
      const corrected=recoveryJsx.changedSource.find(item=>item.path===source.path);
      const ownerVeto=activeOwnerRls.changedSource.find(item=>item.path===source.path);
+     const latestNav=ownerNavigationGuard.changedSource.find(item=>item.path===source.path);
      if(corrected)expect(corrected.previousBlob,source.path).toBe(source.currentBlob);
      if(ownerVeto)expect(ownerVeto.previousBlob,source.path).toBe(corrected?.currentBlob??source.currentBlob);
-     expect(gitHash(read(source.path)),source.path).toBe(ownerVeto?.currentBlob??corrected?.currentBlob??source.currentBlob);
+     if(latestNav)expect(latestNav.previousBlob,source.path).toBe(ownerVeto?.currentBlob??corrected?.currentBlob??source.currentBlob);
+     expect(gitHash(read(source.path)),source.path)
+       .toBe(latestNav?.currentBlob??ownerVeto?.currentBlob??corrected?.currentBlob??source.currentBlob);
    }
    expect(uncertainRegistration.testCases).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",prior:19,current:21,newCases:2,scope:"SYNTHETIC_UI_RECOVERY_NO_CONNECTED_DB"});
    expect(uncertainRegistration.actionUnchanged.path).toBe("src/app/auth/create-workspace/actions.ts");
@@ -376,8 +396,10 @@ describe("F15 independent critic: no new composite, exact source and default-den
    }]);
    for(const check of [recoveryJsx.qaSourceUnchanged,recoveryJsx.guardSourceUnchanged,recoveryJsx.workflowUnchanged]){
      const ownerVeto=activeOwnerRls.changedSource.find(item=>item.path===check.path);
+     const latestNav=ownerNavigationGuard.changedSource.find(item=>item.path===check.path);
      if(ownerVeto)expect(ownerVeto.previousBlob,check.path).toBe(check.blob);
-     expect(gitHash(read(check.path)),check.path).toBe(ownerVeto?.currentBlob??check.blob);
+     if(latestNav)expect(latestNav.previousBlob,check.path).toBe(ownerVeto?.currentBlob??check.blob);
+     expect(gitHash(read(check.path)),check.path).toBe(latestNav?.currentBlob??ownerVeto?.currentBlob??check.blob);
    }
    expect(recoveryJsx.mustRetain).toContain("P02_OPEN_2_OF_7");
    expect(recoveryJsx.mustRetain).toContain("NO_CONNECTED_DB_WRITE");
@@ -399,7 +421,9 @@ describe("F15 independent critic: no new composite, exact source and default-den
    ]);
    for(const changed of activeOwnerRls.changedSource){
      expect(changed.path).not.toContain("..");
-     expect(gitHash(read(changed.path)),changed.path).toBe(changed.currentBlob);
+     const latestNav=ownerNavigationGuard.changedSource.find(item=>item.path===changed.path);
+     if(latestNav)expect(latestNav.previousBlob,changed.path).toBe(changed.currentBlob);
+     expect(gitHash(read(changed.path)),changed.path).toBe(latestNav?.currentBlob??changed.currentBlob);
    }
    expect(activeOwnerRls.tests.route).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",previousCases:21,currentCases:23,added:2});
    expect(activeOwnerRls.tests.unit).toEqual({path:"tests/e2e/v3-authorized-workspace-access.test.ts",previousCases:8,currentCases:9,changedExpectation:"ACTIVE_HIDDEN_OWNER_DENIED"});
@@ -408,6 +432,35 @@ describe("F15 independent critic: no new composite, exact source and default-den
    for(const guard of ["ACTIVE_OWNER_MISSING_WORKSPACE_DENY_NOT_NEW_OWNER","PARTIAL_STAFF_RLS_READBACK_DENY","NO_CONNECTED_JWT_OR_DB_OPERATION","NO_DEPLOY","P02_OPEN_2_OF_7"])
      expect(activeOwnerRls.requiredGuards).toContain(guard);
    expect(activeOwnerRls.acceptance).toBe("SOURCE_ONLY_PENDING_TWO_REAL_OWNER_JWT_RLS");
+   // Separate independent successor: prior manifest byte-identical.
+   expect(gitHash(activeOwnerRlsRaw)).toBe("aa420877a08eb9a31cc47a28ba940d31d0868f92");
+   expect(ownerNavigationGuard.schema).toBe("servicedesk.p02.owner-auth-navigation-transient-and-no-resubmit.v1");
+   expect(ownerNavigationGuard.batchId).toBe("P02-OWNER_NAVIGATION_FAIL_CLOSED_AND_NO_DUPLICATE_REGISTRATION-20261108");
+   expect(ownerNavigationGuard.sourceOnly).toBe(true);
+   expect(ownerNavigationGuard.chat).toBe("PRODUCTION_SOURCE");
+   expect(ownerNavigationGuard.reviewedParentHead).toBe("235c38ba022d83dfb99e96e3f5325517cf0a4e10");
+   expect(ownerNavigationGuard.predecessor).toEqual({path:"docs/delivery/sonic-p02-active-owner-hidden-workspace-veto-20261108.json",blob:"aa420877a08eb9a31cc47a28ba940d31d0868f92",unchanged:true});
+   expect(ownerNavigationGuard.predecessor.blob).toBe(gitHash(activeOwnerRlsRaw));
+   expect(ownerNavigationGuard.changedSource).toEqual([
+     {path:"src/app/auth/create-workspace/page.tsx",previousBlob:"6d424726cd36e6c6bef7b36e174019235a72004c",currentBlob:"2ed68d7a1ae4449e43dfb852fd8e210640664e56",lane:"ONBOARDING_UI"},
+     {path:"src/app/auth/select-workspace/page.tsx",previousBlob:"dc9c9688392a87fe465e31dfbf06b7307f1ce5db",currentBlob:"d49858992d78fcb0a84bbd84d24bb1ebf681896e",lane:"STAFF_WORKSPACE_CHOOSER"},
+     {path:"src/app/onboarding/verified/page.tsx",previousBlob:"71ac07fde991b7b9e59779f483bb4c3c35195844",currentBlob:"12eafdfa355d0c2fe59c3fa72a6533993627f60c",lane:"VERIFIED_OWNER_LANDING"},
+     {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"8c3e470ba2f74441b4441c448928573f7a163007",currentBlob:"f1686a3511072e56147b4dc42ee820bab88ffc00",lane:"ADVERSARIAL_QA"}
+   ]);
+   for(const changed of ownerNavigationGuard.changedSource) {
+     expect(changed.path).not.toContain("..");
+     expect(gitHash(read(changed.path)),changed.path).toBe(changed.currentBlob);
+   }
+   expect(ownerNavigationGuard.regressionTests).toEqual({
+     path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:23,current:29,added:6,
+     scope:"SYNTHETIC_SERVER_COMPONENTS_NO_SIGNED_IN_JWT"
+   });
+   for(const unchanged of [ownerNavigationGuard.unchangedServerAction,ownerNavigationGuard.unchangedAuthorizer,ownerNavigationGuard.unchangedWorkflow]) {
+     expect(gitHash(read(unchanged.path)),unchanged.path).toBe(unchanged.blob);
+   }
+   for(const guard of ["NO_DUPLICATE_REGISTRATION_FORM_ON_AMBIGUOUS_RPC","NO_RAW_AUTH_PROVIDER_500_IN_CHOOSER","NO_RAW_AUTH_PROVIDER_500_ON_VERIFIED_OWNER","NO_CONNECTED_AUTH_DB_WRITE","NO_DEPLOY","P02_REMAINS_2_OF_7"])expect(ownerNavigationGuard.requiredGuards).toContain(guard);
+   expect(ownerNavigationGuard.acceptance).toBe("INTEGRATED_SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_JWT_RLS_ACCEPTANCE");
+
 
 
 

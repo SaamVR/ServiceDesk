@@ -4,6 +4,8 @@ import { trustedWorkspaceRegistrationError, workspaceRegistrationNeedsReadback }
 import { validateWorkspaceFields } from "../../src/features/auth/registration";
 import { GET as continueOwnerJourney } from "../../src/app/auth/continue/route";
 import CreateWorkspacePage from "../../src/app/auth/create-workspace/page";
+import SelectWorkspacePage from "../../src/app/auth/select-workspace/page";
+import VerifiedOwnerWorkspacePage from "../../src/app/onboarding/verified/page";
 
 const ownerNavigation = vi.hoisted(() => ({
   getUser: vi.fn(), membership: vi.fn(), workspace: vi.fn(), customers: vi.fn(),
@@ -76,6 +78,17 @@ describe("P02 bounded workspace setup error presentation", () => {
       expect(workspaceRegistrationNeedsReadback(raw)).toBe(false);
     }
     expect(source).not.toContain("service_role");
+  });
+  it("hides the real registration submit form while an uncertain RPC must be read back", async () => {
+    const uncertain="Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.";
+    const pending=await CreateWorkspacePage({ searchParams: Promise.resolve({ error: uncertain }) });
+    const pendingChildren=Array.isArray(pending.props.children)
+      ? pending.props.children : [pending.props.children];
+    expect(pendingChildren.some((node: {type?: unknown})=>node?.type==="form")).toBe(false);
+    const normal=await CreateWorkspacePage({ searchParams: Promise.resolve({}) });
+    const normalChildren=Array.isArray(normal.props.children)
+      ? normal.props.children : [normal.props.children];
+    expect(normalChildren.some((node: {type?: unknown})=>node?.type==="form")).toBe(true);
   });
   it("does not render untrusted URL instructions as product errors", () => {
     for (const attackerText of [
@@ -291,6 +304,43 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
     expect(target.pathname).not.toBe("/auth/create-workspace");
     expect(target.pathname).not.toBe("/auth/sign-in");
     expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("denies thrown identity transport in the workspace chooser without exposing provider details", async () => {
+    ownerNavigation.getUser.mockRejectedValueOnce(Error("PRIVATE_CHOOSER_AUTH_PROVIDER_TOKEN"));
+    await expect(SelectWorkspacePage()).rejects.toThrow(
+      "MOCK_REDIRECT:/auth/sign-in?error=Sign-in%20is%20temporarily%20unavailable.");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+  });
+
+  it("shows a bounded retry screen after a thrown chooser membership RLS read", async () => {
+    ownerNavigation.membership.mockRejectedValueOnce(Error("PRIVATE_CHOOSER_RLS_PROVIDER_TOKEN"));
+    const view=await SelectWorkspacePage();
+    expect(view.props.title).toBe("Workspace lookup is unavailable");
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unverified chooser identity before reading workspace memberships", async () => {
+    ownerNavigation.getUser.mockResolvedValueOnce({ data: null, error: null });
+    await expect(SelectWorkspacePage()).rejects.toThrow("MOCK_REDIRECT:/auth/sign-in");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+  });
+
+  it("denies a thrown verified-owner landing Auth response without an HTTP 500 or QA fixture write", async () => {
+    ownerNavigation.getUser.mockRejectedValueOnce(Error("PRIVATE_VERIFIED_OWNER_AUTH_TOKEN"));
+    await expect(VerifiedOwnerWorkspacePage({
+      searchParams: Promise.resolve({ workspace: "synthetic-cleaning", qaSeed: "created" }),
+    })).rejects.toThrow(
+      "MOCK_REDIRECT:/auth/sign-in?error=Sign-in%20is%20temporarily%20unavailable.");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+  });
+
+  it("rejects userless verified-owner landing identity without showing a saved workspace", async () => {
+    ownerNavigation.getUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+    await expect(VerifiedOwnerWorkspacePage({
+      searchParams: Promise.resolve({ workspace: "synthetic-cleaning" }),
+    })).rejects.toThrow("MOCK_REDIRECT:/auth/sign-in?next=%2Fauth%2Fcontinue");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
   });
 
   it("denies workspace setup page when Auth identity lookup throws", async () => {

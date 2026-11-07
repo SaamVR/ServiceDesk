@@ -31,8 +31,16 @@ export default async function VerifiedOwnerWorkspacePage({
       setAll() { /* Signed-in session refresh is handled by the request proxy. */ },
     },
   });
-  const { data, error } = await auth.auth.getUser();
-  if (error || !data.user) {
+  // A thrown Auth transport error must not become a raw server 500 after
+  // registration. No owner details or QA actions may render without identity.
+  let identity: Awaited<ReturnType<typeof auth.auth.getUser>> | null = null;
+  try {
+    identity = await auth.auth.getUser();
+  } catch {
+    redirect("/auth/sign-in?error=Sign-in%20is%20temporarily%20unavailable.");
+  }
+  const data = identity?.data;
+  if (!identity || identity.error || !data?.user?.id) {
     redirect("/auth/sign-in?next=" + encodeURIComponent("/auth/continue"));
   }
   if (!data.user.email_confirmed_at) redirect("/auth/sign-up/check-email");

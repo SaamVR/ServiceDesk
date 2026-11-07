@@ -69,7 +69,7 @@ export default async function CreateWorkspacePage({
           <Link href="/auth/continue">Check your authorized workspaces</Link> before trying again.
         </p>
       ) : null}
-      <form className={styles.form} action={createOwnerWorkspace}>
+      {!uncertainRegistration ? <form className={styles.form} action={createOwnerWorkspace}>
         <div className={styles.field}>
           <label htmlFor="business-name">Business name</label>
           <input id="business-name" name="businessName" placeholder="e.g. BrightHome Cleaning" autoComplete="organization" minLength={2} maxLength={120} required />
@@ -103,8 +103,8 @@ export default async function CreateWorkspacePage({
           </p>
         </div>
         <button className={styles.submit} type="submit">Create my workspace <span aria-hidden="true">→</span></button>
-      </form>
-      <p className={styles.help}>You&apos;ll be the workspace owner. Team members can be invited after setup.</p>
+      </form> : null}
+      {!uncertainRegistration ? <p className={styles.help}>You&apos;ll be the workspace owner. Team members can be invited after setup.</p> : null}
     </RegistrationShell>
   );
 }
