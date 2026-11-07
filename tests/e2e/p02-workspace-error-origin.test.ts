@@ -82,13 +82,17 @@ describe("P02 bounded workspace setup error presentation", () => {
   it("hides the real registration submit form while an uncertain RPC must be read back", async () => {
     const uncertain="Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.";
     const pending=await CreateWorkspacePage({ searchParams: Promise.resolve({ error: uncertain }) });
-    const pendingChildren=Array.isArray(pending.props.children)
-      ? pending.props.children : [pending.props.children];
-    expect(pendingChildren.some((node: {type?: unknown})=>node?.type==="form")).toBe(false);
+    // RegistrationShell receives a nested JSX tree, not necessarily a flat
+    // child array; inspect recursively to cover actual conditional rendering.
+    const hasForm = (node: unknown): boolean => {
+      if (Array.isArray(node)) return node.some(hasForm);
+      if (!node || typeof node !== "object") return false;
+      const element=node as {type?: unknown;props?: {children?: unknown}};
+      return element.type === "form" || hasForm(element.props?.children);
+    };
+    expect(hasForm(pending)).toBe(false);
     const normal=await CreateWorkspacePage({ searchParams: Promise.resolve({}) });
-    const normalChildren=Array.isArray(normal.props.children)
-      ? normal.props.children : [normal.props.children];
-    expect(normalChildren.some((node: {type?: unknown})=>node?.type==="form")).toBe(true);
+    expect(hasForm(normal)).toBe(true);
   });
   it("does not render untrusted URL instructions as product errors", () => {
     for (const attackerText of [
