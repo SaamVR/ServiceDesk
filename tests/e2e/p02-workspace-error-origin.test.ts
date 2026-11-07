@@ -268,6 +268,41 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
     expect(ownerNavigation.customers).not.toHaveBeenCalled();
   });
 
+  it("refuses a malformed RLS-visible OWNER workspace slug rather than reopening registration", async () => {
+    ownerNavigation.membership.mockResolvedValueOnce({
+      data: [{ workspace_id: syntheticWorkspace, user_id: syntheticOwner,
+        role: "OWNER", status: "ACTIVE" }], error: null,
+    });
+    ownerNavigation.workspace.mockResolvedValueOnce({
+      data: [{ id: syntheticWorkspace, slug: "../foreign", name: "Invalid Scoped Workspace" }],
+      error: null,
+    });
+    const target=ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/sign-in");
+    expect(target.searchParams.get("error")).toBe("Workspace lookup unavailable");
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("does not silently fall back to CREW when an OWNER workspace has invalid saved routing metadata", async () => {
+    ownerNavigation.membership.mockResolvedValueOnce({
+      data: [
+        { workspace_id: syntheticWorkspace, user_id: syntheticOwner,
+          role: "OWNER", status: "ACTIVE" },
+        { workspace_id: "77777777-7777-4777-8777-777777777777", user_id: syntheticOwner,
+          role: "CREW", status: "ACTIVE" },
+      ], error: null,
+    });
+    ownerNavigation.workspace.mockResolvedValueOnce({
+      data: [{ id: syntheticWorkspace, slug: "invalid--slug", name: "Invalid Owner Address" }],
+      error: null,
+    });
+    const target=ownerTarget(await continueOwnerJourney());
+    expect(target.pathname).toBe("/auth/sign-in");
+    expect(target.pathname).not.toBe("/crew/today");
+    expect(target.searchParams.get("error")).toBe("Workspace lookup unavailable");
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
   it("refuses a thrown customer lookup, never inferring the owner needs a new workspace", async () => {
     ownerNavigation.customers.mockRejectedValueOnce(Error("PRIVATE_CUSTOMER_NETWORK"));
     const target = ownerTarget(await continueOwnerJourney());
