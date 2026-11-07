@@ -360,3 +360,7 @@ jobs:
         run: bash scripts/release/v4-f23-pg17-hold-payment-race.sh
       - name: Native F23 owner role revocation-first and release-first row locking
         run: bash scripts/release/v4-f23-pg17-owner-revocation-race.sh
+      - name: Native F23 selected quote supersession/release lock races
+        run: bash scripts/release/v4-f23-pg17-quote-supersession-race.sh
+      - name: Native F23 crew branch reassignment/release lock races
+        run: bash scripts/release/v4-f23-pg17-crew-branch-race.sh
