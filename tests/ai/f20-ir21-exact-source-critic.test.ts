@@ -21,6 +21,13 @@ const p02=JSON.parse(p02Raw.toString()) as {
  workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
  changedSource:Array<{path:string;blob:string;intent:string}>;
 };
+const p03CurrencyRaw=read("docs/delivery/sonic-p03-currency-first-run-ux-source-successor-20261107.json");
+const p03Currency=JSON.parse(p03CurrencyRaw.toString()) as {
+ schema:string;predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;purpose:string}>;
+ safetySourceUnchanged:{path:string;blob:string;guard:string};
+ releaseState:string;explicitNonActions:string[];
+};
 const f23=JSON.parse(read("docs/delivery/sonic-f23-atomic-release-transactional-source-lock-20261107.json").toString()) as {
  schema:string;historicP02ManifestBlob:string;
  workflowSuccessor:{path:string;previousBlob:string;currentBlob:string};
@@ -137,10 +144,28 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(p02.originalF15F20Overlay.blob).toBe(hash(overlayRaw));
   expect(p02.originalF15F20Overlay.unchanged).toBe(true);
   expect(p02.changedSource).toHaveLength(5);
+  expect(hash(p03CurrencyRaw)).toBe("d7648d1fd14e3e58f584cb0f03e5a386e4c3087d");
+  expect(p03Currency.schema).toBe("servicedesk.p03.currency-first-run-owner-ux-source-successor.v1");
+  expect(p03Currency.predecessor.path).toBe("docs/delivery/sonic-p02-registered-owner-ui-source-successor-20261106.json");
+  expect(p03Currency.predecessor.blob).toBe(hash(p02Raw));
+  expect(p03Currency.predecessor.unchanged).toBe(true);
+  expect(p03Currency.changedSource.map(x=>x.path)).toEqual([
+   "src/app/auth/create-workspace/page.tsx",
+   "tests/e2e/p02-workspace-error-origin.test.ts",
+  ]);
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
-   expect(hash(read(source.path)),source.path).toBe(source.blob);
+   const replacement=p03Currency.changedSource.find(x=>x.path===source.path);
+   if(replacement)expect(replacement.previousBlob,source.path).toBe(source.blob);
+   expect(hash(read(source.path)),source.path).toBe(replacement?.currentBlob??source.blob);
   }
+  const pricingGuard=p03Currency.safetySourceUnchanged;
+  expect(hash(read(pricingGuard.path))).toBe(pricingGuard.blob);
+  expect(read(pricingGuard.path).toString()).toContain(pricingGuard.guard);
+  expect(read("src/app/auth/create-workspace/page.tsx").toString())
+   .toContain("First-run cleaning pricing currently supports USD branches only.");
+  expect(p03Currency.explicitNonActions).toContain("NO_CONNECTED_DB_WRITE");
+  expect(p03Currency.releaseState).toContain("P03_OPEN_0_OF_6");
   expect(f23.schema).toBe("servicedesk.f23.atomic-hold-release.transactional-source.v1");
   expect(f23.historicP02ManifestBlob).toBe(hash(p02Raw));
   expect(f23.workflowSuccessor.previousBlob).toBe(p02.workflowSuccessor.currentBlob);
