@@ -81,6 +81,14 @@ const signInAudit=JSON.parse(signInAuditRaw.toString()) as {
  focusedWorkflow:{path:string;previousBlob:string;currentBlob:string};
  requiredGuards:string[];
 };
+const signupConfirmTransport=JSON.parse(read("docs/delivery/sonic-p02-signup-confirm-transport-successor-20261107.json").toString()) as {
+ schema:string;batchId:string;sourceOnly:boolean;parentHead:string;reviewedSourceHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string}>;
+ addedAdversarialTest:{path:string;previousBlob:null;currentBlob:string;cases:number};
+ focusedWorkflow:{path:string;previousBlob:string;currentBlob:string};
+ requiredGuards:string[];acceptanceState:string;releaseGate:string;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -427,7 +435,47 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(hash(read(signInAudit.newAdversarialTest.path))).toBe(signInAudit.newAdversarialTest.blob);
   expect(signInAudit.focusedWorkflow.path).toBe(resetRetry.focusedWorkflow.path);
   expect(signInAudit.focusedWorkflow.previousBlob).toBe(resetRetry.focusedWorkflow.newBlob);
-  expect(hash(read(signInAudit.focusedWorkflow.path))).toBe(signInAudit.focusedWorkflow.currentBlob);
+  expect(signInAudit.focusedWorkflow.currentBlob).toBe("720495c3087c369249fe19495cb86c2461a0abca");
+   // A new reviewed successor extends, rather than rewrites, the immutable sign-in lock.
+   expect(signupConfirmTransport.schema).toBe("servicedesk.p02.signup-confirm-transport-error-successor.v1");
+   expect(signupConfirmTransport.sourceOnly).toBe(true);
+   expect(signupConfirmTransport.parentHead).toBe("3c23c5d1188030e3ff595e16144420ba97c1c998");
+   expect(signupConfirmTransport.reviewedSourceHead).toBe("0603cc22a9b9268ee5f185c31517c56904a6395a");
+   expect(signupConfirmTransport.predecessor).toEqual({
+     path:"docs/delivery/sonic-p02-signin-verified-session-successor-20261107.json",
+     blob:"355217845c497dd3199ebc0cd3bdac58779ff53f",unchanged:true,
+   });
+   expect(signupConfirmTransport.predecessor.blob).toBe(hash(signInAuditRaw));
+   expect(signupConfirmTransport.changedSource).toEqual([
+     {path:"src/app/auth/sign-up/actions.ts",previousBlob:"87e77031039506fd4ee7c5d9c8f2387b9821e821",currentBlob:"3e925d4ec220f7264e5c6407c42e2670be5cebef"},
+     {path:"src/app/auth/confirm/route.ts",previousBlob:"6b9abb0efb56d597ee258d87faae93693b89d100",currentBlob:"4ab0f387ded6284c9af9b403c178e5869dbe8a33"},
+   ]);
+   for(const source of signupConfirmTransport.changedSource){
+     expect(source.path).not.toContain("..");
+     expect(hash(read(source.path)),source.path).toBe(source.currentBlob);
+   }
+   expect(signupConfirmTransport.addedAdversarialTest).toEqual({
+     path:"tests/e2e/p02-signup-confirm-transport-outcome.test.ts",previousBlob:null,
+     currentBlob:"f6659f118c343173b12767c102afc312053a32ff",cases:11,
+   });
+   expect(hash(read(signupConfirmTransport.addedAdversarialTest.path)))
+     .toBe(signupConfirmTransport.addedAdversarialTest.currentBlob);
+   expect(signupConfirmTransport.focusedWorkflow).toEqual({
+     path:signInAudit.focusedWorkflow.path,
+     previousBlob:"720495c3087c369249fe19495cb86c2461a0abca",
+     currentBlob:"42e200cdfe166ebb0e2f5eb187b182ab81c24490",
+   });
+   expect(signupConfirmTransport.focusedWorkflow.previousBlob)
+     .toBe(signInAudit.focusedWorkflow.currentBlob);
+   expect(hash(read(signupConfirmTransport.focusedWorkflow.path)))
+     .toBe(signupConfirmTransport.focusedWorkflow.currentBlob);
+   expect(read(signupConfirmTransport.focusedWorkflow.path).toString())
+     .toContain("tests/e2e/p02-signup-confirm-transport-outcome.test.ts");
+   expect(signupConfirmTransport.requiredGuards).toContain("NO_CHECK_EMAIL_ON_THROWN_SIGNUP");
+   expect(signupConfirmTransport.requiredGuards).toContain("NO_SUCCESSFUL_CONFIRM_WITHOUT_VERIFIED_USER_SESSION");
+   expect(signupConfirmTransport.requiredGuards).toContain("NO_VERCEL_DEPLOY");
+   expect(signupConfirmTransport.acceptanceState).toBe("SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_ACCEPTANCE");
+  
   expect(read(signInAudit.focusedWorkflow.path).toString())
     .toContain("tests/e2e/p02-signin-session-outcome.test.ts");
   expect(signInAudit.requiredGuards).toContain("NO_SUCCESSFUL_AUTH_REDIRECT_WITHOUT_USER_AND_SESSION");
