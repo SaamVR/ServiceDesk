@@ -93,13 +93,17 @@ export async function runTwoOwnerReadOnlyAudit(
         workspace_branches: "id,workspace_id,is_default,active",
       }[table];
       if (!projection) throw Error("UNAPPROVED_TABLE");
+      const ownScope = workspaceId === owner.expectedWorkspace;
+      // The FOREIGN probe must see *any* RLS-exposed membership or branch.
+      // Applying the caller's owner/active/default predicates to a foreign
+      // tenant can mask a genuine row leak and yield a false isolation PASS.
       const filter = new URLSearchParams({
         select: projection,
         [table === "workspaces" ? "id" : "workspace_id"]: "eq." + workspaceId,
-        ...(table === "memberships" ? {
+        ...(table === "memberships" && ownScope ? {
           user_id: "eq." + owner.subject, role: "eq.OWNER", status: "eq.ACTIVE",
         } : {}),
-        ...(table === "workspace_branches" ? {
+        ...(table === "workspace_branches" && ownScope ? {
           is_default: "eq.true", active: "eq.true",
         } : {}),
         limit: "2",
@@ -114,15 +118,17 @@ export async function runTwoOwnerReadOnlyAudit(
         if (table === "workspaces" && row.id !== workspaceId)
           throw Error("DATABASE_ROW_SCOPE_UNVERIFIED");
         if (table === "memberships" &&
-            (row.workspace_id !== workspaceId || row.user_id !== owner.subject ||
-             row.role !== "OWNER" || row.status !== "ACTIVE"))
+            (row.workspace_id !== workspaceId || !UUID.test(row.user_id ?? "") ||
+             typeof row.role !== "string" || typeof row.status !== "string" ||
+             (ownScope && (row.user_id !== owner.subject ||
+               row.role !== "OWNER" || row.status !== "ACTIVE"))))
           throw Error("OWNER_ACTIVE_MEMBERSHIP_UNVERIFIED");
         if (table === "requests" &&
             (row.workspace_id !== workspaceId || !UUID.test(row.id ?? "")))
           throw Error("DATABASE_ROW_SCOPE_UNVERIFIED");
         if (table === "workspace_branches" &&
             (row.workspace_id !== workspaceId || !UUID.test(row.id ?? "") ||
-             row.is_default !== true || row.active !== true))
+             (ownScope && (row.is_default !== true || row.active !== true))))
           throw Error("DEFAULT_BRANCH_SAVED_SCOPE_UNVERIFIED");
       }
       return data;
