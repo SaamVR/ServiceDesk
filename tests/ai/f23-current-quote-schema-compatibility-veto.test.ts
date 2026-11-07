@@ -5,6 +5,16 @@ import {createQuoteDraftWithRepository} from "../../src/server/core/quotes";
 
 const read=(file:string)=>readFileSync(file,"utf8");
 
+// Inspect SQL commands, not data literals: the read-only catalog probe
+// intentionally searches pg_indexes for the string "CREATE UNIQUE INDEX".
+// Removing string literals and comments keeps executable DDL/DML visible.
+const executableSql=(sql:string)=>sql
+ .replace(/'(?:''|[^'])*'/g,"''")
+ .replace(/--[^\r\n]*/g,"")
+ .replace(/\/\*[\s\S]*?\*\//g," ");
+
+const forbiddenWrites=/\b(?:insert\s+into|update\s+public|delete\s+from|alter\s+table|create\s+(?:unique\s+)?index|drop\s+table)\b/i;
+
 describe("F23 independent DBA critic: current quote uniqueness must be proven, not assumed",()=>{
  it("pins the historical single-version constraint, not a single-current-row guarantee",()=>{
   const sql=read("supabase/migrations/0002_quotes.sql");
@@ -93,6 +103,15 @@ describe("F23 independent DBA critic: current quote uniqueness must be proven, n
   expect(sql).toContain("'identifiersReturned',false");
   expect(sql).toContain("'safeToEnableF23',false");
   expect(sql).toContain("'allQuoteWritersAudited',false");
-  expect(sql).not.toMatch(/^(?!\s*--).*\b(?:insert\s+into|update\s+public|delete\s+from|alter\s+table|create\s+(?:unique\s+)?index|drop\s+table)\b/im);
+  expect(executableSql(sql)).not.toMatch(forbiddenWrites);
+ });
+ it("recognizes catalog index-definition text as data but still rejects executable writes",()=>{
+  const sql=read("scripts/release/v4-f23-current-quote-readonly-preflight.sql");
+  expect(sql).toContain("indexdef ilike '%CREATE UNIQUE INDEX%'");
+  expect(executableSql(sql)).not.toMatch(forbiddenWrites);
+  const withRealWrite=sql.replace("commit;","update public.quotes set status='SUPERSEDED';\ncommit;");
+  expect(executableSql(withRealWrite)).toMatch(forbiddenWrites);
+  const withRealDdl=sql.replace("commit;","create unique index forbidden_idx on public.quotes(id);\ncommit;");
+  expect(executableSql(withRealDdl)).toMatch(forbiddenWrites);
  });
 });
