@@ -66,6 +66,15 @@ describe("P02 two-owner real-session RLS must be manual and exactly approved",()
     expect(runner).toContain("REAL_AUTHENTICATED_STAGING_CORE_RLS_PRECHECK_PASS");
     expect(runner).not.toContain("signUp(");
   });
+  it("limits protected two-owner QA cleanup to the CLI sessions, not every owner device",()=>{
+    const runner=readFileSync("scripts/release/v4-private-rls-proof.mjs","utf8");
+    expect(runner).toContain('db.auth.signOut({ scope: "local" })');
+    expect(runner).not.toContain("db.auth.signOut()");
+    expect(runner).not.toContain('scope: "global"');
+    expect(runner).toContain("persistSession: false");
+    expect(runner).toContain("requireDistinctConfirmedOwnerSessions(a, b, fail)");
+    expect(rlsCredentialJob).toContain("node scripts/release/v4-private-rls-proof.mjs");
+  });
   it("keeps read-only source checks available but never provisions users or deploys",()=>{
     const sourceOnly=rlsSource.split("  auth-source:")[1]?.split("  real-session-rls:")[0];
     expect(sourceOnly).toContain("node --check scripts/release/v4-private-rls-proof.mjs");

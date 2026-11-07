@@ -93,7 +93,10 @@ async function main() {
       console.log("REAL_AUTHENTICATED_STAGING_AUTOMATION_RLS_POSITIVE_NEGATIVE_PASS: each distinct owner has a saved LIVE matched QUOTE_ACCEPTED execution with same-branch SUCCEEDED internal attention action and linked persisted attention; three-table foreign tenant denials passed; provider delivery and full payment journey NOT proven");
     }
   } finally {
-    await Promise.allSettled(dbs.map(db => db.auth.signOut()));
+    // Supabase JS defaults signOut() to GLOBAL, which would revoke every
+    // browser/device refresh session for a QA owner. Only end the transient
+    // CLI session created above; never invalidate unrelated owner sessions.
+    await Promise.allSettled(dbs.map(db => db.auth.signOut({ scope: "local" })));
   }
 }
 try { await main(); } catch (error) {
