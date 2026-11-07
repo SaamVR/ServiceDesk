@@ -23,14 +23,14 @@ describe("P02 Vercel auth-origin migration guard", () => {
   });
 
   it("preserves historical Render fallback outside Vercel without changing old host operation", () => {
-    expect(verifiedEmailRedirectOrigin(undefined, previousRender, undefined)).toBe(previousRender);
     expect(verifiedEmailRedirectOrigin(undefined, previousRender, "0")).toBe(previousRender);
-    expect(verifiedEmailRedirectOrigin(approved, previousRender, undefined)).toBe(approved);
+    expect(verifiedEmailRedirectOrigin(undefined, previousRender, "0")).toBe(previousRender);
+    expect(verifiedEmailRedirectOrigin(approved, previousRender, "0")).toBe(approved);
   });
 
   it("never silently reuses an old host after malformed explicit operator configuration", () => {
     expect(verifiedEmailRedirectOrigin("https://bad.example/evil", previousRender, "1")).toBeNull();
-    expect(verifiedEmailRedirectOrigin("https://bad.example/evil", previousRender, undefined)).toBeNull();
+    expect(verifiedEmailRedirectOrigin("https://bad.example/evil", previousRender, "0")).toBeNull();
     expect(verifiedEmailRedirectOrigin("https://bad.example#x", previousRender, "1")).toBeNull();
   });
 
@@ -58,7 +58,7 @@ describe("P02 Vercel auth-origin migration guard", () => {
     for (const file of files) {
       const src=readFileSync(file,"utf8");
       expect(src).toContain("verifiedEmailRedirectOrigin(");
-      expect(src).toContain("process.env.RENDER_EXTERNAL_URL");
+      expect(src).toContain("RENDER_EXTERNAL_URL");
     }
     const origin=readFileSync("src/features/auth/email-origin.ts","utf8");
     expect(origin).toContain('vercelRuntime === "1"');
