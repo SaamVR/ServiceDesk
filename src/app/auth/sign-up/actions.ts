@@ -43,14 +43,22 @@ export async function signUpWithPassword(formData: FormData): Promise<never> {
     },
   });
 
-  const { error } = await auth.auth.signUp({
-    email, password,
-    options: { emailRedirectTo: redirectOrigin + "/auth/confirm" },
-  });
+  // A transport failure may be reported without an Auth response. Never
+  // imply confirmation email delivery or expose a provider's raw error.
+  let signUpError: { message: string } | null = null;
+  try {
+    const result = await auth.auth.signUp({
+      email, password,
+      options: { emailRedirectTo: redirectOrigin + "/auth/confirm" },
+    });
+    signUpError = result.error;
+  } catch {
+    signupError("We could not start account registration. Try again shortly.");
+  }
 
   // Do not disclose whether an email address already has an account.
-  if (error) {
-    if (/rate.limit|too.many/i.test(error.message)) signupError("Please wait before requesting another confirmation email.");
+  if (signUpError) {
+    if (/rate.limit|too.many/i.test(signUpError.message)) signupError("Please wait before requesting another confirmation email.");
     signupError("We could not start account registration. Try again shortly.");
   }
 
