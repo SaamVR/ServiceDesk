@@ -62,4 +62,21 @@ describe("P02 bounded workspace setup error presentation", () => {
     expect(page).toContain("{trustedError}");
     expect(page).not.toContain("{query.error}");
   });
+  it("warns before non-USD workspace registration that first-run cleaning prices are USD-only", () => {
+    const page = readFileSync("src/app/auth/create-workspace/page.tsx", "utf8");
+    const backend = readFileSync("src/features/operations/owner-pricing-readiness.ts", "utf8");
+    expect(page).toContain('aria-describedby="workspace-currency-hint"');
+    expect(page).toContain('id="workspace-currency-hint"');
+    expect(page).toContain("First-run cleaning pricing currently supports USD branches only.");
+    expect(page).toContain("Do not choose USD unless your business actually bills in USD.");
+    expect(backend).toContain('currency === "USD"');
+    for (const currency of ["USD", "GBP", "EUR", "CAD", "AUD", "BDT"]) {
+      expect(page).toContain('value="' + currency + '"');
+      expect(validateWorkspaceFields({
+        name: "Cleaning Company", slug: "cleaning-company", timezone: "UTC", currency,
+      })).toBeNull();
+    }
+    expect(page).not.toContain('name="currency" type="hidden"');
+  });
+
 });
