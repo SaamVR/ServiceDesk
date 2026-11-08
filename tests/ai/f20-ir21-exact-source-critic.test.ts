@@ -785,7 +785,8 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    const branchSuccessor=ownerMainBranch.changedSource.find(x=>x.path===source.path);
    const reviewedPreBranch=expectedCurrentOwnerSlugBlob(source.path,fixtureFix?.currentBlob??qaWitness?.currentBlob??ownerNavigation?.currentBlob??ownerRlsVeto?.currentBlob??pageCorrection?.currentBlob??recoverySuccessor?.currentBlob??navSuccessor?.currentBlob??transport?.currentBlob??replacement?.currentBlob??source.blob);
    if(branchSuccessor)expect(branchSuccessor.previousBlob,source.path).toBe(reviewedPreBranch);
-   expect(hash(read(source.path)),source.path).toBe(branchSuccessor?.currentBlob??reviewedPreBranch);
+   expect(hash(read(source.path)),source.path)
+      .toBe(currentOwnerFormSafetyBlob(source.path,branchSuccessor?.currentBlob??reviewedPreBranch));
   }
   // Separate independent source successor for actual post-confirm owner routing.
    expect(postConfirmNavigation.schema).toBe("servicedesk.p02.post-confirm-owner-navigation-transport-successor.v1");
