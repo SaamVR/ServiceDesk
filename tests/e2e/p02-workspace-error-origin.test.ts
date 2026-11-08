@@ -464,7 +464,16 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
       return element.type === "form" || hasForm(element.props?.children);
     };
     expect(hasForm(page)).toBe(false);
-    expect(JSON.stringify(page.props.children)).toContain("/auth/continue");
+    // Next.js Link objects are not JSON-serializable in the React test tree.
+    // Inspect only element props and descendants, without serializing internals.
+    const hasContinueLink = (node: unknown): boolean => {
+      if (Array.isArray(node)) return node.some(hasContinueLink);
+      if (!node || typeof node !== "object") return false;
+      const element=node as {props?:{children?:unknown;href?:unknown}};
+      return element.props?.href === "/auth/continue" ||
+        hasContinueLink(element.props?.children);
+    };
+    expect(hasContinueLink(page)).toBe(true);
     expect(ownerNavigation.customers).not.toHaveBeenCalled();
   });
 

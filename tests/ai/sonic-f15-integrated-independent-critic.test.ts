@@ -301,17 +301,38 @@ const ownerFormSafety=JSON.parse(ownerFormSafetyRaw.toString()) as {
  unchangedWorkflow:{path:string;blob:string;unchanged:boolean};
  invariants:string[];acceptance:string;
 };
+const ownerFormTreeRaw=read("docs/delivery/sonic-p02-owner-form-react-tree-critic-correction-20261109.json");
+const ownerFormTree=JSON.parse(ownerFormTreeRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;parentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ testCases:{path:string;previous:number;current:number;added:number};
+ unchangedApplicationSource:Array<{path:string;blob:string;unchanged:boolean}>;
+ unchangedWorkflow:{path:string;blob:string;unchanged:boolean};
+ invariants:string[];acceptance:string;
+};
+const currentOwnerFormTreeBlob=(path:string,previous:string|undefined):string=>{
+ if(typeof previous!=="string"||!/^[a-f0-9]{40}$/.test(previous))
+  throw Error("Missing reviewed actual React-tree QA SHA: "+path);
+ const correction=ownerFormTree.changedSource.find(entry=>entry.path===path);
+ if(!correction)return previous;
+ if(previous===correction.currentBlob)return previous;
+ // Historical lineage may not yet have reached this approved test witness.
+ if(previous!==correction.previousBlob)return previous;
+ expect(correction.previousBlob,path).toBe(previous);
+ return correction.currentBlob;
+};
 const currentOwnerFormSafetyBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing reviewed owner form or registration SHA: "+path);
  const source=ownerFormSafety.changedSource.find(x=>x.path===path);
- if(!source)return prior;
- if(source.currentBlob===prior)return prior;
+ if(!source)return currentOwnerFormTreeBlob(path,prior);
+ if(source.currentBlob===prior)return currentOwnerFormTreeBlob(path,prior);
  // This helper can run before the older predecessor's own successor is
  // composed. The final exact-path test below still requires the reviewed SHA.
- if(source.previousBlob!==prior)return prior;
+ if(source.previousBlob!==prior)return currentOwnerFormTreeBlob(path,prior);
  expect(source.previousBlob,path).toBe(prior);
- return source.currentBlob;
+ return currentOwnerFormTreeBlob(path,source.currentBlob);
 };
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
@@ -542,7 +563,8 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(new Set(landingBranch.changedSource.map(s=>s.path)).size).toBe(4);
   for(const entry of landingBranch.changedSource){
     expect(entry.path).not.toContain("..");
-    expect(gitHash(read(entry.path)),entry.path).toBe(currentQaDefaultBlob(entry.path,entry.currentBlob));
+    expect(gitHash(read(entry.path)),entry.path)
+      .toBe(currentOwnerFormSafetyBlob(entry.path,currentQaDefaultBlob(entry.path,entry.currentBlob)));
   }
   expect(landingBranch.testCases).toEqual({ownerReadback:{old:8,new:10},actualOwnerNavigation:{old:31,new:35}});
   expect(landingBranch.unchangedWorkflow).toEqual({path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true});
@@ -676,7 +698,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(new Set(ownerFormSafety.changedSource.map(x=>x.path)).size).toBe(4);
   for(const source of ownerFormSafety.changedSource){
     expect(source.path).not.toContain("..");
-    expect(gitHash(read(source.path)),source.path).toBe(source.currentBlob);
+    expect(gitHash(read(source.path)),source.path).toBe(currentOwnerFormTreeBlob(source.path,source.currentBlob));
   }
   expect(ownerFormSafety.regressionTests).toEqual([
     {path:"tests/e2e/p02-registration-denial-action.test.ts",previous:12,current:13,added:1},
@@ -693,6 +715,41 @@ describe("F15 independent critic: no new composite, exact source and default-den
     "NO_DEPLOY_OR_MERGE","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
     expect(ownerFormSafety.invariants).toContain(req);
   expect(ownerFormSafety.acceptance).toBe("INTEGRATED_SOURCE_ONLY_NOT_TWO_REAL_OWNER_AUTHENTICATED_JWT_RLS");
+  // Explicit QA tree witness correction, retaining the source fix and all
+  // historical source manifest bytes, including the original test predecessor.
+  expect(gitHash(ownerFormSafetyRaw)).toBe("890dd874b96eb32aa6fb8ebee81e4d01ce359035");
+  expect(ownerFormTree.schema).toBe("servicedesk.p02.owner-form-test-tree-critic-correction.v1");
+  expect(ownerFormTree.batchId).toBe("P02-QA_OWNER_FORM_REACT_LINK_WITNESS_AND_SOURCE_ORDER-20261109");
+  expect(ownerFormTree.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(ownerFormTree.sourceOnly).toBe(true);
+  expect(ownerFormTree.parentHead).toBe("c18aee3c38b17edf3af568509b4dc4e4c48e7f05");
+  expect(ownerFormTree.predecessor).toEqual({path:"docs/delivery/sonic-p02-owner-form-eligibility-valid-actor-successor-20261109.json",blob:"890dd874b96eb32aa6fb8ebee81e4d01ce359035",unchanged:true});
+  expect(ownerFormTree.predecessor.blob).toBe(gitHash(ownerFormSafetyRaw));
+  expect(ownerFormTree.changedSource).toEqual([
+    {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"cf9f60ffc6003ba65afd42269504218af5922a9c",currentBlob:"23aa52648145f76b0e5fd9adab3ef45f5b2b1249",lane:"ACTUAL_REACT_ELEMENT_QA_WITNESS"}
+  ]);
+  expect(gitHash(read(ownerFormTree.changedSource[0].path))).toBe(ownerFormTree.changedSource[0].currentBlob);
+  expect(ownerFormTree.testCases).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:37,current:37,added:0});
+  expect(ownerFormTree.unchangedApplicationSource).toEqual([
+    {path:"src/app/auth/create-workspace/actions.ts",blob:"37871b966731acf08a65f9395577eb356c5177e5",unchanged:true},
+    {path:"src/app/auth/create-workspace/page.tsx",blob:"98c3dd145b011211d345892c01851fa22c4aadc7",unchanged:true}
+  ]);
+  for(const src of ownerFormTree.unchangedApplicationSource){
+    expect(src.unchanged).toBe(true);
+    expect(gitHash(read(src.path)),src.path).toBe(src.blob);
+  }
+  expect(ownerFormTree.unchangedWorkflow).toEqual({
+    path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true
+  });
+  expect(gitHash(read(ownerFormTree.unchangedWorkflow.path))).toBe(ownerFormTree.unchangedWorkflow.blob);
+  for(const guard of ["NO_CIRCULAR_REACT_JSX_SERIALIZATION",
+    "RETAIN_ACTUAL_FORM_AND_AUTHORIZED_LINK_WITNESS",
+    "ALL_HISTORIC_GIT_BLOB_PINS_RETAINED",
+    "NO_CONNECTED_AUTH_OR_DATABASE_WRITE","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6","NO_DEPLOY_OR_MERGE"])
+    expect(ownerFormTree.invariants).toContain(guard);
+  expect(ownerFormTree.acceptance).toBe("SOURCE_CORRECTION_ONLY_AWAIT_EXACT_HEAD_CI_NOT_REAL_OWNER_JWT_RLS");
+
 
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
