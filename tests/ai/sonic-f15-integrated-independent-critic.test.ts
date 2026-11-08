@@ -295,18 +295,39 @@ const qaNoProvider=JSON.parse(qaNoProviderRaw.toString()) as {
  unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
  guards:string[];acceptance:string;
 };
+const qaPropertyPreflightRaw=read("docs/delivery/sonic-p02-qa-saved-property-branch-before-request-successor-20261109.json");
+const qaPropertyPreflight=JSON.parse(qaPropertyPreflightRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ regressionTests:{path:string;previous:number;current:number;added:number;scope:string};
+ unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
+ guards:string[];acceptance:string;
+};
+const currentQaPropertyPreflightBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+  throw Error("Missing reviewed QA property source SHA: "+path);
+ const successor=qaPropertyPreflight.changedSource.find(item=>item.path===path);
+ if(!successor)return prior;
+ if(prior===successor.currentBlob)return prior;
+ // The independently reviewed prior synthetic-marker successor must have
+ // resolved before applying this later exact saved-property improvement.
+ if(prior!==successor.previousBlob)return prior;
+ expect(successor.previousBlob,path).toBe(prior);
+ return successor.currentBlob;
+};
 const currentQaNoProviderBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing reviewed QA synthetic request source SHA: "+path);
  const successor=qaNoProvider.changedSource.find(item=>item.path===path);
- if(!successor)return prior;
- if(prior===successor.currentBlob)return prior;
+ if(!successor)return currentQaPropertyPreflightBlob(path,prior);
+ if(prior===successor.currentBlob)return currentQaPropertyPreflightBlob(path,prior);
  // Older review layers may have a real earlier predecessor. Their own
  // assertions must complete first. The exact final source pins below are
  // mandatory, not inferred from a passed-through earlier SHA.
- if(prior!==successor.previousBlob)return prior;
+ if(prior!==successor.previousBlob)return currentQaPropertyPreflightBlob(path,prior);
  expect(successor.previousBlob,path).toBe(prior);
- return successor.currentBlob;
+ return currentQaPropertyPreflightBlob(path,successor.currentBlob);
 };
 const currentQaOwnerLookupBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
@@ -894,7 +915,8 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(new Set(qaNoProvider.changedSource.map(item=>item.path)).size).toBe(2);
   for(const item of qaNoProvider.changedSource){
     expect(item.path).not.toContain("..");
-    expect(gitHash(read(item.path)),item.path).toBe(item.currentBlob);
+    expect(gitHash(read(item.path)),item.path)
+      .toBe(currentQaPropertyPreflightBlob(item.path,item.currentBlob));
   }
   expect(qaNoProvider.tests).toEqual({
     path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
@@ -918,6 +940,50 @@ describe("F15 independent critic: no new composite, exact source and default-den
     "NO_DEPLOY_OR_SQL_MIGRATION","P02_OPEN_2_OF_7","P03_QUEUED_0_OF_6"])
     expect(qaNoProvider.guards).toContain(guard);
   expect(qaNoProvider.acceptance).toBe("SOURCE_ONLY_PENDING_AUTHORIZED_TWO_OWNER_JWT_BROWSER_RLS");
+  // Additional property lineage prevents touching a request when its saved
+  // fictional QA property was transferred to another branch. Prior SHA
+  // history is byte-identical and reviewed before this successor.
+  expect(gitHash(qaNoProviderRaw)).toBe("cb3a49287fc3df662189b9112c9c4e8472722453");
+  expect(qaPropertyPreflight.schema).toBe("servicedesk.p02.qa-property-default-branch-preflight.v1");
+  expect(qaPropertyPreflight.batchId).toBe("P02-QA_PROPERTY_BRANCH_MUST_MATCH_SAVED_DEFAULT_BEFORE_REQUEST_AMENDMENT-20261109");
+  expect(qaPropertyPreflight.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(qaPropertyPreflight.sourceOnly).toBe(true);
+  expect(qaPropertyPreflight.reviewedParentHead).toBe("c1348db822fda09dc6dca316d46451ac19cfb711");
+  expect(qaPropertyPreflight.predecessor).toEqual({path:"docs/delivery/sonic-p02-qa-no-provider-request-reuse-successor-20261109.json",blob:"cb3a49287fc3df662189b9112c9c4e8472722453",unchanged:true});
+  expect(qaPropertyPreflight.predecessor.blob).toBe(gitHash(qaNoProviderRaw));
+  expect(qaPropertyPreflight.changedSource).toEqual([
+    {path:"src/features/auth/qa-sample-seed.ts",previousBlob:"ac90347b1ce5e41697838953414fa7710eb614eb",currentBlob:"4a9a8f4ab2c8af8b12f6c54df58c598944ffd17c",lane:"QA_SAVED_PROPERTY_SCOPE_BEFORE_AMENDMENT"},
+    {path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",previousBlob:"477fb60817caecf1b4320988d6a0a9f94391204a",currentBlob:"b9119f1f911def6021a1be14857ed21e3b36edfe",lane:"SYNTHETIC_PROPERTY_MUTATION_NEGATIVE"}
+  ]);
+  expect(new Set(qaPropertyPreflight.changedSource.map(item=>item.path)).size).toBe(2);
+  for(const item of qaPropertyPreflight.changedSource){
+    expect(item.path).not.toContain("..");
+    expect(gitHash(read(item.path)),item.path).toBe(item.currentBlob);
+  }
+  expect(qaPropertyPreflight.regressionTests).toEqual({
+    path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+    previous:21,current:22,added:1,scope:"MOCKED_REAL_QA_SEED_HELPER_NO_PRODUCTION_DB"
+  });
+  expect(qaPropertyPreflight.unchangedSource).toEqual([
+    {path:"src/features/auth/qa-sample-readback.ts",blob:"39432b3b076939ed0f304d56e3a7fa21112c8b70",unchanged:true},
+    {path:"src/app/onboarding/verified/qa-seed-actions.ts",blob:"047dc7ed709946c41065027ac7cf18db4b284131",unchanged:true},
+    {path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true}
+  ]);
+  for(const item of qaPropertyPreflight.unchangedSource){
+    expect(item.unchanged).toBe(true);
+    expect(gitHash(read(item.path)),item.path).toBe(item.blob);
+  }
+  for(const guard of [
+   "EXISTING_QA_PROPERTY_BRANCH_SAVED_ID_EQUALS_DEFAULT_BEFORE_REQUEST_UPDATE",
+   "NO_SILENT_QA_PROPERTY_BRANCH_REASSIGNMENT",
+   "FAIL_CLOSED_ON_DUPLICATE_OR_INCOMPLETE_PROPERTY_READ",
+   "NO_SAVED_REQUEST_SERVICE_AMENDMENT_FOR_TRANSFERRED_PROPERTY",
+   "PRESERVE_PREVIOUS_SYNTHETIC_NO_PROVIDER_UPDATE_FILTER",
+   "NO_CONNECTED_SUPABASE_AUTH_OR_DB_WRITE","NO_PROVIDER_SEND_OR_DEPLOY_OR_MIGRATION",
+   "P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
+    expect(qaPropertyPreflight.guards).toContain(guard);
+  expect(qaPropertyPreflight.acceptance).toBe("SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_BROWSER_JWT_RLS");
+
 
   expect(branchAudit.businessScenario).toContain("exactly one saved owner branch assignment");
   expect(branchAudit.nodeCalls).toEqual({

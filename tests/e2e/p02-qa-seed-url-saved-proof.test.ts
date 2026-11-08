@@ -399,6 +399,25 @@ describe("P02 fictional QA seed uses active default branch instead of mutable MA
     expect(f.reads.filter(table => table === "requests")).toEqual(["requests"]);
   });
 
+  it("refuses a transferred QA property before a service amendment can mutate its request", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const f = fixture({ change: rows => {
+      rows.service_catalog = [{
+        id: "77777777-7777-4777-8777-777777777777",
+        workspace_id: workspace, code: "MOVE_OUT", active: true,
+      }];
+      rows.properties[0].branch_id = request; // no longer the saved default
+      rows.requests[0].service_id = null;
+    } });
+    expect(await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" }))
+      .toEqual({ ok: false, stage: "property" });
+    expect(f.reads).not.toContain("requests");
+    expect(f.writes).toEqual([]);
+  });
+
   it("does not UPDATE a previously synthetic request repurposed between read and write", async () => {
     const { seedQaWorkspaceData: actualSeed } =
       await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(

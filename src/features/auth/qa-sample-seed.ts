@@ -104,15 +104,27 @@ export async function seedQaWorkspaceData(
   if (!isUuid(customerId)) return { ok: false, stage: "customer" };
 
   const existingProperties = await auth.from("properties")
-    .select("id")
+    .select("id,workspace_id,customer_id,branch_id,label")
     .eq("workspace_id", workspace.id)
     .eq("customer_id", customerId)
     .eq("label", QA_SEED_LABEL)
     .limit(2);
-  if (existingProperties.error || (existingProperties.data ?? []).length > 1) {
+  if (existingProperties.error || !Array.isArray(existingProperties.data) ||
+      existingProperties.data.length > 1) {
     return { ok: false, stage: "property" };
   }
-  let propertyId = existingProperties.data?.[0]?.id;
+  const savedProperty = existingProperties.data[0];
+  // An existing QA-labelled property can have been transferred to another
+  // branch. Confirm saved tenant, owner-scoped customer and exact active
+  // default branch BEFORE trying to amend any request or create more records.
+  if (savedProperty && (!isUuid(savedProperty.id) ||
+      savedProperty.workspace_id !== workspace.id ||
+      savedProperty.customer_id !== customerId ||
+      savedProperty.branch_id !== branchId ||
+      savedProperty.label !== QA_SEED_LABEL)) {
+    return { ok: false, stage: "property" };
+  }
+  let propertyId = savedProperty?.id;
   if (!propertyId) {
     const created = await auth.from("properties")
       .insert({
