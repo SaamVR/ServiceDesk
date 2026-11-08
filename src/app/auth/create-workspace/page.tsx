@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { createOwnerWorkspace } from "./actions";
 import styles from "../sign-in/page.module.css";
-import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
+import {
+  ownerRegistrationAvailable, ownerRegistrationEmailAllowed,
+} from "@/features/auth/owner-registration-readiness";
 import { trustedWorkspaceRegistrationError, workspaceRegistrationNeedsReadback } from "@/features/auth/workspace-registration-error";
 
 const timezones = [
@@ -52,6 +54,21 @@ export default async function CreateWorkspacePage({
   if (!identity || identity.error || !identity.data?.user?.id ||
       !identity.data.user.email_confirmed_at) {
     redirect("/auth/sign-in?next=" + encodeURIComponent("/auth/create-workspace"));
+  }
+
+  // Registration is not offered to a confirmed but QA-unapproved identity:
+  // the server action would inevitably reject it after showing a live form.
+  // Use the same allowlist guard as the action, never a URL or user metadata.
+  if (!ownerRegistrationEmailAllowed(identity.data.user.email)) {
+    return <RegistrationShell
+      eyebrow="Workspace setup" title="Workspace creation is unavailable for this account"
+      description="This preview limits workspace registration to approved accounts."
+      asideTitle="Your existing account is protected."
+      asideItems={["Workspace access remains session-verified", "No new business was created", "Contact your administrator if you need test access"]}
+    >
+      <p role="alert">New workspace registration is not available for this account.</p>
+      <Link href="/auth/continue">Check your authorized workspaces →</Link>
+    </RegistrationShell>;
   }
 
   return (

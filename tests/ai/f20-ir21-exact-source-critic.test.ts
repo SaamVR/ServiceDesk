@@ -236,9 +236,9 @@ const currentLandingBlob=(path:string,prior:string|undefined):string=>{
  // Resolve the new default-branch correction here only for the owner landing;
  // the later recovery reader applies it after its own exact previous SHA.
  const isLanding=path==="src/app/onboarding/verified/page.tsx";
- if(!successor)return isLanding?currentQaDefaultBlob(path,prior):prior;
+ if(!successor)return currentOwnerFormSafetyBlob(path,isLanding?currentQaDefaultBlob(path,prior):prior);
  expect(successor.previousBlob,path).toBe(prior);
- return isLanding?currentQaDefaultBlob(path,successor.currentBlob):successor.currentBlob;
+ return currentOwnerFormSafetyBlob(path,isLanding?currentQaDefaultBlob(path,successor.currentBlob):successor.currentBlob);
 };
 const checkEmailResendRaw=read("docs/delivery/sonic-p02-check-email-resend-bounded-notice-successor-20261108.json");
 const checkEmailResend=JSON.parse(checkEmailResendRaw.toString()) as {
@@ -297,6 +297,27 @@ const currentQaOwnerLookupBlob=(path:string,prior:string|undefined):string=>{
  if(!delta)return prior;
  expect(delta.previousBlob,path).toBe(prior);
  return delta.currentBlob;
+};
+const ownerFormSafetyRaw=read("docs/delivery/sonic-p02-owner-form-eligibility-valid-actor-successor-20261109.json");
+const ownerFormSafety=JSON.parse(ownerFormSafetyRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;parentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ regressionTests:Array<{path:string;previous:number;current:number;added:number}>;
+ unchangedWorkflow:{path:string;blob:string;unchanged:boolean};
+ invariants:string[];acceptance:string;
+};
+const currentOwnerFormSafetyBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing reviewed owner form or registration SHA: "+path);
+ const source=ownerFormSafety.changedSource.find(x=>x.path===path);
+ if(!source)return prior;
+ if(source.currentBlob===prior)return prior;
+ // This helper can run before the older predecessor's own successor is
+ // composed. The final exact-path test below still requires the reviewed SHA.
+ if(source.previousBlob!==prior)return prior;
+ expect(source.previousBlob,path).toBe(prior);
+ return source.currentBlob;
 };
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
@@ -643,6 +664,42 @@ describe("IR21 exact owner finance + retention source integration",()=>{
     expect(qaOwnerRead.invariants).toContain(guard);
   expect(qaOwnerRead.acceptance).toBe("SOURCE_ONLY_NOT_TWO_OWNER_LIVE_AUTHENTICATED_JWT_RLS");
   expect(qaOwnerRead.nextBatch).toBe("P02_818_OWNER_APPROVAL_FOR_TWO_REAL_QA_SESSIONS");
+  // Additive predecessor-specific review. Older manifests/DB sources stay pinned.
+  expect(hash(qaOwnerReadRaw)).toBe("1380dae4654336ea5ba0af5639ca93a3c3467b3c");
+  expect(ownerFormSafety.schema).toBe("servicedesk.p02.owner-form-eligibility-and-verified-actor.v1");
+  expect(ownerFormSafety.batchId).toBe("P02-OWNER_FORM_QA_ALLOWLIST_AND_VALID_AUTH_ID_BEFORE_RPC-20261109");
+  expect(ownerFormSafety.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(ownerFormSafety.sourceOnly).toBe(true);
+  expect(ownerFormSafety.parentHead).toBe("6497e270cc66a274ffb042555b47101843e39e63");
+  expect(ownerFormSafety.predecessor).toEqual({path:"docs/delivery/sonic-p02-qa-owner-lookup-transport-successor-20261109.json",blob:"1380dae4654336ea5ba0af5639ca93a3c3467b3c",unchanged:true});
+  expect(ownerFormSafety.predecessor.blob).toBe(hash(qaOwnerReadRaw));
+  expect(ownerFormSafety.changedSource).toEqual([
+    {path:"src/app/auth/create-workspace/actions.ts",previousBlob:"8e3a6e0572c38680141ce86b5d7f5f84cf5d6dfd",currentBlob:"37871b966731acf08a65f9395577eb356c5177e5",lane:"AUTH_RPC_ACTOR_ID_VETO"},
+    {path:"src/app/auth/create-workspace/page.tsx",previousBlob:"2ed68d7a1ae4449e43dfb852fd8e210640664e56",currentBlob:"98c3dd145b011211d345892c01851fa22c4aadc7",lane:"OWNER_QA_ELIGIBILITY_UI"},
+    {path:"tests/e2e/p02-registration-denial-action.test.ts",previousBlob:"d5c288aa516ae3e9b2c2f84302de22942748085f",currentBlob:"1cd9e8e3aad8a35574180d7bc0b29dd7033d2065",lane:"ACTION_ADVERSARIAL_TEST"},
+    {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"b490f5decc44e631ff6aef895b5b142f5f926fb0",currentBlob:"cf9f60ffc6003ba65afd42269504218af5922a9c",lane:"UI_ADVERSARIAL_TEST"}
+  ]);
+  expect(new Set(ownerFormSafety.changedSource.map(x=>x.path)).size).toBe(4);
+  for(const source of ownerFormSafety.changedSource){
+    expect(source.path).not.toContain("..");
+    expect(hash(read(source.path)),source.path).toBe(source.currentBlob);
+  }
+  expect(ownerFormSafety.regressionTests).toEqual([
+    {path:"tests/e2e/p02-registration-denial-action.test.ts",previous:12,current:13,added:1},
+    {path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:35,current:37,added:2}
+  ]);
+  expect(ownerFormSafety.unchangedWorkflow).toEqual({
+    path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true
+  });
+  expect(hash(read(ownerFormSafety.unchangedWorkflow.path))).toBe(ownerFormSafety.unchangedWorkflow.blob);
+  for(const req of ["NO_QA_UNAPPROVED_OWNER_REGISTRATION_FORM",
+    "NO_WORKSPACE_REGISTRATION_RPC_ON_MISSING_OR_MALFORMED_AUTH_USER_ID",
+    "NO_CONNECTED_SUPABASE_AUTH_OR_DB_WRITE","NO_REGISTRATION_GUARD_INSTALL",
+    "NO_DEPLOY_OR_MERGE","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
+    expect(ownerFormSafety.invariants).toContain(req);
+  expect(ownerFormSafety.acceptance).toBe("INTEGRATED_SOURCE_ONLY_NOT_TWO_REAL_OWNER_AUTHENTICATED_JWT_RLS");
+
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
    const replacement=p03Currency.changedSource.find(x=>x.path===source.path);
@@ -774,7 +831,8 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    expect(uncertainRegistration.testCases).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",prior:19,current:21,newCases:2,scope:"SYNTHETIC_UI_RECOVERY_NO_CONNECTED_DB"});
    expect(uncertainRegistration.actionUnchanged.path).toBe("src/app/auth/create-workspace/actions.ts");
    expect(uncertainRegistration.actionUnchanged.blob).toBe("8e3a6e0572c38680141ce86b5d7f5f84cf5d6dfd");
-   expect(hash(read(uncertainRegistration.actionUnchanged.path))).toBe(uncertainRegistration.actionUnchanged.blob);
+   expect(hash(read(uncertainRegistration.actionUnchanged.path)))
+      .toBe(currentOwnerFormSafetyBlob(uncertainRegistration.actionUnchanged.path,uncertainRegistration.actionUnchanged.blob));
    expect(uncertainRegistration.actionUnchanged.mayHaveCommittedMessages).toEqual(["Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.","Workspace registration may have committed, but saved owner access could not be verified. Use your authorized workspaces to check before trying again."]);
    expect(uncertainRegistration.workflowUnchanged.blob).toBe("634d35b6eb34025df560b78f0dfbe3354988238c");
    expect(hash(read(uncertainRegistration.workflowUnchanged.path))).toBe(uncertainRegistration.workflowUnchanged.blob);

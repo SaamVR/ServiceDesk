@@ -259,6 +259,22 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
     expect(calls.rpc).not.toHaveBeenCalled();
   });
 
+  it("never calls the registration RPC with a userless or malformed authenticated actor", async () => {
+    for (const actor of [
+      { email: "approved@example.test", email_confirmed_at: "2026-10-26T00:00:00Z" },
+      { id: "", email: "approved@example.test", email_confirmed_at: "2026-10-26T00:00:00Z" },
+      { id: "../foreign", email: "approved@example.test", email_confirmed_at: "2026-10-26T00:00:00Z" },
+      { id: attackerId.slice(0, 20), email: "approved@example.test", email_confirmed_at: "2026-10-26T00:00:00Z" },
+    ]) {
+      calls.getUser.mockResolvedValueOnce({ data: { user: actor }, error: null });
+      const href = await destination();
+      expect(href).toContain("/auth/sign-in?notice=");
+      expect(href).not.toContain("/onboarding/verified");
+    }
+    expect(calls.rpc).not.toHaveBeenCalled();
+    expect(calls.from).not.toHaveBeenCalled();
+  });
+
   it("does not invoke workspace registration when Auth identity verification throws", async () => {
     calls.getUser.mockRejectedValueOnce(Error("PRIVATE_AUTH_TRANSPORT"));
     const href = await destination();

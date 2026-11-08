@@ -450,6 +450,33 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
       .rejects.toThrow("MOCK_REDIRECT:/auth/sign-in?next=%2Fauth%2Fcreate-workspace");
   });
 
+  it("does not offer a workspace creation form to a verified QA-unapproved account", async () => {
+    ownerNavigation.getUser.mockResolvedValueOnce({
+      data: { user: { id: syntheticOwner, email: "unapproved@example.test",
+        email_confirmed_at: "2026-11-07T00:00:00Z" } }, error: null,
+    });
+    const page = await CreateWorkspacePage({ searchParams: Promise.resolve({}) });
+    expect(page.props.title).toBe("Workspace creation is unavailable for this account");
+    const hasForm = (node: unknown): boolean => {
+      if (Array.isArray(node)) return node.some(hasForm);
+      if (!node || typeof node !== "object") return false;
+      const element=node as {type?:unknown;props?:{children?:unknown}};
+      return element.type === "form" || hasForm(element.props?.children);
+    };
+    expect(hasForm(page)).toBe(false);
+    expect(JSON.stringify(page.props.children)).toContain("/auth/continue");
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("rejects a partially verified workspace-page user with no usable Auth ID", async () => {
+    ownerNavigation.getUser.mockResolvedValueOnce({
+      data: { user: { email: "approved@example.test",
+        email_confirmed_at: "2026-11-07T00:00:00Z" } }, error: null,
+    });
+    await expect(CreateWorkspacePage({ searchParams: Promise.resolve({}) }))
+      .rejects.toThrow("MOCK_REDIRECT:/auth/sign-in?next=%2Fauth%2Fcreate-workspace");
+  });
+
   it("preserves the approved, verified owner workspace form and currency warning", async () => {
     const form = await CreateWorkspacePage({ searchParams: Promise.resolve({}) });
     expect(form.props.title).toBe("Make it yours.");

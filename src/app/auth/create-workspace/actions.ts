@@ -48,7 +48,12 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
     identity = null;
   }
   const actor = identity?.data;
-  if (!identity || identity.error || !actor?.user || !actor.user.email_confirmed_at) {
+  // A confirmed email without a usable authenticated user ID must not be
+  // allowed to invoke a privileged, non-idempotent workspace registration RPC.
+  if (!identity || identity.error || !actor?.user ||
+      typeof actor.user.id !== "string" ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(actor.user.id) ||
+      !actor.user.email_confirmed_at) {
     redirect("/auth/sign-in?notice=" + encodeURIComponent("Verify your email and sign in to create a workspace."));
   }
 
