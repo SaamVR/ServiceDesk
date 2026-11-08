@@ -226,9 +226,13 @@ const currentLandingBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing reviewed owner-landing SHA: "+path);
  const successor=landingBranch.changedSource.find(x=>x.path===path);
- if(!successor)return currentQaDefaultBlob(path,prior);
+ // A QA test may have an earlier recovery successor not yet traversed.
+ // Resolve the new default-branch correction here only for the owner landing;
+ // the later recovery reader applies it after its own exact previous SHA.
+ const isLanding=path==="src/app/onboarding/verified/page.tsx";
+ if(!successor)return isLanding?currentQaDefaultBlob(path,prior):prior;
  expect(successor.previousBlob,path).toBe(prior);
- return currentQaDefaultBlob(path,successor.currentBlob);
+ return isLanding?currentQaDefaultBlob(path,successor.currentBlob):successor.currentBlob;
 };
 const checkEmailResendRaw=read("docs/delivery/sonic-p02-check-email-resend-bounded-notice-successor-20261108.json");
 const checkEmailResend=JSON.parse(checkEmailResendRaw.toString()) as {
