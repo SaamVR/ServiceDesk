@@ -1212,7 +1212,8 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(negativeRls.changedSource).toHaveLength(2);
   for(const source of negativeRls.changedSource){
    expect(source.path).not.toContain("..");
-   expect(hash(read(source.path)),source.path).toBe(source.currentBlob);
+   expect(hash(read(source.path)),source.path)
+     .toBe(currentBranchAuditBlob(source.path,source.currentBlob));
   }
   expect(negativeRls.changedSource[0].previousBlob).toBe("e5998a74c176172653fa9782ace23eaadfcbc7a8");
   expect(negativeRls.changedSource[1].previousBlob).toBeNull();
