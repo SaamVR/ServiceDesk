@@ -49,6 +49,8 @@ function config(overrides = {}) {
 function fakeProvider(env, {
   leakMembership = false, leakNonDefaultBranch = false,
   leakRequest = false, missingOwnerMembership = false,
+  missingOwnerAssignment = false, leakForeignAssignment = false,
+  mismatchedOwnerAssignment = false,
   denied = false, malformed = false,
 } = {}) {
   const calls = [];
@@ -104,6 +106,16 @@ function fakeProvider(env, {
           id: o.branch, workspace_id: o.workspace, is_default: false, active: false,
         }] : [];
       }
+      if (target === "branch_memberships") {
+        if (own && missingOwnerAssignment) return [];
+        if (own || leakForeignAssignment) return [{
+          workspace_id: o.workspace,
+          branch_id: own && mismatchedOwnerAssignment
+            ? owners[tag === "A" ? "B" : "A"].branch : o.branch,
+          user_id: o.user, status: own ? "ACTIVE" : "REVOKED",
+        }];
+        return [];
+      }
       throw Error("UNEXPECTED_TABLE");
     });
     const result = selected.filter(row => [...url.searchParams.entries()].every(([field, value]) => {
@@ -125,7 +137,7 @@ test("P02: authorized distinct owners have read-only own-scope proof with foreig
   assert.equal(result.result, "PASS");
   assert.equal(result.noWrites, true);
   assert.equal(result.checks.length, 2);
-  assert.equal(fake.calls.length, 20);
+  assert.equal(fake.calls.length, 24);
   assert.ok(fake.calls.every(x => x.method === "GET" ||
     x.target === "rpc/servicedesk_default_branch"));
   for (const [tag, owner] of Object.entries(owners)) {
@@ -143,6 +155,18 @@ test("P02: authorized distinct owners have read-only own-scope proof with foreig
       x.target === "workspace_branches" && x.params.get("workspace_id") === "eq." + foreignOwner.workspace);
     assert.equal(foreignBranch.params.get("is_default"), null);
     assert.equal(foreignBranch.params.get("active"), null);
+    const ownerAssignment = fake.calls.find(x => x.requester === tag &&
+      x.target === "branch_memberships" &&
+      x.params.get("workspace_id") === "eq." + owner.workspace);
+    assert.equal(ownerAssignment.params.get("user_id"), "eq." + owner.user);
+    assert.equal(ownerAssignment.params.get("branch_id"), "eq." + owner.branch);
+    assert.equal(ownerAssignment.params.get("status"), "eq.ACTIVE");
+    const foreignAssignment = fake.calls.find(x => x.requester === tag &&
+      x.target === "branch_memberships" &&
+      x.params.get("workspace_id") === "eq." + foreignOwner.workspace);
+    assert.equal(foreignAssignment.params.get("user_id"), null);
+    assert.equal(foreignAssignment.params.get("branch_id"), null);
+    assert.equal(foreignAssignment.params.get("status"), null);
   }
 });
 
@@ -162,6 +186,34 @@ test("P02: foreign inactive, nondefault branch leak is still a real RLS breach",
     runTwoOwnerReadOnlyAudit(env, fake.fetcher),
     /FOREIGN_TENANT_DATA_EXPOSED_WORKSPACE_BRANCHES/,
   );
+});
+
+test("P02: missing current default-branch OWNER assignment cannot prove first-run readiness", async () => {
+  const env = config();
+  const fake = fakeProvider(env, { missingOwnerAssignment: true });
+  await assert.rejects(runTwoOwnerReadOnlyAudit(env, fake.fetcher),
+    /DEFAULT_BRANCH_OWNER_ASSIGNMENT_MISSING_OR_AMBIGUOUS/);
+});
+
+test("P02: a branch membership on a different branch cannot stand in for the default branch", async () => {
+  const env = config();
+  await assert.rejects(
+    runTwoOwnerReadOnlyAudit(env, fakeProvider(env, { mismatchedOwnerAssignment: true }).fetcher),
+    /DEFAULT_BRANCH_OWNER_ASSIGNMENT_MISSING_OR_AMBIGUOUS/,
+  );
+});
+
+test("P02: a foreign revoked branch assignment leak cannot be hidden by OWNER filters", async () => {
+  const env = config();
+  const fake = fakeProvider(env, { leakForeignAssignment: true });
+  await assert.rejects(runTwoOwnerReadOnlyAudit(env, fake.fetcher),
+    /FOREIGN_TENANT_DATA_EXPOSED_BRANCH_MEMBERSHIPS/);
+  const foreign = fake.calls.find(x => x.target === "branch_memberships" &&
+    x.requester === "A" &&
+    x.params.get("workspace_id") === "eq." + owners.B.workspace);
+  assert.equal(foreign.params.get("user_id"), null);
+  assert.equal(foreign.params.get("branch_id"), null);
+  assert.equal(foreign.params.get("status"), null);
 });
 
 test("P02: exposed foreign request fails even with exact workspace predicate", async () => {

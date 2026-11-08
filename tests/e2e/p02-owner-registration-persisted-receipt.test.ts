@@ -159,6 +159,12 @@ describe("P02 signed-in owner workspace registration has durable readback", () =
       { branchRows: [{ ...defaultBranch, code: "OTHER" }] },
       { branchRows: [{ ...defaultBranch, timezone: "UTC" }] },
       { branchRows: [{ ...defaultBranch, currency: "BDT" }] },
+      { branchRows: [{ ...defaultBranch, currency: "" }] },
+      { branchRows: [{ ...defaultBranch, currency: "US" }] },
+      { branchRows: [{ ...defaultBranch, currency: "usd" }] },
+      { branchRows: [{ ...defaultBranch, timezone: "" }] },
+      { branchRows: [{ ...defaultBranch, timezone: "  " }] },
+      { branchRows: [{ ...defaultBranch, timezone: "X".repeat(101) }] },
       { branchError: true },
       { branchOwnerRows: [] },
       { branchOwnerRows: null },
@@ -187,6 +193,21 @@ describe("P02 signed-in owner workspace registration has durable readback", () =
       stub.auth, userId, requested, { ok: true, slug: "older-team", existing: true },
     )).toEqual({ ok: true, workspace: previous, existing: true });
     expect(stub.reads).toContain("branch_memberships");
+  });
+
+  it("refuses invalid saved billing fields even for a legitimately renamed existing owner's default branch", async () => {
+    for (const changed of [
+      { currency: "" }, { currency: "US" }, { currency: "usd" },
+      { currency: "USDD" }, { currency: "U$D" },
+      { timezone: "" }, { timezone: "   " },
+      { timezone: "X".repeat(101) },
+    ]) {
+      const invalid = { ...defaultBranch, code: "RENAMED", ...changed };
+      const stub = signedInRlsReadback({ branchRows: [invalid] });
+      expect(await verifySavedOwnerDefaultBranch(stub.auth, userId, saved),
+        JSON.stringify(changed)).toBe(false);
+      expect(stub.reads).not.toContain("branch_memberships");
+    }
   });
 
   it("reuses the exact saved branch proof for an existing owner's landing without an RPC receipt", async () => {

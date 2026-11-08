@@ -236,9 +236,11 @@ const currentLandingBlob=(path:string,prior:string|undefined):string=>{
  // Resolve the new default-branch correction here only for the owner landing;
  // the later recovery reader applies it after its own exact previous SHA.
  const isLanding=path==="src/app/onboarding/verified/page.tsx";
- if(!successor)return currentOwnerFormSafetyBlob(path,isLanding?currentQaDefaultBlob(path,prior):prior);
+ if(!successor)return currentBranchAuditBlob(path,
+   currentOwnerFormSafetyBlob(path,isLanding?currentQaDefaultBlob(path,prior):prior));
  expect(successor.previousBlob,path).toBe(prior);
- return currentOwnerFormSafetyBlob(path,isLanding?currentQaDefaultBlob(path,successor.currentBlob):successor.currentBlob);
+ return currentBranchAuditBlob(path,
+   currentOwnerFormSafetyBlob(path,isLanding?currentQaDefaultBlob(path,successor.currentBlob):successor.currentBlob));
 };
 const checkEmailResendRaw=read("docs/delivery/sonic-p02-check-email-resend-bounded-notice-successor-20261108.json");
 const checkEmailResend=JSON.parse(checkEmailResendRaw.toString()) as {
@@ -339,6 +341,27 @@ const currentOwnerFormSafetyBlob=(path:string,prior:string|undefined):string=>{
  if(source.previousBlob!==prior)return currentOwnerFormTreeBlob(path,prior);
  expect(source.previousBlob,path).toBe(prior);
  return currentOwnerFormTreeBlob(path,source.currentBlob);
+};
+const branchAuditRaw=read("docs/delivery/sonic-p02-two-owner-branch-assignment-audit-successor-20261109.json");
+const branchAudit=JSON.parse(branchAuditRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ priorOwnerLanding:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ businessScenario:string;
+ nodeCalls:{perTwoOwnersBefore:number;perTwoOwnersAfter:number;readOnlyGetsBefore:number;readOnlyGetsAfter:number;readOnlyRpcPosts:number};
+ qaSourceCases:{branchReadbackBefore:number;branchReadbackAfter:number};
+ unchangedSources:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;nextBatch:string;
+};
+/** Apply only the exact newer reviewed source after all prior SHA successors. */
+const currentBranchAuditBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string" || !/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing reviewed two-owner branch audit ancestor "+path);
+ const next=branchAudit.changedSource.find(x=>x.path===path);
+ if(!next)return prior;
+ expect(next.previousBlob,path).toBe(prior);
+ return next.currentBlob;
 };
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
@@ -570,7 +593,8 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   for(const entry of landingBranch.changedSource){
     expect(entry.path).not.toContain("..");
     expect(hash(read(entry.path)),entry.path)
-      .toBe(currentOwnerFormSafetyBlob(entry.path,currentQaDefaultBlob(entry.path,entry.currentBlob)));
+      .toBe(currentBranchAuditBlob(entry.path,
+        currentOwnerFormSafetyBlob(entry.path,currentQaDefaultBlob(entry.path,entry.currentBlob))));
   }
   expect(landingBranch.testCases).toEqual({ownerReadback:{old:8,new:10},actualOwnerNavigation:{old:31,new:35}});
   expect(landingBranch.unchangedWorkflow).toEqual({path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true});
@@ -647,7 +671,7 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   ]);
   for(const entry of qaActiveDefault.immutableSources){
     expect(entry.unchanged).toBe(true);
-    expect(hash(read(entry.path)),entry.path).toBe(entry.blob);
+    expect(hash(read(entry.path)),entry.path).toBe(currentBranchAuditBlob(entry.path,entry.blob));
   }
   for(const rule of [
     "RENAME_DEFAULT_BRANCH_ALLOWED_FOR_EXISTING_OWNER",
@@ -757,6 +781,47 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(ownerFormTree.acceptance).toBe("SOURCE_CORRECTION_ONLY_AWAIT_EXACT_HEAD_CI_NOT_REAL_OWNER_JWT_RLS");
 
 
+  // Read-only real-session audit is an acceptance tool, not a real owner
+  // receipt in CI. The saved branch's valid billing state and exact owner
+  // assignment must both be proved; foreign assignment reads cannot be
+  // narrowed by actor/branch/status and accidentally conceal an RLS leak.
+  expect(branchAudit.schema).toBe("servicedesk.p02.two-owner-branch-assignment-and-saved-billing-validation.v1");
+  expect(branchAudit.batchId).toBe("P02-AUTH_OWNER_DEFAULT_BRANCH_ASSIGNMENT_REAL_READONLY_A_B-20261109");
+  expect(branchAudit.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(branchAudit.sourceOnly).toBe(true);
+  expect(branchAudit.reviewedParentHead).toBe("430bfb6c15bc328fd9b52c60c1798009f8e517a1");
+  expect(branchAudit.predecessor).toEqual({
+    path:"docs/delivery/sonic-p02-owner-form-react-tree-critic-correction-20261109.json",
+    blob:"143ecec7e3003ceb4bc892950fa81fd07ac29cc9",unchanged:true});
+  expect(branchAudit.predecessor.blob).toBe(hash(ownerFormTreeRaw));
+  expect(branchAudit.priorOwnerLanding).toEqual({
+    path:"docs/delivery/sonic-p02-verified-landing-saved-branch-successor-20261108.json",
+    blob:"afece1f197317157ec0534823b51b6afa2c15753",unchanged:true});
+  expect(branchAudit.priorOwnerLanding.blob).toBe(hash(landingBranchRaw));
+  expect(branchAudit.changedSource).toEqual([{"path":"src/features/auth/verified-owner-workspace.ts","previousBlob":"1eef6fb6efe364d0dd816f5f11ecb2e3a4169ddf","currentBlob":"221b0f52e75d2231900767f91806b3ea874f32d7","lane":"OWNER_BRANCH_SAVED_CURRENCY_TIMEZONE"},{"path":"tests/e2e/p02-owner-registration-persisted-receipt.test.ts","previousBlob":"90755da47752e142b7081e93a9ac04c1aa742c2d","currentBlob":"de02499d2af06fcbf6e88a07a39027b8a1eb731c","lane":"OWNER_SAVED_BRANCH_ADVERSARIAL_QA"},{"path":"scripts/release/v4-p02-two-owner-readonly-acceptance.mjs","previousBlob":"f2d619d2c445a2045d1ccb31426de71a3ffcccda","currentBlob":"dc7d6b1d3b2eb84b3554c9c6b822b310049ea4a9","lane":"TWO_OWNER_LIVE_READONLY_RUNNER"},{"path":"scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs","previousBlob":"9dba110b6d186f73b8d184f04c8307f8337ffa50","currentBlob":"7be7fc80bbb4563ebc2b8da7e0de8a53e4a85726","lane":"INTEGRATION_NODE_CI_QA"},{"path":"scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs","previousBlob":"b3729edf1737ece7947ef173204ba7194067c44d","currentBlob":"2eff1ec1fbcb96a2bbeb30e6af2acc309a394bb8","lane":"ADVERSARIAL_SEPARATE_OWNER_NEGATIVE_QA"},{"path":"scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs","previousBlob":"1de9983cd2bdd67020ce85dabc07e833da546bcc","currentBlob":"da39317cab102594f780a3e2a60f5de2a8c3199b","lane":"INDEPENDENT_BRANCH_AUTHORIZATION_CRITIC"}]);
+  expect(new Set(branchAudit.changedSource.map(x=>x.path)).size).toBe(6);
+  for(const delta of branchAudit.changedSource){
+    expect(delta.path).not.toContain("..");
+    expect(hash(read(delta.path)),delta.path).toBe(delta.currentBlob);
+  }
+  expect(branchAudit.businessScenario).toContain("exactly one saved owner branch assignment");
+  expect(branchAudit.nodeCalls).toEqual({
+    perTwoOwnersBefore:20,perTwoOwnersAfter:24,
+    readOnlyGetsBefore:16,readOnlyGetsAfter:20,readOnlyRpcPosts:4});
+  expect(branchAudit.qaSourceCases).toEqual({branchReadbackBefore:10,branchReadbackAfter:11});
+  expect(branchAudit.unchangedSources).toEqual([
+    {path:"supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql",blob:"ee237941a371bf36ac39641fe8c1b65ae516ebe3",unchanged:true},
+    {path:"supabase/migrations/0065_v4_default_branch_membership_authority.sql",blob:"a1d1097c1c31ae258ec4151b7d208bb3c415c21a",unchanged:true},
+    {path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true}
+  ]);
+  for(const unchanged of branchAudit.unchangedSources){
+    expect(unchanged.unchanged).toBe(true);
+    expect(hash(read(unchanged.path)),unchanged.path).toBe(unchanged.blob);
+  }
+  for(const rule of ["NO_OWNER_READY_FOR_MALFORMED_BRANCH_CURRENCY","NO_OWNER_READY_FOR_BLANK_OR_OVERSIZED_BRANCH_TIMEZONE","VALID_RENAMED_OWNER_BRANCH_REMAINS_ALLOWED","OWNER_DEFAULT_BRANCH_ASSIGNMENT_REQUIRES_EXACT_ACTIVE_USER_AND_BRANCH","FOREIGN_BRANCH_MEMBERSHIP_RLS_PROBED_WITHOUT_USER_BRANCH_STATUS_FILTERS","FOREIGN_REVOKED_BRANCH_ASSIGNMENT_IS_LEAK","NO_CONNECTED_SUPABASE_AUTH_DB_WRITE","NO_SQL_MIGRATION_INSTALL","NO_EXTERNAL_PROVIDER_SEND_OR_PAYMENT","NO_VERCEL_DEPLOY_OR_PROTECTED_MERGE","P02_REMAINS_OPEN_2_OF_7","P03_REMAINS_OPEN_0_OF_6"])
+    expect(branchAudit.invariants).toContain(rule);
+  expect(branchAudit.acceptance).toBe("SOURCE_ONLY_READONLY_RUNNER_NOT_EXECUTED_WITH_REAL_OWNER_A_B_JWTS");
+  expect(branchAudit.nextBatch).toBe("P02_818_OWNER_APPROVED_READONLY_TWO_OWNER_JWT_BRANCH_ASSIGNMENTS_AND_DBA_SQL");
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
    const replacement=p03Currency.changedSource.find(x=>x.path===source.path);

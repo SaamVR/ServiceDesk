@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * P02: real authenticated two-owner RLS denial proof for the existing ServiceDesk Supabase.
- * READ ONLY application data: GET owner-scoped workspaces, memberships, requests;
+ * READ ONLY application data: GET owner-scoped workspaces, memberships,
+ * branch assignments, requests;
  * POST only a known read-only SQL function (servicedesk_default_branch).
  *
  * No signup, writes, private keys, HTTP redirects, customer records in stdout,
@@ -85,15 +86,19 @@ export async function runTwoOwnerReadOnlyAudit(
     // Count-only checks are not a proof of OWNER authority: a STAFF row,
     // stale membership or mis-scoped response could otherwise pass.
     // Independently validate the row identity *and* the verified JWT subject.
-    const scoped = async (table, workspaceId) => {
+    const scoped = async (table, workspaceId, expectedDefaultBranchId) => {
       const projection = {
         workspaces: "id",
         memberships: "workspace_id,user_id,role,status",
         requests: "id,workspace_id",
         workspace_branches: "id,workspace_id,is_default,active",
+        branch_memberships: "workspace_id,branch_id,user_id,status",
       }[table];
       if (!projection) throw Error("UNAPPROVED_TABLE");
       const ownScope = workspaceId === owner.expectedWorkspace;
+      if (table === "branch_memberships" && ownScope &&
+          !UUID.test(expectedDefaultBranchId ?? ""))
+        throw Error("DEFAULT_BRANCH_OWN_ROW_NOT_UNAMBIGUOUS");
       // The FOREIGN probe must see *any* RLS-exposed membership or branch.
       // Applying the caller's owner/active/default predicates to a foreign
       // tenant can mask a genuine row leak and yield a false isolation PASS.
@@ -105,6 +110,11 @@ export async function runTwoOwnerReadOnlyAudit(
         } : {}),
         ...(table === "workspace_branches" && ownScope ? {
           is_default: "eq.true", active: "eq.true",
+        } : {}),
+        ...(table === "branch_memberships" && ownScope ? {
+          branch_id: "eq." + expectedDefaultBranchId,
+          user_id: "eq." + owner.subject,
+          status: "eq.ACTIVE",
         } : {}),
         limit: "2",
       });
@@ -130,6 +140,13 @@ export async function runTwoOwnerReadOnlyAudit(
             (row.workspace_id !== workspaceId || !UUID.test(row.id ?? "") ||
              (ownScope && (row.is_default !== true || row.active !== true))))
           throw Error("DEFAULT_BRANCH_SAVED_SCOPE_UNVERIFIED");
+        if (table === "branch_memberships" &&
+            (row.workspace_id !== workspaceId ||
+             !UUID.test(row.branch_id ?? "") || !UUID.test(row.user_id ?? "") ||
+             typeof row.status !== "string" ||
+             (ownScope && (row.branch_id !== expectedDefaultBranchId ||
+               row.user_id !== owner.subject || row.status !== "ACTIVE"))))
+          throw Error("DEFAULT_BRANCH_OWNER_ASSIGNMENT_UNVERIFIED");
       }
       return data;
     };
@@ -150,6 +167,27 @@ export async function runTwoOwnerReadOnlyAudit(
       throw Error("DEFAULT_BRANCH_OWN_ROW_NOT_UNAMBIGUOUS");
     if (foreignDefaults.length !== 0)
       throw Error("FOREIGN_TENANT_DATA_EXPOSED_WORKSPACE_BRANCHES");
+
+    // An OWNER membership plus an active branch is not enough to prove that
+    // this signed-in owner is assigned to that exact default branch. The
+    // foreign probe must intentionally omit actor, branch and status filters:
+    // otherwise a leaked inactive/third-party assignment would be concealed.
+    const ownAssignment = await scoped(
+      "branch_memberships", owner.expectedWorkspace, ownDefaults[0].id,
+    );
+    const foreignAssignments = await scoped(
+      "branch_memberships", foreign.expectedWorkspace,
+    );
+    if (ownAssignment.length !== 1)
+      throw Error("DEFAULT_BRANCH_OWNER_ASSIGNMENT_MISSING_OR_AMBIGUOUS");
+    if (foreignAssignments.length !== 0)
+      throw Error("FOREIGN_TENANT_DATA_EXPOSED_BRANCH_MEMBERSHIPS");
+    if (ownAssignment[0].branch_id !== ownDefaults[0].id ||
+        ownAssignment[0].workspace_id !== owner.expectedWorkspace ||
+        ownAssignment[0].user_id !== owner.subject ||
+        ownAssignment[0].status !== "ACTIVE")
+      throw Error("DEFAULT_BRANCH_OWNER_ASSIGNMENT_UNVERIFIED");
+
     const branch = async id => request("rpc/servicedesk_default_branch", {
       method: "POST", body: { target_workspace: id },
     });
@@ -160,7 +198,8 @@ export async function runTwoOwnerReadOnlyAudit(
     if (foreignBranch !== null)
       throw Error("FOREIGN_DEFAULT_BRANCH_DISCLOSURE");
     checked.push({ owner: owner.tag, scope: "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED",
-      defaultBranch: "AUTHORIZED_ONLY", authenticated: true });
+      defaultBranch: "AUTHORIZED_ONLY", ownerBranchAssignment: "ACTIVE_AND_SCOPED",
+      authenticated: true });
   }
   return { result: "PASS", project: PROJECT_REF,
     checks: checked, noWrites: true,

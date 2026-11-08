@@ -140,7 +140,12 @@ export async function verifySavedOwnerDefaultBranch(
       branch.is_default !== true || branch.active !== true ||
       typeof branch.code !== "string" ||
       !/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(branch.code) ||
-      typeof branch.timezone !== "string" || typeof branch.currency !== "string") {
+      // An existing=true owner may have reconfigured branch settings, but
+      // malformed billing settings cannot certify a ready workspace.
+      typeof branch.timezone !== "string" || !branch.timezone.trim() ||
+      branch.timezone.length > 100 ||
+      typeof branch.currency !== "string" ||
+      !/^[A-Z]{3}$/.test(branch.currency)) {
     return false;
   }
   // A new business requires its actual saved MAIN branch with matching billing
