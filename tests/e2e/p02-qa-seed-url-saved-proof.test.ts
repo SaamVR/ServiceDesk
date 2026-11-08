@@ -276,6 +276,37 @@ describe("P02 authorized QA seed action handles uncertain provider transport", (
     expect(qaAction.seed).not.toHaveBeenCalled();
   });
 
+
+  it("denies a thrown owner RLS read before branch verification or any QA write", async () => {
+    qaAction.readOwner.mockRejectedValueOnce(Error("PRIVATE_QA_OWNER_RLS_TRANSPORT"));
+    const route = await submitQaSeed();
+    expect(route).toContain("qaSeed=not-authorized");
+    expect(route).not.toContain("PRIVATE_QA_OWNER_RLS_TRANSPORT");
+    expect(qaAction.readDefaultBranch).not.toHaveBeenCalled();
+    expect(qaAction.seed).not.toHaveBeenCalled();
+  });
+
+  it("denies a missing or revoked OWNER receipt before reading the branch", async () => {
+    for (const ownerResult of [
+      null, { ok: false, reason: "DENIED" },
+      { ok: false, reason: "QUERY_FAILED" },
+    ]) {
+      qaAction.readOwner.mockResolvedValueOnce(ownerResult);
+      expect(await submitQaSeed()).toContain("qaSeed=not-authorized");
+      expect(qaAction.readDefaultBranch).not.toHaveBeenCalled();
+      expect(qaAction.seed).not.toHaveBeenCalled();
+    }
+  });
+
+  it("calls the exact current owner's active default branch readback before saving QA data", async () => {
+    expect(await submitQaSeed()).toContain("qaSeed=created");
+    expect(qaAction.readDefaultBranch).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), actor,
+      expect.objectContaining({id:qaWorkspace,slug:qaSlug}),
+    );
+    expect(qaAction.seed).toHaveBeenCalledTimes(1);
+  });
+
   it("reports a potentially partial commit as write-failed when the authorized seed transport throws", async () => {
     qaAction.seed.mockRejectedValueOnce(Error("PRIVATE_POST_COMMIT_REST_FAILURE"));
     const href=await submitQaSeed();

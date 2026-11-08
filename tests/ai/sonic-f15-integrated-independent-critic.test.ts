@@ -274,6 +274,24 @@ const currentQaDefaultBlob=(path:string,previous:string|undefined):string=>{
  expect(successor.previousBlob,path).toBe(previous);
  return successor.currentBlob;
 };
+const qaOwnerReadRaw=read("docs/delivery/sonic-p02-qa-owner-lookup-transport-successor-20261109.json");
+const qaOwnerRead=JSON.parse(qaOwnerReadRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ priorExactHeadCi:{run:number;sha:string;result:string;meaning:string};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ tests:{path:string;old:number;current:number;added:number};
+ unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;nextBatch:string;
+};
+const currentQaOwnerLookupBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing predecessor SHA for QA owner transport "+path);
+ const delta=qaOwnerRead.changedSource.find(x=>x.path===path);
+ if(!delta)return prior;
+ expect(delta.previousBlob,path).toBe(prior);
+ return delta.currentBlob;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -473,7 +491,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(new Set(recoveryQaTransport.changedSource.map(source=>source.path)).size).toBe(6);
   for(const source of recoveryQaTransport.changedSource){
     expect(source.path).not.toContain("..");
-    expect(gitHash(read(source.path)),source.path).toBe(currentQaDefaultBlob(source.path,source.currentBlob));
+    expect(gitHash(read(source.path)),source.path).toBe(currentQaOwnerLookupBlob(source.path,currentQaDefaultBlob(source.path,source.currentBlob)));
   }
   expect(recoveryQaTransport.regressionTests).toEqual([
     {path:"tests/e2e/p02-reset-password-session-closure.test.ts",previous:7,current:11,added:4},
@@ -565,7 +583,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(new Set(qaActiveDefault.changedSource.map(x=>x.path)).size).toBe(5);
   for(const changed of qaActiveDefault.changedSource){
     expect(changed.path).not.toContain("..");
-    expect(gitHash(read(changed.path)),changed.path).toBe(changed.currentBlob);
+    expect(gitHash(read(changed.path)),changed.path).toBe(currentQaOwnerLookupBlob(changed.path,changed.currentBlob));
   }
   expect(qaActiveDefault.tests).toEqual({
     path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
@@ -592,6 +610,33 @@ describe("F15 independent critic: no new composite, exact source and default-den
   ])expect(qaActiveDefault.invariants).toContain(rule);
   expect(qaActiveDefault.acceptance).toBe("SOURCE_ONLY_PENDING_TWO_REAL_OWNER_AUTHENTICATED_JWT_RLS");
 
+  // Separate current source-only Owner QA POST guard. Historic QA
+  // provenance is preserved exactly after #42518571140 corrected the source
+  // critic's recovery/QA successor ordering.
+  expect(qaOwnerRead.schema).toBe("servicedesk.p02.qa-owner-lookup-transport-fail-closed.v1");
+  expect(qaOwnerRead.batchId).toBe("P02-QA_OWNER_LOOKUP_THROW_MUST_NEVER_WRITE-20261109");
+  expect(qaOwnerRead.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(qaOwnerRead.sourceOnly).toBe(true);
+  expect(qaOwnerRead.reviewedParentHead).toBe("b461e2327b0d22c3e19986e525f958132e73f0b2");
+  expect(qaOwnerRead.predecessor).toEqual({"path":"docs/delivery/sonic-p02-qa-active-default-renamed-branch-successor-20261109.json","blob":"27165dfaa660454176981aa00532c77bc0ba5b7a","unchanged":true});
+  expect(qaOwnerRead.predecessor.blob).toBe(gitHash(qaActiveDefaultRaw));
+  expect(qaOwnerRead.priorExactHeadCi).toEqual({run:42518571140,sha:"b461e2327b0d22c3e19986e525f958132e73f0b2",result:"SUCCESS",meaning:"SOURCE_ONLY_NOT_REAL_JWT"});
+  expect(qaOwnerRead.changedSource).toEqual([{"path":"src/app/onboarding/verified/qa-seed-actions.ts","previousBlob":"5013dcd824b3dca9141162c849ebef90795671d3","currentBlob":"047dc7ed709946c41065027ac7cf18db4b284131","lane":"OWNER_RLS_POST_FAIL_CLOSED"},{"path":"tests/e2e/p02-qa-seed-url-saved-proof.test.ts","previousBlob":"f769b97c4256063ec9f4dd70cf0ebf3dd519e62b","currentBlob":"615106e53b8f476b04c3ec4abb36d5c7526a6d44","lane":"ADVERSARIAL_SERVER_ACTION_QA"}]);
+  expect(new Set(qaOwnerRead.changedSource.map(x=>x.path)).size).toBe(2);
+  for(const change of qaOwnerRead.changedSource){
+    expect(change.path).not.toContain("..");
+    expect(gitHash(read(change.path)),change.path).toBe(change.currentBlob);
+  }
+  expect(qaOwnerRead.tests).toEqual({path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",old:15,current:18,added:3});
+  expect(qaOwnerRead.unchangedSource).toEqual([{"path":"src/features/auth/qa-sample-seed.ts","blob":"5ed2e466b5b5fa74e3baa91c03140d1958510ed2","unchanged":true},{"path":"src/features/auth/qa-sample-readback.ts","blob":"39432b3b076939ed0f304d56e3a7fa21112c8b70","unchanged":true},{"path":"src/app/onboarding/verified/page.tsx","blob":"ea3c0b9e38d2f10439c9823ff6bdb7c05701231f","unchanged":true},{"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true}]);
+  for(const source of qaOwnerRead.unchangedSource){
+    expect(source.unchanged).toBe(true);
+    expect(gitHash(read(source.path)),source.path).toBe(source.blob);
+  }
+  for(const guard of ["NO_RAW_500_OR_QA_WRITE_ON_THROWN_OWNER_RLS_LOOKUP","NO_QA_WRITE_WHEN_OWNER_MISSING_OR_REVOKED","VERIFY_ACTIVE_DEFAULT_BRANCH_BEFORE_QA_SEED","PRESERVE_RENAMED_DEFAULT_BRANCH_FOR_LEGITIMATE_OWNER","NO_HISTORIC_CRITIC_SHA_WEAKENING","NO_CONNECTED_SUPABASE_AUTH_DB_WRITE","NO_MIGRATION_OR_PROVIDER_SEND_OR_DEPLOY","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
+    expect(qaOwnerRead.invariants).toContain(guard);
+  expect(qaOwnerRead.acceptance).toBe("SOURCE_ONLY_NOT_TWO_OWNER_LIVE_AUTHENTICATED_JWT_RLS");
+  expect(qaOwnerRead.nextBatch).toBe("P02_818_OWNER_APPROVAL_FOR_TWO_REAL_QA_SESSIONS");
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
    const replacement=p03Currency.changedSource.find(x=>x.path===source.path);
@@ -1255,7 +1300,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
    const fixtureFix=qaFixtureScope.changedSource.find(item=>item.path===source.path);
    if(fixtureFix)expect(fixtureFix.previousBlob,source.path).toBe(qaWitness?.currentBlob);
    expect(gitHash(read(source.path)),source.path)
-     .toBe(currentRecoveryQaSource(source.path,expectedCurrentOwnerSlugBlob(source.path,fixtureFix?.currentBlob??qaWitness?.currentBlob??later?.currentBlob??source.blob)));
+     .toBe(currentQaOwnerLookupBlob(source.path,currentRecoveryQaSource(source.path,expectedCurrentOwnerSlugBlob(source.path,fixtureFix?.currentBlob??qaWitness?.currentBlob??later?.currentBlob??source.blob))));
   }
   expect(race.testScript).toBe("scripts/release/v4-f23-pg17-owner-revocation-race.sh");
   expect(race.testScriptSha).toBe("16de03429be8f4474a1f582e78eb749143723f33");

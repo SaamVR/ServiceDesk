@@ -61,8 +61,15 @@ export async function seedVerifiedQaWorkspace(formData: FormData): Promise<never
     back(slug, "not-authorized");
   }
 
-  const owner = await loadVerifiedOwnerWorkspace(auth, user.id, slug);
-  if (!owner.ok) back(slug, "not-authorized");
+  // A rejected or incomplete owner readback is never permission for a QA
+  // write. Unexpected transport failures must not surface a raw 500 either.
+  let owner: Awaited<ReturnType<typeof loadVerifiedOwnerWorkspace>> | null = null;
+  try {
+    owner = await loadVerifiedOwnerWorkspace(auth, user.id, slug);
+  } catch {
+    owner = null;
+  }
+  if (!owner?.ok) back(slug, "not-authorized");
   // Main database QA consent is scoped to an exact, owner-verified workspace;
   // the QA email allowlist must never authorize writes to a real business.
   if (!qaFixtureWritesAllowedForWorkspace(owner.workspace.slug)) {
