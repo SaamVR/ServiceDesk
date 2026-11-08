@@ -269,6 +269,10 @@ const currentQaDefaultBlob=(path:string,previous:string|undefined):string=>{
    throw new Error("Missing reviewed QA default branch source SHA: "+path);
  const successor=qaActiveDefault.changedSource.find(item=>item.path===path);
  if(!successor)return previous;
+ // Multiple independent historical critics may compose the same exact
+ // successor. If the earlier lineage already resolved to this pin, do not
+ // wrongly interpret the final SHA as a new predecessor or waive the pin.
+ if(previous===successor.currentBlob)return previous;
  expect(successor.previousBlob,path).toBe(previous);
  return successor.currentBlob;
 };
