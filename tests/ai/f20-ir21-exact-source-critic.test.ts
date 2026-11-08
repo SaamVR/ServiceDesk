@@ -363,6 +363,25 @@ const currentBranchAuditBlob=(path:string,prior:string|undefined):string=>{
  expect(next.previousBlob,path).toBe(prior);
  return next.currentBlob;
 };
+const p02NodeGateRaw=read("docs/delivery/sonic-p02-node-adversarial-gate-successor-20261109.json");
+const p02NodeGate=JSON.parse(p02NodeGateRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ reviewedChanges:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ testEntrypoint:string;
+ integratedSuites:Array<{path:string;tests:number}>;
+ expectedTotalNodeCases:number;
+ immutableSource:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;nextBatch:string;
+};
+const reviewedP02NodeGateBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing old P02 Node CI gate blob "+path);
+ const delta=p02NodeGate.reviewedChanges.find(x=>x.path===path);
+ if(!delta)return prior;
+ expect(delta.previousBlob,path).toBe(prior);
+ return delta.currentBlob;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -802,8 +821,44 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(new Set(branchAudit.changedSource.map(x=>x.path)).size).toBe(6);
   for(const delta of branchAudit.changedSource){
     expect(delta.path).not.toContain("..");
-    expect(hash(read(delta.path)),delta.path).toBe(delta.currentBlob);
+    expect(hash(read(delta.path)),delta.path).toBe(reviewedP02NodeGateBlob(delta.path,delta.currentBlob));
   }
+  // Enforce every previously source-authored independent A/B negative in the
+  // existing IR21 Node command; a green run must not mean nine tests only.
+  expect(p02NodeGate.schema).toBe("servicedesk.p02.two-owner-adversarial-gate-coverage.v1");
+  expect(p02NodeGate.batchId).toBe("P02-READONLY_A_B_INDEPENDENT_NODE_SUITES_IN_MAIN_CI-20261109");
+  expect(p02NodeGate.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(p02NodeGate.sourceOnly).toBe(true);
+  expect(p02NodeGate.reviewedParentHead).toBe("24f5bd5b87caa74affd9d54af5521750a4b0f4f1");
+  expect(p02NodeGate.predecessor).toEqual({
+    path:"docs/delivery/sonic-p02-two-owner-audit-critic-history-successor-20261109.json",
+    blob:"ebe27df1d45592ab34be73cdbe3781a293c4bd3a",unchanged:true});
+  expect(p02NodeGate.predecessor.blob).toBe(hash(read(p02NodeGate.predecessor.path)));
+  expect(p02NodeGate.reviewedChanges).toEqual([{"path":"scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs","previousBlob":"7be7fc80bbb4563ebc2b8da7e0de8a53e4a85726","currentBlob":"ed6862cb74f12a1d9508e60c3ae2ddadfbf80653","lane":"CI_NODE_ADVERSARIAL_INTEGRATION"}]);
+  for(const source of p02NodeGate.reviewedChanges)
+    expect(hash(read(source.path)),source.path).toBe(source.currentBlob);
+  expect(p02NodeGate.testEntrypoint)
+    .toBe("node --test scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs");
+  expect(p02NodeGate.integratedSuites).toEqual([{"path":"scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs","tests":9},{"path":"scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs","tests":7},{"path":"scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs","tests":18}]);
+  expect(p02NodeGate.expectedTotalNodeCases).toBe(34);
+  expect(p02NodeGate.integratedSuites.reduce((sum,x)=>sum+x.tests,0))
+    .toBe(p02NodeGate.expectedTotalNodeCases);
+  const integratedNodeTest=read(p02NodeGate.testEntrypoint.split(" ").at(-1)!).toString();
+  for(const suite of p02NodeGate.integratedSuites.slice(1)){
+    const importRelative="./tests/"+suite.path.split("/").at(-1);
+    expect(integratedNodeTest).toContain('import "'+importRelative+'";');
+  }
+  const sourceCi=read(".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml").toString();
+  expect(sourceCi).toContain(p02NodeGate.testEntrypoint);
+  expect(p02NodeGate.immutableSource).toEqual([{"path":"scripts/release/v4-p02-two-owner-readonly-acceptance.mjs","blob":"dc7d6b1d3b2eb84b3554c9c6b822b310049ea4a9","unchanged":true},{"path":"scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs","blob":"2eff1ec1fbcb96a2bbeb30e6af2acc309a394bb8","unchanged":true},{"path":"scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs","blob":"da39317cab102594f780a3e2a60f5de2a8c3199b","unchanged":true},{"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true}]);
+  for(const entry of p02NodeGate.immutableSource)
+    expect(hash(read(entry.path)),entry.path).toBe(entry.blob);
+  for(const x of ["NODE_CI_INCLUDES_INDEPENDENT_FOREIGN_BRANCH_ASSIGNMENT_NEGATIVES","ADVERSARIAL_SUITES_RUN_ON_EVERY_EXISTING_IR21_PUSH","NO_PRODUCTION_JWT_IN_CI","NO_CONNECTED_DB_AUTH_WRITE","NO_SQL_MIGRATION_OR_WORKFLOW_MUTATION","NO_NEW_PR_OR_DEPLOY","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
+    expect(p02NodeGate.invariants).toContain(x);
+  expect(p02NodeGate.acceptance)
+    .toBe("SOURCE_ONLY_SYNTHETIC_NODE_TEST_GATE_NOT_REAL_OWNER_A_B_JWT_PROOF");
+  expect(p02NodeGate.nextBatch)
+    .toBe("P02_818_REAL_OWNER_APPROVAL_DBA_AND_SIGNED_IN_TWO_OWNER_TESTS");
   expect(branchAudit.businessScenario).toContain("exactly one saved owner branch assignment");
   expect(branchAudit.nodeCalls).toEqual({
     perTwoOwnersBefore:20,perTwoOwnersAfter:24,

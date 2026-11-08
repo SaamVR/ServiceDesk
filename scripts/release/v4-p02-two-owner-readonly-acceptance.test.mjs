@@ -4,6 +4,12 @@ import {
   ORIGIN, runTwoOwnerReadOnlyAudit, validateInputs,
 } from "./v4-p02-two-owner-readonly-acceptance.mjs";
 
+// Mandatory offline adversarial lanes. Node's test runner registers imported
+// tests with this single CI entrypoint; failures block the existing IR21 gate.
+// Never run live credentials or connect to the approved Supabase project here.
+import "./tests/v4-p02-two-owner-readonly-acceptance.test.mjs";
+import "./tests/v4-p02-two-owner-authorization-proof.test.mjs";
+
 // Offline fake REST responses only: these JWT strings are synthetic, not
 // credentials and MUST never be accepted as production RLS evidence.
 const owners = Object.freeze({
