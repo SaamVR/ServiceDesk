@@ -41,8 +41,10 @@ function fixture(options: {
   denied?: string;
   transport?: string;
   change?: (rows: Record<string, Row[]>) => void;
+  beforeRequestUpdate?: (rows: Record<string, Row[]>) => void;
 } = {}) {
   const reads: string[] = [];
+  const writes: string[] = [];
   const rows: Record<string, Row[]> = {
     memberships: [{ workspace_id: workspace, user_id: actor, role: "OWNER", status: "ACTIVE" }],
     customers: [{ id: customer, workspace_id: workspace, lead_source: QA_SEED_SOURCE }],
@@ -82,9 +84,17 @@ function fixture(options: {
       reads.push(table);
       const equal: Record<string, unknown> = {};
       const json: Record<string, Record<string, unknown>> = {};
+      let pendingUpdate: Row | null = null;
       return {
         select() { return this; },
+        update(fields: Row) {
+          if (table !== "requests") throw Error("UNEXPECTED_QA_TABLE_UPDATE");
+          options.beforeRequestUpdate?.(rows);
+          pendingUpdate = fields;
+          return this;
+        },
         eq(key: string, value: unknown) { equal[key] = value; return this; },
+        is(key: string, value: unknown) { equal[key] = value; return this; },
         contains(key: string, value: Record<string, unknown>) {
           json[key] = value; return this;
         },
@@ -106,6 +116,10 @@ function fixture(options: {
         },
         async maybeSingle() {
           const result = await this.limit(2);
+          if (pendingUpdate !== null && !result.error && result.data.length === 1) {
+            Object.assign(result.data[0], pendingUpdate);
+            writes.push(table);
+          }
           return {
             data: result.data.length === 1 ? result.data[0] : null,
             error: result.error || (result.data.length > 1 ? { code: "MULTIPLE" } : null),
@@ -114,7 +128,7 @@ function fixture(options: {
       };
     },
   } as unknown as SupabaseClient;
-  return { client, reads };
+  return { client, reads, writes };
 }
 
 describe("P02 QA saved receipt must never be supplied by ?qaSeed URL", () => {
@@ -344,6 +358,71 @@ describe("P02 fictional QA seed uses active default branch instead of mutable MA
     expect(result).toEqual({ ok: true, customerId: customer, requestId: request, reused: true });
     expect(f.reads[0]).toBe("workspace_branches");
     expect(f.reads).not.toContain("branch_memberships"); // The Server Action verifies assignment before calling seed.
+  });
+
+  it("refuses a version-tagged request that is not explicitly synthetic and disconnected", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const badMarkers = [
+      { ...QA_SEED_FIELDS, synthetic: false },
+      { ...QA_SEED_FIELDS, provider_connected: true },
+      { qa_sample_version: QA_SEED_FIELDS.qa_sample_version },
+    ];
+    for (const fields of badMarkers) {
+      const f = fixture({ change: rows => {
+        rows.service_catalog = [];
+        rows.requests[0].structured_fields = fields;
+      } });
+      expect(await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" }))
+        .toEqual({ ok: false, stage: "request" });
+      expect(f.reads.filter(table => table === "requests")).toEqual(["requests"]);
+    }
+  });
+
+  it("rejects a previously tagged request on another branch before a service-id amendment", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const f = fixture({ change: rows => {
+      rows.service_catalog = [{
+        id: "77777777-7777-4777-8777-777777777777",
+        workspace_id: workspace, code: "MOVE_OUT", active: true,
+      }];
+      rows.requests[0].branch_id = customer;
+      rows.requests[0].service_id = null;
+    } });
+    expect(await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" }))
+      .toEqual({ ok: false, stage: "request" });
+    expect(f.reads.filter(table => table === "requests")).toEqual(["requests"]);
+  });
+
+  it("does not UPDATE a previously synthetic request repurposed between read and write", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const f = fixture({
+      change: rows => {
+        rows.service_catalog = [{
+          id: "77777777-7777-4777-8777-777777777777",
+          workspace_id: workspace, code: "MOVE_OUT", active: true,
+        }];
+        rows.requests[0].service_id = null;
+      },
+      beforeRequestUpdate: rows => {
+        // A competing editor removes the no-provider/synthetic markers while
+        // the read->update service assignment is in flight.
+        rows.requests[0].structured_fields = {
+          ...QA_SEED_FIELDS, synthetic: false, provider_connected: true,
+        };
+      },
+    });
+    expect(await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" }))
+      .toEqual({ ok: false, stage: "request" });
+    expect(f.writes).toEqual([]);
   });
 
   it("refuses duplicate, inactive and foreign default-branch reads before any fictional customer write", async () => {

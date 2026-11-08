@@ -18,6 +18,15 @@ export type QaSeedResult =
 const isUuid = (value: unknown): value is string =>
   typeof value === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
 
+// A matching version tag alone never authorizes reusing or mutating an
+// enquiry: another row may have lost its fictional-only / no-provider status.
+function isVerifiedSyntheticRequest(fields: unknown): boolean {
+  if (!fields || typeof fields !== "object" || Array.isArray(fields)) return false;
+  const marker = fields as Record<string, unknown>;
+  return marker.qa_sample_version === QA_SEED_FIELDS.qa_sample_version &&
+    marker.synthetic === true && marker.provider_connected === false;
+}
+
 /**
  * Writes as the verified owner's SSR Supabase client, NEVER as service_role.
  * Seeding is resumable: any successfully written synthetic step can be
@@ -125,16 +134,27 @@ export async function seedQaWorkspaceData(
   if (!isUuid(propertyId)) return { ok: false, stage: "property" };
 
   const existingRequests = await auth.from("requests")
-    .select("id,service_id")
+    .select("id,service_id,branch_id,structured_fields")
     .eq("workspace_id", workspace.id)
     .eq("customer_id", customerId)
     .eq("property_id", propertyId)
+    // Keep this broad: a version-tagged row with corrupted synthetic markers
+    // must veto the seed rather than be skipped and silently duplicated.
     .contains("structured_fields", { qa_sample_version: QA_SEED_FIELDS.qa_sample_version })
     .limit(2);
-  if (existingRequests.error || (existingRequests.data ?? []).length > 1) {
+  if (existingRequests.error || !Array.isArray(existingRequests.data) ||
+      existingRequests.data.length > 1) {
     return { ok: false, stage: "request" };
   }
-  let requestId = existingRequests.data?.[0]?.id;
+  const priorRequest = existingRequests.data[0];
+  if (priorRequest && (!isUuid(priorRequest.id) ||
+      priorRequest.branch_id !== branchId ||
+      !isVerifiedSyntheticRequest(priorRequest.structured_fields))) {
+    // Refuse before a service_id UPDATE: this could be a real or otherwise
+    // provider-connected enquiry incorrectly carrying the QA version tag.
+    return { ok: false, stage: "request" };
+  }
+  let requestId = priorRequest?.id;
   if (requestId && configuredServiceId && existingRequests.data?.[0]?.service_id !== configuredServiceId) {
     if (existingRequests.data?.[0]?.service_id != null) {
       // A previous service reference may have been intentionally assigned.
@@ -147,11 +167,20 @@ export async function seedQaWorkspaceData(
       .eq("workspace_id", workspace.id)
       .eq("customer_id", customerId)
       .eq("property_id", propertyId)
+      .eq("branch_id", branchId)
+      // Protect the UPDATE itself against a concurrently repurposed request:
+      // a pre-write synthetic check alone is not an atomic write predicate.
+      .contains("structured_fields", {
+        qa_sample_version: QA_SEED_FIELDS.qa_sample_version,
+        synthetic: true, provider_connected: false,
+      })
       .is("service_id", null)
-      .select("id,service_id")
+      .select("id,service_id,branch_id,structured_fields")
       .maybeSingle();
     if (amended.error || amended.data?.id !== requestId ||
-        amended.data?.service_id !== configuredServiceId) {
+        amended.data?.service_id !== configuredServiceId ||
+        amended.data?.branch_id !== branchId ||
+        !isVerifiedSyntheticRequest(amended.data?.structured_fields)) {
       return { ok: false, stage: "request" };
     }
     reused = false;
@@ -187,11 +216,14 @@ export async function seedQaWorkspaceData(
     auth.from("properties").select("id")
       .eq("id", propertyId).eq("workspace_id", workspace.id)
       .eq("customer_id", customerId).eq("branch_id", branchId).maybeSingle(),
-    auth.from("requests").select("id,service_id")
+    auth.from("requests").select("id,service_id,branch_id,structured_fields")
       .eq("id", requestId).eq("workspace_id", workspace.id)
       .eq("customer_id", customerId).eq("property_id", propertyId)
       .eq("branch_id", branchId)
-      .contains("structured_fields", { qa_sample_version: QA_SEED_FIELDS.qa_sample_version })
+      .contains("structured_fields", {
+        qa_sample_version: QA_SEED_FIELDS.qa_sample_version,
+        synthetic: true, provider_connected: false,
+      })
       .maybeSingle(),
   ]);
   if (customerProof.error || customerProof.data?.id !== customerId) {
@@ -201,6 +233,8 @@ export async function seedQaWorkspaceData(
     return { ok: false, stage: "property" };
   }
   if (requestProof.error || requestProof.data?.id !== requestId ||
+      requestProof.data?.branch_id !== branchId ||
+      !isVerifiedSyntheticRequest(requestProof.data?.structured_fields) ||
       (configuredServiceId && requestProof.data.service_id !== configuredServiceId)) {
     return { ok: false, stage: "request" };
   }

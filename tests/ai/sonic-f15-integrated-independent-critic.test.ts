@@ -286,13 +286,35 @@ const qaOwnerRead=JSON.parse(qaOwnerReadRaw.toString()) as {
  unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
  invariants:string[];acceptance:string;nextBatch:string;
 };
+const qaNoProviderRaw=read("docs/delivery/sonic-p02-qa-no-provider-request-reuse-successor-20261109.json");
+const qaNoProvider=JSON.parse(qaNoProviderRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ tests:{path:string;previous:number;current:number;added:number;scope:string};
+ unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
+ guards:string[];acceptance:string;
+};
+const currentQaNoProviderBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing reviewed QA synthetic request source SHA: "+path);
+ const successor=qaNoProvider.changedSource.find(item=>item.path===path);
+ if(!successor)return prior;
+ if(prior===successor.currentBlob)return prior;
+ // Older review layers may have a real earlier predecessor. Their own
+ // assertions must complete first. The exact final source pins below are
+ // mandatory, not inferred from a passed-through earlier SHA.
+ if(prior!==successor.previousBlob)return prior;
+ expect(successor.previousBlob,path).toBe(prior);
+ return successor.currentBlob;
+};
 const currentQaOwnerLookupBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing predecessor SHA for QA owner transport "+path);
  const delta=qaOwnerRead.changedSource.find(x=>x.path===path);
- if(!delta)return prior;
+ if(!delta)return currentQaNoProviderBlob(path,prior);
  expect(delta.previousBlob,path).toBe(prior);
- return delta.currentBlob;
+ return currentQaNoProviderBlob(path,delta.currentBlob);
 };
 const ownerFormSafetyRaw=read("docs/delivery/sonic-p02-owner-form-eligibility-valid-actor-successor-20261109.json");
 const ownerFormSafety=JSON.parse(ownerFormSafetyRaw.toString()) as {
@@ -711,13 +733,15 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(new Set(qaOwnerRead.changedSource.map(x=>x.path)).size).toBe(2);
   for(const change of qaOwnerRead.changedSource){
     expect(change.path).not.toContain("..");
-    expect(gitHash(read(change.path)),change.path).toBe(change.currentBlob);
+    expect(gitHash(read(change.path)),change.path)
+      .toBe(currentQaNoProviderBlob(change.path,change.currentBlob));
   }
   expect(qaOwnerRead.tests).toEqual({path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",old:15,current:18,added:3});
   expect(qaOwnerRead.unchangedSource).toEqual([{"path":"src/features/auth/qa-sample-seed.ts","blob":"5ed2e466b5b5fa74e3baa91c03140d1958510ed2","unchanged":true},{"path":"src/features/auth/qa-sample-readback.ts","blob":"39432b3b076939ed0f304d56e3a7fa21112c8b70","unchanged":true},{"path":"src/app/onboarding/verified/page.tsx","blob":"ea3c0b9e38d2f10439c9823ff6bdb7c05701231f","unchanged":true},{"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true}]);
   for(const source of qaOwnerRead.unchangedSource){
     expect(source.unchanged).toBe(true);
-    expect(gitHash(read(source.path)),source.path).toBe(source.blob);
+    expect(gitHash(read(source.path)),source.path)
+      .toBe(currentQaNoProviderBlob(source.path,source.blob));
   }
   for(const guard of ["NO_RAW_500_OR_QA_WRITE_ON_THROWN_OWNER_RLS_LOOKUP","NO_QA_WRITE_WHEN_OWNER_MISSING_OR_REVOKED","VERIFY_ACTIVE_DEFAULT_BRANCH_BEFORE_QA_SEED","PRESERVE_RENAMED_DEFAULT_BRANCH_FOR_LEGITIMATE_OWNER","NO_HISTORIC_CRITIC_SHA_WEAKENING","NO_CONNECTED_SUPABASE_AUTH_DB_WRITE","NO_MIGRATION_OR_PROVIDER_SEND_OR_DEPLOY","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
     expect(qaOwnerRead.invariants).toContain(guard);
@@ -853,6 +877,48 @@ describe("F15 independent critic: no new composite, exact source and default-den
     .toBe("SOURCE_ONLY_SYNTHETIC_NODE_TEST_GATE_NOT_REAL_OWNER_A_B_JWT_PROOF");
   expect(p02NodeGate.nextBatch)
     .toBe("P02_818_REAL_OWNER_APPROVAL_DBA_AND_SIGNED_IN_TWO_OWNER_TESTS");
+  // A separate reviewed source successor prevents a QA-only version tag from
+  // authorizing mutation of a request that is no longer synthetic.
+  expect(gitHash(p02NodeGateRaw)).toBe("da37ae64117d48a91d4135744e3923d00eace25b");
+  expect(qaNoProvider.schema).toBe("servicedesk.p02.qa-synthetic-no-provider-request-resume.v1");
+  expect(qaNoProvider.batchId).toBe("P02-QA_SEED_NEVER_REUSE_OR_UPDATE_PROVIDER_CONNECTED_REQUEST-20261109");
+  expect(qaNoProvider.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(qaNoProvider.sourceOnly).toBe(true);
+  expect(qaNoProvider.reviewedParentHead).toBe("7baf4d4e8603774bc9a290c178ffcb3afcc8915f");
+  expect(qaNoProvider.predecessor).toEqual({path:"docs/delivery/sonic-p02-node-adversarial-gate-successor-20261109.json",blob:"da37ae64117d48a91d4135744e3923d00eace25b",unchanged:true});
+  expect(qaNoProvider.predecessor.blob).toBe(gitHash(p02NodeGateRaw));
+  expect(qaNoProvider.changedSource).toEqual([
+   {path:"src/features/auth/qa-sample-seed.ts",previousBlob:"5ed2e466b5b5fa74e3baa91c03140d1958510ed2",currentBlob:"ac90347b1ce5e41697838953414fa7710eb614eb",lane:"SYNTHETIC_REQUEST_RESUME_NO_PROVIDER_UPDATE"},
+   {path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",previousBlob:"615106e53b8f476b04c3ec4abb36d5c7526a6d44",currentBlob:"477fb60817caecf1b4320988d6a0a9f94391204a",lane:"ADVERSARIAL_QA_RACE"}
+  ]);
+  expect(new Set(qaNoProvider.changedSource.map(item=>item.path)).size).toBe(2);
+  for(const item of qaNoProvider.changedSource){
+    expect(item.path).not.toContain("..");
+    expect(gitHash(read(item.path)),item.path).toBe(item.currentBlob);
+  }
+  expect(qaNoProvider.tests).toEqual({
+    path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+    previous:18,current:21,added:3,scope:"MOCKED_SSR_QA_ONLY_NO_LIVE_JWT"
+  });
+  expect(qaNoProvider.unchangedSource).toEqual([
+    {path:"src/features/auth/qa-sample-readback.ts",blob:"39432b3b076939ed0f304d56e3a7fa21112c8b70",unchanged:true},
+    {path:"src/app/onboarding/verified/qa-seed-actions.ts",blob:"047dc7ed709946c41065027ac7cf18db4b284131",unchanged:true},
+    {path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true}
+  ]);
+  for(const item of qaNoProvider.unchangedSource){
+    expect(item.unchanged).toBe(true);
+    expect(gitHash(read(item.path)),item.path).toBe(item.blob);
+  }
+  for(const guard of ["QA_VERSION_ALONE_NEVER_AUTHORIZES_REQUEST_REUSE",
+    "REQUEST_REUSE_REQUIRES_SYNTHETIC_TRUE_PROVIDER_CONNECTED_FALSE",
+    "EXACT_SAVED_DEFAULT_BRANCH_REQUIRED_BEFORE_ANY_SERVICE_AMENDMENT",
+    "UPDATE_HAS_ATOMIC_BRANCH_AND_SYNTHETIC_PROVIDER_PREDICATES",
+    "POST_WRITE_INDEPENDENT_SYNTHETIC_ROW_PROOF",
+    "NO_CONNECT_SUPABASE_AUTH_DB_WRITE","NO_CUSTOMER_CONTACT_OR_PROVIDER_SEND",
+    "NO_DEPLOY_OR_SQL_MIGRATION","P02_OPEN_2_OF_7","P03_QUEUED_0_OF_6"])
+    expect(qaNoProvider.guards).toContain(guard);
+  expect(qaNoProvider.acceptance).toBe("SOURCE_ONLY_PENDING_AUTHORIZED_TWO_OWNER_JWT_BROWSER_RLS");
+
   expect(branchAudit.businessScenario).toContain("exactly one saved owner branch assignment");
   expect(branchAudit.nodeCalls).toEqual({
     perTwoOwnersBefore:20,perTwoOwnersAfter:24,
