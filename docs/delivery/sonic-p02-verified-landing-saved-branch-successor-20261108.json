@@ -1,0 +1,73 @@
+{
+  "schema": "servicedesk.p02.verified-owner-landing-branch-readback-successor.v1",
+  "batchId": "P02-VERIFIED_LANDING_DIRECT_URL_MUST_PROVE_SAVED_BRANCH-20261108",
+  "ownerChat": "PRODUCTION",
+  "sourceOnly": true,
+  "reviewedParentHead": "343beb7e7dee5f21358c73dfec004fbdeb3b4586",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-recovery-qa-transport-uncertain-successor-20261108.json",
+    "blob": "b0f53922940f8025a2979e4dbd30528ef2639245",
+    "unchanged": true
+  },
+  "priorOwnerBranchReadback": {
+    "path": "docs/delivery/sonic-p02-owner-main-branch-saved-readback-successor-20261108.json",
+    "blob": "d881bf6a90a3387cff6465798342138aa7106479",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/features/auth/verified-owner-workspace.ts",
+      "previousBlob": "c1720bdc1f144357126352f54b19699739d5e612",
+      "currentBlob": "1eef6fb6efe364d0dd816f5f11ecb2e3a4169ddf",
+      "lane": "AUTH_RLS_SHARED_SAVED_PROOF"
+    },
+    {
+      "path": "src/app/onboarding/verified/page.tsx",
+      "previousBlob": "12eafdfa355d0c2fe59c3fa72a6533993627f60c",
+      "currentBlob": "d87b1b171095e17f5799b0b77fdee2e829a76add",
+      "lane": "OWNER_SUCCESS_LANDING"
+    },
+    {
+      "path": "tests/e2e/p02-owner-registration-persisted-receipt.test.ts",
+      "previousBlob": "33a3ea21d41d6553b8cdd716465777e02d106d25",
+      "currentBlob": "90755da47752e142b7081e93a9ac04c1aa742c2d",
+      "lane": "INDEPENDENT_BRANCH_READBACK_QA"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "abd144788272813d937fb2d0082b6d559b6a3dd1",
+      "currentBlob": "b490f5decc44e631ff6aef895b5b142f5f926fb0",
+      "lane": "ACTUAL_LANDING_SERVER_COMPONENT_QA"
+    }
+  ],
+  "testCases": {
+    "ownerReadback": {
+      "old": 8,
+      "new": 10
+    },
+    "actualOwnerNavigation": {
+      "old": 31,
+      "new": 35
+    }
+  },
+  "unchangedWorkflow": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "securityInvariants": [
+    "NO_READY_LANDING_WITHOUT_RLS_SAVED_DEFAULT_BRANCH",
+    "NO_READY_LANDING_WITHOUT_ACTIVE_OWNER_BRANCH_ASSIGNMENT",
+    "NO_QA_SEED_UI_ON_UNVERIFIED_BRANCH",
+    "NO_SUCCESS_ON_DIRECT_FORGED_WORKSPACE_URL",
+    "NO_FALSE_500_ON_THROWN_DEFAULT_BRANCH_READ",
+    "PRESERVE_IDEMPOTENT_EXISTING_OWNER_RENAMED_BRANCH",
+    "NO_CONNECTED_AUTH_DB_WRITE",
+    "NO_SQL_OR_RELEASE_FLAG_CHANGE",
+    "NO_VERCEL_DEPLOY",
+    "P02_STAYS_OPEN_2_OF_7",
+    "P03_STAYS_OPEN_0_OF_6"
+  ],
+  "acceptance": "INTEGRATED_SOURCE_ONLY_NOT_REAL_TWO_OWNER_BROWSER_JWT_RLS",
+  "nextBatch": "P02_818_EXACT_OWNER_SCOPED_AUTH_DB_APPROVAL"
+}

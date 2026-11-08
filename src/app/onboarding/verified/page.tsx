@@ -4,7 +4,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
-import { loadVerifiedOwnerWorkspace } from "@/features/auth/verified-owner-workspace";
+import {
+  loadVerifiedOwnerWorkspace,
+  verifySavedOwnerDefaultBranch,
+} from "@/features/auth/verified-owner-workspace";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
 import { qaFixtureWritesAllowedForWorkspace } from "@/features/auth/qa-fixture-write-authority";
@@ -48,7 +51,21 @@ export default async function VerifiedOwnerWorkspacePage({
   const query = await searchParams;
   const workspaceSlug = query.workspace ?? "";
   const result = await loadVerifiedOwnerWorkspace(auth, data.user.id, workspaceSlug);
-  if (!result.ok) {
+  // A direct or later visit to ?workspace= must not assert "workspace ready"
+  // from owner membership alone. The actual saved MAIN/default branch and the
+  // owner's ACTIVE branch assignment are an independent RLS-visible receipt.
+  let savedDefaultBranchVerified = false;
+  if (result.ok) {
+    try {
+      savedDefaultBranchVerified = await verifySavedOwnerDefaultBranch(
+        auth, data.user.id, result.workspace,
+      );
+    } catch {
+      // No provider transport details or false success on uncertain readback.
+      savedDefaultBranchVerified = false;
+    }
+  }
+  if (!result.ok || !savedDefaultBranchVerified) {
     return <RegistrationShell
       eyebrow="Workspace access" title="We could not verify this workspace"
       description="Only a verified owner may open this onboarding confirmation."
@@ -94,7 +111,7 @@ export default async function VerifiedOwnerWorkspacePage({
   >
     <div aria-label="Verified workspace details" style={{display:"grid",gap:16}}>
       <p role="status" style={{color:"#14634a",fontWeight:750}}>
-        Email confirmed. Owner membership verified against the database.
+        Email confirmed. Owner, workspace and active default branch verified against the database.
       </p>
       <dl style={{display:"grid",gap:12,margin:0}}>
         <div><dt>Business</dt><dd style={{fontWeight:700,margin:0}}>{workspace.name}</dd></div>

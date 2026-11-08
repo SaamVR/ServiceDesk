@@ -185,9 +185,9 @@ const expectedCurrentOwnerSlugBlob=(path:string,previous:string|undefined):strin
  if (typeof previous !== "string" || !/^[a-f0-9]{40}$/.test(previous))
    throw new Error("Missing reviewed P02 source SHA: " + path);
  const successor=malformedOwnerSlug.changedSource.find(item=>item.path===path);
- if (!successor) return previous;
+ if (!successor) return currentLandingBlob(path,previous);
  expect(successor.previousBlob,path).toBe(previous);
- return successor.currentBlob;
+ return currentLandingBlob(path,successor.currentBlob);
 };
 const ownerMainBranchRaw=read("docs/delivery/sonic-p02-owner-main-branch-saved-readback-successor-20261108.json");
 const ownerMainBranch=JSON.parse(ownerMainBranchRaw.toString()) as {
@@ -215,6 +215,25 @@ const currentRecoveryQaSource=(path:string,previous:string|undefined):string=>{
  const successor=recoveryQaTransport.changedSource.find(item=>item.path===path);
  if(!successor)return previous;
  expect(successor.previousBlob,path).toBe(previous);
+ return successor.currentBlob;
+};
+const landingBranchRaw=read("docs/delivery/sonic-p02-verified-landing-saved-branch-successor-20261108.json");
+const landingBranch=JSON.parse(landingBranchRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ priorOwnerBranchReadback:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ testCases:{ownerReadback:{old:number;new:number};actualOwnerNavigation:{old:number;new:number}};
+ unchangedWorkflow:{path:string;blob:string;unchanged:boolean};
+ securityInvariants:string[];acceptance:string;nextBatch:string;
+};
+/** Chain only exact SHA successors; a missing or mismatched prior is a veto. */
+const currentLandingBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing reviewed owner-landing SHA: "+path);
+ const successor=landingBranch.changedSource.find(x=>x.path===path);
+ if(!successor)return prior;
+ expect(successor.previousBlob,path).toBe(prior);
  return successor.currentBlob;
 };
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
@@ -359,7 +378,7 @@ describe("IR21 exact owner finance + retention source integration",()=>{
 ]);
   for(const x of ownerMainBranch.changedSource){
     expect(x.path).not.toContain("..");
-    expect(hash(read(x.path)),x.path).toBe(x.currentBlob);
+    expect(hash(read(x.path)),x.path).toBe(currentLandingBlob(x.path,x.currentBlob));
   }
   expect(ownerMainBranch.dbSourceUnchanged).toEqual([
   {
@@ -431,6 +450,30 @@ describe("IR21 exact owner finance + retention source integration",()=>{
     expect(recoveryQaTransport.guards).toContain(guard);
   expect(recoveryQaTransport.acceptance).toBe("SOURCE_ONLY_PENDING_REAL_TWO_OWNER_JWT_RLS_UAT");
 
+  // Independent P02 landing acceptance: a verified OWNER alone is insufficient
+  // to claim the saved default branch. Historic manifests remain unchanged.
+  expect(landingBranch.schema).toBe("servicedesk.p02.verified-owner-landing-branch-readback-successor.v1");
+  expect(landingBranch.batchId).toBe("P02-VERIFIED_LANDING_DIRECT_URL_MUST_PROVE_SAVED_BRANCH-20261108");
+  expect(landingBranch.ownerChat).toBe("PRODUCTION");
+  expect(landingBranch.sourceOnly).toBe(true);
+  expect(landingBranch.reviewedParentHead).toBe("343beb7e7dee5f21358c73dfec004fbdeb3b4586");
+  expect(landingBranch.predecessor).toEqual({"path":"docs/delivery/sonic-p02-recovery-qa-transport-uncertain-successor-20261108.json","blob":"b0f53922940f8025a2979e4dbd30528ef2639245","unchanged":true});
+  expect(landingBranch.predecessor.blob).toBe(hash(recoveryQaTransportRaw));
+  expect(landingBranch.priorOwnerBranchReadback).toEqual({"path":"docs/delivery/sonic-p02-owner-main-branch-saved-readback-successor-20261108.json","blob":"d881bf6a90a3387cff6465798342138aa7106479","unchanged":true});
+  expect(landingBranch.priorOwnerBranchReadback.blob).toBe(hash(ownerMainBranchRaw));
+  expect(landingBranch.changedSource).toEqual([{"path":"src/features/auth/verified-owner-workspace.ts","previousBlob":"c1720bdc1f144357126352f54b19699739d5e612","currentBlob":"1eef6fb6efe364d0dd816f5f11ecb2e3a4169ddf","lane":"AUTH_RLS_SHARED_SAVED_PROOF"},{"path":"src/app/onboarding/verified/page.tsx","previousBlob":"12eafdfa355d0c2fe59c3fa72a6533993627f60c","currentBlob":"d87b1b171095e17f5799b0b77fdee2e829a76add","lane":"OWNER_SUCCESS_LANDING"},{"path":"tests/e2e/p02-owner-registration-persisted-receipt.test.ts","previousBlob":"33a3ea21d41d6553b8cdd716465777e02d106d25","currentBlob":"90755da47752e142b7081e93a9ac04c1aa742c2d","lane":"INDEPENDENT_BRANCH_READBACK_QA"},{"path":"tests/e2e/p02-workspace-error-origin.test.ts","previousBlob":"abd144788272813d937fb2d0082b6d559b6a3dd1","currentBlob":"b490f5decc44e631ff6aef895b5b142f5f926fb0","lane":"ACTUAL_LANDING_SERVER_COMPONENT_QA"}]);
+  expect(new Set(landingBranch.changedSource.map(s=>s.path)).size).toBe(4);
+  for(const entry of landingBranch.changedSource){
+    expect(entry.path).not.toContain("..");
+    expect(hash(read(entry.path)),entry.path).toBe(entry.currentBlob);
+  }
+  expect(landingBranch.testCases).toEqual({ownerReadback:{old:8,new:10},actualOwnerNavigation:{old:31,new:35}});
+  expect(landingBranch.unchangedWorkflow).toEqual({path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true});
+  expect(hash(read(landingBranch.unchangedWorkflow.path))).toBe(landingBranch.unchangedWorkflow.blob);
+  for(const guard of ["NO_READY_LANDING_WITHOUT_RLS_SAVED_DEFAULT_BRANCH","NO_READY_LANDING_WITHOUT_ACTIVE_OWNER_BRANCH_ASSIGNMENT","NO_QA_SEED_UI_ON_UNVERIFIED_BRANCH","NO_FALSE_500_ON_THROWN_DEFAULT_BRANCH_READ","NO_CONNECTED_AUTH_DB_WRITE","NO_SQL_OR_RELEASE_FLAG_CHANGE","NO_VERCEL_DEPLOY","P02_STAYS_OPEN_2_OF_7","P03_STAYS_OPEN_0_OF_6"])
+    expect(landingBranch.securityInvariants).toContain(guard);
+  expect(landingBranch.acceptance).toBe("INTEGRATED_SOURCE_ONLY_NOT_REAL_TWO_OWNER_BROWSER_JWT_RLS");
+  expect(landingBranch.nextBatch).toBe("P02_818_EXACT_OWNER_SCOPED_AUTH_DB_APPROVAL");
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
    const replacement=p03Currency.changedSource.find(x=>x.path===source.path);
@@ -684,7 +727,7 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      {path:"src/app/onboarding/verified/page.tsx",blob:"12eafdfa355d0c2fe59c3fa72a6533993627f60c",unchanged:true}
    ]);
    for(const source of ownerQaWitness.productionSourceUnchanged)
-     expect(hash(read(source.path)),source.path).toBe(source.blob);
+     expect(hash(read(source.path)),source.path).toBe(currentLandingBlob(source.path,source.blob));
    expect(ownerQaWitness.guard).toContain("NO_AUTH_OR_DB_WRITE");
    expect(ownerQaWitness.guard).toContain("NO_DEPLOY");
    expect(ownerQaWitness.state).toBe("PENDING_EXACT_HEAD_SOURCE_CI");
@@ -709,7 +752,7 @@ describe("IR21 exact owner finance + retention source integration",()=>{
      {path:"src/app/onboarding/verified/page.tsx",blob:"12eafdfa355d0c2fe59c3fa72a6533993627f60c",unchanged:true}
    ]);
    for(const source of qaFixtureScope.productionSourceUnchanged)
-     expect(hash(read(source.path)),source.path).toBe(source.blob);
+     expect(hash(read(source.path)),source.path).toBe(currentLandingBlob(source.path,source.blob));
    for(const guard of ["P02_OPEN_2_OF_7","NO_CONNECTED_AUTH_OR_DB_WRITE","NO_DEPLOY","PRESERVE_ALL_SOURCE_LOCKS"])
      expect(qaFixtureScope.guards).toContain(guard);
    expect(qaFixtureScope.acceptance).toBe("SOURCE_ONLY_UNTIL_AUTHENTICATED_OWNER_A_B_RLS");
@@ -728,7 +771,7 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    ]);
    for(const source of malformedOwnerSlug.changedSource){
      expect(source.path).not.toContain("..");
-     expect(hash(read(source.path)),source.path).toBe(source.currentBlob);
+     expect(hash(read(source.path)),source.path).toBe(currentLandingBlob(source.path,source.currentBlob));
    }
    expect(malformedOwnerSlug.tests).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:29,current:31,added:2,scope:"MOCKED_RLS_CONTINUATION_NO_LIVE_JWT"});
    expect(malformedOwnerSlug.unchangedWorkflow.blob).toBe("634d35b6eb34025df560b78f0dfbe3354988238c");

@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { verifyOwnerWorkspaceCreationReadback } from "../../src/features/auth/verified-owner-workspace";
+import {
+  verifyOwnerWorkspaceCreationReadback,
+  verifySavedOwnerDefaultBranch,
+} from "../../src/features/auth/verified-owner-workspace";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 const attackerId = "22222222-2222-4222-8222-222222222222";
@@ -184,6 +187,34 @@ describe("P02 signed-in owner workspace registration has durable readback", () =
       stub.auth, userId, requested, { ok: true, slug: "older-team", existing: true },
     )).toEqual({ ok: true, workspace: previous, existing: true });
     expect(stub.reads).toContain("branch_memberships");
+  });
+
+  it("reuses the exact saved branch proof for an existing owner's landing without an RPC receipt", async () => {
+    const input = signedInRlsReadback();
+    expect(await verifySavedOwnerDefaultBranch(input.auth, userId, saved)).toBe(true);
+    expect(input.reads).toEqual(["workspace_branches", "branch_memberships"]);
+    const previouslyRenamed = signedInRlsReadback({
+      branchRows: [{ ...defaultBranch, code: "OPS", timezone: "UTC", currency: "BDT" }],
+    });
+    expect(await verifySavedOwnerDefaultBranch(previouslyRenamed.auth, userId, saved)).toBe(true);
+    expect(previouslyRenamed.reads).toContain("branch_memberships");
+  });
+
+  it("never reports an existing owner's direct verified landing as ready without saved branch evidence", async () => {
+    for (const options of [
+      { branchRows: [] },
+      { branchRows: [{ ...defaultBranch, workspace_id: attackerId }] },
+      { branchRows: [{ ...defaultBranch, active: false }] },
+      { branchRows: [defaultBranch, defaultBranch] },
+      { branchOwnerRows: [] },
+      { branchOwnerRows: [{ ...branchOwner, user_id: attackerId }] },
+      { branchOwnerRows: [{ ...branchOwner, status: "REVOKED" }] },
+      { branchError: true },
+      { branchOwnerError: true },
+    ]) {
+      const input = signedInRlsReadback(options);
+      expect(await verifySavedOwnerDefaultBranch(input.auth, userId, saved), JSON.stringify(options)).toBe(false);
+    }
   });
 
   it("wires post-RPC readback into the real server action without external side effects", () => {

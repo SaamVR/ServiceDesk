@@ -108,6 +108,71 @@ export async function loadVerifiedOwnerWorkspace(
 }
 
 /**
+ * Independently verify that an already authenticated, RLS-proven OWNER has
+ * one saved ACTIVE default branch and one saved ACTIVE assignment to it.
+ * This is a read-only receipt, NOT an authorization bypass: callers must first
+ * call loadVerifiedOwnerWorkspace using the browser's real Auth session.
+ * New registrations additionally prove migration 0059's MAIN code and fields.
+ * An existing owner may legitimately have renamed or reconfigured the branch.
+ */
+export async function verifySavedOwnerDefaultBranch(
+  auth: SupabaseClient,
+  userId: string,
+  workspace: VerifiedOwnerWorkspace,
+  newRegistration?: Omit<VerifiedOwnerWorkspace, "id">,
+): Promise<boolean> {
+  // Migration 0059 creates both MAIN and its owner branch membership in the
+  // same transaction. RLS-visible workspace + OWNER rows alone cannot prove
+  // first-run branch readiness. Never trust the registration JSON to certify it.
+  const savedBranches = await (async () => await auth.from("workspace_branches")
+    .select("id,workspace_id,code,timezone,currency,is_default,active")
+    .eq("workspace_id", workspace.id)
+    .eq("is_default", true)
+    .eq("active", true)
+    .limit(2))().catch(() => null);
+  if (!savedBranches || savedBranches.error ||
+      !Array.isArray(savedBranches.data) || savedBranches.data.length !== 1) {
+    return false;
+  }
+  const branch = savedBranches.data[0];
+  if (!branch || typeof branch.id !== "string" || !UUID.test(branch.id) ||
+      branch.workspace_id !== workspace.id ||
+      branch.is_default !== true || branch.active !== true ||
+      typeof branch.code !== "string" ||
+      !/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(branch.code) ||
+      typeof branch.timezone !== "string" || typeof branch.currency !== "string") {
+    return false;
+  }
+  // A new business requires its actual saved MAIN branch with matching billing
+  // fields. Existing=true is an idempotent return to an older owned business,
+  // whose default branch code/timezone/currency may legitimately have changed.
+  if (newRegistration !== undefined &&
+      (branch.code !== "MAIN" || branch.timezone !== newRegistration.timezone ||
+       branch.currency !== newRegistration.currency)) {
+    return false;
+  }
+  const savedBranchOwner = await (async () => await auth.from("branch_memberships")
+    .select("workspace_id,branch_id,user_id,status")
+    .eq("workspace_id", workspace.id)
+    .eq("branch_id", branch.id)
+    .eq("user_id", userId)
+    .eq("status", "ACTIVE")
+    .limit(2))().catch(() => null);
+  if (!savedBranchOwner || savedBranchOwner.error ||
+      !Array.isArray(savedBranchOwner.data) || savedBranchOwner.data.length !== 1) {
+    return false;
+  }
+  const assigned = savedBranchOwner.data[0];
+  if (!assigned || assigned.workspace_id !== workspace.id ||
+      assigned.branch_id !== branch.id || assigned.user_id !== userId ||
+      assigned.status !== "ACTIVE") {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Verify a creation RPC against the caller's *saved*, RLS-visible owner row.
  * An existing=true response is the idempotent route of migration 0059: it
  * legitimately returns the owner's prior workspace rather than a new slug.
@@ -148,51 +213,9 @@ export async function verifyOwnerWorkspaceCreationReadback(
   )) {
     return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
   }
-  // Migration 0059 creates both MAIN and its owner branch membership in the
-  // same transaction. RLS-visible workspace + OWNER rows alone cannot prove
-  // first-run branch readiness. Never trust the registration JSON to certify it.
-  const savedBranches = await (async () => await auth.from("workspace_branches")
-    .select("id,workspace_id,code,timezone,currency,is_default,active")
-    .eq("workspace_id", readback.workspace.id)
-    .eq("is_default", true)
-    .eq("active", true)
-    .limit(2))().catch(() => null);
-  if (!savedBranches || savedBranches.error ||
-      !Array.isArray(savedBranches.data) || savedBranches.data.length !== 1) {
-    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
-  }
-  const branch = savedBranches.data[0];
-  if (!branch || typeof branch.id !== "string" || !UUID.test(branch.id) ||
-      branch.workspace_id !== readback.workspace.id ||
-      branch.is_default !== true || branch.active !== true ||
-      typeof branch.code !== "string" ||
-      !/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(branch.code) ||
-      typeof branch.timezone !== "string" || typeof branch.currency !== "string") {
-    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
-  }
-  // A new business requires its actual saved MAIN branch with matching billing
-  // fields. Existing=true is an idempotent return to an older owned business,
-  // whose default branch code/timezone/currency may legitimately have changed.
-  if (receipt.existing === false &&
-      (branch.code !== "MAIN" || branch.timezone !== requested.timezone ||
-       branch.currency !== requested.currency)) {
-    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
-  }
-  const savedBranchOwner = await (async () => await auth.from("branch_memberships")
-    .select("workspace_id,branch_id,user_id,status")
-    .eq("workspace_id", readback.workspace.id)
-    .eq("branch_id", branch.id)
-    .eq("user_id", userId)
-    .eq("status", "ACTIVE")
-    .limit(2))().catch(() => null);
-  if (!savedBranchOwner || savedBranchOwner.error ||
-      !Array.isArray(savedBranchOwner.data) || savedBranchOwner.data.length !== 1) {
-    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
-  }
-  const assigned = savedBranchOwner.data[0];
-  if (!assigned || assigned.workspace_id !== readback.workspace.id ||
-      assigned.branch_id !== branch.id || assigned.user_id !== userId ||
-      assigned.status !== "ACTIVE") {
+  if (!await verifySavedOwnerDefaultBranch(
+    auth, userId, readback.workspace, receipt.existing === false ? requested : undefined,
+  )) {
     return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
   }
 

@@ -10,6 +10,14 @@ import VerifiedOwnerWorkspacePage from "../../src/app/onboarding/verified/page";
 const ownerNavigation = vi.hoisted(() => ({
   getUser: vi.fn(), membership: vi.fn(), workspace: vi.fn(), customers: vi.fn(),
 }));
+const ownerLandingReadback = vi.hoisted(() => ({
+  verifiedOwner: vi.fn(), savedDefaultBranch: vi.fn(),
+}));
+vi.mock("../../src/features/auth/verified-owner-workspace", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../src/features/auth/verified-owner-workspace")>(),
+  loadVerifiedOwnerWorkspace: ownerLandingReadback.verifiedOwner,
+  verifySavedOwnerDefaultBranch: ownerLandingReadback.savedDefaultBranch,
+}));
 vi.mock("next/headers", () => ({
   cookies: async () => ({ getAll: () => [], setAll: () => undefined }),
 }));
@@ -172,6 +180,11 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
     ownerNavigation.membership.mockReset().mockResolvedValue({ data: [], error: null });
     ownerNavigation.workspace.mockReset().mockResolvedValue({ data: [], error: null });
     ownerNavigation.customers.mockReset().mockResolvedValue({ data: [], error: null });
+    ownerLandingReadback.verifiedOwner.mockReset().mockResolvedValue({
+      ok: true, workspace: { id: syntheticWorkspace, slug: "synthetic-cleaning",
+        name: "Synthetic Cleaning", timezone: "UTC", currency: "USD" },
+    });
+    ownerLandingReadback.savedDefaultBranch.mockReset().mockResolvedValue(true);
   });
   afterEach(() => vi.unstubAllEnvs());
 
@@ -383,6 +396,45 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
       searchParams: Promise.resolve({ workspace: "synthetic-cleaning" }),
     })).rejects.toThrow("MOCK_REDIRECT:/auth/sign-in?next=%2Fauth%2Fcontinue");
     expect(ownerNavigation.membership).not.toHaveBeenCalled();
+  });
+
+  it("denies the actual verified-owner landing for an owner without independently saved branch proof", async () => {
+    ownerLandingReadback.savedDefaultBranch.mockResolvedValueOnce(false);
+    const page = await VerifiedOwnerWorkspacePage({
+      searchParams: Promise.resolve({ workspace: "synthetic-cleaning", qaSeed: "created" }),
+    });
+    expect(page.props.title).toBe("We could not verify this workspace");
+    expect(ownerLandingReadback.verifiedOwner).toHaveBeenCalledTimes(1);
+    expect(ownerLandingReadback.savedDefaultBranch).toHaveBeenCalledTimes(1);
+    expect(ownerLandingReadback.savedDefaultBranch).toHaveBeenCalledWith(
+      expect.anything(), syntheticOwner,
+      expect.objectContaining({ id: syntheticWorkspace, slug: "synthetic-cleaning" }),
+    );
+  });
+
+  it("refuses a thrown saved-branch lookup on verified-owner landing without an HTTP 500", async () => {
+    ownerLandingReadback.savedDefaultBranch.mockRejectedValueOnce(Error("PRIVATE_BRANCH_TRANSPORT"));
+    const page = await VerifiedOwnerWorkspacePage({
+      searchParams: Promise.resolve({ workspace: "synthetic-cleaning" }),
+    });
+    expect(page.props.title).toBe("We could not verify this workspace");
+  });
+
+  it("retains the genuine owner-ready landing only with both saved owner and branch proof", async () => {
+    const page = await VerifiedOwnerWorkspacePage({
+      searchParams: Promise.resolve({ workspace: "synthetic-cleaning" }),
+    });
+    expect(page.props.title).toBe("Your business workspace is ready.");
+    expect(ownerLandingReadback.savedDefaultBranch).toHaveBeenCalledTimes(1);
+  });
+
+  it("never attempts default-branch verification when the saved OWNER workspace itself is denied", async () => {
+    ownerLandingReadback.verifiedOwner.mockResolvedValueOnce({ ok: false, reason: "DENIED" });
+    const page = await VerifiedOwnerWorkspacePage({
+      searchParams: Promise.resolve({ workspace: "foreign-tenant" }),
+    });
+    expect(page.props.title).toBe("We could not verify this workspace");
+    expect(ownerLandingReadback.savedDefaultBranch).not.toHaveBeenCalled();
   });
 
   it("denies workspace setup page when Auth identity lookup throws", async () => {
