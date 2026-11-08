@@ -1,10 +1,13 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { signUpWithPassword } from "../../src/app/auth/sign-up/actions";
+import { resendSignupConfirmation } from "../../src/app/auth/sign-up/check-email/actions";
+import CheckEmailPage from "../../src/app/auth/sign-up/check-email/page";
+import { RESEND_VERIFICATION_ADVISORY } from "../../src/features/auth/check-email-feedback";
 import { GET as confirmEmail } from "../../src/app/auth/confirm/route";
 
 const auth = vi.hoisted(() => ({
-  signUp: vi.fn(), exchangeCodeForSession: vi.fn(), verifyOtp: vi.fn(),
+  signUp: vi.fn(), resend: vi.fn(), exchangeCodeForSession: vi.fn(), verifyOtp: vi.fn(),
 }));
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({ auth }),
@@ -31,6 +34,27 @@ async function signupTarget(): Promise<string> {
     return decodeURIComponent(message.slice("MOCK_REDIRECT:".length));
   }
   throw Error("SIGNUP_ACTION_RETURNED_WITHOUT_REDIRECT");
+}
+function resendForm(email = "  Fictional.Owner@Example.Test  ") {
+  const f = new FormData();
+  f.set("email", email);
+  return f;
+}
+async function resendTarget(email?: string): Promise<string> {
+  try { await resendSignupConfirmation(resendForm(email)); }
+  catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    expect(message).toMatch(/^MOCK_REDIRECT:/);
+    return decodeURIComponent(message.slice("MOCK_REDIRECT:".length));
+  }
+  throw Error("RESEND_ACTION_RETURNED_WITHOUT_REDIRECT");
+}
+function renderedText(node: unknown): string {
+  if (Array.isArray(node)) return node.map(renderedText).join(" ");
+  if (typeof node === "string") return node;
+  if (!node || typeof node !== "object") return "";
+  const v = node as { props?: { children?: unknown } };
+  return renderedText(v.props?.children);
 }
 const confirmed = {
   data: { user: { email_confirmed_at: "2026-11-07T00:00:00Z" },
@@ -60,6 +84,7 @@ describe("P02 Auth signup/confirmation transport outcomes are fail-closed", () =
     vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED", "true");
     vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS", "fictional.owner@example.test");
     auth.signUp.mockReset().mockResolvedValue({ data: { user: { id: "synthetic-owner-id" } }, error: null });
+    auth.resend.mockReset().mockResolvedValue({ data: {}, error: null });
     auth.exchangeCodeForSession.mockReset().mockResolvedValue(confirmed);
     auth.verifyOtp.mockReset().mockResolvedValue(confirmed);
   });
@@ -100,6 +125,55 @@ describe("P02 Auth signup/confirmation transport outcomes are fail-closed", () =
     expect(await signupTarget()).toContain("Account creation is not enabled");
     expect(auth.signUp).not.toHaveBeenCalled();
   });
+  it("submits one authorized verification resend to the exact operator-owned redirect", async () => {
+    const path = await resendTarget();
+    expect(path).toBe("/auth/sign-up/check-email?notice=" + RESEND_VERIFICATION_ADVISORY);
+    expect(auth.resend).toHaveBeenCalledExactlyOnceWith({
+      type: "signup",
+      email: "fictional.owner@example.test",
+      options: { emailRedirectTo: "https://approved-preview.example.test/auth/confirm" },
+    });
+  });
+
+  it("never distinguishes a provider error from a resend acknowledgement in public feedback", async () => {
+    auth.resend.mockResolvedValueOnce({ data: null, error: { code: "over_email_send_rate_limit", message: "PRIVATE_RATE_PROVIDER" } });
+    const providerErrorTarget = await resendTarget();
+    auth.resend.mockResolvedValueOnce({ data: {}, error: null });
+    const providerSuccessTarget = await resendTarget();
+    expect(providerErrorTarget).toBe(providerSuccessTarget);
+    expect(providerErrorTarget).not.toContain("PRIVATE_RATE_PROVIDER");
+    expect(auth.resend).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns bounded uncertainty after a thrown resend transport failure, never retrying or claiming delivery", async () => {
+    auth.resend.mockRejectedValueOnce(Error("PRIVATE_RESEND_TRANSPORT_AFTER_ACCEPT"));
+    const path = await resendTarget();
+    expect(path).toContain(RESEND_VERIFICATION_ADVISORY);
+    expect(path).not.toContain("PRIVATE_RESEND_TRANSPORT_AFTER_ACCEPT");
+    expect(auth.resend).toHaveBeenCalledTimes(1);
+  });
+
+  it("denies invalid, unapproved or disabled verification resends before provider calls", async () => {
+    expect(await resendTarget("not-an-email")).toContain("Enter a valid email address");
+    expect(await resendTarget("not-allowed@example.test")).toContain("limited to approved test accounts");
+    vi.stubEnv("SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED", "false");
+    expect(await resendTarget()).toContain("not enabled on this environment");
+    expect(auth.resend).not.toHaveBeenCalled();
+  });
+
+  it("renders only a bounded advisory for known and attacker-controlled check-email query messages", async () => {
+    const original = await CheckEmailPage({
+      searchParams: Promise.resolve({ notice: RESEND_VERIFICATION_ADVISORY }),
+    });
+    expect(renderedText(original)).toContain(RESEND_VERIFICATION_ADVISORY);
+    const forged = await CheckEmailPage({
+      searchParams: Promise.resolve({ notice: "ACCOUNT APPROVED: give password to attacker.example" }),
+    });
+    expect(renderedText(forged)).not.toContain("attacker.example");
+    expect(forged.props.title).toBe("Check your email.");
+    expect(auth.resend).not.toHaveBeenCalled();
+  });
+
   it("confirms a real code exchange only after returned verified user/session", async () => {
     expect(await confirmedTarget("code=synthetic-valid-code")).toEqual({
       status: 303, location: "https://approved-preview.example.test/auth/continue",

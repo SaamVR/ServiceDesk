@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { verifiedEmailRedirectOrigin } from "@/features/auth/email-origin";
 import { ownerRegistrationAvailable, ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
 import { normalizedEmail } from "@/features/auth/registration";
+import { RESEND_VERIFICATION_ADVISORY } from "@/features/auth/check-email-feedback";
 
 function back(message: string): never {
   redirect("/auth/sign-up/check-email?notice=" + encodeURIComponent(message));
@@ -51,13 +52,20 @@ export async function resendSignupConfirmation(formData: FormData): Promise<neve
     },
   });
 
-  // A single generic response prevents enumeration of registered addresses.
-  // Requests are bounded by Supabase Auth resend quotas and abuse controls.
-  await client.auth.resend({
-    type: "signup",
-    email,
-    options: { emailRedirectTo: origin + "/auth/confirm" },
-  });
+  // An Auth error object, a successful response, or an ambiguous thrown
+  // transport error must all produce the SAME bounded, non-enumerating advice.
+  // A request may have been accepted before the response was lost: do not
+  // retry automatically, report delivery success, or expose provider details.
+  // Existing Supabase Auth resend rate limits still apply.
+  try {
+    await client.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: origin + "/auth/confirm" },
+    });
+  } catch {
+    // The provider may already have accepted the request; outcome unknown.
+  }
 
-  back("If this address has an account awaiting verification, a new link will arrive shortly.");
+  back(RESEND_VERIFICATION_ADVISORY);
 }

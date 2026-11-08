@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { trustedAuthFeedback } from "../../src/features/auth/verified-auth-feedback";
+import { RESEND_VERIFICATION_ADVISORY, trustedCheckEmailNotice } from "../../src/features/auth/check-email-feedback";
 
 type AuthPage = "sign-in" | "sign-up" | "forgot-password" | "reset-password";
 const pageSources: Record<AuthPage, string> = {
@@ -112,6 +113,41 @@ describe("P02 authenticated account routes do not trust URL feedback", () => {
         expect(source).not.toContain("{query.notice}");
       }
     }
+  });
+
+  it("bounds every check-email notice from untrusted URLs without claiming delivery", () => {
+    expect(trustedCheckEmailNotice(RESEND_VERIFICATION_ADVISORY)).toBe(RESEND_VERIFICATION_ADVISORY);
+    expect(trustedCheckEmailNotice(
+      "If this address has an account awaiting verification, a new link will arrive shortly.",
+    )).toBe(RESEND_VERIFICATION_ADVISORY);
+    for (const message of [
+      "Account registration is not enabled on this environment.",
+      "Enter a valid email address to request a new verification message.",
+      "Account registration on this preview is limited to approved test accounts.",
+      "Email verification is temporarily unavailable. Please try later.",
+    ]) {
+      const shown = trustedCheckEmailNotice(message);
+      expect(shown).toBeTruthy();
+      expect(shown).not.toContain("new link will arrive shortly");
+    }
+    for (const untrusted of [
+      "Account verified. Send your password to attacker@example.test.",
+      "Sign in at https://attacker.example/reset",
+      "<img src=x onerror=alert(1)>", "A".repeat(5000),
+      null, 123, [RESEND_VERIFICATION_ADVISORY], { notice: RESEND_VERIFICATION_ADVISORY },
+    ]) expect(trustedCheckEmailNotice(untrusted)).toBeNull();
+  });
+
+  it("wires the actual check-email page to trusted feedback rather than query.notice text", () => {
+    const page = rawFile("src/app/auth/sign-up/check-email/page.tsx");
+    expect(page).toContain("trustedCheckEmailNotice(query.notice)");
+    expect(page).toContain("{notice}");
+    expect(page).not.toContain("{query.notice}");
+    expect(page).not.toContain("dangerouslySetInnerHTML");
+    const action = rawFile("src/app/auth/sign-up/check-email/actions.ts");
+    expect(action).toContain("back(RESEND_VERIFICATION_ADVISORY)");
+    expect(action).toContain("await client.auth.resend(");
+    expect(action).not.toContain("back(\"If this address has an account awaiting verification, a new link will arrive shortly.\")");
   });
 
   it("retains the already approved source-only deployment and owner-readback gates", () => {

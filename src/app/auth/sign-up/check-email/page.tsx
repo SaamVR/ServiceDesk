@@ -2,6 +2,7 @@ import Link from "next/link";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { ownerRegistrationAvailable } from "@/features/auth/owner-registration-readiness";
 import { resendSignupConfirmation } from "./actions";
+import { trustedCheckEmailNotice } from "@/features/auth/check-email-feedback";
 import styles from "../../sign-in/page.module.css";
 
 export default async function CheckEmailPage({
@@ -11,6 +12,8 @@ export default async function CheckEmailPage({
 }) {
   const query = await searchParams;
   const registrationEnabled = ownerRegistrationAvailable();
+  // A ?notice= URL is attacker-controlled, never a provider receipt.
+  const notice = trustedCheckEmailNotice(query.notice);
 
   return (
     <RegistrationShell
@@ -23,7 +26,7 @@ export default async function CheckEmailPage({
       <p>Check your spam folder if the email hasn&apos;t arrived. Your verification link will open ServiceDesk automatically.</p>
       {registrationEnabled ? (
         <>
-          {query.notice ? <p className={styles.notice} role="status">{query.notice}</p> : null}
+          {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
           <form className={styles.form} action={resendSignupConfirmation}>
             <div className={styles.field}>
               <label htmlFor="resend-confirmation-email">Need another verification email?</label>

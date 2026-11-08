@@ -230,6 +230,25 @@ const currentLandingBlob=(path:string,prior:string|undefined):string=>{
  expect(successor.previousBlob,path).toBe(prior);
  return successor.currentBlob;
 };
+const checkEmailResendRaw=read("docs/delivery/sonic-p02-check-email-resend-bounded-notice-successor-20261108.json");
+const checkEmailResend=JSON.parse(checkEmailResendRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ historicAuthFeedback:{path:string;blob:string;unchanged:boolean};
+ historicSignupReceipt:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string|null;currentBlob:string;lane:string}>;
+ testCases:{authUrl:{previous:number;current:number};signupConfirm:{previous:number;current:number}};
+ unchangedWorkflows:Array<{path:string;blob:string;unchanged:boolean}>;
+ advisory:string;invariants:string[];acceptance:string;nextBatch:string;
+};
+const currentCheckEmailBlob=(path:string,previous:string|undefined):string=>{
+ if(typeof previous!=="string" || !/^[a-f0-9]{40}$/.test(previous))
+   throw Error("Missing prior reviewed check-email SHA: "+path);
+ const next=checkEmailResend.changedSource.find(x=>x.path===path);
+ if(!next)return previous;
+ expect(next.previousBlob,path).toBe(previous);
+ return next.currentBlob;
+};
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
  previousReviewed:{path:string;blob:string;unchanged:boolean};
@@ -468,6 +487,39 @@ describe("F15 independent critic: no new composite, exact source and default-den
     expect(landingBranch.securityInvariants).toContain(guard);
   expect(landingBranch.acceptance).toBe("INTEGRATED_SOURCE_ONLY_NOT_REAL_TWO_OWNER_BROWSER_JWT_RLS");
   expect(landingBranch.nextBatch).toBe("P02_818_EXACT_OWNER_SCOPED_AUTH_DB_APPROVAL");
+  // Additive lock for the actual check-email resend and bounded confirmation UI.
+  // Earlier source proof is immutable and still checked independently.
+  expect(checkEmailResend.schema).toBe("servicedesk.p02.check-email-resend-transport-and-url-notice.v1");
+  expect(checkEmailResend.batchId).toBe("P02-VERIFICATION_RESEND_SINGLE_REQUEST_AND_BOUNDED_NOTICE-20261108");
+  expect(checkEmailResend.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(checkEmailResend.sourceOnly).toBe(true);
+  expect(checkEmailResend.reviewedParentHead).toBe("a36baf43c71101b857906b219f3edce7253be7ed");
+  expect(checkEmailResend.predecessor).toEqual({"path":"docs/delivery/sonic-p02-verified-landing-saved-branch-successor-20261108.json","blob":"afece1f197317157ec0534823b51b6afa2c15753","unchanged":true});
+  expect(checkEmailResend.predecessor.blob).toBe(gitHash(landingBranchRaw));
+  expect(checkEmailResend.historicAuthFeedback).toEqual({"path":"docs/delivery/sonic-p02-auth-feedback-surface-successor-20261107.json","blob":"cc0c2d4e18777def4db57e8e15c0d73119cb64f3","unchanged":true});
+  expect(checkEmailResend.historicAuthFeedback.blob).toBe(gitHash(authFeedbackRaw));
+  expect(checkEmailResend.historicSignupReceipt).toEqual({"path":"docs/delivery/sonic-p02-signup-user-receipt-successor-20261107.json","blob":"96a70397dbbf60f8ab3f8a6ab5617e754b2d0b83","unchanged":true});
+  expect(checkEmailResend.historicSignupReceipt.blob).toBe(gitHash(signupUserReceiptRaw));
+  expect(checkEmailResend.changedSource).toEqual([{"path":"src/features/auth/check-email-feedback.ts","previousBlob":null,"currentBlob":"59332813362bb69cc5bf66293c90f128826bb7c6","lane":"VERIFICATION_FEEDBACK"},{"path":"src/app/auth/sign-up/check-email/actions.ts","previousBlob":"265fdc9e75e5341369b7e8928d3ebbc75ec3a8e8","currentBlob":"29e32db14a5a6eac143bd3be5acc7a6f965db0c7","lane":"AUTH_RESEND"},{"path":"src/app/auth/sign-up/check-email/page.tsx","previousBlob":"015f3d1a811ffb24b6417d9d17996dd463d0cd27","currentBlob":"2f3cf8b5ade3c7eabdb4dd8e8f3c2b82a6ed0f30","lane":"ONBOARDING_UI"},{"path":"tests/e2e/p02-auth-url-feedback-integrity.test.ts","previousBlob":"9e7d4cf6436084b99284b5da23b26181460df93f","currentBlob":"486f7787f28eac806f9e1776e1c964327d2972b5","lane":"ADVERSARIAL_URL_QA"},{"path":"tests/e2e/p02-signup-confirm-transport-outcome.test.ts","previousBlob":"6d5d988a535039b03df8fcf7082caeea8f3f3b42","currentBlob":"2e7e16db357d1249d279e3729711cc2d64c70558","lane":"DIRECT_SERVER_ACTION_QA"}]);
+  expect(new Set(checkEmailResend.changedSource.map(x=>x.path)).size).toBe(5);
+  for(const change of checkEmailResend.changedSource){
+    expect(change.path).not.toContain("..");
+    expect(gitHash(read(change.path)),change.path).toBe(change.currentBlob);
+  }
+  expect(checkEmailResend.testCases).toEqual({authUrl:{previous:6,current:8},signupConfirm:{previous:12,current:17}});
+  expect(checkEmailResend.unchangedWorkflows).toEqual([
+    {path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true},
+    {path:".github/workflows/sonic-p02-auth-origin-focused.yml",blob:"42e200cdfe166ebb0e2f5eb187b182ab81c24490",unchanged:true}
+  ]);
+  for(const unchanged of checkEmailResend.unchangedWorkflows){
+    expect(unchanged.unchanged).toBe(true);
+    expect(gitHash(read(unchanged.path)),unchanged.path).toBe(unchanged.blob);
+  }
+  expect(checkEmailResend.advisory).toContain("Delivery is not confirmed;");
+  for(const rule of ["NO_ARBITRARY_URL_NOTICE_REFLECTION","NO_VERIFICATION_OR_DELIVERY_CLAIM_FROM_QUERY","NO_PROVIDER_ERROR_EMAIL_ENUMERATION","NO_RAW_PROVIDER_500_ON_THROWN_RESEND","NO_AUTOMATIC_RESEND_RETRY_AFTER_UNCERTAIN_TRANSPORT","NO_CONNECTED_AUTH_PROVIDER_CALL","NO_SUPABASE_DB_WRITE_OR_MIGRATION","NO_VERCEL_DEPLOY","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
+    expect(checkEmailResend.invariants).toContain(rule);
+  expect(checkEmailResend.acceptance).toBe("INTEGRATED_SOURCE_ONLY_NOT_REAL_TWO_OWNER_BROWSER_JWT_RLS");
+  expect(checkEmailResend.nextBatch).toBe("P02_818_REAL_OWNER_A_B_AUTH_DBA_AND_STAGING_APPROVAL");
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
    const replacement=p03Currency.changedSource.find(x=>x.path===source.path);
@@ -815,9 +867,9 @@ describe("F15 independent critic: no new composite, exact source and default-den
    if(source.path===resetRetry.reviewedPage.path)
      expect(resetRetry.reviewedPage.oldBlob).toBe(successor?.currentBlob);
    expect(gitHash(read(source.path)),source.path)
-     .toBe(currentRecoveryQaSource(source.path,
+     .toBe(currentCheckEmailBlob(source.path,currentRecoveryQaSource(source.path,
        source.path===resetRetry.reviewedPage.path
-         ?resetRetry.reviewedPage.newBlob:successor?.currentBlob??source.blob));
+         ?resetRetry.reviewedPage.newBlob:successor?.currentBlob??source.blob)));
   }
   expect(gitHash(qaProofRaw)).toBe("963c2e44e8e5a28fcc326460840657fcbe3401af");
   expect(qaProof.schema).toBe("servicedesk.p02.qa-seed-saved-proof-successor.v1");
@@ -1030,7 +1082,8 @@ describe("F15 independent critic: no new composite, exact source and default-den
      currentBlob:"f6659f118c343173b12767c102afc312053a32ff",cases:11,
    });
    expect(gitHash(read(signupConfirmTransport.addedAdversarialTest.path)))
-     .toBe(signupUserReceipt.changedSource.find(entry=>entry.path===signupConfirmTransport.addedAdversarialTest.path)?.currentBlob);
+     .toBe(currentCheckEmailBlob(signupConfirmTransport.addedAdversarialTest.path,
+       signupUserReceipt.changedSource.find(entry=>entry.path===signupConfirmTransport.addedAdversarialTest.path)?.currentBlob));
    expect(signupConfirmTransport.focusedWorkflow).toEqual({
      path:signInAudit.focusedWorkflow.path,
      previousBlob:"720495c3087c369249fe19495cb86c2461a0abca",
@@ -1064,7 +1117,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
     expect(signupUserReceipt.testCases).toBe(12);
     for(const changed of signupUserReceipt.changedSource){
       expect(changed.path).not.toContain("..");
-      expect(gitHash(read(changed.path)),changed.path).toBe(changed.currentBlob);
+      expect(gitHash(read(changed.path)),changed.path).toBe(currentCheckEmailBlob(changed.path,changed.currentBlob));
     }
     expect(signupUserReceipt.unchangedSource).toEqual([
       {path:"src/app/auth/confirm/route.ts",blob:"4ab0f387ded6284c9af9b403c178e5869dbe8a33",unchanged:true},
