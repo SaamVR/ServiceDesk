@@ -56,13 +56,30 @@ export async function verifiedSavedQaSample(
         property.customer_id !== customer.id ||
         property.label !== QA_SEED_LABEL) return false;
 
+    // A renamed existing default branch is valid, but an inactive, missing or
+    // foreign branch is never proof of a saved fictional QA enquiry.
     const branches = await auth.from("workspace_branches")
-      .select("id,workspace_id,code")
+      .select("id,workspace_id,code,is_default,active")
       .eq("id", property.branch_id).eq("workspace_id", workspaceId)
-      .eq("code", "MAIN").limit(2);
+      .eq("is_default", true).eq("active", true).limit(2);
     const branch = !branches.error && onlyRow(branches.data);
     if (!branch || branch.id !== property.branch_id ||
-        branch.workspace_id !== workspaceId || branch.code !== "MAIN") return false;
+        branch.workspace_id !== workspaceId ||
+        branch.is_default !== true || branch.active !== true ||
+        typeof branch.code !== "string" ||
+        !/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(branch.code)) return false;
+
+    // Workspace ownership is not an unbounded authorization for every branch.
+    // Verify this owner is assigned to the exact saved default branch as well.
+    const assignments = await auth.from("branch_memberships")
+      .select("workspace_id,branch_id,user_id,status")
+      .eq("workspace_id", workspaceId).eq("branch_id", branch.id)
+      .eq("user_id", actorUserId).eq("status", "ACTIVE").limit(2);
+    const assignment = !assignments.error && onlyRow(assignments.data);
+    if (!assignment || assignment.workspace_id !== workspaceId ||
+        assignment.branch_id !== branch.id ||
+        assignment.user_id !== actorUserId || assignment.status !== "ACTIVE")
+      return false;
 
     const requests = await auth.from("requests")
       .select("id,workspace_id,customer_id,property_id,branch_id,structured_fields")

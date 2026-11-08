@@ -7,7 +7,9 @@ import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
 import { ownerRegistrationEmailAllowed, ownerRegistrationMode } from "@/features/auth/owner-registration-readiness";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { qaFixtureWritesAllowed, qaFixtureWritesAllowedForWorkspace } from "@/features/auth/qa-fixture-write-authority";
-import { loadVerifiedOwnerWorkspace } from "@/features/auth/verified-owner-workspace";
+import {
+  loadVerifiedOwnerWorkspace, verifySavedOwnerDefaultBranch,
+} from "@/features/auth/verified-owner-workspace";
 import { seedQaWorkspaceData } from "@/features/auth/qa-sample-seed";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -66,6 +68,17 @@ export async function seedVerifiedQaWorkspace(formData: FormData): Promise<never
   if (!qaFixtureWritesAllowedForWorkspace(owner.workspace.slug)) {
     back(slug, "not-authorized");
   }
+  // A QA email and workspace allowlist still cannot grant writes to a branch
+  // without the current owner's ACTIVE saved default-branch assignment.
+  let authorizedDefaultBranch = false;
+  try {
+    authorizedDefaultBranch = await verifySavedOwnerDefaultBranch(
+      auth, user.id, owner.workspace,
+    );
+  } catch {
+    authorizedDefaultBranch = false;
+  }
+  if (!authorizedDefaultBranch) back(slug, "not-authorized");
 
   // This resumable multi-table QA seed is not atomic. If a transport read
   // fails after any step committed, show the existing may-have-committed

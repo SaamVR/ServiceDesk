@@ -94,7 +94,7 @@ export default async function VerifiedOwnerWorkspacePage({
     : false;
   const seedNotice = claimedSeedSuccess
     ? savedSeedVerified
-      ? "Saved fictional customer, MAIN-branch property and enquiry were independently verified in this workspace."
+      ? "Saved fictional customer, default-branch property and enquiry were independently verified in this workspace."
       : "Saved QA sample records could not be verified. Check your workspace records before retrying; earlier steps may have committed."
     : ({
       "write-failed": "If you attempted QA seeding, earlier steps may have committed. Verify your saved workspace records before retrying.",

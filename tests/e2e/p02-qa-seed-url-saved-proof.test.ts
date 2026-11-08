@@ -6,7 +6,7 @@ import { QA_SEED_FIELDS, QA_SEED_LABEL, QA_SEED_SOURCE } from "../../src/feature
 import { seedVerifiedQaWorkspace } from "../../src/app/onboarding/verified/qa-seed-actions";
 
 const qaAction = vi.hoisted(() => ({
-  getUser: vi.fn(), readOwner: vi.fn(), seed: vi.fn(), from: vi.fn(),
+  getUser: vi.fn(), readOwner: vi.fn(), readDefaultBranch: vi.fn(), seed: vi.fn(), from: vi.fn(),
 }));
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({ auth: { getUser: qaAction.getUser }, from: qaAction.from }),
@@ -20,6 +20,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("../../src/features/auth/verified-owner-workspace", async (importOriginal) => ({
   ...await importOriginal<typeof import("../../src/features/auth/verified-owner-workspace")>(),
   loadVerifiedOwnerWorkspace: qaAction.readOwner,
+  verifySavedOwnerDefaultBranch: qaAction.readDefaultBranch,
 }));
 vi.mock("../../src/features/auth/qa-sample-seed", async (importOriginal) => ({
   ...await importOriginal<typeof import("../../src/features/auth/qa-sample-seed")>(),
@@ -49,7 +50,13 @@ function fixture(options: {
       id: property, workspace_id: workspace, customer_id: customer, branch_id: branch,
       label: QA_SEED_LABEL,
     }],
-    workspace_branches: [{ id: branch, workspace_id: workspace, code: "MAIN" }],
+    workspace_branches: [{
+      id: branch, workspace_id: workspace, code: "MAIN",
+      is_default: true, active: true,
+    }],
+    branch_memberships: [{
+      workspace_id: workspace, branch_id: branch, user_id: actor, status: "ACTIVE",
+    }],
     requests: [{
       id: request, workspace_id: workspace, branch_id: branch,
       customer_id: customer, property_id: property,
@@ -97,6 +104,13 @@ function fixture(options: {
             error: options.denied === table ? { code: "42501" } : null,
           };
         },
+        async maybeSingle() {
+          const result = await this.limit(2);
+          return {
+            data: result.data.length === 1 ? result.data[0] : null,
+            error: result.error || (result.data.length > 1 ? { code: "MULTIPLE" } : null),
+          };
+        },
       };
     },
   } as unknown as SupabaseClient;
@@ -108,7 +122,8 @@ describe("P02 QA saved receipt must never be supplied by ?qaSeed URL", () => {
     const f = fixture();
     expect(await verifiedSavedQaSample(f.client, actor, workspace)).toBe(true);
     expect(f.reads).toEqual([
-      "verified-user", "memberships", "customers", "properties", "workspace_branches", "requests",
+      "verified-user", "memberships", "customers", "properties", "workspace_branches",
+      "branch_memberships", "requests",
     ]);
   });
 
@@ -140,10 +155,22 @@ describe("P02 QA saved receipt must never be supplied by ?qaSeed URL", () => {
     }
   });
 
-  it("denies mismatched property, nonexistent MAIN branch or foreign enquiry", async () => {
+  it("accepts an existing owner's legitimately renamed ACTIVE default branch and assignment", async () => {
+    const f = fixture({ change: rows => {
+      rows.workspace_branches[0].code = "RENAMED_DEFAULT";
+    } });
+    expect(await verifiedSavedQaSample(f.client, actor, workspace)).toBe(true);
+    expect(f.reads).toContain("branch_memberships");
+  });
+
+  it("denies mismatched property, inactive or foreign default branch, revoked assignment and foreign enquiry", async () => {
     for (const change of [
       (r: Record<string, Row[]>) => { r.properties[0].branch_id = request; },
-      (r: Record<string, Row[]>) => { r.workspace_branches[0].code = "OTHER"; },
+      (r: Record<string, Row[]>) => { r.workspace_branches[0].is_default = false; },
+      (r: Record<string, Row[]>) => { r.workspace_branches[0].active = false; },
+      (r: Record<string, Row[]>) => { r.workspace_branches[0].workspace_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"; },
+      (r: Record<string, Row[]>) => { r.branch_memberships[0].status = "REVOKED"; },
+      (r: Record<string, Row[]>) => { r.branch_memberships[0].user_id = "77777777-7777-4777-8777-777777777777"; },
       (r: Record<string, Row[]>) => { r.requests[0].branch_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"; },
       (r: Record<string, Row[]>) => { r.requests[0].property_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"; },
       (r: Record<string, Row[]>) => { r.requests[0].structured_fields = { qa_sample_version: 1, synthetic: false }; },
@@ -155,7 +182,7 @@ describe("P02 QA saved receipt must never be supplied by ?qaSeed URL", () => {
   });
 
   it("fails closed on permission-denied or failed authenticated table reads", async () => {
-    for (const table of ["memberships", "customers", "properties", "workspace_branches", "requests"]) {
+    for (const table of ["memberships", "customers", "properties", "workspace_branches", "branch_memberships", "requests"]) {
       expect(await verifiedSavedQaSample(fixture({ denied: table }).client, actor, workspace)).toBe(false);
       expect(await verifiedSavedQaSample(fixture({ transport: table }).client, actor, workspace)).toBe(false);
     }
@@ -214,6 +241,7 @@ describe("P02 authorized QA seed action handles uncertain provider transport", (
     qaAction.readOwner.mockReset().mockResolvedValue({ok:true,workspace:{
       id:qaWorkspace,slug:qaSlug,name:"Synthetic QA Cleaning",timezone:"UTC",currency:"USD",
     }});
+    qaAction.readDefaultBranch.mockReset().mockResolvedValue(true);
     qaAction.seed.mockReset().mockResolvedValue({ok:true,reused:false,customerId:customer,requestId:request});
     qaAction.from.mockReset();
   });
@@ -233,6 +261,18 @@ describe("P02 authorized QA seed action handles uncertain provider transport", (
     expect(await submitQaSeed()).toContain("/auth/sign-in?next=");
     qaAction.getUser.mockResolvedValueOnce({data:{user:{id:actor,email:"approved@example.test",email_confirmed_at:null}},error:null});
     expect(await submitQaSeed()).toContain("qaSeed=not-authorized");
+    expect(qaAction.seed).not.toHaveBeenCalled();
+  });
+
+
+  it("refuses QA fixture writes without a verified assigned default branch", async () => {
+    qaAction.readDefaultBranch.mockResolvedValueOnce(false);
+    expect(await submitQaSeed()).toContain("qaSeed=not-authorized");
+    expect(qaAction.seed).not.toHaveBeenCalled();
+    qaAction.readDefaultBranch.mockRejectedValueOnce(Error("PRIVATE_BRANCH_RLS_TRANSPORT"));
+    const denied=await submitQaSeed();
+    expect(denied).toContain("qaSeed=not-authorized");
+    expect(denied).not.toContain("PRIVATE_BRANCH_RLS_TRANSPORT");
     expect(qaAction.seed).not.toHaveBeenCalled();
   });
 
@@ -256,5 +296,43 @@ describe("P02 authorized QA seed action handles uncertain provider transport", (
     vi.stubEnv("SERVICEDESK_QA_FIXTURE_WORKSPACE_SLUGS","other-fake-workspace");
     expect(await submitQaSeed()).toContain("qaSeed=not-authorized");
     expect(qaAction.seed).not.toHaveBeenCalled();
+  });
+});
+
+describe("P02 fictional QA seed uses active default branch instead of mutable MAIN code", () => {
+  it("reuses a renamed, ACTIVE saved default branch without rewriting existing synthetic records", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const f = fixture({ change: rows => {
+      rows.workspace_branches[0].code = "EAST_RENAMED";
+      rows.service_catalog = [];
+    } });
+    const result = await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" });
+    expect(result).toEqual({ ok: true, customerId: customer, requestId: request, reused: true });
+    expect(f.reads[0]).toBe("workspace_branches");
+    expect(f.reads).not.toContain("branch_memberships"); // The Server Action verifies assignment before calling seed.
+  });
+
+  it("refuses duplicate, inactive and foreign default-branch reads before any fictional customer write", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const cases = [
+      (rows: Record<string, Row[]>) => { rows.workspace_branches[0].is_default = false; },
+      (rows: Record<string, Row[]>) => { rows.workspace_branches[0].active = false; },
+      (rows: Record<string, Row[]>) => { rows.workspace_branches[0].workspace_id = request; },
+      (rows: Record<string, Row[]>) => {
+        rows.workspace_branches.push({ ...rows.workspace_branches[0], id: "77777777-7777-4777-8777-777777777777" });
+      },
+    ];
+    for(const change of cases) {
+      const f = fixture({ change });
+      expect(await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" }))
+        .toEqual({ ok: false, stage: "branch" });
+      expect(f.reads).toEqual(["workspace_branches"]);
+    }
   });
 });

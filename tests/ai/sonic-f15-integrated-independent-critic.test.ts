@@ -207,9 +207,9 @@ const currentRecoveryQaSource=(path:string,previous:string|undefined):string=>{
  if(typeof previous!=="string" || !/^[a-f0-9]{40}$/.test(previous))
    throw new Error("Missing reviewed recovery/QA source SHA: "+path);
  const successor=recoveryQaTransport.changedSource.find(item=>item.path===path);
- if(!successor)return previous;
+ if(!successor)return currentQaDefaultBlob(path,previous);
  expect(successor.previousBlob,path).toBe(previous);
- return successor.currentBlob;
+ return currentQaDefaultBlob(path,successor.currentBlob);
 };
 const landingBranchRaw=read("docs/delivery/sonic-p02-verified-landing-saved-branch-successor-20261108.json");
 const landingBranch=JSON.parse(landingBranchRaw.toString()) as {
@@ -226,9 +226,9 @@ const currentLandingBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing reviewed owner-landing SHA: "+path);
  const successor=landingBranch.changedSource.find(x=>x.path===path);
- if(!successor)return prior;
+ if(!successor)return currentQaDefaultBlob(path,prior);
  expect(successor.previousBlob,path).toBe(prior);
- return successor.currentBlob;
+ return currentQaDefaultBlob(path,successor.currentBlob);
 };
 const checkEmailResendRaw=read("docs/delivery/sonic-p02-check-email-resend-bounded-notice-successor-20261108.json");
 const checkEmailResend=JSON.parse(checkEmailResendRaw.toString()) as {
@@ -248,6 +248,23 @@ const currentCheckEmailBlob=(path:string,previous:string|undefined):string=>{
  if(!next)return previous;
  expect(next.previousBlob,path).toBe(previous);
  return next.currentBlob;
+};
+const qaActiveDefaultRaw=read("docs/delivery/sonic-p02-qa-active-default-renamed-branch-successor-20261109.json");
+const qaActiveDefault=JSON.parse(qaActiveDefaultRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;parentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ tests:{path:string;previous:number;current:number;added:number;scope:string};
+ immutableSources:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;
+};
+const currentQaDefaultBlob=(path:string,previous:string|undefined):string=>{
+ if(typeof previous!=="string" || !/^[a-f0-9]{40}$/.test(previous))
+   throw new Error("Missing reviewed QA default branch source SHA: "+path);
+ const successor=qaActiveDefault.changedSource.find(item=>item.path===path);
+ if(!successor)return previous;
+ expect(successor.previousBlob,path).toBe(previous);
+ return successor.currentBlob;
 };
 const resetRetry=JSON.parse(resetRetryRaw.toString()) as {
  schema:string;scope:string;
@@ -448,7 +465,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(new Set(recoveryQaTransport.changedSource.map(source=>source.path)).size).toBe(6);
   for(const source of recoveryQaTransport.changedSource){
     expect(source.path).not.toContain("..");
-    expect(gitHash(read(source.path)),source.path).toBe(source.currentBlob);
+    expect(gitHash(read(source.path)),source.path).toBe(currentQaDefaultBlob(source.path,source.currentBlob));
   }
   expect(recoveryQaTransport.regressionTests).toEqual([
     {path:"tests/e2e/p02-reset-password-session-closure.test.ts",previous:7,current:11,added:4},
@@ -478,7 +495,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(new Set(landingBranch.changedSource.map(s=>s.path)).size).toBe(4);
   for(const entry of landingBranch.changedSource){
     expect(entry.path).not.toContain("..");
-    expect(gitHash(read(entry.path)),entry.path).toBe(entry.currentBlob);
+    expect(gitHash(read(entry.path)),entry.path).toBe(currentQaDefaultBlob(entry.path,entry.currentBlob));
   }
   expect(landingBranch.testCases).toEqual({ownerReadback:{old:8,new:10},actualOwnerNavigation:{old:31,new:35}});
   expect(landingBranch.unchangedWorkflow).toEqual({path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true});
@@ -520,6 +537,53 @@ describe("F15 independent critic: no new composite, exact source and default-den
     expect(checkEmailResend.invariants).toContain(rule);
   expect(checkEmailResend.acceptance).toBe("INTEGRATED_SOURCE_ONLY_NOT_REAL_TWO_OWNER_BROWSER_JWT_RLS");
   expect(checkEmailResend.nextBatch).toBe("P02_818_REAL_OWNER_A_B_AUTH_DBA_AND_STAGING_APPROVAL");
+  // New reviewed P02 source successor: existing #915 manifests and independent
+  // historic SHA verifications remain intact; no fake connected RLS receipts.
+  expect(gitHash(checkEmailResendRaw)).toBe("711b21342218b4aa93c48d915e4fc9d2d2ebdc17");
+  expect(qaActiveDefault.schema).toBe("servicedesk.p02.qa-verified-active-default-branch-successor.v1");
+  expect(qaActiveDefault.batchId).toBe("P02-QA_RENAMED_DEFAULT_BRANCH_RLS_PROOF_AND_NO_FOREIGN_ASSIGNMENT_20261109");
+  expect(qaActiveDefault.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(qaActiveDefault.sourceOnly).toBe(true);
+  expect(qaActiveDefault.parentHead).toBe("2c845c7221d0533522ba2720fccf26921f59681d");
+  expect(qaActiveDefault.predecessor).toEqual({path:"docs/delivery/sonic-p02-check-email-resend-bounded-notice-successor-20261108.json",blob:"711b21342218b4aa93c48d915e4fc9d2d2ebdc17",unchanged:true});
+  expect(qaActiveDefault.predecessor.blob).toBe(gitHash(checkEmailResendRaw));
+  expect(qaActiveDefault.changedSource).toEqual([
+    {path:"src/features/auth/qa-sample-seed.ts",previousBlob:"f1f5a88d0b2fecee4a511f9dc906aa48578f10ed",currentBlob:"5ed2e466b5b5fa74e3baa91c03140d1958510ed2",lane:"QA_DEFAULT_BRANCH_SEED"},
+    {path:"src/features/auth/qa-sample-readback.ts",previousBlob:"736b636462305d8ba52e546b7a9fa2a95ec730d7",currentBlob:"39432b3b076939ed0f304d56e3a7fa21112c8b70",lane:"QA_INDEPENDENT_SAVED_RECEIPT"},
+    {path:"src/app/onboarding/verified/qa-seed-actions.ts",previousBlob:"132e72cd4ea64e6c89fdc8cba3c2ae1c78aa71d9",currentBlob:"5013dcd824b3dca9141162c849ebef90795671d3",lane:"OWNER_BRANCH_WRITE_GATE"},
+    {path:"src/app/onboarding/verified/page.tsx",previousBlob:"d87b1b171095e17f5799b0b77fdee2e829a76add",currentBlob:"ea3c0b9e38d2f10439c9823ff6bdb7c05701231f",lane:"QA_UI_DEFAULT_BRANCH_COPY"},
+    {path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",previousBlob:"0795016afdc513196fecb9b802ec9710a3720968",currentBlob:"f769b97c4256063ec9f4dd70cf0ebf3dd519e62b",lane:"QA_ADVERSARIAL_DEFAULT_BRANCH"}
+  ]);
+  expect(new Set(qaActiveDefault.changedSource.map(x=>x.path)).size).toBe(5);
+  for(const changed of qaActiveDefault.changedSource){
+    expect(changed.path).not.toContain("..");
+    expect(gitHash(read(changed.path)),changed.path).toBe(changed.currentBlob);
+  }
+  expect(qaActiveDefault.tests).toEqual({
+    path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+    previous:11,current:15,added:4,
+    scope:"SYNTHETIC_RLS_QA_SEED_AND_DEFAULT_BRANCH_NO_LIVE_JWT"
+  });
+  expect(qaActiveDefault.immutableSources).toEqual([
+    {path:"src/features/auth/verified-owner-workspace.ts",blob:"1eef6fb6efe364d0dd816f5f11ecb2e3a4169ddf",unchanged:true},
+    {path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true},
+    {path:"supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql",blob:"ee237941a371bf36ac39641fe8c1b65ae516ebe3",unchanged:true},
+    {path:"supabase/migrations/0065_v4_default_branch_membership_authority.sql",blob:"a1d1097c1c31ae258ec4151b7d208bb3c415c21a",unchanged:true}
+  ]);
+  for(const entry of qaActiveDefault.immutableSources){
+    expect(entry.unchanged).toBe(true);
+    expect(gitHash(read(entry.path)),entry.path).toBe(entry.blob);
+  }
+  for(const rule of [
+    "RENAME_DEFAULT_BRANCH_ALLOWED_FOR_EXISTING_OWNER",
+    "QA_SEED_ONLY_ONE_ACTIVE_DEFAULT_BRANCH",
+    "QA_SEED_REQUIRE_OWNER_ACTIVE_DEFAULT_ASSIGNMENT",
+    "QA_RECEIPT_REQUIRE_SAVED_ACTIVE_DEFAULT_AND_BRANCH_MEMBERSHIP",
+    "NO_CONNECTED_DB_AUTH_WRITE","NO_NEW_MIGRATION_OR_RELEASE_FLAG",
+    "NO_DEPLOY_OR_PROVIDER_SEND","P02_STILL_OPEN_2_OF_7","P03_STILL_QUEUED_0_OF_6"
+  ])expect(qaActiveDefault.invariants).toContain(rule);
+  expect(qaActiveDefault.acceptance).toBe("SOURCE_ONLY_PENDING_TWO_REAL_OWNER_AUTHENTICATED_JWT_RLS");
+
   for(const source of p02.changedSource){
    expect(source.path).not.toContain("..");
    const replacement=p03Currency.changedSource.find(x=>x.path===source.path);

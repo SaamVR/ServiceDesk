@@ -34,13 +34,25 @@ export async function seedQaWorkspaceData(
     return { ok: false, stage: "branch" };
   }
 
+  // The atomic owner bootstrap creates MAIN, but an existing owner can rename
+  // the default branch later. Use the single ACTIVE default branch proven by
+  // the owner readiness gate, not a mutable display code. Duplicate or
+  // unreadable defaults must never route a fictional write to another branch.
   const branch = await auth.from("workspace_branches")
-    .select("id")
+    .select("id,workspace_id,code,is_default,active")
     .eq("workspace_id", workspace.id)
-    .eq("code", "MAIN")
-    .maybeSingle();
-  const branchId = branch.data?.id;
-  if (branch.error || !isUuid(branchId)) return { ok: false, stage: "branch" };
+    .eq("is_default", true)
+    .eq("active", true)
+    .limit(2);
+  if (branch.error || !Array.isArray(branch.data) || branch.data.length !== 1)
+    return { ok: false, stage: "branch" };
+  const saved = branch.data[0];
+  const branchId = saved?.id;
+  if (!isUuid(branchId) || saved.workspace_id !== workspace.id ||
+      saved.is_default !== true || saved.active !== true ||
+      typeof saved.code !== "string" ||
+      !/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(saved.code))
+    return { ok: false, stage: "branch" };
 
   // The QA customer may be seeded before the owner configures pricing. An
   // active MOVE_OUT service is optional, but when it exists the saved request
