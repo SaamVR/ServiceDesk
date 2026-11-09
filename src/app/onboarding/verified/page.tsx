@@ -50,12 +50,21 @@ export default async function VerifiedOwnerWorkspacePage({
 
   const query = await searchParams;
   const workspaceSlug = query.workspace ?? "";
-  const result = await loadVerifiedOwnerWorkspace(auth, data.user.id, workspaceSlug);
+  // A verified Auth session is not proof of saved owner membership. A thrown
+  // workspace RLS transport read must not become an HTTP 500 or accidentally
+  // expose workspace/QA controls. Use the same bounded denial as an explicit
+  // missing or unauthorized saved owner result.
+  let result: Awaited<ReturnType<typeof loadVerifiedOwnerWorkspace>> | null = null;
+  try {
+    result = await loadVerifiedOwnerWorkspace(auth, data.user.id, workspaceSlug);
+  } catch {
+    result = null;
+  }
   // A direct or later visit to ?workspace= must not assert "workspace ready"
   // from owner membership alone. The actual saved MAIN/default branch and the
   // owner's ACTIVE branch assignment are an independent RLS-visible receipt.
   let savedDefaultBranchVerified = false;
-  if (result.ok) {
+  if (result?.ok) {
     try {
       savedDefaultBranchVerified = await verifySavedOwnerDefaultBranch(
         auth, data.user.id, result.workspace,
@@ -65,7 +74,7 @@ export default async function VerifiedOwnerWorkspacePage({
       savedDefaultBranchVerified = false;
     }
   }
-  if (!result.ok || !savedDefaultBranchVerified) {
+  if (!result?.ok || !savedDefaultBranchVerified) {
     return <RegistrationShell
       eyebrow="Workspace access" title="We could not verify this workspace"
       description="Only a verified owner may open this onboarding confirmation."

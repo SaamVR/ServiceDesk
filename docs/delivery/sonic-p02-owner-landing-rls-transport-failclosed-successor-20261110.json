@@ -1,0 +1,61 @@
+{
+  "schema": "servicedesk.p02.owner-landing-rls-transport-fail-closed.v1",
+  "batchId": "P02_VERIFIED_OWNER_PAGE_NO_HTTP_500_ON_THROWN_OWNER_LOOKUP_20261110",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "reviewedParentHead": "c00a9992a38bfd238075202d42cec302dc268c61",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-qa-fictional-contactless-customer-property-successor-20261109.json",
+    "blob": "f79cd1810d89fbce5427baf5db7cd6fbb64396fe",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/onboarding/verified/page.tsx",
+      "previousBlob": "ea3c0b9e38d2f10439c9823ff6bdb7c05701231f",
+      "currentBlob": "f7c2fcee7d6f6d1c95c445ee40b7f78d9037081c",
+      "lane": "VERIFIED_OWNER_RLS_TRANSPORT_DENIAL"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "23aa52648145f76b0e5fd9adab3ef45f5b2b1249",
+      "currentBlob": "cafb82ecfc548c4b649d02a023a295b2a10bad34",
+      "lane": "ACTUAL_OWNER_LANDING_ADVERSARIAL_TEST"
+    }
+  ],
+  "tests": {
+    "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+    "previous": 37,
+    "current": 39,
+    "added": 2,
+    "scope": "MOCKED_SSR_OWNER_RLS_AND_ACTUAL_JSX"
+  },
+  "unchangedSources": [
+    {
+      "path": "src/features/auth/verified-owner-workspace.ts",
+      "blob": "221b0f52e75d2231900767f91806b3ea874f32d7",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/onboarding/verified/qa-seed-actions.ts",
+      "blob": "047dc7ed709946c41065027ac7cf18db4b284131",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+      "unchanged": true
+    }
+  ],
+  "vetoes": [
+    "NO_OWNER_DETAILS_OR_QA_SEED_ON_THROWN_RLS_LOOKUP",
+    "NO_HTTP_500_OR_INTERNAL_RLS_ERROR_LEAK",
+    "NO_FALSE_SAVED_BRANCH_READY_ON_MISSING_OWNER",
+    "NO_GUESSING_WORKSPACE_FROM_QUERY_PARAMS",
+    "NO_AUTH_DB_USER_OR_PROVIDER_WRITES",
+    "NO_RELEASE_FLAGS_OR_DEPLOYMENTS_OR_PROTECTED_MERGE",
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6"
+  ],
+  "acceptance": "SOURCE_ONLY_PENDING_REAL_TWO_OWNER_AUTHENTICATED_JWT_RLS"
+}

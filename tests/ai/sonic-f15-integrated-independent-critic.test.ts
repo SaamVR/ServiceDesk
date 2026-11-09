@@ -317,13 +317,13 @@ const currentQaContactlessBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
   throw Error("Missing reviewed QA contactless source SHA: "+path);
  const delta=qaContactless.changedSource.find(x=>x.path===path);
- if(!delta)return prior;
- if(prior===delta.currentBlob)return prior;
+ if(!delta)return currentOwnerLandingRlsBlob(path,prior);
+ if(prior===delta.currentBlob)return currentOwnerLandingRlsBlob(path,prior);
  // An older historical source lock may precede multiple reviewed successors.
  // Never override its predecessor until the exact previous SHA is reached.
- if(prior!==delta.previousBlob)return prior;
+ if(prior!==delta.previousBlob)return currentOwnerLandingRlsBlob(path,prior);
  expect(delta.previousBlob,path).toBe(prior);
- return delta.currentBlob;
+ return currentOwnerLandingRlsBlob(path,delta.currentBlob);
 };
 const currentQaPropertyPreflightBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
@@ -377,16 +377,37 @@ const ownerFormTree=JSON.parse(ownerFormTreeRaw.toString()) as {
  unchangedWorkflow:{path:string;blob:string;unchanged:boolean};
  invariants:string[];acceptance:string;
 };
+const ownerLandingRlsRaw=read("docs/delivery/sonic-p02-owner-landing-rls-transport-failclosed-successor-20261110.json");
+const ownerLandingRls=JSON.parse(ownerLandingRlsRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ tests:{path:string;previous:number;current:number;added:number;scope:string};
+ unchangedSources:Array<{path:string;blob:string;unchanged:boolean}>;
+ vetoes:string[];acceptance:string;
+};
+const currentOwnerLandingRlsBlob=(path:string,previous:string|undefined):string=>{
+ if(typeof previous!=="string"||!/^[a-f0-9]{40}$/.test(previous))
+   throw Error("Missing reviewed owner-landing source SHA: "+path);
+ const successor=ownerLandingRls.changedSource.find(x=>x.path===path);
+ if(!successor)return previous;
+ if(previous===successor.currentBlob)return previous;
+ // The older exact hash chain must reach this successor's own predecessor;
+ // do not claim a new SHA if a legacy parent is unresolved.
+ if(previous!==successor.previousBlob)return previous;
+ expect(successor.previousBlob,path).toBe(previous);
+ return successor.currentBlob;
+};
 const currentOwnerFormTreeBlob=(path:string,previous:string|undefined):string=>{
  if(typeof previous!=="string"||!/^[a-f0-9]{40}$/.test(previous))
   throw Error("Missing reviewed actual React-tree QA SHA: "+path);
  const correction=ownerFormTree.changedSource.find(entry=>entry.path===path);
- if(!correction)return previous;
- if(previous===correction.currentBlob)return previous;
+ if(!correction)return currentOwnerLandingRlsBlob(path,previous);
+ if(previous===correction.currentBlob)return currentOwnerLandingRlsBlob(path,previous);
  // Historical lineage may not yet have reached this approved test witness.
- if(previous!==correction.previousBlob)return previous;
+ if(previous!==correction.previousBlob)return currentOwnerLandingRlsBlob(path,previous);
  expect(correction.previousBlob,path).toBe(previous);
- return correction.currentBlob;
+ return currentOwnerLandingRlsBlob(path,correction.currentBlob);
 };
 const currentOwnerFormSafetyBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
@@ -417,9 +438,9 @@ const currentBranchAuditBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string" || !/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing reviewed two-owner branch audit ancestor "+path);
  const next=branchAudit.changedSource.find(x=>x.path===path);
- if(!next)return prior;
+ if(!next)return currentOwnerLandingRlsBlob(path,prior);
  expect(next.previousBlob,path).toBe(prior);
- return next.currentBlob;
+ return currentOwnerLandingRlsBlob(path,next.currentBlob);
 };
 const p02NodeGateRaw=read("docs/delivery/sonic-p02-node-adversarial-gate-successor-20261109.json");
 const p02NodeGate=JSON.parse(p02NodeGateRaw.toString()) as {
@@ -837,7 +858,8 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(ownerFormTree.changedSource).toEqual([
     {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"cf9f60ffc6003ba65afd42269504218af5922a9c",currentBlob:"23aa52648145f76b0e5fd9adab3ef45f5b2b1249",lane:"ACTUAL_REACT_ELEMENT_QA_WITNESS"}
   ]);
-  expect(gitHash(read(ownerFormTree.changedSource[0].path))).toBe(ownerFormTree.changedSource[0].currentBlob);
+  expect(gitHash(read(ownerFormTree.changedSource[0].path)))
+    .toBe(currentOwnerLandingRlsBlob(ownerFormTree.changedSource[0].path,ownerFormTree.changedSource[0].currentBlob));
   expect(ownerFormTree.testCases).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:37,current:37,added:0});
   expect(ownerFormTree.unchangedApplicationSource).toEqual([
     {path:"src/app/auth/create-workspace/actions.ts",blob:"37871b966731acf08a65f9395577eb356c5177e5",unchanged:true},
@@ -1053,6 +1075,49 @@ describe("F15 independent critic: no new composite, exact source and default-den
     "P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"
   ])expect(qaContactless.invariants).toContain(invariant);
   expect(qaContactless.acceptance).toBe("SOURCE_ONLY_PENDING_OWNER_APPROVED_JWT_BROWSER_RLS");
+  // Review an independent owner-landing RLS failure boundary. All older blob
+  // manifests and permanent release gates remain byte-identical.
+  expect(gitHash(qaContactlessRaw)).toBe("f79cd1810d89fbce5427baf5db7cd6fbb64396fe");
+  expect(ownerLandingRls.schema).toBe("servicedesk.p02.owner-landing-rls-transport-fail-closed.v1");
+  expect(ownerLandingRls.batchId).toBe("P02_VERIFIED_OWNER_PAGE_NO_HTTP_500_ON_THROWN_OWNER_LOOKUP_20261110");
+  expect(ownerLandingRls.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(ownerLandingRls.sourceOnly).toBe(true);
+  expect(ownerLandingRls.reviewedParentHead).toBe("c00a9992a38bfd238075202d42cec302dc268c61");
+  expect(ownerLandingRls.predecessor).toEqual({path:"docs/delivery/sonic-p02-qa-fictional-contactless-customer-property-successor-20261109.json",blob:"f79cd1810d89fbce5427baf5db7cd6fbb64396fe",unchanged:true});
+  expect(ownerLandingRls.predecessor.blob).toBe(gitHash(qaContactlessRaw));
+  expect(ownerLandingRls.changedSource).toEqual([
+    {path:"src/app/onboarding/verified/page.tsx",previousBlob:"ea3c0b9e38d2f10439c9823ff6bdb7c05701231f",currentBlob:"f7c2fcee7d6f6d1c95c445ee40b7f78d9037081c",lane:"VERIFIED_OWNER_RLS_TRANSPORT_DENIAL"},
+    {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"23aa52648145f76b0e5fd9adab3ef45f5b2b1249",currentBlob:"cafb82ecfc548c4b649d02a023a295b2a10bad34",lane:"ACTUAL_OWNER_LANDING_ADVERSARIAL_TEST"}
+  ]);
+  expect(new Set(ownerLandingRls.changedSource.map(x=>x.path)).size).toBe(2);
+  for(const changed of ownerLandingRls.changedSource){
+    expect(changed.path).not.toContain("..");
+    expect(gitHash(read(changed.path)),changed.path).toBe(changed.currentBlob);
+  }
+  expect(ownerLandingRls.tests).toEqual({
+    path:"tests/e2e/p02-workspace-error-origin.test.ts",
+    previous:37,current:39,added:2,scope:"MOCKED_SSR_OWNER_RLS_AND_ACTUAL_JSX"
+  });
+  expect(ownerLandingRls.unchangedSources).toEqual([
+    {path:"src/features/auth/verified-owner-workspace.ts",blob:"221b0f52e75d2231900767f91806b3ea874f32d7",unchanged:true},
+    {path:"src/app/onboarding/verified/qa-seed-actions.ts",blob:"047dc7ed709946c41065027ac7cf18db4b284131",unchanged:true},
+    {path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true}
+  ]);
+  for(const immutable of ownerLandingRls.unchangedSources){
+    expect(immutable.unchanged).toBe(true);
+    expect(gitHash(read(immutable.path)),immutable.path).toBe(immutable.blob);
+  }
+  for(const veto of [
+    "NO_OWNER_DETAILS_OR_QA_SEED_ON_THROWN_RLS_LOOKUP",
+    "NO_HTTP_500_OR_INTERNAL_RLS_ERROR_LEAK",
+    "NO_FALSE_SAVED_BRANCH_READY_ON_MISSING_OWNER",
+    "NO_GUESSING_WORKSPACE_FROM_QUERY_PARAMS",
+    "NO_AUTH_DB_USER_OR_PROVIDER_WRITES",
+    "NO_RELEASE_FLAGS_OR_DEPLOYMENTS_OR_PROTECTED_MERGE",
+    "P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
+    expect(ownerLandingRls.vetoes).toContain(veto);
+  expect(ownerLandingRls.acceptance).toBe("SOURCE_ONLY_PENDING_REAL_TWO_OWNER_AUTHENTICATED_JWT_RLS");
+
 
 
 

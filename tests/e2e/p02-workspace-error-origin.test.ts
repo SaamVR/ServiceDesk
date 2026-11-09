@@ -398,6 +398,30 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
     expect(ownerNavigation.membership).not.toHaveBeenCalled();
   });
 
+  it("fails closed on a thrown saved owner RLS read, without a raw 500 or misleading QA success", async () => {
+    ownerLandingReadback.verifiedOwner.mockRejectedValueOnce(
+      Error("PRIVATE_OWNER_TENANT_TRANSPORT_TOKEN"),
+    );
+    const page = await VerifiedOwnerWorkspacePage({
+      searchParams: Promise.resolve({ workspace: "synthetic-cleaning", qaSeed: "created" }),
+    });
+    expect(page.props.title).toBe("We could not verify this workspace");
+    expect(page.props.title).not.toContain("PRIVATE_OWNER_TENANT_TRANSPORT_TOKEN");
+    expect(ownerLandingReadback.savedDefaultBranch).not.toHaveBeenCalled();
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("denies a partial or unavailable owner result before branch proof or QA success", async () => {
+    for (const partial of [null, { ok: false, reason: "QUERY_FAILED" }]) {
+      ownerLandingReadback.verifiedOwner.mockResolvedValueOnce(partial);
+      const page = await VerifiedOwnerWorkspacePage({
+        searchParams: Promise.resolve({ workspace: "synthetic-cleaning", qaSeed: "already-exists" }),
+      });
+      expect(page.props.title).toBe("We could not verify this workspace");
+      expect(ownerLandingReadback.savedDefaultBranch).not.toHaveBeenCalled();
+    }
+  });
+
   it("denies the actual verified-owner landing for an owner without independently saved branch proof", async () => {
     ownerLandingReadback.savedDefaultBranch.mockResolvedValueOnce(false);
     const page = await VerifiedOwnerWorkspacePage({
