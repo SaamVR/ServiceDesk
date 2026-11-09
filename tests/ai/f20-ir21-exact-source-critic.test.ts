@@ -232,6 +232,10 @@ const currentLandingBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing reviewed owner-landing SHA: "+path);
  const successor=landingBranch.changedSource.find(x=>x.path===path);
+ // Do not apply the landing predecessor after a reviewed later complete
+ // source successor was already checked by another historical reader.
+ if(ownerLandingRls.changedSource.some(item=>item.path===path && item.currentBlob===prior))
+   return prior;
  // A QA test may have an earlier recovery successor not yet traversed.
  // Resolve the new default-branch correction here only for the owner landing;
  // the later recovery reader applies it after its own exact previous SHA.
@@ -274,6 +278,11 @@ const currentQaDefaultBlob=(path:string,previous:string|undefined):string=>{
  if(typeof previous!=="string" || !/^[a-f0-9]{40}$/.test(previous))
    throw new Error("Missing reviewed QA default branch source SHA: "+path);
  const successor=qaActiveDefault.changedSource.find(item=>item.path===path);
+ // A newer independently pinned owner-landing source may already have been
+ // composed by an earlier historical reader. Its exact current blob is
+ // separately checked below; never route it back to this older predecessor.
+ if(ownerLandingRls.changedSource.some(item=>item.path===path && item.currentBlob===previous))
+   return previous;
  if(!successor)return previous;
  // Multiple independent historical critics may compose the same exact
  // successor. If the earlier lineage already resolved to this pin, do not
