@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { QA_SEED_FIELDS, QA_SEED_LABEL, QA_SEED_SOURCE } from "./qa-sample-seed";
+import {
+  QA_SEED_CUSTOMER, QA_SEED_FIELDS, QA_SEED_LABEL, QA_SEED_PROPERTY,
+  QA_SEED_SOURCE,
+} from "./qa-sample-seed";
 
 const uuid = (value: unknown): value is string =>
   typeof value === "string" &&
@@ -14,7 +17,7 @@ function onlyRow(value: unknown): Record<string, unknown> | null {
 
 /**
  * A ?qaSeed=created URL flag cannot authenticate a database write. Verify
- * the exact synthetic customer, property, MAIN branch and enquiry through
+ * the exact synthetic customer, property, active default branch and enquiry through
  * the SAME signed-in, RLS-limited Supabase client. No writes, service-role
  * key, provider sends, caller-chosen actor or cross-tenant fallback.
  */
@@ -39,22 +42,35 @@ export async function verifiedSavedQaSample(
         member.role !== "OWNER" || member.status !== "ACTIVE") return false;
 
     const customers = await auth.from("customers")
-      .select("id,workspace_id,lead_source")
+      .select("id,workspace_id,auth_user_id,display_name,lead_source,notes,archived_at")
       .eq("workspace_id", workspaceId).eq("lead_source", QA_SEED_SOURCE).limit(2);
     const customer = !customers.error && onlyRow(customers.data);
     if (!customer || !uuid(customer.id) ||
         customer.workspace_id !== workspaceId ||
-        customer.lead_source !== QA_SEED_SOURCE) return false;
+        customer.lead_source !== QA_SEED_SOURCE ||
+        customer.auth_user_id !== null || customer.archived_at !== null ||
+        customer.display_name !== QA_SEED_CUSTOMER.display_name ||
+        customer.notes !== QA_SEED_CUSTOMER.notes) return false;
+
+    const contacts = await auth.from("customer_contacts")
+      .select("id")
+      .eq("workspace_id", workspaceId).eq("customer_id", customer.id).limit(1);
+    if (contacts.error || !Array.isArray(contacts.data) ||
+        contacts.data.length !== 0) return false;
 
     const properties = await auth.from("properties")
-      .select("id,workspace_id,customer_id,branch_id,label")
+      .select("id,workspace_id,customer_id,branch_id,label,address_line1,city,postal_code,country_code,archived_at")
       .eq("workspace_id", workspaceId).eq("customer_id", customer.id)
       .eq("label", QA_SEED_LABEL).limit(2);
     const property = !properties.error && onlyRow(properties.data);
     if (!property || !uuid(property.id) || !uuid(property.branch_id) ||
         property.workspace_id !== workspaceId ||
         property.customer_id !== customer.id ||
-        property.label !== QA_SEED_LABEL) return false;
+        property.label !== QA_SEED_LABEL || property.archived_at !== null ||
+        property.address_line1 !== QA_SEED_PROPERTY.address_line1 ||
+        property.city !== QA_SEED_PROPERTY.city ||
+        property.postal_code !== QA_SEED_PROPERTY.postal_code ||
+        property.country_code !== QA_SEED_PROPERTY.country_code) return false;
 
     // A renamed existing default branch is valid, but an inactive, missing or
     // foreign branch is never proof of a saved fictional QA enquiry.

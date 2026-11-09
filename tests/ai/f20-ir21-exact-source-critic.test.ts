@@ -310,17 +310,38 @@ const qaPropertyPreflight=JSON.parse(qaPropertyPreflightRaw.toString()) as {
  unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
  guards:string[];acceptance:string;
 };
+const qaContactlessRaw=read("docs/delivery/sonic-p02-qa-fictional-contactless-customer-property-successor-20261109.json");
+const qaContactless=JSON.parse(qaContactlessRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ tests:{path:string;previous:number;current:number;added:number;scope:string};
+ unchangedProofs:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;
+};
+const currentQaContactlessBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+  throw Error("Missing reviewed QA contactless source SHA: "+path);
+ const delta=qaContactless.changedSource.find(x=>x.path===path);
+ if(!delta)return prior;
+ if(prior===delta.currentBlob)return prior;
+ // An older historical source lock may precede multiple reviewed successors.
+ // Never override its predecessor until the exact previous SHA is reached.
+ if(prior!==delta.previousBlob)return prior;
+ expect(delta.previousBlob,path).toBe(prior);
+ return delta.currentBlob;
+};
 const currentQaPropertyPreflightBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
   throw Error("Missing reviewed QA property source SHA: "+path);
  const successor=qaPropertyPreflight.changedSource.find(item=>item.path===path);
- if(!successor)return prior;
- if(prior===successor.currentBlob)return prior;
+ if(!successor)return currentQaContactlessBlob(path,prior);
+ if(prior===successor.currentBlob)return currentQaContactlessBlob(path,prior);
  // The independently reviewed prior synthetic-marker successor must have
  // resolved before applying this later exact saved-property improvement.
- if(prior!==successor.previousBlob)return prior;
+ if(prior!==successor.previousBlob)return currentQaContactlessBlob(path,prior);
  expect(successor.previousBlob,path).toBe(prior);
- return successor.currentBlob;
+ return currentQaContactlessBlob(path,successor.currentBlob);
 };
 const currentQaNoProviderBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
@@ -935,7 +956,8 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   ]);
   for(const item of qaNoProvider.unchangedSource){
     expect(item.unchanged).toBe(true);
-    expect(hash(read(item.path)),item.path).toBe(item.blob);
+    expect(hash(read(item.path)),item.path)
+      .toBe(currentQaContactlessBlob(item.path,item.blob));
   }
   for(const guard of ["QA_VERSION_ALONE_NEVER_AUTHORIZES_REQUEST_REUSE",
     "REQUEST_REUSE_REQUIRES_SYNTHETIC_TRUE_PROVIDER_CONNECTED_FALSE",
@@ -964,7 +986,8 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(new Set(qaPropertyPreflight.changedSource.map(item=>item.path)).size).toBe(2);
   for(const item of qaPropertyPreflight.changedSource){
     expect(item.path).not.toContain("..");
-    expect(hash(read(item.path)),item.path).toBe(item.currentBlob);
+    expect(hash(read(item.path)),item.path)
+      .toBe(currentQaContactlessBlob(item.path,item.currentBlob));
   }
   expect(qaPropertyPreflight.regressionTests).toEqual({
     path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
@@ -977,7 +1000,8 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   ]);
   for(const item of qaPropertyPreflight.unchangedSource){
     expect(item.unchanged).toBe(true);
-    expect(hash(read(item.path)),item.path).toBe(item.blob);
+    expect(hash(read(item.path)),item.path)
+      .toBe(currentQaContactlessBlob(item.path,item.blob));
   }
   for(const guard of [
    "EXISTING_QA_PROPERTY_BRANCH_SAVED_ID_EQUALS_DEFAULT_BEFORE_REQUEST_UPDATE",
@@ -989,6 +1013,53 @@ describe("IR21 exact owner finance + retention source integration",()=>{
    "P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
     expect(qaPropertyPreflight.guards).toContain(guard);
   expect(qaPropertyPreflight.acceptance).toBe("SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_BROWSER_JWT_RLS");
+  // Source-only critical safety improvement: no QA-labelled customer with an
+  // Auth identity, contact info, real-world address, or archived state may
+  // receive newly associated fictional requests or a positive QA receipt.
+  expect(hash(qaPropertyPreflightRaw)).toBe("3d55f7b6259f05d68ae4345bc2dbd7cdc6ffe471");
+  expect(qaContactless.schema).toBe("servicedesk.p02.qa-contactless-fictional-customer-property.v1");
+  expect(qaContactless.batchId).toBe("P02-QA_REPURPOSED_CONTACTABLE_CUSTOMER_OR_REAL_ADDRESS_NO_REUSE_20261109");
+  expect(qaContactless.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(qaContactless.sourceOnly).toBe(true);
+  expect(qaContactless.reviewedParentHead).toBe("acec5c4a226da8bcdc3cda31ab2cdee10936804c");
+  expect(qaContactless.predecessor).toEqual({path:"docs/delivery/sonic-p02-qa-saved-property-branch-before-request-successor-20261109.json",blob:"3d55f7b6259f05d68ae4345bc2dbd7cdc6ffe471",unchanged:true});
+  expect(qaContactless.predecessor.blob).toBe(hash(qaPropertyPreflightRaw));
+  expect(qaContactless.changedSource).toEqual([
+    {path:"src/features/auth/qa-sample-seed.ts",previousBlob:"4a9a8f4ab2c8af8b12f6c54df58c598944ffd17c",currentBlob:"9bcc6b03c94c9655ac6dcebd145461d52e8de416",lane:"SAVED_CUSTOMER_AND_PROPERTY_UNCONTACTABLE_REUSE"},
+    {path:"src/features/auth/qa-sample-readback.ts",previousBlob:"39432b3b076939ed0f304d56e3a7fa21112c8b70",currentBlob:"6f5ebf53d3dd58731db78852f1a393fe266177bc",lane:"INDEPENDENT_FICTIONAL_RECEIPT"},
+    {path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",previousBlob:"b9119f1f911def6021a1be14857ed21e3b36edfe",currentBlob:"cd6184c36e4a9643b7441ca370623c544eb2ece8",lane:"CONTACT_ARCHIVED_REAL_CUSTOMER_PROPERTY_ADVERSARIAL"}
+  ]);
+  expect(new Set(qaContactless.changedSource.map(x=>x.path)).size).toBe(3);
+  for(const record of qaContactless.changedSource){
+    expect(record.path).not.toContain("..");
+    expect(hash(read(record.path)),record.path).toBe(record.currentBlob);
+  }
+  expect(qaContactless.tests).toEqual({
+    path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+    previous:22,current:25,added:3,scope:"SYNTHETIC_SSR_RLS_NO_LIVE_OWNER_JWT"
+  });
+  expect(qaContactless.unchangedProofs).toEqual([
+    {path:"src/app/onboarding/verified/qa-seed-actions.ts",blob:"047dc7ed709946c41065027ac7cf18db4b284131",unchanged:true},
+    {path:"supabase/migrations/0001_core.sql",blob:"e9385c0fc97c812de1d1e3eb4dfea94d2338fbe5",unchanged:true},
+    {path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true}
+  ]);
+  for(const immutable of qaContactless.unchangedProofs){
+    expect(immutable.unchanged).toBe(true);
+    expect(hash(read(immutable.path)),immutable.path).toBe(immutable.blob);
+  }
+  for(const invariant of [
+    "QA_REUSED_CUSTOMER_EXACT_FICTIONAL_NAME_NOTES_NO_AUTH_LINK_NOT_ARCHIVED",
+    "QA_CUSTOMER_CONTACTS_MUST_BE_ZERO",
+    "QA_REUSED_PROPERTY_EXACT_FICTIONAL_ADDRESS_NOT_ARCHIVED",
+    "NO_REQUEST_MUTATION_FOR_REPURPOSED_CUSTOMER_OR_PROPERTY",
+    "SAVED_SAMPLE_RECEIPT_RECHECKS_IDENTITY_AND_CONTACTS",
+    "NO_SERVICE_ROLE_OR_CONNECTED_DB_AUTH_WRITE",
+    "NO_PROVIDER_CUSTOMER_CONTACT_OR_PAYMENT",
+    "NO_SQL_MIGRATION_OR_DEPLOY_OR_PROTECTED_MERGE",
+    "P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"
+  ])expect(qaContactless.invariants).toContain(invariant);
+  expect(qaContactless.acceptance).toBe("SOURCE_ONLY_PENDING_OWNER_APPROVED_JWT_BROWSER_RLS");
+
 
 
   expect(branchAudit.businessScenario).toContain("exactly one saved owner branch assignment");

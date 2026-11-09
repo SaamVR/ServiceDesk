@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifiedSavedQaSample } from "../../src/features/auth/qa-sample-readback";
-import { QA_SEED_FIELDS, QA_SEED_LABEL, QA_SEED_SOURCE } from "../../src/features/auth/qa-sample-seed";
+import {
+  QA_SEED_CUSTOMER, QA_SEED_FIELDS, QA_SEED_LABEL, QA_SEED_PROPERTY, QA_SEED_SOURCE,
+} from "../../src/features/auth/qa-sample-seed";
 import { seedVerifiedQaWorkspace } from "../../src/app/onboarding/verified/qa-seed-actions";
 
 const qaAction = vi.hoisted(() => ({
@@ -47,10 +49,14 @@ function fixture(options: {
   const writes: string[] = [];
   const rows: Record<string, Row[]> = {
     memberships: [{ workspace_id: workspace, user_id: actor, role: "OWNER", status: "ACTIVE" }],
-    customers: [{ id: customer, workspace_id: workspace, lead_source: QA_SEED_SOURCE }],
+    customers: [{
+      id: customer, workspace_id: workspace, lead_source: QA_SEED_SOURCE,
+      auth_user_id: null, archived_at: null, ...QA_SEED_CUSTOMER,
+    }],
+    customer_contacts: [],
     properties: [{
       id: property, workspace_id: workspace, customer_id: customer, branch_id: branch,
-      label: QA_SEED_LABEL,
+      label: QA_SEED_LABEL, archived_at: null, ...QA_SEED_PROPERTY,
     }],
     workspace_branches: [{
       id: branch, workspace_id: workspace, code: "MAIN",
@@ -99,7 +105,7 @@ function fixture(options: {
           json[key] = value; return this;
         },
         async limit(size: number) {
-          expect(size).toBe(2);
+          expect(size).toBe(table === "customer_contacts" ? 1 : 2);
           if (options.transport === table) throw Error("private transport unavailable");
           const found = (rows[table] ?? []).filter(row =>
             Object.entries(equal).every(([k, v]) => row[k] === v) &&
@@ -136,8 +142,8 @@ describe("P02 QA saved receipt must never be supplied by ?qaSeed URL", () => {
     const f = fixture();
     expect(await verifiedSavedQaSample(f.client, actor, workspace)).toBe(true);
     expect(f.reads).toEqual([
-      "verified-user", "memberships", "customers", "properties", "workspace_branches",
-      "branch_memberships", "requests",
+      "verified-user", "memberships", "customers", "customer_contacts",
+      "properties", "workspace_branches", "branch_memberships", "requests",
     ]);
   });
 
@@ -196,7 +202,7 @@ describe("P02 QA saved receipt must never be supplied by ?qaSeed URL", () => {
   });
 
   it("fails closed on permission-denied or failed authenticated table reads", async () => {
-    for (const table of ["memberships", "customers", "properties", "workspace_branches", "branch_memberships", "requests"]) {
+    for (const table of ["memberships", "customers", "customer_contacts", "properties", "workspace_branches", "branch_memberships", "requests"]) {
       expect(await verifiedSavedQaSample(fixture({ denied: table }).client, actor, workspace)).toBe(false);
       expect(await verifiedSavedQaSample(fixture({ transport: table }).client, actor, workspace)).toBe(false);
     }
@@ -358,6 +364,65 @@ describe("P02 fictional QA seed uses active default branch instead of mutable MA
     expect(result).toEqual({ ok: true, customerId: customer, requestId: request, reused: true });
     expect(f.reads[0]).toBe("workspace_branches");
     expect(f.reads).not.toContain("branch_memberships"); // The Server Action verifies assignment before calling seed.
+  });
+
+
+  it("rejects a repurposed contactable or authenticated QA-labeled customer before request writes", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    for (const change of [
+      (rows: Record<string, Row[]>) => { rows.customers[0].display_name = "Real Customer"; },
+      (rows: Record<string, Row[]>) => { rows.customers[0].notes = "Real customer details"; },
+      (rows: Record<string, Row[]>) => { rows.customers[0].auth_user_id = actor; },
+      (rows: Record<string, Row[]>) => { rows.customers[0].archived_at = "2026-11-09T00:00:00Z"; },
+      (rows: Record<string, Row[]>) => { rows.customer_contacts.push({
+        id: request, workspace_id: workspace, customer_id: customer,
+        kind: "EMAIL", value: "test@example.test",
+      }); },
+    ]) {
+      const f = fixture({change});
+      expect(await actualSeed(f.client,{id:workspace,slug:"fictional-qa-cleaning"}))
+        .toEqual({ok:false,stage:"customer"});
+      expect(f.reads).not.toContain("requests");
+      expect(f.writes).toEqual([]);
+    }
+  });
+
+  it("rejects an altered or archived QA-labeled property before an existing request amendment", async () => {
+    const {seedQaWorkspaceData: actualSeed} =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    for (const change of [
+      (rows: Record<string, Row[]>) => {rows.properties[0].address_line1="Real residential address";},
+      (rows: Record<string, Row[]>) => {rows.properties[0].city="Chattogram";},
+      (rows: Record<string, Row[]>) => {rows.properties[0].archived_at="2026-11-09T00:00:00Z";},
+    ]) {
+      const f=fixture({change});
+      expect(await actualSeed(f.client,{id:workspace,slug:"fictional-qa-cleaning"}))
+        .toEqual({ok:false,stage:"property"});
+      expect(f.reads).not.toContain("requests");
+      expect(f.writes).toEqual([]);
+    }
+  });
+
+  it("does not certify a fictional saved receipt for repurposed customers, contacts, or real addresses", async () => {
+    for (const change of [
+      (rows: Record<string, Row[]>) => {rows.customers[0].display_name="Real Person";},
+      (rows: Record<string, Row[]>) => {rows.customers[0].notes="Not synthetic";},
+      (rows: Record<string, Row[]>) => {rows.customers[0].auth_user_id=actor;},
+      (rows: Record<string, Row[]>) => {rows.customer_contacts.push({
+        id:request, workspace_id:workspace,customer_id:customer,
+        kind:"PHONE",value:"+15555550101",
+      });},
+      (rows: Record<string, Row[]>) => {rows.properties[0].address_line1="Real Property";},
+    ]) {
+      const f=fixture({change});
+      expect(await verifiedSavedQaSample(f.client,actor,workspace)).toBe(false);
+      expect(f.reads).not.toContain("requests");
+    }
   });
 
   it("refuses a version-tagged request that is not explicitly synthetic and disconnected", async () => {
