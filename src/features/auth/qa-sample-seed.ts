@@ -182,7 +182,7 @@ export async function seedQaWorkspaceData(
   if (!isUuid(propertyId)) return { ok: false, stage: "property" };
 
   const existingRequests = await auth.from("requests")
-    .select("id,service_id,branch_id,structured_fields")
+    .select("id,service_id,branch_id,status,structured_fields")
     .eq("workspace_id", workspace.id)
     .eq("customer_id", customerId)
     .eq("property_id", propertyId)
@@ -209,6 +209,11 @@ export async function seedQaWorkspaceData(
       // Do not overwrite it with a different service when a QA seed is retried.
       return { ok: false, stage: "request" };
     }
+    // A synthetic request may still have entered a real owner workflow.
+    // Never retroactively assign a service to one that is being qualified,
+    // quoted, booked, lost, or closed, even with untouched QA markers.
+    if (priorRequest?.status !== "NEW")
+      return { ok: false, stage: "request" };
     const amended = await auth.from("requests")
       .update({ service_id: configuredServiceId })
       .eq("id", requestId)
@@ -216,6 +221,9 @@ export async function seedQaWorkspaceData(
       .eq("customer_id", customerId)
       .eq("property_id", propertyId)
       .eq("branch_id", branchId)
+      // Status is a mutable business decision. Protect the UPDATE at the DB
+      // boundary too, not only the preceding read (TOCTOU).
+      .eq("status", "NEW")
       // Protect the UPDATE itself against a concurrently repurposed request:
       // a pre-write synthetic check alone is not an atomic write predicate.
       .contains("structured_fields", {
@@ -223,11 +231,12 @@ export async function seedQaWorkspaceData(
         synthetic: true, provider_connected: false,
       })
       .is("service_id", null)
-      .select("id,service_id,branch_id,structured_fields")
+      .select("id,service_id,branch_id,status,structured_fields")
       .maybeSingle();
     if (amended.error || amended.data?.id !== requestId ||
         amended.data?.service_id !== configuredServiceId ||
         amended.data?.branch_id !== branchId ||
+        amended.data?.status !== "NEW" ||
         !isVerifiedSyntheticRequest(amended.data?.structured_fields)) {
       return { ok: false, stage: "request" };
     }

@@ -68,6 +68,7 @@ function fixture(options: {
     requests: [{
       id: request, workspace_id: workspace, branch_id: branch,
       customer_id: customer, property_id: property,
+      status: "NEW", service_id: null,
       structured_fields: { ...QA_SEED_FIELDS },
     }],
   };
@@ -509,6 +510,86 @@ describe("P02 fictional QA seed uses active default branch instead of mutable MA
     expect(f.writes).toEqual([]);
   });
 
+
+  it("adds the configured service to a genuine NEW fictional enquiry exactly once", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const savedService = "77777777-7777-4777-8777-777777777777";
+    const f = fixture({ change: rows => {
+      rows.service_catalog = [{
+        id: savedService, workspace_id: workspace, code: "MOVE_OUT", active: true,
+      }];
+      rows.requests[0].service_id = null;
+      rows.requests[0].status = "NEW";
+    } });
+    expect(await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" }))
+      .toEqual({ ok: true, customerId: customer, requestId: request, reused: false });
+    expect(f.writes).toEqual(["requests"]);
+  });
+
+  it("refuses to amend a previously synthetic request after owner workflow progression", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const savedService = "77777777-7777-4777-8777-777777777777";
+    for (const status of ["COLLECTING", "READY", "NEEDS_REVIEW", "QUOTED", "BOOKED", "LOST", "CLOSED", null]) {
+      const f = fixture({ change: rows => {
+        rows.service_catalog = [{
+          id: savedService, workspace_id: workspace, code: "MOVE_OUT", active: true,
+        }];
+        rows.requests[0].service_id = null;
+        rows.requests[0].status = status;
+      } });
+      expect(await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" }),
+        String(status)).toEqual({ ok: false, stage: "request" });
+      expect(f.writes).toEqual([]);
+      expect(f.reads.filter(x => x === "requests")).toEqual(["requests"]);
+    }
+  });
+
+  it("refuses a request that advances from NEW during the service assignment UPDATE race", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const f = fixture({
+      change: rows => {
+        rows.service_catalog = [{
+          id: "77777777-7777-4777-8777-777777777777",
+          workspace_id: workspace, code: "MOVE_OUT", active: true,
+        }];
+        rows.requests[0].service_id = null;
+        rows.requests[0].status = "NEW";
+      },
+      beforeRequestUpdate: rows => {
+        rows.requests[0].status = "QUOTED";
+      },
+    });
+    expect(await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" }))
+      .toEqual({ ok: false, stage: "request" });
+    expect(f.writes).toEqual([]);
+  });
+
+  it("preserves an already assigned progressed synthetic enquiry without replaying a write", async () => {
+    const { seedQaWorkspaceData: actualSeed } =
+      await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(
+        "../../src/features/auth/qa-sample-seed",
+      );
+    const savedService = "77777777-7777-4777-8777-777777777777";
+    const f = fixture({ change: rows => {
+      rows.service_catalog = [{
+        id: savedService, workspace_id: workspace, code: "MOVE_OUT", active: true,
+      }];
+      rows.requests[0].service_id = savedService;
+      rows.requests[0].status = "QUOTED";
+    } });
+    expect(await actualSeed(f.client, { id: workspace, slug: "fictional-qa-cleaning" }))
+      .toEqual({ ok: true, customerId: customer, requestId: request, reused: true });
+    expect(f.writes).toEqual([]);
+  });
   it("refuses duplicate, inactive and foreign default-branch reads before any fictional customer write", async () => {
     const { seedQaWorkspaceData: actualSeed } =
       await vi.importActual<typeof import("../../src/features/auth/qa-sample-seed")>(

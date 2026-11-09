@@ -322,17 +322,36 @@ const qaContactless=JSON.parse(qaContactlessRaw.toString()) as {
  unchangedProofs:Array<{path:string;blob:string;unchanged:boolean}>;
  invariants:string[];acceptance:string;
 };
+const qaLifecycleRaw=read("docs/delivery/sonic-p02-qa-new-status-service-assignment-successor-20261110.json");
+const qaLifecycle=JSON.parse(qaLifecycleRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ qa:{path:string;previous:number;current:number;added:number;scope:string};
+ businessScenario:string;unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;nextBatch:string;
+};
+const currentQaLifecycleBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing reviewed QA lifecycle SHA: "+path);
+ const delta=qaLifecycle.changedSource.find(x=>x.path===path);
+ if(!delta)return prior;
+ if(prior===delta.currentBlob)return prior;
+ if(prior!==delta.previousBlob)return prior;
+ expect(delta.previousBlob,path).toBe(prior);
+ return delta.currentBlob;
+};
 const currentQaContactlessBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
   throw Error("Missing reviewed QA contactless source SHA: "+path);
  const delta=qaContactless.changedSource.find(x=>x.path===path);
  if(!delta)return currentOwnerLandingRlsBlob(path,prior);
- if(prior===delta.currentBlob)return currentOwnerLandingRlsBlob(path,prior);
+ if(prior===delta.currentBlob)return currentQaLifecycleBlob(path,currentOwnerLandingRlsBlob(path,prior));
  // An older historical source lock may precede multiple reviewed successors.
  // Never override its predecessor until the exact previous SHA is reached.
  if(prior!==delta.previousBlob)return currentOwnerLandingRlsBlob(path,prior);
  expect(delta.previousBlob,path).toBe(prior);
- return currentOwnerLandingRlsBlob(path,delta.currentBlob);
+ return currentQaLifecycleBlob(path,currentOwnerLandingRlsBlob(path,delta.currentBlob));
 };
 const currentQaPropertyPreflightBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
@@ -1057,7 +1076,7 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(new Set(qaContactless.changedSource.map(x=>x.path)).size).toBe(3);
   for(const record of qaContactless.changedSource){
     expect(record.path).not.toContain("..");
-    expect(gitHash(read(record.path)),record.path).toBe(record.currentBlob);
+    expect(gitHash(read(record.path)),record.path).toBe(currentQaLifecycleBlob(record.path,record.currentBlob));
   }
   expect(qaContactless.tests).toEqual({
     path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
@@ -1084,6 +1103,44 @@ describe("F15 independent critic: no new composite, exact source and default-den
     "P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"
   ])expect(qaContactless.invariants).toContain(invariant);
   expect(qaContactless.acceptance).toBe("SOURCE_ONLY_PENDING_OWNER_APPROVED_JWT_BROWSER_RLS");
+  expect(qaLifecycle.schema).toBe("servicedesk.p02.qa-request-lifecycle-service-assignment-guard.v1");
+  expect(qaLifecycle.batchId).toBe("P02-QA_SERVICE_ASSIGNMENT_ONLY_WHILE_REQUEST_NEW-20261110");
+  expect(qaLifecycle.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(qaLifecycle.sourceOnly).toBe(true);
+  expect(qaLifecycle.reviewedParentHead).toBe("3f7486c3ab0c00db128bb0b8d4807098e541cf3c");
+  expect(qaLifecycle.predecessor).toEqual({
+    path:"docs/delivery/sonic-p02-qa-fictional-contactless-customer-property-successor-20261109.json",
+    blob:"f79cd1810d89fbce5427baf5db7cd6fbb64396fe",unchanged:true});
+  expect(qaLifecycle.predecessor.blob).toBe(gitHash(qaContactlessRaw));
+  expect(qaLifecycle.changedSource).toEqual([
+    {path:"src/features/auth/qa-sample-seed.ts",previousBlob:"9bcc6b03c94c9655ac6dcebd145461d52e8de416",currentBlob:"32bd6b7587aee5acbb2923e6648617ccc107d9a6",lane:"P02_QA_LIFECYCLE_SAFE_MUTATION"},
+    {path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",previousBlob:"cd6184c36e4a9643b7441ca370623c544eb2ece8",currentBlob:"14d93de4fb5d0017c1e6563f3e592002c6ee0c1c",lane:"ADVERSARIAL_NEW_VS_PROGRESS_AND_TOCTOU"}
+  ]);
+  for(const next of qaLifecycle.changedSource)
+    expect(gitHash(read(next.path)),next.path).toBe(next.currentBlob);
+  expect(qaLifecycle.qa).toEqual({
+    path:"tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+    previous:25,current:29,added:4,
+    scope:"OFFLINE_SSR_POSTGREST_SIMULATIONS_NOT_LIVE_OWNER"
+  });
+  expect(qaLifecycle.businessScenario).toContain("only to the untouched fictional NEW request");
+  expect(qaLifecycle.unchangedSource).toEqual([
+    {path:"src/features/auth/qa-sample-readback.ts",blob:"6f5ebf53d3dd58731db78852f1a393fe266177bc",unchanged:true},
+    {path:"src/app/onboarding/verified/qa-seed-actions.ts",blob:"047dc7ed709946c41065027ac7cf18db4b284131",unchanged:true},
+    {path:"supabase/migrations/0001_core.sql",blob:"e9385c0fc97c812de1d1e3eb4dfea94d2338fbe5",unchanged:true},
+    {path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true}
+  ]);
+  for(const prior of qaLifecycle.unchangedSource)
+    expect(gitHash(read(prior.path)),prior.path).toBe(prior.blob);
+  const lifecycle=read("src/features/auth/qa-sample-seed.ts").toString();
+  expect(lifecycle).toContain('priorRequest?.status !== "NEW"');
+  expect(lifecycle).toContain('.eq("status", "NEW")');
+  expect(lifecycle).toContain('amended.data?.status !== "NEW"');
+  for(const rule of ["NO_RETROACTIVE_SERVICE_ASSIGNMENT_AFTER_NEW_REQUEST_LIFECYCLE","UPDATE_REQUIRES_ATOMIC_STATUS_NEW_FILTER","NEW_FICTIONAL_REQUEST_VALID_SERVICE_ASSIGNMENT_PRESERVED","PREEXISTING_ADVANCED_SYNTHETIC_REQUEST_REUSED_WITHOUT_WRITE","NO_PROVIDER_CONNECTED_OR_REAL_CUSTOMER_MUTATION","NO_UNSCOPED_BRANCH_OR_CUSTOMER_UPDATE","NO_CONNECTED_DB_AUTH_WRITE_OR_PROVIDER_SEND","NO_SQL_MIGRATION_OR_RELEASE_FLAG_OR_DEPLOY","P02_STAYS_OPEN_2_OF_7","P03_STAYS_OPEN_0_OF_6"])
+    expect(qaLifecycle.invariants).toContain(rule);
+  expect(qaLifecycle.acceptance).toBe("SOURCE_ONLY_OFFLINE_NEGATIVE_AND_POSITIVE_NOT_REAL_TWO_OWNER_JWT_RLS");
+  expect(qaLifecycle.nextBatch).toBe("P02_818_OWNER_APPROVED_STAGING_JWT_RLS_AND_DBA_SQL");
+
   // Review an independent owner-landing RLS failure boundary. All older blob
   // manifests and permanent release gates remain byte-identical.
   expect(gitHash(qaContactlessRaw)).toBe("f79cd1810d89fbce5427baf5db7cd6fbb64396fe");
