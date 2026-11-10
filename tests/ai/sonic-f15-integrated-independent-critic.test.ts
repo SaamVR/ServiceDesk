@@ -426,16 +426,37 @@ const currentOwnerLandingRlsBlob=(path:string,previous:string|undefined):string=
  expect(successor.previousBlob,path).toBe(previous);
  return successor.currentBlob;
 };
+const postRpcRecoveryRaw=read("docs/delivery/sonic-p02-post-rpc-readback-throw-recovery-successor-20261111.json");
+const postRpcRecovery=JSON.parse(postRpcRecoveryRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ qa:{path:string;previous:number;current:number;added:number;scenarios:string[]};
+ businessScenario:string;
+ unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;nextBatch:string;
+};
+/** Apply only the exact final reviewed source to its already verified parent. */
+const currentPostRpcRecoveryBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing approved post-RPC owner readback SHA: "+path);
+ const successor=postRpcRecovery.changedSource.find(item=>item.path===path);
+ if(!successor)return prior;
+ if(prior===successor.currentBlob)return prior;
+ if(prior!==successor.previousBlob)return prior;
+ expect(successor.previousBlob,path).toBe(prior);
+ return successor.currentBlob;
+};
 const currentOwnerFormTreeBlob=(path:string,previous:string|undefined):string=>{
  if(typeof previous!=="string"||!/^[a-f0-9]{40}$/.test(previous))
   throw Error("Missing reviewed actual React-tree QA SHA: "+path);
  const correction=ownerFormTree.changedSource.find(entry=>entry.path===path);
- if(!correction)return currentOwnerLandingRlsBlob(path,previous);
- if(previous===correction.currentBlob)return currentOwnerLandingRlsBlob(path,previous);
+ if(!correction)return currentPostRpcRecoveryBlob(path,currentOwnerLandingRlsBlob(path,previous));
+ if(previous===correction.currentBlob)return currentPostRpcRecoveryBlob(path,currentOwnerLandingRlsBlob(path,previous));
  // Historical lineage may not yet have reached this approved test witness.
- if(previous!==correction.previousBlob)return currentOwnerLandingRlsBlob(path,previous);
+ if(previous!==correction.previousBlob)return currentPostRpcRecoveryBlob(path,currentOwnerLandingRlsBlob(path,previous));
  expect(correction.previousBlob,path).toBe(previous);
- return currentOwnerLandingRlsBlob(path,correction.currentBlob);
+ return currentPostRpcRecoveryBlob(path,currentOwnerLandingRlsBlob(path,correction.currentBlob));
 };
 const currentOwnerFormSafetyBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
@@ -858,6 +879,44 @@ describe("F15 independent critic: no new composite, exact source and default-den
     expect(source.path).not.toContain("..");
     expect(gitHash(read(source.path)),source.path).toBe(currentOwnerFormTreeBlob(source.path,source.currentBlob));
   }
+  // A successful registration RPC may already have committed before saved
+  // owner/branch readback throws. Preserve the user's bounded verification
+  // recovery path without a second implicit RPC, provider data, or fake READY.
+  expect(postRpcRecovery.schema).toBe("servicedesk.p02.post-rpc-owner-readback-transport-recovery.v1");
+  expect(postRpcRecovery.batchId).toBe("P02-OWNER_REGISTRATION_POST_RPC_READBACK_THROW_NO_SECOND_WRITE-20261111");
+  expect(postRpcRecovery.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(postRpcRecovery.sourceOnly).toBe(true);
+  expect(postRpcRecovery.reviewedParentHead).toBe("f1f9fedcacb9891fe049a063ab1899674d8100e3");
+  expect(postRpcRecovery.predecessor).toEqual({
+    path:"docs/delivery/sonic-p02-owner-form-eligibility-valid-actor-successor-20261109.json",
+    blob:"890dd874b96eb32aa6fb8ebee81e4d01ce359035",unchanged:true});
+  expect(postRpcRecovery.predecessor.blob).toBe(gitHash(ownerFormSafetyRaw));
+  expect(postRpcRecovery.changedSource).toEqual([{"path":"src/app/auth/create-workspace/actions.ts","previousBlob":"37871b966731acf08a65f9395577eb356c5177e5","currentBlob":"11a85433b84c88592d6efa270a5f832b9432b7a6","lane":"OWNER_AUTH_POST_COMMIT_TRANSPORT_FAIL_CLOSED"},{"path":"tests/e2e/p02-registration-denial-action.test.ts","previousBlob":"1cd9e8e3aad8a35574180d7bc0b29dd7033d2065","currentBlob":"d0257951ed4a8c8c7f823ccd91b88f96a696a3da","lane":"INDEPENDENT_POST_COMMIT_QA"}]);
+  for(const change of postRpcRecovery.changedSource){
+    expect(change.path).not.toContain("..");
+    expect(gitHash(read(change.path)),change.path).toBe(change.currentBlob);
+  }
+  expect(postRpcRecovery.qa).toEqual({
+    path:"tests/e2e/p02-registration-denial-action.test.ts",
+    previous:13,current:14,added:1,scenarios:[
+      "new-owner-response-readback-throws",
+      "existing-owner-response-readback-throws",
+      "no-implicit-retry","no-provider-secret-leak"
+    ]});
+  expect(postRpcRecovery.businessScenario)
+    .toContain("a bounded saved-workspace recovery route");
+  expect(postRpcRecovery.unchangedSource).toEqual([{"path":"src/features/auth/verified-owner-workspace.ts","blob":"221b0f52e75d2231900767f91806b3ea874f32d7","unchanged":true},{"path":"src/features/auth/workspace-registration-error.ts","blob":"73e200d522da5bf4dabe0275f97860379f53637f","unchanged":true},{"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true}]);
+  for(const unchanged of postRpcRecovery.unchangedSource)
+    expect(gitHash(read(unchanged.path)),unchanged.path).toBe(unchanged.blob);
+  const ownerAction=read("src/app/auth/create-workspace/actions.ts").toString();
+  expect(ownerAction).toContain("readback = await verifyOwnerWorkspaceCreationReadback(");
+  expect(ownerAction).toContain("if (!readback?.ok)");
+  for(const rule of ["NO_RAW_HTTP_500_AFTER_POSSIBLE_REGISTRATION_COMMIT","NO_FALSE_OWNER_READY_AFTER_THROWN_PERSISTENCE_READBACK","NO_AUTOMATIC_SECOND_REGISTRATION_RPC","NO_PRIVATE_PROVIDER_TRANSPORT_DETAILS_IN_REDIRECT","REUSE_EXISTING_UNCERTAIN_COMMIT_USER_RECOVERY","NO_CONNECTED_DB_AUTH_WRITE_OR_REGISTRATION_SQL","NO_CUSTOMER_PROVIDER_SEND_OR_PAYMENT","NO_DEPLOY_RELEASE_FLAG_PROTECTED_MERGE","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
+    expect(postRpcRecovery.invariants).toContain(rule);
+  expect(postRpcRecovery.acceptance)
+    .toBe("INTEGRATED_SOURCE_TEST_NOT_AUTHENTICATED_REAL_TWO_OWNER_RLS");
+  expect(postRpcRecovery.nextBatch)
+    .toBe("P02_818_EXPLICIT_OWNER_APPROVED_TWO_REAL_JWT_SESSIONS_AND_DBA_SQL_REVIEW");
   expect(ownerFormSafety.regressionTests).toEqual([
     {path:"tests/e2e/p02-registration-denial-action.test.ts",previous:12,current:13,added:1},
     {path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:35,current:37,added:2}

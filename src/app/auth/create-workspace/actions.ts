@@ -103,10 +103,20 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
   // verified owner access. RLS-read the saved membership and workspace before
   // presenting a creation receipt. A transport failure can occur after commit;
   // do not suggest blindly submitting a second non-idempotent setup.
-  const readback = await verifyOwnerWorkspaceCreationReadback(
-    auth, actor.user.id, { slug, name, timezone, currency }, result,
-  );
-  if (!readback.ok) {
+  // The registration RPC may already have committed by the time its
+  // independent owner/branch RLS readback begins. If verification itself
+  // throws (not just returns a denied result), show the same bounded
+  // may-have-committed recovery route. Never return an HTTP 500 that could
+  // encourage a second non-idempotent registration or expose provider data.
+  let readback: Awaited<ReturnType<typeof verifyOwnerWorkspaceCreationReadback>> | null = null;
+  try {
+    readback = await verifyOwnerWorkspaceCreationReadback(
+      auth, actor.user.id, { slug, name, timezone, currency }, result,
+    );
+  } catch {
+    readback = null;
+  }
+  if (!readback?.ok) {
     fail("Workspace registration may have committed, but saved owner access could not be verified. Use your authorized workspaces to check before trying again.");
   }
 

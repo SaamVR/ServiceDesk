@@ -1,11 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createOwnerWorkspace } from "../../src/app/auth/create-workspace/actions";
 
+const readbackTransport = vi.hoisted(() => ({ throwAfterRpc: false }));
 const calls = vi.hoisted(() => ({
   getUser: vi.fn(),
   rpc: vi.fn(),
   from: vi.fn(),
 }));
+vi.mock("../../src/features/auth/verified-owner-workspace", async importOriginal => {
+  const original = await importOriginal<
+    typeof import("../../src/features/auth/verified-owner-workspace")
+  >();
+  return {
+    ...original,
+    verifyOwnerWorkspaceCreationReadback: async (
+      ...args: Parameters<typeof original.verifyOwnerWorkspaceCreationReadback>
+    ) => {
+      if (readbackTransport.throwAfterRpc) {
+        throw Error("PRIVATE_POST_COMMIT_OWNER_RLS_TRANSPORT_FAILURE");
+      }
+      return original.verifyOwnerWorkspaceCreationReadback(...args);
+    },
+  };
+});
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({
     auth: { getUser: calls.getUser },
@@ -68,6 +85,7 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
   let branchMembershipError: boolean;
 
   beforeEach(() => {
+    readbackTransport.throwAfterRpc = false;
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://synthetic.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_synthetic");
     vi.stubEnv("SERVICEDESK_AUTH_REDIRECT_ORIGIN", "https://synthetic.example.test");
@@ -187,6 +205,24 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
     expect(href).toContain("before trying again");
     expect(href).not.toContain("/onboarding/verified");
     expect(calls.from).toHaveBeenCalledTimes(1);
+  });
+
+  it("recovers from unexpected post-commit owner/branch readback failure without replay or leaked details", async () => {
+    for (const existing of [false, true]) {
+      calls.rpc.mockResolvedValueOnce({
+        data: { ok: true, slug: "synthetic-team", existing }, error: null,
+      });
+      readbackTransport.throwAfterRpc = true;
+      const href = await destination();
+      expect(href).toContain("/auth/create-workspace?error=");
+      expect(href).toContain("may have committed");
+      expect(href).toContain("saved owner access could not be verified");
+      expect(href).toContain("authorized workspaces to check before trying again");
+      expect(href).not.toContain("/onboarding/verified");
+      expect(href).not.toContain("PRIVATE_POST_COMMIT_OWNER_RLS_TRANSPORT_FAILURE");
+      expect(calls.from).not.toHaveBeenCalled();
+    }
+    expect(calls.rpc).toHaveBeenCalledTimes(2); // Exactly one RPC per explicit submission.
   });
 
   it("rejects an authenticated user change between write and readback", async () => {
