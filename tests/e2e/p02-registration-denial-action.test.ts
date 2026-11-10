@@ -264,14 +264,37 @@ describe("P02 owner registration action: DB authority + saved readback", () => {
     expect(calls.rpc).toHaveBeenCalledTimes(2); // One explicit action per owner submission; no implicit retry.
   });
 
-  it("never leaks raw provider failures or treats them as successful setup", async () => {
-    calls.rpc.mockResolvedValueOnce({
-      data: { ok: true, slug: "synthetic-team", existing: false },
-      error: { message: "PRIVATE_DATABASE_SECRETS" },
-    });
-    const href = await destination();
-    expect(href).toContain("Workspace setup is unavailable");
-    expect(href).not.toContain("PRIVATE_DATABASE_SECRETS");
+  it("recovers from returned ambiguous PostgREST/network errors without replaying signup", async () => {
+    // A failed response can be represented as { data, error } even when
+    // the POST registration transaction's outcome is unknown.
+    for (const code of ["", "PGRSTX00", "08006", undefined]) {
+      calls.rpc.mockResolvedValueOnce({
+        data: { ok: true, slug: "synthetic-team", existing: false },
+        error: { code, message: "PRIVATE_DATABASE_SECRETS" },
+      });
+      const href = await destination();
+      expect(href).toContain("may have committed");
+      expect(href).toContain("authorized workspaces before trying again");
+      expect(href).not.toContain("PRIVATE_DATABASE_SECRETS");
+      expect(href).not.toContain("/onboarding/verified");
+      expect(calls.from).not.toHaveBeenCalled();
+    }
+    expect(calls.rpc).toHaveBeenCalledTimes(4);
+  });
+
+  it("keeps deterministic pre-execution RPC denials separate from ambiguous post-commit errors", async () => {
+    for (const code of ["PGRST202", "PGRST301", "42501"]) {
+      calls.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { code, message: "PRIVATE_SCHEMA_OR_AUTH_DETAILS" },
+      });
+      const href = await destination();
+      expect(href).toContain("Workspace setup is unavailable");
+      expect(href).not.toContain("may have committed");
+      expect(href).not.toContain("PRIVATE_SCHEMA_OR_AUTH_DETAILS");
+      expect(href).not.toContain("/onboarding/verified");
+    }
+    expect(calls.rpc).toHaveBeenCalledTimes(3);
     expect(calls.from).not.toHaveBeenCalled();
   });
 

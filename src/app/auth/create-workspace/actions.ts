@@ -79,9 +79,16 @@ export async function createOwnerWorkspace(formData: FormData): Promise<never> {
   const { data, error } = rpcResponse;
 
   if (error) {
-    // An unapplied migration, missing EXECUTE permission or DB outage must
-    // never be presented as a successful account/workspace creation.
-    fail("Workspace setup is unavailable. Contact the administrator to complete deployment.");
+    // Supabase may return { error } for a failed network response instead of
+    // throwing. A POST RPC might already have committed before the response
+    // was lost. Treat only known pre-execution rejections as definitively
+    // unavailable; every other error needs saved-workspace reconciliation.
+    // Do not log details, retry the POST or claim successful onboarding.
+    const code = typeof error.code === "string" ? error.code : "";
+    if (code === "PGRST202" || code === "PGRST301" || code === "42501") {
+      fail("Workspace setup is unavailable. Contact the administrator to complete deployment.");
+    }
+    fail("Workspace registration may have committed, but its result could not be confirmed. Check your authorized workspaces before trying again.");
   }
 
   const result = data as {ok?: unknown; slug?: unknown; existing?: unknown; code?: unknown} | null;

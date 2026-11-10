@@ -437,15 +437,35 @@ const postRpcRecovery=JSON.parse(postRpcRecoveryRaw.toString()) as {
  invariants:string[];acceptance:string;nextBatch:string;
 };
 /** Apply only the exact final reviewed source to its already verified parent. */
+const rpcErrorPairRaw=read("docs/delivery/sonic-p02-rpc-error-pair-recovery-successor-20261111.json");
+const rpcErrorPair=JSON.parse(rpcErrorPairRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ qa:{path:string;previous:number;current:number;added:number;ambiguousReturnedErrors:string[];deterministicPreExecutionCodes:string[]};
+ businessScenario:string;externalDocumentation:string[];
+ unchangedSources:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;nextBatch:string;
+};
+const currentRpcErrorPairBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing approved RPC result error-pair SHA: "+path);
+ const next=rpcErrorPair.changedSource.find(x=>x.path===path);
+ if(!next)return prior;
+ if(prior===next.currentBlob)return prior;
+ if(prior!==next.previousBlob)return prior;
+ expect(next.previousBlob,path).toBe(prior);
+ return next.currentBlob;
+};
 const currentPostRpcRecoveryBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing approved post-RPC owner readback SHA: "+path);
  const successor=postRpcRecovery.changedSource.find(item=>item.path===path);
- if(!successor)return prior;
- if(prior===successor.currentBlob)return prior;
- if(prior!==successor.previousBlob)return prior;
+ if(!successor)return currentRpcErrorPairBlob(path,prior);
+ if(prior===successor.currentBlob)return currentRpcErrorPairBlob(path,prior);
+ if(prior!==successor.previousBlob)return currentRpcErrorPairBlob(path,prior);
  expect(successor.previousBlob,path).toBe(prior);
- return successor.currentBlob;
+ return currentRpcErrorPairBlob(path,successor.currentBlob);
 };
 const currentOwnerFormTreeBlob=(path:string,previous:string|undefined):string=>{
  if(typeof previous!=="string"||!/^[a-f0-9]{40}$/.test(previous))
@@ -894,7 +914,8 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(postRpcRecovery.changedSource).toEqual([{"path":"src/app/auth/create-workspace/actions.ts","previousBlob":"37871b966731acf08a65f9395577eb356c5177e5","currentBlob":"11a85433b84c88592d6efa270a5f832b9432b7a6","lane":"OWNER_AUTH_POST_COMMIT_TRANSPORT_FAIL_CLOSED"},{"path":"tests/e2e/p02-registration-denial-action.test.ts","previousBlob":"1cd9e8e3aad8a35574180d7bc0b29dd7033d2065","currentBlob":"d0257951ed4a8c8c7f823ccd91b88f96a696a3da","lane":"INDEPENDENT_POST_COMMIT_QA"}]);
   for(const change of postRpcRecovery.changedSource){
     expect(change.path).not.toContain("..");
-    expect(gitHash(read(change.path)),change.path).toBe(change.currentBlob);
+    expect(gitHash(read(change.path)),change.path)
+      .toBe(currentRpcErrorPairBlob(change.path,change.currentBlob));
   }
   expect(postRpcRecovery.qa).toEqual({
     path:"tests/e2e/p02-registration-denial-action.test.ts",
@@ -915,6 +936,42 @@ describe("F15 independent critic: no new composite, exact source and default-den
     expect(postRpcRecovery.invariants).toContain(rule);
   expect(postRpcRecovery.acceptance)
     .toBe("INTEGRATED_SOURCE_TEST_NOT_AUTHENTICATED_REAL_TWO_OWNER_RLS");
+  expect(rpcErrorPair.schema).toBe("servicedesk.p02.rpc-error-pair-ambiguous-post-commit-recovery.v1");
+  expect(rpcErrorPair.batchId).toBe("P02-OWNER_REGISTRATION_RETURNED_RPC_ERROR_AMBIGUITY-20261111");
+  expect(rpcErrorPair.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(rpcErrorPair.sourceOnly).toBe(true);
+  expect(rpcErrorPair.reviewedParentHead).toBe("8e4e96b08657597cf4fc967cd000c0accba09184");
+  expect(rpcErrorPair.predecessor).toEqual({
+    path:"docs/delivery/sonic-p02-post-rpc-readback-throw-recovery-successor-20261111.json",
+    blob:"63587689beed682ffa268b43a5bff6f8d16b4c1a",unchanged:true});
+  expect(rpcErrorPair.predecessor.blob).toBe(gitHash(postRpcRecoveryRaw));
+  expect(rpcErrorPair.changedSource).toEqual([{"path":"src/app/auth/create-workspace/actions.ts","previousBlob":"11a85433b84c88592d6efa270a5f832b9432b7a6","currentBlob":"472496c93c64f33f64b8667ce4f67dcbb415b2e8","lane":"OWNER_RPC_RESULT_ERROR_AMBIGUOUS_RECOVERY"},{"path":"tests/e2e/p02-registration-denial-action.test.ts","previousBlob":"d0257951ed4a8c8c7f823ccd91b88f96a696a3da","currentBlob":"942a1ab6039958187ac2e0ba1e875e2a7d6882ca","lane":"INDEPENDENT_RETURNED_POSTGREST_ERROR_QA"}]);
+  for(const next of rpcErrorPair.changedSource){
+    expect(next.path).not.toContain("..");
+    expect(gitHash(read(next.path)),next.path).toBe(next.currentBlob);
+  }
+  expect(rpcErrorPair.qa).toEqual({
+    path:"tests/e2e/p02-registration-denial-action.test.ts",
+    previous:14,current:15,added:1,
+    ambiguousReturnedErrors:["missing-code","empty-code","PGRSTX00","08006"],
+    deterministicPreExecutionCodes:["PGRST202","PGRST301","42501"]
+  });
+  expect(rpcErrorPair.businessScenario).toContain("bounded check-saved-workspaces recovery UI");
+  expect(rpcErrorPair.externalDocumentation).toEqual([
+    "https://supabase.com/docs/guides/api/automatic-retries-in-supabase-js",
+    "https://supabase.com/docs/guides/api/handling-errors-in-supabase-js",
+    "https://supabase.com/docs/guides/api/rest/postgrest-error-codes"
+  ]);
+  expect(rpcErrorPair.unchangedSources).toEqual([{"path":"src/features/auth/workspace-registration-error.ts","blob":"73e200d522da5bf4dabe0275f97860379f53637f","unchanged":true},{"path":"src/features/auth/verified-owner-workspace.ts","blob":"221b0f52e75d2231900767f91806b3ea874f32d7","unchanged":true},{"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true}]);
+  for(const unchanged of rpcErrorPair.unchangedSources)
+    expect(gitHash(read(unchanged.path)),unchanged.path).toBe(unchanged.blob);
+  const rpcAction=read("src/app/auth/create-workspace/actions.ts").toString();
+  for(const code of ['code === "PGRST202"','code === "PGRST301"','code === "42501"'])
+    expect(rpcAction).toContain(code);
+  for(const rule of ["RETURNED_NETWORK_OR_UNKNOWN_RPC_ERROR_HAS_UNCERTAIN_COMMIT_NOTICE","RPC_POST_NOT_AUTOMATICALLY_RETRIED","NO_DUPLICATE_NONIDEMPOTENT_REGISTRATION_ON_UNCERTAIN_RPC","DETERMINISTIC_PGRST202_PGRST301_42501_NOT_FALSE_COMMIT","NO_PROVIDER_ERROR_MESSAGE_DISCLOSED","NO_SIGNED_IN_OWNER_READY_WITHOUT_RLS_READBACK","NO_CONNECTED_DB_AUTH_WRITE_OR_MIGRATION","NO_CUSTOMER_PROVIDER_PAYMENT_OR_DEPLOY","NO_PROTECTED_MERGE_NO_NEW_PR","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])expect(rpcErrorPair.invariants).toContain(rule);
+  expect(rpcErrorPair.acceptance).toBe("SOURCE_ONLY_OFFLINE_TESTS_NOT_REAL_TWO_OWNER_JWT_RLS");
+  expect(rpcErrorPair.nextBatch).toBe("P02_818_AUTHORIZED_TWO_OWNER_SIGNED_IN_RLS_AND_APPROVED_SQL");
+
   expect(postRpcRecovery.nextBatch)
     .toBe("P02_818_EXPLICIT_OWNER_APPROVED_TWO_REAL_JWT_SESSIONS_AND_DBA_SQL_REVIEW");
   expect(ownerFormSafety.regressionTests).toEqual([
