@@ -954,7 +954,10 @@ describe("F15 independent critic: no new composite, exact source and default-den
   ]);
   for(const src of ownerFormTree.unchangedApplicationSource){
     expect(src.unchanged).toBe(true);
-    expect(gitHash(read(src.path)),src.path).toBe(src.blob);
+    // Historical owner form inputs remain pinned. A separately reviewed
+    // post-RPC error successor may advance only the exact registered action.
+    expect(gitHash(read(src.path)),src.path)
+      .toBe(currentPostRpcRecoveryBlob(src.path,src.blob));
   }
   expect(ownerFormTree.unchangedWorkflow).toEqual({
     path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
