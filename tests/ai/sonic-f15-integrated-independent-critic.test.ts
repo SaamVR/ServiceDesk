@@ -837,8 +837,9 @@ describe("F15 independent critic: no new composite, exact source and default-den
   for(const entry of landingBranch.changedSource){
     expect(entry.path).not.toContain("..");
     expect(gitHash(read(entry.path)),entry.path)
-      .toBe(currentBranchAuditBlob(entry.path,
-        currentOwnerFormSafetyBlob(entry.path,currentQaDefaultBlob(entry.path,entry.currentBlob))));
+      .toBe(currentExplicitOnboardingBlob(entry.path,
+        currentBranchAuditBlob(entry.path,
+          currentOwnerFormSafetyBlob(entry.path,currentQaDefaultBlob(entry.path,entry.currentBlob)))));
   }
   expect(landingBranch.testCases).toEqual({ownerReadback:{old:8,new:10},actualOwnerNavigation:{old:31,new:35}});
   expect(landingBranch.unchangedWorkflow).toEqual({path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true});
