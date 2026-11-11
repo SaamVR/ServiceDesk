@@ -1496,7 +1496,8 @@ describe("F15 independent critic: no new composite, exact source and default-den
     // Preserve the historical landing snapshot, then permit only the
     // explicitly reviewed latest P02 onboarding / foreign-RLS successor.
     expect(gitHash(read(changed.path)),changed.path)
-      .toBe(currentOnboardingVetoBlob(changed.path,changed.currentBlob));
+      .toBe(currentExplicitOnboardingBlob(changed.path,
+        currentOnboardingVetoBlob(changed.path,changed.currentBlob)));
   }
   expect(ownerLandingRls.tests).toEqual({
     path:"tests/e2e/p02-workspace-error-origin.test.ts",
