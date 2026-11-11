@@ -119,7 +119,7 @@ describe("V4 onboarding explicit verified owner workspace selection", () => {
       expect(calls).not.toContain("table:workspaces");
     }
     const mixed = fakeRls([
-      membership(north), { workspace_id: "../../foreign" },
+      membership(north), { ...membership(south), workspace_id: "../../foreign" },
     ], [workspace(north, "north-cleaning", "North Cleaning")]);
     expect(await resolveOwnerOnboardingWorkspaceChoice(mixed.auth, person))
       .toEqual({ ok: false, code: "MEMBERSHIP_UNVERIFIED" });

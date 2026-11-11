@@ -432,15 +432,33 @@ const returnedMembership=JSON.parse(returnedMembershipRaw.toString()) as {
  businessScenario:string;unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
  invariants:string[];acceptance:string;nextBatch:string;
 };
-const currentReturnedMembershipBlob=(path:string,prior:string|undefined):string=>{
+const typedFixtureRaw=read("docs/delivery/sonic-p02-owner-membership-typed-fixture-repair-20261111.json");
+const typedFixture=JSON.parse(typedFixtureRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ diagnosis:string;qa:{path:string;count:number;change:string};
+ invariants:string[];acceptance:string;nextBatch:string;
+};
+const currentTypedFixtureBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
-   throw Error("Missing reviewed returned membership source SHA: "+path);
- const delta=returnedMembership.changedSource.find(x=>x.path===path);
+   throw Error("Missing reviewed owner QA test SHA "+path);
+ const delta=typedFixture.changedSource.find(x=>x.path===path);
  if(!delta)return prior;
  if(prior===delta.currentBlob)return prior;
  if(prior!==delta.previousBlob)return prior;
  expect(delta.previousBlob,path).toBe(prior);
  return delta.currentBlob;
+};
+const currentReturnedMembershipBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing reviewed returned membership source SHA: "+path);
+ const delta=returnedMembership.changedSource.find(x=>x.path===path);
+ if(!delta)return currentTypedFixtureBlob(path,prior);
+ if(prior===delta.currentBlob)return currentTypedFixtureBlob(path,prior);
+ if(prior!==delta.previousBlob)return currentTypedFixtureBlob(path,prior);
+ expect(delta.previousBlob,path).toBe(prior);
+ return currentTypedFixtureBlob(path,delta.currentBlob);
 };
 const currentOnboardingVetoBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
@@ -1058,7 +1076,8 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(returnedMembership.changedSource).toEqual([{"path":"src/features/onboarding/owner-onboarding-workspace-choice.ts","previousBlob":"fbd623618b87718bffd16abc2b212db3f2e6aebf","currentBlob":"edc4c7c7976b9ec1f6ea14660232218049c81832","lane":"OWNER_RETURNED_MEMBERSHIP_SUBJECT_ROLE_STATUS_GUARD"},{"path":"tests/e2e/p02-workspace-error-origin.test.ts","previousBlob":"a716260cf036f691927fa1d448b68f4ebd3b3958","currentBlob":"56966913487c69c11c612ad0019ca2ccca165dc0","lane":"INDEPENDENT_P02_OWNER_SESSION_QA"},{"path":"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts","previousBlob":"a83f68b9121d9455adc4c15b4ae6102f2f843cf3","currentBlob":"1a6b7dd23a7a3cd83807fe25f09736a5deeb28ae","lane":"MULTI_OWNER_CHOOSER_ROLE_SUBJECT_NEGATIVE_MATRIX"}]);
   for(const delta of returnedMembership.changedSource){
     expect(delta.path).not.toContain("..");
-    expect(gitHash(read(delta.path)),delta.path).toBe(delta.currentBlob);
+    expect(gitHash(read(delta.path)),delta.path)
+      .toBe(currentTypedFixtureBlob(delta.path,delta.currentBlob));
   }
   expect(returnedMembership.qa).toEqual({"primary":{"path":"tests/e2e/p02-workspace-error-origin.test.ts","previous":42,"current":43,"added":1},"secondary":{"path":"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts","previous":9,"current":11,"added":2},"scope":"OFFLINE_RLS_SIMULATION_NO_REAL_OWNER_JWT"});
   expect(returnedMembership.businessScenario).toContain("individually verified saved membership");
@@ -1076,6 +1095,27 @@ describe("F15 independent critic: no new composite, exact source and default-den
     expect(returnedMembership.invariants).toContain(guard);
   expect(returnedMembership.acceptance).toBe("SOURCE_ONLY_VERIFIED_MOCKED_ROWS_NOT_TWO_REAL_OWNER_BROWSER_JWT_RLS");
   expect(returnedMembership.nextBatch).toBe("P02_818_OWNER_GRANTED_TWO_REAL_AUTH_SESSIONS_DBA_APPROVED_REGISTRATION_SQL_AND_STAGING_READBACK");
+  // Preserve the independently checked prior source before the typed
+  // negative fixture correction required by the full repository compiler.
+  expect(typedFixture.schema).toBe("servicedesk.p02.owner-membership-qa-typescript-repair.v1");
+  expect(typedFixture.batchId).toBe("P02_OWNER_MEMBERSHIP_INVALID_WORKSPACE_TYPED_FIXTURE_20261111");
+  expect(typedFixture.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(typedFixture.sourceOnly).toBe(true);
+  expect(typedFixture.reviewedParentHead).toBe("125f4be54796a1f41df503ca52f569bdd00c3c97");
+  expect(typedFixture.predecessor).toEqual({"path":"docs/delivery/sonic-p02-onboarding-returned-owner-membership-veto-successor-20261111.json","blob":"bf9f1c538f17e74363310d3445e8873ed3299aa4","unchanged":true});
+  expect(typedFixture.predecessor.blob).toBe(gitHash(returnedMembershipRaw));
+  expect(typedFixture.changedSource).toEqual([{"path":"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts","previousBlob":"1a6b7dd23a7a3cd83807fe25f09736a5deeb28ae","currentBlob":"e729a9f6bce2780824eb7cffe0fd3f0cb6cce25c","lane":"ADVERSARIAL_QA_TYPED_INVALID_WORKSPACE"}]);
+  for(const delta of typedFixture.changedSource)
+    expect(gitHash(read(delta.path)),delta.path).toBe(delta.currentBlob);
+  expect(typedFixture.qa).toEqual({"path":"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts","count":11,"change":"malformed-workspace-id-fixture-inherits-valid-owner-subject-role-active-state"});
+  expect(typedFixture.diagnosis).toContain("TS2739");
+  expect(read("tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts").toString())
+    .toContain('{ ...membership(south), workspace_id: "../../foreign" }');
+  for(const invariant of ["NO_SECURITY_POLICY_OR_LIVE_DATABASE_CHANGE","NO_NEW_OWNER_AUTH_OR_PROVIDER_WRITE","KEEP_HISTORICAL_MEMBERSHIP_MANIFEST_IMMUTABLE","TYPED_INVALID_WORKSPACE_RLS_NEGATIVE_RETAINED","NO_DEPLOY_OR_PROTECTED_MERGE","P02_STILL_NOT_REAL_STAGING_ACCEPTANCE"])
+    expect(typedFixture.invariants).toContain(invariant);
+  expect(typedFixture.acceptance).toBe("SOURCE_ONLY_PENDING_NEW_EXACT_HEAD_TYPESCRIPT_FULL_CI");
+  expect(typedFixture.nextBatch).toBe("P02_818_AUTHORIZED_TWO_REAL_OWNER_SESSIONS_DBA_APPROVED_SQL_RLS");
+
 
 
 
