@@ -1218,7 +1218,8 @@ describe("F15 independent critic: no new composite, exact source and default-den
     {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"cf9f60ffc6003ba65afd42269504218af5922a9c",currentBlob:"23aa52648145f76b0e5fd9adab3ef45f5b2b1249",lane:"ACTUAL_REACT_ELEMENT_QA_WITNESS"}
   ]);
   expect(gitHash(read(ownerFormTree.changedSource[0].path)))
-    .toBe(currentOwnerLandingRlsBlob(ownerFormTree.changedSource[0].path,ownerFormTree.changedSource[0].currentBlob));
+    .toBe(currentExplicitOnboardingBlob(ownerFormTree.changedSource[0].path,
+      currentOwnerLandingRlsBlob(ownerFormTree.changedSource[0].path,ownerFormTree.changedSource[0].currentBlob)));
   expect(ownerFormTree.testCases).toEqual({path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:37,current:37,added:0});
   expect(ownerFormTree.unchangedApplicationSource).toEqual([
     {path:"src/app/auth/create-workspace/actions.ts",blob:"37871b966731acf08a65f9395577eb356c5177e5",unchanged:true},
