@@ -214,6 +214,40 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
     }
   });
 
+  it("rejects null/undefined Auth transport receipts without reading any owner workspace", async () => {
+    for (const identity of [null, undefined, { data: null, error: null }]) {
+      ownerNavigation.getUser.mockResolvedValueOnce(identity);
+      const result = await loadOnboardingProduct();
+      expect(result).toMatchObject({ ok: false, kind: "authentication" });
+    }
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+    expect(ownerNavigation.workspace).not.toHaveBeenCalled();
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("requires confirmed Auth on explicit onboarding workspace URLs before operational access", async () => {
+    for (const identity of [
+      null,
+      { data: { user: null }, error: null },
+      { data: { user: { id: syntheticOwner, email_confirmed_at: null } }, error: null },
+    ]) {
+      ownerNavigation.getUser.mockResolvedValueOnce(identity);
+      const result = await loadOnboardingProduct("synthetic-cleaning");
+      expect(result).toMatchObject({
+        ok: false,
+        kind: identity?.data?.user ? "verification" : "authentication",
+      });
+      expect(result.ok).toBe(false);
+    }
+    ownerNavigation.getUser.mockRejectedValueOnce(Error("PRIVATE_EXPLICIT_OWNER_AUTH_OUTAGE"));
+    const outage = await loadOnboardingProduct("synthetic-cleaning");
+    expect(outage).toMatchObject({ ok: false, kind: "authentication" });
+    expect(JSON.stringify(outage)).not.toContain("PRIVATE_EXPLICIT_OWNER_AUTH_OUTAGE");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+    expect(ownerNavigation.workspace).not.toHaveBeenCalled();
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
   it("rejects a foreign workspace returned beside the signed-in owner's expected row", async () => {
     const expected = {
       id: syntheticWorkspace, slug: "synthetic-cleaning", name: "Synthetic Cleaning",

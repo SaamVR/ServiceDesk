@@ -446,6 +446,27 @@ const typedFixture=JSON.parse(typedFixtureRaw.toString()) as {
  diagnosis:string;qa:{path:string;count:number;change:string};
  invariants:string[];acceptance:string;nextBatch:string;
 };
+const explicitOnboardingRaw=read("docs/delivery/sonic-p02-explicit-onboarding-confirmed-owner-preflight-successor-20261111.json");
+const explicitOnboarding=JSON.parse(explicitOnboardingRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ qa:{path:string;previous:number;current:number;added:number;scope:string};
+ unchangedSources:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;
+};
+const currentExplicitOnboardingBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing reviewed P02 explicit owner Auth source SHA: "+path);
+ const successor=explicitOnboarding.changedSource.find(x=>x.path===path);
+ if(!successor)return prior;
+ if(prior===successor.currentBlob)return prior;
+ // Older source lineage is checked independently. A missing predecessor must
+ // never silently waive the new SHA: exact current pins below are mandatory.
+ if(prior!==successor.previousBlob)return prior;
+ expect(successor.previousBlob,path).toBe(prior);
+ return successor.currentBlob;
+};
 const currentTypedFixtureBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing reviewed owner QA test SHA "+path);
@@ -1050,7 +1071,8 @@ describe("IR21 exact owner finance + retention source integration",()=>{
     // Preserve the historical onboarding source and apply only the reviewed
     // current returned-membership successor when the older SHA matches.
     expect(hash(read(next.path)),next.path)
-      .toBe(currentReturnedMembershipBlob(next.path,next.currentBlob));
+      .toBe(currentExplicitOnboardingBlob(next.path,
+        currentReturnedMembershipBlob(next.path,next.currentBlob)));
   }
   expect(onboardingVeto.qa).toEqual({
     selectedSuite:{path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:39,current:42,added:3},
@@ -1083,13 +1105,15 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   for(const delta of returnedMembership.changedSource){
     expect(delta.path).not.toContain("..");
     expect(hash(read(delta.path)),delta.path)
-      .toBe(currentTypedFixtureBlob(delta.path,delta.currentBlob));
+      .toBe(currentExplicitOnboardingBlob(delta.path,
+        currentTypedFixtureBlob(delta.path,delta.currentBlob)));
   }
   expect(returnedMembership.qa).toEqual({"primary":{"path":"tests/e2e/p02-workspace-error-origin.test.ts","previous":42,"current":43,"added":1},"secondary":{"path":"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts","previous":9,"current":11,"added":2},"scope":"OFFLINE_RLS_SIMULATION_NO_REAL_OWNER_JWT"});
   expect(returnedMembership.businessScenario).toContain("individually verified saved membership");
   expect(returnedMembership.unchangedSource).toEqual([{"path":"src/features/auth/verified-owner-workspace.ts","blob":"221b0f52e75d2231900767f91806b3ea874f32d7","unchanged":true},{"path":"src/features/onboarding/onboarding-product-runtime.ts","blob":"0b980b4b1991f41eb2f7f4f848073e2fb8acd15f","unchanged":true},{"path":"src/features/onboarding/OnboardingProductRoute.tsx","blob":"3a91b7fddf694336ac11b0d7a265de882bf66d09","unchanged":true},{"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true},{"path":"docs/delivery/sonic-p02-onboarding-direct-auth-foreign-rls-veto-successor-20261111.json","blob":"fa9f2d10a3e789f05e9dcf079d44e341507839e5","unchanged":true}]);
   for(const row of returnedMembership.unchangedSource)
-    expect(hash(read(row.path)),row.path).toBe(row.blob);
+    expect(hash(read(row.path)),row.path)
+      .toBe(currentExplicitOnboardingBlob(row.path,row.blob));
   const ownerChoice=read("src/features/onboarding/owner-onboarding-workspace-choice.ts").toString();
   for(const statement of [
     '.select("workspace_id,user_id,role,status")',
@@ -1121,6 +1145,49 @@ describe("IR21 exact owner finance + retention source integration",()=>{
     expect(typedFixture.invariants).toContain(invariant);
   expect(typedFixture.acceptance).toBe("SOURCE_ONLY_PENDING_NEW_EXACT_HEAD_TYPESCRIPT_FULL_CI");
   expect(typedFixture.nextBatch).toBe("P02_818_AUTHORIZED_TWO_REAL_OWNER_SESSIONS_DBA_APPROVED_SQL_RLS");
+  // Actual onboarding consistency fix, downstream authorization unchanged.
+  // The previous reviewed source and all prior Git blobs stay immutable.
+  expect(hash(typedFixtureRaw)).toBe("86bb32420543cbacf3af09201348c51536deaec8");
+  expect(explicitOnboarding.schema).toBe("servicedesk.p02.explicit-onboarding-verified-owner-session.v1");
+  expect(explicitOnboarding.batchId).toBe("P02-EXPLICIT_WORKSPACE_ONBOARDING_NO_UNCONFIRMED_AUTH_BYPASS-20261111");
+  expect(explicitOnboarding.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(explicitOnboarding.sourceOnly).toBe(true);
+  expect(explicitOnboarding.reviewedParentHead).toBe("0d00b42778e0baeb1cb1b0c12be18bb1f6ef48a7");
+  expect(explicitOnboarding.predecessor).toEqual({path:"docs/delivery/sonic-p02-owner-membership-typed-fixture-repair-20261111.json",blob:"86bb32420543cbacf3af09201348c51536deaec8",unchanged:true});
+  expect(explicitOnboarding.predecessor.blob).toBe(hash(typedFixtureRaw));
+  expect(explicitOnboarding.changedSource).toEqual([
+    {path:"src/features/onboarding/onboarding-product-runtime.ts",previousBlob:"0b980b4b1991f41eb2f7f4f848073e2fb8acd15f",currentBlob:"52e0cf11818bf473ce6042c935986eec0baf4adf",lane:"BARE_AND_EXPLICIT_CONFIRMED_AUTH_PREFLIGHT"},
+    {path:"tests/e2e/p02-workspace-error-origin.test.ts",previousBlob:"56966913487c69c11c612ad0019ca2ccca165dc0",currentBlob:"eab720d2b782d4825e68a3ab7dc330c642e2f149",lane:"DIRECT_EXPLICIT_WORKSPACE_AUTH_NEGATIVE_QA"}
+  ]);
+  expect(new Set(explicitOnboarding.changedSource.map(x=>x.path)).size).toBe(2);
+  for(const source of explicitOnboarding.changedSource){
+    expect(source.path).not.toContain("..");
+    expect(hash(read(source.path)),source.path).toBe(source.currentBlob);
+  }
+  expect(explicitOnboarding.qa).toEqual({
+    path:"tests/e2e/p02-workspace-error-origin.test.ts",
+    previous:43,current:45,added:2,
+    scope:"SYNTHETIC_ENTRYPOINT_NO_LIVE_OWNER_JWT"
+  });
+  expect(explicitOnboarding.unchangedSources).toEqual([
+    {path:"src/features/onboarding/owner-onboarding-workspace-choice.ts",blob:"edc4c7c7976b9ec1f6ea14660232218049c81832",unchanged:true},
+    {path:"src/features/onboarding/OnboardingProductRoute.tsx",blob:"3a91b7fddf694336ac11b0d7a265de882bf66d09",unchanged:true},
+    {path:".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",blob:"634d35b6eb34025df560b78f0dfbe3354988238c",unchanged:true}
+  ]);
+  for(const original of explicitOnboarding.unchangedSources){
+    expect(original.unchanged).toBe(true);
+    expect(hash(read(original.path)),original.path).toBe(original.blob);
+  }
+  for(const guard of ["DIRECT_ONBOARDING_EXPLICIT_SLUG_REQUIRES_CONFIRMED_AUTH",
+    "NO_RAW_500_ON_NULL_UNDEFINED_AUTH_RESPONSE",
+    "NO_WORKSPACE_MEMBERSHIP_READ_ON_UNVERIFIED_AUTH",
+    "RETAIN_DOWNSTREAM_OWNER_ROLE_AND_WORKSPACE_RLS_AUTHORIZATION",
+    "RETAIN_MULTIOWNER_AND_DUPLICATE_MEMBERSHIP_NAVIGATION",
+    "NO_CONNECTED_SUPABASE_AUTH_DB_WRITE","NO_SQL_MIGRATION_OR_PROVIDER_SEND_OR_PAYMENT",
+    "NO_DEPLOY_OR_PROTECTED_MERGE","P02_STILL_OPEN_2_OF_7","P03_QUEUED_0_OF_6"])
+      expect(explicitOnboarding.invariants).toContain(guard);
+  expect(explicitOnboarding.acceptance).toBe("SOURCE_ONLY_NOT_REAL_TWO_OWNER_JWT_BROWSER_RLS");
+
 
 
 
