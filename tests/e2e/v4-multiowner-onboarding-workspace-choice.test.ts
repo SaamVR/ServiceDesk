@@ -137,9 +137,11 @@ describe("V4 onboarding explicit verified owner workspace selection", () => {
       [workspace(north, "north-cleaning", "North Cleaning"),
         workspace(foreign, "foreign-office", "Foreign Office")],
     );
+    // An RLS-filtered read must never contain an unrelated tenant. Merely
+    // discarding the unexpected row and choosing North would certify a
+    // broken isolation boundary as a valid signed-in owner result.
     expect(await resolveOwnerOnboardingWorkspaceChoice(h.auth, person))
-      .toMatchObject({ ok: true, kind: "SINGLE",
-        workspace: { slug: "north-cleaning" } });
+      .toEqual({ ok: false, code: "WORKSPACE_UNVERIFIED" });
     const bad = fakeRls([membership(north)], [workspace(north, "../../evil", "Untrusted")]);
     expect(await resolveOwnerOnboardingWorkspaceChoice(bad.auth, person))
       .toEqual({ ok: false, code: "WORKSPACE_UNVERIFIED" });

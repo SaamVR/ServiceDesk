@@ -414,17 +414,36 @@ const ownerLandingRls=JSON.parse(ownerLandingRlsRaw.toString()) as {
  unchangedSources:Array<{path:string;blob:string;unchanged:boolean}>;
  vetoes:string[];acceptance:string;
 };
+const onboardingVetoRaw=read("docs/delivery/sonic-p02-onboarding-direct-auth-foreign-rls-veto-successor-20261111.json");
+const onboardingVeto=JSON.parse(onboardingVetoRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ qa:{selectedSuite:{path:string;previous:number;current:number;added:number};otherSuite:{path:string;total:number;negativeExpectationUpdated:boolean};scope:string};
+ businessScenario:string;unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;nextBatch:string;
+};
+const currentOnboardingVetoBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing approved P02 onboarding tenant SHA: "+path);
+ const next=onboardingVeto.changedSource.find(x=>x.path===path);
+ if(!next)return prior;
+ if(prior===next.currentBlob)return prior;
+ if(prior!==next.previousBlob)return prior;
+ expect(next.previousBlob,path).toBe(prior);
+ return next.currentBlob;
+};
 const currentOwnerLandingRlsBlob=(path:string,previous:string|undefined):string=>{
  if(typeof previous!=="string"||!/^[a-f0-9]{40}$/.test(previous))
    throw Error("Missing reviewed owner-landing source SHA: "+path);
  const successor=ownerLandingRls.changedSource.find(x=>x.path===path);
- if(!successor)return previous;
- if(previous===successor.currentBlob)return previous;
+ if(!successor)return currentOnboardingVetoBlob(path,previous);
+ if(previous===successor.currentBlob)return currentOnboardingVetoBlob(path,previous);
  // The older exact hash chain must reach this successor's own predecessor;
  // do not claim a new SHA if a legacy parent is unresolved.
- if(previous!==successor.previousBlob)return previous;
+ if(previous!==successor.previousBlob)return currentOnboardingVetoBlob(path,previous);
  expect(successor.previousBlob,path).toBe(previous);
- return successor.currentBlob;
+ return currentOnboardingVetoBlob(path,successor.currentBlob);
 };
 const postRpcRecoveryRaw=read("docs/delivery/sonic-p02-post-rpc-readback-throw-recovery-successor-20261111.json");
 const postRpcRecovery=JSON.parse(postRpcRecoveryRaw.toString()) as {
@@ -971,6 +990,41 @@ describe("F15 independent critic: no new composite, exact source and default-den
   for(const rule of ["RETURNED_NETWORK_OR_UNKNOWN_RPC_ERROR_HAS_UNCERTAIN_COMMIT_NOTICE","RPC_POST_NOT_AUTOMATICALLY_RETRIED","NO_DUPLICATE_NONIDEMPOTENT_REGISTRATION_ON_UNCERTAIN_RPC","DETERMINISTIC_PGRST202_PGRST301_42501_NOT_FALSE_COMMIT","NO_PROVIDER_ERROR_MESSAGE_DISCLOSED","NO_SIGNED_IN_OWNER_READY_WITHOUT_RLS_READBACK","NO_CONNECTED_DB_AUTH_WRITE_OR_MIGRATION","NO_CUSTOMER_PROVIDER_PAYMENT_OR_DEPLOY","NO_PROTECTED_MERGE_NO_NEW_PR","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])expect(rpcErrorPair.invariants).toContain(rule);
   expect(rpcErrorPair.acceptance).toBe("SOURCE_ONLY_OFFLINE_TESTS_NOT_REAL_TWO_OWNER_JWT_RLS");
   expect(rpcErrorPair.nextBatch).toBe("P02_818_AUTHORIZED_TWO_OWNER_SIGNED_IN_RLS_AND_APPROVED_SQL");
+  // A direct /onboarding navigation must deny unverified identity transport;
+  // extra foreign rows from an RLS-filtered workspace query veto selection.
+  expect(onboardingVeto.schema).toBe("servicedesk.p02.onboarding-direct-auth-foreign-tenant-veto.v1");
+  expect(onboardingVeto.batchId).toBe("P02-DIRECT_ONBOARDING_AUTH_FAILURE_AND_FOREIGN_RLS_ROW_VETO-20261111");
+  expect(onboardingVeto.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(onboardingVeto.sourceOnly).toBe(true);
+  expect(onboardingVeto.reviewedParentHead).toBe("86eb1121151e0df6866df957dc776e59e50a3f96");
+  expect(onboardingVeto.predecessor).toEqual({
+    path:"docs/delivery/sonic-p02-rpc-error-pair-recovery-successor-20261111.json",
+    blob:"84bfc9ae26367bec4004a2a80d6539e0934884b8",unchanged:true});
+  expect(onboardingVeto.predecessor.blob).toBe(gitHash(rpcErrorPairRaw));
+  expect(onboardingVeto.changedSource).toEqual([{"path":"src/features/onboarding/onboarding-product-runtime.ts","previousBlob":"7da899db0de552ce8184f7db36111bb17e5f0db0","currentBlob":"0b980b4b1991f41eb2f7f4f848073e2fb8acd15f","lane":"AUTHENTICATED_OWNER_ONBOARDING_ROUTE"},{"path":"src/features/onboarding/owner-onboarding-workspace-choice.ts","previousBlob":"5d2066f151aebb61957bd33170581dbac5d63fb6","currentBlob":"fbd623618b87718bffd16abc2b212db3f2e6aebf","lane":"OWNER_TENANT_RLS_FOREIGN_ROW_VETO"},{"path":"tests/e2e/p02-workspace-error-origin.test.ts","previousBlob":"cafb82ecfc548c4b649d02a023a295b2a10bad34","currentBlob":"a716260cf036f691927fa1d448b68f4ebd3b3958","lane":"INDEPENDENT_AUTH_RLS_ADVERSARIAL_QA"},{"path":"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts","previousBlob":"778e65243cd65f641c580921dcbf1566a5c84d19","currentBlob":"a83f68b9121d9455adc4c15b4ae6102f2f843cf3","lane":"OWNER_CHOOSER_FOREIGN_RETURN_NEGATIVE"}]);
+  for(const next of onboardingVeto.changedSource){
+    expect(next.path).not.toContain("..");
+    expect(gitHash(read(next.path)),next.path).toBe(next.currentBlob);
+  }
+  expect(onboardingVeto.qa).toEqual({
+    selectedSuite:{path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:39,current:42,added:3},
+    otherSuite:{path:"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts",total:9,negativeExpectationUpdated:true},
+    scope:"SYNTHETIC_ACTUAL_SOURCE_ENTRYPOINT_NOT_LIVE_JWT"
+  });
+  expect(onboardingVeto.businessScenario).toContain("a null identity presents safe sign-in guidance");
+  expect(onboardingVeto.unchangedSource).toEqual([{"path":"src/features/auth/verified-owner-workspace.ts","blob":"221b0f52e75d2231900767f91806b3ea874f32d7","unchanged":true},{"path":"src/features/onboarding/OnboardingProductRoute.tsx","blob":"3a91b7fddf694336ac11b0d7a265de882bf66d09","unchanged":true},{"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true},{"path":"supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql","blob":"ee237941a371bf36ac39641fe8c1b65ae516ebe3","unchanged":true},{"path":"docs/delivery/sonic-p02-rpc-error-pair-recovery-successor-20261111.json","blob":"84bfc9ae26367bec4004a2a80d6539e0934884b8","unchanged":true}]);
+  for(const witness of onboardingVeto.unchangedSource)
+    expect(gitHash(read(witness.path)),witness.path).toBe(witness.blob);
+  const defaultOnboarding=read("src/features/onboarding/onboarding-product-runtime.ts").toString();
+  expect(defaultOnboarding).toContain("identity = await auth.auth.getUser()");
+  expect(defaultOnboarding).toContain('kind: "authentication"');
+  const chooser=read("src/features/onboarding/owner-onboarding-workspace-choice.ts").toString();
+  expect(chooser).toContain('return { ok: false, code: "WORKSPACE_UNVERIFIED" }');
+  expect(chooser).toContain("!owned.has(row.id)");
+  for(const guard of ["NO_HTTP_500_ON_THROWN_UNSELECTED_ONBOARDING_AUTH","NO_RLS_MEMBERSHIP_READ_AFTER_UNVERIFIED_IDENTITY","NO_FALSE_OWNER_WORKSPACE_SELECTION_ON_FOREIGN_ROW_LEAK","NO_FOREIGN_TENANT_DISPLAY_NAME_LEAK_IN_NAVIGATION","RETAIN_LEGITIMATE_SINGLE_MULTIOWNER_SELECTION","RETAIN_OWNER_AUTH_REQUIRED_FOR_OPERATIONAL_BACKEND","NO_AUTH_USER_FIXTURE_OR_DB_WRITE","NO_MIGRATION_PROVIDER_PAYMENT_OR_DEPLOY","NO_PROTECTED_MERGE_OR_NEW_PR","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])expect(onboardingVeto.invariants).toContain(guard);
+  expect(onboardingVeto.acceptance).toBe("INTEGRATED_SOURCE_ONLY_NOT_REAL_OWNER_A_B_BROWSER_JWT_RLS");
+  expect(onboardingVeto.nextBatch).toBe("P02_818_OWNER_APPROVAL_FOR_INACTIVE_DB_RECOVERY_DBA_SQL_AND_TWO_REAL_QA_OWNER_SESSIONS");
+
 
   expect(postRpcRecovery.nextBatch)
     .toBe("P02_818_EXPLICIT_OWNER_APPROVED_TWO_REAL_JWT_SESSIONS_AND_DBA_SQL_REVIEW");

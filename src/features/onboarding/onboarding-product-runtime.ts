@@ -49,8 +49,18 @@ async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
     },
   });
 
-  const { data, error } = await auth.auth.getUser();
-  if (error || !data.user) {
+  // An Auth provider outage can throw rather than return { data, error }.
+  // A bare /onboarding visit must never become a raw server 500 or fall
+  // through to owner membership/operational reads on uncertain identity.
+  let identity: Awaited<ReturnType<typeof auth.auth.getUser>> | null = null;
+  try {
+    identity = await auth.auth.getUser();
+  } catch {
+    return { ok: false, kind: "authentication",
+      message: "We could not verify your sign-in right now. Retry from sign-in before setting up your business." };
+  }
+  const { data, error } = identity;
+  if (error || !data?.user?.id) {
     return { ok: false, kind: "authentication",
       message: "Sign in with an owner account to continue setup." };
   }

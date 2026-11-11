@@ -6,6 +6,9 @@ import { GET as continueOwnerJourney } from "../../src/app/auth/continue/route";
 import CreateWorkspacePage from "../../src/app/auth/create-workspace/page";
 import SelectWorkspacePage from "../../src/app/auth/select-workspace/page";
 import VerifiedOwnerWorkspacePage from "../../src/app/onboarding/verified/page";
+import { loadOnboardingProduct } from "../../src/features/onboarding/onboarding-product-runtime";
+import { resolveOwnerOnboardingWorkspaceChoice } from "../../src/features/onboarding/owner-onboarding-workspace-choice";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const ownerNavigation = vi.hoisted(() => ({
   getUser: vi.fn(), membership: vi.fn(), workspace: vi.fn(), customers: vi.fn(),
@@ -187,6 +190,69 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
     ownerLandingReadback.savedDefaultBranch.mockReset().mockResolvedValue(true);
   });
   afterEach(() => vi.unstubAllEnvs());
+
+  it("fails closed on a thrown Auth lookup from the real direct /onboarding entrypoint", async () => {
+    ownerNavigation.getUser.mockRejectedValueOnce(Error("PRIVATE_ONBOARDING_AUTH_TRANSPORT"));
+    const result = await loadOnboardingProduct();
+    expect(result).toEqual({
+      ok: false, kind: "authentication",
+      message: "We could not verify your sign-in right now. Retry from sign-in before setting up your business.",
+    });
+    expect(JSON.stringify(result)).not.toContain("PRIVATE_ONBOARDING_AUTH_TRANSPORT");
+    expect(ownerNavigation.membership).not.toHaveBeenCalled();
+    expect(ownerNavigation.workspace).not.toHaveBeenCalled();
+    expect(ownerNavigation.customers).not.toHaveBeenCalled();
+  });
+
+  it("does not treat null or userless Auth responses as permission to select an owner workspace", async () => {
+    for (const identity of [{ data: null, error: null }, { data: { user: null }, error: null }]) {
+      ownerNavigation.getUser.mockResolvedValueOnce(identity);
+      const result = await loadOnboardingProduct();
+      expect(result).toMatchObject({ ok: false, kind: "authentication" });
+      expect(ownerNavigation.membership).not.toHaveBeenCalled();
+      expect(ownerNavigation.workspace).not.toHaveBeenCalled();
+    }
+  });
+
+  it("rejects a foreign workspace returned beside the signed-in owner's expected row", async () => {
+    const expected = {
+      id: syntheticWorkspace, slug: "synthetic-cleaning", name: "Synthetic Cleaning",
+    };
+    const foreign = {
+      id: "77777777-7777-4777-8777-777777777777",
+      slug: "foreign-business", name: "Foreign Customer Data",
+    };
+    const visited: string[] = [];
+    const rls = {
+      from(table: string) {
+        visited.push(table);
+        if (table === "memberships") return {
+          select() { return this; }, eq() { return this; },
+          async limit(value: number) {
+            expect(value).toBe(21);
+            return { data: [{ workspace_id: syntheticWorkspace }], error: null };
+          },
+        };
+        if (table === "workspaces") return {
+          select() { return this; },
+          in(column: string, ids: string[]) {
+            expect(column).toBe("id");
+            expect(ids).toEqual([syntheticWorkspace]);
+            return this;
+          },
+          async limit(value: number) {
+            expect(value).toBe(21);
+            return { data: [expected, foreign], error: null };
+          },
+        };
+        throw Error("UNEXPECTED_OWNER_TABLE");
+      },
+    } as unknown as Pick<SupabaseClient, "from">;
+    const result = await resolveOwnerOnboardingWorkspaceChoice(rls, syntheticOwner);
+    expect(result).toEqual({ ok: false, code: "WORKSPACE_UNVERIFIED" });
+    expect(visited).toEqual(["memberships", "workspaces"]);
+    expect(JSON.stringify(result)).not.toContain("Foreign Customer Data");
+  });
 
   // Exact same signed-in QA setup as the actual owner-journey route cases.
   it("hides the real registration submit form while an uncertain RPC must be read back", async () => {

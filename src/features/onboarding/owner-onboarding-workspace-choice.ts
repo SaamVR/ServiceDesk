@@ -66,11 +66,18 @@ export async function resolveOwnerOnboardingWorkspaceChoice(
     const seen = new Set<string>();
     const authorized: OwnerOnboardingWorkspace[] = [];
     for (const row of workspaces.data) {
-      if (typeof row.id !== "string" || !owned.has(row.id) ||
+      // A SELECT explicitly filtered by the owner's verified workspace IDs
+      // must never return an unrelated tenant, a malformed row or a duplicate.
+      // Silently ignoring such records would make a broken RLS response look
+      // like an isolated owner success when the expected rows also exist.
+      if (!row || typeof row !== "object" ||
+          typeof row.id !== "string" || !owned.has(row.id) ||
           typeof row.slug !== "string" || row.slug.length < 3 ||
           row.slug.length > 40 || !SLUG.test(row.slug) ||
           typeof row.name !== "string" || !row.name.trim() ||
-          row.name.length > 160 || seen.has(row.id)) continue;
+          row.name.length > 160 || seen.has(row.id)) {
+        return { ok: false, code: "WORKSPACE_UNVERIFIED" };
+      }
       seen.add(row.id);
       authorized.push({ id: row.id, slug: row.slug, name: row.name.trim() });
     }
