@@ -1337,7 +1337,10 @@ describe("IR21 exact owner finance + retention source integration",()=>{
   expect(new Set(ownerLandingRls.changedSource.map(x=>x.path)).size).toBe(2);
   for(const changed of ownerLandingRls.changedSource){
     expect(changed.path).not.toContain("..");
-    expect(hash(read(changed.path)),changed.path).toBe(changed.currentBlob);
+    // Preserve the historical landing snapshot, then permit only the
+    // explicitly reviewed latest P02 onboarding / foreign-RLS successor.
+    expect(hash(read(changed.path)),changed.path)
+      .toBe(currentOnboardingVetoBlob(changed.path,changed.currentBlob));
   }
   expect(ownerLandingRls.tests).toEqual({
     path:"tests/e2e/p02-workspace-error-origin.test.ts",
