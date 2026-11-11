@@ -1,0 +1,34 @@
+{
+  "kind": "SONIC_P02_REAL_SESSION_SAVED_OWNER_MEMBERSHIP_ASSERTION",
+  "date": "2026-11-12",
+  "parentCommit": "9421c0ab9ce6a7e385bd0017df77818f821753ba",
+  "sourceOnly": true,
+  "liveJWTSessionAcceptance": false,
+  "changed": [
+    {
+      "path": "scripts/release/v4-private-rls-proof.mjs",
+      "oldBlob": "bb46dc07624e88187bb15d6a0949245cea1bb64d",
+      "newBlob": "f1edee80651dc9e3e6f50de6c8ae9b16974b9ddb"
+    },
+    {
+      "path": "scripts/release/v4-p02-real-owner-membership-assertion.mjs",
+      "oldBlob": null,
+      "newBlob": "ea70793e75c1ed92dd3a9052b4b58c892e418061"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-real-owner-membership-assertion.test.mjs",
+      "oldBlob": null,
+      "newBlob": "daf24e556e64eca5bb3afb700dab742b69574432"
+    },
+    {
+      "path": ".github/workflows/sonic-p02-two-owner-browser-acceptance.yml",
+      "oldBlob": "48c0234dde87507f883a951e12c34763571b6630",
+      "newBlob": "da29894d117a1f26cc57b029b0efc5789ff3deb3"
+    }
+  ],
+  "priorManifest": "docs/delivery/sonic-p02-two-owner-browser-acceptance-source-successor-20261112.json",
+  "historicalShaLocks": "unchanged",
+  "manualBrowserUat": "not dispatched",
+  "newNegatives": 17,
+  "reason": "Real Auth/RLS checker now independently asserts returned saved user_id, role OWNER, status ACTIVE and workspace_id under the authenticated owner's session."
+}
