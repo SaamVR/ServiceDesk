@@ -423,15 +423,34 @@ const onboardingVeto=JSON.parse(onboardingVetoRaw.toString()) as {
  businessScenario:string;unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
  invariants:string[];acceptance:string;nextBatch:string;
 };
+const returnedMembershipRaw=read("docs/delivery/sonic-p02-onboarding-returned-owner-membership-veto-successor-20261111.json");
+const returnedMembership=JSON.parse(returnedMembershipRaw.toString()) as {
+ schema:string;batchId:string;ownerChat:string;sourceOnly:boolean;reviewedParentHead:string;
+ predecessor:{path:string;blob:string;unchanged:boolean};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;lane:string}>;
+ qa:{primary:{path:string;previous:number;current:number;added:number};secondary:{path:string;previous:number;current:number;added:number};scope:string};
+ businessScenario:string;unchangedSource:Array<{path:string;blob:string;unchanged:boolean}>;
+ invariants:string[];acceptance:string;nextBatch:string;
+};
+const currentReturnedMembershipBlob=(path:string,prior:string|undefined):string=>{
+ if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
+   throw Error("Missing reviewed returned membership source SHA: "+path);
+ const delta=returnedMembership.changedSource.find(x=>x.path===path);
+ if(!delta)return prior;
+ if(prior===delta.currentBlob)return prior;
+ if(prior!==delta.previousBlob)return prior;
+ expect(delta.previousBlob,path).toBe(prior);
+ return delta.currentBlob;
+};
 const currentOnboardingVetoBlob=(path:string,prior:string|undefined):string=>{
  if(typeof prior!=="string"||!/^[a-f0-9]{40}$/.test(prior))
    throw Error("Missing approved P02 onboarding tenant SHA: "+path);
  const next=onboardingVeto.changedSource.find(x=>x.path===path);
- if(!next)return prior;
- if(prior===next.currentBlob)return prior;
- if(prior!==next.previousBlob)return prior;
+ if(!next)return currentReturnedMembershipBlob(path,prior);
+ if(prior===next.currentBlob)return currentReturnedMembershipBlob(path,prior);
+ if(prior!==next.previousBlob)return currentReturnedMembershipBlob(path,prior);
  expect(next.previousBlob,path).toBe(prior);
- return next.currentBlob;
+ return currentReturnedMembershipBlob(path,next.currentBlob);
 };
 const currentOwnerLandingRlsBlob=(path:string,previous:string|undefined):string=>{
  if(typeof previous!=="string"||!/^[a-f0-9]{40}$/.test(previous))
@@ -1004,7 +1023,10 @@ describe("F15 independent critic: no new composite, exact source and default-den
   expect(onboardingVeto.changedSource).toEqual([{"path":"src/features/onboarding/onboarding-product-runtime.ts","previousBlob":"7da899db0de552ce8184f7db36111bb17e5f0db0","currentBlob":"0b980b4b1991f41eb2f7f4f848073e2fb8acd15f","lane":"AUTHENTICATED_OWNER_ONBOARDING_ROUTE"},{"path":"src/features/onboarding/owner-onboarding-workspace-choice.ts","previousBlob":"5d2066f151aebb61957bd33170581dbac5d63fb6","currentBlob":"fbd623618b87718bffd16abc2b212db3f2e6aebf","lane":"OWNER_TENANT_RLS_FOREIGN_ROW_VETO"},{"path":"tests/e2e/p02-workspace-error-origin.test.ts","previousBlob":"cafb82ecfc548c4b649d02a023a295b2a10bad34","currentBlob":"a716260cf036f691927fa1d448b68f4ebd3b3958","lane":"INDEPENDENT_AUTH_RLS_ADVERSARIAL_QA"},{"path":"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts","previousBlob":"778e65243cd65f641c580921dcbf1566a5c84d19","currentBlob":"a83f68b9121d9455adc4c15b4ae6102f2f843cf3","lane":"OWNER_CHOOSER_FOREIGN_RETURN_NEGATIVE"}]);
   for(const next of onboardingVeto.changedSource){
     expect(next.path).not.toContain("..");
-    expect(gitHash(read(next.path)),next.path).toBe(next.currentBlob);
+    // Preserve the historical onboarding source and apply only the reviewed
+    // current returned-membership successor when the older SHA matches.
+    expect(gitHash(read(next.path)),next.path)
+      .toBe(currentReturnedMembershipBlob(next.path,next.currentBlob));
   }
   expect(onboardingVeto.qa).toEqual({
     selectedSuite:{path:"tests/e2e/p02-workspace-error-origin.test.ts",previous:39,current:42,added:3},
@@ -1024,6 +1046,37 @@ describe("F15 independent critic: no new composite, exact source and default-den
   for(const guard of ["NO_HTTP_500_ON_THROWN_UNSELECTED_ONBOARDING_AUTH","NO_RLS_MEMBERSHIP_READ_AFTER_UNVERIFIED_IDENTITY","NO_FALSE_OWNER_WORKSPACE_SELECTION_ON_FOREIGN_ROW_LEAK","NO_FOREIGN_TENANT_DISPLAY_NAME_LEAK_IN_NAVIGATION","RETAIN_LEGITIMATE_SINGLE_MULTIOWNER_SELECTION","RETAIN_OWNER_AUTH_REQUIRED_FOR_OPERATIONAL_BACKEND","NO_AUTH_USER_FIXTURE_OR_DB_WRITE","NO_MIGRATION_PROVIDER_PAYMENT_OR_DEPLOY","NO_PROTECTED_MERGE_OR_NEW_PR","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])expect(onboardingVeto.invariants).toContain(guard);
   expect(onboardingVeto.acceptance).toBe("INTEGRATED_SOURCE_ONLY_NOT_REAL_OWNER_A_B_BROWSER_JWT_RLS");
   expect(onboardingVeto.nextBatch).toBe("P02_818_OWNER_APPROVAL_FOR_INACTIVE_DB_RECOVERY_DBA_SQL_AND_TWO_REAL_QA_OWNER_SESSIONS");
+  // A row filtered by the caller's session does not independently attest
+  // its subject, role or ACTIVE status. Veto untrusted returned memberships.
+  expect(returnedMembership.schema).toBe("servicedesk.p02.owner-onboarding-returned-membership-identity-veto.v1");
+  expect(returnedMembership.batchId).toBe("P02_OWNER_WORKSPACE_CHOOSER_VERIFY_ACTUAL_RETURNED_ROLE_SUBJECT_STATUS_20261111");
+  expect(returnedMembership.ownerChat).toBe("PRODUCTION_SOURCE");
+  expect(returnedMembership.sourceOnly).toBe(true);
+  expect(returnedMembership.reviewedParentHead).toBe("7940b945f73afa0af946af8a8d8b96439bbc53a1");
+  expect(returnedMembership.predecessor).toEqual({"path":"docs/delivery/sonic-p02-onboarding-direct-auth-foreign-rls-veto-successor-20261111.json","blob":"fa9f2d10a3e789f05e9dcf079d44e341507839e5","unchanged":true});
+  expect(returnedMembership.predecessor.blob).toBe(gitHash(onboardingVetoRaw));
+  expect(returnedMembership.changedSource).toEqual([{"path":"src/features/onboarding/owner-onboarding-workspace-choice.ts","previousBlob":"fbd623618b87718bffd16abc2b212db3f2e6aebf","currentBlob":"edc4c7c7976b9ec1f6ea14660232218049c81832","lane":"OWNER_RETURNED_MEMBERSHIP_SUBJECT_ROLE_STATUS_GUARD"},{"path":"tests/e2e/p02-workspace-error-origin.test.ts","previousBlob":"a716260cf036f691927fa1d448b68f4ebd3b3958","currentBlob":"56966913487c69c11c612ad0019ca2ccca165dc0","lane":"INDEPENDENT_P02_OWNER_SESSION_QA"},{"path":"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts","previousBlob":"a83f68b9121d9455adc4c15b4ae6102f2f843cf3","currentBlob":"1a6b7dd23a7a3cd83807fe25f09736a5deeb28ae","lane":"MULTI_OWNER_CHOOSER_ROLE_SUBJECT_NEGATIVE_MATRIX"}]);
+  for(const delta of returnedMembership.changedSource){
+    expect(delta.path).not.toContain("..");
+    expect(gitHash(read(delta.path)),delta.path).toBe(delta.currentBlob);
+  }
+  expect(returnedMembership.qa).toEqual({"primary":{"path":"tests/e2e/p02-workspace-error-origin.test.ts","previous":42,"current":43,"added":1},"secondary":{"path":"tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts","previous":9,"current":11,"added":2},"scope":"OFFLINE_RLS_SIMULATION_NO_REAL_OWNER_JWT"});
+  expect(returnedMembership.businessScenario).toContain("individually verified saved membership");
+  expect(returnedMembership.unchangedSource).toEqual([{"path":"src/features/auth/verified-owner-workspace.ts","blob":"221b0f52e75d2231900767f91806b3ea874f32d7","unchanged":true},{"path":"src/features/onboarding/onboarding-product-runtime.ts","blob":"0b980b4b1991f41eb2f7f4f848073e2fb8acd15f","unchanged":true},{"path":"src/features/onboarding/OnboardingProductRoute.tsx","blob":"3a91b7fddf694336ac11b0d7a265de882bf66d09","unchanged":true},{"path":".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml","blob":"634d35b6eb34025df560b78f0dfbe3354988238c","unchanged":true},{"path":"docs/delivery/sonic-p02-onboarding-direct-auth-foreign-rls-veto-successor-20261111.json","blob":"fa9f2d10a3e789f05e9dcf079d44e341507839e5","unchanged":true}]);
+  for(const row of returnedMembership.unchangedSource)
+    expect(gitHash(read(row.path)),row.path).toBe(row.blob);
+  const ownerChoice=read("src/features/onboarding/owner-onboarding-workspace-choice.ts").toString();
+  for(const statement of [
+    '.select("workspace_id,user_id,role,status")',
+    'row.user_id !== verifiedUserId',
+    'row.role !== "OWNER"',
+    'row.status !== "ACTIVE"'
+  ])expect(ownerChoice).toContain(statement);
+  for(const guard of ["REQUIRE_RETURNED_MEMBERSHIP_USER_ID_MATCHES_VERIFIED_ID","REQUIRE_RETURNED_MEMBERSHIP_ROLE_OWNER_ACTIVE","DENY_FOREIGN_REVOKED_STAFF_RETURNED_ROW_WITHOUT_WORKSPACE_QUERY","RETAIN_LEGITIMATE_MULTI_WORKSPACE_SELECTION","RETAIN_DUPLICATE_MEMBERSHIP_DEDUPLICATION","NO_PRIVATE_TENANT_OR_PROVIDER_DETAILS_EXPOSED","NO_CONNECTED_SUPABASE_AUTH_DB_WRITES","NO_SQL_MIGRATION_PROVIDER_PAYMENT_VERCEL_DEPLOY","NO_NEW_PR_NO_PROTECTED_BRANCH_MERGE","P02_OPEN_2_OF_7","P03_OPEN_0_OF_6"])
+    expect(returnedMembership.invariants).toContain(guard);
+  expect(returnedMembership.acceptance).toBe("SOURCE_ONLY_VERIFIED_MOCKED_ROWS_NOT_TWO_REAL_OWNER_BROWSER_JWT_RLS");
+  expect(returnedMembership.nextBatch).toBe("P02_818_OWNER_GRANTED_TWO_REAL_AUTH_SESSIONS_DBA_APPROVED_REGISTRATION_SQL_AND_STAGING_READBACK");
+
 
 
   expect(postRpcRecovery.nextBatch)

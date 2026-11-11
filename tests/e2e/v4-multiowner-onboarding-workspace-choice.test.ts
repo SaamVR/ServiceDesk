@@ -9,7 +9,7 @@ const north = "11111111-1111-4111-8111-111111111111";
 const south = "22222222-2222-4222-8222-222222222222";
 const foreign = "33333333-3333-4333-8333-333333333333";
 
-interface OwnerRow { workspace_id: string }
+interface OwnerRow { workspace_id: string; user_id: string; role: string; status: string }
 interface WorkspaceRow { id: string; slug: string; name: string }
 
 function fakeRls(
@@ -45,7 +45,9 @@ function fakeRls(
   } as unknown as Pick<SupabaseClient, "from">;
   return { auth, calls };
 }
-const membership = (workspace_id: string) => ({ workspace_id });
+const membership = (workspace_id: string): OwnerRow => ({
+  workspace_id, user_id: person, role: "OWNER", status: "ACTIVE",
+});
 const workspace = (id: string, slug: string, name: string): WorkspaceRow =>
   ({ id, slug, name });
 
@@ -55,6 +57,7 @@ describe("V4 onboarding explicit verified owner workspace selection", () => {
     expect(await resolveOwnerOnboardingWorkspaceChoice(auth, person)).toEqual({
       ok: true, kind: "NONE",
     });
+    expect(calls).toContain("membership-select:workspace_id,user_id,role,status");
     expect(calls).toContain("membership-filter:role=OWNER");
     expect(calls).toContain("membership-filter:status=ACTIVE");
     expect(calls).toContain("membership-filter:user_id=" + person);
@@ -120,6 +123,37 @@ describe("V4 onboarding explicit verified owner workspace selection", () => {
     ], [workspace(north, "north-cleaning", "North Cleaning")]);
     expect(await resolveOwnerOnboardingWorkspaceChoice(mixed.auth, person))
       .toEqual({ ok: false, code: "MEMBERSHIP_UNVERIFIED" });
+  });
+
+  it("vetoes returned inactive, staff, foreign-account or missing-role memberships despite OWNER/ACTIVE filters", async () => {
+    for (const altered of [
+      { ...membership(north), user_id: "99999999-9999-4999-8999-999999999999" },
+      { ...membership(north), role: "DISPATCHER" },
+      { ...membership(north), role: "CREW" },
+      { ...membership(north), status: "REVOKED" },
+      { ...membership(north), user_id: null },
+      { ...membership(north), role: null },
+      { ...membership(north), status: null },
+    ]) {
+      const { auth, calls } = fakeRls(
+        [altered as OwnerRow],
+        [workspace(north, "north-cleaning", "North Cleaning")],
+      );
+      expect(await resolveOwnerOnboardingWorkspaceChoice(auth, person))
+        .toEqual({ ok: false, code: "MEMBERSHIP_UNVERIFIED" });
+      expect(calls).toContain("membership-select:workspace_id,user_id,role,status");
+      expect(calls).not.toContain("table:workspaces");
+    }
+  });
+
+  it("denies a mixed real owner and foreign-user membership without selecting the real business", async () => {
+    const { auth, calls } = fakeRls(
+      [membership(north), { ...membership(south), user_id: "99999999-9999-4999-8999-999999999999" }],
+      [workspace(north, "north-cleaning", "North Cleaning")],
+    );
+    expect(await resolveOwnerOnboardingWorkspaceChoice(auth, person))
+      .toEqual({ ok: false, code: "MEMBERSHIP_UNVERIFIED" });
+    expect(calls).not.toContain("table:workspaces");
   });
 
   it("fails closed when RLS hides one of several linked owner workspaces", async () => {

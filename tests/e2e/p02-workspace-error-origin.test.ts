@@ -230,7 +230,10 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
           select() { return this; }, eq() { return this; },
           async limit(value: number) {
             expect(value).toBe(21);
-            return { data: [{ workspace_id: syntheticWorkspace }], error: null };
+            return { data: [{
+              workspace_id: syntheticWorkspace, user_id: syntheticOwner,
+              role: "OWNER", status: "ACTIVE",
+            }], error: null };
           },
         };
         if (table === "workspaces") return {
@@ -252,6 +255,42 @@ describe("P02 post-confirmation owner navigation: real entrypoints fail closed",
     expect(result).toEqual({ ok: false, code: "WORKSPACE_UNVERIFIED" });
     expect(visited).toEqual(["memberships", "workspaces"]);
     expect(JSON.stringify(result)).not.toContain("Foreign Customer Data");
+  });
+
+  it("rejects foreign, revoked and staff owner-membership rows before any workspace read", async () => {
+    for (const tamper of [
+      { user_id: "99999999-9999-4999-8999-999999999999" },
+      { status: "INACTIVE" },
+      { role: "DISPATCHER" },
+      { role: "CREW" },
+      { user_id: null },
+      { role: null },
+    ]) {
+      const visited: string[] = [];
+      const rls = {
+        from(table: string) {
+          visited.push(table);
+          if (table !== "memberships") throw Error("FOREIGN_WORKSPACE_QUERY_SHOULD_NOT_RUN");
+          return {
+            select(columns: string) {
+              expect(columns).toBe("workspace_id,user_id,role,status");
+              return this;
+            },
+            eq() { return this; },
+            async limit(n: number) {
+              expect(n).toBe(21);
+              return { data: [{
+                workspace_id: syntheticWorkspace, user_id: syntheticOwner,
+                role: "OWNER", status: "ACTIVE", ...tamper,
+              }], error: null };
+            },
+          };
+        },
+      } as unknown as Pick<SupabaseClient, "from">;
+      expect(await resolveOwnerOnboardingWorkspaceChoice(rls, syntheticOwner))
+        .toEqual({ ok: false, code: "MEMBERSHIP_UNVERIFIED" });
+      expect(visited).toEqual(["memberships"]);
+    }
   });
 
   // Exact same signed-in QA setup as the actual owner-journey route cases.

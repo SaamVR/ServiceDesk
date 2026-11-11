@@ -27,7 +27,7 @@ export async function resolveOwnerOnboardingWorkspaceChoice(
   if (!UUID.test(verifiedUserId)) return { ok: false, code: "MEMBERSHIP_UNVERIFIED" };
   try {
     const membership = await auth.from("memberships")
-      .select("workspace_id")
+      .select("workspace_id,user_id,role,status")
       .eq("user_id", verifiedUserId)
       .eq("role", "OWNER")
       .eq("status", "ACTIVE")
@@ -37,11 +37,15 @@ export async function resolveOwnerOnboardingWorkspaceChoice(
       return { ok: false, code: "MEMBERSHIP_UNVERIFIED" };
     }
     if (membership.data.length > 20) return { ok: false, code: "TOO_MANY" };
-    // Never turn a corrupt/untrusted membership row into an apparently new
-    // business. A filtered-out owner record could otherwise produce NONE,
-    // inviting duplicate onboarding under an existing authenticated identity.
+    // A filtered query is not a saved-role proof. Verify each returned
+    // membership's subject, active OWNER status and workspace ID before
+    // listing even one business. Reject a corrupted or leaked row rather
+    // than treating an unrelated tenant as signed-in owner access.
     if (membership.data.some(row =>
-      !row || typeof row.workspace_id !== "string" || !UUID.test(row.workspace_id))) {
+      !row || typeof row !== "object" ||
+      row.user_id !== verifiedUserId || row.role !== "OWNER" ||
+      row.status !== "ACTIVE" ||
+      typeof row.workspace_id !== "string" || !UUID.test(row.workspace_id))) {
       return { ok: false, code: "MEMBERSHIP_UNVERIFIED" };
     }
 
