@@ -1,0 +1,127 @@
+name: SONIC P02 two-owner authenticated browser acceptance
+# Push: source-only. Real Auth/Chrome/RLS: manual exact-SHA owner-approved ONLY.
+on:
+  push:
+    branches: ["sonic-integration/ir21-f20-real-finance-retention-20261030"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: sonic-p02-two-owner-browser-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser-source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Enforce exact source SHA and no secret use
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Parse and adversarially test TWO-owner manual browser witness
+        run: |
+          node --check scripts/release/v4-p02-two-owner-browser-contract.mjs
+          node --check scripts/release/v4-p02-two-owner-browser-journey.mjs
+          node --test scripts/release/tests/v4-p02-two-owner-browser-contract.test.mjs
+
+  two-owner-authenticated-browser:
+    # Approval and exact SHA must independently be configured by the owner.
+    # A source push never starts credential-bearing jobs or live QA sign-in.
+    if: github.event_name == 'workflow_dispatch' && vars.SERVICEDESK_P02_TWO_OWNER_BROWSER_APPROVED == 'true' && vars.SERVICEDESK_P02_TWO_OWNER_BROWSER_SHA == github.sha
+    needs: browser-source-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Refuse unreviewed SHA before any credential-bearing step
+        env:
+          APPROVED_SHA: ${{ vars.SERVICEDESK_P02_TWO_OWNER_BROWSER_SHA }}
+        run: test "$(git rev-parse HEAD)" = "$APPROVED_SHA"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Ensure two existing approved fictional owner identities (no Auth mutation)
+        env:
+          SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+          SERVICEDESK_QA_OWNER_A_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_A_EMAIL }}
+          SERVICEDESK_QA_OWNER_A_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_A_PASSWORD }}
+          SERVICEDESK_QA_OWNER_A_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_A_WORKSPACE }}
+          SERVICEDESK_QA_OWNER_B_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_B_EMAIL }}
+          SERVICEDESK_QA_OWNER_B_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_B_PASSWORD }}
+          SERVICEDESK_QA_OWNER_B_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_B_WORKSPACE }}
+        run: node scripts/release/v4-protected-qa-preflight.mjs two-owner-rls
+      - name: Build read-only owner onboarding app at the exact authorized SHA
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://cpmmgivhlkfbiwzhlcey.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+          SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false"
+          SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "false"
+          SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "false"
+        run: pnpm build
+      - name: Start isolated local Next server, never Vercel or Render
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://cpmmgivhlkfbiwzhlcey.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+          SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false"
+          SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED: "false"
+          SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "false"
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/sonic-p02-browser-server.log" 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "P02_AUTHENTICATED_BROWSER_LOCAL_APP_UNAVAILABLE" >&2
+          exit 1
+      - name: Independently verify both real JWT owners, saved branches and foreign RLS/RPC denials
+        env:
+          V4_QA_SUPABASE_URL: https://cpmmgivhlkfbiwzhlcey.supabase.co
+          V4_QA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+          V4_QA_OWNER_A_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_A_EMAIL }}
+          V4_QA_OWNER_A_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_A_PASSWORD }}
+          V4_QA_OWNER_A_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_A_WORKSPACE }}
+          V4_QA_OWNER_B_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_B_EMAIL }}
+          V4_QA_OWNER_B_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_B_PASSWORD }}
+          V4_QA_OWNER_B_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_B_WORKSPACE }}
+          V4_QA_REQUIRE_OPERATIONAL_EVIDENCE: "0"
+          V4_QA_REQUIRE_AUTOMATION_EVIDENCE: "0"
+        run: node scripts/release/v4-private-rls-proof.mjs
+      - name: Install real Chromium
+        uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Verify both genuine isolated Chrome owner sessions and foreign route denials
+        env:
+          SD_P02_BROWSER_APPROVAL: TWO_OWNER_READ_ONLY
+          SD_P02_BROWSER_APPROVED_SHA: ${{ vars.SERVICEDESK_P02_TWO_OWNER_BROWSER_SHA }}
+          V4_AUTH_TEST_ORIGIN: http://127.0.0.1:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://cpmmgivhlkfbiwzhlcey.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SERVICEDESK_QA_SUPABASE_PUBLISHABLE_KEY }}
+          V4_P02_OWNER_A_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_A_EMAIL }}
+          V4_P02_OWNER_A_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_A_PASSWORD }}
+          V4_P02_OWNER_A_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_A_WORKSPACE }}
+          V4_P02_OWNER_B_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_B_EMAIL }}
+          V4_P02_OWNER_B_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_B_PASSWORD }}
+          V4_P02_OWNER_B_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_B_WORKSPACE }}
+          V4_P02_BROWSER_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          V4_P02_BROWSER_OUTPUT: ${{ runner.temp }}/private-sonic-p02-two-owner
+        run: node scripts/release/v4-p02-two-owner-browser-journey.mjs
+      - name: Retain pseudonymous private acceptance manifest for one day
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-sonic-p02-two-owner-${{ github.sha }}
+          path: ${{ runner.temp }}/private-sonic-p02-two-owner/
+          retention-days: 1
+          if-no-files-found: error
