@@ -14,16 +14,31 @@ function actor(id, branch, settings = {}) {
     id, userId: settings.userId ?? id,
     client: {
       from(table) {
-        assert.equal(table, "workspace_branches");
+        assert.ok(["workspace_branches", "branch_memberships"].includes(table));
         const filters = {};
         return {
           select(projection) {
-            assert.equal(projection, "id,workspace_id,is_default,active");
+            assert.equal(projection, table === "workspace_branches"
+              ? "id,workspace_id,is_default,active"
+              : "workspace_id,branch_id,user_id,status");
             return this;
           },
           eq(k, v) { filters[k] = v; return this; },
           async limit(n) {
             assert.equal(n, 2);
+            if (table === "branch_memberships") {
+              assert.deepEqual(filters, { workspace_id:id, branch_id:branch,
+                user_id:settings.userId ?? id, status:"ACTIVE" });
+              if (settings.assignmentError) return {data:null,error:{code:"42501"}};
+              if (settings.assignmentMissing) return {data:[],error:null};
+              const row = {workspace_id:id,branch_id:branch,
+                user_id:settings.userId ?? id,status:"ACTIVE"};
+              if (settings.assignmentRevoked) row.status = "REVOKED";
+              if (settings.assignmentWrongUser) row.user_id = id === A ? B : A;
+              if (settings.assignmentWrongBranch) row.branch_id = id === A ? BB : AB;
+              if (settings.assignmentWrongWorkspace) row.workspace_id = id === A ? B : A;
+              return {data:settings.assignmentDuplicate?[row,row]:[row],error:null};
+            }
             assert.deepEqual(filters, {workspace_id:id,is_default:true,active:true});
             if (settings.dbError) return {data:null,error:{code:"42501"}};
             if (settings.empty) return {data:[],error:null};
@@ -113,3 +128,22 @@ test("missing authenticated owner context and identical tenant are rejected", as
     /DEFAULT_BRANCH_TWO_DISTINCT_OWNERS_REQUIRED/,
   );
 });
+
+// Read-only branch readiness must not accept a branch merely because the
+// owner can see it and the SECURITY DEFINER RPC returns the same ID.
+for (const fault of [
+  "assignmentError", "assignmentMissing", "assignmentRevoked",
+  "assignmentWrongUser", "assignmentWrongBranch",
+  "assignmentWrongWorkspace", "assignmentDuplicate",
+]) {
+  for (const owner of ["A", "B"]) {
+    test("rejects unverified saved default-branch assignment: " + fault + " / " + owner, async () => {
+      const settings = {[fault]:true};
+      const [a, b] = owner === "A" ? pair(settings, {}) : pair({}, settings);
+      await assert.rejects(
+        verifyTwoOwnerDefaultBranchRpcBoundary(a, b, fail),
+        /DEFAULT_BRANCH_OWNER_ASSIGNMENT_MISSING_OR_UNVERIFIED/,
+      );
+    });
+  }
+}
