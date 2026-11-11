@@ -1,0 +1,33 @@
+name: SONIC P02 owner branch assignment source gate
+# Source-only: no Auth credentials, no Supabase connection or deployment.
+on:
+  push:
+    branches: ["sonic-integration/ir21-f20-real-finance-retention-20261030"]
+permissions:
+  contents: read
+concurrency:
+  group: sonic-p02-owner-assignment-contract-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  independent-owner-branch-assignment-critic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Pin exact reviewed source SHA
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Parse read-only RLS boundary and two-owner source runner
+        run: |
+          node --check scripts/release/v4-default-branch-rpc-boundary.mjs
+          node --check scripts/release/v4-p02-two-owner-readonly-acceptance.mjs
+      - name: Independently test active owner branch assignment and foreign-deny negatives
+        run: |
+          node --test \
+            scripts/release/tests/v4-default-branch-rpc-boundary.test.mjs \
+            scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs \
+            scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs
