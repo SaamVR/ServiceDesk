@@ -1,0 +1,3 @@
+# SONIC R38 inbox second-read source equivalence
+
+Original #718 checks matching authorized owner identity, source completeness, counts and proposed owner review categories across two reads. However, QUEUED -> PROVIDER_ACCEPTED changes the saved outbound **delivery evidence** while leaving the candidate reason DELIVERY_UNVERIFIED and count unchanged. To truthfully label its evidence DOUBLE_CHECKED, compare all **used** saved message and conversation fields (IDs, scopes, timestamps, sender/direction, delivery, version, handover and latest timestamp), sorted deterministically, before returning to the owner. Excludes raw customer body, contact, provider IDs and media. No sends, payments or model calls.
