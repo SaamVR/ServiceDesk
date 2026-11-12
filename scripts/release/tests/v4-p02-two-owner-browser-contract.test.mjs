@@ -97,7 +97,7 @@ test("fully rendered foreign owner-readiness disclosure is terminal for either o
  assert.equal(hasForeignReadyDisclosure(
    own("fictional-a"),"fictional-b","fictional-a"),true);
 });
-for(const [name,view,owner,foreign] of [
+for(const [name,view,owner,foreignSlug] of [
  ["valid foreign denial",foreign("fictional-b"),"fictional-a","fictional-b"],
  ["stale own DOM while foreign route loads",{
    ...own("fictional-a"),queryWorkspace:"fictional-b"
@@ -113,7 +113,7 @@ for(const [name,view,owner,foreign] of [
  },"fictional-a","fictional-b"],
  ["exact owner same as requested",own("fictional-a"),"fictional-a","fictional-a"],
 ]) test("fast-fail critic waits rather than declaring false disclosure for "+name,()=>{
- assert.equal(hasForeignReadyDisclosure(view,owner,foreign),false);
+ assert.equal(hasForeignReadyDisclosure(view,owner,foreignSlug),false);
 });
 test("runner invokes fast-fail outside its transient readback retry catch",()=>{
  const code=readFileSync("scripts/release/v4-p02-two-owner-browser-journey.mjs","utf8");
