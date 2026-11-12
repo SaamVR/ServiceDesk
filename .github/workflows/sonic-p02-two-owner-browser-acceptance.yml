@@ -31,6 +31,29 @@ jobs:
           node --check scripts/release/v4-private-rls-proof.mjs
           node --test scripts/release/tests/v4-p02-real-owner-membership-assertion.test.mjs
 
+  browser-synthetic-chrome:
+    # Mock local pages and two entirely fictional cookies. No Supabase/Auth
+    # secrets, live SQL, real account, provider call or production environment.
+    needs: browser-source-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Install real headless Chrome for credential-free replay
+        uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Replay actual two-owner browser runner against fictional loopback HTTP
+        env:
+          V4_P02_BROWSER_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          node --check scripts/release/tests/v4-p02-two-owner-browser-synthetic-replay.test.mjs
+          node --test --test-concurrency=1 scripts/release/tests/v4-p02-two-owner-browser-synthetic-replay.test.mjs
+
   two-owner-authenticated-browser:
     # Approval and exact SHA must independently be configured by the owner.
     # A source push never starts credential-bearing jobs or live QA sign-in.

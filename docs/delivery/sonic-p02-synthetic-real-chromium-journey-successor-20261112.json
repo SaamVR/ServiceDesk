@@ -1,0 +1,32 @@
+{
+  "kind": "SONIC_P02_BROWSER_SYNTHETIC_CHROME_INTEGRATION",
+  "date": "2026-11-12",
+  "baseCommit": "5cfa4475ef96683c1f0c86e3bfd637828617fed0",
+  "sourceOnly": true,
+  "historicalShaLocksModified": false,
+  "liveOwnerAuthUAT": false,
+  "autonomousLiveJob": false,
+  "purpose": "Use real headless Chrome and actual P02 browser runner against an isolated fake two-owner HTML/cookie server. Exercise own saved-ready UI / foreign denial / post-denial revisit and injected foreign-leak negative.",
+  "sourceGate": "browser-synthetic-chrome on push, no GitHub secrets",
+  "protectedManualGate": "existing two-owner-authenticated-browser job unchanged, still workflow_dispatch and exact approved SHA",
+  "changed": [
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-browser-synthetic-replay.test.mjs",
+      "sha": "a97570d2c67d3254d2d941968f691dc0883394a3"
+    },
+    {
+      "path": ".github/workflows/sonic-p02-two-owner-browser-acceptance.yml",
+      "sha": "e079b56596f3d275f2e14490cce88cd3c93078bb"
+    }
+  ],
+  "releaseCounting": "Synthetic positive and negative are source/integration tests only, never real P02 tenant acceptance",
+  "prohibitions": {
+    "SQL": true,
+    "AuthUsers": true,
+    "tenantFixtures": true,
+    "providerCalls": true,
+    "payments": true,
+    "VercelDeploy": true,
+    "protectedBranchMerge": true
+  }
+}
