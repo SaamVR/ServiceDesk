@@ -1,0 +1,279 @@
+{
+  "schemaVersion": "sonic-studio-blob-diff-v1",
+  "canonicalSha": "ac78ff7737c95aa1b29b679d2b8ede57e5dfcae4",
+  "recordedOn": "2026-10-26",
+  "reviewOnly": true,
+  "originalPrsUnmodified": true,
+  "issue": 846,
+  "prDecisions": [
+    {
+      "pr": 631,
+      "prHead": "84db0ddfc2bc55f8edcb36f48091b47096d78db5",
+      "state": "OPEN_DRAFT_UNMERGED",
+      "paths": [
+        {
+          "path": "src/features/operations/AiRequestBrief.tsx",
+          "change": "modified",
+          "prBlob": "2b082d3501b2367d5efd040da5d66520ecffecb4",
+          "canonicalBlob": "2b082d3501b2367d5efd040da5d66520ecffecb4",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "src/features/operations/AiStudioWorkbench.tsx",
+          "change": "modified",
+          "prBlob": "2e07bbc7c0ffe1f7f6de7969a0c5cc933b0b41ad",
+          "canonicalBlob": "2e07bbc7c0ffe1f7f6de7969a0c5cc933b0b41ad",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "src/features/operations/AiStudioWorkspace.module.css",
+          "change": "modified",
+          "prBlob": "fb0786e2bdc9ac855b1ed35af529196ab6650dbb",
+          "canonicalBlob": "fb0786e2bdc9ac855b1ed35af529196ab6650dbb",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "src/features/operations/ai-studio-records.ts",
+          "change": "modified",
+          "prBlob": "2a0e4409d683d9a5455850c7fe712759daa9d620",
+          "canonicalBlob": "2a0e4409d683d9a5455850c7fe712759daa9d620",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "tests/e2e/v4-ai-request-brief-scope-abort.test.ts",
+          "change": "modified",
+          "prBlob": "25edd381aa92c148650e2f1494affa3eb84dc397",
+          "canonicalBlob": "25edd381aa92c148650e2f1494affa3eb84dc397",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "tests/e2e/v4-ai-request-copilot-lifecycle.test.ts",
+          "change": "modified",
+          "prBlob": "fc63909b11c6a6321ca1577d17cd03385696913d",
+          "canonicalBlob": "fc63909b11c6a6321ca1577d17cd03385696913d",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "tests/e2e/v4-ai-studio-accessible-record-picker.test.ts",
+          "change": "added",
+          "prBlob": "771aa351856a68e8486538020b818fbde418e378",
+          "canonicalBlob": "771aa351856a68e8486538020b818fbde418e378",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "tests/e2e/v4-r22-ai-studio-scope-navigation.test.ts",
+          "change": "modified",
+          "prBlob": "9f104c4068744f158ad6322c7851d5cef020bfc5",
+          "canonicalBlob": "9f104c4068744f158ad6322c7851d5cef020bfc5",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        }
+      ],
+      "alreadyInCanonical": 8,
+      "drift": 0,
+      "decision": "NO_SOURCE_MERGE_NEEDED"
+    },
+    {
+      "pr": 633,
+      "prHead": "37fa6baca2d1456a9db4ba5520b84f2cb78a63e7",
+      "state": "OPEN_DRAFT_UNMERGED",
+      "paths": [
+        {
+          "path": "src/features/operations/AiStudioWorkspace.tsx",
+          "change": "modified",
+          "prBlob": "7a74eb59a09f7ec367c12686e5defa7ec78c00c6",
+          "canonicalBlob": "d70ae1ac014adf9046dfd3fe2550c9aa81851f0e",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "src/features/operations/WorkflowExecutionInspector.module.css",
+          "change": "added",
+          "prBlob": "19256e8e1773c72f7145d7f811cc00d8b6f06b4f",
+          "canonicalBlob": "19256e8e1773c72f7145d7f811cc00d8b6f06b4f",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "src/features/operations/WorkflowExecutionInspector.tsx",
+          "change": "added",
+          "prBlob": "110359e85d8c039752b59e373c7cefc21f4657b7",
+          "canonicalBlob": "110359e85d8c039752b59e373c7cefc21f4657b7",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "src/features/operations/workflow-inspector-client-snapshot.ts",
+          "change": "added",
+          "prBlob": "5c6203e6782987413d34c780267a27b111636389",
+          "canonicalBlob": "5c6203e6782987413d34c780267a27b111636389",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "src/features/operations/workflow-inspector-model.ts",
+          "change": "added",
+          "prBlob": "ad1bebcb29d1a84fbc91d0e3aeb2b0931c479233",
+          "canonicalBlob": "ad1bebcb29d1a84fbc91d0e3aeb2b0931c479233",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "tests/e2e/v4-ai-workflow-client-snapshot-privacy.test.ts",
+          "change": "added",
+          "prBlob": "7e26259145b576bc236d2c7b8a65a281b2388267",
+          "canonicalBlob": "7e26259145b576bc236d2c7b8a65a281b2388267",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "tests/e2e/v4-ai-workflow-execution-inspector.test.ts",
+          "change": "added",
+          "prBlob": "5a2366c69b951d3a7651a62703450097dfa3f405",
+          "canonicalBlob": "5a2366c69b951d3a7651a62703450097dfa3f405",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        }
+      ],
+      "alreadyInCanonical": 6,
+      "drift": 1,
+      "decision": "SELECTIVE_REVIEW_ONLY_NO_BLIND_MERGE"
+    },
+    {
+      "pr": 645,
+      "prHead": "2b2a7d77adc75a70a11e5efa6f2ce34878fe3fe7",
+      "state": "OPEN_DRAFT_UNMERGED",
+      "paths": [
+        {
+          "path": "src/features/operations/AiQuoteReview.module.css",
+          "change": "added",
+          "prBlob": "ed3948511eda8a6b4d83b65a1288e9fc89872b0f",
+          "canonicalBlob": "ed3948511eda8a6b4d83b65a1288e9fc89872b0f",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "src/features/operations/AiQuoteReview.tsx",
+          "change": "modified",
+          "prBlob": "a332a5b7084583f5d6c42af9977185f15b968d7d",
+          "canonicalBlob": "a332a5b7084583f5d6c42af9977185f15b968d7d",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "src/features/operations/OperationalProductRoute.tsx",
+          "change": "modified",
+          "prBlob": "f01118585b0755c14ac568ad12c0eba23cabcc45",
+          "canonicalBlob": "f69e386153edff07cc9136dc0b18f1a89b314fd6",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "src/features/operations/ai-quote-review-response.ts",
+          "change": "added",
+          "prBlob": "bc4e90812dcb1809463d9543134379ff34a05bed",
+          "canonicalBlob": "bc4e90812dcb1809463d9543134379ff34a05bed",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "tests/e2e/r37-staff-quote-ai-adversarial-corpus.test.ts",
+          "change": "added",
+          "prBlob": "fbd499793d65cc3dcb5cce7599170cafaa9b3681",
+          "canonicalBlob": "fbd499793d65cc3dcb5cce7599170cafaa9b3681",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "tests/e2e/v4-ai-quote-review-client-cancel.test.ts",
+          "change": "modified",
+          "prBlob": "9baa4aebc716aaa4a3f8b5f025ffdefdc42f3a55",
+          "canonicalBlob": "9baa4aebc716aaa4a3f8b5f025ffdefdc42f3a55",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "tests/e2e/v4-ai-quote-review-client-proof.test.tsx",
+          "change": "added",
+          "prBlob": "d02b228974ce43570d109b3055b7ddfc1cb3c020",
+          "canonicalBlob": "17f1990853c2d5c788ed6447aa7c9c2468478e00",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        }
+      ],
+      "alreadyInCanonical": 5,
+      "drift": 2,
+      "decision": "SELECTIVE_REVIEW_ONLY_NO_BLIND_MERGE"
+    },
+    {
+      "pr": 642,
+      "prHead": "fb051ec554542b315cb149c2e2770f8fcca921d3",
+      "state": "CLOSED_UNMERGED",
+      "paths": [
+        {
+          "path": "src/features/operations/AiOwnerModelProbe.module.css",
+          "change": "modified",
+          "prBlob": "a54018f6f0ce808dbc60aacd6e894a0d4870f681",
+          "canonicalBlob": "a0e4b4b6e66a90eaca8e594ef5eca711b7a1aa71",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "src/features/operations/AiOwnerModelProbe.tsx",
+          "change": "modified",
+          "prBlob": "42879d9a0c3b8c641d94b159c8240e0e284d5336",
+          "canonicalBlob": "53790076383d8713e1ed468e04c8fe2745a90ba2",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "src/features/operations/AiOwnerOperationsBrief.module.css",
+          "change": "added",
+          "prBlob": "57718aeca7fe6f0cd7089f0d80c8ad117e9be0d5",
+          "canonicalBlob": "57718aeca7fe6f0cd7089f0d80c8ad117e9be0d5",
+          "disposition": "EXACT_SOURCE_ALREADY_PRESENT"
+        },
+        {
+          "path": "src/features/operations/AiOwnerOperationsBrief.tsx",
+          "change": "modified",
+          "prBlob": "717b54645ec70da5a154b4deb0b775a48bbc78fa",
+          "canonicalBlob": "dbff40fdb097869f9d206072b2761393e7c9ec7d",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "src/features/operations/ai-owner-model-probe-result.ts",
+          "change": "added",
+          "prBlob": "4dfc0cf990c093236ec123db889a752116c66000",
+          "canonicalBlob": "8ee39bf7a63c9aa8170f67c5196d279b6624be22",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "src/features/operations/owner-operations-brief-proof.ts",
+          "change": "added",
+          "prBlob": "4b65e9799d767390366ac999937bca2f9b636adf",
+          "canonicalBlob": "b6d14db75d2f0e1cd79b9bc8660b4ffaba55d6f4",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "tests/e2e/v4-ai-panel-scope-reliability.test.tsx",
+          "change": "modified",
+          "prBlob": "6567739041e71a154a69b563d81914a06aa5efde",
+          "canonicalBlob": "461f8e4d21c1cac87e6698f207c8a6b1c902f01c",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "tests/e2e/v4-owner-ai-brief-ui-guardrails.test.tsx",
+          "change": "added",
+          "prBlob": "2dede8977ba894ad9b5a59f180877b9ac9b74bf5",
+          "canonicalBlob": "74d8a686c8864b48aad9e4b316975fae61a805d5",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "tests/e2e/v4-owner-ai-priority-actions-client-proof.test.ts",
+          "change": "added",
+          "prBlob": "be49e7e2d0e9d302998ef1f458c56b3f0379e226",
+          "canonicalBlob": "31fad4ad91fce8567e96ccb4dce925e939e28cd5",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        },
+        {
+          "path": "tests/e2e/v4-owner-ai-probe-guardrails.test.ts",
+          "change": "added",
+          "prBlob": "a8ce63be87d22d1ffa84cfd64c33cacfa813ac27",
+          "canonicalBlob": "575427a6e325784536692a71cb274a8a300cfa54",
+          "disposition": "DRIFT_NEEDS_DIFF_REVIEW"
+        }
+      ],
+      "alreadyInCanonical": 1,
+      "drift": 9,
+      "decision": "DO_NOT_REOPEN_OR_MERGE_CLOSED_HISTORIC_PR"
+    }
+  ],
+  "sourceIdenticalTotal": 20,
+  "divergentTotal": 12,
+  "automaticMergeAuthorized": false,
+  "canonicalDeploymentVerified": false,
+  "blobsMeanEquivalentFilesNotVerifiedPrMerge": true
+}
