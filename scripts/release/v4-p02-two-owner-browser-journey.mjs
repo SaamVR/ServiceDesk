@@ -12,7 +12,8 @@ import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 import {setTimeout as sleep} from "node:timers/promises";
 import {
-  LOCAL_ORIGIN, assertBrowserReadback, validateTwoOwnerBrowserConfig
+  LOCAL_ORIGIN, assertBrowserReadback, hasForeignReadyDisclosure,
+  validateTwoOwnerBrowserConfig
 } from "./v4-p02-two-owner-browser-contract.mjs";
 
 const owners = validateTwoOwnerBrowserConfig(process.env);
@@ -112,6 +113,12 @@ async function runOwner(owner, foreignSlug, index) {
     for(let n=0;n<160;n++){
       let snapshot;
       try {snapshot=await read();}catch{await sleep(250);continue;}
+      // A confirmed foreign saved-workspace readiness disclosure is a hard
+      // privacy breach. Do not wait out the normal loading/retry budget.
+      // Only the exact foreign slug is terminal; stale own DOM is not.
+      if(phase==="FOREIGN_DENIED" &&
+          hasForeignReadyDisclosure(snapshot,ownSlug,requested))
+        throw Error("P02_BROWSER_FOREIGN_READINESS_EXPOSED");
       try{assertBrowserReadback(snapshot,ownSlug,requested,phase);return;}
       catch{await sleep(250);}
     }

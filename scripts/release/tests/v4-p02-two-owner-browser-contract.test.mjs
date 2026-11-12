@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {
   PROJECT_ORIGIN, LOCAL_ORIGIN, VERIFIED_STATUS, DENIED_STATUS,
-  assertBrowserReadback, validateTwoOwnerBrowserConfig
+  assertBrowserReadback, hasForeignReadyDisclosure,
+  validateTwoOwnerBrowserConfig
 } from "../v4-p02-two-owner-browser-contract.mjs";
 
 const SHA="a".repeat(40);
@@ -89,6 +90,39 @@ test("unsupported phase and missing browser state fail closed",()=>{
  assert.throws(()=>assertBrowserReadback(own("fictional-a"),"fictional-a","fictional-a","SKIP"),/UNKNOWN_PHASE/);
  assert.throws(()=>assertBrowserReadback(null,"fictional-a","fictional-a","OWN"),/UNVERIFIED_BROWSER_ROUTE/);
 });
+
+test("fully rendered foreign owner-readiness disclosure is terminal for either owner",()=>{
+ assert.equal(hasForeignReadyDisclosure(
+   own("fictional-b"),"fictional-a","fictional-b"),true);
+ assert.equal(hasForeignReadyDisclosure(
+   own("fictional-a"),"fictional-b","fictional-a"),true);
+});
+for(const [name,view,owner,foreign] of [
+ ["valid foreign denial",foreign("fictional-b"),"fictional-a","fictional-b"],
+ ["stale own DOM while foreign route loads",{
+   ...own("fictional-a"),queryWorkspace:"fictional-b"
+ },"fictional-a","fictional-b"],
+ ["incomplete foreign branch data",{
+   ...own("fictional-b"),savedWorkspaceSlug:""
+ },"fictional-a","fictional-b"],
+ ["missing foreign readiness proof",{
+   ...own("fictional-b"),readyStatus:""
+ },"fictional-a","fictional-b"],
+ ["missing foreign saved detail",{
+   ...own("fictional-b"),verifiedDetails:false
+ },"fictional-a","fictional-b"],
+ ["exact owner same as requested",own("fictional-a"),"fictional-a","fictional-a"],
+]) test("fast-fail critic waits rather than declaring false disclosure for "+name,()=>{
+ assert.equal(hasForeignReadyDisclosure(view,owner,foreign),false);
+});
+test("runner invokes fast-fail outside its transient readback retry catch",()=>{
+ const code=readFileSync("scripts/release/v4-p02-two-owner-browser-journey.mjs","utf8");
+ const hard=code.indexOf("hasForeignReadyDisclosure(snapshot,ownSlug,requested)");
+ const soft=code.indexOf("try{assertBrowserReadback(snapshot,ownSlug,requested,phase)");
+ assert.ok(hard>0 && soft>hard);
+ assert.match(code,/P02_BROWSER_FOREIGN_READINESS_EXPOSED/);
+});
+
 test("manual workflow cannot run credential-bearing browser job from a branch push",()=>{
  const yaml=readFileSync(".github/workflows/sonic-p02-two-owner-browser-acceptance.yml","utf8");
  const protectedPart=yaml.split("  two-owner-authenticated-browser:")[1];

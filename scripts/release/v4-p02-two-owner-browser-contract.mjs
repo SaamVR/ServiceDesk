@@ -47,6 +47,24 @@ export function validateTwoOwnerBrowserConfig(env) {
   return owners;
 }
 
+
+/**
+ * A fully rendered, cross-tenant owner-ready page is an immediate privacy
+ * failure, not an eventual-consistency state worth polling for 40 seconds.
+ * Require the saved foreign slug to match the requested URL: this deliberately
+ * ignores stale own-page DOM while Chromium is still navigating.
+ */
+export function hasForeignReadyDisclosure(snapshot, ownerSlug, requestedSlug) {
+  return Boolean(snapshot && typeof snapshot === "object" &&
+    snapshot.path === "/onboarding/verified" &&
+    snapshot.queryWorkspace === requestedSlug &&
+    requestedSlug !== ownerSlug &&
+    snapshot.heading === "Your business workspace is ready." &&
+    snapshot.readyStatus === VERIFIED_STATUS &&
+    snapshot.verifiedDetails === true &&
+    snapshot.savedWorkspaceSlug === requestedSlug);
+}
+
 /** Pure independent critic: never decide acceptance from URL or status alone. */
 export function assertBrowserReadback(snapshot, ownerSlug, requestedSlug, phase) {
   if (!snapshot || typeof snapshot !== "object" ||
