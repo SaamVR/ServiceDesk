@@ -1,0 +1,37 @@
+{
+  "schema": "servicedesk.f26.active-crew-safeguard.v1",
+  "repository": "SaamVR/ServiceDesk",
+  "base": "53049fc437712d77bccd5c79e490d155734dd7bd",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "status": "SOURCE_ONLY_NO_INSTALL",
+  "originalF26Manifest": "docs/delivery/sonic-f26-verified-booking-dispatch-source-lock-20261106.json",
+  "sourceBlobs": [
+    {
+      "path": "src/server/workflows/f26-active-crew-readiness.ts",
+      "blob": "1a8475dcef8c57bf5bb889921db50dcfd0bf4d87"
+    },
+    {
+      "path": "src/server/workflows/owner-verified-booking-dispatch.ts",
+      "blob": "910b800c4279f67316636d833a4b2b12e356c831"
+    },
+    {
+      "path": "tests/ai/f26-owner-verified-booking-dispatch.test.ts",
+      "blob": "ac14d55e556d2a1efdb8d98d93435a93613d50bd"
+    },
+    {
+      "path": "tests/ai/f26-active-crew-readiness.test.ts",
+      "blob": "5d3ac77af11a2713d9f67b18626759b7c442624c"
+    }
+  ],
+  "criticalPreflight": [
+    "saved applied deposit and booked visit",
+    "active same-branch crew",
+    "active crew member",
+    "ACTIVE workspace membership",
+    "two matching crew eligibility fingerprints",
+    "same authorized OWNER across checks",
+    "ASSIGN visit transition and independent postwrite proof"
+  ],
+  "releaseVeto": "DBA must add atomic crew-active and membership guard to existing ASSIGN transaction before flag activation",
+  "sideEffectsThisRun": "NONE"
+}

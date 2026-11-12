@@ -1,0 +1,69 @@
+{
+  "schema": "servicedesk.f23.sibling-quote-phantom-veto-and-review-prototype.v1",
+  "batch": "SONIC-F23-REAL-PG17-PHANTOM-20261107",
+  "classification": "SECURITY_VETO_CONFIRMED_ON_DISPOSABLE_PG17__NO_PRODUCTION_APPROVAL",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-foreign-rls-negative-probe-successor-20261107.json",
+    "blob": "efdebce4aab449dbf804805ea202653f19279dd7",
+    "unchanged": true
+  },
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousBlob": "d7a157dfe6f6ea7af5408558255b7289ea6b0db4",
+    "currentBlob": "e1794d1e00866ea3daa7ed592869d5828cc7fcd8"
+  },
+  "reviewedCandidate": {
+    "path": "docs/engineering/security/f23-atomic-hold-release-rpc-candidate.sql",
+    "blob": "b217a434fc95d7fb2bdfc884fa135acc3461ede0",
+    "installed": false,
+    "unsafeSiblingPhantom": true
+  },
+  "sources": [
+    {
+      "path": "scripts/release/v4-f23-pg17-sibling-quote-phantom-witness.sh",
+      "blob": "d2349471ffb3ed78f5826442d480bd2a9b54cac3",
+      "type": "UNSAFE_GAP_WITNESS",
+      "receipt": "F23_KNOWN_UNSAFE_SIBLING_QUOTE_PHANTOM_REPRODUCED_RELEASE_VETO",
+      "passedMeansSafe": false
+    },
+    {
+      "path": "scripts/release/v4-f23-pg17-unique-current-quote-remedy-prototype.sh",
+      "blob": "13a734fa7a283f49250b0ee23645f2cd4c475c28",
+      "type": "DISPOSABLE_INDEX_PROTOTYPE",
+      "receipt": "PG17_F23_REVIEW_ONLY_UNIQUE_INDEX_PREVENTS_CONCURRENT_SIBLING_PHANTOM",
+      "passedMeansSafe": false
+    },
+    {
+      "path": "docs/engineering/security/f23-quote-phantom-dba-veto-and-review-options-20261107.md",
+      "blob": "bf312ba3f736e8ce8f3504c56336e3f4e695646e",
+      "type": "DBA_VETO_AND_REMEDIATION_OPTIONS",
+      "passedMeansSafe": false
+    }
+  ],
+  "additionalPrototypeReceipts": [
+    "PG17_F23_REVIEW_ONLY_PARTIAL_UNIQUE_INDEX_BLOCKS_DUPLICATE_CURRENT_QUOTE",
+    "PG17_F23_REVIEW_ONLY_SUPERSEDE_THEN_INSERT_COMPATIBILITY_PASS"
+  ],
+  "flagsDefaultOff": [
+    "SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED",
+    "SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED"
+  ],
+  "unresolved": [
+    "VERIFY_DEPLOYED_SCHEMA_AND_UNIQUE_CONSTRAINTS",
+    "VERIFY_ALL_QUOTE_WRITERS_SUPPORT_SUPERSEDE_BEFORE_INSERT",
+    "DUPLICATE_EXISTING_QUOTES_READ_ONLY_PREFLIGHT",
+    "DBA_APPROVE_MIGRATION_ROLLBACK_CONCURRENCY",
+    "REVIEW_PROVIDER_PENDING_EVENTS_AND_PAYMENT_RPC",
+    "P02_TWO_OWNER_REAL_UAT_AND_P03_SAVED_PRICES",
+    "SEPARATE_VERCEL_SHA_DEPLOY_APPROVAL"
+  ],
+  "nonActions": [
+    "NO_SUPABASE_MIGRATION",
+    "NO_DB_WRITE",
+    "NO_NEW_PR",
+    "NO_MERGE",
+    "NO_PROVIDER_SEND",
+    "NO_PAYMENT_CAPTURE"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "schema": "servicedesk.p02.qa-seed-saved-proof-successor.v1",
+  "batch": "SONIC-P02-READONLY-QA-SEED-RECEIPT-20261107",
+  "sourceOnly": true,
+  "connectedDatabaseWrites": false,
+  "previousAcceptedSource": {
+    "path": "docs/delivery/sonic-p02-auth-feedback-surface-successor-20261107.json",
+    "blob": "cc0c2d4e18777def4db57e8e15c0d73119cb64f3",
+    "unchanged": true
+  },
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousBlob": "c905e462f94594e8d70de10141ab2a872c8443ea",
+    "currentBlob": "c75bea67e0a5ac64e955aae9b24c89d485e2dfa5"
+  },
+  "changedSource": [
+    {
+      "path": "src/features/auth/qa-sample-readback.ts",
+      "blob": "736b636462305d8ba52e546b7a9fa2a95ec730d7",
+      "lane": "P02_AUTHENTICATED_RLS_READONLY"
+    },
+    {
+      "path": "src/app/onboarding/verified/page.tsx",
+      "blob": "71ac07fde991b7b9e59779f483bb4c3c35195844",
+      "lane": "P02_NO_UNVERIFIED_UI_RECEIPT"
+    },
+    {
+      "path": "tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+      "blob": "55ab5017788b95128e2f5a7982f744f7e3fd6277",
+      "lane": "P02_INDEPENDENT_NEGATIVE_QA"
+    }
+  ],
+  "historicalContractsUnmodified": [
+    "docs/delivery/sonic-ir21-f20-finance-retention-source-lock-20261030.json",
+    "docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json",
+    "docs/delivery/sonic-f15-f20-post-lock-ui-guard-20261106.json",
+    "docs/delivery/sonic-p02-registered-owner-ui-source-successor-20261106.json",
+    "docs/delivery/sonic-f23-atomic-release-transactional-source-lock-20261107.json",
+    "docs/delivery/sonic-f23-owner-revocation-race-successor-20261107.json"
+  ],
+  "evidenceRules": [
+    "SAVED_SAMPLE_SUCCESS_REQUIRES_REVERIFIED_OWNER",
+    "SIGNED_IN_RLS_ONLY",
+    "MATCH_EXACT_MAIN_BRANCH_AND_TENANT",
+    "REJECT_AMBIGUOUS_PARTIAL_OR_FOREIGN_SOURCE",
+    "NO_DIRECT_DB_WRITE"
+  ],
+  "releaseGate": "P02_818_OPEN_P03_819_OPEN",
+  "prohibited": [
+    "NO_CONNECTED_SUPABASE_WRITE",
+    "NO_QA_USER_CREATION",
+    "NO_VERCEL_DEPLOY",
+    "NO_F15_F23_F26_ACTIVATION",
+    "NO_CUSTOMER_SEND",
+    "NO_PAYMENT",
+    "NO_CANONICAL_MERGE",
+    "NO_NEW_PR"
+  ]
+}

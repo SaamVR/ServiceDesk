@@ -1,0 +1,56 @@
+{
+  "schema": "servicedesk.f26.owner-verified-booking-dispatch.v1",
+  "repo": "SaamVR/ServiceDesk",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "parentHead": "7b16f06e23819dbafe8244c80a42fc0e475dcdf3",
+  "gateHead": "174ebd2651be22bc33a9c205968a0ed20c6d5c28",
+  "status": "SOURCE_ONLY_DISABLED_NOT_DEPLOYED",
+  "flag": "SERVICEDESK_F26_OWNER_DISPATCH_ENABLED",
+  "default": "OFF",
+  "sources": [
+    {
+      "path": "src/server/workflows/owner-verified-booking-dispatch.ts",
+      "sha": "b80f3e1c70f0df8761754adf5c372aa2ca63b100"
+    },
+    {
+      "path": "src/features/operations/owner-verified-dispatch-action.ts",
+      "sha": "2627959f9c405e9803cafd96e9cba77142aa5e5b"
+    },
+    {
+      "path": "src/features/operations/OwnerVerifiedBookingDispatchControls.tsx",
+      "sha": "fdb79a789f36622d093b14fd206ea60f48402d0f"
+    },
+    {
+      "path": "src/features/operations/OwnerSavedBookingReceiptPanel.tsx",
+      "sha": "a4a0a795e74daa29932654cb1f7ed3f54a3237ac"
+    },
+    {
+      "path": "tests/ai/f26-owner-verified-booking-dispatch.test.ts",
+      "sha": "c44d1993dd32b6f552a01d0282235532b6133288"
+    }
+  ],
+  "preconditions": [
+    "Two independent F25 same-owner saved booking/deposit readbacks",
+    "SCHEDULED exact quote+visit+invoice+revision+start",
+    "OWNER/ALL branch reauthorization before ASSIGN",
+    "Existing version-checked transitionOperationalVisit(ASSIGN)",
+    "Third owner reauth and F25 saved ASSIGNED readback"
+  ],
+  "possibleSideEffectsOnApprovedActivation": [
+    "visit status ASSIGNED",
+    "calendar.visit.upsert internal outbox may be queued"
+  ],
+  "neverClaim": [
+    "provider delivery",
+    "customer message",
+    "new booking",
+    "payment application",
+    "crew reassignment from unverified source"
+  ],
+  "authorization": [
+    "P02 real distinct owner A/B",
+    "P03 actual saved services and branch rates",
+    "Production approval for exact rollout env/SHA",
+    "Consolidated verified-deposit/visit integration"
+  ]
+}

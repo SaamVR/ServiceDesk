@@ -1,0 +1,91 @@
+{
+  "schema": "servicedesk.p02.check-email-resend-transport-and-url-notice.v1",
+  "batchId": "P02-VERIFICATION_RESEND_SINGLE_REQUEST_AND_BOUNDED_NOTICE-20261108",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "reviewedParentHead": "a36baf43c71101b857906b219f3edce7253be7ed",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-verified-landing-saved-branch-successor-20261108.json",
+    "blob": "afece1f197317157ec0534823b51b6afa2c15753",
+    "unchanged": true
+  },
+  "historicAuthFeedback": {
+    "path": "docs/delivery/sonic-p02-auth-feedback-surface-successor-20261107.json",
+    "blob": "cc0c2d4e18777def4db57e8e15c0d73119cb64f3",
+    "unchanged": true
+  },
+  "historicSignupReceipt": {
+    "path": "docs/delivery/sonic-p02-signup-user-receipt-successor-20261107.json",
+    "blob": "96a70397dbbf60f8ab3f8a6ab5617e754b2d0b83",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/features/auth/check-email-feedback.ts",
+      "previousBlob": null,
+      "currentBlob": "59332813362bb69cc5bf66293c90f128826bb7c6",
+      "lane": "VERIFICATION_FEEDBACK"
+    },
+    {
+      "path": "src/app/auth/sign-up/check-email/actions.ts",
+      "previousBlob": "265fdc9e75e5341369b7e8928d3ebbc75ec3a8e8",
+      "currentBlob": "29e32db14a5a6eac143bd3be5acc7a6f965db0c7",
+      "lane": "AUTH_RESEND"
+    },
+    {
+      "path": "src/app/auth/sign-up/check-email/page.tsx",
+      "previousBlob": "015f3d1a811ffb24b6417d9d17996dd463d0cd27",
+      "currentBlob": "2f3cf8b5ade3c7eabdb4dd8e8f3c2b82a6ed0f30",
+      "lane": "ONBOARDING_UI"
+    },
+    {
+      "path": "tests/e2e/p02-auth-url-feedback-integrity.test.ts",
+      "previousBlob": "9e7d4cf6436084b99284b5da23b26181460df93f",
+      "currentBlob": "486f7787f28eac806f9e1776e1c964327d2972b5",
+      "lane": "ADVERSARIAL_URL_QA"
+    },
+    {
+      "path": "tests/e2e/p02-signup-confirm-transport-outcome.test.ts",
+      "previousBlob": "6d5d988a535039b03df8fcf7082caeea8f3f3b42",
+      "currentBlob": "2e7e16db357d1249d279e3729711cc2d64c70558",
+      "lane": "DIRECT_SERVER_ACTION_QA"
+    }
+  ],
+  "testCases": {
+    "authUrl": {
+      "previous": 6,
+      "current": 8
+    },
+    "signupConfirm": {
+      "previous": 12,
+      "current": 17
+    }
+  },
+  "unchangedWorkflows": [
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/sonic-p02-auth-origin-focused.yml",
+      "blob": "42e200cdfe166ebb0e2f5eb187b182ab81c24490",
+      "unchanged": true
+    }
+  ],
+  "advisory": "If this address has an account awaiting verification, a new link may arrive. Delivery is not confirmed; wait before trying again.",
+  "invariants": [
+    "NO_ARBITRARY_URL_NOTICE_REFLECTION",
+    "NO_VERIFICATION_OR_DELIVERY_CLAIM_FROM_QUERY",
+    "NO_PROVIDER_ERROR_EMAIL_ENUMERATION",
+    "NO_RAW_PROVIDER_500_ON_THROWN_RESEND",
+    "NO_AUTOMATIC_RESEND_RETRY_AFTER_UNCERTAIN_TRANSPORT",
+    "NO_CONNECTED_AUTH_PROVIDER_CALL",
+    "NO_SUPABASE_DB_WRITE_OR_MIGRATION",
+    "NO_VERCEL_DEPLOY",
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6"
+  ],
+  "acceptance": "INTEGRATED_SOURCE_ONLY_NOT_REAL_TWO_OWNER_BROWSER_JWT_RLS",
+  "nextBatch": "P02_818_REAL_OWNER_A_B_AUTH_DBA_AND_STAGING_APPROVAL"
+}

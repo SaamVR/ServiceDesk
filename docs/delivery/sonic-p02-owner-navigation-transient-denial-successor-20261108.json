@@ -1,0 +1,72 @@
+{
+  "schema": "servicedesk.p02.owner-auth-navigation-transient-and-no-resubmit.v1",
+  "batchId": "P02-OWNER_NAVIGATION_FAIL_CLOSED_AND_NO_DUPLICATE_REGISTRATION-20261108",
+  "sourceOnly": true,
+  "chat": "PRODUCTION_SOURCE",
+  "reviewedParentHead": "235c38ba022d83dfb99e96e3f5325517cf0a4e10",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-active-owner-hidden-workspace-veto-20261108.json",
+    "blob": "aa420877a08eb9a31cc47a28ba940d31d0868f92",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "previousBlob": "6d424726cd36e6c6bef7b36e174019235a72004c",
+      "currentBlob": "2ed68d7a1ae4449e43dfb852fd8e210640664e56",
+      "lane": "ONBOARDING_UI"
+    },
+    {
+      "path": "src/app/auth/select-workspace/page.tsx",
+      "previousBlob": "dc9c9688392a87fe465e31dfbf06b7307f1ce5db",
+      "currentBlob": "d49858992d78fcb0a84bbd84d24bb1ebf681896e",
+      "lane": "STAFF_WORKSPACE_CHOOSER"
+    },
+    {
+      "path": "src/app/onboarding/verified/page.tsx",
+      "previousBlob": "71ac07fde991b7b9e59779f483bb4c3c35195844",
+      "currentBlob": "12eafdfa355d0c2fe59c3fa72a6533993627f60c",
+      "lane": "VERIFIED_OWNER_LANDING"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "8c3e470ba2f74441b4441c448928573f7a163007",
+      "currentBlob": "f1686a3511072e56147b4dc42ee820bab88ffc00",
+      "lane": "ADVERSARIAL_QA"
+    }
+  ],
+  "regressionTests": {
+    "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+    "previous": 23,
+    "current": 29,
+    "added": 6,
+    "scope": "SYNTHETIC_SERVER_COMPONENTS_NO_SIGNED_IN_JWT"
+  },
+  "unchangedServerAction": {
+    "path": "src/app/auth/create-workspace/actions.ts",
+    "blob": "8e3a6e0572c38680141ce86b5d7f5f84cf5d6dfd",
+    "unchanged": true
+  },
+  "unchangedAuthorizer": {
+    "path": "src/features/auth/authorized-workspace-access.ts",
+    "blob": "432490ce986695d418b7f2cf0f7bcdac27806102",
+    "unchanged": true
+  },
+  "unchangedWorkflow": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "requiredGuards": [
+    "NO_DUPLICATE_REGISTRATION_FORM_ON_AMBIGUOUS_RPC",
+    "NO_RAW_AUTH_PROVIDER_500_IN_CHOOSER",
+    "NO_RAW_AUTH_PROVIDER_500_ON_VERIFIED_OWNER",
+    "NO_ONBOARDING_ON_UNVERIFIED_USER",
+    "NO_DB_READ_FALLBACK_TO_FALSE_NEW_OWNER",
+    "NO_CONNECTED_AUTH_DB_WRITE",
+    "NO_DEPLOY",
+    "P02_REMAINS_2_OF_7",
+    "P03_REMAINS_0_OF_6"
+  ],
+  "acceptance": "INTEGRATED_SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_JWT_RLS_ACCEPTANCE"
+}

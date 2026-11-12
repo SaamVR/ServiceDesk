@@ -107,6 +107,126 @@ export async function loadVerifiedOwnerWorkspace(
   } };
 }
 
+/**
+ * Independently verify that an already authenticated, RLS-proven OWNER has
+ * one saved ACTIVE default branch and one saved ACTIVE assignment to it.
+ * This is a read-only receipt, NOT an authorization bypass: callers must first
+ * call loadVerifiedOwnerWorkspace using the browser's real Auth session.
+ * New registrations additionally prove migration 0059's MAIN code and fields.
+ * An existing owner may legitimately have renamed or reconfigured the branch.
+ */
+export async function verifySavedOwnerDefaultBranch(
+  auth: SupabaseClient,
+  userId: string,
+  workspace: VerifiedOwnerWorkspace,
+  newRegistration?: Omit<VerifiedOwnerWorkspace, "id">,
+): Promise<boolean> {
+  // Migration 0059 creates both MAIN and its owner branch membership in the
+  // same transaction. RLS-visible workspace + OWNER rows alone cannot prove
+  // first-run branch readiness. Never trust the registration JSON to certify it.
+  const savedBranches = await (async () => await auth.from("workspace_branches")
+    .select("id,workspace_id,code,timezone,currency,is_default,active")
+    .eq("workspace_id", workspace.id)
+    .eq("is_default", true)
+    .eq("active", true)
+    .limit(2))().catch(() => null);
+  if (!savedBranches || savedBranches.error ||
+      !Array.isArray(savedBranches.data) || savedBranches.data.length !== 1) {
+    return false;
+  }
+  const branch = savedBranches.data[0];
+  if (!branch || typeof branch.id !== "string" || !UUID.test(branch.id) ||
+      branch.workspace_id !== workspace.id ||
+      branch.is_default !== true || branch.active !== true ||
+      typeof branch.code !== "string" ||
+      !/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(branch.code) ||
+      // An existing=true owner may have reconfigured branch settings, but
+      // malformed billing settings cannot certify a ready workspace.
+      typeof branch.timezone !== "string" || !branch.timezone.trim() ||
+      branch.timezone.length > 100 ||
+      typeof branch.currency !== "string" ||
+      !/^[A-Z]{3}$/.test(branch.currency)) {
+    return false;
+  }
+  // A new business requires its actual saved MAIN branch with matching billing
+  // fields. Existing=true is an idempotent return to an older owned business,
+  // whose default branch code/timezone/currency may legitimately have changed.
+  if (newRegistration !== undefined &&
+      (branch.code !== "MAIN" || branch.timezone !== newRegistration.timezone ||
+       branch.currency !== newRegistration.currency)) {
+    return false;
+  }
+  const savedBranchOwner = await (async () => await auth.from("branch_memberships")
+    .select("workspace_id,branch_id,user_id,status")
+    .eq("workspace_id", workspace.id)
+    .eq("branch_id", branch.id)
+    .eq("user_id", userId)
+    .eq("status", "ACTIVE")
+    .limit(2))().catch(() => null);
+  if (!savedBranchOwner || savedBranchOwner.error ||
+      !Array.isArray(savedBranchOwner.data) || savedBranchOwner.data.length !== 1) {
+    return false;
+  }
+  const assigned = savedBranchOwner.data[0];
+  if (!assigned || assigned.workspace_id !== workspace.id ||
+      assigned.branch_id !== branch.id || assigned.user_id !== userId ||
+      assigned.status !== "ACTIVE") {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Verify a creation RPC against the caller's *saved*, RLS-visible owner row.
+ * An existing=true response is the idempotent route of migration 0059: it
+ * legitimately returns the owner's prior workspace rather than a new slug.
+ * No response field alone is authoritative, including the existing flag.
+ */
+export async function verifyOwnerWorkspaceCreationReadback(
+  auth: SupabaseClient,
+  userId: string,
+  requested: Omit<VerifiedOwnerWorkspace, "id">,
+  response: unknown,
+): Promise<
+  | { ok: true; workspace: VerifiedOwnerWorkspace; existing: boolean }
+  | { ok: false; reason: "RPC_UNVERIFIED" | "PERSISTENCE_UNVERIFIED" }
+> {
+  if (!response || typeof response !== "object" || Array.isArray(response)) {
+    return { ok: false, reason: "RPC_UNVERIFIED" };
+  }
+  const receipt = response as Record<string, unknown>;
+  if (receipt.ok !== true || typeof receipt.slug !== "string" ||
+      receipt.slug.length < 3 || receipt.slug.length > 40 ||
+      !slugPattern.test(receipt.slug) ||
+      (receipt.existing !== true && receipt.existing !== false)) {
+    return { ok: false, reason: "RPC_UNVERIFIED" };
+  }
+  // A newly created business must have the exact submitted address. Only the
+  // atomic RPC's existing=true path may legitimately point to an older one.
+  if (receipt.existing === false && receipt.slug !== requested.slug) {
+    return { ok: false, reason: "RPC_UNVERIFIED" };
+  }
+
+  const readback = await loadVerifiedOwnerWorkspace(auth, userId, receipt.slug);
+  if (!readback.ok) return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  if (receipt.existing === false && (
+    readback.workspace.slug !== requested.slug ||
+    readback.workspace.name !== requested.name ||
+    readback.workspace.timezone !== requested.timezone ||
+    readback.workspace.currency !== requested.currency
+  )) {
+    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  }
+  if (!await verifySavedOwnerDefaultBranch(
+    auth, userId, readback.workspace, receipt.existing === false ? requested : undefined,
+  )) {
+    return { ok: false, reason: "PERSISTENCE_UNVERIFIED" };
+  }
+
+  return { ok: true, workspace: readback.workspace, existing: receipt.existing };
+}
+
 /** Login never silently sends an owner into a staff backend without its key. */
 export function ownerAfterLoginHref(
   workspace: { slug: string; role: string; href: string },

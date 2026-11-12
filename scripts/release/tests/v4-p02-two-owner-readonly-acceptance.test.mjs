@@ -44,19 +44,29 @@ function mockFetch(options = {}) {
     } else {
       assert.equal(request.method, "GET");
       const name = url.pathname.split("/").at(-1);
-      assert.ok(["workspaces", "memberships", "requests", "workspace_branches"].includes(name));
+      assert.ok(["workspaces", "memberships", "requests", "workspace_branches", "branch_memberships"].includes(name));
       const id = (url.searchParams.get(name === "workspaces" ? "id" : "workspace_id") || "").slice(3);
       if (name === "memberships") {
-        assert.equal(url.searchParams.get("user_id"),"eq." + (owner === "A" ? userA : userB));
-        assert.equal(url.searchParams.get("role"),"eq.OWNER");
-        assert.equal(url.searchParams.get("status"),"eq.ACTIVE");
+        assert.equal(url.searchParams.get("user_id"), id === expected
+          ? "eq." + (owner === "A" ? userA : userB) : null);
+        assert.equal(url.searchParams.get("role"), id === expected ? "eq.OWNER" : null);
+        assert.equal(url.searchParams.get("status"), id === expected ? "eq.ACTIVE" : null);
       }
       if (name === "workspace_branches") {
-        assert.equal(url.searchParams.get("is_default"),"eq.true");
-        assert.equal(url.searchParams.get("active"),"eq.true");
+        assert.equal(url.searchParams.get("is_default"), id === expected ? "eq.true" : null);
+        assert.equal(url.searchParams.get("active"), id === expected ? "eq.true" : null);
       }
-      const present=(id === expected || options.leakForeignRows && id !== expected) &&
-        (name !== "requests" || options.savedRequest);
+      if (name === "branch_memberships") {
+        assert.equal(url.searchParams.get("user_id"), id === expected
+          ? "eq." + (owner === "A" ? userA : userB) : null);
+        assert.equal(url.searchParams.get("branch_id"), id === expected ? "eq." + branch : null);
+        assert.equal(url.searchParams.get("status"), id === expected ? "eq.ACTIVE" : null);
+      }
+      const present=(id === expected ||
+        options.leakForeignRows && id !== expected ||
+        options.leakForeignAssignment && id !== expected && name === "branch_memberships") &&
+        (name !== "requests" || options.savedRequest) &&
+        !(name === "branch_memberships" && id === expected && options.missingAssignment);
       if (!present) data=[];
       else if(name==="workspaces") data=[{id}];
       else if(name==="memberships") data=[{
@@ -66,6 +76,10 @@ function mockFetch(options = {}) {
         status:options.inactiveOwner?"INACTIVE":"ACTIVE",
       }];
       else if(name==="requests") data=[{id:branch,workspace_id:id}];
+      else if(name==="branch_memberships") data=[{
+        workspace_id:id, branch_id:id===workA?branchA:branchB,
+        user_id:id===workA?userA:userB, status:id===expected?"ACTIVE":"REVOKED",
+      }];
       else data=[{id:id===workA?branchA:branchB,workspace_id:id,
         is_default:true,active:true}];
     }
@@ -98,14 +112,28 @@ test("proves two different owners' own visibility, foreign denial and own-only b
   assert.equal(result.noWrites, true);
   assert.equal(result.checks.length, 2);
   assert.ok(result.checks.every(x => x.scope === "OWN_WORKSPACE_ALLOWED_FOREIGN_DENIED"));
-  assert.equal(calls.length, 20);
+  assert.equal(calls.length, 24);
   assert.equal(calls.filter(x => x.method === "POST").length, 4);
-  assert.equal(calls.filter(x => x.method === "GET").length, 16);
+  assert.equal(calls.filter(x => x.method === "GET").length, 20);
 });
 
 test("does not require seeded requests to prove owner workspace isolation", async () => {
   const { fetcher } = mockFetch();
   assert.equal((await runTwoOwnerReadOnlyAudit(env, fetcher)).result, "PASS");
+});
+
+test("fails without saved ACTIVE branch owner assignment even when workspace OWNER exists", async () => {
+  await assert.rejects(
+    runTwoOwnerReadOnlyAudit(env, mockFetch({ missingAssignment: true }).fetcher),
+    /DEFAULT_BRANCH_OWNER_ASSIGNMENT_MISSING_OR_AMBIGUOUS/,
+  );
+});
+
+test("detects a foreign revoked branch assignment without over-filtering the foreign probe", async () => {
+  await assert.rejects(
+    runTwoOwnerReadOnlyAudit(env, mockFetch({ leakForeignAssignment: true }).fetcher),
+    /FOREIGN_TENANT_DATA_EXPOSED_BRANCH_MEMBERSHIPS/,
+  );
 });
 
 test("fails when a foreign tenant row is visible", async () => {

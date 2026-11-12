@@ -1,0 +1,39 @@
+{
+  "kind": "SONIC_P02_REAL_TWO_OWNER_BROWSER_SOURCE",
+  "date": "2026-11-12",
+  "baseCommit": "826b00567d5cc52cb4f881e9fee1900e99c431c1",
+  "sourceOnly": true,
+  "liveAcceptance": false,
+  "protectedRunsDispatched": false,
+  "authorization": "manual separate exact SHA plus operator-approved identities",
+  "lanes": {
+    "auth": "actual signed-in Next action verified in isolated Chrome profiles",
+    "frontend": "/onboarding/verified own saved branch and foreign deny",
+    "rls": "existing genuine v4-private-rls-proof.mjs before browser run",
+    "adversarial": "offline validators and denial matrix",
+    "ciRelease": "new independent source-only and manual gated workflow",
+    "critic": "historic source locks and existing workflow byte-identical",
+    "integrator": "single CAS fast-forward"
+  },
+  "files": [
+    {
+      "path": "scripts/release/v4-p02-two-owner-browser-contract.mjs",
+      "blob": "d56b2dfbee3fc0182f58c8a9051ab09260078180"
+    },
+    {
+      "path": "scripts/release/v4-p02-two-owner-browser-journey.mjs",
+      "blob": "5bf11c0fd49d6b3f5d55666de8f2711e353dc035"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-browser-contract.test.mjs",
+      "blob": "d93a7e49077f56aaeb67ffcad13d71b73dee8e76"
+    },
+    {
+      "path": ".github/workflows/sonic-p02-two-owner-browser-acceptance.yml",
+      "blob": "48c0234dde87507f883a951e12c34763571b6630"
+    }
+  ],
+  "historicalManifests": "unchanged",
+  "liveSupabaseSql": false,
+  "customerPaymentProviderWrites": false
+}

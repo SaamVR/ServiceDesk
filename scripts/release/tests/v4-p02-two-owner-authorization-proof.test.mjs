@@ -43,22 +43,28 @@ function harness(fault){
   }else{
    assert.equal(options.method,"GET");
    const table=url.pathname.split("/").at(-1);
-   assert.ok(["workspaces","memberships","requests","workspace_branches"].includes(table));
+   assert.ok(["workspaces","memberships","requests","workspace_branches","branch_memberships"].includes(table));
    const key=table==="workspaces"?"id":"workspace_id";
    const target=(url.searchParams.get(key)||"").replace(/^eq\./,"");
    assert.ok([own,other].includes(target));
    assert.equal(url.searchParams.get("limit"),"2");
    if(table==="memberships"){
-    assert.equal(url.searchParams.get("user_id"),"eq."+(me===0?A:B));
-    assert.equal(url.searchParams.get("role"),"eq.OWNER");
-    assert.equal(url.searchParams.get("status"),"eq.ACTIVE");
+    assert.equal(url.searchParams.get("user_id"),target===own?"eq."+(me===0?A:B):null);
+    assert.equal(url.searchParams.get("role"),target===own?"eq.OWNER":null);
+    assert.equal(url.searchParams.get("status"),target===own?"eq.ACTIVE":null);
    }
    if(table==="workspace_branches"){
-    assert.equal(url.searchParams.get("is_default"),"eq.true");
-    assert.equal(url.searchParams.get("active"),"eq.true");
+    assert.equal(url.searchParams.get("is_default"),target===own?"eq.true":null);
+    assert.equal(url.searchParams.get("active"),target===own?"eq.true":null);
    }
-   const exists=target===own ||
-    (fault==="foreign-default-visible"&&target===other&&table==="workspace_branches");
+   if(table==="branch_memberships"){
+    assert.equal(url.searchParams.get("user_id"),target===own?"eq."+(me===0?A:B):null);
+    assert.equal(url.searchParams.get("branch_id"),target===own?"eq."+ownBranch:null);
+    assert.equal(url.searchParams.get("status"),target===own?"eq.ACTIVE":null);
+   }
+   const exists=(target===own && !(fault==="missing-owner-assignment"&&table==="branch_memberships")) ||
+    (fault==="foreign-default-visible"&&target===other&&table==="workspace_branches") ||
+    (fault==="foreign-assignment-visible"&&target===other&&table==="branch_memberships");
    if(!exists||table==="requests")data=[];
    else if(table==="workspaces")
     data=[{id:fault==="foreign-workspace-identity"?other:target}];
@@ -73,6 +79,17 @@ function harness(fault){
     if(fault==="foreign-branch-identity")row.workspace_id=other;
     if(fault==="inactive-branch")row.active=false;
     data=fault==="duplicate-default"?[row,row]:[row];
+   }else if(table==="branch_memberships"){
+    const row={
+      workspace_id:target,
+      branch_id:target===WA?BA:BB,
+      user_id:target===WA?A:B,
+      status:target===own?"ACTIVE":"REVOKED",
+    };
+    if(fault==="wrong-owner-branch-assignment")row.branch_id=otherBranch;
+    if(fault==="revoked-owner-assignment")row.status="REVOKED";
+    if(fault==="foreign-branch-assignment")row.user_id=target===WA?B:A;
+    data=fault==="duplicate-owner-assignment"?[row,row]:[row];
    }
   }
   return new Response(JSON.stringify(data),{
@@ -87,9 +104,9 @@ test("requires two scoped active owners, a saved default branch, and separately 
  assert.equal(result.result,"PASS");
  assert.equal(result.noWrites,true);
  assert.equal(result.checks.length,2);
- assert.equal(h.calls.length,20);
+ assert.equal(h.calls.length,24);
  assert.equal(h.calls.filter(x=>x.method==="POST").length,4);
- assert.equal(h.calls.filter(x=>x.method==="GET").length,16);
+ assert.equal(h.calls.filter(x=>x.method==="GET").length,20);
  assert.deepEqual(new Set(h.calls.map(x=>x.method)),new Set(["POST","GET"]));
 });
 for(const [fault,expected] of [
@@ -104,6 +121,12 @@ for(const [fault,expected] of [
  ["foreign-default-visible","FOREIGN_TENANT_DATA_EXPOSED_WORKSPACE_BRANCHES"],
  ["wrong-rpc","DEFAULT_BRANCH_OWN_RPC_NOT_VERIFIED"],
  ["foreign-rpc-leak","FOREIGN_DEFAULT_BRANCH_DISCLOSURE"],
+ ["missing-owner-assignment","DEFAULT_BRANCH_OWNER_ASSIGNMENT_MISSING_OR_AMBIGUOUS"],
+ ["wrong-owner-branch-assignment","DEFAULT_BRANCH_OWNER_ASSIGNMENT_UNVERIFIED"],
+ ["revoked-owner-assignment","DEFAULT_BRANCH_OWNER_ASSIGNMENT_UNVERIFIED"],
+ ["foreign-branch-assignment","DEFAULT_BRANCH_OWNER_ASSIGNMENT_UNVERIFIED"],
+ ["duplicate-owner-assignment","DEFAULT_BRANCH_OWNER_ASSIGNMENT_MISSING_OR_AMBIGUOUS"],
+ ["foreign-assignment-visible","FOREIGN_TENANT_DATA_EXPOSED_BRANCH_MEMBERSHIPS"],
 ]){
  test("fails closed rather than reporting two-owner acceptance: "+fault,async()=>{
   const h=harness(fault);

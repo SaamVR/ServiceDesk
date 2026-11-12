@@ -1,0 +1,15 @@
+{
+  "kind": "SONIC_P02_REAL_SESSION_BRANCH_ASSIGNMENT_CI_WITNESS",
+  "date": "2026-11-12",
+  "parentCommit": "ab84b64dbe204024c4b57c8f000c14ee4896d148",
+  "sourceOnly": true,
+  "authorizedCredentialJobChanged": false,
+  "priorManifest": "docs/delivery/sonic-p02-real-rls-default-branch-owner-assignment-successor-20261112.json",
+  "workflow": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "oldBlob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "newBlob": "c13c26caf154bd5a1677bde0023220c2894dca67"
+  },
+  "newProof": "Existing source-only owner-finance-retention job now runs exact branch RPC boundary module syntax and node:test adversarial owner assignment negatives; credential-bearing manual workflows unchanged.",
+  "historicalLocks": "unchanged"
+}

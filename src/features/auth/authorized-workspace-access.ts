@@ -63,8 +63,18 @@ export async function loadAuthorizedWorkspaceDecision(
     if (workspaceRows.length > 100) return { ok: false, code: "WORKSPACE_LOOKUP" };
     if (workspaceRows.some(row => !row || typeof row !== "object" ||
         !staffIds.includes(row.id) || typeof row.slug !== "string" ||
+        // A malformed saved staff address cannot mean "no owner workspace".
+        // Resolve it as an RLS/readback inconsistency, never another signup.
+        row.slug.length < 3 || row.slug.length > 40 ||
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row.slug) ||
         typeof row.name !== "string") ||
         new Set(workspaceRows.map(row => row.id)).size !== workspaceRows.length)
+      return { ok: false, code: "WORKSPACE_LOOKUP" };
+    // A genuine ACTIVE staff membership with an RLS-hidden workspace is
+    // an authorization/readback inconsistency, NOT proof of a new owner.
+    // Otherwise /auth/continue would incorrectly offer another registration.
+    const visibleStaffIds = new Set(workspaceRows.map(row => row.id));
+    if (staffIds.some(id => !visibleStaffIds.has(id)))
       return { ok: false, code: "WORKSPACE_LOOKUP" };
   }
 

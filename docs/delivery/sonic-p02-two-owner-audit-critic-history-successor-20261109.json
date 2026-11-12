@@ -1,0 +1,42 @@
+{
+  "schema": "servicedesk.p02.two-owner-readonly-audit-critic-source-history.v1",
+  "batchId": "P02-TWO_OWNER_BRANCH_ASSIGNMENT_POST_REVIEW_CRITIC_FIX-20261109",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "reviewedParentHead": "29257559fc44fb96b7228ab3a6ab2bede0b90868",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-two-owner-branch-assignment-audit-successor-20261109.json",
+    "blob": "87b4bb927c57ec17779d4e702b3beb2a600bf2f1",
+    "unchanged": true
+  },
+  "previousCI": {
+    "run": 42521017710,
+    "sha": "29257559fc44fb96b7228ab3a6ab2bede0b90868",
+    "selectedTestsPassed": 264,
+    "selectedTestsFailed": 2,
+    "reason": "Two historical negative-RLS critic assertions did not compose the reviewed exact source successor"
+  },
+  "changedSource": [
+    {
+      "path": "tests/ai/f20-ir21-exact-source-critic.test.ts",
+      "previousBlob": "3304d8cf82acd4fb491c0fbedebdde5f22e50888",
+      "currentBlob": "cc175c619683f4d182928b24608781e4148f7b83"
+    },
+    {
+      "path": "tests/ai/sonic-f15-integrated-independent-critic.test.ts",
+      "previousBlob": "a6278a256167e8ec7d8fc580fb2a1ceca57d5cd6",
+      "currentBlob": "c963f28be32d435511edc6ebb00d19bf76a3275b"
+    }
+  ],
+  "oldHistoricalRunnerBlob": "f2d619d2c445a2045d1ccb31426de71a3ffcccda",
+  "newReviewedRunnerBlob": "dc7d6b1d3b2eb84b3554c9c6b822b310049ea4a9",
+  "guards": [
+    "HISTORICAL_NEGATIVE_RLS_MANIFEST_BYTE_IDENTICAL",
+    "EXACT_REVIEWED_SOURCE_SUCCESSOR_PINNED",
+    "NO_CI_SOURCE_BYPASS",
+    "NO_CONNECTED_AUTH_DB_WRITE",
+    "NO_VERCEL_DEPLOY",
+    "P02_STILL_OPEN_2_OF_7"
+  ],
+  "acceptance": "SOURCE_ONLY_NOT_TWO_SIGNED_IN_REAL_OWNER_JWT_RLS_PROOF"
+}

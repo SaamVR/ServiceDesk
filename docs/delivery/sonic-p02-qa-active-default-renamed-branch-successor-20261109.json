@@ -1,0 +1,86 @@
+{
+  "schema": "servicedesk.p02.qa-verified-active-default-branch-successor.v1",
+  "batchId": "P02-QA_RENAMED_DEFAULT_BRANCH_RLS_PROOF_AND_NO_FOREIGN_ASSIGNMENT_20261109",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "parentHead": "2c845c7221d0533522ba2720fccf26921f59681d",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-check-email-resend-bounded-notice-successor-20261108.json",
+    "blob": "711b21342218b4aa93c48d915e4fc9d2d2ebdc17",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/features/auth/qa-sample-seed.ts",
+      "previousBlob": "f1f5a88d0b2fecee4a511f9dc906aa48578f10ed",
+      "currentBlob": "5ed2e466b5b5fa74e3baa91c03140d1958510ed2",
+      "lane": "QA_DEFAULT_BRANCH_SEED"
+    },
+    {
+      "path": "src/features/auth/qa-sample-readback.ts",
+      "previousBlob": "736b636462305d8ba52e546b7a9fa2a95ec730d7",
+      "currentBlob": "39432b3b076939ed0f304d56e3a7fa21112c8b70",
+      "lane": "QA_INDEPENDENT_SAVED_RECEIPT"
+    },
+    {
+      "path": "src/app/onboarding/verified/qa-seed-actions.ts",
+      "previousBlob": "132e72cd4ea64e6c89fdc8cba3c2ae1c78aa71d9",
+      "currentBlob": "5013dcd824b3dca9141162c849ebef90795671d3",
+      "lane": "OWNER_BRANCH_WRITE_GATE"
+    },
+    {
+      "path": "src/app/onboarding/verified/page.tsx",
+      "previousBlob": "d87b1b171095e17f5799b0b77fdee2e829a76add",
+      "currentBlob": "ea3c0b9e38d2f10439c9823ff6bdb7c05701231f",
+      "lane": "QA_UI_DEFAULT_BRANCH_COPY"
+    },
+    {
+      "path": "tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+      "previousBlob": "0795016afdc513196fecb9b802ec9710a3720968",
+      "currentBlob": "f769b97c4256063ec9f4dd70cf0ebf3dd519e62b",
+      "lane": "QA_ADVERSARIAL_DEFAULT_BRANCH"
+    }
+  ],
+  "tests": {
+    "path": "tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+    "previous": 11,
+    "current": 15,
+    "added": 4,
+    "scope": "SYNTHETIC_RLS_QA_SEED_AND_DEFAULT_BRANCH_NO_LIVE_JWT"
+  },
+  "immutableSources": [
+    {
+      "path": "src/features/auth/verified-owner-workspace.ts",
+      "blob": "1eef6fb6efe364d0dd816f5f11ecb2e3a4169ddf",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+      "unchanged": true
+    },
+    {
+      "path": "supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql",
+      "blob": "ee237941a371bf36ac39641fe8c1b65ae516ebe3",
+      "unchanged": true
+    },
+    {
+      "path": "supabase/migrations/0065_v4_default_branch_membership_authority.sql",
+      "blob": "a1d1097c1c31ae258ec4151b7d208bb3c415c21a",
+      "unchanged": true
+    }
+  ],
+  "invariants": [
+    "RENAME_DEFAULT_BRANCH_ALLOWED_FOR_EXISTING_OWNER",
+    "QA_SEED_ONLY_ONE_ACTIVE_DEFAULT_BRANCH",
+    "QA_SEED_REQUIRE_OWNER_ACTIVE_DEFAULT_ASSIGNMENT",
+    "QA_RECEIPT_REQUIRE_SAVED_ACTIVE_DEFAULT_AND_BRANCH_MEMBERSHIP",
+    "NO_DEFAULT_BRANCH_ID_FROM_URL_OR_FORGED_METADATA",
+    "NO_CONNECTED_DB_AUTH_WRITE",
+    "NO_NEW_MIGRATION_OR_RELEASE_FLAG",
+    "NO_DEPLOY_OR_PROVIDER_SEND",
+    "P02_STILL_OPEN_2_OF_7",
+    "P03_STILL_QUEUED_0_OF_6"
+  ],
+  "acceptance": "SOURCE_ONLY_PENDING_TWO_REAL_OWNER_AUTHENTICATED_JWT_RLS"
+}

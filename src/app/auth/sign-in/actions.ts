@@ -51,9 +51,19 @@ export async function signInWithPassword(formData: FormData): Promise<never> {
     },
   });
 
-  const { error } = await auth.auth.signInWithPassword({ email, password });
-  if (error) {
+  // A provider transport failure is not an invalid password, and a
+  // no-error/partial response is NOT evidence that a signed-in session exists.
+  let result: Awaited<ReturnType<typeof auth.auth.signInWithPassword>>;
+  try {
+    result = await auth.auth.signInWithPassword({ email, password });
+  } catch {
+    signInError(next, "Sign in is temporarily unavailable.");
+  }
+  if (result.error) {
     signInError(next, "The email or password is incorrect.");
+  }
+  if (!result.data?.user?.email_confirmed_at || !result.data.session) {
+    signInError(next, "Sign in is temporarily unavailable.");
   }
 
   redirect(next);

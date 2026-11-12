@@ -1,0 +1,44 @@
+{
+  "schema": "servicedesk.p02.owner-navigation-qa-witness-correction.v1",
+  "batchId": "P02-EXACT_JSX_TREE_REGISTRATION_DENIAL_WITNESS_20261108",
+  "sourceOnly": true,
+  "parentHead": "c6433a0e78b83d81413e53e450e27b554563413b",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-owner-navigation-transient-denial-successor-20261108.json",
+    "blob": "1e6b75052dfd1b5803ceb22da610df6d62a160ea",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "f1686a3511072e56147b4dc42ee820bab88ffc00",
+      "currentBlob": "2469e781c54f285d94b63d22ddd4471da0b4e974",
+      "reason": "RECURSIVE_JXS_TREE_TRAVERSAL_CORRECTS_SHALLOW_TEST_FALSE_FAILURE"
+    }
+  ],
+  "testCount": 29,
+  "productionSourceUnchanged": [
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "blob": "2ed68d7a1ae4449e43dfb852fd8e210640664e56",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/auth/select-workspace/page.tsx",
+      "blob": "d49858992d78fcb0a84bbd84d24bb1ebf681896e",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/onboarding/verified/page.tsx",
+      "blob": "12eafdfa355d0c2fe59c3fa72a6533993627f60c",
+      "unchanged": true
+    }
+  ],
+  "guard": [
+    "P02_REMAINS_2_OF_7",
+    "NO_AUTH_OR_DB_WRITE",
+    "NO_DEPLOY",
+    "SOURCE_ONLY_NOT_PRODUCTION_ACCEPTANCE"
+  ],
+  "state": "PENDING_EXACT_HEAD_SOURCE_CI"
+}

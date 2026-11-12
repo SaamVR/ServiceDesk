@@ -1,0 +1,82 @@
+{
+  "schema": "servicedesk.p02.recovery-and-qa-transport-uncertain-successor.v1",
+  "batchId": "P02-RECOVERY_AND_QA_SEED_DENY_RAW_500_OR_FALSE_POST_COMMIT_RECEIPT-20261108",
+  "chat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "parentHead": "e98e4ff0048f283a2272a00924e5f27feee635f5",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-owner-main-branch-saved-readback-successor-20261108.json",
+    "blob": "d881bf6a90a3387cff6465798342138aa7106479",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/reset-password/actions.ts",
+      "previousBlob": "833aa5e9a09d4153faea12aa7178bf7d7f1f9c94",
+      "currentBlob": "5c9919850e8ddadfb5b361d8cb942c4f7785d945",
+      "lane": "RECOVERY_ACTION"
+    },
+    {
+      "path": "src/app/auth/reset-password/page.tsx",
+      "previousBlob": "9a771cc40a68b8c5c50aaaf00ea346b1603fef45",
+      "currentBlob": "905c32bf18e1658a1ab88f6c437bf58a8c6c4fc3",
+      "lane": "RECOVERY_UI"
+    },
+    {
+      "path": "src/features/auth/verified-auth-feedback.ts",
+      "previousBlob": "cd689d192e816ccd9a1d0f0a1851f5ef97d7f728",
+      "currentBlob": "334b7b1aa396a5608ab89839071632880bc805ce",
+      "lane": "TRUSTED_FEEDBACK"
+    },
+    {
+      "path": "src/app/onboarding/verified/qa-seed-actions.ts",
+      "previousBlob": "5828d942a092d300a03f54ca751525f67a7c7056",
+      "currentBlob": "132e72cd4ea64e6c89fdc8cba3c2ae1c78aa71d9",
+      "lane": "QA_SEED_ACTION"
+    },
+    {
+      "path": "tests/e2e/p02-reset-password-session-closure.test.ts",
+      "previousBlob": "d6bc935818c6f33a45301840b4e0b04dbe256eb6",
+      "currentBlob": "f6d1ac6a027823e0b4fb8d6ddbf605cf175164f6",
+      "lane": "RECOVERY_ADVERSARIAL_QA"
+    },
+    {
+      "path": "tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+      "previousBlob": "55ab5017788b95128e2f5a7982f744f7e3fd6277",
+      "currentBlob": "0795016afdc513196fecb9b802ec9710a3720968",
+      "lane": "QA_FIXTURE_ADVERSARIAL_QA"
+    }
+  ],
+  "regressionTests": [
+    {
+      "path": "tests/e2e/p02-reset-password-session-closure.test.ts",
+      "previous": 7,
+      "current": 11,
+      "added": 4
+    },
+    {
+      "path": "tests/e2e/p02-qa-seed-url-saved-proof.test.ts",
+      "previous": 6,
+      "current": 11,
+      "added": 5
+    }
+  ],
+  "unchangedIntegrationWorkflow": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "guards": [
+    "NO_PASSWORD_UPDATE_ON_THROWN_OR_USERLESS_AUTH",
+    "NO_RESET_SUCCESS_ON_PARTIAL_OR_FOREIGN_UPDATED_USER",
+    "NO_SECOND_RESET_FORM_ON_UNCERTAIN_POST_UPDATE_RESULT",
+    "NO_QA_SEED_ON_THROWN_OR_USERLESS_AUTH",
+    "NO_QA_SEED_SUCCESS_ON_PARTIALLY_COMMITTED_TRANSPORT",
+    "NO_RETRY_DUPLICATE_QA_WRITES_ON_TRANSPORT_FAILURE",
+    "NO_CONNECTED_SUPABASE_DB_OR_AUTH_WRITE",
+    "NO_DEPLOY_OR_PROVIDER_SEND",
+    "P02_REMAINS_OPEN_2_OF_7",
+    "P03_REMAINS_OPEN_0_OF_6"
+  ],
+  "acceptance": "SOURCE_ONLY_PENDING_REAL_TWO_OWNER_JWT_RLS_UAT"
+}

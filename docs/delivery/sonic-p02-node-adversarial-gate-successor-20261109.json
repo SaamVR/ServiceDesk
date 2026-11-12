@@ -1,0 +1,70 @@
+{
+  "schema": "servicedesk.p02.two-owner-adversarial-gate-coverage.v1",
+  "batchId": "P02-READONLY_A_B_INDEPENDENT_NODE_SUITES_IN_MAIN_CI-20261109",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "reviewedParentHead": "24f5bd5b87caa74affd9d54af5521750a4b0f4f1",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-two-owner-audit-critic-history-successor-20261109.json",
+    "blob": "ebe27df1d45592ab34be73cdbe3781a293c4bd3a",
+    "unchanged": true
+  },
+  "reviewedChanges": [
+    {
+      "path": "scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs",
+      "previousBlob": "7be7fc80bbb4563ebc2b8da7e0de8a53e4a85726",
+      "currentBlob": "ed6862cb74f12a1d9508e60c3ae2ddadfbf80653",
+      "lane": "CI_NODE_ADVERSARIAL_INTEGRATION"
+    }
+  ],
+  "testEntrypoint": "node --test scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs",
+  "integratedSuites": [
+    {
+      "path": "scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs",
+      "tests": 9
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
+      "tests": 7
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
+      "tests": 18
+    }
+  ],
+  "expectedTotalNodeCases": 34,
+  "immutableSource": [
+    {
+      "path": "scripts/release/v4-p02-two-owner-readonly-acceptance.mjs",
+      "blob": "dc7d6b1d3b2eb84b3554c9c6b822b310049ea4a9",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-readonly-acceptance.test.mjs",
+      "blob": "2eff1ec1fbcb96a2bbeb30e6af2acc309a394bb8",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-authorization-proof.test.mjs",
+      "blob": "da39317cab102594f780a3e2a60f5de2a8c3199b",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+      "unchanged": true
+    }
+  ],
+  "invariants": [
+    "NODE_CI_INCLUDES_INDEPENDENT_FOREIGN_BRANCH_ASSIGNMENT_NEGATIVES",
+    "ADVERSARIAL_SUITES_RUN_ON_EVERY_EXISTING_IR21_PUSH",
+    "NO_PRODUCTION_JWT_IN_CI",
+    "NO_CONNECTED_DB_AUTH_WRITE",
+    "NO_SQL_MIGRATION_OR_WORKFLOW_MUTATION",
+    "NO_NEW_PR_OR_DEPLOY",
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6"
+  ],
+  "acceptance": "SOURCE_ONLY_SYNTHETIC_NODE_TEST_GATE_NOT_REAL_OWNER_A_B_JWT_PROOF",
+  "nextBatch": "P02_818_REAL_OWNER_APPROVAL_DBA_AND_SIGNED_IN_TWO_OWNER_TESTS"
+}

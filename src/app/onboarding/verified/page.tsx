@@ -4,11 +4,15 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { RegistrationShell } from "@/features/auth/RegistrationShell";
 import { supabasePublicConfig } from "@/features/auth/supabase-public-config";
-import { loadVerifiedOwnerWorkspace } from "@/features/auth/verified-owner-workspace";
+import {
+  loadVerifiedOwnerWorkspace,
+  verifySavedOwnerDefaultBranch,
+} from "@/features/auth/verified-owner-workspace";
 import { operationalDatabaseMode } from "@/features/auth/operational-preview-mode";
 import { ownerRegistrationEmailAllowed } from "@/features/auth/owner-registration-readiness";
 import { qaFixtureWritesAllowedForWorkspace } from "@/features/auth/qa-fixture-write-authority";
 import { seedVerifiedQaWorkspace } from "./qa-seed-actions";
+import { verifiedSavedQaSample } from "@/features/auth/qa-sample-readback";
 import { RegistrationSubmitButton } from "@/features/auth/RegistrationSubmitButton";
 
 export const dynamic = "force-dynamic";
@@ -30,16 +34,47 @@ export default async function VerifiedOwnerWorkspacePage({
       setAll() { /* Signed-in session refresh is handled by the request proxy. */ },
     },
   });
-  const { data, error } = await auth.auth.getUser();
-  if (error || !data.user) {
+  // A thrown Auth transport error must not become a raw server 500 after
+  // registration. No owner details or QA actions may render without identity.
+  let identity: Awaited<ReturnType<typeof auth.auth.getUser>> | null = null;
+  try {
+    identity = await auth.auth.getUser();
+  } catch {
+    redirect("/auth/sign-in?error=Sign-in%20is%20temporarily%20unavailable.");
+  }
+  const data = identity?.data;
+  if (!identity || identity.error || !data?.user?.id) {
     redirect("/auth/sign-in?next=" + encodeURIComponent("/auth/continue"));
   }
   if (!data.user.email_confirmed_at) redirect("/auth/sign-up/check-email");
 
   const query = await searchParams;
   const workspaceSlug = query.workspace ?? "";
-  const result = await loadVerifiedOwnerWorkspace(auth, data.user.id, workspaceSlug);
-  if (!result.ok) {
+  // A verified Auth session is not proof of saved owner membership. A thrown
+  // workspace RLS transport read must not become an HTTP 500 or accidentally
+  // expose workspace/QA controls. Use the same bounded denial as an explicit
+  // missing or unauthorized saved owner result.
+  let result: Awaited<ReturnType<typeof loadVerifiedOwnerWorkspace>> | null = null;
+  try {
+    result = await loadVerifiedOwnerWorkspace(auth, data.user.id, workspaceSlug);
+  } catch {
+    result = null;
+  }
+  // A direct or later visit to ?workspace= must not assert "workspace ready"
+  // from owner membership alone. The actual saved MAIN/default branch and the
+  // owner's ACTIVE branch assignment are an independent RLS-visible receipt.
+  let savedDefaultBranchVerified = false;
+  if (result?.ok) {
+    try {
+      savedDefaultBranchVerified = await verifySavedOwnerDefaultBranch(
+        auth, data.user.id, result.workspace,
+      );
+    } catch {
+      // No provider transport details or false success on uncertain readback.
+      savedDefaultBranchVerified = false;
+    }
+  }
+  if (!result?.ok || !savedDefaultBranchVerified) {
     return <RegistrationShell
       eyebrow="Workspace access" title="We could not verify this workspace"
       description="Only a verified owner may open this onboarding confirmation."
@@ -58,14 +93,24 @@ export default async function VerifiedOwnerWorkspacePage({
   const canSeed = operationalMode === "QA_SESSION_RLS" &&
     qaFixtureWritesAllowedForWorkspace(workspace.slug) &&
     ownerRegistrationEmailAllowed(data.user.email);
-  const seedNotice = ({
-    created: "Fictional sample customer, property and enquiry saved in your real test workspace.",
-    "already-exists": "Sample records already exist. No duplicate records were created.",
-    "write-failed": "Sample data was not fully saved. Confirm workspace permissions and retry; earlier steps are resumable.",
-    "not-enabled": "Sample data is only available in an authorized QA environment.",
-    "not-configured": "The test database is not configured.",
-    "not-authorized": "This test account is not authorized to seed workspace records.",
-  } as Record<string, string>)[query.qaSeed ?? ""];
+  // A ?qaSeed=created URL is NOT a database receipt. Re-read the exact
+  // saved synthetic customer, property and enquiry with this owner's live
+  // RLS session before reporting any successful fixture persistence.
+  const claimedSeedSuccess = query.qaSeed === "created" ||
+    query.qaSeed === "already-exists";
+  const savedSeedVerified = canSeed && claimedSeedSuccess
+    ? await verifiedSavedQaSample(auth, data.user.id, workspace.id)
+    : false;
+  const seedNotice = claimedSeedSuccess
+    ? savedSeedVerified
+      ? "Saved fictional customer, default-branch property and enquiry were independently verified in this workspace."
+      : "Saved QA sample records could not be verified. Check your workspace records before retrying; earlier steps may have committed."
+    : ({
+      "write-failed": "If you attempted QA seeding, earlier steps may have committed. Verify your saved workspace records before retrying.",
+      "not-enabled": "QA sample data is only available when this workspace is explicitly authorized.",
+      "not-configured": "QA data requires an authorized database connection.",
+      "not-authorized": "QA fixture writes require an active owner membership and separately approved workspace.",
+    } as Record<string, string>)[query.qaSeed ?? ""];
   return <RegistrationShell
     eyebrow="Account verified · workspace registered"
     title="Your business workspace is ready."
@@ -75,7 +120,7 @@ export default async function VerifiedOwnerWorkspacePage({
   >
     <div aria-label="Verified workspace details" style={{display:"grid",gap:16}}>
       <p role="status" style={{color:"#14634a",fontWeight:750}}>
-        Email confirmed. Owner membership verified against the database.
+        Email confirmed. Owner, workspace and active default branch verified against the database.
       </p>
       <dl style={{display:"grid",gap:12,margin:0}}>
         <div><dt>Business</dt><dd style={{fontWeight:700,margin:0}}>{workspace.name}</dd></div>

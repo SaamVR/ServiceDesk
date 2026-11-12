@@ -1,0 +1,58 @@
+{
+  "schema": "servicedesk.f26.atomic-trigger-integration-dual-guard.v1",
+  "repo": "SaamVR/ServiceDesk",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "sourceParent": "b7fbf8f24c958767423280fd2a26ad4bb9b191a7",
+  "sourceOnly": true,
+  "productionDeployed": false,
+  "sourceSQL": "docs/engineering/security/f26-atomic-crew-assign-trigger-candidate-v1.sql",
+  "sqlSourceBlob": "0deeed123b57046aa2d11be1d210b34a722005b0",
+  "dependencies": [
+    "P02 #818",
+    "P03 #819",
+    "Independent DBA SQL install review",
+    "Approved staging exact head and owner JWTs"
+  ],
+  "flagsDefaultOff": [
+    "SERVICEDESK_F26_OWNER_DISPATCH_ENABLED",
+    "SERVICEDESK_F26_ATOMIC_GUARD_APPROVED"
+  ],
+  "changes": [
+    {
+      "path": "src/server/workflows/f26-active-crew-readiness.ts",
+      "previous": "1a8475dcef8c57bf5bb889921db50dcfd0bf4d87",
+      "blob": "5c58ebed8bfa6767d3ee7d8e33eec1d27ad129f9"
+    },
+    {
+      "path": "src/server/workflows/owner-verified-booking-dispatch.ts",
+      "previous": "910b800c4279f67316636d833a4b2b12e356c831",
+      "blob": "579536ed260877d22c6d3246698d28c2d72b60ef"
+    },
+    {
+      "path": "src/features/operations/OwnerSavedBookingReceiptPanel.tsx",
+      "previous": "a4a0a795e74daa29932654cb1f7ed3f54a3237ac",
+      "blob": "e6337570713829669fe8e133c657f9965503eb1e"
+    },
+    {
+      "path": "tests/ai/f26-active-crew-readiness.test.ts",
+      "previous": "5d3ac77af11a2713d9f67b18626759b7c442624c",
+      "blob": "ca30f2cb7f14303ca7ab796fbb6946274093e316"
+    },
+    {
+      "path": "tests/ai/f26-owner-verified-booking-dispatch.test.ts",
+      "previous": "ac14d55e556d2a1efdb8d98d93435a93613d50bd",
+      "blob": "275a35d9a26fbc4c4b7078eb28b982280b0dd635"
+    },
+    {
+      "path": "tests/ai/f26-owner-verified-booking-dispatch-critic.test.ts",
+      "previous": "8fe7be1d36cf101361649f577e6b751132ac3408",
+      "blob": "cbf58c8fb2f96223dd52763ebca52bad2a641431"
+    },
+    {
+      "path": "tests/ai/f26-atomic-crew-pg17-critic.test.ts",
+      "previous": "36d29609ccda44b62ecf780aaa00f7e650722663",
+      "blob": "2aac842dc23ac4f4c9a0ccfcaa632079963e2f0c"
+    }
+  ],
+  "rolloutAllowed": false
+}

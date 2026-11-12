@@ -1,0 +1,70 @@
+{
+  "schema": "servicedesk.p02.post-rpc-owner-readback-transport-recovery.v1",
+  "batchId": "P02-OWNER_REGISTRATION_POST_RPC_READBACK_THROW_NO_SECOND_WRITE-20261111",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "reviewedParentHead": "f1f9fedcacb9891fe049a063ab1899674d8100e3",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-owner-form-eligibility-valid-actor-successor-20261109.json",
+    "blob": "890dd874b96eb32aa6fb8ebee81e4d01ce359035",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/create-workspace/actions.ts",
+      "previousBlob": "37871b966731acf08a65f9395577eb356c5177e5",
+      "currentBlob": "11a85433b84c88592d6efa270a5f832b9432b7a6",
+      "lane": "OWNER_AUTH_POST_COMMIT_TRANSPORT_FAIL_CLOSED"
+    },
+    {
+      "path": "tests/e2e/p02-registration-denial-action.test.ts",
+      "previousBlob": "1cd9e8e3aad8a35574180d7bc0b29dd7033d2065",
+      "currentBlob": "d0257951ed4a8c8c7f823ccd91b88f96a696a3da",
+      "lane": "INDEPENDENT_POST_COMMIT_QA"
+    }
+  ],
+  "qa": {
+    "path": "tests/e2e/p02-registration-denial-action.test.ts",
+    "previous": 13,
+    "current": 14,
+    "added": 1,
+    "scenarios": [
+      "new-owner-response-readback-throws",
+      "existing-owner-response-readback-throws",
+      "no-implicit-retry",
+      "no-provider-secret-leak"
+    ]
+  },
+  "businessScenario": "Signed-in, authorized owner receives a bounded saved-workspace recovery route if the post-registration durable owner/branch readback throws after RPC may have committed; never present successful registration or automatically submit a second workspace.",
+  "unchangedSource": [
+    {
+      "path": "src/features/auth/verified-owner-workspace.ts",
+      "blob": "221b0f52e75d2231900767f91806b3ea874f32d7",
+      "unchanged": true
+    },
+    {
+      "path": "src/features/auth/workspace-registration-error.ts",
+      "blob": "73e200d522da5bf4dabe0275f97860379f53637f",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+      "unchanged": true
+    }
+  ],
+  "invariants": [
+    "NO_RAW_HTTP_500_AFTER_POSSIBLE_REGISTRATION_COMMIT",
+    "NO_FALSE_OWNER_READY_AFTER_THROWN_PERSISTENCE_READBACK",
+    "NO_AUTOMATIC_SECOND_REGISTRATION_RPC",
+    "NO_PRIVATE_PROVIDER_TRANSPORT_DETAILS_IN_REDIRECT",
+    "REUSE_EXISTING_UNCERTAIN_COMMIT_USER_RECOVERY",
+    "NO_CONNECTED_DB_AUTH_WRITE_OR_REGISTRATION_SQL",
+    "NO_CUSTOMER_PROVIDER_SEND_OR_PAYMENT",
+    "NO_DEPLOY_RELEASE_FLAG_PROTECTED_MERGE",
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6"
+  ],
+  "acceptance": "INTEGRATED_SOURCE_TEST_NOT_AUTHENTICATED_REAL_TWO_OWNER_RLS",
+  "nextBatch": "P02_818_EXPLICIT_OWNER_APPROVED_TWO_REAL_JWT_SESSIONS_AND_DBA_SQL_REVIEW"
+}

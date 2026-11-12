@@ -34,7 +34,16 @@ type OwnerWorkspaceResult =
  * silently routed to the first arbitrary RLS membership. Workspace records
  * and roles are read under the actual user's session; never service_role.
  */
-async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
+type VerifiedOnboardingOwnerSession =
+  | { ok: true; auth: ReturnType<typeof createServerClient>; userId: string }
+  | { ok: false; kind: "configuration" | "authentication" | "verification"; message: string };
+
+/**
+ * Both bare /onboarding and /onboarding?workspace= must require a real,
+ * confirmed Auth subject. A caller-supplied slug never bypasses email
+ * confirmation; the operational snapshot re-authorizes role and scope.
+ */
+async function verifiedOnboardingOwnerSession(): Promise<VerifiedOnboardingOwnerSession> {
   const config = supabasePublicConfig();
   if (!config) {
     return { ok: false, kind: "configuration",
@@ -48,18 +57,31 @@ async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
       setAll() { /* The request proxy owns session refresh. */ },
     },
   });
-
-  const { data, error } = await auth.auth.getUser();
-  if (error || !data.user) {
+  let identity: Awaited<ReturnType<typeof auth.auth.getUser>> | null = null;
+  try {
+    identity = await auth.auth.getUser();
+  } catch {
+    return { ok: false, kind: "authentication",
+      message: "We could not verify your sign-in right now. Retry from sign-in before setting up your business." };
+  }
+  // An error-free but null/undefined Auth result is not a confirmed session.
+  const user = identity?.data?.user;
+  if (!identity || identity.error || typeof user?.id !== "string" || !user.id) {
     return { ok: false, kind: "authentication",
       message: "Sign in with an owner account to continue setup." };
   }
-  if (!data.user.email_confirmed_at) {
+  if (!user.email_confirmed_at) {
     return { ok: false, kind: "verification",
       message: "Confirm your account email before configuring a business." };
   }
+  return { ok: true, auth, userId: user.id };
+}
 
-  const choice = await resolveOwnerOnboardingWorkspaceChoice(auth, data.user.id);
+async function defaultOwnerWorkspaceSlug(): Promise<OwnerWorkspaceResult> {
+  const verified = await verifiedOnboardingOwnerSession();
+  if (!verified.ok) return verified;
+
+  const choice = await resolveOwnerOnboardingWorkspaceChoice(verified.auth, verified.userId);
   if (!choice.ok) {
     return { ok: false, kind: "server",
       message: "Your owner workspace access could not be verified. No business was selected." };
@@ -82,6 +104,13 @@ export async function loadOnboardingProduct(
     return { ok: false, kind: "not_found", message: "Invalid workspace selection." };
   }
   let slug = parsed.kind === "SELECTED" ? parsed.slug : undefined;
+
+  // Explicit-workspace navigation must not skip the bare route's email and
+  // live Auth preflight. The downstream snapshot still authorizes the role.
+  if (slug) {
+    const verified = await verifiedOnboardingOwnerSession();
+    if (!verified.ok) return verified;
+  }
 
   if (!slug) {
     const selected = await defaultOwnerWorkspaceSlug();

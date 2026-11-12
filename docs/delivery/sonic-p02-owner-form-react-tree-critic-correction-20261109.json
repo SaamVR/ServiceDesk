@@ -1,0 +1,53 @@
+{
+  "schema": "servicedesk.p02.owner-form-test-tree-critic-correction.v1",
+  "batchId": "P02-QA_OWNER_FORM_REACT_LINK_WITNESS_AND_SOURCE_ORDER-20261109",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "parentHead": "c18aee3c38b17edf3af568509b4dc4e4c48e7f05",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-owner-form-eligibility-valid-actor-successor-20261109.json",
+    "blob": "890dd874b96eb32aa6fb8ebee81e4d01ce359035",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "cf9f60ffc6003ba65afd42269504218af5922a9c",
+      "currentBlob": "23aa52648145f76b0e5fd9adab3ef45f5b2b1249",
+      "lane": "ACTUAL_REACT_ELEMENT_QA_WITNESS"
+    }
+  ],
+  "testCases": {
+    "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+    "previous": 37,
+    "current": 37,
+    "added": 0
+  },
+  "unchangedApplicationSource": [
+    {
+      "path": "src/app/auth/create-workspace/actions.ts",
+      "blob": "37871b966731acf08a65f9395577eb356c5177e5",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "blob": "98c3dd145b011211d345892c01851fa22c4aadc7",
+      "unchanged": true
+    }
+  ],
+  "unchangedWorkflow": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "invariants": [
+    "NO_CIRCULAR_REACT_JSX_SERIALIZATION",
+    "RETAIN_ACTUAL_FORM_AND_AUTHORIZED_LINK_WITNESS",
+    "ALL_HISTORIC_GIT_BLOB_PINS_RETAINED",
+    "NO_CONNECTED_AUTH_OR_DATABASE_WRITE",
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6",
+    "NO_DEPLOY_OR_MERGE"
+  ],
+  "acceptance": "SOURCE_CORRECTION_ONLY_AWAIT_EXACT_HEAD_CI_NOT_REAL_OWNER_JWT_RLS"
+}

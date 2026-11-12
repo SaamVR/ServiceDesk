@@ -1,0 +1,37 @@
+{
+  "schema": "servicedesk.f26.owner-rpc-acl-source-lock.v1",
+  "date": "2026-11-06",
+  "repository": "SaamVR/ServiceDesk",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "parentCommit": "e609ae9cf9baae9f1b8629505c417f6eb03a174b",
+  "supplements": "docs/delivery/sonic-f26-owner-auth-atomic-source-lock-20261106.json",
+  "sourceOnly": true,
+  "installedInSupabase": false,
+  "approvedForProduction": false,
+  "correction": "Migration 0011 denies direct anon/authenticated EXECUTE; candidate now explicitly enforces this boundary. Disposable PG17 validates default ACL denial and identity binding under deliberately widened test ACL.",
+  "changedFiles": [
+    {
+      "path": "docs/engineering/security/f26-owner-role-atomic-assign-rpc-candidate.sql",
+      "sha": "7abc712a5b71cb4e3a4d9c90573de305cd143bca"
+    },
+    {
+      "path": "tests/sql/v4-f26-atomic-crew-pg17-fixture.sql",
+      "sha": "6da5812e3efd83b0f0380b679c25ccabfdd80595"
+    },
+    {
+      "path": "tests/sql/v4-f26-owner-atomic-pg17-acceptance.sql",
+      "sha": "496755b553e003365b000c2476b8a716dea30975"
+    },
+    {
+      "path": "tests/ai/f26-owner-actor-lock-critic.test.ts",
+      "sha": "b333bd01e36e27af7fbc80273a59ed22dbe850ec"
+    }
+  ],
+  "rolloutFlagsDefaultOff": [
+    "SERVICEDESK_F26_OWNER_DISPATCH_ENABLED",
+    "SERVICEDESK_F26_ATOMIC_GUARD_APPROVED"
+  ],
+  "independentDBAReviewRequired": true,
+  "realJwtAndRlsVerified": false,
+  "productionDeploymentAuthorized": false
+}
