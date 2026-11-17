@@ -20,12 +20,25 @@ export default async function SelectWorkspacePage() {
       setAll() { /* Middleware owns session refresh. */ },
     },
   });
-  const { data, error } = await auth.auth.getUser();
-  if (error || !data.user) redirect("/auth/sign-in");
-  if (!data.user.email_confirmed_at) redirect("/auth/sign-up/check-email");
+  // Auth transport errors are not evidence of an anonymous or first-time owner.
+  let identity: Awaited<ReturnType<typeof auth.auth.getUser>> | null = null;
+  try {
+    identity = await auth.auth.getUser();
+  } catch {
+    redirect("/auth/sign-in?error=Sign-in%20is%20temporarily%20unavailable.");
+  }
+  const user = identity?.data?.user;
+  if (!identity || identity.error || !user?.id) redirect("/auth/sign-in");
+  if (!user.email_confirmed_at) redirect("/auth/sign-up/check-email");
 
-  const loaded = await loadAuthorizedWorkspaceDecision(auth, data.user.id);
-  if (!loaded.ok) {
+  // Fail closed on a thrown membership/workspace RLS transport response.
+  let loaded: Awaited<ReturnType<typeof loadAuthorizedWorkspaceDecision>> | null = null;
+  try {
+    loaded = await loadAuthorizedWorkspaceDecision(auth, user.id);
+  } catch {
+    loaded = null;
+  }
+  if (!loaded?.ok) {
     return (
       <RegistrationShell
         eyebrow="Workspace access"

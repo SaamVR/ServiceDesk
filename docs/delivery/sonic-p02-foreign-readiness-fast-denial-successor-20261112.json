@@ -1,0 +1,31 @@
+{
+  "kind": "SONIC_P02_REAL_BROWSER_FOREIGN_LEAK_FAST_FAIL",
+  "date": "2026-11-12",
+  "parentCommit": "d1f2f8f3d6598a86361b0b1914899015426cfd44",
+  "sourceOnly": true,
+  "liveAcceptance": false,
+  "changes": [
+    {
+      "path": "scripts/release/v4-p02-two-owner-browser-contract.mjs",
+      "preimageSha": "d56b2dfbee3fc0182f58c8a9051ab09260078180",
+      "successorSha": "41ae0d93d5f24150f4bc235ff9fb531f30be6b87"
+    },
+    {
+      "path": "scripts/release/v4-p02-two-owner-browser-journey.mjs",
+      "preimageSha": "5bf11c0fd49d6b3f5d55666de8f2711e353dc035",
+      "successorSha": "61e9b3c157a35f52d977279a6edc03cf23057d0f"
+    },
+    {
+      "path": "scripts/release/tests/v4-p02-two-owner-browser-contract.test.mjs",
+      "preimageSha": "d93a7e49077f56aaeb67ffcad13d71b73dee8e76",
+      "successorSha": "e0ae1879950bb7b83f7578a6779cae5458520239"
+    }
+  ],
+  "replaySource": "scripts/release/tests/v4-p02-two-owner-browser-synthetic-replay.test.mjs",
+  "purpose": "Fail immediately on already-rendered foreign tenant saved success; do not fail while stale own DOM is visible during navigation.",
+  "newUnitCases": 9,
+  "expectedImprovement": "Remove approximately 40s retry wait in known synthetic leak case without weakening successful legitimate positive/negative browser paths.",
+  "manualAuthenticatedJob": "unchanged, not dispatched",
+  "historicalShaLocks": "unchanged",
+  "prohibitedDatabaseWrites": true
+}

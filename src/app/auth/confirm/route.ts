@@ -51,19 +51,29 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const verification = code && code.length <= 2048
-    ? await supabase.auth.exchangeCodeForSession(code)
-    : await supabase.auth.verifyOtp({ token_hash: tokenHash!, type: flow === "recovery" ? "recovery" : "email" });
+  // A thrown provider/transport failure must not leak a 500 or claim an
+  // authenticated callback. Error redirects never reuse partial session cookies.
+  let verifiedUser: { email_confirmed_at?: string | null } | null = null;
+  let verifiedSession = false;
+  let verificationFailed = true;
+  try {
+    const verification = code && code.length <= 2048
+      ? await supabase.auth.exchangeCodeForSession(code)
+      : await supabase.auth.verifyOtp({ token_hash: tokenHash!, type: flow === "recovery" ? "recovery" : "email" });
+    verificationFailed = Boolean(verification.error);
+    verifiedUser = verification.data?.user ?? null;
+    verifiedSession = Boolean(verification.data?.session);
+  } catch {
+    verificationFailed = true;
+  }
 
-  if (verification.error) return NextResponse.redirect(failure, 303);
-
-  // Both exchangeCodeForSession and verifyOtp return the user verified by
-  // Supabase Auth along with the new session. Check that authoritative result
-  // directly: SSR setAll() writes cookies to the *response*, and a second
-  // getUser() on this same inbound request can re-read its old, unsigned-in
-  // cookies before the browser has received the newly verified session.
-  if (!verification.data.user?.email_confirmed_at || !verification.data.session) {
-    return NextResponse.redirect(failure, 303);
+  // Both exchangeCodeForSession and verifyOtp must return a verified user and
+  // session before a newly authenticated browser can be redirected onward.
+  // A second getUser() here would read the OLD inbound request's cookies.
+  if (verificationFailed || !verifiedUser?.email_confirmed_at || !verifiedSession) {
+    const denied = NextResponse.redirect(failure, 303);
+    denied.headers.set("Cache-Control", "private, no-store");
+    return denied;
   }
   return response;
 }

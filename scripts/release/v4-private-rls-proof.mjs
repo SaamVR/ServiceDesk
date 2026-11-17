@@ -11,6 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireDistinctConfirmedOwnerSessions, verifyTwoTenantOperationalRls } from "./v4-operational-rls-positive-negative.mjs";
 import { verifyTwoTenantAutomationRls } from "./v4-automation-rls-positive-negative.mjs";
 import { verifyTwoOwnerDefaultBranchRpcBoundary } from "./v4-default-branch-rpc-boundary.mjs";
+import { isSavedActiveOwnerMembership } from "./v4-p02-real-owner-membership-assertion.mjs";
 
 const projectHost = "cpmmgivhlkfbiwzhlcey.supabase.co";
 const env = process.env;
@@ -42,9 +43,14 @@ async function getOwnWorkspace(db, account) {
     verified.user.email?.toLowerCase() !== account.email.toLowerCase()) fail("EMAIL_VERIFIED_SESSION");
   const own = await db.from("workspaces").select("id,slug").eq("slug", account.slug).maybeSingle();
   if (own.error || !own.data || own.data.slug !== account.slug) fail("RLS_OWNER_WORKSPACE_READ");
-  const membership = await db.from("memberships").select("workspace_id,role,status")
+  const membership = await db.from("memberships").select("workspace_id,user_id,role,status")
     .eq("workspace_id", own.data.id).eq("user_id", verified.user.id).eq("role","OWNER").eq("status","ACTIVE").maybeSingle();
-  if (membership.error || !membership.data || membership.data.workspace_id !== own.data.id) fail("OWNER_MEMBERSHIP");
+  // Database filters are not independent evidence that returned role/subject
+  // and ACTIVE status were correct. Reject an anomalous saved response even
+  // if it arrives under successful HTTP/RLS transport.
+  if (membership.error || !isSavedActiveOwnerMembership(membership.data, {
+    workspaceId: own.data.id, userId: verified.user.id,
+  })) fail("OWNER_MEMBERSHIP");
   return { client: db, id: own.data.id, slug: own.data.slug, userId: verified.user.id };
 }
 async function verifyIsolation(actor, foreign) {
@@ -93,7 +99,10 @@ async function main() {
       console.log("REAL_AUTHENTICATED_STAGING_AUTOMATION_RLS_POSITIVE_NEGATIVE_PASS: each distinct owner has a saved LIVE matched QUOTE_ACCEPTED execution with same-branch SUCCEEDED internal attention action and linked persisted attention; three-table foreign tenant denials passed; provider delivery and full payment journey NOT proven");
     }
   } finally {
-    await Promise.allSettled(dbs.map(db => db.auth.signOut()));
+    // Supabase JS defaults signOut() to GLOBAL, which would revoke every
+    // browser/device refresh session for a QA owner. Only end the transient
+    // CLI session created above; never invalidate unrelated owner sessions.
+    await Promise.allSettled(dbs.map(db => db.auth.signOut({ scope: "local" })));
   }
 }
 try { await main(); } catch (error) {

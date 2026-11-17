@@ -1,0 +1,36 @@
+{
+  "schema": "servicedesk.p02.sign-in-verified-returned-session.v1",
+  "batch": "P02-OWNER-SIGNIN-CORRECT-SESSION-TRUTH-20261107",
+  "sourceOnly": true,
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-reset-retry-form-suppression-20261107.json",
+    "blob": "96b3557377f5fc364fee6682045224116f9c2acd",
+    "unchanged": true
+  },
+  "sourceChange": {
+    "path": "src/app/auth/sign-in/actions.ts",
+    "previousBlob": "17bccf3e88b0935f5fa184fc7e9ffa2225423498",
+    "currentBlob": "d6265fb55f74cffefc01ece4c2bf9da718b4b4c4"
+  },
+  "newAdversarialTest": {
+    "path": "tests/e2e/p02-signin-session-outcome.test.ts",
+    "blob": "d5d46976024bd07bf8e763fc10a8665051d5dedd",
+    "cases": 7
+  },
+  "focusedWorkflow": {
+    "path": ".github/workflows/sonic-p02-auth-origin-focused.yml",
+    "previousBlob": "7a13aa9845d5e3ef295a51c248b02f4e3f887e71",
+    "currentBlob": "720495c3087c369249fe19495cb86c2461a0abca"
+  },
+  "requiredGuards": [
+    "NO_SUCCESSFUL_AUTH_REDIRECT_WITHOUT_USER_AND_SESSION",
+    "NO_UNVERIFIED_EMAIL_LOGIN_CLAIM",
+    "NO_RAW_PROVIDER_OR_TRANSPORT_ERROR",
+    "RETURN_PATH_NORMALIZED",
+    "NO_CONNECTED_SUPABASE_AUTH_WRITE",
+    "NO_QA_USER_PROVISIONING",
+    "NO_DEPLOY",
+    "P02_OPEN_P03_QUEUED"
+  ],
+  "verification": "AWAIT_EXACT_HEAD_CI"
+}

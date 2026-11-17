@@ -1,0 +1,43 @@
+{
+  "schema": "servicedesk.p02.uncertain-registration-jsx-verified-successor.v1",
+  "batchId": "P02-UNKNOWN-RPC-RECOVERY-JSX-SYNTAX-CORRECTION-20261108",
+  "sourceOnly": true,
+  "parentHead": "8ec0894a7b643f1da10a02b6a0cab6f4c67f9023",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-uncertain-registration-recovery-successor-20261108.json",
+    "blob": "f7ecb97302c8b0bba90ed9c0bf5350ad744077f5",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "previousBlob": "49499b2cbb7e230765b7097f1f67b5f12578156e",
+      "currentBlob": "6d424726cd36e6c6bef7b36e174019235a72004c",
+      "fix": "CLOSE_JSX_CONDITIONAL_WITHOUT_CHANGING_OWNER_RECOVERY_COPY"
+    }
+  ],
+  "qaSourceUnchanged": {
+    "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+    "blob": "826f1e67c2570b0fcc6c8298558b1b663b254d2d",
+    "unchanged": true
+  },
+  "guardSourceUnchanged": {
+    "path": "src/features/auth/workspace-registration-error.ts",
+    "blob": "73e200d522da5bf4dabe0275f97860379f53637f",
+    "unchanged": true
+  },
+  "workflowUnchanged": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "mustRetain": [
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6",
+    "NO_CONNECTED_DB_WRITE",
+    "NO_AUTH_USER_CREATION",
+    "NO_DEPLOY",
+    "NO_PROTECTED_MERGE"
+  ],
+  "acceptance": "PENDING_EXACT_HEAD_CI_SOURCE_ONLY"
+}

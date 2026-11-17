@@ -37,6 +37,20 @@ describe("Owner first-run pricing requires verified branch price books", () => {
     expect(availableFirstRunUsdBranches(scope,undefined)).toEqual([]);
     expect(availableFirstRunUsdBranches(scope,{ state:"UNAVAILABLE",activeBranchIds:[] })).toEqual([]);
   });
+  it("fails closed for contradictory, duplicate, or foreign VERIFIED price-book evidence", () => {
+    const untrusted = [
+      { state: "VERIFIED" as const, activeBranchIds: [usA.id], existingBookBranchIds: [] },
+      { state: "VERIFIED" as const, activeBranchIds: ["foreign"], existingBookBranchIds: ["foreign"] },
+      { state: "VERIFIED" as const, activeBranchIds: [], existingBookBranchIds: [gb.id] },
+      { state: "VERIFIED" as const, activeBranchIds: [], existingBookBranchIds: [usA.id, usA.id] },
+      { state: "VERIFIED" as const, activeBranchIds: [usA.id, usA.id], existingBookBranchIds: [usA.id] },
+    ];
+    for (const proof of untrusted) {
+      expect(availableFirstRunUsdBranches(scope, proof), JSON.stringify(proof)).toEqual([]);
+      expect(invalidExistingUsdBranches(scope, proof), JSON.stringify(proof)).toEqual([]);
+    }
+  });
+
   it("preserves selected-branch authorization", () => {
     const picked = { ...scope, mode: "BRANCH" as const, selectedBranchId: usB.id };
     expect(availableFirstRunUsdBranches(picked,{ state:"VERIFIED",activeBranchIds:[],existingBookBranchIds:[] })).toEqual([usB]);

@@ -1,0 +1,42 @@
+{
+  "schema": "servicedesk.p03.currency-first-run-owner-ux-source-successor.v1",
+  "classification": "SOURCE_ONLY_TRUTHFUL_PRICING_SCOPE_NO_CURRENCY_ENGINE_EXPANSION",
+  "sourcePr": 915,
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-registered-owner-ui-source-successor-20261106.json",
+    "blob": "daedeb155f8d11dfb245b3cca709b20205e400d3",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "previousBlob": "d56ca9220d55071544ce4872ceda779744bb33f2",
+      "currentBlob": "9c02eee0f20cc9711b37176d95eef7caf6c285c0",
+      "purpose": "Show accessible truthful USD-only first-run cleaning price scope before accepting invoice currency"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "7d362bed7ec582accece5e0baf8730c0642601a9",
+      "currentBlob": "7a429027bb8f9d854727de567115be9b8fa6c820",
+      "purpose": "Preserve six workspace currency options and refuse implicit non-USD quote-ready claims"
+    }
+  ],
+  "safetySourceUnchanged": {
+    "path": "src/features/operations/owner-pricing-readiness.ts",
+    "blob": "254b5098ae6f8f68a3178b2dc840929a932d2af2",
+    "guard": "currency === \"USD\""
+  },
+  "releaseState": "P02_OPEN_2_OF_7_P03_OPEN_0_OF_6_SOURCE_ONLY",
+  "explicitNonActions": [
+    "NO_REGISTERED_TEST_USERS",
+    "NO_CONNECTED_DB_WRITE",
+    "NO_SCHEMA_OR_PRICE_RPC_CHANGE",
+    "NO_VERCEL_DEPLOY",
+    "NO_CURRENCY_CONVERSION",
+    "NO_PAYMENT",
+    "NO_CUSTOMER_SEND",
+    "NO_CANONICAL_OR_MAIN_MERGE"
+  ],
+  "nextBatch": "P02_818_REAL_TWO_OWNER_AUTH_RLS_BROWSER_EVIDENCE"
+}

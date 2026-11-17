@@ -6,6 +6,11 @@ on:
     branches: [feat/servicedesk-v4-l3-auth-rc-20261012, feat/servicedesk-v4-real-rls-uat-20261012, feat/servicedesk-v4-protected-qa-preflight-20261012, feat/v4-two-tenant-real-operations-rls-proof-20261012]
   workflow_dispatch:
     inputs:
+      require_operational_evidence:
+        description: "Optional post-P02: require saved operational rows for both QA businesses; basic P02 authentication/tenant checks do not require P03 records"
+        required: false
+        default: false
+        type: boolean
       require_automation_evidence:
         description: "Require persisted execution, action and internal attention rows for both verified QA owners (read-only)"
         required: false
@@ -44,13 +49,20 @@ jobs:
       - name: Validate protected QA credential shapes (fictional inputs only)
         run: node --test scripts/release/v4-protected-qa-preflight.test.mjs
   real-session-rls:
-    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'feat/servicedesk-v4-real-rls-uat-20261012'
+    # Two real owner sessions are sensitive. A legacy feature-branch push
+    # cannot access QA credentials. Require an explicit independent P02
+    # RLS operator approval and the exact reviewed Git SHA.
+    if: github.event_name == 'workflow_dispatch' && vars.SERVICEDESK_P02_RLS_UAT_APPROVED == 'true' && vars.SERVICEDESK_P02_RLS_UAT_APPROVED_SHA == github.sha
     needs: auth-source
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
+      - name: Refuse stale or unapproved real two-owner RLS workflow head before accessing QA secrets
+        env:
+          APPROVED_SHA: ${{ vars.SERVICEDESK_P02_RLS_UAT_APPROVED_SHA }}
+        run: test "$(git rev-parse HEAD)" = "$APPROVED_SHA"
       - uses: pnpm/action-setup@v4
         with: { version: 10.17.1, run_install: false }
       - uses: actions/setup-node@v4
@@ -76,6 +88,8 @@ jobs:
           V4_QA_OWNER_B_EMAIL: ${{ secrets.SERVICEDESK_QA_OWNER_B_EMAIL }}
           V4_QA_OWNER_B_PASSWORD: ${{ secrets.SERVICEDESK_QA_OWNER_B_PASSWORD }}
           V4_QA_OWNER_B_WORKSPACE: ${{ secrets.SERVICEDESK_QA_OWNER_B_WORKSPACE }}
-          V4_QA_REQUIRE_OPERATIONAL_EVIDENCE: "1"
+          # P02 must work with empty newly created QA businesses; saved
+          # requests/jobs are P03+ evidence and can be opted into later.
+          V4_QA_REQUIRE_OPERATIONAL_EVIDENCE: ${{ inputs.require_operational_evidence && '1' || '0' }}
           V4_QA_REQUIRE_AUTOMATION_EVIDENCE: ${{ inputs.require_automation_evidence && '1' || '0' }}
         run: node scripts/release/v4-private-rls-proof.mjs

@@ -1,0 +1,98 @@
+{
+  "schema": "servicedesk.f15-f20.post-lock-ui-guard.v1",
+  "batch_id": "SONIC-F15-F20-ASYNC-GUARD-20261106",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "baseHead": "6e3d27e64517255a582ddceed5df9321542c504b",
+  "sourceOnly": true,
+  "productionApplied": false,
+  "originalLocks": [
+    {
+      "path": "docs/delivery/sonic-f15-ir21-reviewed-owner-inbox-source-lock-20261030.json",
+      "blob": "c11e87a63e0a13b8c873548675b8c3cc79e08315"
+    },
+    {
+      "path": "docs/delivery/sonic-ir21-f20-finance-retention-source-lock-20261030.json",
+      "blob": "0f1a19568e70fd0209a353876f74d79ad4db0952"
+    }
+  ],
+  "replacements": [
+    {
+      "path": "src/features/operations/OwnerLinkedAttentionReview.tsx",
+      "blob": "bea83cd6640e4dda4dd0e160f41bedea166593a7",
+      "priorBlob": "80927abfee80a1d6c1f928811ff36d35426bfd78",
+      "newBlob": "bea83cd6640e4dda4dd0e160f41bedea166593a7"
+    },
+    {
+      "path": "src/features/operations/OwnerLedgerExceptionReview.tsx",
+      "blob": "7fb302dc271789cccd06fd7fde5a748a8e3660bd",
+      "priorBlob": "ee7a620cc326ca6fa4e31a8f9aa5c2439162ce9a",
+      "newBlob": "7fb302dc271789cccd06fd7fde5a748a8e3660bd"
+    },
+    {
+      "path": "src/features/operations/OwnerConsentedRetentionReview.tsx",
+      "blob": "b87a67e2ae265bf568c76842fcd573bba89a4891",
+      "priorBlob": "0849231e0a470787cc029c32291f97994a0edfb3",
+      "newBlob": "b87a67e2ae265bf568c76842fcd573bba89a4891"
+    },
+    {
+      "path": "tests/ai/sonic-f15-owner-acknowledge.test.ts",
+      "blob": "1dc58a692be9a6a0787ede5263b442307e247c4b",
+      "priorBlob": "bd83aba3f0d9689fb852bf147e7f19b80cbc1b2c",
+      "newBlob": "1dc58a692be9a6a0787ede5263b442307e247c4b"
+    },
+    {
+      "path": "tests/ai/f20-owner-ledger-entrypoint.test.ts",
+      "blob": "d621deddb849442ffffa79dfdb6f943f580ed4b5",
+      "priorBlob": "1e1d2c3df60131c2f99d11a3753d9fed62105d59",
+      "newBlob": "d621deddb849442ffffa79dfdb6f943f580ed4b5"
+    },
+    {
+      "path": "tests/ai/f20-owner-retention-entrypoint.test.ts",
+      "blob": "6532646ad0e09dcf4051e5840fd21dbcba0fb485",
+      "priorBlob": "dac9209cae67eac0a14097510cd07f311f679e2a",
+      "newBlob": "6532646ad0e09dcf4051e5840fd21dbcba0fb485"
+    }
+  ],
+  "changedFiles": [
+    {
+      "path": "src/features/operations/f15-owner-acknowledgement-readback.ts",
+      "blob": "7ee6ced077d98d296d167413379f250b0a31b8c3"
+    },
+    {
+      "path": "src/features/operations/OwnerLinkedAttentionReview.tsx",
+      "blob": "bea83cd6640e4dda4dd0e160f41bedea166593a7"
+    },
+    {
+      "path": "src/features/operations/OwnerLedgerExceptionReview.tsx",
+      "blob": "7fb302dc271789cccd06fd7fde5a748a8e3660bd"
+    },
+    {
+      "path": "src/features/operations/OwnerConsentedRetentionReview.tsx",
+      "blob": "b87a67e2ae265bf568c76842fcd573bba89a4891"
+    },
+    {
+      "path": "tests/ai/sonic-f15-owner-acknowledge.test.ts",
+      "blob": "1dc58a692be9a6a0787ede5263b442307e247c4b"
+    },
+    {
+      "path": "tests/ai/f20-owner-ledger-entrypoint.test.ts",
+      "blob": "d621deddb849442ffffa79dfdb6f943f580ed4b5"
+    },
+    {
+      "path": "tests/ai/f20-owner-retention-entrypoint.test.ts",
+      "blob": "6532646ad0e09dcf4051e5840fd21dbcba0fb485"
+    },
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "blob": "6fe5b79c709dd79ecc1e3dd09cf2d0b52baf4ff7"
+    }
+  ],
+  "independentCI": "PENDING_EXACT_HEAD",
+  "releaseGate": "P02_AND_P03_AUTHENTICATED_ACCEPTANCE_REQUIRED",
+  "noNewPR": true,
+  "forbidden": [
+    "HISTORICAL_LOCK_MUTATION",
+    "PRODUCTION_SQL_INSTALL",
+    "AUTOMATIC_CUSTOMER_SEND"
+  ]
+}

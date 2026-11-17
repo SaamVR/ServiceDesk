@@ -1,0 +1,55 @@
+{
+  "schema": "servicedesk.p03.pricebook-inventory-source-successor.v1",
+  "date": "2026-11-18",
+  "scope": "SOURCE_ONLY_P03_PREPARATION_NO_LIVE_WRITE",
+  "integrationPr": 915,
+  "predecessor": {
+    "manifestPath": "docs/delivery/sonic-p03-currency-first-run-ux-source-successor-20261107.json",
+    "manifestBlob": "d7648d1fd14e3e58f584cb0f03e5a386e4c3087d",
+    "safetyGuardPath": "src/features/operations/owner-pricing-readiness.ts",
+    "safetyGuardOriginalBlob": "254b5098ae6f8f68a3178b2dc840929a932d2af2"
+  },
+  "changedSource": [
+    {
+      "path": "src/features/operations/owner-pricing-readiness.ts",
+      "previousBlob": "254b5098ae6f8f68a3178b2dc840929a932d2af2",
+      "currentBlob": "6e3908f71382f0804ad4e9273e81982d02e4a8b2",
+      "purpose": "Reject contradictory or foreign USD price inventory before first-run decisions"
+    },
+    {
+      "path": "src/features/operations/OwnerCleaningPricingSetupForm.tsx",
+      "previousBlob": "921c50cc67ec10d01d0ee6a8035dcf4030bc633a",
+      "currentBlob": "7302079132145a5701b26110538e2aa061606db5",
+      "purpose": "Render an alert instead of writable first-run fields when inventory cannot be verified"
+    },
+    {
+      "path": "tests/e2e/v4-owner-branch-price-readiness.test.ts",
+      "previousBlob": "bd129816852f4d6193320f804b5061d36574cd1c",
+      "currentBlob": "70c2988fea6e1c30cfd8511f25ca079a9b23cec5",
+      "purpose": "Negative evidence cases: unsupported, foreign, duplicated and contradictory pricing"
+    },
+    {
+      "path": "tests/e2e/v4-owner-pricing-form-state-readiness.test.tsx",
+      "previousBlob": "e235a548dbc7bdf14997c9b23b62d71b9143a97d",
+      "currentBlob": "41c8041948fdaf775e3d2036e8c57eead6d1f88c",
+      "purpose": "Adversarial render proof: fail-closed no setup identifiers or submit controls"
+    }
+  ],
+  "releaseGate": "P03_NOT_ACCEPTED_P02_REAL_AUTH_REQUIRED",
+  "explicitNonActions": [
+    "NO_CONNECTED_DB_WRITE",
+    "NO_MIGRATION_INSTALL",
+    "NO_PROVISIONED_OWNER_ACCOUNTS",
+    "NO_PROVIDER_SEND",
+    "NO_PAYMENT",
+    "NO_VERCEL_DEPLOY",
+    "NO_MAIN_MERGE"
+  ],
+  "invariants": [
+    "currency === \"USD\"",
+    "verifiedUsdPricingBookInventory",
+    "activeBranchIds subset of existingBookBranchIds",
+    "duplicate and foreign branch evidence veto",
+    "prior manifest and its original hash remain immutable"
+  ]
+}

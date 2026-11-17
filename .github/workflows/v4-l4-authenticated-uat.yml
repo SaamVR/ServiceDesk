@@ -31,13 +31,22 @@ jobs:
       - name: Validate protected QA credential shapes (fictional inputs only)
         run: node --test scripts/release/v4-protected-qa-preflight.test.mjs
   authenticated-seven-widths:
-    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'feat/servicedesk-v4-real-auth-uat-20261012'
+    # No automatic credential-bearing QA on branch pushes; explicit operator
+    # gate + owner-approved SHA are both required before session access.
+    if: github.event_name == 'workflow_dispatch' && vars.SERVICEDESK_P02_AUTH_UAT_APPROVED == 'true' && vars.SERVICEDESK_P02_AUTH_UAT_APPROVED_SHA == github.sha
     runs-on: ubuntu-latest
     needs: source-preflight
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
+      - name: Fail closed unless this exact SHA and HTTPS callback origin were approved
+        env:
+          APPROVED_SHA: ${{ vars.SERVICEDESK_P02_AUTH_UAT_APPROVED_SHA }}
+          APPROVED_ORIGIN: ${{ vars.SERVICEDESK_P02_AUTH_REDIRECT_ORIGIN }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$APPROVED_SHA"
+          node -e 'let u;try{u=new URL(process.env.APPROVED_ORIGIN||"")}catch{process.exit(1)}const v=process.env.APPROVED_ORIGIN;if(u.origin!==v||u.protocol!=="https:"||u.username||u.password||u.port||u.pathname!=="/"||u.search||u.hash||!u.hostname.includes(".")||u.hostname.endsWith(".onrender.com"))process.exit(1)'
       - uses: pnpm/action-setup@v4
         with: { version: 10.17.1, run_install: false }
       - uses: actions/setup-node@v4
@@ -58,7 +67,9 @@ jobs:
           SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true"
           SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false"
           SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS: ${{ secrets.SERVICEDESK_QA_TEST_EMAIL }}
-          SERVICEDESK_AUTH_REDIRECT_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
+          # Explicit operator-approved canonical Vercel QA origin; no stale Render fallback.
+          SERVICEDESK_AUTH_REDIRECT_ORIGIN: ${{ vars.SERVICEDESK_P02_AUTH_REDIRECT_ORIGIN }}
+          VERCEL: "1"
         run: pnpm build
       - name: Start isolated Next QA server (no live provider secrets)
         env:
@@ -68,7 +79,9 @@ jobs:
           SERVICEDESK_OPERATIONS_RLS_PREVIEW_ENABLED: "true"
           SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false"
           SERVICEDESK_OWNER_REGISTRATION_QA_EMAILS: ${{ secrets.SERVICEDESK_QA_TEST_EMAIL }}
-          SERVICEDESK_AUTH_REDIRECT_ORIGIN: https://servicedesk-v3-frontend-review.onrender.com
+          # Explicit operator-approved canonical Vercel QA origin; no stale Render fallback.
+          SERVICEDESK_AUTH_REDIRECT_ORIGIN: ${{ vars.SERVICEDESK_P02_AUTH_REDIRECT_ORIGIN }}
+          VERCEL: "1"
         run: |
           pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/servicedesk-authenticated-qa.log" 2>&1 &
           for i in $(seq 1 90); do

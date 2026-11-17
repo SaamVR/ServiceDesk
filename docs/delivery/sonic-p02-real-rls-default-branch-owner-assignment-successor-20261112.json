@@ -1,0 +1,22 @@
+{
+  "kind": "SONIC_P02_REVIEWED_REAL_SESSION_DEFAULT_BRANCH_ASSIGNMENT",
+  "date": "2026-11-12",
+  "baseCommit": "ffdf11c86e372f9b68ca66267ab8c298f7bda433",
+  "sourceOnly": true,
+  "liveOwnerAcceptance": false,
+  "sqlOrHostingMutation": false,
+  "changes": [
+    {
+      "path": "scripts/release/v4-default-branch-rpc-boundary.mjs",
+      "oldBlob": "3e798fc9ffec271045aeed4d89ad86b40ba07f8c",
+      "newBlob": "5523ffa11edab51268d8730376ef0a209366475e"
+    },
+    {
+      "path": "scripts/release/tests/v4-default-branch-rpc-boundary.test.mjs",
+      "oldBlob": "5d3dec7eb0cf04f49f17099a5658f044e79504fb",
+      "newBlob": "ff10f206b788cf39f2fac42ff37d3faf4d94e87a"
+    }
+  ],
+  "historicalLocks": "unchanged",
+  "receipt": "Real-session RLS owner default branch must also have ACTIVE saved owner branch membership; seven adversarial failures per owner."
+}

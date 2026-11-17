@@ -1,0 +1,36 @@
+{
+  "schema": "servicedesk.p02.owner-membership-qa-typescript-repair.v1",
+  "batchId": "P02_OWNER_MEMBERSHIP_INVALID_WORKSPACE_TYPED_FIXTURE_20261111",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "reviewedParentHead": "125f4be54796a1f41df503ca52f569bdd00c3c97",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-onboarding-returned-owner-membership-veto-successor-20261111.json",
+    "blob": "bf9f1c538f17e74363310d3445e8873ed3299aa4",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts",
+      "previousBlob": "1a6b7dd23a7a3cd83807fe25f09736a5deeb28ae",
+      "currentBlob": "e729a9f6bce2780824eb7cffe0fd3f0cb6cce25c",
+      "lane": "ADVERSARIAL_QA_TYPED_INVALID_WORKSPACE"
+    }
+  ],
+  "diagnosis": "First automatic full workflow #43049861398 passed 42/42 suites 285/285 tests and both source critics but TypeScript flagged one intentionally malformed fixture row missing required OwnerRow identity/role/status fields (TS2739); keep owner columns authentic and perturb workspace_id only.",
+  "qa": {
+    "path": "tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts",
+    "count": 11,
+    "change": "malformed-workspace-id-fixture-inherits-valid-owner-subject-role-active-state"
+  },
+  "invariants": [
+    "NO_SECURITY_POLICY_OR_LIVE_DATABASE_CHANGE",
+    "NO_NEW_OWNER_AUTH_OR_PROVIDER_WRITE",
+    "KEEP_HISTORICAL_MEMBERSHIP_MANIFEST_IMMUTABLE",
+    "TYPED_INVALID_WORKSPACE_RLS_NEGATIVE_RETAINED",
+    "NO_DEPLOY_OR_PROTECTED_MERGE",
+    "P02_STILL_NOT_REAL_STAGING_ACCEPTANCE"
+  ],
+  "acceptance": "SOURCE_ONLY_PENDING_NEW_EXACT_HEAD_TYPESCRIPT_FULL_CI",
+  "nextBatch": "P02_818_AUTHORIZED_TWO_REAL_OWNER_SESSIONS_DBA_APPROVED_SQL_RLS"
+}

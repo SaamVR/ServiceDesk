@@ -1,0 +1,78 @@
+{
+  "schema": "servicedesk.f23.atomic-hold-release.transactional-source.v1",
+  "batchId": "SONIC-F23-ATOMIC-HOLD-RELEASE-20261107",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "baseHead": "648925897265ae6f999a660d28baddea06999e04",
+  "sourceOnly": true,
+  "installedInSupabase": false,
+  "productionApproved": false,
+  "paymentPreimage": "supabase/migrations/0010_e03_verified_payment_rpc.sql",
+  "independentDbaAndOwnerReviewRequired": true,
+  "hardActivationFlagsDefaultOff": [
+    "SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED",
+    "SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED"
+  ],
+  "historicReviewedManifestsUnchanged": [
+    "docs/delivery/sonic-f15-f20-post-lock-ui-guard-20261106.json",
+    "docs/delivery/sonic-p02-registered-owner-ui-source-successor-20261106.json"
+  ],
+  "historicP02ManifestBlob": "daedeb155f8d11dfb245b3cca709b20205e400d3",
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousBlob": "a76896747be9412f320d5868fc74aff08d39d9e8",
+    "currentBlob": "7c17ec21bc11a66c1bae6b6953fdfa259b0657b3"
+  },
+  "changedSource": [
+    {
+      "path": "src/server/workflows/owner-verified-quote-hold-release.ts",
+      "blob": "f5133cdb5dca937fdcf7ed240bded9c1590dffb9"
+    },
+    {
+      "path": "src/features/operations/OwnerQuoteHoldReleasePanel.tsx",
+      "blob": "e022685928d4f3329382be653bbd4024ed6e3f11"
+    },
+    {
+      "path": "tests/ai/f23-owner-held-slot-release.test.ts",
+      "blob": "c9d366ec53d3c6b15270ab4de79b031c624318da"
+    },
+    {
+      "path": "tests/ai/f23-owner-hold-release-critic.test.ts",
+      "blob": "a445b993b0713aa57a7e21ee807febdbd7594856"
+    },
+    {
+      "path": "docs/engineering/security/f23-atomic-hold-release-rpc-candidate.sql",
+      "blob": "b217a434fc95d7fb2bdfc884fa135acc3461ede0"
+    },
+    {
+      "path": "tests/sql/v4-f23-atomic-hold-release-pg17-fixture.sql",
+      "blob": "865e09bf8e5ad1f3d96779cda74099e3936ca2bf"
+    },
+    {
+      "path": "tests/sql/v4-f23-atomic-hold-release-pg17-acceptance.sql",
+      "blob": "db5ebbc7c09f15f0da8653f73195174882cefe4b"
+    },
+    {
+      "path": "scripts/release/v4-f23-pg17-hold-payment-race.sh",
+      "blob": "f27a97831bc32be8cd2816f8471413aaafb32a38"
+    },
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "blob": "7c17ec21bc11a66c1bae6b6953fdfa259b0657b3"
+    }
+  ],
+  "releaseConditions": [
+    "Native disposable PostgreSQL 17 exact-head acceptance and real two-session payment versus release lock proof",
+    "Confirm installed 0010 payment RPC source and actual row/table privilege preimage",
+    "Confirm grant EXECUTE service_role only and ability to rollback candidate",
+    "Real P02 authorized owner A/B JWT-browser-RLS and P03 saved price receipts",
+    "Human DBA approval followed by scoped owner SQL and deploy permission"
+  ],
+  "nonClaims": [
+    "NO_REAL_PAYMENT_CAPTURE",
+    "NO_CONNECTED_SUPABASE_WRITE",
+    "NO_PROVIDER_DELIVERY",
+    "NOT_INSTALLED",
+    "NO_NEW_PR",
+    "NO_CANONICAL_MERGE"
+  ]
+}

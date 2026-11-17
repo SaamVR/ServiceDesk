@@ -1,0 +1,40 @@
+{
+  "schema": "servicedesk.p02-f23.review-only-prototype-source-bridge.v1",
+  "batch": "SONIC-P02-FOREIGN-RLS-F23-REVIEW-INTEGRATION-20261107",
+  "sourceOnly": true,
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-foreign-rls-negative-probe-successor-20261107.json",
+    "blob": "efdebce4aab449dbf804805ea202653f19279dd7",
+    "unchanged": true
+  },
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousBlob": "d7a157dfe6f6ea7af5408558255b7289ea6b0db4",
+    "currentBlob": "e1794d1e00866ea3daa7ed592869d5828cc7fcd8"
+  },
+  "externalF23ReviewOnly": {
+    "path": "scripts/release/v4-f23-pg17-unique-current-quote-remedy-prototype.sh",
+    "blob": "13a734fa7a283f49250b0ee23645f2cd4c475c28",
+    "disposablePg17Only": true,
+    "productionInstallApproved": false,
+    "notes": "Experiments with partial UNIQUE index; not a reviewed migration; quote lifecycle compatibility incomplete"
+  },
+  "existingF23VetoUnchanged": {
+    "path": "scripts/release/v4-f23-pg17-sibling-quote-phantom-witness.sh",
+    "blob": "d2349471ffb3ed78f5826442d480bd2a9b54cac3",
+    "marker": "F23_KNOWN_UNSAFE_SIBLING_QUOTE_PHANTOM_REPRODUCED_RELEASE_VETO"
+  },
+  "integrationRules": [
+    "P02_FOREIGN_MEMBERSHIP_BRANCH_NEGATIVE_PROBE_PINNED",
+    "F23_PARTIAL_UNIQUE_INDEX_REVIEW_ONLY",
+    "F23_KNOWN_UNSAFE_SIBLING_QUOTE_VETO_RETAINED",
+    "NO_SQL_MIGRATION",
+    "NO_QA_USER_CREATION",
+    "NO_LIVE_RLS_TEST",
+    "NO_VERCEL_DEPLOY",
+    "NO_F23_FLAG",
+    "NO_CUSTOMER_SEND",
+    "NO_PAYMENT",
+    "P02_P03_STILL_OPEN"
+  ]
+}

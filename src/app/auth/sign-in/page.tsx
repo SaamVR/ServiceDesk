@@ -6,6 +6,7 @@ import { ownerRegistrationAvailable, ownerRegistrationMode, ownerRegistrationPub
 import { marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 import { signInWithPassword } from "./actions";
 import styles from "./page.module.css";
+import { trustedAuthFeedback } from "@/features/auth/verified-auth-feedback";
 
 export default async function SignInPage({
   searchParams,
@@ -13,6 +14,8 @@ export default async function SignInPage({
   searchParams: Promise<{ next?: string; error?: string; notice?: string }>;
 }) {
   const query = await searchParams;
+  const noticeMessage = trustedAuthFeedback("sign-in", "notice", query.notice);
+  const errorMessage = trustedAuthFeedback("sign-in", "error", query.error);
   const next = normalizeReturnPath(query.next ?? "/auth/continue");
   const registrationAvailable = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
   const inviteOnly = ownerRegistrationMode() === "QA_ONLY";
@@ -26,8 +29,8 @@ export default async function SignInPage({
       asideTitle="Stay on top of every workday."
       asideItems={["Prioritize the conversations that need you", "Know where every crew and job stands", "Keep invoices and follow-ups moving"]}
     >
-      {query.notice ? <p className={styles.notice} role="status">{query.notice}</p> : null}
-      {query.error ? <p className={styles.error} role="alert">{query.error}</p> : null}
+      {noticeMessage ? <p className={styles.notice} role="status">{noticeMessage}</p> : null}
+      {errorMessage ? <p className={styles.error} role="alert">{errorMessage}</p> : null}
 
       <form className={styles.form} action={signInWithPassword}>
         <input type="hidden" name="next" value={next} />

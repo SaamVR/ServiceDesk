@@ -1,0 +1,20 @@
+{
+  "kind": "SONIC_P02_STANDALONE_CI_PRESERVES_HISTORIC_WORKFLOW_BLOB",
+  "date": "2026-11-12",
+  "parentCommit": "80c0e32e7f366405c6c4b84c4edf187fea044cd2",
+  "sourceOnly": true,
+  "unreviewedFailures": "CI #43082080584: 285/287 Vitest pass; 2 pinned legacy workflow SHA assertions fail (no source regression).",
+  "restoredHistoricalWorkflow": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c"
+  },
+  "newWorkflow": {
+    "path": ".github/workflows/sonic-p02-owner-assignment-source-gate.yml",
+    "blob": "bd7e9302f666e0f47ca4a11eba067e980247e0df",
+    "noSecrets": true,
+    "checks": "Three standalone two-owner Node test files at exact SHA"
+  },
+  "priorManifest": "docs/delivery/sonic-p02-real-session-branch-assignment-ci-witness-successor-20261112.json",
+  "historicalManifests": "unchanged",
+  "realJwtBrowserAcceptance": false
+}

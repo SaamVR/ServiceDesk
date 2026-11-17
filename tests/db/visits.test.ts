@@ -25,10 +25,14 @@ const hold: SlotHold = {
 function repo(holdFixture: SlotHold = hold) {
   const inserted: VisitRecord[] = [];
   const confirmedHolds: string[] = [];
+  const atomicPayments: string[] = [];
+  const legacyCalls: string[] = [];
 
   return {
     inserted,
     confirmedHolds,
+    atomicPayments,
+    legacyCalls,
     repository: {
       nextVisitId: () => "visit_1",
       findHoldById: async (workspaceId: string, holdId: string) => (
@@ -41,12 +45,22 @@ function repo(holdFixture: SlotHold = hold) {
           ? { ok: true as const, value: slot }
           : { ok: false as const, code: "SLOT_NOT_FOUND", message: "Slot was not found in this workspace." }
       ),
-      confirmHold: async (workspaceId: string, holdId: string) => {
-        confirmedHolds.push(`${workspaceId}:${holdId}`);
+      // An atomic port simulates a single transaction with both write
+      // receipts. The old split-write methods exist only to catch misuse.
+      commitScheduledVisit: async (visit: VisitRecord, paymentId: string) => {
+        atomicPayments.push(paymentId);
+        confirmedHolds.push(`${visit.workspaceId}:${visit.holdId}`);
+        inserted.push(visit);
+        return { ok: true as const, value: {
+          visit, confirmedHold: { ...holdFixture, status: "CONFIRMED" as const },
+        }};
+      },
+      confirmHold: async () => {
+        legacyCalls.push("confirmHold");
         return { ok: true as const, value: true as const };
       },
       insertVisit: async (visit: VisitRecord) => {
-        inserted.push(visit);
+        legacyCalls.push("insertVisit");
         return { ok: true as const, value: visit };
       },
     },
@@ -63,6 +77,7 @@ describe("visit scheduling from held slots", () => {
       quoteId: "quote_1",
       holdId: "hold_1",
       timezone: "Europe/London",
+      verifiedPaymentApplicationId: "payment_applied_1",
     }, { idempotencyKey: "visit-1", now }, fixture.repository)).resolves.toMatchObject({
       ok: true,
       value: {
@@ -80,6 +95,40 @@ describe("visit scheduling from held slots", () => {
     });
     expect(fixture.confirmedHolds).toEqual(["ws_1:hold_1"]);
     expect(fixture.inserted).toHaveLength(1);
+    expect(fixture.atomicPayments).toEqual(["payment_applied_1"]);
+    expect(fixture.legacyCalls).toEqual([]);
+  });
+
+  it("fails closed without a trusted atomic gateway or verified deposit reference", async () => {
+    const fixture = repo();
+    const withoutPayment = await scheduleVisitFromHoldWithRepository(dispatcher, {
+      workspaceId: "ws_1", requestId: "req_1", quoteId: "quote_1",
+      holdId: "hold_1", timezone: "Europe/London",
+    }, { idempotencyKey: "missing-payment", now }, fixture.repository);
+    expect(withoutPayment).toMatchObject({ok:false,code:"VERIFIED_DEPOSIT_REQUIRED"});
+    const withoutAtomic = await scheduleVisitFromHoldWithRepository(dispatcher, {
+      workspaceId: "ws_1", requestId: "req_1", quoteId: "quote_1",
+      holdId: "hold_1", timezone: "Europe/London",
+      verifiedPaymentApplicationId: "payment_applied_1",
+    }, { idempotencyKey: "no-atomic", now },
+    { ...fixture.repository, commitScheduledVisit: undefined });
+    expect(withoutAtomic).toMatchObject({ok:false,code:"ATOMIC_VISIT_UNAVAILABLE"});
+    expect(fixture.legacyCalls).toEqual([]);
+    expect(fixture.inserted).toHaveLength(0);
+  });
+
+  it("rejects a forged post-transaction visit/hold receipt", async () => {
+    const fixture = repo();
+    const invalid = await scheduleVisitFromHoldWithRepository(dispatcher, {
+      workspaceId: "ws_1", requestId: "req_1", quoteId: "quote_1",
+      holdId: "hold_1", timezone: "Europe/London",
+      verifiedPaymentApplicationId: "payment_applied_1",
+    }, { idempotencyKey: "forged", now },
+    { ...fixture.repository, commitScheduledVisit: async (visit) => ({
+      ok:true as const, value:{visit:{...visit,requestId:"req_foreign"},
+      confirmedHold:{...hold,status:"CONFIRMED" as const}},
+    })});
+    expect(invalid).toMatchObject({ok:false,code:"ATOMIC_VISIT_READBACK_INVALID"});
   });
 
   it("rejects expired or wrong quote holds", async () => {
@@ -89,6 +138,7 @@ describe("visit scheduling from held slots", () => {
       quoteId: "quote_1",
       holdId: "hold_1",
       timezone: "Europe/London",
+      verifiedPaymentApplicationId: "payment_applied_1",
     }, { idempotencyKey: "visit-expired", now: "2026-10-04T06:16:00.000Z" }, repo().repository)).resolves.toEqual({
       ok: false,
       code: "HOLD_EXPIRED",
@@ -101,6 +151,7 @@ describe("visit scheduling from held slots", () => {
       quoteId: "quote_other",
       holdId: "hold_1",
       timezone: "Europe/London",
+      verifiedPaymentApplicationId: "payment_applied_1",
     }, { idempotencyKey: "visit-wrong-quote", now }, repo().repository)).resolves.toEqual({
       ok: false,
       code: "HOLD_QUOTE_MISMATCH",

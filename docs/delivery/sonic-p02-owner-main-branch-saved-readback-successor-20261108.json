@@ -1,0 +1,88 @@
+{
+  "schema": "servicedesk.p02.owner-main-branch-saved-rsls-readback.v1",
+  "batchId": "P02-OWNER_REGISTRATION_MAIN_BRANCH_PERSISTENCE_READBACK-20261108",
+  "ownerChat": "PRODUCTION",
+  "sourceOnly": true,
+  "parentHead": "69f51b69af73fc9846ffd3a871e56386f4e20e47",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-active-owner-malformed-slug-veto-20261108.json",
+    "blob": "746c0779c9edbda494d3fe466584c0797e87f152",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/features/auth/verified-owner-workspace.ts",
+      "previousBlob": "1983ddf2bdca7c1015c84933b59b29a81a6b21d3",
+      "currentBlob": "c1720bdc1f144357126352f54b19699739d5e612",
+      "lane": "AUTH_RLS_SAVED_BRANCH_READBACK"
+    },
+    {
+      "path": "tests/e2e/p02-owner-registration-persisted-receipt.test.ts",
+      "previousBlob": "c3ae8c36b4e59e8a4362eeaaa651442079a1d8b3",
+      "currentBlob": "33a3ea21d41d6553b8cdd716465777e02d106d25",
+      "lane": "INDEPENDENT_SAVED_BRANCH_QA"
+    },
+    {
+      "path": "tests/e2e/p02-registration-denial-action.test.ts",
+      "previousBlob": "37ecfaba9c14a442b2a9beccf77d2aa850673622",
+      "currentBlob": "d5c288aa516ae3e9b2c2f84302de22942748085f",
+      "lane": "SERVER_ACTION_DENIAL_QA"
+    }
+  ],
+  "dbSourceUnchanged": [
+    {
+      "path": "supabase/migrations/0059_v3_verified_owner_workspace_bootstrap.sql",
+      "blob": "ee237941a371bf36ac39641fe8c1b65ae516ebe3",
+      "unchanged": true
+    },
+    {
+      "path": "supabase/migrations/0065_v4_default_branch_membership_authority.sql",
+      "blob": "a1d1097c1c31ae258ec4151b7d208bb3c415c21a",
+      "unchanged": true
+    }
+  ],
+  "workflowUnchanged": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "expectedNewCases": {
+    "readbackSuite": {
+      "previous": 6,
+      "current": 8
+    },
+    "serverActionSuite": {
+      "previous": 11,
+      "current": 12
+    }
+  },
+  "checkedNewBranchFields": [
+    "id",
+    "workspace_id",
+    "code",
+    "timezone",
+    "currency",
+    "is_default",
+    "active"
+  ],
+  "checkedOwnerBranchMembershipFields": [
+    "workspace_id",
+    "branch_id",
+    "user_id",
+    "status"
+  ],
+  "invariants": [
+    "NO_ONBOARDING_SUCCESS_WITHOUT_RLS_SAVED_MAIN_BRANCH",
+    "NO_ONBOARDING_SUCCESS_WITHOUT_ACTIVE_OWNER_BRANCH_MEMBERSHIP",
+    "NO_CROSS_TENANT_OR_FOREIGN_BRANCH_RECEIPT",
+    "IDEMPOTENT_EXISTING_OWNER_BRANCH_CAN_BE_RENAMED",
+    "NO_CONNECTED_AUTH_DB_WRITES",
+    "NO_RELEASE_FLAG_CHANGE",
+    "NO_MIGRATION_INSTALL",
+    "NO_VERCEL_DEPLOY",
+    "P02_2_OF_7",
+    "P03_0_OF_6"
+  ],
+  "acceptance": "SOURCE_ONLY_NOT_TWO_REAL_OWNER_SIGNED_IN_BROWSER_JWT_RLS",
+  "nextBatch": "P02_818_REAL_OWNER_A_B_APPROVALS"
+}

@@ -1,0 +1,90 @@
+{
+  "schema": "servicedesk.p02.owner-onboarding-returned-membership-identity-veto.v1",
+  "batchId": "P02_OWNER_WORKSPACE_CHOOSER_VERIFY_ACTUAL_RETURNED_ROLE_SUBJECT_STATUS_20261111",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "reviewedParentHead": "7940b945f73afa0af946af8a8d8b96439bbc53a1",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-onboarding-direct-auth-foreign-rls-veto-successor-20261111.json",
+    "blob": "fa9f2d10a3e789f05e9dcf079d44e341507839e5",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/features/onboarding/owner-onboarding-workspace-choice.ts",
+      "previousBlob": "fbd623618b87718bffd16abc2b212db3f2e6aebf",
+      "currentBlob": "edc4c7c7976b9ec1f6ea14660232218049c81832",
+      "lane": "OWNER_RETURNED_MEMBERSHIP_SUBJECT_ROLE_STATUS_GUARD"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "a716260cf036f691927fa1d448b68f4ebd3b3958",
+      "currentBlob": "56966913487c69c11c612ad0019ca2ccca165dc0",
+      "lane": "INDEPENDENT_P02_OWNER_SESSION_QA"
+    },
+    {
+      "path": "tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts",
+      "previousBlob": "a83f68b9121d9455adc4c15b4ae6102f2f843cf3",
+      "currentBlob": "1a6b7dd23a7a3cd83807fe25f09736a5deeb28ae",
+      "lane": "MULTI_OWNER_CHOOSER_ROLE_SUBJECT_NEGATIVE_MATRIX"
+    }
+  ],
+  "qa": {
+    "primary": {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previous": 42,
+      "current": 43,
+      "added": 1
+    },
+    "secondary": {
+      "path": "tests/e2e/v4-multiowner-onboarding-workspace-choice.test.ts",
+      "previous": 9,
+      "current": 11,
+      "added": 2
+    },
+    "scope": "OFFLINE_RLS_SIMULATION_NO_REAL_OWNER_JWT"
+  },
+  "businessScenario": "A signed-in OWNER navigating to one or several business workspaces must have individually verified saved membership user_id, role OWNER and status ACTIVE, not merely an RLS-filtered workspace_id. A returned foreign-user, revoked or staff membership vetoes navigation before any workspace lookup or another registration.",
+  "unchangedSource": [
+    {
+      "path": "src/features/auth/verified-owner-workspace.ts",
+      "blob": "221b0f52e75d2231900767f91806b3ea874f32d7",
+      "unchanged": true
+    },
+    {
+      "path": "src/features/onboarding/onboarding-product-runtime.ts",
+      "blob": "0b980b4b1991f41eb2f7f4f848073e2fb8acd15f",
+      "unchanged": true
+    },
+    {
+      "path": "src/features/onboarding/OnboardingProductRoute.tsx",
+      "blob": "3a91b7fddf694336ac11b0d7a265de882bf66d09",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+      "unchanged": true
+    },
+    {
+      "path": "docs/delivery/sonic-p02-onboarding-direct-auth-foreign-rls-veto-successor-20261111.json",
+      "blob": "fa9f2d10a3e789f05e9dcf079d44e341507839e5",
+      "unchanged": true
+    }
+  ],
+  "invariants": [
+    "REQUIRE_RETURNED_MEMBERSHIP_USER_ID_MATCHES_VERIFIED_ID",
+    "REQUIRE_RETURNED_MEMBERSHIP_ROLE_OWNER_ACTIVE",
+    "DENY_FOREIGN_REVOKED_STAFF_RETURNED_ROW_WITHOUT_WORKSPACE_QUERY",
+    "RETAIN_LEGITIMATE_MULTI_WORKSPACE_SELECTION",
+    "RETAIN_DUPLICATE_MEMBERSHIP_DEDUPLICATION",
+    "NO_PRIVATE_TENANT_OR_PROVIDER_DETAILS_EXPOSED",
+    "NO_CONNECTED_SUPABASE_AUTH_DB_WRITES",
+    "NO_SQL_MIGRATION_PROVIDER_PAYMENT_VERCEL_DEPLOY",
+    "NO_NEW_PR_NO_PROTECTED_BRANCH_MERGE",
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6"
+  ],
+  "acceptance": "SOURCE_ONLY_VERIFIED_MOCKED_ROWS_NOT_TWO_REAL_OWNER_BROWSER_JWT_RLS",
+  "nextBatch": "P02_818_OWNER_GRANTED_TWO_REAL_AUTH_SESSIONS_DBA_APPROVED_REGISTRATION_SQL_AND_STAGING_READBACK"
+}

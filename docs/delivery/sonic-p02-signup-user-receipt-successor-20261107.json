@@ -1,0 +1,44 @@
+{
+  "schema": "servicedesk.p02.signup-provider-user-receipt-successor.v1",
+  "batchId": "P02-SIGNUP-PARTIAL-PROVIDER-RECEIPT-DENIAL-20261107",
+  "sourceOnly": true,
+  "parentHead": "13f72c92b19e524d06f1fa97563386d5ebc64cd6",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-signup-confirm-transport-successor-20261107.json",
+    "blob": "a25c45beaee878113757e59310ba480fc9e81c59",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/sign-up/actions.ts",
+      "previousBlob": "3e925d4ec220f7264e5c6407c42e2670be5cebef",
+      "currentBlob": "e08615dda66c6b7068c92ac56fe60364e6188ec4"
+    },
+    {
+      "path": "tests/e2e/p02-signup-confirm-transport-outcome.test.ts",
+      "previousBlob": "f6659f118c343173b12767c102afc312053a32ff",
+      "currentBlob": "6d5d988a535039b03df8fcf7082caeea8f3f3b42"
+    }
+  ],
+  "testCases": 12,
+  "unchangedSource": [
+    {
+      "path": "src/app/auth/confirm/route.ts",
+      "blob": "4ab0f387ded6284c9af9b403c178e5869dbe8a33",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/sonic-p02-auth-origin-focused.yml",
+      "blob": "42e200cdfe166ebb0e2f5eb187b182ab81c24490",
+      "unchanged": true
+    }
+  ],
+  "requiredGuards": [
+    "NO_CHECK_EMAIL_WITHOUT_RETURNED_SIGNUP_USER_ID",
+    "NO_EMAIL_EXISTENCE_DISCLOSURE",
+    "NO_CONNECTED_AUTH_WRITE",
+    "NO_DEPLOY",
+    "P02_REMAINS_2_OF_7"
+  ],
+  "acceptanceState": "SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_ACCEPTANCE"
+}

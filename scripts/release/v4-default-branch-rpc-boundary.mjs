@@ -28,6 +28,24 @@ export async function readAuthenticatedOwnerDefaultBranch(actor, fail) {
     !uuid.test(result.data[0]?.id ?? "")) {
     reject(fail, "DEFAULT_BRANCH_OWN_ROW_NOT_UNAMBIGUOUS");
   }
+  // The caller's active default branch must also be assigned to that SAME
+  // authenticated owner. A revoked, missing, duplicate or foreign assignment
+  // cannot certify usable owner onboarding, even when the definer RPC agrees.
+  const assignment = await actor.client.from("branch_memberships")
+    .select("workspace_id,branch_id,user_id,status")
+    .eq("workspace_id", actor.id)
+    .eq("branch_id", result.data[0].id)
+    .eq("user_id", actor.userId)
+    .eq("status", "ACTIVE")
+    .limit(2);
+  if (assignment.error || !Array.isArray(assignment.data) ||
+    assignment.data.length !== 1 ||
+    assignment.data[0]?.workspace_id !== actor.id ||
+    assignment.data[0]?.branch_id !== result.data[0].id ||
+    assignment.data[0]?.user_id !== actor.userId ||
+    assignment.data[0]?.status !== "ACTIVE") {
+    reject(fail, "DEFAULT_BRANCH_OWNER_ASSIGNMENT_MISSING_OR_UNVERIFIED");
+  }
   return result.data[0].id;
 }
 

@@ -1,0 +1,383 @@
+name: ServiceDesk IR21 Owner journeys plus F15 atomic Inbox integration
+on:
+  push:
+    branches: ["sonic-integration/ir21-f20-real-finance-retention-20261030"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-ir21-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  owner-finance-retention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Single focused owner journeys, F15 atomic ingress and exact-source critic
+        run: >-
+          pnpm exec vitest run
+          tests/e2e/p02-owner-registration-persisted-receipt.test.ts
+          tests/e2e/p02-registration-denial-action.test.ts
+          tests/e2e/p02-workspace-error-origin.test.ts
+          tests/e2e/p02-auth-url-feedback-integrity.test.ts
+          tests/e2e/p02-qa-seed-url-saved-proof.test.ts
+          tests/e2e/p02-reset-password-session-closure.test.ts
+          tests/e2e/v4-owner-pricing-form-state-readiness.test.tsx
+          tests/ai/f20-owner-ledger-entrypoint.test.ts
+          tests/ai/f20-owner-retention-entrypoint.test.ts
+          tests/ai/f20-independent-finance-retention-critic.test.ts
+          tests/ai/f20-ir21-exact-source-critic.test.ts
+          tests/ai/f19-inbox-request-rules.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
+          tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
+          tests/ai/f21-inbox-first-quote.test.ts
+          tests/ai/f21-inbox-first-quote-critic.test.ts
+          tests/ai/f22-verified-quote-slot-hold.test.ts
+          tests/ai/f22-verified-quote-slot-critic.test.ts
+          tests/ai/f23-owner-held-slot-release.test.ts
+          tests/ai/f23-owner-hold-release-critic.test.ts
+          tests/ai/f23-current-quote-schema-compatibility-veto.test.ts
+          tests/db/visits.test.ts
+          tests/db/visit-repository-adapter.test.ts
+          tests/db/f24-atomic-visit-critic.test.ts
+          tests/ai/f25-owner-saved-booking-receipt.test.ts
+          tests/ai/f25-owner-booking-receipt-critic.test.ts
+          tests/ai/f26-owner-verified-booking-dispatch.test.ts
+          tests/ai/f26-owner-verified-booking-dispatch-critic.test.ts
+          tests/ai/f26-active-crew-readiness.test.ts
+          tests/ai/f26-atomic-crew-pg17-critic.test.ts
+          tests/ai/f26-owner-actor-lock-critic.test.ts
+          tests/ai/sonic-f15-owner-manual-journey.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
+          src/server/workflows/sonic-f15-atomic-ingress.ts
+          src/server/workflows/sonic-f15-postgres-port.ts
+          src/server/workflows/sonic-f15-unanswered-lead-sla.ts
+          src/server/workflows/sonic-f15-complete-saved-source.ts
+          src/server/workflows/sonic-f15-owner-manual-escalation.ts
+          src/server/workflows/sonic-f15-owner-review-evidence.ts
+          src/server/workflows/sonic-f15-owner-linked-attention.ts
+          src/features/operations/f15-owner-linked-attention-action.ts
+          src/features/operations/OwnerLinkedAttentionReview.tsx
+          tests/ai/sonic-f15-linked-attention.test.ts
+          src/features/operations/f15-owner-lead-sla-action.ts
+          src/features/operations/OwnerUnansweredLeadReview.tsx
+          src/features/operations/InboxProtectedLeadReviewPanel.tsx
+          src/app/app/\[workspace\]/inbox/page.tsx
+          tests/ai/sonic-f15-owner-manual-journey.test.ts
+          tests/ai/sonic-f15-complete-source-reader.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
+          tests/ai/sonic-f15-owner-review-evidence.test.ts
+          tests/ai/sonic-f15-owner-acknowledge.test.ts
+          tests/ai/sonic-f15-v3-release-security-critic.test.ts
+          tests/ai/sonic-f15-linked-attention.test.ts
+          tests/ai/sonic-f15-unanswered-lead-sla.test.ts
+          tests/ai/sonic-f15-atomic-ingress.test.ts
+          tests/ai/sonic-f15-postgres-port.test.ts
+          tests/ai/sonic-f15-ingress-independent-critic.test.ts
+          tests/ai/sonic-f15-owner-manual-journey.test.ts
+          tests/ai/sonic-f15-complete-source-reader.test.ts
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
+      - name: P02 offline two-owner RLS leak-detection critic (no live JWTs)
+        run: |
+          node --check scripts/release/v4-p02-two-owner-readonly-acceptance.mjs
+          node --check scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs
+          node --test scripts/release/v4-p02-two-owner-readonly-acceptance.test.mjs
+      - name: TypeScript
+        run: pnpm typecheck
+      - name: Changed-file lint
+        run: >-
+          pnpm exec eslint
+          src/app/auth/reset-password/actions.ts
+          tests/e2e/p02-auth-url-feedback-integrity.test.ts
+          tests/e2e/p02-qa-seed-url-saved-proof.test.ts
+          tests/e2e/p02-reset-password-session-closure.test.ts
+          src/features/auth/verified-auth-feedback.ts
+          src/features/auth/qa-sample-readback.ts
+          src/app/onboarding/verified/page.tsx
+          src/app/auth/sign-in/page.tsx
+          src/app/auth/sign-up/page.tsx
+          src/app/auth/forgot-password/page.tsx
+          src/app/auth/reset-password/page.tsx
+          tests/e2e/p02-owner-registration-persisted-receipt.test.ts
+          tests/e2e/p02-registration-denial-action.test.ts
+          tests/e2e/p02-workspace-error-origin.test.ts
+          src/features/auth/workspace-registration-error.ts
+          src/app/auth/create-workspace/page.tsx
+          src/features/auth/verified-owner-workspace.ts
+          src/app/auth/create-workspace/actions.ts
+          src/features/operations/OwnerCleaningPricingSetupForm.tsx
+          tests/e2e/v4-owner-pricing-form-state-readiness.test.tsx
+          src/features/operations/f20-owner-finance-review-action.ts
+          src/features/operations/OwnerLedgerExceptionReview.tsx
+          src/features/operations/f20-owner-retention-review-action.ts
+          src/features/operations/OwnerConsentedRetentionReview.tsx
+          src/features/operations/F20OwnerSourceReviewGate.tsx
+          src/app/app/\[workspace\]/invoices/page.tsx
+          src/app/app/\[workspace\]/customers/page.tsx
+          tests/ai/f20-owner-ledger-entrypoint.test.ts
+          tests/ai/f20-owner-retention-entrypoint.test.ts
+          tests/ai/f20-independent-finance-retention-critic.test.ts
+          tests/ai/f20-ir21-exact-source-critic.test.ts
+          src/features/operations/InboxRequestRulesPanel.tsx
+          src/features/operations/AiInboxRequestRules.tsx
+          src/features/operations/f19-inbox-request-rules-action.ts
+          src/features/operations/inbox-request-rule-gate.ts
+          src/server/ai/owner-inbox-request-rules.ts
+          src/app/app/\[workspace\]/inbox/page.tsx
+          tests/ai/f19-inbox-request-rules.test.ts
+          tests/ai/f19-inbox-request-rule-gate.test.ts
+          tests/ai/f19-ir21-reconciled-inbox-critic.test.ts
+          tests/ai/f21-inbox-first-quote.test.ts
+          tests/ai/f21-inbox-first-quote-critic.test.ts
+          tests/ai/f22-verified-quote-slot-hold.test.ts
+          tests/ai/f22-verified-quote-slot-critic.test.ts
+          tests/ai/f23-owner-held-slot-release.test.ts
+          tests/ai/f23-owner-hold-release-critic.test.ts
+          tests/db/visits.test.ts
+          tests/db/visit-repository-adapter.test.ts
+          tests/db/f24-atomic-visit-critic.test.ts
+          tests/ai/f25-owner-saved-booking-receipt.test.ts
+          tests/ai/f25-owner-booking-receipt-critic.test.ts
+          tests/ai/f26-owner-verified-booking-dispatch.test.ts
+          tests/ai/f26-owner-verified-booking-dispatch-critic.test.ts
+          tests/ai/f26-active-crew-readiness.test.ts
+          tests/ai/f26-atomic-crew-pg17-critic.test.ts
+          tests/ai/f26-owner-actor-lock-critic.test.ts
+          src/server/workflows/f26-active-crew-readiness.ts
+          src/server/workflows/owner-verified-booking-dispatch.ts
+          src/features/operations/owner-verified-dispatch-action.ts
+          src/features/operations/OwnerVerifiedBookingDispatchControls.tsx
+          src/features/operations/OwnerSavedBookingReceiptPanel.tsx
+          src/server/ai/owner-saved-booking-receipt.ts
+          src/features/operations/OwnerSavedBookingReceiptPanel.tsx
+          src/app/app/\[workspace\]/quotes/page.tsx
+          src/server/core/visits.ts
+          src/server/core/visit-repository.ts
+          src/server/workflows/owner-verified-quote-hold-release.ts
+          src/features/operations/verified-hold-release-action.ts
+          src/features/operations/OwnerSavedHoldReleaseControls.tsx
+          src/features/operations/OwnerQuoteHoldReleasePanel.tsx
+          src/server/ai/owner-inbox-first-quote.ts
+          src/features/operations/inbox-first-quote-action.ts
+          src/features/operations/InboxFirstQuoteAction.tsx
+          src/features/operations/inbox-first-quote-gate.ts
+          src/server/workflows/owner-verified-quote-slot-hold.ts
+          src/features/operations/verified-quote-slot-action.ts
+          src/features/operations/VerifiedQuoteSlotHoldControls.tsx
+          src/features/operations/OwnerQuoteCapacityHoldPanel.tsx
+          src/app/app/\[workspace\]/quotes/page.tsx
+          tests/ai/sonic-f15-integrated-independent-critic.test.ts
+          src/server/workflows/sonic-f15-owner-acknowledge.ts
+          src/features/operations/f15-owner-acknowledge-action.ts
+          src/features/operations/OwnerLinkedAttentionReview.tsx
+          src/features/operations/f15-owner-acknowledgement-readback.ts
+          tests/ai/sonic-f15-owner-acknowledge.test.ts
+          tests/ai/sonic-f15-v3-release-security-critic.test.ts
+      - name: Source build only, no deployment
+        run: pnpm build
+
+  native-pg17-f15-atomic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f15-no-real-user
+          POSTGRES_DB: sd_f15_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f15_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: sd_f15_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable-f15-no-real-user
+      SERVICEDESK_F15_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Enforce disposable database and exact source head
+        run: |
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "sd_f15_disposable"
+          test "$SERVICEDESK_F15_PG17_DISPOSABLE_ONLY" = "1"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Install isolated PG client if absent
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Create fictional baseline with NO pgcrypto, load reviewed V2 candidate
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-fixture-v2.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f15-unanswered-lead-atomic-db-candidate-v2.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+      - name: Real PostgreSQL 17 ACL, rollback, two-tenant and replay checks
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-acceptance.sql
+      - name: Twelve real concurrent claims and writer lock
+        run: bash scripts/release/v4-f15-atomic-pg17-concurrency.sh
+
+  native-pg17-f15-attention-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f15-no-real-user
+          POSTGRES_DB: sd_f15_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f15_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: sd_f15_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable-f15-no-real-user
+      SERVICEDESK_F15_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact head and local-only database guard
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "sd_f15_disposable"
+          test "$SERVICEDESK_F15_PG17_DISPOSABLE_ONLY" = "1"
+      - name: Install PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Isolated fictional Attention Center, core SHA-256 V3 candidate
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-fixture-v3.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f15-unanswered-lead-atomic-attention-v3.sql
+          test "$(psql -X -At -v ON_ERROR_STOP=1 -c "select count(*) from pg_extension where extname='pgcrypto';")" = "0"
+      - name: Real source journal plus attention lineage and forced rollback
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f15-atomic-pg17-acceptance-v3.sql
+      - name: Twelve competing SLA claims plus message-writer lock
+        run: bash scripts/release/v4-f15-atomic-pg17-concurrency.sh
+
+  native-pg17-f26-atomic-crew:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f26-no-real-user
+          POSTGRES_DB: sd_f26_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f26_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: sd_f26_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable-f26-no-real-user
+      SERVICEDESK_F26_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact source and disposable localhost guard
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "sd_f26_disposable"
+          test "$SERVICEDESK_F26_PG17_DISPOSABLE_ONLY" = "1"
+      - name: Install local PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Build fictional baseline and extract exact original 0011 RPC
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-atomic-crew-pg17-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-owner-jwt-pg17-auth-fixture.sql
+          python3 -c 'from pathlib import Path; s=Path("supabase/migrations/0011_visit_field_runtime.sql").read_text(); i=s.index("create or replace function public.servicedesk_transition_visit(p_input jsonb)"); j=s.index("\n$$;",i)+4; Path("/tmp/f26-original-0011-rpc.sql").write_text(s[i:j]+"\n")'
+          psql -X -v ON_ERROR_STOP=1 -f /tmp/f26-original-0011-rpc.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f26-atomic-crew-assign-trigger-candidate-v1.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f26-owner-role-atomic-assign-rpc-candidate.sql
+      - name: Native PG17 rejected rows and original 0011 positive compatibility
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-atomic-crew-pg17-acceptance.sql
+      - name: Real parallel membership revocation and ASSIGN row locks
+        run: bash scripts/release/v4-f26-pg17-crew-revocation-race.sh
+      - name: Source-only owner actor JWT spoof + role-revocation denial in PG17
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f26-owner-atomic-pg17-acceptance.sql
+      - name: Real owner row revocation races before and after ASSIGN
+        run: bash scripts/release/v4-f26-pg17-owner-revocation-race.sh
+
+  native-pg17-f23-atomic-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-f23-no-real-user
+          POSTGRES_DB: sd_f23_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sd_f23_disposable"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: sd_f23_disposable
+      PGUSER: postgres
+      PGPASSWORD: disposable-f23-no-real-user
+      SERVICEDESK_F23_PG17_DISPOSABLE_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: F23 exact source SHA and isolated DB guard
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$PGHOST" = "127.0.0.1"
+          test "$PGDATABASE" = "sd_f23_disposable"
+          test "$SERVICEDESK_F23_PG17_DISPOSABLE_ONLY" = "1"
+      - name: Install disposable PostgreSQL client if unavailable
+        run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y postgresql-client)
+      - name: Install fictional F23 test schema and review-only source candidate
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f23-atomic-hold-release-pg17-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f docs/engineering/security/f23-atomic-hold-release-rpc-candidate.sql
+      - name: DBA aggregate-only read-only F23 schema preflight before witness
+        run: psql -X -v ON_ERROR_STOP=1 -f scripts/release/v4-f23-current-quote-readonly-preflight.sql
+      - name: Native F23 ACL, revocation, payment, quote, expiry and positive checks
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/v4-f23-atomic-hold-release-pg17-acceptance.sql
+      - name: Native F23 two-session deposit-first and release-first quote row locking
+        run: bash scripts/release/v4-f23-pg17-hold-payment-race.sh
+      - name: Native F23 owner role revocation-first and release-first row locking
+        run: bash scripts/release/v4-f23-pg17-owner-revocation-race.sh
+      - name: Native F23 selected quote supersession/release lock races
+        run: bash scripts/release/v4-f23-pg17-quote-supersession-race.sh
+      - name: Native F23 crew branch reassignment/release lock races
+        run: bash scripts/release/v4-f23-pg17-crew-branch-race.sh
+      - name: SECURITY VETO evidence - witness sibling quote phantom (NOT acceptance)
+        run: bash scripts/release/v4-f23-pg17-sibling-quote-phantom-witness.sh
+      - name: DBA review ONLY - prototype partial unique current-quote index on disposable PG17
+        run: bash scripts/release/v4-f23-pg17-unique-current-quote-remedy-prototype.sh
+      - name: DBA aggregate-only read-only F23 schema preflight after disposable index
+        run: psql -X -v ON_ERROR_STOP=1 -f scripts/release/v4-f23-current-quote-readonly-preflight.sql

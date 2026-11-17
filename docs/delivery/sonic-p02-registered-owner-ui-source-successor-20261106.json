@@ -1,0 +1,64 @@
+{
+  "schema": "servicedesk.p02.registered-owner-ui-source-successor.v1",
+  "batchId": "SONIC-P02-REGISTERED-OWNER-UX-20261106",
+  "sourceOnly": true,
+  "approvedForConnectedDb": false,
+  "parentVerifiedHead": "648925897265ae6f999a660d28baddea06999e04",
+  "repository": "SaamVR/ServiceDesk",
+  "branch": "sonic-integration/ir21-f20-real-finance-retention-20261030",
+  "originalF15F20Overlay": {
+    "path": "docs/delivery/sonic-f15-f20-post-lock-ui-guard-20261106.json",
+    "blob": "73f0dad66c31dc676b83b58ae17cd2f9f611f688",
+    "unchanged": true
+  },
+  "reviewedP02Predecessor": {
+    "pr": 871,
+    "head": "d08fb519239531b43fc66684feb7bd4b1b7ac7d7",
+    "sourceModule": "src/features/auth/workspace-registration-error.ts",
+    "originalBlob": "935af198417ed78b81f642f070f26529b85fe6b0"
+  },
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousBlob": "6fe5b79c709dd79ecc1e3dd09cf2d0b52baf4ff7",
+    "currentBlob": "a76896747be9412f320d5868fc74aff08d39d9e8"
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/create-workspace/actions.ts",
+      "blob": "0b825123a19e7de93ee26efccc9839a9aa4b1760",
+      "intent": "database REGISTRATION_NOT_AUTHORIZED and contradiction denial before readback"
+    },
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "blob": "d56ca9220d55071544ce4872ceda779744bb33f2",
+      "intent": "bounded URL error messages and native slug/server parity"
+    },
+    {
+      "path": "src/features/auth/workspace-registration-error.ts",
+      "blob": "77c1c0f5c2abf940edb6517e34e721ebd250e684",
+      "intent": "whitelisted safe display copy; not signed provenance"
+    },
+    {
+      "path": "tests/e2e/p02-registration-denial-action.test.ts",
+      "blob": "03ea94eb594fb424e479649e0003539ee11b222f",
+      "intent": "real server action tested with mock authenticated RLS readback"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "blob": "7d362bed7ec582accece5e0baf8730c0642601a9",
+      "intent": "URL-error spoofing and browser slug parity cases"
+    }
+  ],
+  "retains": [
+    "P02_818_OPEN",
+    "P03_819_OPEN",
+    "EXISTING_P02_DB_GUARD_PR_869_UNAPPLIED",
+    "F15_F26_UNAPPLIED",
+    "NO_CONNECTED_SUPABASE_WRITE",
+    "NO_CUSTOMER_SEND",
+    "NO_PAYMENT_WRITE",
+    "NO_VERCEL_DEPLOY",
+    "NO_MAIN_OR_CANONICAL_MERGE"
+  ],
+  "status": "SOURCE_IMPLEMENTED_PENDING_EXACT_HEAD_CI"
+}

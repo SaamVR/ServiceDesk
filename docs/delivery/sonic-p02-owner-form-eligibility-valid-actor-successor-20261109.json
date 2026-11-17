@@ -1,0 +1,69 @@
+{
+  "schema": "servicedesk.p02.owner-form-eligibility-and-verified-actor.v1",
+  "batchId": "P02-OWNER_FORM_QA_ALLOWLIST_AND_VALID_AUTH_ID_BEFORE_RPC-20261109",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "parentHead": "6497e270cc66a274ffb042555b47101843e39e63",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-qa-owner-lookup-transport-successor-20261109.json",
+    "blob": "1380dae4654336ea5ba0af5639ca93a3c3467b3c",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/create-workspace/actions.ts",
+      "previousBlob": "8e3a6e0572c38680141ce86b5d7f5f84cf5d6dfd",
+      "currentBlob": "37871b966731acf08a65f9395577eb356c5177e5",
+      "lane": "AUTH_RPC_ACTOR_ID_VETO"
+    },
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "previousBlob": "2ed68d7a1ae4449e43dfb852fd8e210640664e56",
+      "currentBlob": "98c3dd145b011211d345892c01851fa22c4aadc7",
+      "lane": "OWNER_QA_ELIGIBILITY_UI"
+    },
+    {
+      "path": "tests/e2e/p02-registration-denial-action.test.ts",
+      "previousBlob": "d5c288aa516ae3e9b2c2f84302de22942748085f",
+      "currentBlob": "1cd9e8e3aad8a35574180d7bc0b29dd7033d2065",
+      "lane": "ACTION_ADVERSARIAL_TEST"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "b490f5decc44e631ff6aef895b5b142f5f926fb0",
+      "currentBlob": "cf9f60ffc6003ba65afd42269504218af5922a9c",
+      "lane": "UI_ADVERSARIAL_TEST"
+    }
+  ],
+  "regressionTests": [
+    {
+      "path": "tests/e2e/p02-registration-denial-action.test.ts",
+      "previous": 12,
+      "current": 13,
+      "added": 1
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previous": 35,
+      "current": 37,
+      "added": 2
+    }
+  ],
+  "unchangedWorkflow": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "invariants": [
+    "NO_QA_UNAPPROVED_OWNER_REGISTRATION_FORM",
+    "NO_WORKSPACE_REGISTRATION_RPC_ON_MISSING_OR_MALFORMED_AUTH_USER_ID",
+    "PUBLIC_MODE_STILL_PERMITTED_ONLY_WHEN_OWNER_AUTHZ_FLAG_APPROVED",
+    "NO_AUTOMATIC_RETRY_AFTER_UNCERTAIN_RPC",
+    "NO_CONNECTED_SUPABASE_AUTH_OR_DB_WRITE",
+    "NO_REGISTRATION_GUARD_INSTALL",
+    "NO_DEPLOY_OR_MERGE",
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6"
+  ],
+  "acceptance": "INTEGRATED_SOURCE_ONLY_NOT_TWO_REAL_OWNER_AUTHENTICATED_JWT_RLS"
+}

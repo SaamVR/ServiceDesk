@@ -94,26 +94,74 @@ describe("visit persistence adapter", () => {
         }, error: null };
       },
       confirmHold: async (workspaceId, holdId) => {
-        calls.push(`confirmHold:${workspaceId}:${holdId}`);
+        calls.push(`UNSAFE_CONFIRM:${workspaceId}:${holdId}`);
         return { data: null, error: null };
       },
       insertVisit: async (row) => {
-        calls.push(`insertVisit:${row.workspace_id}:${row.id}`);
+        calls.push(`UNSAFE_INSERT:${row.workspace_id}:${row.id}`);
         return { data: row, error: null };
+      },
+      commitScheduledVisit: async (row, paymentId) => {
+        calls.push(`atomic:${row.workspace_id}:${paymentId}`);
+        return { data: {
+          visit: row,
+          hold: {
+            id: hold.id, workspace_id: hold.workspaceId,
+            slot_id: hold.slotId, quote_id: hold.quoteId,
+            expires_at: hold.expiresAt, status: "CONFIRMED" as const,
+          },
+        }, error: null };
       },
     });
 
     await expect(repo.findHoldById("ws_1", "hold_1")).resolves.toEqual({ ok: true, value: hold });
     await expect(repo.findSlotById("ws_1", "slot_1")).resolves.toEqual({ ok: true, value: slot });
-    await expect(repo.confirmHold("ws_1", "hold_1", { idempotencyKey: "idem", now: visit.createdAt })).resolves.toEqual({ ok: true, value: true });
-    await expect(repo.insertVisit(visit, { idempotencyKey: "idem", now: visit.createdAt })).resolves.toEqual({ ok: true, value: visit });
+    await expect(repo.commitScheduledVisit!(visit, "payment_applied_1",
+      { idempotencyKey: "idem", now: visit.createdAt })).resolves.toEqual({
+      ok: true,
+      value: {visit,confirmedHold:{...hold,status:"CONFIRMED"}},
+    });
 
     expect(repo.nextVisitId()).toBe("visit_2");
     expect(calls).toEqual([
       "findHold:ws_1:hold_1",
       "findSlot:ws_1:slot_1",
-      "confirmHold:ws_1:hold_1",
-      "insertVisit:ws_1:visit_1",
+      "atomic:ws_1:payment_applied_1",
     ]);
   });
+  it("never falls back to split writes if the gateway lacks an atomic transaction", async () => {
+    const unsafe = createPostgresVisitRepository({
+      nextVisitId:()=> "visit_3",
+      findHoldById: async()=> ({data:null,error:null}),
+      findSlotById: async()=> ({data:null,error:null}),
+      confirmHold: async()=> {throw new Error("unsafe confirm");},
+      insertVisit: async()=> {throw new Error("unsafe visit");},
+    });
+    await expect(unsafe.commitScheduledVisit!(visit,"payment_applied_1",
+      {idempotencyKey:"block-split",now:visit.createdAt})).resolves.toMatchObject({
+        ok:false,code:"ATOMIC_VISIT_UNAVAILABLE",
+      });
+  });
+
+  it("rejects atomic gateway receipts with an unconfirmed or foreign hold", async () => {
+    for(const status of ["HELD","RELEASED"] as const){
+      const gateway=createPostgresVisitRepository({
+        nextVisitId:()=> "visit_4",
+        findHoldById:async()=>({data:null,error:null}),
+        findSlotById:async()=>({data:null,error:null}),
+        commitScheduledVisit:async(row)=>({data:{
+          visit:row,hold:{
+            id:hold.id,workspace_id:hold.workspaceId,
+            quote_id:hold.quoteId,slot_id:hold.slotId,
+            expires_at:hold.expiresAt,status,
+          },
+        },error:null}),
+      });
+      await expect(gateway.commitScheduledVisit!(visit,"payment_applied_1",
+        {idempotencyKey:"forge",now:visit.createdAt})).resolves.toMatchObject({
+          ok:false,code:"ATOMIC_VISIT_READBACK_INVALID",
+        });
+    }
+  });
+
 });

@@ -1,0 +1,81 @@
+{
+  "schema": "servicedesk.p02.rpc-error-pair-ambiguous-post-commit-recovery.v1",
+  "batchId": "P02-OWNER_REGISTRATION_RETURNED_RPC_ERROR_AMBIGUITY-20261111",
+  "ownerChat": "PRODUCTION_SOURCE",
+  "sourceOnly": true,
+  "reviewedParentHead": "8e4e96b08657597cf4fc967cd000c0accba09184",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-post-rpc-readback-throw-recovery-successor-20261111.json",
+    "blob": "63587689beed682ffa268b43a5bff6f8d16b4c1a",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/create-workspace/actions.ts",
+      "previousBlob": "11a85433b84c88592d6efa270a5f832b9432b7a6",
+      "currentBlob": "472496c93c64f33f64b8667ce4f67dcbb415b2e8",
+      "lane": "OWNER_RPC_RESULT_ERROR_AMBIGUOUS_RECOVERY"
+    },
+    {
+      "path": "tests/e2e/p02-registration-denial-action.test.ts",
+      "previousBlob": "d0257951ed4a8c8c7f823ccd91b88f96a696a3da",
+      "currentBlob": "942a1ab6039958187ac2e0ba1e875e2a7d6882ca",
+      "lane": "INDEPENDENT_RETURNED_POSTGREST_ERROR_QA"
+    }
+  ],
+  "qa": {
+    "path": "tests/e2e/p02-registration-denial-action.test.ts",
+    "previous": 14,
+    "current": 15,
+    "added": 1,
+    "ambiguousReturnedErrors": [
+      "missing-code",
+      "empty-code",
+      "PGRSTX00",
+      "08006"
+    ],
+    "deterministicPreExecutionCodes": [
+      "PGRST202",
+      "PGRST301",
+      "42501"
+    ]
+  },
+  "businessScenario": "Signed-in owner receives the bounded check-saved-workspaces recovery UI when a registration POST returns a Supabase {data,error} pair with uncertain transaction outcome; known pre-execution permission/schema/JWT denials still report configuration failure and never claim success.",
+  "externalDocumentation": [
+    "https://supabase.com/docs/guides/api/automatic-retries-in-supabase-js",
+    "https://supabase.com/docs/guides/api/handling-errors-in-supabase-js",
+    "https://supabase.com/docs/guides/api/rest/postgrest-error-codes"
+  ],
+  "unchangedSources": [
+    {
+      "path": "src/features/auth/workspace-registration-error.ts",
+      "blob": "73e200d522da5bf4dabe0275f97860379f53637f",
+      "unchanged": true
+    },
+    {
+      "path": "src/features/auth/verified-owner-workspace.ts",
+      "blob": "221b0f52e75d2231900767f91806b3ea874f32d7",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+      "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+      "unchanged": true
+    }
+  ],
+  "invariants": [
+    "RETURNED_NETWORK_OR_UNKNOWN_RPC_ERROR_HAS_UNCERTAIN_COMMIT_NOTICE",
+    "RPC_POST_NOT_AUTOMATICALLY_RETRIED",
+    "NO_DUPLICATE_NONIDEMPOTENT_REGISTRATION_ON_UNCERTAIN_RPC",
+    "DETERMINISTIC_PGRST202_PGRST301_42501_NOT_FALSE_COMMIT",
+    "NO_PROVIDER_ERROR_MESSAGE_DISCLOSED",
+    "NO_SIGNED_IN_OWNER_READY_WITHOUT_RLS_READBACK",
+    "NO_CONNECTED_DB_AUTH_WRITE_OR_MIGRATION",
+    "NO_CUSTOMER_PROVIDER_PAYMENT_OR_DEPLOY",
+    "NO_PROTECTED_MERGE_NO_NEW_PR",
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6"
+  ],
+  "acceptance": "SOURCE_ONLY_OFFLINE_TESTS_NOT_REAL_TWO_OWNER_JWT_RLS",
+  "nextBatch": "P02_818_AUTHORIZED_TWO_OWNER_SIGNED_IN_RLS_AND_APPROVED_SQL"
+}

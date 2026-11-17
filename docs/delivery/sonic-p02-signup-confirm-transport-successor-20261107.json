@@ -1,0 +1,49 @@
+{
+  "schema": "servicedesk.p02.signup-confirm-transport-error-successor.v1",
+  "batchId": "P02-SIGNUP-CONFIRM-TRANSPORT-FAIL-CLOSED-20261107",
+  "sourceOnly": true,
+  "parentHead": "3c23c5d1188030e3ff595e16144420ba97c1c998",
+  "reviewedSourceHead": "0603cc22a9b9268ee5f185c31517c56904a6395a",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-signin-verified-session-successor-20261107.json",
+    "blob": "355217845c497dd3199ebc0cd3bdac58779ff53f",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/sign-up/actions.ts",
+      "previousBlob": "87e77031039506fd4ee7c5d9c8f2387b9821e821",
+      "currentBlob": "3e925d4ec220f7264e5c6407c42e2670be5cebef"
+    },
+    {
+      "path": "src/app/auth/confirm/route.ts",
+      "previousBlob": "6b9abb0efb56d597ee258d87faae93693b89d100",
+      "currentBlob": "4ab0f387ded6284c9af9b403c178e5869dbe8a33"
+    }
+  ],
+  "addedAdversarialTest": {
+    "path": "tests/e2e/p02-signup-confirm-transport-outcome.test.ts",
+    "previousBlob": null,
+    "currentBlob": "f6659f118c343173b12767c102afc312053a32ff",
+    "cases": 11
+  },
+  "focusedWorkflow": {
+    "path": ".github/workflows/sonic-p02-auth-origin-focused.yml",
+    "previousBlob": "720495c3087c369249fe19495cb86c2461a0abca",
+    "currentBlob": "42e200cdfe166ebb0e2f5eb187b182ab81c24490"
+  },
+  "requiredGuards": [
+    "NO_CHECK_EMAIL_ON_THROWN_SIGNUP",
+    "NO_SUCCESSFUL_CONFIRM_WITHOUT_VERIFIED_USER_SESSION",
+    "NO_RAW_PROVIDER_ERROR_OR_SESSION_COOKIE_ON_FAILURE",
+    "NO_EXTERNAL_REDIRECT",
+    "NO_CONNECTED_AUTH_WRITE",
+    "NO_QA_USER_CREATION",
+    "NO_SQL_INSTALL",
+    "NO_VERCEL_DEPLOY",
+    "P02_REMAINS_2_OF_7",
+    "P03_REMAINS_0_OF_6"
+  ],
+  "acceptanceState": "SOURCE_ONLY_NOT_AUTHENTICATED_TWO_OWNER_ACCEPTANCE",
+  "releaseGate": "P02_OPEN_BLOCKED_OWNER_AND_SUPABASE_INACTIVE"
+}

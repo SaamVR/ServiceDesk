@@ -1,0 +1,37 @@
+{
+  "schema": "servicedesk.p02.owner-workspace-transport-uncertainty.v1",
+  "batchId": "P02-AUTH-AND-RPC-TRANSPORT-FAIL-CLOSED-20261107",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-registered-owner-ui-source-successor-20261106.json",
+    "blob": "daedeb155f8d11dfb245b3cca709b20205e400d3",
+    "unchanged": true
+  },
+  "p03CurrencyPredecessor": {
+    "path": "docs/delivery/sonic-p03-currency-first-run-ux-source-successor-20261107.json",
+    "blob": "d7648d1fd14e3e58f584cb0f03e5a386e4c3087d",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/app/auth/create-workspace/actions.ts",
+      "previousBlob": "0b825123a19e7de93ee26efccc9839a9aa4b1760",
+      "currentBlob": "8e3a6e0572c38680141ce86b5d7f5f84cf5d6dfd"
+    },
+    {
+      "path": "tests/e2e/p02-registration-denial-action.test.ts",
+      "previousBlob": "03ea94eb594fb424e479649e0003539ee11b222f",
+      "currentBlob": "37ecfaba9c14a442b2a9beccf77d2aa850673622"
+    }
+  ],
+  "acceptance": "SOURCE_ONLY_AUTHENTICATED_OWNER_NOT_YET_VERIFIED",
+  "invariants": [
+    "NO_OWNER_RPC_AFTER_IDENTITY_TRANSPORT_FAILURE",
+    "NO_FALSE_WORKSPACE_CREATED_RECEIPT_AFTER_RPC_TRANSPORT_FAILURE",
+    "NO_AUTOMATIC_SECOND_REGISTRATION_ATTEMPT",
+    "NO_PROVIDER_DETAILS_IN_REDIRECT",
+    "NO_SUPABASE_RESTORE_OR_CONNECTED_DB_WRITE",
+    "NO_VERCEL_DEPLOY",
+    "P02_REMAINS_OPEN",
+    "F23_RELEASE_VETO_REMAINS"
+  ]
+}

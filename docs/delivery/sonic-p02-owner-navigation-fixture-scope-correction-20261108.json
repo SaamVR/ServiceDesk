@@ -1,0 +1,45 @@
+{
+  "schema": "servicedesk.p02.owner-navigation-preview-fixture-scope-successor.v1",
+  "batchId": "P02-OWNER_PREVIEW_FIXTURE_SCOPE_OF_FORM_RENDER_20261108",
+  "sourceOnly": true,
+  "parentHead": "bada02c370cf2c2879515f2072342d38be4f29fb",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-owner-navigation-qa-witness-correction-20261108.json",
+    "blob": "1d26bb853f703f62b456cd9fca506e2aca58ea51",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "2469e781c54f285d94b63d22ddd4471da0b4e974",
+      "currentBlob": "6aaad27365257fed0fa33d2b6c1a008f87ed3542",
+      "reason": "MOVE_RENDER_TEST_UNDER_VERIFIED_OWNER_QA_ENV_FIXTURE"
+    }
+  ],
+  "testCount": 29,
+  "productionSourceUnchanged": [
+    {
+      "path": "src/app/auth/create-workspace/page.tsx",
+      "blob": "2ed68d7a1ae4449e43dfb852fd8e210640664e56",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/auth/select-workspace/page.tsx",
+      "blob": "d49858992d78fcb0a84bbd84d24bb1ebf681896e",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/onboarding/verified/page.tsx",
+      "blob": "12eafdfa355d0c2fe59c3fa72a6533993627f60c",
+      "unchanged": true
+    }
+  ],
+  "guards": [
+    "P02_OPEN_2_OF_7",
+    "P03_OPEN_0_OF_6",
+    "NO_CONNECTED_AUTH_OR_DB_WRITE",
+    "NO_DEPLOY",
+    "PRESERVE_ALL_SOURCE_LOCKS"
+  ],
+  "acceptance": "SOURCE_ONLY_UNTIL_AUTHENTICATED_OWNER_A_B_RLS"
+}

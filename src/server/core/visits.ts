@@ -27,14 +27,27 @@ export interface ScheduleVisitFromHoldInput {
   quoteId: string;
   holdId: string;
   timezone: string;
+  /** Required proof reference; the atomic database port independently verifies it. */
+  verifiedPaymentApplicationId?: string;
 }
 
+export interface AtomicScheduledVisitReceipt {
+  visit: VisitRecord;
+  confirmedHold: SlotHold;
+}
 export interface VisitRepository {
   nextVisitId(): string;
   findHoldById(workspaceId: string, holdId: string): Promise<Result<SlotHold>>;
   findSlotById(workspaceId: string, slotId: string): Promise<Result<CapacitySlot>>;
-  confirmHold(workspaceId: string, holdId: string, meta: CommandMeta): Promise<Result<true>>;
-  insertVisit(visit: VisitRecord, meta: CommandMeta): Promise<Result<VisitRecord>>;
+  /**
+   * MUST be one database transaction: lock hold/slot/quote, verify an APPLIED
+   * DEPOSIT for this exact tenant/hold/quote, insert one visit, confirm hold,
+   * and read back the committed rows. No confirm-then-insert fallback.
+   * The existing verified-payment RPC is the preferred production path.
+   */
+  commitScheduledVisit?: (
+    visit: VisitRecord, verifiedPaymentApplicationId: string, meta: CommandMeta,
+  ) => Promise<Result<AtomicScheduledVisitReceipt>>;
 }
 
 function authorizeVisitScheduling(ctx: ActorContext, workspaceId: string): Result<true> {
@@ -69,8 +82,22 @@ export async function scheduleVisitFromHoldWithRepository(
   const slot = await repository.findSlotById(ctx.workspaceId, hold.value.slotId);
   if (slot.ok === false) return slot;
 
-  const confirmed = await repository.confirmHold(ctx.workspaceId, hold.value.id, meta);
-  if (confirmed.ok === false) return confirmed;
+  if (hold.value.workspaceId !== ctx.workspaceId ||
+      slot.value.workspaceId !== ctx.workspaceId ||
+      slot.value.id !== hold.value.slotId ||
+      !slot.value.crewId ||
+      !Number.isFinite(Date.parse(slot.value.startsAt)) ||
+      !Number.isFinite(Date.parse(slot.value.endsAt)) ||
+      Date.parse(slot.value.endsAt) <= Date.parse(slot.value.startsAt)) {
+    return { ok: false, code: "VISIT_SOURCE_INVALID", message: "Hold or slot source was not verified." };
+  }
+  if (!input.verifiedPaymentApplicationId || !input.verifiedPaymentApplicationId.trim() ||
+      input.verifiedPaymentApplicationId.length > 128) {
+    return { ok: false, code: "VERIFIED_DEPOSIT_REQUIRED", message: "An applied deposit must be verified in the database." };
+  }
+  if (!repository.commitScheduledVisit) {
+    return { ok: false, code: "ATOMIC_VISIT_UNAVAILABLE", message: "Atomic visit persistence is not configured." };
+  }
 
   const visit: VisitRecord = {
     id: repository.nextVisitId(),
@@ -89,5 +116,31 @@ export async function scheduleVisitFromHoldWithRepository(
     updatedAt: meta.now,
   };
 
-  return repository.insertVisit(visit, meta);
+  // Never make two independent writes here. Failure or an ambiguous response
+  // is NOT evidence of rollback; callers must not retry blindly.
+  const committed = await repository.commitScheduledVisit(visit, input.verifiedPaymentApplicationId, meta);
+  if (committed.ok === false) return committed;
+  const saved = committed.value.visit;
+  const confirmed = committed.value.confirmedHold;
+  if (confirmed.status !== "CONFIRMED" ||
+      confirmed.workspaceId !== ctx.workspaceId ||
+      confirmed.id !== input.holdId ||
+      confirmed.quoteId !== input.quoteId ||
+      confirmed.slotId !== slot.value.id ||
+      saved.workspaceId !== visit.workspaceId ||
+      saved.id !== visit.id ||
+      saved.requestId !== visit.requestId ||
+      saved.quoteId !== visit.quoteId ||
+      saved.holdId !== visit.holdId ||
+      saved.slotId !== visit.slotId ||
+      saved.crewId !== visit.crewId ||
+      saved.status !== "SCHEDULED" ||
+      saved.version !== 1 ||
+      saved.timezone !== visit.timezone ||
+      saved.startsAt !== visit.startsAt ||
+      saved.endsAt !== visit.endsAt) {
+    return { ok: false, code: "ATOMIC_VISIT_READBACK_INVALID",
+      message: "Atomic visit confirmation could not be independently verified." };
+  }
+  return { ok: true, value: saved };
 }

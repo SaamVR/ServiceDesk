@@ -1,0 +1,53 @@
+{
+  "schema": "servicedesk.f23.quote-crew-lock-races-successor.v1",
+  "batch": "SONIC-F23-QUOTE-CREW-LOCK-RACES-20261107",
+  "sourceOnly": true,
+  "installed": false,
+  "releaseAuthorized": false,
+  "priorVerifiedSource": {
+    "path": "docs/delivery/sonic-p02-qa-seed-saved-proof-successor-20261107.json",
+    "blob": "963c2e44e8e5a28fcc326460840657fcbe3401af",
+    "unchanged": true
+  },
+  "workflowSuccessor": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "previousBlob": "c75bea67e0a5ac64e955aae9b24c89d485e2dfa5",
+    "currentBlob": "8c2cab1749d363309d5c89cce9a6980084019202"
+  },
+  "newRaces": [
+    {
+      "path": "scripts/release/v4-f23-pg17-quote-supersession-race.sh",
+      "blob": "120c6571fd42d60e1f1ba3bdf8db81f20367c5ac",
+      "expectedReceipts": [
+        "PG17_F23_QUOTE_SUPERSEDE_FIRST_LOCK_DENIAL_PASS",
+        "PG17_F23_RELEASE_FIRST_QUOTE_SUPERSESSION_ROLLBACK_PASS"
+      ],
+      "scope": "SELECTED_QUOTE_ONLY_NOT_SIBLING_PHANTOM"
+    },
+    {
+      "path": "scripts/release/v4-f23-pg17-crew-branch-race.sh",
+      "blob": "a51811ee5b0d8170e4fa382c12b46b50cb3fa2f1",
+      "expectedReceipts": [
+        "PG17_F23_CREW_BRANCH_CHANGE_FIRST_FOR_SHARE_DENIED_PASS",
+        "PG17_F23_RELEASE_FIRST_CREW_REBRANCH_ROLLBACK_PASS"
+      ],
+      "scope": "SELECTED_CREW_BRANCH_ONLY"
+    }
+  ],
+  "safeDatabase": {
+    "host": "127.0.0.1",
+    "name": "sd_f23_disposable",
+    "shaGuard": "GITHUB_SHA"
+  },
+  "flagsDefaultOff": [
+    "SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED",
+    "SERVICEDESK_F23_ATOMIC_RELEASE_APPROVED"
+  ],
+  "releaseVeto": [
+    "QUOTE_PHANTOM_WHOLE_REQUEST_UNPROVEN",
+    "FULL_REAL_PAYMENT_RPC_RACE_UNPROVEN",
+    "PROVIDER_EVENTS_IN_TRANSIT_UNPROVEN",
+    "DBA_APPROVAL_MISSING",
+    "P02_P03_ACCEPTANCE_MISSING"
+  ]
+}

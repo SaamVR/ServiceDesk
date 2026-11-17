@@ -1,0 +1,48 @@
+{
+  "schema": "servicedesk.p02.active-owner-malformed-address-deny-successor.v1",
+  "batchId": "P02-ACTIVE_OWNER_INVALID_SLUG_MUST_NOT_RESTART_ONBOARDING-20261108",
+  "sourceOnly": true,
+  "chat": "PRODUCTION_SOURCE",
+  "parentHead": "4e2d7278f1d8c3ee16205d272d664286f2f0b75f",
+  "predecessor": {
+    "path": "docs/delivery/sonic-p02-owner-navigation-fixture-scope-correction-20261108.json",
+    "blob": "8e9662c5d2594eadee84b0eec79140133c0c3d5e",
+    "unchanged": true
+  },
+  "changedSource": [
+    {
+      "path": "src/features/auth/authorized-workspace-access.ts",
+      "previousBlob": "432490ce986695d418b7f2cf0f7bcdac27806102",
+      "currentBlob": "408f7cc2bfc5c6c94565ec4f0658840bc1a2f008",
+      "lane": "RLS_NAVIGATION_AUTHORIZATION"
+    },
+    {
+      "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+      "previousBlob": "6aaad27365257fed0fa33d2b6c1a008f87ed3542",
+      "currentBlob": "abd144788272813d937fb2d0082b6d559b6a3dd1",
+      "lane": "OWNER_ROUTE_ADVERSARIAL_QA"
+    }
+  ],
+  "tests": {
+    "path": "tests/e2e/p02-workspace-error-origin.test.ts",
+    "previous": 29,
+    "current": 31,
+    "added": 2,
+    "scope": "MOCKED_RLS_CONTINUATION_NO_LIVE_JWT"
+  },
+  "unchangedWorkflow": {
+    "path": ".github/workflows/v4-sonic-ir21-f20-owner-finance-retention-ci.yml",
+    "blob": "634d35b6eb34025df560b78f0dfbe3354988238c",
+    "unchanged": true
+  },
+  "invariants": [
+    "MALFORMED_ACTIVE_OWNER_SLUG_RETURNS_WORKSPACE_LOOKUP",
+    "OWNER_WITH_CREW_DROPS_NO_MEMBERSHIP",
+    "NO_SECOND_WORKSPACE_REGISTRATION",
+    "NO_PROD_SQL_OR_AUTH_JWT",
+    "NO_VERCEL_DEPLOY",
+    "P02_REMAINS_2_OF_7",
+    "P03_REMAINS_0_OF_6"
+  ],
+  "acceptance": "SOURCE_TESTED_NOT_TWO_REAL_OWNER_AUTHENTICATED_ACCEPTANCE"
+}

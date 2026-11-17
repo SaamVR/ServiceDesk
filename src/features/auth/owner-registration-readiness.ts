@@ -17,6 +17,7 @@ function hasValidAuthConfig(env: NodeJS.ProcessEnv): boolean {
   const origin = verifiedEmailRedirectOrigin(
     env.SERVICEDESK_AUTH_REDIRECT_ORIGIN,
     env.RENDER_EXTERNAL_URL,
+    env.VERCEL,
   );
   return Boolean(url && key && origin);
 }
@@ -39,8 +40,14 @@ export function ownerRegistrationMode(env: NodeJS.ProcessEnv = process.env): Own
       env.SERVICEDESK_OWNER_REGISTRATION_TENANT_AUTHZ_APPROVED !== "true") {
     return "DISABLED";
   }
-  if (env.SERVICEDESK_OWNER_REGISTRATION_ENABLED === "true") return "PUBLIC";
-  if (env.SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED === "true" && qaAllowlist(env).length) {
+  const wantsPublic = env.SERVICEDESK_OWNER_REGISTRATION_ENABLED === "true";
+  const wantsQa = env.SERVICEDESK_OWNER_REGISTRATION_QA_ENABLED === "true";
+  // QA allowlists are a safety boundary, not a lower-priority preference.
+  // A misconfigured QA+PUBLIC environment must never silently become open
+  // registration. Require an explicit single mode before creating users.
+  if (wantsPublic && wantsQa) return "DISABLED";
+  if (wantsPublic) return "PUBLIC";
+  if (wantsQa && qaAllowlist(env).length) {
     return "QA_ONLY";
   }
   return "DISABLED";
