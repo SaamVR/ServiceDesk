@@ -22,6 +22,13 @@ const p02=JSON.parse(p02Raw.toString()) as {
  changedSource:Array<{path:string;blob:string;intent:string}>;
 };
 const p03CurrencyRaw=read("docs/delivery/sonic-p03-currency-first-run-ux-source-successor-20261107.json");
+const p03Inventory=JSON.parse(read("docs/delivery/sonic-p03-pricebook-inventory-source-successor-20261118.json").toString()) as {
+ schema:string;
+ predecessor:{manifestPath:string;manifestBlob:string;safetyGuardPath:string;safetyGuardOriginalBlob:string};
+ changedSource:Array<{path:string;previousBlob:string;currentBlob:string;purpose:string}>;
+ releaseGate:string;explicitNonActions:string[];invariants:string[];
+};
+
 const workspaceTransportRaw=read("docs/delivery/sonic-p02-workspace-rpc-transport-uncertainty-successor-20261107.json");
 const workspaceTransport=JSON.parse(workspaceTransportRaw.toString()) as {
   schema:string;batchId:string;
@@ -1865,7 +1872,24 @@ describe("IR21 exact owner finance + retention source integration",()=>{
 
 
   const pricingGuard=p03Currency.safetySourceUnchanged;
-  expect(hash(read(pricingGuard.path))).toBe(pricingGuard.blob);
+  // Preserve the original November 7 source lock as historical provenance.
+  // An explicit November 18 successor pins EACH changed blob at the current tree.
+  expect(p03Inventory.schema).toBe("servicedesk.p03.pricebook-inventory-source-successor.v1");
+  expect(p03Inventory.predecessor.manifestPath)
+    .toBe("docs/delivery/sonic-p03-currency-first-run-ux-source-successor-20261107.json");
+  expect(p03Inventory.predecessor.manifestBlob).toBe(hash(p03CurrencyRaw));
+  expect(p03Inventory.predecessor.safetyGuardPath).toBe(pricingGuard.path);
+  expect(p03Inventory.predecessor.safetyGuardOriginalBlob).toBe(pricingGuard.blob);
+  expect(p03Inventory.changedSource).toHaveLength(4);
+  const pricingSuccessor=p03Inventory.changedSource.find(row=>row.path===pricingGuard.path);
+  expect(pricingSuccessor?.previousBlob).toBe(pricingGuard.blob);
+  expect(pricingSuccessor?.currentBlob).toBe(hash(read(pricingGuard.path)));
+  for(const item of p03Inventory.changedSource) {
+    expect(hash(read(item.path)),item.path).toBe(item.currentBlob);
+  }
+  expect(p03Inventory.releaseGate).toBe("P03_NOT_ACCEPTED_P02_REAL_AUTH_REQUIRED");
+  expect(p03Inventory.explicitNonActions).toContain("NO_CONNECTED_DB_WRITE");
+  expect(read(pricingGuard.path).toString()).toContain("verifiedUsdPricingBookInventory");
   expect(read(pricingGuard.path).toString()).toContain(pricingGuard.guard);
   expect(read("src/app/auth/create-workspace/page.tsx").toString())
    .toContain("First-run cleaning pricing currently supports USD branches only.");
