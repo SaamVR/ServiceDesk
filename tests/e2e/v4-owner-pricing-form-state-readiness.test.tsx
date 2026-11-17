@@ -40,6 +40,20 @@ describe("P26 owner pricing form distinguishes first-run safety states",()=>{
     expect(html).toContain('name="setupId"');
     expect(html).toContain("Enter actual price");
   });
+  it("never renders a writable setup form from contradictory VERIFIED price-book evidence",()=>{
+    for(const proof of [
+      {state:"VERIFIED" as const,activeBranchIds:[a.id],existingBookBranchIds:[]},
+      {state:"VERIFIED" as const,activeBranchIds:["foreign"],existingBookBranchIds:["foreign"]},
+      {state:"VERIFIED" as const,activeBranchIds:[],existingBookBranchIds:[gb.id]},
+      {state:"VERIFIED" as const,activeBranchIds:[],existingBookBranchIds:[a.id,a.id]},
+    ]) {
+      const html=markup(proof);
+      expect(html).toContain('role="alert"');
+      expect(html).toContain("Saved branch pricing could not be verified");
+      expect(html).not.toContain('name="setupId"');
+      expect(html).not.toContain('name="branchId"');
+    }
+  });
   it("requires positive base prices and base minutes while permitting zero add-ons",()=>{
     const html=markup({state:"VERIFIED",activeBranchIds:[],existingBookBranchIds:[]});
     const input=(name:string)=>{

@@ -8,6 +8,29 @@ export interface OwnerPricingBookProof {
   existingBookBranchIds?: string[];
 }
 
+/** A VERIFIED label alone is insufficient: contradictory, duplicate or out-of-scope
+ * rate-book evidence must never expose a potentially destructive first-run form.
+ * This is UI safety, not a replacement for server authorization or SQL locks.
+ */
+export function verifiedUsdPricingBookInventory(
+  scope?: OperationalBranchScope,
+  proof?: OwnerPricingBookProof,
+): boolean {
+  if (!scope || proof?.state !== "VERIFIED" ||
+      !Array.isArray(scope.branches) ||
+      !Array.isArray(proof.existingBookBranchIds) ||
+      !Array.isArray(proof.activeBranchIds)) return false;
+  const authorizedUsdIds = new Set(scope.branches
+    .filter(branch => branch.currency === "USD").map(branch => branch.id));
+  const existing = proof.existingBookBranchIds;
+  const active = proof.activeBranchIds;
+  return existing.every(id => typeof id === "string" && authorizedUsdIds.has(id)) &&
+    active.every(id => typeof id === "string" &&
+      authorizedUsdIds.has(id) && existing.includes(id)) &&
+    new Set(existing).size === existing.length &&
+    new Set(active).size === active.length;
+}
+
 function eligibleUsdBranch(scope: OperationalBranchScope, id: string, currency: string): boolean {
   return currency === "USD" && (scope.mode !== "BRANCH" || scope.selectedBranchId === id);
 }
@@ -21,8 +44,7 @@ export function availableFirstRunUsdBranches(
   scope?: OperationalBranchScope,
   proof?: OwnerPricingBookProof,
 ): NonNullable<OperationalBranchScope["branches"]> {
-  if (proof?.state !== "VERIFIED" || !scope ||
-      !Array.isArray(proof.existingBookBranchIds)) return [];
+  if (!verifiedUsdPricingBookInventory(scope, proof) || !scope || !proof) return [];
   const existing = new Set(proof.existingBookBranchIds);
   return scope.branches.filter(branch =>
     eligibleUsdBranch(scope, branch.id, branch.currency) && !existing.has(branch.id)
@@ -36,8 +58,7 @@ export function invalidExistingUsdBranches(
   scope?: OperationalBranchScope,
   proof?: OwnerPricingBookProof,
 ): NonNullable<OperationalBranchScope["branches"]> {
-  if (proof?.state !== "VERIFIED" || !scope ||
-      !Array.isArray(proof.existingBookBranchIds)) return [];
+  if (!verifiedUsdPricingBookInventory(scope, proof) || !scope || !proof) return [];
   const existing = new Set(proof.existingBookBranchIds);
   const quoteable = new Set(proof.activeBranchIds);
   return scope.branches.filter(branch =>

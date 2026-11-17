@@ -4,7 +4,11 @@ import { OwnerCleaningPricingWorksheet } from "./OwnerCleaningPricingWorksheet";
 import { OwnerPricingCompletionGuide } from "./OwnerPricingCompletionGuide";
 import type { OperationalBranchScope } from "./operational-product-runtime";
 import type { OwnerExistingPricingBook } from "@/server/core/owner-cleaning-pricing-revision";
-import { availableFirstRunUsdBranches, type OwnerPricingBookProof } from "./owner-pricing-readiness";
+import {
+  availableFirstRunUsdBranches,
+  verifiedUsdPricingBookInventory,
+  type OwnerPricingBookProof,
+} from "./owner-pricing-readiness";
 import { assessOwnerPricingRevisionAccess } from "./owner-pricing-revision-access";
 
 type PriceService = {
@@ -68,9 +72,7 @@ export function OwnerCleaningPricingSetupForm({
   );
   // A missing saved-book read is not evidence that a first-run SQL setup
   // would be safe. The owner must retry the independent inventory first.
-  if (!repairTarget && (!proof || proof.state !== "VERIFIED" ||
-      !Array.isArray(proof.existingBookBranchIds) ||
-      !Array.isArray(proof.activeBranchIds))) return (
+  if (!repairTarget && !verifiedUsdPricingBookInventory(scope, proof)) return (
     <p role="alert">Saved branch pricing could not be verified. Reload Settings to check the existing price books before entering any new rates. No prices were saved.</p>
   );
   if (branches.length === 0) {
