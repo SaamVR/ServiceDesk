@@ -128,6 +128,23 @@ try{
  await checkContrast('[class*="metrics"] article small',"#ffffff","Dashboard metric caption contrast >=4.5");
 
  assert((await js("document.body.textContent||''")).includes("Welcome to the operations desk"),"First-run guide appears");
+ assert(await click("button","Quick switch"),"Dashboard command center opens");
+ assert(await js("!!document.querySelector('dialog[open]')"),"Native modal is open and focusable");
+ assert(await js("document.activeElement?.getAttribute('aria-label')==='Search dashboard commands'"),"Search receives initial keyboard focus");
+ await send("Input.insertText",{text:"crew"});
+ await sleep(120);
+ assert(await js("document.querySelector('dialog[open] input')?.value==='crew'"),"Command query accepts typed input");
+ assert(await click("dialog[open] button","Crew & quality"),"Quick switch selects a matching workspace");
+ assert((await js("document.querySelector('h1')?.textContent||''")).includes("Crew & quality"),"Workspace changes after command selection");
+ await navigate("/demo");
+ await send("Input.dispatchKeyEvent",{type:"keyDown",key:"k",code:"KeyK",windowsVirtualKeyCode:75,modifiers:2});
+ await send("Input.dispatchKeyEvent",{type:"keyUp",key:"k",code:"KeyK",windowsVirtualKeyCode:75});
+ assert(await js("!!document.querySelector('dialog[open]')"),"Ctrl+K opens the command center");
+ await send("Input.dispatchKeyEvent",{type:"keyDown",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+ await send("Input.dispatchKeyEvent",{type:"keyUp",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+ await sleep(140);
+ assert(await js("!document.querySelector('dialog[open]')"),"Escape closes command center safely");
+
  await shot("dashboard-1440.png");
  assert(await click("button","Next guide step"),"Guided tour advances to inbox");
  assert((await js("document.body.textContent||''")).includes("Start with the customer conversation"),"Guide changes contextual instruction");
@@ -135,8 +152,16 @@ try{
  await sleep(180);
  assert((await js("document.body.textContent||''")).includes("Quote prepared"),"Quote stage visible after action");
  assert(await click('nav[aria-label="Dashboard modules"] button',"AI co-pilot"),"AI tab selectable");
- assert(await click("button","Approve draft"),"Example AI draft review is interactive");
- assert((await js("document.body.textContent||''")).includes("Approved for this local preview only"),"AI approval does not claim delivery");
+ assert(await click("button","Approve local draft"),"Example AI draft review is interactive");
+ assert((await js("document.body.textContent||''")).includes("No message was sent"),"AI approval does not claim delivery");
+ assert(await click("button","Potential safety incident"),"AI scenario switches to safety exception");
+ assert((await js("document.body.textContent||''")).includes("SAFETY REVIEW"),"Safety boundary is clearly visible");
+ assert(await js("!Array.from(document.querySelectorAll('button')).some(x=>x.textContent?.includes('Approve local draft'))"),"Unsafe scenario forbids routine approval");
+ assert(await click("button","Escalate for human review"),"Unsafe sample offers human escalation");
+ assert((await js("document.body.textContent||''")).includes("No job was dispatched"),"Escalation never claims dispatch");
+ assert(await click("button","Move-out enquiry"),"Returning to safe sample restores original scenario");
+ assert((await js("document.body.textContent||''")).includes("Awaiting human review"),"Switching cases resets stale approval state");
+
  assert(await click('nav[aria-label="Dashboard modules"] button',"Automation rules"),"Automation catalogue accessible");
  assert((await js("document.body.textContent||''")).includes("27 review-only workflow starters"),"Actual 27-rule catalogue visible");
  assert(await click('nav[aria-label="Dashboard modules"] button',"Audit activity"),"Audit activity selectable");
