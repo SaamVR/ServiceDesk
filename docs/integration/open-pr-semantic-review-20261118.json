@@ -166,5 +166,121 @@
     "No DB/tenant/provisioning/deploy/production main merge",
     "PR 869 guarded by independent DBA approval",
     "Keep F23 release paths disabled pending safety review"
-  ]
+  ],
+  "reviewedCandidateCount": 17,
+  "reviewCoverage": "17/17 unique candidate heads and cited candidate paths reviewed for blob-level identity/difference; NOT complete full-diff functional equivalence",
+  "reviewedApprovalCount": 0,
+  "predecessorPathEvidence": [
+    {
+      "pr": 905,
+      "comp": 908,
+      "paths": [
+        "src/features/operations/OwnerOverdueAttentionReview.tsx",
+        "src/features/operations/owner-attention-review-projection.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 903,
+      "comp": 906,
+      "paths": [
+        "src/features/operations/automation-playbook-event-whatif.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 902,
+      "comp": 906,
+      "paths": [
+        "src/features/operations/owner-pricing-scenario-matrix.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 897,
+      "comp": 901,
+      "paths": [
+        "src/features/operations/owner-attention-review-playbook.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 896,
+      "comp": 908,
+      "paths": [
+        "src/features/operations/owner-activation-next-action.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 889,
+      "comp": 893,
+      "paths": [
+        "src/features/onboarding/OwnerCommercialActionPanel.tsx"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 887,
+      "comp": 893,
+      "paths": [
+        "src/features/operations/owner-automation-next-action.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 886,
+      "comp": 893,
+      "paths": [
+        "src/features/onboarding/OwnerCommercialActionPanel.tsx"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 885,
+      "comp": 893,
+      "paths": [
+        "src/features/operations/owner-automation-next-action.ts"
+      ],
+      "allPinnedPathsExact": true
+    }
+  ],
+  "governanceCandidates": [
+    {
+      "pr": 916,
+      "head": "bd3952b89c531df64c261c94e8ce08c643e99cf8",
+      "reviewCount": 0,
+      "disposition": "GOVERNANCE_OWNER_REVIEW_REQUIRED",
+      "paths": [
+        ".agents/skills/karpathy-guidelines/SKILL.md",
+        ".cursor/rules/karpathy-guidelines.mdc",
+        ".github/copilot-instructions.md",
+        "CLAUDE.md"
+      ],
+      "pathResult": "ALL_FOUR_ABSENT_AT_INTEGRATION_HEAD",
+      "caveat": "Do not import project instructions or override AGENTS.md without owner governance approval."
+    },
+    {
+      "pr": 124,
+      "head": "7e2c6bf35a161929e79c7514ad19e7bcd2880996",
+      "reviewCount": 0,
+      "disposition": "DESIGN_OWNER_REVIEW_REQUIRED",
+      "paths": [
+        "src/app/tour/BrightTour.module.css"
+      ],
+      "pathResult": "ABSENT_AT_INTEGRATION_HEAD",
+      "caveat": "Compare historical tour CSS with current V4 visual system and confirm scope before import."
+    }
+  ],
+  "independentDecisionsRemaining": [
+    "#913 F15 alternative",
+    "#907 P44 security",
+    "#906 P40 what-if",
+    "#908 P35 overdue attention",
+    "#901 P42 playbook",
+    "#893 P39 onboarding",
+    "#916 governance",
+    "#124 visual tour"
+  ],
+  "predecessorEvidenceLimitation": "Only the specified unique path payloads were byte-identical; stacked predecessor PRs may carry other changes, so don't close or blanket reclassify."
 }
