@@ -123,3 +123,14 @@
 :global(html[data-portfolio-theme="dark"]) :is(.inspectorRows span,.inspectorRows p){color:#d0e5d8}
 :global(html[data-portfolio-theme="dark"]) .simulation{background:#113f38;color:#fff}
 :global(html[data-portfolio-theme="dark"]) .finish{background:#0d2728;color:#f0fff5}
+
+/* Dark case study: restore readable text inside the fictional operational diagram. */
+:global(html[data-portfolio-theme="dark"]) .sampleRequest strong,
+:global(html[data-portfolio-theme="dark"]) .canvasCards strong{color:#f3fff6}
+:global(html[data-portfolio-theme="dark"]) :is(.sampleRequest small,.sampleRequest div span,.canvasCardMeta,.canvasFooter,.canvasTop){color:#c5e5d4}
+:global(html[data-portfolio-theme="dark"]) :is(.sampleRequest,.canvasCards>div){background:#20483c;border-color:#4b7e65}
+:global(html[data-portfolio-theme="dark"]) .canvasHeader>span{color:#a6edcc}
+:global(html[data-portfolio-theme="dark"]) .heroActions .secondary{color:#b9f1d1}
+:global(html[data-portfolio-theme="dark"]) .heroActions .secondary:hover{color:#edfff3}
+:global(html[data-portfolio-theme="dark"]) .honestNotice{color:#c9e6d5}
+:global(html[data-portfolio-theme="dark"]) .canvasFooter{border-color:#3b7056}

@@ -283,3 +283,8 @@
 :global(html[data-portfolio-theme="light"]) .stageNarrative h4{color:#373765}
 :global(html[data-portfolio-theme="light"]) .operationNote{color:#52627c}
 :global(html[data-portfolio-theme="light"]) .afterTheater{color:#4d5880}
+
+/* Screenshot critic veto: the original wide pastel ring obscured dark-mode copy.
+ * Keep the interactive SVG stage, but remove decoration from the night edition. */
+:global(html[data-portfolio-theme="dark"]) .theater::before{display:none}
+:global(html[data-portfolio-theme="light"]) .theater::before{opacity:.14;border-color:#aca3e3;box-shadow:0 0 0 52px #d9d8ff7a,0 0 0 53px #aaa1e055,0 0 0 116px #d0f1ff6b,0 0 0 117px #96dbe76b}
