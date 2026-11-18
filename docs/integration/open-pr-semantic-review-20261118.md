@@ -66,3 +66,32 @@ The last two unique candidates are independent decisions:
 **Coverage accounting:** 17/17 initially unique candidates have now received a pinned, cited-path review. They can be managed as **six primary feature review tips + nine byte-identical predecessor source paths + two governance/design decisions**. This is **not** full PR semantic acceptance, and the 48 provisional duplicates still require review. Original totals 52/48/17/10 remain unchanged. All 17 unique candidates have zero submitted reviews at the time checked, hence zero automatic approvals.
 
 Machine evidence remains in this report's companion JSON.
+
+## Third review wave — 10 of 48 provisional duplicates
+
+This wave compares the **identified high-value source module** at each provisional PR head to exact integrated HEAD `2f3c1c`; it does **not** establish full-PR equivalence. Four paths are byte-identical to integration; four have meaningful divergent versions; two are older source versions whose current successor must preserve intended behavior.
+
+| PR | Checked path/result | Disposition for follow-up |
+|---|---|---|
+| [#904](https://github.com/SaamVR/ServiceDesk/pull/904) | `owner-attention-triage.ts` differs from current; **exact same blob as #907** | Candidate duplicate-LIVE-ID security remedy, retain under #907 review |
+| [#899](https://github.com/SaamVR/ServiceDesk/pull/899) | `owner-attention-triage.ts` differs; exact same blob as #901 | Candidate strict zoned attention deadline remedy |
+| [#898](https://github.com/SaamVR/ServiceDesk/pull/898) | `owner-automation-draft-recommendations.ts` identical to integration | Byte-identical sampled module, complete semantic review still needed |
+| [#895](https://github.com/SaamVR/ServiceDesk/pull/895) | `owner-pricing-revision-access.ts` identical | Byte-identical sampled module |
+| [#892](https://github.com/SaamVR/ServiceDesk/pull/892) | `owner-attention-triage.ts` identical | Current older triage lacks #904/#907 guards |
+| [#891](https://github.com/SaamVR/ServiceDesk/pull/891) | `owner-automation-activation.ts` identical | Byte-identical sampled module |
+| [#890](https://github.com/SaamVR/ServiceDesk/pull/890) | `quote-pipeline.ts` differs; **exact same stricter blob in #893** | Potential zoned quote-clock behavior missing |
+| [#888](https://github.com/SaamVR/ServiceDesk/pull/888) | `request-quote-price-readiness.ts` differs; **exact same stricter blob in #893** | Potential false-ready branch pricing projection |
+| [#880](https://github.com/SaamVR/ServiceDesk/pull/880) | `owner-automation-activation.ts` older than integrated | Superset check pending; do not roll back |
+| [#877](https://github.com/SaamVR/ServiceDesk/pull/877) | `OwnerCleaningPricingSetupForm.tsx` older than latest integrated | Current source has newer owner pricing changes; no rollback |
+
+### Critical static false-readiness candidates
+
+**#888:** Current `quotePriceReadiness` can choose `selectedBranchId` or the sole `activeBranchIds[0]` when the saved request's `branchId` is absent. The candidate refuses to guess a request branch, requires independent `existingBookBranchIds`, authorization in current branch scope and supported USD currency. That is an observable projection difference; the server is still responsible for authoritative quote creation. The specific candidate **8-case** Vitest file `tests/e2e/v4-p36-owner-request-quote-price-preflight.test.ts` is absent at integration HEAD. Recommend independent regression before any source change.
+
+**#890:** Current `quote-pipeline.ts` uses `Date.parse` to assess snapshot and quote expiry. The unimported candidate uses `trustedQuoteInstant`, rejects timezone-free, impossible civil dates and invalid offset, and routes uncertain expiry to review. Its **4-case** zoned-clock test `tests/e2e/v4-p38-quote-pipeline-zoned-clock.test.ts` is absent. Queue correctness, not an independently proven authorization bypass.
+
+**#904/#899:** Current attention triage also lacks P43 duplicate identity and P41 strict-clock protections; their **6-case** and **5-case** candidate test files are absent from integration. #904 source is byte-identical to the #907 review tip; import no old head separately.
+
+**Priority:** #907 + #888 + #890 are security/false-ready review candidates. Do not call these provisional PRs safely superseded until their behavior is preserved by an independently tested and authorized implementation. Do not claim runtime test failure without executing the exact repository tests.
+
+The initial 127-entry ledger is preserved; the 48 provisional labels remain provisional rather than silently promoting unapproved source. **38 provisional PRs have not yet had this follow-up semantic check.**
