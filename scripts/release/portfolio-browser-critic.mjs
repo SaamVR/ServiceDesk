@@ -113,6 +113,26 @@ try{
  await setViewport(1440,900);await navigate("/");
  assert((await js("document.querySelector('h1')?.textContent||''")).includes("Your business"),"Home hero renders");
  assert(await js("!!document.querySelector('a[href=\"/demo\"]')"),"Guided dashboard CTA exists");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='light'"),"Colorful light theme is initial default");
+ assert(await js("!!document.querySelector('button[aria-label*=\"dark theme\"]')"),"Accessible appearance control visible on portfolio header");
+ assert(await js("getComputedStyle(document.querySelector('[id=\"scenario-lab\"] [class*=\"workspace\"]')).backgroundColor==='rgb(16, 46, 43)'"),"Original deep-green stage baseline is grounded");
+ await shot("portfolio-vibrant-light-1440.png");
+ assert(await js("(()=>{const b=document.querySelector('button[aria-label*=\"dark theme\"]');if(!b)return false;b.click();return true})()"),"Switch to deep-green dark theme");
+ await waitFor(()=>js("document.documentElement.dataset.portfolioTheme==='dark'"),1800);
+ assert(await js("localStorage.getItem('servicedesk-portfolio-theme-v1')==='dark'"),"Manual dark preference persists in local storage");
+ assert(await js("getComputedStyle(document.querySelector('[id=\"scenario-lab\"] [class*=\"workspace\"]')).backgroundColor==='rgb(16, 46, 43)'"),"Dark mode preserves original deep-green animation workspace");
+ assert(await js("getComputedStyle(document.querySelector('[id=\"scenario-lab\"]')).backgroundColor!=='rgb(255, 255, 255)'"),"Dark theater frame is not bright white");
+ await shot("portfolio-forest-dark-1440.png");
+ await navigate("/demo");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='dark'"),"Dark appearance persists across portfolio-to-dashboard navigation");
+ assert(await js("getComputedStyle(document.querySelector('[id=\"demo-main\"]')).color!=='rgb(20, 61, 53)'"),"Dashboard switches away from dark text on light background");
+ await shot("dashboard-forest-dark-1440.png");
+ assert(await js("(()=>{const b=document.querySelector('button[aria-label*=\"light theme\"]');if(!b)return false;b.click();return true})()"),"Dashboard toggles back to colorful light theme");
+ await waitFor(()=>js("document.documentElement.dataset.portfolioTheme==='light'"),1800);
+ assert(await js("localStorage.getItem('servicedesk-portfolio-theme-v1')==='light'"),"Light choice replaces saved dark preference");
+ await navigate("/");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='light'"),"Colorful light theme persists after returning to homepage");
+
  await checkContrast('[class*="hubCard"] [class*="stageLabel"]',"#f9fffa","Cinematic microcopy contrast >=4.5");
  await checkContrast('[class*="heroBoundary"]',"#fafdfb","Hero disclosure contrast >=4.5");
 
@@ -191,6 +211,16 @@ try{
  await navigate("/");await sleep(200);
  assert(await js("document.body.textContent?.includes('Motion off')"),"Reduced-motion disables cinematic autoplay");
  await shot("home-reduced-motion-320.png");
+ // Both themes on the smallest supported mobile viewport; no overflow after switching.
+ assert(await js("(()=>{const b=document.querySelector('button[aria-label*=\"dark theme\"]');if(!b)return false;b.click();return true})()"),"Mobile theme toggle is operable");
+ await waitFor(()=>js("document.documentElement.dataset.portfolioTheme==='dark'"),1800);
+ await shot("portfolio-forest-dark-320.png");
+ await noOverrun("Dark portfolio 320");
+ await navigate("/demo");
+ await shot("dashboard-forest-dark-320.png");
+ await noOverrun("Dark dashboard 320");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='dark'"),"Mobile dashboard retains dark choice");
+
  const blocked=await fetch(url+"/auth/sign-in",{redirect:"manual"});
  assert(blocked.status===404||blocked.status===403,"Portfolio blocks sign-in HTTP route (HTTP "+blocked.status+")");
  writeFileSync(join(out,"receipt.json"),JSON.stringify({passed:true,commit:process.env.GITHUB_SHA,results,widths:[320,375,768,1440]},null,2));
