@@ -69,6 +69,9 @@
 .pipelineIcon{display:grid;place-items:center;width:74px;height:74px;border:1px solid #426e5c;background:#28594a;color:#9ec3ac;border-radius:17px;transition:transform .5s cubic-bezier(.17,.8,.25,1),color .3s,box-shadow .3s,border-color .3s,background .3s}
 .pipelineIcon .glyph{width:31px;height:31px;transition:transform .45s}
 .pipeline>li[data-phase="complete"] .pipelineIcon{border-color:#4cbb8f;background:#1c6c53;color:#d1f6df}
+.pipeline>li[data-phase="complete"] button.pipelineIcon{cursor:pointer}
+.pipeline>li[data-phase="complete"] button.pipelineIcon:hover{transform:translateY(-4px);border-color:#b2f6c9;box-shadow:0 0 0 4px #71e5af20}
+.pipeline>li[data-phase="complete"] button.pipelineIcon:focus-visible{outline:3px solid #b2f6c9;outline-offset:4px}
 .pipeline>li[data-phase="active"] .pipelineIcon{border-color:#b0efc7;background:#d1ffdf;color:#195d45;transform:translateY(-7px) scale(1.08);box-shadow:0 15px 33px #031c1640,0 0 0 6px #56d99f22}
 .pipeline>li[data-phase="active"] .pipelineIcon .glyph{animation:meaningfulIcon .65s cubic-bezier(.13,.9,.25,1) both}
 .pipeline>li[data-phase="blocked"] .pipelineIcon{border-color:#f4b17e;background:#f9e4c9;color:#9b542c;transform:translateY(-7px);box-shadow:0 0 0 6px #f9b37022}

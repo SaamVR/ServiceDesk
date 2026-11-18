@@ -7,7 +7,7 @@ import {mkdtempSync,mkdirSync,writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 
-const url="http://127.0.0.1:3000";
+const url=process.env.PORTFOLIO_QA_BASE_URL?.replace(/\/$/, "") || "http://127.0.0.1:3000";
 const out=process.env.PORTFOLIO_QA_OUTPUT||join(tmpdir(),"servicedesk-portfolio-qa");
 const chromeBin=process.env.CHROME_BIN;
 if(!chromeBin)throw Error("CHROME_BIN must point to a locally installed Chrome executable");
@@ -127,6 +127,17 @@ try{
  assert(lightStage!==darkStage,"The animated six-stage theater actually changes its palette");
  await js("document.getElementById('scenario-lab').scrollIntoView({block:'start'})");
  await sleep(350);await shot("theater-dark-1440.png");
+ if(!process.env.PORTFOLIO_QA_BASE_URL){
+  assert(await js("document.querySelectorAll('#scenario-lab button[aria-label^=\"Revisit stage\"]').length===0"),"Unvisited theater stages are not clickable");
+  assert(await click('#scenario-lab [class*="theaterControls"] button',"Next event"),"Theater advances to the AI brief");
+  assert(await click('#scenario-lab [class*="theaterControls"] button',"Next event"),"Theater advances to human review");
+  await sleep(120);
+  assert(await js("document.querySelectorAll('#scenario-lab button[aria-label^=\"Revisit stage\"]').length===2"),"Only completed stages become direct inspection buttons");
+  assert(await js("(()=>{const stage=document.querySelector('#scenario-lab button[aria-label=\"Revisit stage 1: Capture\"]');if(!stage)return false;stage.click();return true})()"),"Completed capture stage can be revisited");
+  await sleep(120);
+  assert(await js("document.querySelector('#scenario-lab [class*=\"stageNarrative\"] h4')?.textContent==='A request arrives'"),"Stage inspection returns to the correct narrative");
+  assert(await js("document.querySelectorAll('#scenario-lab button[aria-label^=\"Revisit stage\"]').length===0"),"Future stages remain protected after revisiting");
+ }
  await js("scrollTo({top:0})");await sleep(180);await shot("home-dark-1440.png");
  await navigate("/");
  assert(await js("document.documentElement.dataset.portfolioTheme==='dark'"),"Dark theme is restored before page interaction");

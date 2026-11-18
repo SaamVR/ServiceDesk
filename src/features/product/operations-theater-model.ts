@@ -126,6 +126,7 @@ export type TheaterAction =
   | { type: "SELECT_SCENARIO"; scenarioId: TheaterScenarioId }
   | { type: "NEXT" }
   | { type: "PREVIOUS" }
+  | { type: "REVISIT"; index: number }
   | { type: "TICK" }
   | { type: "PLAY" }
   | { type: "PAUSE" }
@@ -161,6 +162,10 @@ export function theaterTransition(state: TheaterState, action: TheaterAction): T
     case "NEXT": return moveForward(state, false);
     case "TICK": return !state.playing ? state : moveForward(state, true);
     case "PREVIOUS": return { ...state, step: Math.max(state.step - 1, 0), playing: false };
+    case "REVISIT":
+      return Number.isInteger(action.index) && action.index >= 0 && action.index < state.step
+        ? { ...state, step: action.index, playing: false }
+        : state;
     case "PLAY":
       return (theaterIsBlocked(state) || state.step >= theaterSteps.length - 1)
         ? { ...state, playing: false }

@@ -122,15 +122,21 @@ export function OperationsTheater() {
                   const isActive = state.step === index;
                   const isPast = state.step > index;
                   return (
-                    <li key={item.id} data-phase={isActive ? blocked ? "blocked" : "active" : isPast ? "complete" : "pending"}>
-                      <div className={styles.pipelineIcon}><Icon name={item.icon}/></div>
+                    <li key={item.id} aria-current={isActive ? "step" : undefined} data-phase={isActive ? blocked ? "blocked" : "active" : isPast ? "complete" : "pending"}>
+                      {isPast ? (
+                        <button type="button" className={styles.pipelineIcon}
+                          aria-label={`Revisit stage ${index + 1}: ${item.label}`}
+                          onClick={() => dispatch({ type: "REVISIT", index })}>
+                          <Icon name={item.icon}/>
+                        </button>
+                      ) : <div className={styles.pipelineIcon}><Icon name={item.icon}/></div>}
                       <span className={styles.pipelineLabel}><small>{String(index + 1).padStart(2, "0")}</small><strong>{item.label}</strong></span>
                     </li>
                   );
                 })}
               </ol>
               <div className={styles.signalCaption}>
-                <span><span className={styles.smallPulse} /> Event handoffs, simulated</span>
+                <span><span className={styles.smallPulse} /> Simulated handoffs · Select completed stages to revisit</span>
                 <span>{String(state.step + 1).padStart(2, "0")} / {String(theaterSteps.length).padStart(2, "0")}</span>
               </div>
             </div>

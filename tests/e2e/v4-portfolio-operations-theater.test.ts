@@ -60,6 +60,25 @@ describe("connected portfolio theater", () => {
     expect(theaterTransition(state,{type:"SET_MESSAGE",message:"x".repeat(400)}).message.length).toBe(180);
     expect(scenarioFor(state.scenarioId).exampleOnly).toBe(true);
   });
+  it("lets visitors revisit completed stages but never skip a future event or an unresolved human gate",()=>{
+    let state=initialTheaterState("urgent-clean");
+    state=theaterTransition(state,{type:"NEXT"});
+    state=theaterTransition(state,{type:"NEXT"});
+    expect(state.step).toBe(2);
+    expect(theaterIsBlocked(state)).toBe(true);
+    state=theaterTransition({...state,playing:true},{type:"REVISIT",index:0});
+    expect(state.step).toBe(0);
+    expect(state.playing).toBe(false);
+    expect(state.resolved).toBe(false);
+    expect(theaterTransition(state,{type:"REVISIT",index:4}).step).toBe(0);
+    expect(theaterTransition(state,{type:"REVISIT",index:-1}).step).toBe(0);
+    expect(theaterTransition(state,{type:"REVISIT",index:0.5}).step).toBe(0);
+    state=theaterTransition(state,{type:"NEXT"});
+    state=theaterTransition(state,{type:"NEXT"});
+    expect(state.step).toBe(2);
+    expect(theaterIsBlocked(state)).toBe(true);
+    expect(theaterTransition(state,{type:"NEXT"}).step).toBe(2);
+  });
   it("resets state and replays locally without creating receipts",()=>{
     let state=initialTheaterState("new-lead");
     state=theaterTransition(state,{type:"PLAY"});
