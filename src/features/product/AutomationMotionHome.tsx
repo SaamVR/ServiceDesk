@@ -30,7 +30,7 @@ function Num({ value }: { value: number }) {
 
 export function AutomationMotionHome() {
   const [currentStage, setCurrentStage] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(true);
   const [reduced, setReduced] = useState(false);
   const [inViewport, setInViewport] = useState(true);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -176,8 +176,8 @@ export function AutomationMotionHome() {
         </div>
         <div className={styles.timelineControls}>
           <div className={styles.controlGroup}>
-            <button type="button" className={styles.playButton} aria-label={playing ? "Pause workflow playback" : "Play workflow animation"} aria-pressed={playing} onClick={() => { if (!reduced) setPlaying(p => !p); }}>
-              {playing ? "Ⅱ Pause" : "▶ Play"} 
+            <button type="button" className={styles.playButton} aria-label={playing ? "Pause workflow playback" : "Play workflow animation"} aria-pressed={playing} disabled={reduced} onClick={() => setPlaying(p => !p)}>
+              {reduced ? "Motion off" : playing ? "Ⅱ Pause" : "▶ Play"} 
             </button>
             <button type="button" className={styles.controlButton} onClick={() => selectStage((currentStage + totalStages - 1) % totalStages)}>← Previous</button>
             <button type="button" className={styles.controlButton} onClick={() => selectStage((currentStage + 1) % totalStages)}>Next →</button>
@@ -205,7 +205,7 @@ export function AutomationMotionHome() {
             <div className={styles.aiModuleHeading}><div className={styles.aiModuleIcon}><Icon name={ai.icon} /></div><div><p>{ai.group} / SAMPLE WORKSPACE</p><h3>{ai.name}</h3></div></div>
             <div className={styles.aiInput}><span>FICTIONAL INPUT</span><p>{ai.input}</p></div>
             <div className={styles.aiRunArea}>
-              <button type="button" className={styles.aiRunButton} onClick={() => setAiPreview(true)}>{aiPreview ? "↺ Replay preview" : "✦ Show scripted AI preview"}</button>
+              <button type="button" className={styles.aiRunButton} onClick={() => setAiPreview(v => !v)}>{aiPreview ? "↺ Hide sample draft" : "✦ Show scripted AI preview"}</button>
               <span>Human-reviewed draft, not an AI call</span>
             </div>
             {aiPreview ? <div className={styles.aiOutput} role="status"><span className={styles.aiOutputStamp}><Icon name="sparkles" /> SAMPLE DRAFT</span><p>{ai.output}</p><div className={styles.aiApproval}><Icon name="shield-check" /> Approval checkpoint: {ai.boundary}</div></div> :
