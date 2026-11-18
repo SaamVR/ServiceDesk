@@ -14,9 +14,11 @@ export const marketingLinks = [
 ] as const;
 
 const portfolioLinks = [
-  { href: "/work/business-automation", label: "Case study", description: "How the automation is designed" },
-  { href: "/tour", label: "Product tour", description: "Explore sample operations" },
-  { href: "/sandbox", label: "Interactive demo", description: "Try the browser-only workflow" },
+  { href: "/#live-workflow", label: "Workflows", description: "Watch the business story move" },
+  { href: "/#ai-studio", label: "AI studio", description: "Explore six AI-assisted examples" },
+  { href: "/#playbooks", label: "27 automations", description: "Search the real draft rule catalogue" },
+  { href: "/#integrations", label: "Integrations", description: "Inspect evidence and provider handoffs" },
+  { href: "/work/business-automation", label: "Case study", description: "Read the design and engineering story" },
 ] as const;
 
 export function MarketingNavLinks({ variant, portfolioMode = false }: { variant: "desktop" | "mobile"; portfolioMode?: boolean }) {
