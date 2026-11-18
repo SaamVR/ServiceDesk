@@ -282,5 +282,90 @@
     "#916 governance",
     "#124 visual tour"
   ],
-  "predecessorEvidenceLimitation": "Only the specified unique path payloads were byte-identical; stacked predecessor PRs may carry other changes, so don't close or blanket reclassify."
+  "predecessorEvidenceLimitation": "Only the specified unique path payloads were byte-identical; stacked predecessor PRs may carry other changes, so don't close or blanket reclassify.",
+  "reviewedProvisionalDuplicateCount": 10,
+  "remainingProvisionalDuplicateCount": 38,
+  "provisionalReviews": [
+    {
+      "pr": 904,
+      "source": "2e1f44255501b9faef965a63374d80538bf59fe0",
+      "path": "src/features/operations/owner-attention-triage.ts",
+      "srcBlob": "706f21c1b28209cc022281fdf1631dc3eb6bfa54",
+      "intBlob": "752543fcf25178bd6ad2da16a324f50a569a6be0",
+      "composite": "#907 exact",
+      "result": "POTENTIAL_MISSING_SECURITY_GUARD",
+      "note": "Source identical to #907: duplicate LIVE identity quarantine; specific 6-case regression suite absent current head."
+    },
+    {
+      "pr": 899,
+      "source": "0cf421a0da26b37550599aa10418a5eeb4e6aaa1",
+      "path": "src/features/operations/owner-attention-triage.ts",
+      "srcBlob": "600c9e1d69fe22e7c7308a1901de2b056b3513c6",
+      "intBlob": "752543fcf25178bd6ad2da16a324f50a569a6be0",
+      "composite": "#901 exact",
+      "result": "POTENTIAL_MISSING_STRICT_CLOCK",
+      "note": "Older zoned-clock source version is retained in #901; related 5-case regression suite absent integration."
+    },
+    {
+      "pr": 898,
+      "path": "src/features/operations/owner-automation-draft-recommendations.ts",
+      "result": "EXACT_BLOB_INTEGRATED",
+      "blob": "6469ecfd1de098663e639795c73c2c32007bf552"
+    },
+    {
+      "pr": 895,
+      "path": "src/features/operations/owner-pricing-revision-access.ts",
+      "result": "EXACT_BLOB_INTEGRATED",
+      "blob": "fa38266470a49676161930f55fd0666eded3fcd6"
+    },
+    {
+      "pr": 892,
+      "path": "src/features/operations/owner-attention-triage.ts",
+      "result": "EXACT_BLOB_INTEGRATED",
+      "blob": "752543fcf25178bd6ad2da16a324f50a569a6be0"
+    },
+    {
+      "pr": 891,
+      "path": "src/features/operations/owner-automation-activation.ts",
+      "result": "EXACT_BLOB_INTEGRATED",
+      "blob": "87f25cd7c2e7668223c7730061e992edfebd970c"
+    },
+    {
+      "pr": 890,
+      "source": "6eacc58cc316e6402a379c8e0840a8b79bdb9a67",
+      "path": "src/features/operations/quote-pipeline.ts",
+      "srcBlob": "d47a0ff00ff80a16e8cca3563b4138aea1d14dc1",
+      "intBlob": "93f599e14e95f94e9c754eb8f3f756cb7ed68497",
+      "composite": "#893 exact",
+      "result": "POTENTIAL_MISSING_STRICT_QUOTE_CLOCK",
+      "note": "Source uses trustedQuoteInstant for quote validity; current Date.parse for snapshot and expiry. Four-case zoned-clock test absent."
+    },
+    {
+      "pr": 888,
+      "source": "8eada331b297675d06a847c6c55c9cde553f2e9a",
+      "path": "src/features/operations/request-quote-price-readiness.ts",
+      "srcBlob": "c5d74529f376d7fd048ef17f175e8813dcf6d2b6",
+      "intBlob": "c44a942721ec61acf132583daa6526747d7863cc",
+      "composite": "#893 exact",
+      "result": "POTENTIAL_FALSE_READY_QUOTE_BRANCH",
+      "note": "Source requires explicitly persisted request branch plus independent saved book inventory and scoped USD authorization. Current may fall back to selected branch or one active book; eight-case preflight test absent."
+    },
+    {
+      "pr": 880,
+      "path": "src/features/operations/owner-automation-activation.ts",
+      "result": "OLDER_SOURCE_REPLACED",
+      "srcBlob": "5c24ee15b057d2157d527e7d7ae87973887753ad",
+      "intBlob": "87f25cd7c2e7668223c7730061e992edfebd970c",
+      "note": "Compare historical behavior before confirming semantic superset."
+    },
+    {
+      "pr": 877,
+      "path": "src/features/operations/OwnerCleaningPricingSetupForm.tsx",
+      "result": "OLDER_SOURCE_REPLACED",
+      "srcBlob": "06132ba797602c2c6fd57f851781403961cdbb3f",
+      "intBlob": "7302079132145a5701b26110538e2aa061606db5",
+      "note": "Current owner form underwent newer two-commit improvements; no automatic rollback."
+    }
+  ],
+  "provisionalReviewCaveat": "10 of 48 checked by one high-value functional path each; not full PR diffs. The remaining 38 and all incomplete semantic proof still pending. Original four-way ledger unchanged."
 }
