@@ -164,3 +164,100 @@
 .headingAdvance:hover{background:#d3f1dd;border-color:#3c9b6b;transform:translateY(-1px)}
 @media(max-width:600px){.headingActions{justify-content:stretch;width:100%;max-width:none}.headingAdvance{width:100%;text-align:center}.headingActions .headingBadge{display:none}}
 @media(prefers-reduced-motion:reduce){.headingAdvance:hover{transform:none}}
+
+
+/* Night mode treats the application chrome as forest-green and the work canvas
+   as a bright, legible document, mirroring the approved dark theater screenshot. */
+:global(html[data-portfolio-theme="dark"]) .app {
+  --ink:#eaf9ed;--muted:#b1d5bf;--line:#3a765c;
+  background:#0d2e25;color:#eaf9ed;
+}
+:global(html[data-portfolio-theme="dark"]) .sidebar{
+  background:#102f27;border-color:#3b7559;
+}
+:global(html[data-portfolio-theme="dark"]) .topbar{
+  background:#143a30;border-bottom-color:#3b7058;
+}
+:global(html[data-portfolio-theme="dark"]) .topbar>p{color:#b8d7c4}
+:global(html[data-portfolio-theme="dark"]) .topbar>p strong{color:#ecffef}
+:global(html[data-portfolio-theme="dark"]) .topbar>div>button{
+  background:#214c3d;color:#deffeb;border-color:#477b61;
+}
+:global(html[data-portfolio-theme="dark"]) .topbar>div>button:hover{background:#30644e}
+:global(html[data-portfolio-theme="dark"]) .synth{color:#a3e5bb}
+:global(html[data-portfolio-theme="dark"]) .avatar{background:#2b694e;color:#e3ffec;border-color:#579a73}
+:global(html[data-portfolio-theme="dark"]) .guide{
+  background:linear-gradient(120deg,#1a4a38,#164234);border-color:#4b9370;
+  box-shadow:0 14px 34px #071f1833;
+}
+:global(html[data-portfolio-theme="dark"]) .guide h2{color:#e9ffef}
+:global(html[data-portfolio-theme="dark"]) .guide .eyebrow{color:#9cebc0}
+:global(html[data-portfolio-theme="dark"]) .guideExplanation,
+:global(html[data-portfolio-theme="dark"]) .guideInstruction,
+:global(html[data-portfolio-theme="dark"]) .guide>div:nth-child(2)>p:nth-of-type(2){color:#c2dfca}
+:global(html[data-portfolio-theme="dark"]) .guideInstruction strong,
+:global(html[data-portfolio-theme="dark"]) .guide p strong{color:#dcffe8}
+:global(html[data-portfolio-theme="dark"]) .guideMobileDetails{color:#c4dfcb}
+:global(html[data-portfolio-theme="dark"]) .guideMobileDetails summary{color:#b4f9d2}
+:global(html[data-portfolio-theme="dark"]) .guideProgress{background:#32634c}
+:global(html[data-portfolio-theme="dark"]) .guideProgress span{background:#9af0bd}
+:global(html[data-portfolio-theme="dark"]) .guideActions button:not(.primary){
+  background:#245c46;color:#ecfff0;border-color:#4d8c6b;
+}
+:global(html[data-portfolio-theme="dark"]) .guideActions button:hover:not(:disabled){background:#327458}
+:global(html[data-portfolio-theme="dark"]) .guideActions .primary{
+  background:#a4f3c3;color:#154b35;border-color:#a4f3c3;
+}
+:global(html[data-portfolio-theme="dark"]) .guideClosed,
+:global(html[data-portfolio-theme="dark"]) .tourReturn{
+  background:#1b4b39;color:#b7dec3;border-color:#467e61;
+}
+:global(html[data-portfolio-theme="dark"]) .guideClosed button,
+:global(html[data-portfolio-theme="dark"]) .tourReturn button{color:#a6f4c7}
+:global(html[data-portfolio-theme="dark"]) .heading h1{color:#f0fff2}
+:global(html[data-portfolio-theme="dark"]) .heading>div>p:last-child{color:#b8d8c4}
+:global(html[data-portfolio-theme="dark"]) .headingBadge{
+  background:#255541;border-color:#467e5e;color:#c7f6d9;
+}
+:global(html[data-portfolio-theme="dark"]) .headingAdvance{
+  background:#b0f1c9;color:#14513b;border-color:#b0f1c9;
+}
+:global(html[data-portfolio-theme="dark"]) .headingAdvance:hover{background:#cafaD9}
+:global(html[data-portfolio-theme="dark"]) .metrics article{
+  background:#1b4738;border-color:#4a8061;
+  box-shadow:0 9px 20px #071f1a35;
+}
+:global(html[data-portfolio-theme="dark"]) .metrics article>span,
+:global(html[data-portfolio-theme="dark"]) .metrics small{color:#badcc8}
+:global(html[data-portfolio-theme="dark"]) .metrics strong{color:#d5ffe5}
+:global(html[data-portfolio-theme="dark"]) .metrics .icon{color:#8de1b1}
+:global(html[data-portfolio-theme="dark"]) .mission{
+  background:linear-gradient(110deg,#1c533e,#1b4738);border-color:#438c68;
+}
+:global(html[data-portfolio-theme="dark"]) .mission .eyebrow{color:#a6edc3}
+:global(html[data-portfolio-theme="dark"]) .missionCopy h2{color:#e7ffed}
+:global(html[data-portfolio-theme="dark"]) .missionCopy>p:nth-last-child(2){color:#b9dcca}
+:global(html[data-portfolio-theme="dark"]) .missionIcon{background:#2a6b4d;color:#bcf5d2;border-color:#479e71}
+:global(html[data-portfolio-theme="dark"]) .missionProgress{background:#35664c}
+:global(html[data-portfolio-theme="dark"]) .missionProgress span{background:#9aefbe}
+:global(html[data-portfolio-theme="dark"]) .missionActions>button:not(.primary){
+  background:#285e47;color:#e3ffe9;border-color:#55946e;
+}
+:global(html[data-portfolio-theme="dark"]) .missionActions>button:not(.primary):hover{background:#377857}
+:global(html[data-portfolio-theme="dark"]) .surface{
+  background:#f7fdf8;color:#1c4f3b;border-color:#91c3a5;box-shadow:0 23px 55px #071c1938;
+}
+:global(html[data-portfolio-theme="dark"]) .footer{
+  background:#1a4738;color:#c7e6d1;border-color:#457e60;
+}
+:global(html[data-portfolio-theme="dark"]) .footer .icon{color:#9feac0}
+:global(html[data-portfolio-theme="dark"]) .footer a{color:#b4f3d1}
+:global(html[data-portfolio-theme="dark"]) .mobileNav{
+  background:#173e32;border-bottom-color:#3e7d5e;
+}
+:global(html[data-portfolio-theme="dark"]) .mobileNav button{
+  background:#225441;color:#d7f7e4;border-color:#468561;
+}
+:global(html[data-portfolio-theme="dark"]) .mobileNav button[data-active="true"]{
+  background:#b4f8d0;border-color:#b4f8d0;color:#17543a;
+}
