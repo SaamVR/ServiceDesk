@@ -1,0 +1,170 @@
+{
+  "schema": "servicedesk-pr-semantic-review.v1",
+  "observedDate": "2026-11-18",
+  "baseAuditCommit": "6926bc60c4b62bc2caac9556125ba27539e3c467",
+  "integrationHeadAtReview": "2f3c1cc21005ce8f555ecde9514a5e0d0d8438a5",
+  "mainSha": "56872ccbd7fbe6de043c35d9d8d37d32c4b726ac",
+  "integrationPr": 915,
+  "sourceImportCount": 0,
+  "reviewScope": "6 highest-priority PRs; only cited paths statically compared against exact head; other 11 unique candidates and 48 provisional duplicates remain pending",
+  "initialClassification": {
+    "alreadyIncorporated": 52,
+    "provisionalDuplicate": 48,
+    "uniqueCandidate": 17,
+    "blockedOrRejected": 10
+  },
+  "sourceWorkflowRuns": [
+    44202705888,
+    44202705831,
+    44202705822
+  ],
+  "protectedRealBrowserJob": "SKIPPED",
+  "p02Accepted": "2/7",
+  "p03Accepted": "0/6",
+  "candidates": [
+    {
+      "pr": 913,
+      "head": "6ec1c2970a478337cdb3bacce9c618eabf48ae01",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "MEDIUM",
+      "category": "Inbox/F15 alternate owner SLA review",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/AiUnansweredLeadSlaReview.tsx",
+          "62e9a79dcff1e2e848604b09214348ee6b141d25",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/InboxLeadSlaPanel.tsx",
+          "33704951642cbab6dd3aa2e178a649fcbeb22c5b",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/f15-inbox-sla-review-action.ts",
+          "0ef694b1175f8ecd19ff314f5a5d1571e6b1e51e",
+          "ABSENT"
+        ],
+        [
+          "src/server/ai/owner-inbox-f15-sla-review.ts",
+          "c7815b276f77b4b7ec0cc06469d0b7bb995a0267",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Four historical F15 read-only SLA review files are absent at integration HEAD, but current head has InboxProtectedLeadReviewPanel and an F15 manually gated, database-backed escalation action. Functional equivalence is unproven; importing the old reviewer wholesale risks duplicate Inbox flows or conflating read-only SLA review with durable event creation.",
+      "next": "Compare authorization, request/conversation selection, response-history and event-recording semantics; product owner chooses whether read-only view remains necessary. No direct import."
+    },
+    {
+      "pr": 907,
+      "head": "097ce884916b49407351edffb07e35634c32a237",
+      "status": "BLOCKED_SECURITY_REVIEW",
+      "confidence": "HIGH_STATIC",
+      "category": "P44 duplicate LIVE identity and strict zoned dates",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/owner-attention-triage.ts",
+          "706f21c1b28209cc022281fdf1631dc3eb6bfa54",
+          "752543fcf25178bd6ad2da16a324f50a569a6be0"
+        ]
+      ],
+      "finding": "Current triage builds a LIVE execution map from array pairs, so duplicate execution IDs use last-write-wins; current Date.parse accepts some timezone-free/malformed civil values. #907 candidate quarantines duplicate selected LIVE IDs and uses trustedQuoteInstant for loadedAt and dueAt. This is a code-level difference with plausible false-ready/false-overdue consequences, not a runtime-proven breach. Existing P43 duplicate test and P41 zoned-clock test exist on candidate, not current head.",
+      "next": "Highest priority: independent security/QA approval; construct isolated regression with same-ID LIVE rows, branch scoping, malformed/zoned timestamps. Review provenance critics; adopt only narrowly verified guard and tests, never blind-merge P44 stack."
+    },
+    {
+      "pr": 906,
+      "head": "92bf5b014d01ad2c4739b48c3e026aa3f69ab80b",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "HIGH_STATIC",
+      "category": "P40 pricing scenarios and fictional playbook what-if",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/automation-playbook-event-whatif.ts",
+          "8a3e78edb87d48ef137dfe90a31a8849e949b974",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/owner-pricing-scenario-matrix.ts",
+          "3f952e8a67ccea3ea702b54f40ef95bf97ca526e",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Two standalone modules are absent at current integration HEAD. Candidate scenarios derive nine (3 service × 3 layout) unsaved rate previews from owner FormData; playbook what-if returns FICTIONAL/NOT_EXECUTED outcomes. Source is review-only, does not show live persisted pricing, and must preserve fail-closed form validation.",
+      "next": "Review candidate tests and dependencies from #902/#903; prove no invented rates, persistence, execution or preview-as-authority; product approval before source import. P03 live acceptance stays blocked by P02."
+    },
+    {
+      "pr": 908,
+      "head": "abd805bb1af68a375f5a96eb29c6e97a096a4cd9",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "MEDIUM",
+      "category": "P35 owner overdue saved attention review",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/OwnerOverdueAttentionReview.tsx",
+          "d876e61b8731d6ff0e61372941503139d918d606",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/owner-attention-review-action.ts",
+          "8a511441ec4a516be406c3228d9221fcf5a790ea",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/owner-activation-next-action.ts",
+          "cbfb64e4fcec9f0ec2c4eff17108b18ec15f1d7f",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Three cited owner overdue-attention and activation modules are absent at latest head. Candidate depends on authoritative owner-attention SLA and currently overlaps existing owner-linked Inbox attention workflows; absence alone does not prove business behavior is missing.",
+      "next": "Reconcile with P44/P42 attention, verify tenant and branch scope, reject stale/forged action input, keep P03 source-only."
+    },
+    {
+      "pr": 901,
+      "head": "e42be516daf82619a6161336e6e45e63120d7549",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "MEDIUM",
+      "category": "P42 manual attention review playbook",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/owner-attention-review-playbook.ts",
+          "4ad58f8a6062dfb960b9ede8ebd47346b9cde9d5",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Manual attention playbook module absent at current head. It consumes attention-triage projections, so P44 duplicate-ID and zoned-time correctness is upstream security prerequisite.",
+      "next": "Review only after triage correctness agreed, test fail-closed ambiguity step and no side-effect claims."
+    },
+    {
+      "pr": 893,
+      "head": "792267bfc75f23d3814225a6ab9d24c7591e5fcb",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "MEDIUM",
+      "category": "P39 owner onboarding commercial action guidance",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/onboarding/OwnerCommercialActionPanel.tsx",
+          "f9e185624189c740feca480371b4c95194d3ab69",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/owner-automation-next-action.ts",
+          "cad65e8ed60728f9a6e590d8b419f6ca0bb8188a",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Commercial onboarding action panel and automation next-action module are absent. Candidate source contains read-only owner-guidance links; it is not live saved-price, quote or automation acceptance.",
+      "next": "Reconcile against newer owner pricing-readiness form changes at exact integration HEAD; owner UX approval and P02 prerequisite before activation."
+    }
+  ],
+  "governance": [
+    "No candidate reviewed has APPROVED review",
+    "Source missing/different does not mean automatically approved",
+    "No DB/tenant/provisioning/deploy/production main merge",
+    "PR 869 guarded by independent DBA approval",
+    "Keep F23 release paths disabled pending safety review"
+  ]
+}
