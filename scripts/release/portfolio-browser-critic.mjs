@@ -131,12 +131,13 @@ try{
  await shot("portfolio-forest-dark-1440.png");
  await js("document.getElementById('scenario-lab')?.scrollIntoView({block:'start',behavior:'instant'})");
  await sleep(420);await shot("theater-forest-dark-1440.png");
+ assert(await js("getComputedStyle(document.querySelector('#scenario-lab'),'::before').display==='none'"),"Nighttime theater removes pale decorative ring over text");
  await js("window.scrollTo({top:0,behavior:'instant'})");
  await navigate("/work/business-automation");
  assert(await js("document.documentElement.dataset.portfolioTheme==='dark'"),"Case study inherits saved forest appearance");
  await checkContrast('[class*="sampleRequest"] strong',"#20483c","Dark case-study fictional request is readable");
  await checkContrast('[class*="canvasCards"] strong',"#20483c","Dark case-study handoff-card text is readable");
- assert(await js("getComputedStyle(document.querySelector('#scenario-lab'),'::before').display==='none'"),"Nighttime theater removes pale decorative ring over text");
+
 
  await shot("case-study-forest-dark-1440.png");
  await navigate("/demo");
