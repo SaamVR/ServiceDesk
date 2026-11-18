@@ -39,3 +39,30 @@
 ## Mutation and release receipt
 
 **This follow-up changes documentation only on an isolated review branch.** No accepted feature import, source behavior, tenant fixtures, SQL, paid/provider event, Vercel deploy, canonical/main merge or PR closures. Owner and independent reviewer decisions remain pending. Machine-readable review: `docs/integration/open-pr-semantic-review-20261118.json`.
+
+## Second review wave — remaining 11 of the 17 candidates
+
+The nine predecessor PRs below were independently re-read at their **live draft HEADs**. Each has **zero submitted reviews**, and the cited unique module blobs were compared byte-for-byte against the named later composite. In all **10 checked path pairs**, Git blob SHAs match exactly:
+
+| Historical predecessor | Review composite | Compared unique payload |
+|---|---|---|
+| [#905](https://github.com/SaamVR/ServiceDesk/pull/905) | #908 | OverdueAttentionReview UI + projection |
+| [#903](https://github.com/SaamVR/ServiceDesk/pull/903) | #906 | Fictional playbook event what-if |
+| [#902](https://github.com/SaamVR/ServiceDesk/pull/902) | #906 | Owner pricing scenario matrix |
+| [#897](https://github.com/SaamVR/ServiceDesk/pull/897) | #901 | Attention review playbook |
+| [#896](https://github.com/SaamVR/ServiceDesk/pull/896) | #908 | Owner activation next action |
+| [#889](https://github.com/SaamVR/ServiceDesk/pull/889) | #893 | Owner commercial action panel |
+| [#887](https://github.com/SaamVR/ServiceDesk/pull/887) | #893 | Owner automation next action |
+| [#886](https://github.com/SaamVR/ServiceDesk/pull/886) | #893 | Owner commercial action panel |
+| [#885](https://github.com/SaamVR/ServiceDesk/pull/885) | #893 | Owner automation next action |
+
+**Disposition:** `REVIEW_THROUGH_COMPOSITE` for these **cited paths only**, not a global PR supersession approval. Importing a predecessor and its selected composite would duplicate these unique files. No older PR was closed or reclassified in the original 127-entry inventory.
+
+The last two unique candidates are independent decisions:
+
+- [#916](https://github.com/SaamVR/ServiceDesk/pull/916) has four absent IDE/coding policy files (`.agents/skills/karpathy-guidelines/SKILL.md`, `.cursor/rules/karpathy-guidelines.mdc`, `.github/copilot-instructions.md`, `CLAUDE.md`). **Zero reviews, governance-owner approval required**; do not modify `AGENTS.md` silently.
+- [#124](https://github.com/SaamVR/ServiceDesk/pull/124) has absent legacy `src/app/tour/BrightTour.module.css`. **Zero reviews, design-owner approval required**, confirm compatibility with newer tour/brand before import.
+
+**Coverage accounting:** 17/17 initially unique candidates have now received a pinned, cited-path review. They can be managed as **six primary feature review tips + nine byte-identical predecessor source paths + two governance/design decisions**. This is **not** full PR semantic acceptance, and the 48 provisional duplicates still require review. Original totals 52/48/17/10 remain unchanged. All 17 unique candidates have zero submitted reviews at the time checked, hence zero automatic approvals.
+
+Machine evidence remains in this report's companion JSON.
