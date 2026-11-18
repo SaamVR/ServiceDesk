@@ -5,6 +5,7 @@ import {createSandboxState,sandboxReducer,sandboxQuote,sandboxStages,sandboxOuts
 import {automationPlaybooks,automationPlaybookCategories} from "@/features/operations/automation-playbooks";
 import {dashboardModules,dashboardGuide,dashboardNextAction,dashboardProgress,dashboardStatus,dashboardScreenFor,type DashboardModule} from "./demo-dashboard-model";
 import styles from "./DemoOperationsDashboard.module.css";
+import {aiReviewScenarios,aiScenarioFor,aiCanApprove,aiDecisionLabel,type AiReviewDecision,type AiReviewScenarioId} from "./ai-review-model";
 
 const usd=new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
 const money=(minor:number)=>usd.format(minor/100);
@@ -12,16 +13,16 @@ function Icon({name}:{name:string}){
  const url="url(/portfolio/icons/"+name+".svg)";
  return <span aria-hidden="true" className={styles.icon} style={{maskImage:url,WebkitMaskImage:url,maskPosition:"center",WebkitMaskPosition:"center",maskSize:"contain",WebkitMaskSize:"contain",maskRepeat:"no-repeat",WebkitMaskRepeat:"no-repeat"} as CSSProperties}/>;
 }
-const exampleReply="Thanks for contacting BrightRoom. We can prepare your move-out cleaning quote. Could you share the address and preferred date? Our team will review availability before confirming.";
-type Review="pending"|"approved"|"rejected";
+
 
 export function DemoOperationsDashboard(){
  const [state,dispatch]=useReducer(sandboxReducer,undefined,createSandboxState);
  const [module,setModule]=useState<DashboardModule>("overview");
  const [guide,setGuide]=useState(true);
  const [guideIndex,setGuideIndex]=useState(0);
- const [reply,setReply]=useState(exampleReply);
- const [review,setReview]=useState<Review>("pending");
+ const [aiScenarioId,setAiScenarioId]=useState<AiReviewScenarioId>("move-out");
+ const [reply,setReply]=useState(aiReviewScenarios[0].draft);
+ const [review,setReview]=useState<AiReviewDecision>("pending");
  const [category,setCategory]=useState("All");
  const [filter,setFilter]=useState("");
  const [ruleId,setRuleId]=useState("new-enquiry");
@@ -33,6 +34,11 @@ export function DemoOperationsDashboard(){
  const selectedRule=rules.find(r=>r.id===ruleId)??rules[0];
  const currentGuide=dashboardGuide[guideIndex];
  const sampleStage=sandboxStages.find(s=>s.id===state.stage)??sandboxStages[0];
+ const aiScenario=aiScenarioFor(aiScenarioId);
+ function chooseAiScenario(id:AiReviewScenarioId){
+  const selected=aiScenarioFor(id);
+  setAiScenarioId(id);setReply(selected.draft);setReview("pending");
+ }
  function navigate(to: DashboardModule) {
    setModule(to);
    if (guide) {
@@ -44,7 +50,7 @@ export function DemoOperationsDashboard(){
 
  function act(action:SandboxAction){
    dispatch(action);
-   if(action==="RESET"){navigate("overview");setReply(exampleReply);setReview("pending");setChecks([false,false,false]);return;}
+   if(action==="RESET"){navigate("overview");chooseAiScenario("move-out");setChecks([false,false,false]);return;}
    if(action==="CREATE_QUOTE"||action==="ACCEPT_QUOTE")navigate("requests");
    else if(action==="HOLD_SLOT"||action==="ASSIGN_CREW")navigate("schedule");
    else if(action==="PAY_DEPOSIT"||action==="PAY_BALANCE")navigate("finance");
@@ -137,8 +143,40 @@ export function DemoOperationsDashboard(){
      <div className={styles.invoice}><div><p className={styles.eyebrow}>BRIGHTROOM CLEANING / SAMPLE</p><h3>Invoice #DEMO-001</h3><p>Alex Morgan · Fictional customer</p></div><dl><dt>Move-out cleaning including oven</dt><dd>{money(sandboxQuote.subtotalMinor)}</dd><dt>Illustrative tax</dt><dd>{money(sandboxQuote.taxMinor)}</dd><dt className={styles.invoiceTotal}>Quote total</dt><dd className={styles.invoiceTotal}>{money(sandboxQuote.totalMinor)}</dd><dt>Simulated deposit</dt><dd>− {money(state.depositAllocatedMinor)}</dd><dt>Simulated balance</dt><dd>− {money(state.balanceAllocatedMinor)}</dd><dt className={styles.invoiceDue}>Remaining sample balance</dt><dd className={styles.invoiceDue}>{money(sandboxOutstandingMinor(state))}</dd></dl>{next&&["PAY_DEPOSIT","PAY_BALANCE"].includes(next.action)?<button type="button" className={styles.primary} onClick={()=>act(next.action)}>Simulate {next.label} →</button>:<p>Complete previous stages to unlock eligible sample finance actions.</p>}</div>
     </>:null}
     {module==="ai"?<>
-     <div className={styles.sectionTop}><div><p className={styles.eyebrow}>BOUNDED AI COPILOT</p><h2>An editable draft—not an autonomous operator.</h2><p>Highlight the extracted example, make changes, then approve or reject a local suggestion.</p></div><span className={styles.chip}>MODEL NOT CONNECTED</span></div>
-     <div className={styles.aiSplit}><article><p className={styles.eyebrow}>FICTIONAL INPUT</p><blockquote>“Can you clean a three-bedroom home before we move out? The oven needs attention too.”</blockquote><div className={styles.extractions}><div><span>Service</span><strong>Move-out</strong></div><div><span>Property</span><strong>3 bedrooms (sample)</strong></div><div><span>Add-on</span><strong>Oven clean</strong></div><div><span>Missing</span><strong>Date and address</strong></div></div></article><article><p className={styles.eyebrow}><Icon name="brain-circuit"/> SCRIPTED AI SUGGESTION</p><label htmlFor="dashboard-draft">Review and edit reply</label><textarea id="dashboard-draft" value={reply} maxLength={520} rows={6} onChange={e=>{setReply(e.target.value);setReview("pending")}}/><div className={styles.inlineActions}><button type="button" className={styles.primary} onClick={()=>setReview("approved")}>✓ Approve draft</button><button type="button" onClick={()=>setReview("rejected")}>✕ Reject</button><button type="button" onClick={()=>{setReply(exampleReply);setReview("pending")}}>Reset</button></div><p className={styles.reviewState} role="status">{review==="approved"?"Approved for this local preview only. No message sent.":review==="rejected"?"Proposal rejected. No external action occurred.":"Human review pending. Nothing has been sent."}</p></article></div>
+     <div className={styles.sectionTop}><div><p className={styles.eyebrow}>AI DECISION STUDIO / SCRIPTED EXAMPLES</p><h2>Show the evidence. Keep a human in charge.</h2><p>Change the customer situation, inspect the extracted facts, edit the reply and decide whether to approve, reject or escalate. This is a prewritten simulation, not an LLM connection.</p></div><span className={styles.chip}>NO MODEL / NO SEND</span></div>
+     <div className={styles.aiScenarioPicker} role="group" aria-label="Choose a fictional AI-assisted business situation">
+       {aiReviewScenarios.map(item=><button type="button" key={item.id} data-active={aiScenarioId===item.id} aria-pressed={aiScenarioId===item.id} onClick={()=>chooseAiScenario(item.id)}>
+         <span>{item.requiresEscalation?"03 / SAFETY":"SCENARIO / SAMPLE"}</span>
+         <strong>{item.label}</strong><small>{item.short}</small>
+       </button>)}
+     </div>
+     <div className={styles.aiFlow} aria-label="AI review is a three-step process"><span><b>01</b> Customer enquiry</span><i aria-hidden="true">→</i><span><b>02</b> Scripted evidence</span><i aria-hidden="true">→</i><span><b>03</b> Human decision</span></div>
+     <div key={aiScenario.id} className={styles.aiSplit}>
+       <article className={styles.aiSource}>
+         <div className={styles.aiPanelTitle}><Icon name="inbox"/><span>FICTIONAL CUSTOMER INPUT</span><small>NOT RECEIVED LIVE</small></div>
+         <blockquote>{aiScenario.customerMessage}</blockquote>
+         <div className={styles.aiPanelTitle}><Icon name="file-text"/><span>SCRIPTED STRUCTURED FIELDS</span></div>
+         <div className={styles.extractions}>{aiScenario.facts.map(fact=><div key={fact.label} data-missing={fact.source==="missing"}><span>{fact.label}</span><strong>{fact.value}</strong><small>{fact.source==="stated"?"Stated in sample enquiry":"Needs human clarification"}</small></div>)}</div>
+       </article>
+       <article className={styles.aiDraft}>
+         <div className={styles.aiPanelTitle}><Icon name="brain-circuit"/><span>EDITABLE DRAFT / NO AI CALL</span><small>HUMAN DECIDES</small></div>
+         <label htmlFor="dashboard-draft">Reply draft — review the wording</label>
+         <textarea id="dashboard-draft" value={reply} maxLength={520} rows={7} onChange={e=>{setReply(e.target.value);setReview("pending")}}/>
+         <div className={styles.aiCharacterCount}><span>{reply.length} / 520 characters</span><span>Saved in memory only</span></div>
+         <div className={styles.aiGate} data-alert={aiScenario.requiresEscalation}>
+           <Icon name="shield-check"/><span><strong>{aiScenario.requiresEscalation?"SAFETY REVIEW — ROUTINE WORK BLOCKED":"REQUIRED HUMAN REVIEW"}</strong><small>{aiScenario.reviewNote}</small></span>
+         </div>
+         <div className={styles.inlineActions}>
+           {aiScenario.requiresEscalation?
+             <button type="button" className={styles.primary} onClick={()=>setReview("escalated")}>Escalate for human review →</button>:
+             <button type="button" className={styles.primary} disabled={!aiCanApprove(aiScenario,reply)} onClick={()=>setReview("approved")}>✓ Approve local draft</button>}
+           <button type="button" onClick={()=>setReview("rejected")}>✕ Reject suggestion</button>
+           <button type="button" onClick={()=>{setReply(aiScenario.draft);setReview("pending")}}>↺ Restore example</button>
+         </div>
+         <p className={styles.reviewState} data-decision={review} role="status">{aiDecisionLabel(review)}</p>
+       </article>
+     </div>
+     <div className={styles.aiHumanNote}><Icon name="shield-check"/><span>Simulation boundary: these three scripted examples demonstrate the intended AI review experience. They do not perform extraction, submit real customer messages, schedule jobs or connect to an LLM.</span></div>
     </>:null}
     {module==="automations"?<>
      <div className={styles.sectionTop}><div><p className={styles.eyebrow}>AUTOMATIONS / REAL SOURCE CATALOGUE</p><h2>27 review-only workflow starters.</h2><p>No rule can be published or trigger a customer communication from this demo.</p></div><span className={styles.chip}>{rules.length} matching</span></div>
