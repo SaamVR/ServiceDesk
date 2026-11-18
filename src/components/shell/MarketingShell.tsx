@@ -6,6 +6,7 @@ import brightStyles from "@/features/product/BrightHomeExperience.module.css";
 import { OperationalFlowHero } from "./OperationalFlowHero";
 import { ProductStoryHero, type ProductStoryHeroKind } from "./ProductStoryHero";
 import { MarketingNavLinks } from "./MarketingNavLinks";
+import { PortfolioThemeToggle } from "@/features/product/PortfolioThemeToggle";
 import { ownerRegistrationAvailable, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 import { marketingHeroEntry, marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 
@@ -68,6 +69,7 @@ export function MarketingShell({
         </nav>
         <div className={styles.actions}>
           {!portfolioMode ? <Link className={styles.signIn} href="/auth/sign-in">Sign in</Link> : null}
+          {portfolioMode ? <span className={styles.desktopThemeToggle}><PortfolioThemeToggle /></span> : null}
           <Link className={styles.primaryAction} href={registration.href}>
             <span className={styles.desktopActionLabel}>{registration.desktop}</span>
             <span className={styles.mobileActionLabel}>{registration.mobile}</span>
@@ -96,6 +98,7 @@ export function MarketingShell({
                   </>
                 )}
               </div>
+              {portfolioMode ? <div className={styles.mobileThemeToggle}><PortfolioThemeToggle /></div> : null}
             </nav>
           </details>
         </div>
