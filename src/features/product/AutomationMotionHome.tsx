@@ -6,6 +6,7 @@ import { motionJourney, aiShowcaseModules, integrationShowcase, recoveryShowcase
 import { automationPlaybooks, automationPlaybookCategories } from "../operations/automation-playbooks";
 import { filterAutomationPlaybooks, type PlaybookCategoryFilter, type PlaybookSeverityFilter } from "../operations/automation-playbook-finder";
 import styles from "./AutomationMotionHome.module.css";
+import { OperationsTheater } from "./OperationsTheater";
 
 const totalStages = motionJourney.length;
 
@@ -111,7 +112,7 @@ export function AutomationMotionHome() {
           <h1 id="motion-home-title">Your business.<br /><em>In motion.</em></h1>
           <p className={styles.heroLead}>Watch a cleaning business move from the first customer message to the final follow-up. Explore the systems, AI assistance and human decisions behind every handoff.</p>
           <div className={styles.heroActions}>
-            <a href="#live-workflow" className={styles.primaryCta}>Watch the workflow <span aria-hidden="true">↘</span></a>
+            <a href="#scenario-lab" className={styles.primaryCta}>Run an interactive scenario <span aria-hidden="true">↘</span></a>
             <Link href="/sandbox" className={styles.secondaryCta}>Try the working sandbox <span aria-hidden="true">↗</span></Link>
           </div>
           <p className={styles.heroBoundary}><span className={styles.boundaryDot} /> Interactive fictional walkthrough. Source-level prototypes; no live customer, AI or payment actions.</p>
@@ -139,6 +140,8 @@ export function AutomationMotionHome() {
         <p>Catalogued capabilities, not live customer deployments.</p>
       </div>
     </section>
+
+    <OperationsTheater />
 
     <section className={styles.sectionLight} id="live-workflow" aria-labelledby="journey-title" ref={stageRef}>
       <div className={styles.sectionHead}>

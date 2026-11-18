@@ -14,7 +14,7 @@ export const marketingLinks = [
 ] as const;
 
 const portfolioLinks = [
-  { href: "/#live-workflow", label: "Workflows", description: "Watch the business story move" },
+  { href: "/#scenario-lab", label: "Live scenario", description: "Trigger and inspect connected business events" },
   { href: "/#ai-studio", label: "AI studio", description: "Explore six AI-assisted examples" },
   { href: "/#playbooks", label: "27 automations", description: "Search the real draft rule catalogue" },
   { href: "/#integrations", label: "Integrations", description: "Inspect evidence and provider handoffs" },
