@@ -57,3 +57,18 @@
 @media(max-width:600px){.topbar>p{display:none}.topbar{justify-content:flex-end}.synth{display:none}.topbar>div{gap:7px}.topbar button{padding:9px;font-size:.67rem}.guide{grid-template-columns:1fr;gap:12px;margin:13px 11px 0;padding:17px}.guideIcon{display:none}.guideActions{grid-column:1;justify-content:flex-start}.main{padding:23px 11px}.heading{align-items:stretch;flex-direction:column;gap:15px}.heading h1{font-size:2.2rem}.heading>.primary{align-self:flex-start}.metrics{gap:8px}.metrics article{min-height:120px;padding:14px}.metrics strong{font-size:1.65rem}.metrics .icon{top:12px;right:10px;width:17px;height:17px}.surface{padding:17px;min-height:400px}.sectionTop{flex-direction:column;gap:12px}.sectionTop h2{font-size:1.75rem}.split,.aiSplit,.overview,.rules{grid-template-columns:1fr}.chat{grid-template-columns:1fr}.chat aside{border-right:0;border-bottom:1px solid #dceade}.sideCards{grid-template-columns:1fr}.calendar{grid-template-columns:repeat(2,minmax(0,1fr))}.calendar article{min-height:112px}.extractions{grid-template-columns:1fr 1fr}.ruleList{grid-template-columns:1fr 1fr;max-height:400px}.bigMoney{font-size:2.6rem}.footer{margin-top:12px;padding:14px}}
 @media(max-width:380px){.metrics article{padding:13px}.metrics strong{font-size:1.35rem}.ruleList{grid-template-columns:1fr}.filters input{min-width:0;width:100%}}
 @media(prefers-reduced-motion:reduce){.app *, .app *::before, .app *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.nav button:hover,.primary:hover{transform:none!important}}
+
+/* Mission control makes the next operation explicit across all nine workspaces. */
+.mission{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:17px;align-items:center;border:1px solid #a9d8bf;border-radius:13px;background:linear-gradient(115deg,#e7f7ed,#f1fbf4);padding:21px 24px;margin-bottom:25px;box-shadow:0 13px 34px #1e67411c}
+.missionIcon{display:grid;place-items:center;width:46px;height:46px;border:1px solid #b0e4c4;background:#d7f1e1;border-radius:12px;color:#21865f}
+.missionIcon .icon{width:25px;height:25px}
+.missionCopy{min-width:0}.missionCopy h2{font-size:1.25rem;color:#1b5d43;margin:5px 0 6px}.missionCopy>p:nth-last-child(2){font-size:.77rem;line-height:1.65;color:#537b63}
+.missionProgress{height:5px;max-width:430px;margin-top:13px;border-radius:100px;background:#d1e8d9;overflow:hidden}
+.missionProgress span{display:block;height:100%;background:linear-gradient(90deg,#40a875,#1c926b);transition:width .35s ease}
+.missionActions{display:grid;justify-items:stretch;gap:8px;min-width:185px}
+.missionActions>button:not(.primary){min-height:40px;border:1px solid #b5dcc5;border-radius:8px;background:#fff;color:#287957;font-size:.73rem;font-weight:830;padding:9px 12px}
+.missionActions>button:not(.primary):hover{background:#d9f4e3}
+.app small{font-size:max(.7rem,11px)}
+.app .eyebrow{font-size:.7rem}
+@media(max-width:1130px){.mission{grid-template-columns:42px minmax(0,1fr)}.missionActions{grid-column:2;display:flex;flex-wrap:wrap;min-width:0}}
+@media(max-width:600px){.mission{grid-template-columns:1fr;padding:15px;margin-bottom:18px;gap:12px}.missionIcon{display:none}.missionActions{grid-column:1}.missionActions button{flex:1;white-space:normal;font-size:.71rem}.missionCopy h2{font-size:1.14rem}}

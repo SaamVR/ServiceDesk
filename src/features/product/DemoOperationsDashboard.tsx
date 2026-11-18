@@ -33,19 +33,27 @@ export function DemoOperationsDashboard(){
  const selectedRule=rules.find(r=>r.id===ruleId)??rules[0];
  const currentGuide=dashboardGuide[guideIndex];
  const sampleStage=sandboxStages.find(s=>s.id===state.stage)??sandboxStages[0];
+ function navigate(to: DashboardModule) {
+   setModule(to);
+   if (guide) {
+     const index = dashboardGuide.findIndex(item=>item.module===to);
+     if(index>=0) setGuideIndex(index);
+   }
+ }
+
 
  function act(action:SandboxAction){
    dispatch(action);
-   if(action==="RESET"){setModule("overview");setReply(exampleReply);setReview("pending");setChecks([false,false,false]);return;}
-   if(action==="CREATE_QUOTE"||action==="ACCEPT_QUOTE")setModule("requests");
-   else if(action==="HOLD_SLOT"||action==="ASSIGN_CREW")setModule("schedule");
-   else if(action==="PAY_DEPOSIT"||action==="PAY_BALANCE")setModule("finance");
-   else if(action==="START_JOB"||action==="COMPLETE_JOB")setModule("crew");
-   else setModule("inbox");
+   if(action==="RESET"){navigate("overview");setReply(exampleReply);setReview("pending");setChecks([false,false,false]);return;}
+   if(action==="CREATE_QUOTE"||action==="ACCEPT_QUOTE")navigate("requests");
+   else if(action==="HOLD_SLOT"||action==="ASSIGN_CREW")navigate("schedule");
+   else if(action==="PAY_DEPOSIT"||action==="PAY_BALANCE")navigate("finance");
+   else if(action==="START_JOB"||action==="COMPLETE_JOB")navigate("crew");
+   else navigate("inbox");
  }
  function stepGuide(index:number){
    const value=Math.max(0,Math.min(index,dashboardGuide.length-1));
-   setGuideIndex(value);setModule(dashboardGuide[value].module);
+   setGuideIndex(value);navigate(dashboardGuide[value].module);
  }
  const moneyTile=[
    {label:"Calculated quote",value:money(sandboxQuote.totalMinor),desc:"Actual domain pricing",icon:"file-text"},
@@ -60,7 +68,7 @@ export function DemoOperationsDashboard(){
    <div className={styles.workspace}><span>B</span><p><strong>BrightRoom Cleaning</strong><small>FICTIONAL WORKSPACE</small></p></div>
    <div className={styles.sideTitle}>WORKSPACE</div>
    <nav aria-label="Dashboard modules" className={styles.nav}>
-    {dashboardModules.map(item=><button key={item.id} type="button" data-active={module===item.id} data-guided={guide&&currentGuide.module===item.id} aria-current={module===item.id?"page":undefined} onClick={()=>setModule(item.id)}><Icon name={item.icon}/>{item.label}{guide&&currentGuide.module===item.id?<span className={styles.guideDot}/>:null}</button>)}
+    {dashboardModules.map(item=><button key={item.id} type="button" data-active={module===item.id} data-guided={guide&&currentGuide.module===item.id} aria-current={module===item.id?"page":undefined} onClick={()=>navigate(item.id)}><Icon name={item.icon}/>{item.label}{guide&&currentGuide.module===item.id?<span className={styles.guideDot}/>:null}</button>)}
    </nav>
    <div className={styles.sideFoot}><p><Icon name="shield-check"/><span><strong>Portfolio mode</strong><small>No real customer data</small></span></p><Link href="/">← Return to portfolio</Link></div>
  </aside>
@@ -69,7 +77,7 @@ export function DemoOperationsDashboard(){
    <p>BrightRoom <span>/</span> <strong>{dashboardScreenFor(module).label}</strong></p>
    <div><span className={styles.synth}><i/> SAMPLE ONLY</span><button type="button" onClick={()=>{setGuide(true);stepGuide(0)}}>Guided tour</button><button type="button" onClick={()=>act("RESET")}>↺ Reset</button><span className={styles.avatar}>BR</span></div>
   </header>
-  <nav className={styles.mobileNav} aria-label="Dashboard module shortcuts">{dashboardModules.map(item=><button type="button" key={item.id} data-active={module===item.id} onClick={()=>setModule(item.id)}>{item.label}</button>)}</nav>
+  <nav className={styles.mobileNav} aria-label="Dashboard module shortcuts">{dashboardModules.map(item=><button type="button" key={item.id} data-active={module===item.id} onClick={()=>navigate(item.id)}>{item.label}</button>)}</nav>
   {guide?<section className={styles.guide} aria-label="Dashboard guided tour">
     <span className={styles.guideIcon}><Icon name="sparkles"/></span>
     <div><p className={styles.eyebrow}>INTERACTIVE WALKTHROUGH · {guideIndex+1}/{dashboardGuide.length} · SYNTHETIC</p><h2>{currentGuide.title}</h2><p>{currentGuide.explanation} <strong>{currentGuide.instruction}</strong></p><div className={styles.guideProgress}><span style={{width:Math.round((guideIndex+1)/dashboardGuide.length*100)+"%"}}/></div></div>
@@ -78,22 +86,43 @@ export function DemoOperationsDashboard(){
   <section className={styles.main} aria-labelledby="demo-title">
    <div className={styles.heading}><div><p className={styles.eyebrow}>BRIGHTROOM / {module.toUpperCase()} / SAMPLE WORKSPACE</p><h1 id="demo-title">{dashboardScreenFor(module).label}</h1><p>{dashboardScreenFor(module).short}. No real account, AI provider or payment is connected.</p></div>{next?<button type="button" className={styles.primary} onClick={()=>act(next.action)}>Advance: {next.label} ↗</button>:<button type="button" className={styles.primary} onClick={()=>act("RESET")}>Restart sample ↺</button>}</div>
    <div className={styles.metrics}>{moneyTile.map(tile=><article key={tile.label}><span>{tile.label}</span><strong>{tile.value}</strong><small>{tile.desc}</small><Icon name={tile.icon}/></article>)}</div>
+   <section className={styles.mission} aria-labelledby="demo-mission-title">
+     <div className={styles.missionIcon}><Icon name={next?"workflow":"badge-check"}/></div>
+     <div className={styles.missionCopy}>
+       <p className={styles.eyebrow}>OPERATOR MISSION · {progress.completed+1} / {progress.total+1} · SAMPLE</p>
+       <h2 id="demo-mission-title">{next?"Make the next handoff visible":"Sample lifecycle complete"}</h2>
+       <p aria-live="polite">{next?.detail??"All sandbox business steps have been recorded locally. Explore the audit trail or reset."}</p>
+       <div className={styles.missionProgress} role="progressbar" aria-label="Sample job lifecycle completion" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.completed}>
+         <span style={{width:progress.percent+"%"}}/>
+       </div>
+     </div>
+     <div className={styles.missionActions}>
+       {next?<>
+         <button type="button" onClick={()=>navigate(next.module)}>Inspect {dashboardScreenFor(next.module).label} →</button>
+         <button type="button" className={styles.primary} onClick={()=>act(next.action)}>Simulate {next.label} ✓</button>
+       </>:<>
+         <button type="button" onClick={()=>navigate("activity")}>Review audit trail →</button>
+         <button type="button" className={styles.primary} onClick={()=>act("RESET")}>Restart scenario ↺</button>
+       </>}
+     </div>
+   </section>
+
    <div className={styles.surface}>
     {module==="overview"?<>
      <div className={styles.sectionTop}><div><p className={styles.eyebrow}>SAMPLE ACTIVITY</p><h2>One request. A connected operation.</h2><p>Advance the fictional cleaning request through its actual deterministic sandbox lifecycle.</p></div><span className={styles.chip}>{status.stage}</span></div>
      <div className={styles.overview}>
       <ol className={styles.timeline}>{sandboxStages.map((s,i)=><li key={s.id} data-current={progress.completed===i} data-passed={i<progress.completed}><span>{i<progress.completed?"✓":String(i+1).padStart(2,"0")}</span><div><strong>{s.label}</strong><p>{s.description}</p></div></li>)}</ol>
-      <div className={styles.sideCards}><article><Icon name="inbox"/><h3>Customer enquiry</h3><p>Alex Morgan · move-out cleaning · 3 bedrooms · 2 bathrooms · oven add-on.</p><button type="button" onClick={()=>setModule("inbox")}>Inspect conversation →</button></article><article><Icon name="workflow"/><h3>Next controlled handoff</h3><p>{next?.detail??"All sample business transitions are complete."}</p><button type="button" onClick={()=>setModule(next?.module??"activity")}>View responsible team →</button></article><article className={styles.nightCard}><Icon name="brain-circuit"/><h3>AI as a drafting partner</h3><p>Review a proposal, edit it, approve or reject it. No live model connection.</p><button type="button" onClick={()=>setModule("ai")}>Open AI co-pilot →</button></article></div>
+      <div className={styles.sideCards}><article><Icon name="inbox"/><h3>Customer enquiry</h3><p>Alex Morgan · move-out cleaning · 3 bedrooms · 2 bathrooms · oven add-on.</p><button type="button" onClick={()=>navigate("inbox")}>Inspect conversation →</button></article><article><Icon name="workflow"/><h3>Next controlled handoff</h3><p>{next?.detail??"All sample business transitions are complete."}</p><button type="button" onClick={()=>navigate(next?.module??"activity")}>View responsible team →</button></article><article className={styles.nightCard}><Icon name="brain-circuit"/><h3>AI as a drafting partner</h3><p>Review a proposal, edit it, approve or reject it. No live model connection.</p><button type="button" onClick={()=>navigate("ai")}>Open AI co-pilot →</button></article></div>
      </div>
     </>:null}
     {module==="inbox"?<>
      <div className={styles.sectionTop}><div><p className={styles.eyebrow}>CUSTOMER COMMUNICATION</p><h2>Every message has context.</h2><p>Fictional enquiry and locally simulated delivery recovery.</p></div><span className={styles.chip}>1 sample conversation</span></div>
-     <div className={styles.chat}><aside><h3>Shared inbox</h3><p>ALL THREADS · SAMPLE</p><div className={styles.thread}><span className={styles.customer}>AM</span><span><strong>Alex Morgan</strong><small>Move-out clean · Enquiry</small></span></div></aside><div><header><span className={styles.customer}>AM</span><span><strong>Alex Morgan</strong><small>WEBSITE / FICTIONAL</small></span></header><div className={styles.bubble}>Hi, I need a move-out clean with the oven included. Can someone send me a quote?<small>EXAMPLE MESSAGE · NOT RECEIVED LIVE</small></div><div className={styles.assistantBubble}><Icon name="brain-circuit"/><p><strong>Draft intake</strong><span>Move-out · 3 bedrooms · 2 bathrooms · oven. Missing: confirmed date and address.</span></p></div><div className={styles.inlineActions}><button type="button" onClick={()=>setModule("ai")}>Review AI draft →</button><button type="button" onClick={()=>setModule("requests")}>View quote ↗</button></div></div></div>
+     <div className={styles.chat}><aside><h3>Shared inbox</h3><p>ALL THREADS · SAMPLE</p><div className={styles.thread}><span className={styles.customer}>AM</span><span><strong>Alex Morgan</strong><small>Move-out clean · Enquiry</small></span></div></aside><div><header><span className={styles.customer}>AM</span><span><strong>Alex Morgan</strong><small>WEBSITE / FICTIONAL</small></span></header><div className={styles.bubble}>Hi, I need a move-out clean with the oven included. Can someone send me a quote?<small>EXAMPLE MESSAGE · NOT RECEIVED LIVE</small></div><div className={styles.assistantBubble}><Icon name="brain-circuit"/><p><strong>Draft intake</strong><span>Move-out · 3 bedrooms · 2 bathrooms · oven. Missing: confirmed date and address.</span></p></div><div className={styles.inlineActions}><button type="button" onClick={()=>navigate("ai")}>Review AI draft →</button><button type="button" onClick={()=>navigate("requests")}>View quote ↗</button></div></div></div>
      <div className={styles.recovery}><div><h3>Mock communication recovery</h3><p>{status.delivery}. Acceptance is not delivery.</p></div><div className={styles.inlineActions}>{state.delivery==="UNSENT"?<button type="button" disabled={progress.completed<4} onClick={()=>act("QUEUE_CONFIRMATION")}>Queue local confirmation</button>:state.delivery==="QUEUED"?<><button type="button" onClick={()=>act("FAIL_DELIVERY")}>Inject failure</button><button type="button" onClick={()=>act("ACKNOWLEDGE_DELIVERY")}>Mock acceptance</button></>:state.delivery==="FAILED"?<button type="button" onClick={()=>act("RETRY_DELIVERY")}>Retry locally</button>:<span>Mock transport accepted; no customer delivery receipt.</span>}</div></div>
     </>:null}
     {module==="requests"?<>
      <div className={styles.sectionTop}><div><p className={styles.eyebrow}>QUOTES / SOURCE PRICING</p><h2>Every quote has a reason.</h2><p>Actual deterministic calculation, with a fictional request and human approval points.</p></div><span className={styles.chip}>{sampleStage.label}</span></div>
-     <div className={styles.split}><article className={styles.detail}><h3>Request #DEMO-001</h3><dl><dt>Customer</dt><dd>Alex Morgan (fictional)</dd><dt>Service</dt><dd>Move-out clean</dd><dt>Property</dt><dd>3 bedrooms / 2 bathrooms</dd><dt>Add-on</dt><dd>Oven cleaning</dd><dt>Version</dt><dd>Illustrative v1</dd></dl><button type="button" onClick={()=>setModule("ai")}>See bounded AI review ↗</button></article><article className={styles.detail}><span className={styles.eyebrow}>CALCULATED QUOTE</span><div className={styles.bigMoney}>{money(sandboxQuote.totalMinor)}</div><p>Deposit {money(sandboxQuote.depositMinor)} · Balance {money(sandboxQuote.balanceMinor)}</p><p className={styles.ruleBoundary}><Icon name="shield-check"/> AI does not create prices or accept a quote on a customer’s behalf.</p>{next&&["CREATE_QUOTE","ACCEPT_QUOTE"].includes(next.action)?<button type="button" className={styles.primary} onClick={()=>act(next.action)}>{next.label} →</button>:<p>Waiting for the next eligible business stage.</p>}</article></div>
+     <div className={styles.split}><article className={styles.detail}><h3>Request #DEMO-001</h3><dl><dt>Customer</dt><dd>Alex Morgan (fictional)</dd><dt>Service</dt><dd>Move-out clean</dd><dt>Property</dt><dd>3 bedrooms / 2 bathrooms</dd><dt>Add-on</dt><dd>Oven cleaning</dd><dt>Version</dt><dd>Illustrative v1</dd></dl><button type="button" onClick={()=>navigate("ai")}>See bounded AI review ↗</button></article><article className={styles.detail}><span className={styles.eyebrow}>CALCULATED QUOTE</span><div className={styles.bigMoney}>{money(sandboxQuote.totalMinor)}</div><p>Deposit {money(sandboxQuote.depositMinor)} · Balance {money(sandboxQuote.balanceMinor)}</p><p className={styles.ruleBoundary}><Icon name="shield-check"/> AI does not create prices or accept a quote on a customer’s behalf.</p>{next&&["CREATE_QUOTE","ACCEPT_QUOTE"].includes(next.action)?<button type="button" className={styles.primary} onClick={()=>act(next.action)}>{next.label} →</button>:<p>Waiting for the next eligible business stage.</p>}</article></div>
     </>:null}
     {module==="schedule"?<>
      <div className={styles.sectionTop}><div><p className={styles.eyebrow}>DISPATCH / CAPACITY</p><h2>Schedule without guessing.</h2><p>Demonstration week: no Google Calendar or crew schedule is contacted.</p></div><span className={styles.chip}>{status.stage}</span></div>
