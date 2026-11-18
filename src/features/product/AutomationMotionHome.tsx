@@ -217,7 +217,7 @@ export function AutomationMotionHome() {
     <section className={styles.sectionLight} id="playbooks" aria-labelledby="playbooks-title">
       <div className={styles.sectionHead}>
         <div><p className={styles.eyebrow}><Num value={3} /> / AUTOMATION LIBRARY</p><h2 id="playbooks-title">27 rules for<br /><em>less routine work.</em></h2></div>
-        <p>This is the actual 27-item starter catalogue from ServiceDesk's source, not invented portfolio data. These rules create <strong>internal attention drafts</strong>; none is published or connected to real customer sends here.</p>
+        <p>This is the actual 27-item starter catalogue from ServiceDesk’s source, not invented portfolio data. These rules create <strong>internal attention drafts</strong>; none is published or connected to real customer sends here.</p>
       </div>
       <div className={styles.libraryFrame}>
         <div className={styles.filterBar}>

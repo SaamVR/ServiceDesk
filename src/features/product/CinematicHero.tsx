@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useRef,useState,type CSSProperties} from "react";
+import {useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import styles from "./CinematicHero.module.css";
 
