@@ -6,6 +6,7 @@ describe("keyboard quick-switch model is local navigation only",()=>{
   const list=quickCommands(null);
   const modules=list.filter(item=>item.kind==="module");
   expect(modules).toHaveLength(9);
+  expect(modules.every(item=>item.kind==="module"&&item.icon.length>2)).toBe(true);
   expect(new Set(modules.map(item=>item.id)).size).toBe(9);
   expect(list.some(item=>item.id==="next")).toBe(false);
  });

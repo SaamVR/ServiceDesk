@@ -114,7 +114,7 @@ export function DemoOperationsDashboard(){
      </div>
    </section>
 
-   <div className={styles.surface}>
+   <div key={module} className={styles.surface}>
     {module==="overview"?<>
      <div className={styles.sectionTop}><div><p className={styles.eyebrow}>SAMPLE ACTIVITY</p><h2>One request. A connected operation.</h2><p>Advance the fictional cleaning request through its actual deterministic sandbox lifecycle.</p></div><span className={styles.chip}>{status.stage}</span></div>
      <div className={styles.overview}>

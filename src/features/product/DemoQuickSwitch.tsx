@@ -91,7 +91,7 @@ export function DemoQuickSwitch({onNavigate,onTour,onReset,onAdvance,nextLabel}:
 
  return <>
   <button type="button" className={styles.trigger} onClick={show} aria-haspopup="dialog" aria-expanded={open} aria-keyshortcuts="Control+K Meta+K" title="Search dashboard modules and sample actions">
-   <span className={styles.lens} aria-hidden="true">⌕</span><span className={styles.buttonText}>Quick switch</span><kbd>Ctrl K</kbd>
+   <span className={styles.lens} aria-hidden="true"/><span className={styles.buttonText}>Quick switch</span><kbd>Ctrl K</kbd>
   </button>
   <dialog ref={dialogRef} className={styles.dialog} onClose={()=>{setOpen(false);setSearch("")}} onClick={event=>{if(event.target===event.currentTarget)hide()}} aria-labelledby="quick-switch-heading" aria-describedby="quick-switch-description">
    <div className={styles.dialogBody}>
@@ -100,14 +100,14 @@ export function DemoQuickSwitch({onNavigate,onTour,onReset,onAdvance,nextLabel}:
      <button type="button" className={styles.close} onClick={hide} aria-label="Close quick switch">✕</button>
     </header>
     <div className={styles.search}>
-     <span aria-hidden="true">⌕</span>
+     <span className={styles.lens} aria-hidden="true"/>
      <input ref={searchRef} type="search" aria-label="Search dashboard commands" maxLength={80} placeholder="Try: invoice, AI, crew, tour…" value={search} onChange={event=>setSearch(event.target.value)} onKeyDown={inputKeys}/>
      <kbd>ESC</kbd>
     </div>
     <div className={styles.results} role="group" aria-label="Matching dashboard commands">
      {options.length===0?<p className={styles.empty}>No matching workspace. Try “inbox”, “AI” or “tour”.</p>:options.map((option,index)=>
       <button type="button" key={option.id} ref={element=>{resultRefs.current[index]=element}} className={styles.option} onClick={()=>choose(option)} onKeyDown={event=>resultKeys(event,index)}>
-       <span className={styles.optionIcon} aria-hidden="true">{option.kind==="module"?"▦":"↗"}</span>
+       <span className={styles.optionIcon} aria-hidden="true">{option.kind==="module"?<span className={styles.optionSvg} style={{maskImage:"url(/portfolio/icons/"+option.icon+".svg)",WebkitMaskImage:"url(/portfolio/icons/"+option.icon+".svg)"}}/>:"↗"}</span>
        <span className={styles.optionCopy}><strong>{option.label}</strong><small>{option.detail}</small></span>
        <span className={styles.optionType}>{option.kind==="module"?"WORKSPACE":"LOCAL ACTION"}</span>
       </button>)}

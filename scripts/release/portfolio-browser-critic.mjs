@@ -161,11 +161,13 @@ try{
  assert(await click('nav[aria-label="Dashboard modules"] button',"AI co-pilot"),"AI tab selectable");
  assert(await click("button","Approve local draft"),"Example AI draft review is interactive");
  assert((await js("document.body.textContent||''")).includes("No message was sent"),"AI approval does not claim delivery");
+ await shot("ai-review-approved-1440.png");
  assert(await click("button","Potential safety incident"),"AI scenario switches to safety exception");
  assert((await js("document.body.textContent||''")).includes("SAFETY REVIEW"),"Safety boundary is clearly visible");
  assert(await js("!Array.from(document.querySelectorAll('button')).some(x=>x.textContent?.includes('Approve local draft'))"),"Unsafe scenario forbids routine approval");
  assert(await click("button","Escalate for human review"),"Unsafe sample offers human escalation");
  assert((await js("document.body.textContent||''")).includes("No job was dispatched"),"Escalation never claims dispatch");
+ await shot("ai-review-safety-escalation-1440.png");
  assert(await click("button","Move-out enquiry"),"Returning to safe sample restores original scenario");
  assert((await js("document.body.textContent||''")).includes("Awaiting human review"),"Switching cases resets stale approval state");
 
@@ -176,6 +178,11 @@ try{
  await setViewport(768,900);await navigate("/demo");await shot("dashboard-768.png");await noOverrun("Dashboard 768");
  await setViewport(375,812,true);await navigate("/demo");await shot("dashboard-375.png");await noOverrun("Dashboard 375");
  await setViewport(320,740,true);await navigate("/demo");await shot("dashboard-320.png");await noOverrun("Dashboard 320");
+ assert(await click("button","Quick switch"),"Mobile quick switch opens");
+ await shot("command-center-mobile-320.png");
+ assert(await js("!!document.querySelector('dialog[open]')"),"Mobile command dialog remains visible");
+ await send("Input.dispatchKeyEvent",{type:"keyDown",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+ await send("Input.dispatchKeyEvent",{type:"keyUp",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
  await send("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
  await navigate("/");await sleep(200);
  assert(await js("document.body.textContent?.includes('Motion off')"),"Reduced-motion disables cinematic autoplay");

@@ -2,13 +2,13 @@ import { dashboardModules, type DashboardModule } from "./demo-dashboard-model";
 
 /** Navigation actions only. Nothing in this index calls a server or performs a provider operation. */
 export type QuickCommand =
- | { id: string; kind: "module"; label: string; detail: string; module: DashboardModule }
+ | { id: string; kind: "module"; label: string; detail: string; module: DashboardModule; icon: string }
  | { id: "tour" | "reset" | "next"; kind: "action"; label: string; detail: string; action: "tour" | "reset" | "next" };
 
 export function quickCommands(nextLabel: string | null): QuickCommand[] {
  const modules: QuickCommand[] = dashboardModules.map(module=>({
    id: "module-"+module.id, kind: "module" as const,
-   label: module.label, detail: module.short, module: module.id,
+   label: module.label, detail: module.short, module: module.id, icon: module.icon,
  }));
  const commands: QuickCommand[] = [
    {id:"tour",kind:"action",label:"Restart guided tour",detail:"Walk through each area with contextual instructions",action:"tour"},
