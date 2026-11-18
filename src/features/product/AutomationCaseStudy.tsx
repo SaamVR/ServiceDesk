@@ -64,7 +64,7 @@ export function AutomationCaseStudy() {
           <h1 id="portfolio-heading">Less busywork.<br /><em>More business.</em></h1>
           <p className={styles.lead}>A connected operations experience designed for cleaning businesses—from a first enquiry to quoting, team coordination, invoicing and follow-up.</p>
           <div className={styles.heroActions}>
-            <Link className={styles.primary} href="/sandbox">Try the interactive demo <span aria-hidden="true">↗</span></Link>
+            <Link className={styles.primary} href="/demo">Explore the guided dashboard <span aria-hidden="true">↗</span></Link>
             <a className={styles.secondary} href="#workflow">Explore the automation <span aria-hidden="true">↓</span></a>
           </div>
           <p className={styles.honestNotice}><span aria-hidden="true">●</span> Portfolio case study · interactive prototype · sample data only. Not a claim of a live customer deployment.</p>

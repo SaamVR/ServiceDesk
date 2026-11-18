@@ -12,6 +12,7 @@ const PUBLIC_PORTFOLIO_PATHS = new Set([
   "/health",
   "/work/business-automation",
   "/sandbox",
+  "/demo",
   "/tour",
   "/features",
   "/use-cases/cleaning",

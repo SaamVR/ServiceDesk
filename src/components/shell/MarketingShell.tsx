@@ -40,7 +40,7 @@ export function MarketingShell({
   const portfolioMode = process.env.SERVICEDESK_PORTFOLIO_MODE === "true";
   const registrationEnabled = !portfolioMode && ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
   const registration = portfolioMode
-    ? { href: "/sandbox", desktop: "Interactive demo", mobile: "Demo" }
+    ? { href: "/demo", desktop: "Guided dashboard", mobile: "Dashboard" }
     : marketingRegistrationEntry(registrationEnabled);
   const heroAction = portfolioMode
     ? { href: "/work/business-automation", label: "View the case study" }
@@ -85,7 +85,8 @@ export function MarketingShell({
                 {portfolioMode ? (
                   <>
                     <Link href="/work/business-automation">Case study <span aria-hidden="true">↗</span></Link>
-                    <Link href="/sandbox">Interactive demo <span aria-hidden="true">↗</span></Link>
+                    <Link href="/demo">Guided dashboard <span aria-hidden="true">↗</span></Link>
+                    <Link href="/sandbox">Workflow sandbox <span aria-hidden="true">↗</span></Link>
                   </>
                 ) : (
                   <>
