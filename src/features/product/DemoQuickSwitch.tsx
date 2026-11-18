@@ -32,7 +32,7 @@ export function DemoQuickSwitch({onNavigate,onTour,onReset,onAdvance,nextLabel}:
      setSearch("");
      dialog.showModal();
      setOpen(true);
-     searchRef.current?.focus();
+     requestAnimationFrame(()=>searchRef.current?.focus());
     }
    }
   }
@@ -46,7 +46,7 @@ export function DemoQuickSwitch({onNavigate,onTour,onReset,onAdvance,nextLabel}:
   setSearch("");
   dialog.showModal();
   setOpen(true);
-  searchRef.current?.focus();
+  requestAnimationFrame(()=>searchRef.current?.focus());
  }
  function hide(){dialogRef.current?.close();}
  function choose(option:QuickCommand){
