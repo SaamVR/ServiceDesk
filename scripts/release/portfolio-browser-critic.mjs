@@ -130,7 +130,9 @@ try{
  assert((await js("document.body.textContent||''")).includes("Welcome to the operations desk"),"First-run guide appears");
  assert(await click("button","Quick switch"),"Dashboard command center opens");
  assert(await js("!!document.querySelector('dialog[open]')"),"Native modal is open and focusable");
- assert(await js("document.activeElement?.getAttribute('aria-label')==='Search dashboard commands'"),"Search receives initial keyboard focus");
+ await waitFor(()=>js("document.activeElement?.getAttribute('aria-label')==='Search dashboard commands'"),1800);
+ assert(await js("document.activeElement?.getAttribute('aria-label')==='Search dashboard commands'"),"Search receives keyboard focus after the modal opening frame");
+ await shot("command-center-desktop-1440.png");
  await send("Input.insertText",{text:"crew"});
  await sleep(120);
  assert(await js("document.querySelector('dialog[open] input')?.value==='crew'"),"Command query accepts typed input");
