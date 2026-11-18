@@ -60,6 +60,9 @@ function send(method,params={}){
  });
 }
 await send("Page.enable");await send("Runtime.enable");
+// Headless Chrome may create a background target; ensure DOM focus is meaningful.
+await send("Page.bringToFront");
+await send("Emulation.setFocusEmulationEnabled",{enabled:true});
 async function js(expression){
  const r=await send("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true});
  if(r.exceptionDetails)throw Error("Browser evaluation exception: "+(r.exceptionDetails.text||"unknown"));
@@ -131,7 +134,7 @@ try{
  assert(await click("button","Quick switch"),"Dashboard command center opens");
  assert(await js("!!document.querySelector('dialog[open]')"),"Native modal is open and focusable");
  await sleep(140);
- console.log("FOCUS_DIAG",JSON.stringify(await js("({activeTag:document.activeElement?.tagName,activeLabel:document.activeElement?.getAttribute('aria-label'),activeHTML:document.activeElement?.outerHTML?.slice(0,400),modalOpen:!!document.querySelector('dialog[open]'),modalVisibility:getComputedStyle(document.querySelector('dialog')).visibility,inputExists:!!document.querySelector('dialog input[aria-label]'),inputFocused:document.activeElement===document.querySelector('dialog input[aria-label]')})")));
+ console.log("FOCUS_DIAG",JSON.stringify(await js("({activeTag:document.activeElement?.tagName,activeLabel:document.activeElement?.getAttribute('aria-label'),activeHTML:document.activeElement?.outerHTML?.slice(0,400),documentHasFocus:document.hasFocus(),modalOpen:!!document.querySelector('dialog[open]'),modalVisibility:getComputedStyle(document.querySelector('dialog')).visibility,inputExists:!!document.querySelector('dialog input[aria-label]'),inputFocused:document.activeElement===document.querySelector('dialog input[aria-label]')})")));
  await waitFor(()=>js("document.activeElement?.getAttribute('aria-label')==='Search dashboard commands'"),1800);
  assert(await js("document.activeElement?.getAttribute('aria-label')==='Search dashboard commands'"),"Search receives keyboard focus after the modal opening frame");
  await shot("command-center-desktop-1440.png");
