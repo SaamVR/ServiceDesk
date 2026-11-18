@@ -130,6 +130,8 @@ try{
  assert((await js("document.body.textContent||''")).includes("Welcome to the operations desk"),"First-run guide appears");
  assert(await click("button","Quick switch"),"Dashboard command center opens");
  assert(await js("!!document.querySelector('dialog[open]')"),"Native modal is open and focusable");
+ await sleep(140);
+ console.log("FOCUS_DIAG",JSON.stringify(await js("({activeTag:document.activeElement?.tagName,activeLabel:document.activeElement?.getAttribute('aria-label'),activeHTML:document.activeElement?.outerHTML?.slice(0,400),modalOpen:!!document.querySelector('dialog[open]'),modalVisibility:getComputedStyle(document.querySelector('dialog')).visibility,inputExists:!!document.querySelector('dialog input[aria-label]'),inputFocused:document.activeElement===document.querySelector('dialog input[aria-label]')})")));
  await waitFor(()=>js("document.activeElement?.getAttribute('aria-label')==='Search dashboard commands'"),1800);
  assert(await js("document.activeElement?.getAttribute('aria-label')==='Search dashboard commands'"),"Search receives keyboard focus after the modal opening frame");
  await shot("command-center-desktop-1440.png");

@@ -21,6 +21,14 @@ export function DemoQuickSwitch({onNavigate,onTour,onReset,onAdvance,nextLabel}:
  const [search,setSearch]=useState("");
  const options=searchQuickCommands(quickCommands(nextLabel),search);
 
+ // Native showModal() establishes the focus trap. After React reflects the
+ // modal open state, move keyboard focus to its primary search control.
+ useEffect(()=>{
+  if(open && dialogRef.current?.open){
+   searchRef.current?.focus({preventScroll:true});
+  }
+ },[open]);
+
  useEffect(()=>{
   function keyboardShortcut(event:KeyboardEvent){
    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){
