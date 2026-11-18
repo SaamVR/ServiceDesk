@@ -258,3 +258,74 @@
 
 /* Disclosure and strip microcopy are readable on the pale brand surface. */
 .heroBoundary,.heroStrip p{color:#52715f}
+
+
+/* Brand-specific portfolio themes: night retains ServiceDesk's deep-green animation canvas. */
+:global(html[data-portfolio-theme="light"]) .home{--ink:#273b59;--muted:#5a6681;--aqua:#147d9a;--coral:#db5570;--line:#e2dbef;background:#fffdfb;color:#273b59}
+:global(html[data-portfolio-theme="light"]) .hero{background:radial-gradient(ellipse at 7% 4%,#ffdfcf 0%,transparent 36%),radial-gradient(ellipse at 96% 18%,#dcdcff 0%,transparent 43%),radial-gradient(ellipse at 44% 94%,#c5f6f0 0%,transparent 52%),#fff9f5}
+:global(html[data-portfolio-theme="light"]) .hero h1{color:#293751}
+:global(html[data-portfolio-theme="light"]) .hero h1 em{color:#d65073}
+:global(html[data-portfolio-theme="light"]) .kicker{color:#5945aa}
+:global(html[data-portfolio-theme="light"]) .kickerSpark{background:linear-gradient(135deg,#7457cf,#ed6886)}
+:global(html[data-portfolio-theme="light"]) .heroLead{color:#475c76}
+:global(html[data-portfolio-theme="light"]) .primaryCta{background:#5940ad;border-color:#5940ad;color:#fff}
+:global(html[data-portfolio-theme="light"]) .primaryCta:hover{background:#47318f}
+:global(html[data-portfolio-theme="light"]) .secondaryCta{border-color:#9d8bca;color:#4b4190;background:#ffffffad}
+:global(html[data-portfolio-theme="light"]) .heroStrip{background:linear-gradient(100deg,#fce9df,#e9efff 47%,#dffaf4);border-color:#e8d5ec}
+:global(html[data-portfolio-theme="light"]) .heroStrip>div:nth-child(4n+1) strong{color:#ae437d}
+:global(html[data-portfolio-theme="light"]) .heroStrip>div:nth-child(4n+2) strong{color:#5243ad}
+:global(html[data-portfolio-theme="light"]) .heroStrip>div:nth-child(4n+3) strong{color:#087e8e}
+:global(html[data-portfolio-theme="light"]) .heroStrip>div:nth-child(4n) strong{color:#bd7135}
+:global(html[data-portfolio-theme="light"]) .heroStrip :is(span,p){color:#545b77}
+:global(html[data-portfolio-theme="light"]) .sectionLight{background:#fffefb}
+:global(html[data-portfolio-theme="light"]) .sectionSoft{background:linear-gradient(130deg,#ecf8ff 0%,#f7f0ff 56%,#fff6eb)}
+:global(html[data-portfolio-theme="light"]) .sectionDark{background:linear-gradient(142deg,#342d69 0%,#35346e 52%,#204e69 100%);color:#f7f5ff}
+:global(html[data-portfolio-theme="light"]) .sectionHead h2{color:#2e3a61}
+:global(html[data-portfolio-theme="light"]) .sectionHead h2 em{color:#bd4c8a}
+:global(html[data-portfolio-theme="light"]) .sectionHead>p{color:#566481}
+:global(html[data-portfolio-theme="light"]) .sectionDark .sectionHead h2{color:#fff}
+:global(html[data-portfolio-theme="light"]) .sectionDark .sectionHead h2 em{color:#ffba95}
+:global(html[data-portfolio-theme="light"]) .sectionDark .sectionHead>p{color:#d5d1f1}
+:global(html[data-portfolio-theme="light"]) .sectionDark .eyebrow{color:#e3b9fb}
+:global(html[data-portfolio-theme="light"]) .capabilityCard:nth-child(4n+1){background:#fce9f0;border-color:#edcfdf}
+:global(html[data-portfolio-theme="light"]) .capabilityCard:nth-child(4n+2){background:#edf0ff;border-color:#d4d4fb}
+:global(html[data-portfolio-theme="light"]) .capabilityCard:nth-child(4n+3){background:#e6f8ff;border-color:#bee7f2}
+:global(html[data-portfolio-theme="light"]) .capabilityCard:nth-child(4n){background:#fff0db;border-color:#f4debd}
+:global(html[data-portfolio-theme="light"]) .ruleCard:nth-child(3n+1){border-color:#d3c9ee;background:#fbf8ff}
+:global(html[data-portfolio-theme="light"]) .ruleCard:nth-child(3n+2){border-color:#c5e6ef;background:#f4fcff}
+:global(html[data-portfolio-theme="light"]) .ruleCard:nth-child(3n){border-color:#eed5d9;background:#fff8fa}
+:global(html[data-portfolio-theme="light"]) .deepDiveControl{background:linear-gradient(100deg,#f0e7ff,#e7f8ff);border-color:#d5c6f0}
+:global(html[data-portfolio-theme="dark"]) .home{--ink:#e9f6f0;--muted:#b0cec0;--aqua:#8bdcc9;--coral:#f6b798;--line:#365c52;--night:#102d2a;color:#e9f6f0;background:#091e20}
+:global(html[data-portfolio-theme="dark"]) .hero{background:radial-gradient(ellipse at 12% 2%,#163f3c,transparent 47%),radial-gradient(ellipse at 96% 74%,#173737,transparent 48%),#091e20}
+:global(html[data-portfolio-theme="dark"]) .hero h1{color:#f5fff9}
+:global(html[data-portfolio-theme="dark"]) .hero h1 em{color:#98e7ba}
+:global(html[data-portfolio-theme="dark"]) .kicker{color:#9de9c1}
+:global(html[data-portfolio-theme="dark"]) .kickerSpark{background:#24684f}
+:global(html[data-portfolio-theme="dark"]) .heroLead{color:#c6e0d2}
+:global(html[data-portfolio-theme="dark"]) .heroBoundary{color:#abd1bc}
+:global(html[data-portfolio-theme="dark"]) .heroStrip{background:#153d35;border-color:#3a6d57}
+:global(html[data-portfolio-theme="dark"]) .heroStrip strong{color:#a9efc0}
+:global(html[data-portfolio-theme="dark"]) .heroStrip :is(span,p){color:#c7e3d0}
+:global(html[data-portfolio-theme="dark"]) :is(.sectionLight,.sectionSoft,.capabilities){background:#0d2425;color:#e8f7ec}
+:global(html[data-portfolio-theme="dark"]) .sectionSoft{background:#102b2a}
+:global(html[data-portfolio-theme="dark"]) .sectionDark{background:#103c35;color:#f2fff4}
+:global(html[data-portfolio-theme="dark"]) .sectionHead h2{color:#effcf4}
+:global(html[data-portfolio-theme="dark"]) .sectionHead h2 em{color:#9fe5bc}
+:global(html[data-portfolio-theme="dark"]) .sectionHead>p{color:#bbd5c8}
+:global(html[data-portfolio-theme="dark"]) .sectionHead>p strong{color:#c4efd4}
+:global(html[data-portfolio-theme="dark"]) .eyebrow{color:#83d5b2}
+:global(html[data-portfolio-theme="dark"]) :is(.journeyBoard,.libraryFrame,.aiCanvas,.integrationInspector,.recoveryCanvas,.deepDiveControl){background:#153432;border-color:#3c6658;color:#ecf9f1;box-shadow:0 17px 44px #03161444}
+:global(html[data-portfolio-theme="dark"]) :is(.journeyChrome,.aiCanvasChrome,.recoveryChrome,.filterBar,.ruleInspectorTop){background:#173b36;border-color:#3a6556;color:#b7d9c5}
+:global(html[data-portfolio-theme="dark"]) :is(.journeyInspector,.aiCanvasInner,.ruleInspector,.recoveryGraphic,.recoveryTrail,.ruleDiagram){background:#163a35;border-color:#446c5e;color:#e9f9ef}
+:global(html[data-portfolio-theme="dark"]) :is(.stageButton,.aiMenuItem,.ruleCard,.providerTile,.recoveryTab,.capabilityCard){background:#183b38;border-color:#3a6d59;color:#e6f6e9}
+:global(html[data-portfolio-theme="dark"]) :is(.stageButton:hover,.aiMenuItem:hover,.ruleCard:hover,.recoveryTab:hover){background:#225146}
+:global(html[data-portfolio-theme="dark"]) :is(.stageMeta strong,.eventCopy h3,.aiModuleHeading h3,.aiMenuItem strong,.ruleCard strong,.ruleInspector h3,.capabilityCard h3){color:#effaf2}
+:global(html[data-portfolio-theme="dark"]) :is(.stageMeta small,.eventCopy>p:last-child,.eventDetails span,.eventDetails p,.aiMenuItem small,.aiModuleHeading p,.aiOutput>p,.ruleDisclaimer,.integrationCaveat){color:#c0d9c9}
+:global(html[data-portfolio-theme="dark"]) :is(.aiInput,.aiOutput,.aiSource,.eventDetails>div,.ruleNeutral,.recoveryResult){background:#1b403a;border-color:#416b5c;color:#e9f7ee}
+:global(html[data-portfolio-theme="dark"]) :is(.searchLabel input,.selectLabel select){background:#102c2b;border-color:#487362;color:#f3fff6}
+:global(html[data-portfolio-theme="dark"]) .primaryCta{background:#8de6b5;border-color:#8de6b5;color:#123c30}
+:global(html[data-portfolio-theme="dark"]) .secondaryCta{background:#1b443a;border-color:#568d70;color:#e6f9ec}
+:global(html[data-portfolio-theme="dark"]) .deepDiveControl strong{color:#edfef1}
+:global(html[data-portfolio-theme="dark"]) .deepDiveControl p{color:#bad9c9}
+:global(html[data-portfolio-theme="dark"]) .deepDiveControl button{background:#277657;border-color:#4ba57c}
+:global(html[data-portfolio-theme="dark"]) .closing{background:#092523}
