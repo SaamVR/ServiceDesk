@@ -33,6 +33,7 @@ function Num({ value }: { value: number }) {
 
 export function AutomationMotionHome() {
   const [currentStage, setCurrentStage] = useState(0);
+  const [detailedOpen,setDetailedOpen] = useState(false);
   const [playing, setPlaying] = useState(true);
   const [reduced, setReduced] = useState(false);
   const [inViewport, setInViewport] = useState(true);
@@ -66,12 +67,12 @@ export function AutomationMotionHome() {
   }, []);
 
   useEffect(() => {
-    if (!playing || reduced || !inViewport) return;
+    if (!playing || reduced || !inViewport || !detailedOpen) return;
     const id = window.setInterval(() => {
       if (!document.hidden) setCurrentStage(previous => (previous + 1) % totalStages);
     }, 3600);
     return () => window.clearInterval(id);
-  }, [playing, reduced, inViewport]);
+  }, [playing, reduced, inViewport, detailedOpen]);
 
   const visiblePlaybooks = useMemo(
     () => filterAutomationPlaybooks(automationPlaybooks, {
@@ -138,7 +139,11 @@ export function AutomationMotionHome() {
         <div><p className={styles.eyebrow}><Num value={1} /> / INTERACTIVE MOTION STORY</p><h2 id="journey-title">From the first hello<br />to the final <em>follow-up.</em></h2></div>
         <p>Every icon is a real licensed vector asset. Every state change represents a business handoff. Select an event or start playback to see what moves—and who approves it.</p>
       </div>
-      <div className={styles.journeyBoard}>
+      <div className={styles.deepDiveControl}>
+        <div><strong>Go deeper: the complete eight-stage business lifecycle</strong><p>Explore each trigger, automation response, AI assistance and human approval gate. The detailed sequence is optional so the main story stays focused.</p></div>
+        <button type="button" aria-expanded={detailedOpen} aria-controls="detailed-workflow-board" onClick={()=>{setDetailedOpen(v=>!v);setPlaying(false)}}>{detailedOpen?"Hide detailed workflow ↑":"Explore all 8 stages ↓"}</button>
+      </div>
+      {detailedOpen ? <div id="detailed-workflow-board" className={styles.journeyBoard}>
         <div className={styles.journeyChrome}><span><span className={styles.ping} /> WORKFLOW SIMULATOR</span><span>SAMPLE DATA • NO EXTERNAL ACTIONS</span></div>
         <div className={styles.routeViewport} aria-label="Select a stage to inspect">
           <div className={styles.routeTrack} aria-hidden="true"><div className={styles.routeFill} style={{width: (currentStage / (totalStages - 1) * 100) + "%"}} /><span className={styles.routePacket} style={{left: (currentStage / (totalStages - 1) * 100) + "%"}} /></div>
@@ -178,7 +183,7 @@ export function AutomationMotionHome() {
           </div>
           <span>{reduced ? "Reduced-motion preference respected · use Next" : playing ? "Playing · pauses when out of view" : "Paused · select a stage"}</span>
         </div>
-      </div>
+      </div> : null}
     </section>
 
     <section className={styles.sectionDark} id="ai-studio" aria-labelledby="ai-title">
