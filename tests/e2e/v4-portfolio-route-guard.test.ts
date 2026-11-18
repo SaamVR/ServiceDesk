@@ -5,7 +5,7 @@ describe("portfolio-only HTTP entry boundary", () => {
   it("keeps the homepage, case study, product tour and sandbox readable", () => {
     for (const path of [
       "/", "/work/business-automation", "/work/business-automation/",
-      "/sandbox", "/tour", "/features", "/use-cases/cleaning",
+      "/sandbox", "/demo", "/tour", "/features", "/use-cases/cleaning",
       "/integrations", "/pricing", "/contact", "/help", "/privacy",
       "/terms", "/presentation", "/health",
     ]) {
@@ -16,7 +16,7 @@ describe("portfolio-only HTTP entry boundary", () => {
 
   it("rejects all mutating verbs, even on otherwise public pages", () => {
     for (const method of ["POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) {
-      for (const path of ["/", "/sandbox", "/health", "/contact"]) {
+      for (const path of ["/", "/sandbox", "/demo", "/health", "/contact"]) {
         expect(portfolioAllowsRequest(method, path), method + " " + path).toBe(false);
       }
     }

@@ -141,7 +141,7 @@ export function AutomationCaseStudy() {
         <div className={styles.stackLine}><span>IMPLEMENTATION STACK</span><div><span>Next.js</span><span>React</span><span>TypeScript</span><span>PostgreSQL / Supabase</span><span>CSS motion</span></div></div>
       </section>
 
-      <section className={styles.finish} aria-labelledby="finish-heading"><span className={styles.finishMark} aria-hidden="true">✳</span><p>THE TAKEAWAY</p><h2 id="finish-heading">Automation should make the business <em>more understandable.</em> Not less human.</h2><div><Link className={styles.finishPrimary} href="/sandbox">Explore the working sample <span aria-hidden="true">↗</span></Link><Link className={styles.finishSecondary} href="/tour">View guided product tour <span aria-hidden="true">→</span></Link></div><small>Portfolio demonstration · synthetic customer, financial and delivery events · not a live service</small></section>
+      <section className={styles.finish} aria-labelledby="finish-heading"><span className={styles.finishMark} aria-hidden="true">✳</span><p>THE TAKEAWAY</p><h2 id="finish-heading">Automation should make the business <em>more understandable.</em> Not less human.</h2><div><Link className={styles.finishPrimary} href="/demo">Explore the guided dashboard <span aria-hidden="true">↗</span></Link><Link className={styles.finishSecondary} href="/tour">View guided product tour <span aria-hidden="true">→</span></Link></div><small>Portfolio demonstration · synthetic customer, financial and delivery events · not a live service</small></section>
     </div>
   );
 }
