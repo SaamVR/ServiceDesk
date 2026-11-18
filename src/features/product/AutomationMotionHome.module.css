@@ -240,3 +240,18 @@
 .deepDiveControl button{border:1px solid #217e5d;border-radius:9px;background:#176d51;color:white;min-height:46px;padding:11px 16px;font-size:.77rem;font-weight:870;flex:none}
 .deepDiveControl button:hover{background:#0e573f}.deepDiveControl + .journeyBoard{margin-top:18px}
 @media(max-width:640px){.deepDiveControl{padding:18px;gap:15px}.deepDiveControl>div{min-width:0}.deepDiveControl strong{font-size:1.12rem}.deepDiveControl p{font-size:.78rem}.deepDiveControl button{width:100%}}
+
+/* Screenshot-based mobile critic: bring the illustration closer to the first fold. */
+@media(max-width:380px){
+ .heroInner{padding-top:27px;padding-bottom:37px;gap:26px}
+ .hero h1{font-size:2.67rem;line-height:1.06;letter-spacing:-.075em;margin:19px 0 20px}
+ .heroLead{font-size:.91rem;line-height:1.67}
+ .heroActions{margin:22px 0 12px;gap:10px}
+ .heroActions .primaryCta,.heroActions .secondaryCta{width:100%;min-height:45px;justify-content:space-between}
+ .heroBoundary{font-size:.68rem}
+}
+@media(min-width:381px) and (max-width:640px){
+ .heroInner{padding-top:38px;gap:32px}
+ .hero h1{margin:19px 0 22px}
+ .heroActions{margin:23px 0 15px}
+}

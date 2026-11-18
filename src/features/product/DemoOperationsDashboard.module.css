@@ -72,3 +72,24 @@
 .app .eyebrow{font-size:.7rem}
 @media(max-width:1130px){.mission{grid-template-columns:42px minmax(0,1fr)}.missionActions{grid-column:2;display:flex;flex-wrap:wrap;min-width:0}}
 @media(max-width:600px){.mission{grid-template-columns:1fr;padding:15px;margin-bottom:18px;gap:12px}.missionIcon{display:none}.missionActions{grid-column:1}.missionActions button{flex:1;white-space:normal;font-size:.71rem}.missionCopy h2{font-size:1.14rem}}
+
+/* Visual QA: keep contextual onboarding meaningful without hiding the workspace on phones. */
+.guideExplanation{color:#537e6a;font-size:.78rem;line-height:1.6;margin:7px 0 0!important}
+.guideInstruction{color:#205c41;font-size:.77rem;line-height:1.5;margin:5px 0 0!important}
+.guideMobileDetails{display:none}
+.headingBadge{display:flex;align-items:center;gap:8px;border:1px solid #c6e7d1;background:#e8f8ee;color:#24825b;border-radius:9px;min-height:40px;padding:10px 12px;white-space:nowrap;font-size:.69rem;font-weight:900;letter-spacing:.05em}
+.headingBadge .icon{width:18px;height:18px}
+@media(max-width:600px){
+ .guide{margin:11px 11px 0;padding:14px 15px 13px;gap:8px}
+ .guide h2{font-size:1.05rem;margin:5px 0}
+ .guideExplanation{display:none}
+ .guideInstruction{margin:5px 0 0!important;font-size:.74rem;line-height:1.55}
+ .guideMobileDetails{display:block;margin-top:7px;font-size:.71rem;color:#507965}
+ .guideMobileDetails summary{cursor:pointer;color:#237957;font-weight:850}
+ .guideMobileDetails p{padding:7px 0 0;font-size:.71rem;line-height:1.6}
+ .guideProgress{margin:9px 0 0}
+ .guideActions{gap:5px}
+ .guideActions button{min-height:42px;padding:8px 9px}
+ .headingBadge{display:none}
+ .heading{margin-bottom:16px}
+}

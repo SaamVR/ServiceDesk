@@ -113,7 +113,7 @@ export function AutomationMotionHome() {
         <div className={styles.heroCopy}>
           <div className={styles.kicker}><span className={styles.kickerSpark}><Icon name="sparkles" /></span> BUSINESS AUTOMATION / INTERACTIVE PORTFOLIO</div>
           <h1 id="motion-home-title">Your business.<br /><em>In motion.</em></h1>
-          <p className={styles.heroLead}>Watch a cleaning business move from the first customer message to the final follow-up. Explore the systems, AI assistance and human decisions behind every handoff.</p>
+          <p className={styles.heroLead}>One customer message becomes a reviewed quote, scheduled visit and accountable follow-up. Explore the AI-assisted handoffs and human decisions.</p>
           <div className={styles.heroActions}>
             <Link href="/demo" className={styles.primaryCta}>Explore guided dashboard <span aria-hidden="true">↗</span></Link>
             <a href="#scenario-lab" className={styles.secondaryCta}>Run workflow simulation <span aria-hidden="true">↘</span></a>
