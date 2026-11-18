@@ -255,3 +255,6 @@
  .hero h1{margin:19px 0 22px}
  .heroActions{margin:23px 0 15px}
 }
+
+/* Disclosure and strip microcopy are readable on the pale brand surface. */
+.heroBoundary,.heroStrip p{color:#52715f}

@@ -87,6 +87,21 @@ async function shot(name){
  writeFileSync(join(out,name),Buffer.from(result.data,"base64"));
 }
 async function size(){return js("({width:innerWidth,scrollWidth:document.documentElement.scrollWidth})")}
+function contrastRatio(fg,bg){
+ const channels=String(fg).match(/[0-9]+(?:\.[0-9]+)?/g)?.slice(0,3).map(Number);
+ if(!channels||channels.length!==3)throw Error("Cannot parse CSS color "+fg);
+ const background=[1,3,5].map(i=>parseInt(bg.slice(i,i+2),16));
+ const l=x=>{const n=x/255;return n<=.04045?n/12.92:((n+.055)/1.055)**2.4};
+ const lum=rgb=>.2126*l(rgb[0])+.7152*l(rgb[1])+.0722*l(rgb[2]);
+ const a=lum(channels),b=lum(background);
+ return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+}
+async function checkContrast(selector,bg,label){
+ const fg=await js("getComputedStyle(document.querySelector("+JSON.stringify(selector)+")).color");
+ const ratio=contrastRatio(fg,bg);
+ assert(ratio>=4.5,label+" ("+ratio.toFixed(2)+":1)");
+}
+
 async function noOverrun(title){
  const v=await size();assert(v.scrollWidth<=v.width+4,title+": horizontal overrun "+(v.scrollWidth-v.width)+"px");
 }
@@ -95,6 +110,9 @@ try{
  await setViewport(1440,900);await navigate("/");
  assert((await js("document.querySelector('h1')?.textContent||''")).includes("Your business"),"Home hero renders");
  assert(await js("!!document.querySelector('a[href=\"/demo\"]')"),"Guided dashboard CTA exists");
+ await checkContrast('[class*="hubCard"] [class*="stageLabel"]',"#f9fffa","Cinematic microcopy contrast >=4.5");
+ await checkContrast('[class*="heroBoundary"]',"#fafdfb","Hero disclosure contrast >=4.5");
+
  assert(await click("button","Replay"),"Cinematic replay button responds");
  await shot("home-1440.png");await noOverrun("Home 1440");
  assert(await click("button","Explore all 8 stages"),"Detailed lifecycle expands");
@@ -107,6 +125,8 @@ try{
 
  await setViewport(1440,900);await navigate("/demo");
  assert((await js("document.querySelector('h1')?.textContent||''")).includes("Overview"),"Dashboard overview renders");
+ await checkContrast('[class*="metrics"] article small',"#ffffff","Dashboard metric caption contrast >=4.5");
+
  assert((await js("document.body.textContent||''")).includes("Welcome to the operations desk"),"First-run guide appears");
  await shot("dashboard-1440.png");
  assert(await click("button","Next guide step"),"Guided tour advances to inbox");

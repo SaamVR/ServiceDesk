@@ -21,3 +21,9 @@
 @media(max-width:660px){.frame{height:535px;border-radius:16px}.top{padding:17px;font-size:.55rem}.hub{height:335px}.hubCard{width:74%;min-height:290px;padding:18px}.orbitOne,.orbitTwo,.orbitThree{width:40px;height:40px}.orbitOne{top:26px;left:1%}.orbitTwo{top:84px;right:1%}.orbitThree{bottom:25px;left:2%}.circleOne{width:280px;height:280px}.circleTwo{width:355px;height:355px}.pipeline{padding:0 12px}.pipelineRail{left:calc(12px + (100% - 24px)/12);right:calc(12px + (100% - 24px)/12)}.bottom{padding:0 15px}.bottom{padding:0 13px 12px;gap:7px}.launchLink{font-size:.63rem}}
 @media(max-width:390px){.hubCard{width:77%}.hubCard h2{font-size:1.25rem}.hubCard p{font-size:.7rem}.top>span:last-child{display:none}.pipeline .stageSlot{width:36px;height:36px}.stageSlot .icon{width:20px;height:20px}.pipelineRail{top:19px}}
 @media(prefers-reduced-motion:reduce){.frame *, .frame *::before,.frame *::after{animation:none!important;transition:none!important}}
+
+/* Text contrast on the mint storyboard card, verified against #f9fffa. */
+.hubCard .stageNumber{color:#2d7655}
+.hubCard .stageLabel{color:#27744f}
+.hubCard p{color:#476e5b}
+.hubCard .cardFooter{color:#3f7459}

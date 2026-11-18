@@ -37,3 +37,7 @@
 @media(max-width:750px){.heading{grid-template-columns:1fr;gap:14px}.heading>p{max-width:700px}.comparison{grid-template-columns:1fr;gap:0}.bridge{padding:9px;grid-template-columns:auto auto auto;justify-content:center}.bridge i{transform:rotate(90deg)!important}.manual,.assisted{padding:21px}.columnHead{margin-bottom:12px}.columnNote{margin-top:13px}}
 @media(max-width:550px){.section{padding:65px 16px}.heading h2{font-size:clamp(2.7rem,10vw,4rem)}.choices{display:grid;grid-template-columns:1fr;gap:6px}.choices button{justify-content:start}.statement{padding:15px;gap:8px}.statement>span{font-size:.58rem}.statement strong{font-size:.8rem}.comparison li button{min-height:61px}.footer a{width:100%;text-align:center}}
 @media(prefers-reduced-motion:reduce){.section *, .section *::before,.section *::after{animation:none!important;transition:none!important}.choices button:hover,.comparison li button:hover,.footer a:hover{transform:none!important}}
+
+/* Restore readable editorial microcopy on the pearl-white background. */
+.heading>p{color:#557360}
+.choices button:not([data-active="true"]){color:#1c7754}

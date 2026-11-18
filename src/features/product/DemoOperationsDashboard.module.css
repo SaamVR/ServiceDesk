@@ -93,3 +93,7 @@
  .headingBadge{display:none}
  .heading{margin-bottom:16px}
 }
+
+/* Independent screenshot audit: smaller metric labels require real readability. */
+.metrics article>span,.metrics small,.heading>div>p:last-child{color:#52715f}
+@media(max-width:600px){.metrics .icon{display:none}}
