@@ -2,6 +2,7 @@
   --theater-night:#102e2b;--theater-dark:#143a35;--theater-mint:#94e8bf;
   --theater-green:#22b18c;--theater-white:#f6fbf6;--theater-orange:#e3ae83;
   color:#174739;padding:clamp(78px,8vw,132px) max(38px,calc((100vw - 1320px)/2));
+  scroll-margin-top:94px;
   background:linear-gradient(180deg,#eff8f2 0%,#e9f6ee 64%,#f4fbf7 100%);
   position:relative;isolation:isolate;overflow:hidden;
 }
