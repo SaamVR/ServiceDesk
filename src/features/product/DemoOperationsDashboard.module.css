@@ -157,3 +157,10 @@
  .guide[data-compact="true"] .guideMobileDetails{margin-top:6px}
  .guide[data-compact="true"] h2{font-size:1rem}
 }
+
+/* Compact cross-workspace next action: no dead end after navigation. */
+.headingActions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:9px;max-width:420px}
+.headingAdvance{border:1px solid #69b68d;border-radius:9px;background:#e7f7ec;color:#176746;padding:10px 15px;min-height:44px;font-size:.75rem;font-weight:870;line-height:1.35;box-shadow:0 4px 11px #205e3c0b}
+.headingAdvance:hover{background:#d3f1dd;border-color:#3c9b6b;transform:translateY(-1px)}
+@media(max-width:600px){.headingActions{justify-content:stretch;width:100%;max-width:none}.headingAdvance{width:100%;text-align:center}.headingActions .headingBadge{display:none}}
+@media(prefers-reduced-motion:reduce){.headingAdvance:hover{transform:none}}
