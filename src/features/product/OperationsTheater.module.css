@@ -241,3 +241,137 @@
   .theater *, .theater *::before, .theater *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
   .scenarioButton:hover,.scenarioButton[data-selected="true"]{transform:none}
 }
+
+
+/* Theme direction: dark retains the originally approved deep-green event theater.
+   Light switches the SAME interactive engine to the site's mint/porcelain palette. */
+:global(html:not([data-portfolio-theme="dark"])) .theater {
+  background:linear-gradient(180deg,#f5fff9 0%,#e9f9f0 65%,#fbfffc 100%);
+}
+:global(html:not([data-portfolio-theme="dark"])) .workspace {
+  background:#f6fdf8;color:#214f3c;border-color:#b3d9c4;
+  box-shadow:0 31px 73px rgb(47 115 71 / 13%);
+}
+:global(html:not([data-portfolio-theme="dark"])) .workspaceChrome {
+  background:#e2f5ea;color:#286449;border-bottom-color:#c2e5d0;
+}
+:global(html:not([data-portfolio-theme="dark"])) .chromeFlags,
+:global(html:not([data-portfolio-theme="dark"])) .chromeFlags>span:last-child {color:#3b8565;border-color:#add7bf}
+:global(html:not([data-portfolio-theme="dark"])) .mainArea {
+  background:radial-gradient(circle at 54% 42%,#f8fff9 0%,#e8f9ee 61%,#dcf2e5 100%);
+}
+:global(html:not([data-portfolio-theme="dark"])) .mainArea::before {
+  background-image:linear-gradient(#69ba9166 1px,transparent 1px),linear-gradient(90deg,#69ba9166 1px,transparent 1px);
+  opacity:.35;
+}
+:global(html:not([data-portfolio-theme="dark"])) .overline{color:#287c60}
+:global(html:not([data-portfolio-theme="dark"])) .simulatorSummary h3{color:#185d45}
+:global(html:not([data-portfolio-theme="dark"])) .simulatorSummary>div:first-child>p:last-child{color:#4d7a63}
+:global(html:not([data-portfolio-theme="dark"])) .samplePill{color:#256e50;border-color:#a4d4b6;background:#effaf2}
+:global(html:not([data-portfolio-theme="dark"])) .samplePill .glyph{color:#288d65}
+:global(html:not([data-portfolio-theme="dark"])) .signalCanvas {
+  background:linear-gradient(125deg,#eefbf2,#e0f4e8);
+  border-color:#b2dec2;
+}
+:global(html:not([data-portfolio-theme="dark"])) .signalCurve{background:#b5dbbe}
+:global(html:not([data-portfolio-theme="dark"])) .signalBeam{background:linear-gradient(90deg,#1c906c,#5bc996)}
+:global(html:not([data-portfolio-theme="dark"])) .signalMover {
+  background:#fff;border-color:#1a9871;box-shadow:0 0 0 7px #4acb9b2c,0 0 20px #26a47d30;
+}
+:global(html:not([data-portfolio-theme="dark"])) .pipelineIcon {
+  color:#2f8b67;border-color:#a6d6b7;background:#f8fffa;
+  box-shadow:0 8px 16px #41966d12;
+}
+:global(html:not([data-portfolio-theme="dark"])) .pipeline>li[data-phase="complete"] .pipelineIcon {
+  color:#176b4d;background:#bcebd0;border-color:#7ac29d;
+}
+:global(html:not([data-portfolio-theme="dark"])) .pipeline>li[data-phase="active"] .pipelineIcon {
+  color:#105f41;background:#d2ffe2;border-color:#40aa7b;
+  box-shadow:0 13px 25px #2d80582a,0 0 0 6px #76ddb332;
+}
+:global(html:not([data-portfolio-theme="dark"])) .pipelineLabel{color:#446f56}
+:global(html:not([data-portfolio-theme="dark"])) .pipelineLabel small{color:#5a886f}
+:global(html:not([data-portfolio-theme="dark"])) .pipeline>li[data-phase="active"] .pipelineLabel,
+:global(html:not([data-portfolio-theme="dark"])) .pipeline>li[data-phase="blocked"] .pipelineLabel{color:#165c41}
+:global(html:not([data-portfolio-theme="dark"])) .signalCaption {
+  color:#517d67;border-color:#b8ddc8;
+}
+:global(html:not([data-portfolio-theme="dark"])) .stageFocus {
+  background:#fff;border-color:#b6e0c7;box-shadow:0 18px 39px #266b4320;
+}
+:global(html:not([data-portfolio-theme="dark"])) .stageSymbol {background:#e6f8eb}
+:global(html:not([data-portfolio-theme="dark"])) .stageHalo {border-color:#9fdec0}
+:global(html:not([data-portfolio-theme="dark"])) .stepControl {
+  background:#fff;color:#23694a;border-color:#a9d4b9;
+}
+:global(html:not([data-portfolio-theme="dark"])) .stepControl:hover:not(:disabled) {background:#e0f6e8}
+:global(html:not([data-portfolio-theme="dark"])) .playControl {
+  background:#1c8966;color:#fff;border-color:#1c8966;
+}
+:global(html:not([data-portfolio-theme="dark"])) .playControl:hover:not(:disabled){background:#146c50}
+:global(html:not([data-portfolio-theme="dark"])) .controlState{color:#4d8066}
+:global(html:not([data-portfolio-theme="dark"])) .commandPanel {
+  background:linear-gradient(180deg,#f2fcf5,#e6f7ed);color:#275e46;border-left-color:#b7dfc6;
+}
+:global(html:not([data-portfolio-theme="dark"])) .panelHeading{color:#28674d;border-color:#c2e0c9}
+:global(html:not([data-portfolio-theme="dark"])) .viewSwitcher{background:#d9eee1}
+:global(html:not([data-portfolio-theme="dark"])) .viewSwitcher button{color:#4b765d}
+:global(html:not([data-portfolio-theme="dark"])) .viewSwitcher button[data-active="true"] {
+  background:#fff;color:#156345;box-shadow:0 2px 8px #295a4121;
+}
+:global(html:not([data-portfolio-theme="dark"])) .sourceLabel,
+:global(html:not([data-portfolio-theme="dark"])) .messageLabel{color:#376c54}
+:global(html:not([data-portfolio-theme="dark"])) .sourceLabel select,
+:global(html:not([data-portfolio-theme="dark"])) .messageLabel textarea {
+  background:#fff;color:#244d39;border-color:#b9dcc4;
+}
+:global(html:not([data-portfolio-theme="dark"])) .messageLabel>span,
+:global(html:not([data-portfolio-theme="dark"])) .inputNote{color:#587f65}
+:global(html:not([data-portfolio-theme="dark"])) .signalFields {
+  background:#e6f7ed;border-color:#b4d9c2;
+}
+:global(html:not([data-portfolio-theme="dark"])) .signalFields>span{color:#357058}
+:global(html:not([data-portfolio-theme="dark"])) .signalFields>div span {
+  background:#fff;color:#507865;border-color:#b8d7c4;
+}
+:global(html:not([data-portfolio-theme="dark"])) .signalFields>div span[data-found="true"] {
+  background:#c9f2d9;color:#1a694c;border-color:#6ab68d;
+}
+:global(html:not([data-portfolio-theme="dark"])) .ledgerHeader {border-color:#c2e0cc;color:#285f46}
+:global(html:not([data-portfolio-theme="dark"])) .ledgerHeader span:last-child {color:#4d8869}
+:global(html:not([data-portfolio-theme="dark"])) .ledgerIndex {
+  color:#216d4c;background:#dbf4e5;border-color:#a1d7b7;
+}
+:global(html:not([data-portfolio-theme="dark"])) .ledger>li>div {border-color:#cae3d0}
+:global(html:not([data-portfolio-theme="dark"])) .ledger>li strong {color:#26573f}
+:global(html:not([data-portfolio-theme="dark"])) .ledger>li p {color:#567964}
+:global(html:not([data-portfolio-theme="dark"])) .ledger>li small {color:#3d7b5d}
+:global(html:not([data-portfolio-theme="dark"])) .panelTrust {border-color:#b7dbc6;color:#527861}
+:global(html:not([data-portfolio-theme="dark"])) .panelTrust .glyph {color:#258562}
+
+/* The approved green simulator is dark in dark mode; brighten only its outer stage text. */
+:global(html[data-portfolio-theme="dark"]) .theater {
+  background:linear-gradient(180deg,#102c27,#103b32 62%,#102b27);color:#e4f9eb;
+}
+:global(html[data-portfolio-theme="dark"]) .theater::before {
+  border-color:#438b6647;box-shadow:0 0 0 52px #15443755,0 0 0 53px #7acda11b,0 0 0 116px #1a4c3c44;
+}
+:global(html[data-portfolio-theme="dark"]) .kicker {color:#93e6bb}
+:global(html[data-portfolio-theme="dark"]) .sectionIntro h2 {color:#effff2}
+:global(html[data-portfolio-theme="dark"]) .sectionIntro h2 em {color:#95ecc3}
+:global(html[data-portfolio-theme="dark"]) .introAside>p {color:#b5d5bf}
+:global(html[data-portfolio-theme="dark"]) .notice {color:#a3d9bc}
+:global(html[data-portfolio-theme="dark"]) .scenarioButton:not([data-selected="true"]) {
+  background:#1b483a;color:#e4f8eb;border-color:#377d5f;box-shadow:none;
+}
+:global(html[data-portfolio-theme="dark"]) .scenarioButton:not([data-selected="true"]) small {color:#bfd8c5}
+:global(html[data-portfolio-theme="dark"]) .scenarioButton:not([data-selected="true"]) .scenarioOrdinal {color:#a4d7b6}
+:global(html[data-portfolio-theme="dark"]) .scenarioButton:not([data-selected="true"]) .scenarioOrdinal .glyph {color:#90dcb7}
+:global(html[data-portfolio-theme="dark"]) .scenarioButton:not([data-selected="true"]):hover {
+  background:#245942;border-color:#65bb8c;
+}
+:global(html[data-portfolio-theme="dark"]) .afterTheater>div {
+  background:#194537;border-color:#3c7b60;color:#95e9c1;
+}
+:global(html[data-portfolio-theme="dark"]) .afterTheater strong {color:#e0f8e7}
+:global(html[data-portfolio-theme="dark"]) .afterTheater small {color:#b5d2be}
