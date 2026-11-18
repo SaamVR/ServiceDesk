@@ -5,6 +5,7 @@ import {createSandboxState,sandboxReducer,sandboxQuote,sandboxStages,sandboxOuts
 import {automationPlaybooks,automationPlaybookCategories} from "@/features/operations/automation-playbooks";
 import {dashboardModules,dashboardGuide,dashboardNextAction,dashboardProgress,dashboardStatus,dashboardScreenFor,type DashboardModule} from "./demo-dashboard-model";
 import styles from "./DemoOperationsDashboard.module.css";
+import {DemoQuickSwitch} from "./DemoQuickSwitch";
 import {aiReviewScenarios,aiScenarioFor,aiCanApprove,aiDecisionLabel,type AiReviewDecision,type AiReviewScenarioId} from "./ai-review-model";
 
 const usd=new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
@@ -81,7 +82,7 @@ export function DemoOperationsDashboard(){
  <div className={styles.area}>
   <header className={styles.topbar}>
    <p>BrightRoom <span>/</span> <strong>{dashboardScreenFor(module).label}</strong></p>
-   <div><span className={styles.synth}><i/> SAMPLE ONLY</span><button type="button" onClick={()=>{setGuide(true);stepGuide(0)}}>Guided tour</button><button type="button" onClick={()=>act("RESET")}>↺ Reset</button><span className={styles.avatar}>BR</span></div>
+   <div><span className={styles.synth}><i/> SAMPLE ONLY</span><DemoQuickSwitch onNavigate={navigate} onTour={()=>{setGuide(true);stepGuide(0)}} onReset={()=>act("RESET")} onAdvance={()=>{if(next)act(next.action)}} nextLabel={next?.label??null}/><button type="button" onClick={()=>{setGuide(true);stepGuide(0)}}>Guided tour</button><button type="button" onClick={()=>act("RESET")}>↺ Reset</button><span className={styles.avatar}>BR</span></div>
   </header>
   <nav className={styles.mobileNav} aria-label="Dashboard module shortcuts">{dashboardModules.map(item=><button type="button" key={item.id} data-active={module===item.id} onClick={()=>navigate(item.id)}>{item.label}</button>)}</nav>
   {guide?<section className={styles.guide} aria-label="Dashboard guided tour">
