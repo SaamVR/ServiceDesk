@@ -124,6 +124,5 @@ export function DemoOperationsDashboard(){
    <footer className={styles.footer}><Icon name="shield-check"/><p>Portfolio dashboard · all messages, bookings, AI text, financial actions, and crew records are fictional and stored in React memory only.</p><Link href="/sandbox">Original sandbox ↗</Link></footer>
   </section>
  </div>
- </div>
  </main>;
 }
