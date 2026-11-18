@@ -7,6 +7,8 @@ import { automationPlaybooks, automationPlaybookCategories } from "../operations
 import { filterAutomationPlaybooks, type PlaybookCategoryFilter, type PlaybookSeverityFilter } from "../operations/automation-playbook-finder";
 import styles from "./AutomationMotionHome.module.css";
 import { OperationsTheater } from "./OperationsTheater";
+import { CinematicHero } from "./CinematicHero";
+import { WorkflowComparison } from "./WorkflowComparison";
 
 const totalStages = motionJourney.length;
 
@@ -112,25 +114,12 @@ export function AutomationMotionHome() {
           <h1 id="motion-home-title">Your business.<br /><em>In motion.</em></h1>
           <p className={styles.heroLead}>Watch a cleaning business move from the first customer message to the final follow-up. Explore the systems, AI assistance and human decisions behind every handoff.</p>
           <div className={styles.heroActions}>
-            <a href="#scenario-lab" className={styles.primaryCta}>Run an interactive scenario <span aria-hidden="true">↘</span></a>
-            <Link href="/sandbox" className={styles.secondaryCta}>Try the working sandbox <span aria-hidden="true">↗</span></Link>
+            <Link href="/demo" className={styles.primaryCta}>Explore guided dashboard <span aria-hidden="true">↗</span></Link>
+            <a href="#scenario-lab" className={styles.secondaryCta}>Run workflow simulation <span aria-hidden="true">↘</span></a>
           </div>
           <p className={styles.heroBoundary}><span className={styles.boundaryDot} /> Interactive fictional walkthrough. Source-level prototypes; no live customer, AI or payment actions.</p>
         </div>
-        <div className={styles.heroVisual} aria-label="Animated overview of the customer-to-operation business journey">
-          <div className={styles.visualTop}><span className={styles.greenDot} /> AUTOMATION SYSTEM / SIMULATION <span className={styles.visualMeta}>PORTFOLIO VIEW</span></div>
-          <div className={styles.visualCore}>
-            <div className={styles.visualCoreTop}><Icon name="workflow" className={styles.coreIcon} /><span><small>OPERATING SYSTEM</small><strong>ServiceDesk AI</strong></span></div>
-            <div className={styles.visualCoreStatus}><span className={styles.signalSpark} /> Follow the signal, not the busywork.</div>
-          </div>
-          <div className={styles.visualOrbit}>
-            <div className={styles.orbitItem}><Icon name="message-square" /><span>New enquiry</span></div>
-            <div className={styles.orbitItem}><Icon name="brain-circuit" /><span>AI assists</span></div>
-            <div className={styles.orbitItem}><Icon name="calendar-check" /><span>Crew coordinated</span></div>
-            <div className={styles.orbitItem}><Icon name="receipt" /><span>Ledger reviewed</span></div>
-          </div>
-          <div className={styles.visualBottom}><span><Icon name="shield-check" /> Human approvals stay in control</span><span>01 → 08</span></div>
-        </div>
+        <CinematicHero />
       </div>
       <div className={styles.heroStrip}>
         <div><strong>08</strong><span>Story stages</span></div>
@@ -142,6 +131,7 @@ export function AutomationMotionHome() {
     </section>
 
     <OperationsTheater />
+    <WorkflowComparison />
 
     <section className={styles.sectionLight} id="live-workflow" aria-labelledby="journey-title" ref={stageRef}>
       <div className={styles.sectionHead}>
@@ -319,7 +309,7 @@ export function AutomationMotionHome() {
     <section className={styles.closing} aria-labelledby="closing-title">
       <div className={styles.closingOrbit} aria-hidden="true"><Icon name="workflow"/></div>
       <p>THE NEXT GENERATION OF SERVICE OPERATIONS</p><h2 id="closing-title">Less noise.<br /><em>More time for the work.</em></h2>
-      <div className={styles.closingActions}><Link href="/sandbox" className={styles.primaryCta}>Launch interactive sandbox <span aria-hidden="true">↗</span></Link><Link href="/work/business-automation" className={styles.secondaryCta}>Read the full case study <span aria-hidden="true">→</span></Link></div>
+      <div className={styles.closingActions}><Link href="/demo" className={styles.primaryCta}>Launch guided dashboard <span aria-hidden="true">↗</span></Link><Link href="/work/business-automation" className={styles.secondaryCta}>Read the full case study <span aria-hidden="true">→</span></Link></div>
       <small>Portfolio prototype · all event data, AI outputs, failures and financial actions are fictional · no external API calls from this experience.</small>
     </section>
   </div>;

@@ -51,6 +51,7 @@ export function SandboxJourney() {
           <span>ServiceDesk <b>AI</b></span>
         </Link>
         <nav aria-label="Sandbox navigation" className={styles.navLinks}>
+          <Link href="/demo">Guided dashboard</Link>
           <Link href="/tour">Guided tour</Link>
           <Link href="/">Website</Link>
         </nav>

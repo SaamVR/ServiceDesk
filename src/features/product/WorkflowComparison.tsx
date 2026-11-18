@@ -1,5 +1,5 @@
 "use client";
-import {useState,type CSSProperties} from "react";
+import {useState} from "react";
 import Link from "next/link";
 import styles from "./WorkflowComparison.module.css";
 const stories=[
@@ -7,7 +7,7 @@ const stories=[
 {id:"scheduling",label:"Crew scheduling",icon:"calendar-check",prompt:"An accepted quote needs a realistic visit time.",manual:["Find the previous customer email","Call the crew for availability","Compare calendars by hand","Send an unverified confirmation"],assisted:["Review slot freshness","Check conflicts and holds","Propose eligible crew assignment","Wait for dispatcher confirmation"],gate:"No booking is confirmed until real capacity and provider state are verified."},
 {id:"recovery",label:"Failed confirmation",icon:"mail",prompt:"An outbound job update has no delivery receipt.",manual:["Search the mailbox for a reply","Guess whether the customer read it","Resend without verifying the last send","Lose context during handover"],assisted:["Preserve QUEUED/FAILED state","Show owned recovery attention","Require operator reconciliation","Only retry after human authorization"],gate:"Provider acceptance, delivery and read are always distinct."},
 ] as const;
-function Icon({name}:{name:string}){const url="url(/portfolio/icons/"+name+".svg)";return <span aria-hidden="true" className={styles.icon} style={{maskImage:url,WebkitMaskImage:url,maskSize:"contain",WebkitMaskSize:"contain",maskRepeat:"no-repeat",WebkitMaskRepeat:"no-repeat",maskPosition:"center",WebkitMaskPosition:"center"}} as CSSProperties/>}
+function Icon({name}:{name:string}){const url="url(/portfolio/icons/"+name+".svg)";return <span aria-hidden="true" className={styles.icon} style={{maskImage:url,WebkitMaskImage:url,maskSize:"contain",WebkitMaskSize:"contain",maskRepeat:"no-repeat",WebkitMaskRepeat:"no-repeat",maskPosition:"center",WebkitMaskPosition:"center"}}/>}
 export function WorkflowComparison(){
  const [active,setActive]=useState(0);
  const [focus,setFocus]=useState(0);
