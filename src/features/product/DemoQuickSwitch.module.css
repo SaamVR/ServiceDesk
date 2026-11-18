@@ -33,22 +33,3 @@
 @media(max-width:920px){.trigger kbd{display:none}.dialog{inset:5vh 0 auto}}
 @media(max-width:550px){.trigger{padding:8px;min-width:39px;justify-content:center}.buttonText{display:none}.header{padding:19px 17px 16px}.header>div>span{font-size:.72rem}.dialog{inset:3vh 0 auto;width:calc(100vw - 22px);max-height:90vh;border-radius:13px}.search{margin:12px 11px;padding:12px}.results{padding:0 11px 12px;max-height:62vh}.option{padding:9px;gap:8px}.optionType{display:none}.footer{padding:12px}.footer strong{width:100%;margin:0}}
 @media(prefers-reduced-motion:reduce){.dialog,.option{transition:none!important}.option:hover,.option:focus-visible{transform:none!important}}
-
-/* Consistent nighttime command palette; native dialog behavior unchanged. */
-:global(html[data-portfolio-theme="dark"]) .dialog{background:#132f2e;border-color:#467460;color:#ebf8f0;box-shadow:0 45px 105px #011716c9}
-:global(html[data-portfolio-theme="dark"]) .dialog::backdrop{background:#020f10d9}
-:global(html[data-portfolio-theme="dark"]) .header{border-color:#3c6154}
-:global(html[data-portfolio-theme="dark"]) .header h2{color:#f0fff6}
-:global(html[data-portfolio-theme="dark"]) .header>div p{color:#9be6bd}
-:global(html[data-portfolio-theme="dark"]) .header>div>span{color:#b9d7c7}
-:global(html[data-portfolio-theme="dark"]) .search{background:#0e2829;border-color:#4e8569;box-shadow:0 8px 23px #06161750}
-:global(html[data-portfolio-theme="dark"]) .search input{color:#f6fff9}
-:global(html[data-portfolio-theme="dark"]) .search input::placeholder{color:#bad5c6}
-:global(html[data-portfolio-theme="dark"]) :is(.close,.optionIcon,.search kbd,.footer kbd){background:#235043;color:#cbf0d8;border-color:#457963}
-:global(html[data-portfolio-theme="dark"]) .option{color:#edfaef}
-:global(html[data-portfolio-theme="dark"]) .option :is(strong,small){color:#d5eddd}
-:global(html[data-portfolio-theme="dark"]) .option:hover,:global(html[data-portfolio-theme="dark"]) .option:focus-visible{background:#224d3e;border-color:#549c70}
-:global(html[data-portfolio-theme="dark"]) .optionType{color:#b2e3c6}
-:global(html[data-portfolio-theme="dark"]) .results{scrollbar-color:#4e7964 #122b2b}
-:global(html[data-portfolio-theme="dark"]) .footer{background:#193931;border-color:#3c6b52;color:#b9d7c8}
-:global(html[data-portfolio-theme="dark"]) .footer strong{color:#a4e9bd}

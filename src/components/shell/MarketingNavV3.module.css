@@ -312,22 +312,3 @@
   .brightHeader:global(.site-header) { min-height: 65px; padding-inline: 18px; }
   .brightHeader .brandName { letter-spacing: -.04em; }
 }
-
-
-/* Portfolio appearance: premium colorful day / deep-green night. Existing SaaS nav is untouched. */
-:global(html[data-portfolio-theme="light"]) .brightHeader:global(.site-header){background:rgb(255 251 246 / 96%);border-bottom-color:#efdfed}
-:global(html[data-portfolio-theme="light"]) .brightHeader .brandAi{color:#6546bd}
-:global(html[data-portfolio-theme="light"]) .brightHeader .primaryAction{background:#5e42b9;border-color:#5e42b9;box-shadow:0 8px 22px #6650c524}
-:global(html[data-portfolio-theme="light"]) .brightHeader .primaryAction:hover{background:#4931a0}
-:global(html[data-portfolio-theme="dark"]) .header:global(.site-header){background:rgb(12 34 35 / 97%);border-bottom:1px solid #335b51;box-shadow:0 9px 25px #061a1b1e}
-:global(html[data-portfolio-theme="dark"]) .header :is(.brand,.brandName,.navLink){color:#edf9f2}
-:global(html[data-portfolio-theme="dark"]) .header :is(.brandCaption,.signIn){color:#b4cfbd}
-:global(html[data-portfolio-theme="dark"]) .header :is(.brandAi,.navLink:hover){color:#a0edba}
-:global(html[data-portfolio-theme="dark"]) .header .primaryAction{background:#246d56;border-color:#4d9a73;color:#f5fff7}
-:global(html[data-portfolio-theme="dark"]) .header .primaryAction:hover{background:#328963}
-:global(html[data-portfolio-theme="dark"]) .menuToggle{background:#193d35;border-color:#386a53;color:#edfff4}
-:global(html[data-portfolio-theme="dark"]) .menuBars span{background:#a7e9c2}
-:global(html[data-portfolio-theme="dark"]) .mobileMenuPanel{background:#112e2d;border:1px solid #3b6c5b;box-shadow:0 26px 60px #031c1b77}
-:global(html[data-portfolio-theme="dark"]) .mobileMenuPanel :is(.menuEyebrow,.mobileLinkCopy small){color:#abd3bb}
-:global(html[data-portfolio-theme="dark"]) .mobileMenuPanel :is(.mobileLink,.mobileLinkCopy strong,.mobileMenuFooter a){color:#e2f7e9}
-:global(html[data-portfolio-theme="dark"]) .mobileLink:hover{background:#245442}

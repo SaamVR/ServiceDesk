@@ -27,22 +27,3 @@
 .hubCard .stageLabel{color:#27744f}
 .hubCard p{color:#476e5b}
 .hubCard .cardFooter{color:#3f7459}
-
-
-/* Night remains the original deep-green performance stage, day gains playful vivid accents. */
-:global(html[data-portfolio-theme="light"]) .frame{background:radial-gradient(ellipse at 9% 16%,#57468e 0%,transparent 56%),linear-gradient(145deg,#34327d,#295b86 65%,#237a80);border-color:#7f7ccb;box-shadow:0 28px 65px #443c9240}
-:global(html[data-portfolio-theme="light"]) .top{color:#e6e9ff}
-:global(html[data-portfolio-theme="light"]) .circleOne{border-color:#d9bfff70}
-:global(html[data-portfolio-theme="light"]) .circleTwo{border-color:#a4f1eb60}
-:global(html[data-portfolio-theme="light"]) :is(.orbitOne,.orbitTwo,.orbitThree){background:#554aa0;border-color:#aaa1ec;color:#ffe5ee}
-:global(html[data-portfolio-theme="light"]) .hubCard{background:linear-gradient(148deg,#fff9fd,#ecf5ff);border-color:#dccbf7;color:#34366a}
-:global(html[data-portfolio-theme="light"]) .mainSymbol{background:#ebe0ff;color:#6c47bd}
-:global(html[data-portfolio-theme="light"]) .stageNumber{color:#6653a2}
-:global(html[data-portfolio-theme="light"]) .stageLabel{color:#8a4181}
-:global(html[data-portfolio-theme="light"]) .hubCard h2{color:#303e77}
-:global(html[data-portfolio-theme="light"]) .hubCard p{color:#4c587a}
-:global(html[data-portfolio-theme="light"]) .cardFooter{color:#65538d;border-color:#e0d5f2}
-:global(html[data-portfolio-theme="light"]) .stageSlot{background:#3a4f91;border-color:#8490d3;color:#e0e8ff;box-shadow:0 0 0 5px #343774}
-:global(html[data-portfolio-theme="light"]) .pipeline button[data-active="true"] .stageSlot{background:#ffd0e9;border-color:#ffafd3;color:#8a4076}
-:global(html[data-portfolio-theme="light"]) .controls button{background:#48468b;border-color:#9492dc;color:#f6eeff}
-:global(html[data-portfolio-theme="light"]) .launchLink{color:#f5dbff}
