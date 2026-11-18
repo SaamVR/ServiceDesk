@@ -41,3 +41,51 @@
 /* Restore readable editorial microcopy on the pearl-white background. */
 .heading>p{color:#557360}
 .choices button:not([data-active="true"]){color:#1c7754}
+
+/* Keep side-by-side manual / connected diagrams readable on the green night stage. */
+:global(html[data-portfolio-theme="dark"]) .section{
+  background:linear-gradient(160deg,#12372d,#0e2d27);color:#e9f8ec;
+}
+:global(html[data-portfolio-theme="dark"]) .heading h2{color:#f1fff5}
+:global(html[data-portfolio-theme="dark"]) .heading h2 em{color:#9bf0c6}
+:global(html[data-portfolio-theme="dark"]) .heading>p{color:#b4d5c2}
+:global(html[data-portfolio-theme="dark"]) .eyebrow{color:#91e4b9}
+:global(html[data-portfolio-theme="dark"]) .choices button:not([data-active="true"]){
+  background:#235344;border-color:#417e61;color:#d8f7e4;
+}
+:global(html[data-portfolio-theme="dark"]) .choices button[data-active="true"]{
+  background:#a6edc4;border-color:#a6edc4;color:#164f3b;
+}
+:global(html[data-portfolio-theme="dark"]) .statement{
+  background:#1b4d3c;border-color:#457e61;
+}
+:global(html[data-portfolio-theme="dark"]) .statement>span{color:#a4edc4}
+:global(html[data-portfolio-theme="dark"]) .statement strong{color:#e7f9ee}
+:global(html[data-portfolio-theme="dark"]) .manual,
+:global(html[data-portfolio-theme="dark"]) .assisted{
+  border-color:#407a5e;background:#1b493b;box-shadow:0 18px 40px #061d1942;
+}
+:global(html[data-portfolio-theme="dark"]) .columnHead{border-color:#41765c}
+:global(html[data-portfolio-theme="dark"]) .columnHead h3{color:#e9fff1}
+:global(html[data-portfolio-theme="dark"]) .columnHead p{color:#d7b399}
+:global(html[data-portfolio-theme="dark"]) .assisted .columnHead p{color:#a7edc1}
+:global(html[data-portfolio-theme="dark"]) .comparison li button{
+  background:#204d3e;border-color:#386e55;color:#c5e3d0;
+}
+:global(html[data-portfolio-theme="dark"]) .comparison li[data-active="true"] button{
+  background:#31563f;border-color:#bba180;color:#fff0dc;
+}
+:global(html[data-portfolio-theme="dark"]) .assisted li[data-active="true"] button{
+  background:#286548;border-color:#63b88c;color:#e5ffeb;
+}
+:global(html[data-portfolio-theme="dark"]) .columnNote{
+  background:#365044;border-color:#668d6a;color:#d8d7bd;
+}
+:global(html[data-portfolio-theme="dark"]) .assisted .columnNote{
+  background:#245843;border-color:#467d5e;color:#c5f5d8;
+}
+:global(html[data-portfolio-theme="dark"]) .footer p{color:#b4d4bf}
+:global(html[data-portfolio-theme="dark"]) .footer strong{color:#dcf5e3}
+:global(html[data-portfolio-theme="dark"]) .bridge>span{
+  background:#205842;border-color:#4b9770;
+}

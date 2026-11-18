@@ -83,3 +83,21 @@
 @media(max-width:760px){.hero{grid-template-columns:1fr;gap:52px;padding-top:58px;padding-bottom:65px}.hero h1{font-size:clamp(3.15rem,11vw,5.5rem)}.heroCanvas{transform:none}.definition{grid-template-columns:1fr;padding:20px 25px}.definition>div,.definition>div:first-child{padding:20px 3px;border-left:0;border-top:1px solid #cde4db}.definition>div:first-child{border-top:0}.workbench,.simulation{grid-template-columns:1fr}.simulation{gap:34px}.archGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.hero{width:calc(100% - 32px)}.hero h1{font-size:clamp(2.95rem,12vw,4.4rem)}.heroCanvas{padding:16px;border-radius:16px}.canvasCards{gap:5px}.canvasCards>div{min-height:144px;padding:11px 7px}.canvasCards strong{font-size:.68rem}.canvasCardMeta{font-size:.52rem!important}.illustratedStatus,.humanStatus{font-size:.53rem;padding:4px 6px}.canvasFooter{font-size:.51rem}.sectionIntro,.workbench,.archGrid,.stackLine{width:calc(100% - 32px)}.sectionIntro h2,.simulation h2{font-size:clamp(2.55rem,10vw,3.5rem)}.stepButton,.stepActive{padding:14px 11px;gap:10px}.stepLabel{font-size:.95rem}.stepNumber{flex-basis:36px;height:36px}.inspector{padding:26px 20px}.inspector h3{font-size:2.15rem}.simulation{padding:65px 16px}.archGrid{grid-template-columns:1fr}.archGrid article{min-height:0}.finish h2{font-size:clamp(2.5rem,10vw,3.5rem)}}
 @media(prefers-reduced-motion:reduce){.caseStudy *,.caseStudy *::before,.caseStudy *::after{transition:none!important;scroll-behavior:auto!important}.primary:hover{transform:none}}
+
+/* The case study follows the portfolio's opt-in dark palette; illustrations stay legible. */
+:global(html[data-portfolio-theme="dark"]) .caseStudy{background:#112d27;color:#e9f8ee;--ink:#e9f8ee;--muted:#b4d6c2}
+:global(html[data-portfolio-theme="dark"]) .hero h1{color:#f0fff3}
+:global(html[data-portfolio-theme="dark"]) .hero h1 em{color:#98ebc4}
+:global(html[data-portfolio-theme="dark"]) .lead{color:#b6d9c6}
+:global(html[data-portfolio-theme="dark"]) .eyebrow{color:#9be6c6}
+:global(html[data-portfolio-theme="dark"]) .secondary{color:#b8f0d0}
+:global(html[data-portfolio-theme="dark"]) .honestNotice{color:#b4d1c2}
+:global(html[data-portfolio-theme="dark"]) .serviceTags span{
+  background:#224c3e;border-color:#41775b;color:#d2edda;
+}
+:global(html[data-portfolio-theme="dark"]) .sectionIntro h2{color:#effff3}
+:global(html[data-portfolio-theme="dark"]) .sectionIntro>p:last-child{color:#b4d5c1}
+:global(html[data-portfolio-theme="dark"]) .finish{background:#173d31}
+:global(html[data-portfolio-theme="dark"]) .finish h2{color:#f0fff2}
+:global(html[data-portfolio-theme="dark"]) .finish>p,
+:global(html[data-portfolio-theme="dark"]) .finish small{color:#b6d9c5}
