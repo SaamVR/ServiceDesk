@@ -3,8 +3,8 @@
 .trigger .lens{font-size:1.24rem;line-height:1}
 .trigger kbd,.footer kbd{font-family:inherit;border:1px solid #c9e2d2;border-radius:5px;background:#fff;color:#5e8c73;font-size:.62rem;padding:3px 5px;font-weight:840}
 .trigger:focus-visible,.dialog button:focus-visible,.dialog input:focus-visible{outline:3px solid #55ca96;outline-offset:3px}
-.dialog{position:fixed;inset:8vh 0 auto;display:block;visibility:hidden;opacity:0;transform:translateY(-13px) scale(.985);width:min(92vw,640px);max-height:min(83vh,730px);overflow:auto;margin-inline:auto;padding:0;border:1px solid #467968;border-radius:17px;box-shadow:0 45px 105px #061a1a77;background:#f7fcf8;color:#1e5643;transition:transform .23s ease,opacity .23s,visibility .23s}
-.dialog[open]{visibility:visible;opacity:1;transform:translateY(0) scale(1)}
+.dialog{position:fixed;inset:8vh 0 auto;opacity:0;transform:translateY(-13px) scale(.985);width:min(92vw,640px);max-height:min(83vh,730px);overflow:auto;margin-inline:auto;padding:0;border:1px solid #467968;border-radius:17px;box-shadow:0 45px 105px #061a1a77;background:#f7fcf8;color:#1e5643;transition:transform .23s ease,opacity .23s}
+.dialog[open]{opacity:1;transform:translateY(0) scale(1)}
 .dialog::backdrop{background:#071f1bc9;backdrop-filter:blur(8px)}
 .dialogBody{padding:0;min-width:0}
 .header{display:flex;align-items:start;justify-content:space-between;gap:15px;padding:26px 28px 20px;border-bottom:1px solid #e0eee5}
