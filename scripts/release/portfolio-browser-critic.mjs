@@ -112,6 +112,33 @@ async function noOverrun(title){
 try{
  await setViewport(1440,900);await navigate("/");
  assert((await js("document.querySelector('h1')?.textContent||''")).includes("Your business"),"Home hero renders");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='light'"),"Portfolio defaults to the approved light theme");
+ assert(await js("!!document.querySelector('button[aria-label=\"Switch to dark mode\"]')"),"A semantic dark-mode toggle is available");
+ const theaterBackground=()=>js("getComputedStyle(document.querySelector('#scenario-lab [class*=\"mainArea\"]')).backgroundImage");
+ const lightStage=await theaterBackground();
+ assert(lightStage.includes("248, 255, 249"),"Operations Theater is bright porcelain and mint in light mode");
+ await js("document.getElementById('scenario-lab').scrollIntoView({block:'start'})");
+ await sleep(350);await shot("theater-light-1440.png");
+ assert(await click('button[aria-label="Switch to dark mode"]',"Dark"),"Switch from default light to dark");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='dark'"),"Dark theme selected");
+ assert(await js("localStorage.getItem('servicedesk-portfolio-theme-v1')==='dark'"),"Dark theme persists without provider requests");
+ const darkStage=await theaterBackground();
+ assert(darkStage.includes("28, 84, 69"),"Dark Operations Theater retains the original deep-green stage");
+ assert(lightStage!==darkStage,"The animated six-stage theater actually changes its palette");
+ await js("document.getElementById('scenario-lab').scrollIntoView({block:'start'})");
+ await sleep(350);await shot("theater-dark-1440.png");
+ await js("scrollTo({top:0})");await sleep(180);await shot("home-dark-1440.png");
+ await navigate("/");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='dark'"),"Dark theme is restored before page interaction");
+ await navigate("/demo");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='dark'"),"Theme persists from portfolio to guided dashboard");
+ assert(await js("getComputedStyle(document.querySelector('[class*=\"topbar\"]')).backgroundColor==='rgb(20, 58, 48)'"),"Dashboard header switches to the deep-green palette");
+ await shot("dashboard-dark-1440.png");
+ assert(await click('button[aria-label="Switch to light mode"]',"Light"),"Dashboard toggle restores light mode");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='light'"),"Light mode restored");
+ await navigate("/");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='light'"),"Light choice persists after returning home");
+
  assert(await js("!!document.querySelector('a[href=\"/demo\"]')"),"Guided dashboard CTA exists");
  await checkContrast('[class*="hubCard"] [class*="stageLabel"]',"#f9fffa","Cinematic microcopy contrast >=4.5");
  await checkContrast('[class*="heroBoundary"]',"#fafdfb","Hero disclosure contrast >=4.5");
@@ -122,6 +149,13 @@ try{
  assert(await js("document.querySelector('[aria-controls=\"detailed-workflow-board\"]')?.getAttribute('aria-expanded')==='true'"),"Lifecycle has accurate ARIA state");
  assert(await click("button","Hide detailed workflow"),"Detailed lifecycle collapses");
  await setViewport(375,812,true);await navigate("/");
+ assert(await click("summary","Menu"),"Mobile menu opens for theme access");
+ assert(await click('[class*="mobileThemeToggle"] button',"Dark"),"Mobile theme toggle switches to dark");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='dark'"),"Mobile dark mode active");
+ await shot("home-mobile-dark-375.png");
+ assert(await click('[class*="mobileThemeToggle"] button',"Light"),"Mobile theme toggle returns to light");
+ assert(await js("document.documentElement.dataset.portfolioTheme==='light'"),"Mobile light mode restored");
+
  await shot("home-375.png");await noOverrun("Home 375");
  await setViewport(320,740,true);await navigate("/");
  await shot("home-320.png");await noOverrun("Home 320");
