@@ -132,3 +132,28 @@
 @media(max-width:800px){.aiScenarioPicker{grid-template-columns:1fr 1fr}.aiScenarioPicker button:last-child{grid-column:1/-1;min-height:85px}}
 @media(max-width:600px){.aiScenarioPicker{grid-template-columns:1fr;gap:7px}.aiScenarioPicker button,.aiScenarioPicker button:last-child{grid-column:1;min-height:0;padding:13px;gap:5px}.aiFlow{gap:7px;padding:10px 6px;font-size:.59rem}.aiFlow span{gap:3px}.aiFlow b{width:20px;height:20px}.aiSource blockquote{padding:14px;font-size:.9rem}.aiDraft textarea{min-height:165px}.aiCharacterCount{font-size:.61rem}}
 @media(prefers-reduced-motion:reduce){.aiSource .extractions>div,.aiSplit>article{animation:none!important}.aiScenarioPicker button:hover{transform:none}}
+
+/* A focused workspace comes before global metrics. Overview retains the full snapshot. */
+.guide[data-compact="true"]{margin-top:13px;padding:15px 19px;grid-template-columns:38px minmax(0,1fr) auto;gap:15px;background:linear-gradient(100deg,#e4f6e8,#f3faf4)}
+.guide[data-compact="true"] .guideIcon{width:38px;height:38px;border-radius:10px}
+.guide[data-compact="true"] .guideIcon .icon{width:22px;height:22px}
+.guide[data-compact="true"] h2{font-size:1.04rem;margin:5px 0}
+.guide[data-compact="true"] .guideExplanation{display:none}
+.guide[data-compact="true"] .guideInstruction{font-size:.73rem;line-height:1.45;margin:4px 0 0!important}
+.guide[data-compact="true"] .guideMobileDetails{display:block;margin-top:4px;color:#4c7b5e;font-size:.67rem;line-height:1.5}
+.guide[data-compact="true"] .guideMobileDetails summary{color:#267654;font-weight:820;cursor:pointer}
+.guide[data-compact="true"] .guideMobileDetails p{font-size:.69rem;line-height:1.5;padding:5px 0 0}
+.guide[data-compact="true"] .guideProgress{margin-top:8px;height:3px}
+.guide[data-compact="true"] .guideActions{gap:6px}
+.guide[data-compact="true"] .guideActions button{min-height:36px}
+@media(max-width:920px){
+ .guide[data-compact="true"]{grid-template-columns:34px minmax(0,1fr);gap:11px}
+ .guide[data-compact="true"] .guideActions{grid-column:2;max-width:none}
+}
+@media(max-width:600px){
+ .guide[data-compact="true"]{display:grid;grid-template-columns:1fr;margin:10px 11px 0;padding:13px;gap:7px}
+ .guide[data-compact="true"] .guideIcon{display:none}
+ .guide[data-compact="true"] .guideActions{grid-column:1;display:flex}
+ .guide[data-compact="true"] .guideMobileDetails{margin-top:6px}
+ .guide[data-compact="true"] h2{font-size:1rem}
+}

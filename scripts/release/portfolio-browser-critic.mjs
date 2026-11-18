@@ -159,15 +159,19 @@ try{
  await sleep(180);
  assert((await js("document.body.textContent||''")).includes("Quote prepared"),"Quote stage visible after action");
  assert(await click('nav[aria-label="Dashboard modules"] button',"AI co-pilot"),"AI tab selectable");
+ await sleep(470);
+ const aiFirstFold=await js("document.querySelector('[class*=\"aiScenarioPicker\"]')?.getBoundingClientRect().top??9999");
+ assert(aiFirstFold<850,"Selected AI workspace appears in the first desktop viewport (top "+Math.round(aiFirstFold)+"px)");
+
  assert(await click("button","Approve local draft"),"Example AI draft review is interactive");
  assert((await js("document.body.textContent||''")).includes("No message was sent"),"AI approval does not claim delivery");
- await shot("ai-review-approved-1440.png");
+ await sleep(480);await shot("ai-review-approved-1440.png");
  assert(await click("button","Potential safety incident"),"AI scenario switches to safety exception");
  assert((await js("document.body.textContent||''")).includes("SAFETY REVIEW"),"Safety boundary is clearly visible");
  assert(await js("!Array.from(document.querySelectorAll('button')).some(x=>x.textContent?.includes('Approve local draft'))"),"Unsafe scenario forbids routine approval");
  assert(await click("button","Escalate for human review"),"Unsafe sample offers human escalation");
  assert((await js("document.body.textContent||''")).includes("No job was dispatched"),"Escalation never claims dispatch");
- await shot("ai-review-safety-escalation-1440.png");
+ await sleep(560);await shot("ai-review-safety-escalation-1440.png");
  assert(await click("button","Move-out enquiry"),"Returning to safe sample restores original scenario");
  assert((await js("document.body.textContent||''")).includes("Awaiting human review"),"Switching cases resets stale approval state");
 
