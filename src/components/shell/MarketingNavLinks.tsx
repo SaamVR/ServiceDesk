@@ -13,11 +13,17 @@ export const marketingLinks = [
   { href: "/pricing", label: "Pricing", description: "Understand quote controls" },
 ] as const;
 
-export function MarketingNavLinks({ variant }: { variant: "desktop" | "mobile" }) {
+const portfolioLinks = [
+  { href: "/work/business-automation", label: "Case study", description: "How the automation is designed" },
+  { href: "/tour", label: "Product tour", description: "Explore sample operations" },
+  { href: "/sandbox", label: "Interactive demo", description: "Try the browser-only workflow" },
+] as const;
+
+export function MarketingNavLinks({ variant, portfolioMode = false }: { variant: "desktop" | "mobile"; portfolioMode?: boolean }) {
   const pathname = usePathname() ?? "";
   return (
     <>
-      {marketingLinks.map((item) => (
+      {(portfolioMode ? portfolioLinks : marketingLinks).map((item) => (
         <Link
           key={item.href}
           href={item.href}

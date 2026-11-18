@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  const canRegister = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
+  const canRegister = process.env.SERVICEDESK_PORTFOLIO_MODE !== "true" && ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
 
   return (
     <MarketingShell
