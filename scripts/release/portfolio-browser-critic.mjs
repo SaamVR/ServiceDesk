@@ -115,7 +115,7 @@ try{
  assert(await js("!!document.querySelector('a[href=\"/demo\"]')"),"Guided dashboard CTA exists");
  assert(await js("document.documentElement.dataset.portfolioTheme==='light'"),"Colorful light theme is initial default");
  assert(await js("!!document.querySelector('button[aria-label*=\"dark theme\"]')"),"Accessible appearance control visible on portfolio header");
- assert(await js("getComputedStyle(document.querySelector('[id=\"scenario-lab\"] [class*=\"workspace\"]')).backgroundColor==='rgb(16, 46, 43)'"),"Original deep-green stage baseline is grounded");
+ assert(await js("getComputedStyle(document.querySelector('[id=\"scenario-lab\"] [class*=\"workspace\"]')).backgroundColor==='rgb(39, 45, 96)'"),"Daylight stage uses the intended vibrant indigo (not green) palette");
  await shot("portfolio-vibrant-light-1440.png");
  assert(await js("(()=>{const b=document.querySelector('button[aria-label*=\"dark theme\"]');if(!b)return false;b.click();return true})()"),"Switch to deep-green dark theme");
  await waitFor(()=>js("document.documentElement.dataset.portfolioTheme==='dark'"),1800);
