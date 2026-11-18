@@ -1,0 +1,371 @@
+{
+  "schema": "servicedesk-pr-semantic-review.v1",
+  "observedDate": "2026-11-18",
+  "baseAuditCommit": "6926bc60c4b62bc2caac9556125ba27539e3c467",
+  "integrationHeadAtReview": "2f3c1cc21005ce8f555ecde9514a5e0d0d8438a5",
+  "mainSha": "56872ccbd7fbe6de043c35d9d8d37d32c4b726ac",
+  "integrationPr": 915,
+  "sourceImportCount": 0,
+  "reviewScope": "6 highest-priority PRs; only cited paths statically compared against exact head; other 11 unique candidates and 48 provisional duplicates remain pending",
+  "initialClassification": {
+    "alreadyIncorporated": 52,
+    "provisionalDuplicate": 48,
+    "uniqueCandidate": 17,
+    "blockedOrRejected": 10
+  },
+  "sourceWorkflowRuns": [
+    44202705888,
+    44202705831,
+    44202705822
+  ],
+  "protectedRealBrowserJob": "SKIPPED",
+  "p02Accepted": "2/7",
+  "p03Accepted": "0/6",
+  "candidates": [
+    {
+      "pr": 913,
+      "head": "6ec1c2970a478337cdb3bacce9c618eabf48ae01",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "MEDIUM",
+      "category": "Inbox/F15 alternate owner SLA review",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/AiUnansweredLeadSlaReview.tsx",
+          "62e9a79dcff1e2e848604b09214348ee6b141d25",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/InboxLeadSlaPanel.tsx",
+          "33704951642cbab6dd3aa2e178a649fcbeb22c5b",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/f15-inbox-sla-review-action.ts",
+          "0ef694b1175f8ecd19ff314f5a5d1571e6b1e51e",
+          "ABSENT"
+        ],
+        [
+          "src/server/ai/owner-inbox-f15-sla-review.ts",
+          "c7815b276f77b4b7ec0cc06469d0b7bb995a0267",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Four historical F15 read-only SLA review files are absent at integration HEAD, but current head has InboxProtectedLeadReviewPanel and an F15 manually gated, database-backed escalation action. Functional equivalence is unproven; importing the old reviewer wholesale risks duplicate Inbox flows or conflating read-only SLA review with durable event creation.",
+      "next": "Compare authorization, request/conversation selection, response-history and event-recording semantics; product owner chooses whether read-only view remains necessary. No direct import."
+    },
+    {
+      "pr": 907,
+      "head": "097ce884916b49407351edffb07e35634c32a237",
+      "status": "BLOCKED_SECURITY_REVIEW",
+      "confidence": "HIGH_STATIC",
+      "category": "P44 duplicate LIVE identity and strict zoned dates",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/owner-attention-triage.ts",
+          "706f21c1b28209cc022281fdf1631dc3eb6bfa54",
+          "752543fcf25178bd6ad2da16a324f50a569a6be0"
+        ]
+      ],
+      "finding": "Current triage builds a LIVE execution map from array pairs, so duplicate execution IDs use last-write-wins; current Date.parse accepts some timezone-free/malformed civil values. #907 candidate quarantines duplicate selected LIVE IDs and uses trustedQuoteInstant for loadedAt and dueAt. This is a code-level difference with plausible false-ready/false-overdue consequences, not a runtime-proven breach. Existing P43 duplicate test and P41 zoned-clock test exist on candidate, not current head.",
+      "next": "Highest priority: independent security/QA approval; construct isolated regression with same-ID LIVE rows, branch scoping, malformed/zoned timestamps. Review provenance critics; adopt only narrowly verified guard and tests, never blind-merge P44 stack."
+    },
+    {
+      "pr": 906,
+      "head": "92bf5b014d01ad2c4739b48c3e026aa3f69ab80b",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "HIGH_STATIC",
+      "category": "P40 pricing scenarios and fictional playbook what-if",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/automation-playbook-event-whatif.ts",
+          "8a3e78edb87d48ef137dfe90a31a8849e949b974",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/owner-pricing-scenario-matrix.ts",
+          "3f952e8a67ccea3ea702b54f40ef95bf97ca526e",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Two standalone modules are absent at current integration HEAD. Candidate scenarios derive nine (3 service × 3 layout) unsaved rate previews from owner FormData; playbook what-if returns FICTIONAL/NOT_EXECUTED outcomes. Source is review-only, does not show live persisted pricing, and must preserve fail-closed form validation.",
+      "next": "Review candidate tests and dependencies from #902/#903; prove no invented rates, persistence, execution or preview-as-authority; product approval before source import. P03 live acceptance stays blocked by P02."
+    },
+    {
+      "pr": 908,
+      "head": "abd805bb1af68a375f5a96eb29c6e97a096a4cd9",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "MEDIUM",
+      "category": "P35 owner overdue saved attention review",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/OwnerOverdueAttentionReview.tsx",
+          "d876e61b8731d6ff0e61372941503139d918d606",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/owner-attention-review-action.ts",
+          "8a511441ec4a516be406c3228d9221fcf5a790ea",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/owner-activation-next-action.ts",
+          "cbfb64e4fcec9f0ec2c4eff17108b18ec15f1d7f",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Three cited owner overdue-attention and activation modules are absent at latest head. Candidate depends on authoritative owner-attention SLA and currently overlaps existing owner-linked Inbox attention workflows; absence alone does not prove business behavior is missing.",
+      "next": "Reconcile with P44/P42 attention, verify tenant and branch scope, reject stale/forged action input, keep P03 source-only."
+    },
+    {
+      "pr": 901,
+      "head": "e42be516daf82619a6161336e6e45e63120d7549",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "MEDIUM",
+      "category": "P42 manual attention review playbook",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/operations/owner-attention-review-playbook.ts",
+          "4ad58f8a6062dfb960b9ede8ebd47346b9cde9d5",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Manual attention playbook module absent at current head. It consumes attention-triage projections, so P44 duplicate-ID and zoned-time correctness is upstream security prerequisite.",
+      "next": "Review only after triage correctness agreed, test fail-closed ambiguity step and no side-effect claims."
+    },
+    {
+      "pr": 893,
+      "head": "792267bfc75f23d3814225a6ab9d24c7591e5fcb",
+      "status": "UNIQUE_AWAITING_APPROVAL",
+      "confidence": "MEDIUM",
+      "category": "P39 owner onboarding commercial action guidance",
+      "reviewCount": 0,
+      "paths": [
+        [
+          "src/features/onboarding/OwnerCommercialActionPanel.tsx",
+          "f9e185624189c740feca480371b4c95194d3ab69",
+          "ABSENT"
+        ],
+        [
+          "src/features/operations/owner-automation-next-action.ts",
+          "cad65e8ed60728f9a6e590d8b419f6ca0bb8188a",
+          "ABSENT"
+        ]
+      ],
+      "finding": "Commercial onboarding action panel and automation next-action module are absent. Candidate source contains read-only owner-guidance links; it is not live saved-price, quote or automation acceptance.",
+      "next": "Reconcile against newer owner pricing-readiness form changes at exact integration HEAD; owner UX approval and P02 prerequisite before activation."
+    }
+  ],
+  "governance": [
+    "No candidate reviewed has APPROVED review",
+    "Source missing/different does not mean automatically approved",
+    "No DB/tenant/provisioning/deploy/production main merge",
+    "PR 869 guarded by independent DBA approval",
+    "Keep F23 release paths disabled pending safety review"
+  ],
+  "reviewedCandidateCount": 17,
+  "reviewCoverage": "17/17 unique candidate heads and cited candidate paths reviewed for blob-level identity/difference; NOT complete full-diff functional equivalence",
+  "reviewedApprovalCount": 0,
+  "predecessorPathEvidence": [
+    {
+      "pr": 905,
+      "comp": 908,
+      "paths": [
+        "src/features/operations/OwnerOverdueAttentionReview.tsx",
+        "src/features/operations/owner-attention-review-projection.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 903,
+      "comp": 906,
+      "paths": [
+        "src/features/operations/automation-playbook-event-whatif.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 902,
+      "comp": 906,
+      "paths": [
+        "src/features/operations/owner-pricing-scenario-matrix.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 897,
+      "comp": 901,
+      "paths": [
+        "src/features/operations/owner-attention-review-playbook.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 896,
+      "comp": 908,
+      "paths": [
+        "src/features/operations/owner-activation-next-action.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 889,
+      "comp": 893,
+      "paths": [
+        "src/features/onboarding/OwnerCommercialActionPanel.tsx"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 887,
+      "comp": 893,
+      "paths": [
+        "src/features/operations/owner-automation-next-action.ts"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 886,
+      "comp": 893,
+      "paths": [
+        "src/features/onboarding/OwnerCommercialActionPanel.tsx"
+      ],
+      "allPinnedPathsExact": true
+    },
+    {
+      "pr": 885,
+      "comp": 893,
+      "paths": [
+        "src/features/operations/owner-automation-next-action.ts"
+      ],
+      "allPinnedPathsExact": true
+    }
+  ],
+  "governanceCandidates": [
+    {
+      "pr": 916,
+      "head": "bd3952b89c531df64c261c94e8ce08c643e99cf8",
+      "reviewCount": 0,
+      "disposition": "GOVERNANCE_OWNER_REVIEW_REQUIRED",
+      "paths": [
+        ".agents/skills/karpathy-guidelines/SKILL.md",
+        ".cursor/rules/karpathy-guidelines.mdc",
+        ".github/copilot-instructions.md",
+        "CLAUDE.md"
+      ],
+      "pathResult": "ALL_FOUR_ABSENT_AT_INTEGRATION_HEAD",
+      "caveat": "Do not import project instructions or override AGENTS.md without owner governance approval."
+    },
+    {
+      "pr": 124,
+      "head": "7e2c6bf35a161929e79c7514ad19e7bcd2880996",
+      "reviewCount": 0,
+      "disposition": "DESIGN_OWNER_REVIEW_REQUIRED",
+      "paths": [
+        "src/app/tour/BrightTour.module.css"
+      ],
+      "pathResult": "ABSENT_AT_INTEGRATION_HEAD",
+      "caveat": "Compare historical tour CSS with current V4 visual system and confirm scope before import."
+    }
+  ],
+  "independentDecisionsRemaining": [
+    "#913 F15 alternative",
+    "#907 P44 security",
+    "#906 P40 what-if",
+    "#908 P35 overdue attention",
+    "#901 P42 playbook",
+    "#893 P39 onboarding",
+    "#916 governance",
+    "#124 visual tour"
+  ],
+  "predecessorEvidenceLimitation": "Only the specified unique path payloads were byte-identical; stacked predecessor PRs may carry other changes, so don't close or blanket reclassify.",
+  "reviewedProvisionalDuplicateCount": 10,
+  "remainingProvisionalDuplicateCount": 38,
+  "provisionalReviews": [
+    {
+      "pr": 904,
+      "source": "2e1f44255501b9faef965a63374d80538bf59fe0",
+      "path": "src/features/operations/owner-attention-triage.ts",
+      "srcBlob": "706f21c1b28209cc022281fdf1631dc3eb6bfa54",
+      "intBlob": "752543fcf25178bd6ad2da16a324f50a569a6be0",
+      "composite": "#907 exact",
+      "result": "POTENTIAL_MISSING_SECURITY_GUARD",
+      "note": "Source identical to #907: duplicate LIVE identity quarantine; specific 6-case regression suite absent current head."
+    },
+    {
+      "pr": 899,
+      "source": "0cf421a0da26b37550599aa10418a5eeb4e6aaa1",
+      "path": "src/features/operations/owner-attention-triage.ts",
+      "srcBlob": "600c9e1d69fe22e7c7308a1901de2b056b3513c6",
+      "intBlob": "752543fcf25178bd6ad2da16a324f50a569a6be0",
+      "composite": "#901 exact",
+      "result": "POTENTIAL_MISSING_STRICT_CLOCK",
+      "note": "Older zoned-clock source version is retained in #901; related 5-case regression suite absent integration."
+    },
+    {
+      "pr": 898,
+      "path": "src/features/operations/owner-automation-draft-recommendations.ts",
+      "result": "EXACT_BLOB_INTEGRATED",
+      "blob": "6469ecfd1de098663e639795c73c2c32007bf552"
+    },
+    {
+      "pr": 895,
+      "path": "src/features/operations/owner-pricing-revision-access.ts",
+      "result": "EXACT_BLOB_INTEGRATED",
+      "blob": "fa38266470a49676161930f55fd0666eded3fcd6"
+    },
+    {
+      "pr": 892,
+      "path": "src/features/operations/owner-attention-triage.ts",
+      "result": "EXACT_BLOB_INTEGRATED",
+      "blob": "752543fcf25178bd6ad2da16a324f50a569a6be0"
+    },
+    {
+      "pr": 891,
+      "path": "src/features/operations/owner-automation-activation.ts",
+      "result": "EXACT_BLOB_INTEGRATED",
+      "blob": "87f25cd7c2e7668223c7730061e992edfebd970c"
+    },
+    {
+      "pr": 890,
+      "source": "6eacc58cc316e6402a379c8e0840a8b79bdb9a67",
+      "path": "src/features/operations/quote-pipeline.ts",
+      "srcBlob": "d47a0ff00ff80a16e8cca3563b4138aea1d14dc1",
+      "intBlob": "93f599e14e95f94e9c754eb8f3f756cb7ed68497",
+      "composite": "#893 exact",
+      "result": "POTENTIAL_MISSING_STRICT_QUOTE_CLOCK",
+      "note": "Source uses trustedQuoteInstant for quote validity; current Date.parse for snapshot and expiry. Four-case zoned-clock test absent."
+    },
+    {
+      "pr": 888,
+      "source": "8eada331b297675d06a847c6c55c9cde553f2e9a",
+      "path": "src/features/operations/request-quote-price-readiness.ts",
+      "srcBlob": "c5d74529f376d7fd048ef17f175e8813dcf6d2b6",
+      "intBlob": "c44a942721ec61acf132583daa6526747d7863cc",
+      "composite": "#893 exact",
+      "result": "POTENTIAL_FALSE_READY_QUOTE_BRANCH",
+      "note": "Source requires explicitly persisted request branch plus independent saved book inventory and scoped USD authorization. Current may fall back to selected branch or one active book; eight-case preflight test absent."
+    },
+    {
+      "pr": 880,
+      "path": "src/features/operations/owner-automation-activation.ts",
+      "result": "OLDER_SOURCE_REPLACED",
+      "srcBlob": "5c24ee15b057d2157d527e7d7ae87973887753ad",
+      "intBlob": "87f25cd7c2e7668223c7730061e992edfebd970c",
+      "note": "Compare historical behavior before confirming semantic superset."
+    },
+    {
+      "pr": 877,
+      "path": "src/features/operations/OwnerCleaningPricingSetupForm.tsx",
+      "result": "OLDER_SOURCE_REPLACED",
+      "srcBlob": "06132ba797602c2c6fd57f851781403961cdbb3f",
+      "intBlob": "7302079132145a5701b26110538e2aa061606db5",
+      "note": "Current owner form underwent newer two-commit improvements; no automatic rollback."
+    }
+  ],
+  "provisionalReviewCaveat": "10 of 48 checked by one high-value functional path each; not full PR diffs. The remaining 38 and all incomplete semantic proof still pending. Original four-way ledger unchanged."
+}
