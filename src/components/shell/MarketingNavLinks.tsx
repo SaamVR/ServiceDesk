@@ -6,6 +6,7 @@ import styles from "./MarketingNavV3.module.css";
 
 /** Concise information architecture for the public site. */
 export const marketingLinks = [
+  { href: "/work/business-automation", label: "Case study", description: "See the automation project" },
   { href: "/features", label: "Product", description: "Explore the operations platform" },
   { href: "/use-cases/cleaning", label: "Solutions", description: "Built for cleaning teams" },
   { href: "/integrations", label: "Integrations", description: "Connect your existing tools" },
