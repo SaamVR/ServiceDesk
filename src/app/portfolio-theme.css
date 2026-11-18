@@ -1,0 +1,16 @@
+/* Public portfolio only: never alter the protected SaaS application's palette. */
+html[data-portfolio-theme="dark"]{color-scheme:dark;background:#081b1d}
+html[data-portfolio-theme="light"]{color-scheme:light;background:#fffdf9}
+html[data-portfolio-theme="dark"] body{background:#081b1d;color:#e7f7ed}
+html[data-portfolio-theme="light"] body{background:#fffdf9}
+html[data-portfolio-theme="dark"] .site-shell{background:#0c2124;color:#e8f8ec}
+html[data-portfolio-theme="dark"] .site-footer{background:#0e2728!important;color:#d8f0e4;border-color:#32594d!important}
+html[data-portfolio-theme="dark"] .site-footer :is(p,a,strong){color:#cee8dc!important}
+html[data-portfolio-theme="dark"] .site-footer a:hover{color:#a4f1c4!important}
+html[data-portfolio-theme="light"] .site-footer{background:linear-gradient(100deg,#f6efff,#e5f9ff,#fff1e4);border-color:#ebddf0}
+html[data-portfolio-theme="light"] .site-footer strong{color:#203b65}
+html[data-portfolio-theme="dark"] ::selection{background:#9bebb7;color:#123529}
+html[data-portfolio-theme="light"] ::selection{background:#ffe49c;color:#28254e}
+@media(prefers-reduced-motion:reduce){
+ html[data-portfolio-theme] *{scroll-behavior:auto!important}
+}

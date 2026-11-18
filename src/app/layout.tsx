@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./responsive-a11y.css";
+import "./portfolio-theme.css";
+import {portfolioThemeBootScript} from "@/features/product/portfolio-theme";
 
 // Public indexing is an explicit deployment/release decision. Preview
 // builds are noindex/nofollow by default until the owner approves publication.
@@ -19,8 +21,10 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const portfolioMode = process.env.SERVICEDESK_PORTFOLIO_MODE === "true";
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning={portfolioMode}>
+      {portfolioMode ? <head><meta name="color-scheme" content="light dark"/><script dangerouslySetInnerHTML={{__html:portfolioThemeBootScript}}/></head> : null}
       <body>
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <div id="main-content">{children}</div>

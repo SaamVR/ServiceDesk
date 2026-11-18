@@ -1,0 +1,11 @@
+.toggle{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:8px;min-height:43px;padding:7px 12px;border:1px solid #bfded3;border-radius:10px;background:#fff;color:#255c4d;font:750 .77rem "DM Sans",system-ui,sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 3px 11px #1a61400b;transition:background .24s,border-color .24s,color .24s,transform .24s}
+.toggle:hover{transform:translateY(-1px);border-color:#5cbba4;background:#ecfaf4}.toggle:focus-visible{outline:3px solid #f3a851;outline-offset:3px}
+.icon{display:block;width:20px;height:20px;flex:none;background:currentColor;mask-position:center;mask-size:contain;mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;-webkit-mask-repeat:no-repeat}
+.icon[data-icon="sun"]{mask-image:url(/portfolio/icons/sun.svg);-webkit-mask-image:url(/portfolio/icons/sun.svg)}
+.icon[data-icon="moon"]{mask-image:url(/portfolio/icons/moon.svg);-webkit-mask-image:url(/portfolio/icons/moon.svg)}
+.label{font-weight:870;letter-spacing:.015em}.indicator{width:6px;height:6px;border-radius:50%;background:#25a88c;box-shadow:0 0 0 3px #25a88c20}
+:global(html[data-portfolio-theme="dark"]) .toggle{background:#173d34;color:#e4fbec;border-color:#397761;box-shadow:0 5px 19px #061c1822}
+:global(html[data-portfolio-theme="dark"]) .toggle:hover{background:#225342;border-color:#70d1a0}
+:global(html[data-portfolio-theme="dark"]) .indicator{background:#f6c77d;box-shadow:0 0 0 3px #f6c77d24}
+@media(max-width:720px){.toggle{padding:9px;min-height:41px;width:41px}.label,.indicator{display:none}}
+@media(prefers-reduced-motion:reduce){.toggle{transition:none}.toggle:hover{transform:none}}
