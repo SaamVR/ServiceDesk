@@ -39,3 +39,27 @@ Status: **source candidate, NOT deployed, NOT validated by production build/brow
 - Static source audit: all case-study CSS module class references resolved, 5/5 stage selectors found, both desktop/mobile public links found, sample/no-payment disclosures found, and new PR paths isolated from database/provider code.
 - Local cloud Runtime \`git ls-remote https://github.com/SaamVR/ServiceDesk.git\` FAILED with \`Could not resolve host: github.com\`. No TypeScript/build/browser/CI PASS is claimed.
 - No deployment, migrations, Auth users, payments, provider calls, customer sends or canonical merges performed.
+
+## Vercel deployment attempt — 2026-11-18 (verified)
+
+**Release target is a single existing reusable project:** `servicedesk-automation-portfolio` on Vercel team `Samvrc` (`team_SwFPLhTkG0XpAX3RQ8B4vbLt`), Vercel project ID `prj_DS77yz73Kp69m69BIRSce8xNs6EW`. Connected Git repository: `SaamVR/ServiceDesk`. Production branch remains `main` at provider level. No automatic preview was created on Git linking.
+
+**Requested exact source:** `6ae2eee9c3c4e54f39788a28106cae943cb6f296` on branch `feat/servicedesk-automation-portfolio-case-study-20261118` (code tip before this operational documentation update).
+
+**Implemented provider settings:**
+- Framework Next.js; Node.js 22.x.
+- Portfolio flag plus six additional safety variables installed for production, preview and development. Public registration disabled (including QA mode and tenant-auth approval), F23 holds disabled, public indexing disabled.
+- Vercel project retains its default Vercel Auth / SSO protection `all_except_custom_domains`. Do not represent a resulting URL as public until access is reviewed.
+- Rejected Pro-only project deployment-policy attempt with `403 pro_plan_required`; no plan upgrade or cost incurred.
+- Applied documented Hobby-supported project Ignored Build Step guard: proceed only when `VERCEL_GIT_COMMIT_REF` matches the portfolio branch; skip other branches. The portfolio source itself retains `vercel.json` with `git.deploymentEnabled=false`; no Git auto-deploy is intended. Re-audit guard behavior on an actual deployment.
+
+**Blocked attempt:** Explicit create-deployment with Git source `SaamVR/ServiceDesk`, exact pinned SHA, target `production`, existing project ID returned **Vercel HTTP 402** `api-deployments-free-per-day`, limit over 100 API deployments/day, `retryAfter:86400` seconds. This is a **platform quota** failure, not a Next.js build failure. No build began and no deployment URL exists. No retry storm. Native CLI fallback unavailable in cloud runtime (`vercel` executable absent and cloud DNS cannot resolve GitHub); prohibited samai/samvr/local/self-hosted runner fallback not used.
+
+**Verified final state:** Vercel project `live:false`, `latestDeployment:null`, zero deployment records; seven configured environment-variable keys present. The deployment target is **NOT LIVE**.
+
+**Resumption after provider quota permits:**
+1. Confirm Vercel limits and team plan. Hobby supports **personal/non-commercial only**. A publicly promoted commercial/freelance lead-generation site must use an authorized compliant plan; no automatic paid upgrade.
+2. Check source / PR #918 exact head, review portfolio-only source and build/QA; restore any unavailable CI evidence without claiming green.
+3. Deploy the exact reviewed code SHA to the **same existing project** via manual API/CLI, with portfolio-mode environment, no extra Vercel project and no unauthorized third-party calls.
+4. Validate actual Vercel build events, `/health`, `/`, `/work/business-automation`, `/tour`, `/sandbox`, mobile interactions, auth denial and provider safety. If protected, give a Vercel-authenticated URL, not a public-sharing claim.
+5. Preserve a single stable project domain for later approved updates. Each Vercel update creates an immutable deployment internally; **do not create another project**. Record the exact build SHA, live alias, rollback and issue receipt.
