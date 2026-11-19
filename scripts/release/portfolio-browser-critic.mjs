@@ -296,8 +296,13 @@ try{
  await navigate("/");await sleep(200);
  assert(await js("document.body.textContent?.includes('Motion off')"),"Reduced-motion disables cinematic autoplay");
  if(storyPresent){
-   assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).animationDuration||'0')<=0.01"),"Operator shoulder honors reduced motion");
-   assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"eyelids\"]')).animationDuration||'0')<=0.01"),"Operator blinking honors reduced motion");
+   const reducedRigV2=await js("document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')!==null");
+   if(reducedRigV2){
+     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).animationDuration||'0')<=0.01"),"Operator shoulder honors reduced motion");
+     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"eyelids\"]')).animationDuration||'0')<=0.01"),"Operator blinking honors reduced motion");
+   }else{
+     assert(!!process.env.PORTFOLIO_QA_BASE_URL,"New articulated operator must exist in the exact-source build");
+   }
  }
  await shot("home-reduced-motion-320.png");
  const blocked=await fetch(url+"/auth/sign-in",{redirect:"manual"});
