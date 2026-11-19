@@ -97,9 +97,9 @@ export function OperatorIllustration({
 
       {/* Forearm has its own pivot instead of turning the entire character as a rigid image. */}
       <g className={styles.frontArm}>
-        <path d="M424 315c-17 4-26 23-41 49l-41 29 25 23 57-30c16-8 28-23 32-39Z" fill="#1f9175"/>
-        <path d="M346 392c-15-1-24 7-27 19 1 12 11 18 25 15l23-10Z" fill="#c78c6d"/>
-        <path d="M319 410l-9-5m13 12-11 2m18 5-8 9" stroke="#ac7356" strokeWidth="4" strokeLinecap="round"/>
+        <path d="M424 315c-19 6-30 23-45 43l-31 24 18 19 51-25c16-8 28-22 36-37Z" fill="#1f9175"/>
+        <path d="M350 376c-13 0-24 8-27 18l25 3 20-9Z" fill="#c78c6d"/>
+        <path d="m326 389-10 3m19 2-9 5m19-3-5 6" stroke="#ac7356" strokeWidth="3.5" strokeLinecap="round"/>
       </g>
 
       {/* Desktop is layered above the lower body, anchoring hand movement. */}

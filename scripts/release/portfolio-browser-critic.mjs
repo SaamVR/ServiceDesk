@@ -121,7 +121,7 @@ try{
   await js("document.getElementById('interactive-stories').scrollIntoView({block:'start'})");
   await sleep(250);await shot("interactive-stories-desktop-1440.png");
   assert(await js("!!document.querySelector('a[href=\"#interactive-stories-play\"]')"),"Hero links directly to the playable stage");
-  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start'})");
+  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start',behavior:'instant'})");
   await sleep(200);await shot("interactive-story-play-desktop-1440.png");
   assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Visitor can choose exception branch");
   assert(await click('#interactive-stories [class*="continue"]',"Continue to AI brief"),"Operator proceeds to the AI brief");
@@ -194,14 +194,20 @@ try{
  await shot("home-375.png");await noOverrun("Home 375");
  if(storyPresent){
   await js("document.querySelector('header details[open]')?.removeAttribute('open')");
-  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start'})");
-  await sleep(180);await shot("interactive-stories-mobile-375.png");await noOverrun("Story 375");
+  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start',behavior:'instant'})");
+  await sleep(260);
+  const storyTop375=await js("Math.round(document.getElementById('interactive-stories-play').getBoundingClientRect().top)");
+  assert(storyTop375>=60 && storyTop375<160,"Mobile playable experience is actually in viewport at 375px (top "+storyTop375+")");
+  await shot("interactive-stories-mobile-375.png");await noOverrun("Story 375");
  }
  await setViewport(320,740,true);await navigate("/");
  await shot("home-320.png");await noOverrun("Home 320");
  if(storyPresent){
-  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start'})");
-  await sleep(180);await shot("interactive-stories-mobile-320.png");await noOverrun("Story 320");
+  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start',behavior:'instant'})");
+  await sleep(260);
+  const storyTop320=await js("Math.round(document.getElementById('interactive-stories-play').getBoundingClientRect().top)");
+  assert(storyTop320>=60 && storyTop320<160,"Mobile playable experience is actually in viewport at 320px (top "+storyTop320+")");
+  await shot("interactive-stories-mobile-320.png");await noOverrun("Story 320");
  }
 
  await setViewport(1440,900);await navigate("/demo");
