@@ -123,12 +123,18 @@ try{
   assert(await js("!!document.querySelector('a[href=\"#interactive-stories-play\"]')"),"Hero links directly to the playable stage");
   await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start',behavior:'instant'})");
   await sleep(200);await shot("interactive-story-play-desktop-1440.png");
-  assert(await js("document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')!==null"),"Operator has a real shoulder articulation group");
-  assert(await js("document.querySelector('#interactive-stories [data-rig=\"elbow\"]')!==null"),"Operator has a real nested elbow articulation group");
-  assert(await js("document.querySelector('#interactive-stories [data-rig=\"wrist\"]')!==null"),"Operator has a separate wrist and hand group");
-  assert(await js("document.querySelector('#interactive-stories [data-rig=\"gaze\"]')!==null"),"Operator has independent gaze tracking");
-  const animatedArm=await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName");
-  assert(animatedArm.includes("actorReachElbow"),"Operator elbow follows choreographed keyframes");
+  // Hosted smoke can run before manual deploy, so it must not mislabel the old
+  // published source as a regression; exact-source build requires the V2 rig.
+  const hasActorV2=await js("document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')!==null");
+  if(hasActorV2){
+    assert(await js("document.querySelector('#interactive-stories [data-rig=\"elbow\"]')!==null"),"Operator has a real nested elbow articulation group");
+    assert(await js("document.querySelector('#interactive-stories [data-rig=\"wrist\"]')!==null"),"Operator has a separate wrist and hand group");
+    assert(await js("document.querySelector('#interactive-stories [data-rig=\"gaze\"]')!==null"),"Operator has independent gaze tracking");
+    const animatedArm=await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName");
+    assert(animatedArm.includes("actorReachElbow"),"Operator elbow follows choreographed keyframes");
+  }else{
+    assert(!!process.env.PORTFOLIO_QA_BASE_URL,"New articulated character is missing from exact source build");
+  }
   await shot("operator-notice-0200.png");
   await sleep(250);await shot("operator-notice-0450.png");
   await sleep(520);await shot("operator-notice-0970.png");
