@@ -137,7 +137,7 @@ export function OperatorIllustration({
       </g>
 
       {/* Desktop is layered above the lower body, anchoring hand movement. */}
-      <rect x="36" y="392" width="650" height="27" rx="13" fill="#2a685a"/>
+      <rect data-prop="desktop-edge" x="36" y="392" width="650" height="27" rx="13" fill="#2a685a"/>
       <path d="M50 399h620" stroke="#62a68a" strokeWidth="3" opacity=".75"/>
       <rect x="79" y="413" width="23" height="87" rx="8" fill="#255b50"/>
       <rect x="627" y="413" width="23" height="87" rx="8" fill="#255b50"/>

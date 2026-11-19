@@ -3,6 +3,7 @@
  * Captures screenshots and tests synthetic interactions without new JS packages.
  */
 import {spawn} from "node:child_process";
+import {createHash} from "node:crypto";
 import {mkdtempSync,mkdirSync,writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -87,7 +88,9 @@ async function click(selector,label){
 }
 async function shot(name){
  const result=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});
- writeFileSync(join(out,name),Buffer.from(result.data,"base64"));
+ const bytes=Buffer.from(result.data,"base64");
+ writeFileSync(join(out,name),bytes);
+ return createHash("sha256").update(bytes).digest("hex");
 }
 async function size(){return js("({width:innerWidth,scrollWidth:document.documentElement.scrollWidth})")}
 function contrastRatio(fg,bg){
@@ -135,9 +138,19 @@ try{
   }else{
     assert(!!process.env.PORTFOLIO_QA_BASE_URL,"New articulated character is missing from exact source build");
   }
-  await shot("operator-notice-0200.png");
-  await sleep(250);await shot("operator-notice-0450.png");
-  await sleep(520);await shot("operator-notice-0970.png");
+  if(hasActorV2){
+    // The initial page may have settled before we reach the section. Explicit
+    // branch reset forces the first acting beat to replay before frame capture.
+    assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Notice capture enters another scenario first");
+    assert(await click('#interactive-stories [class*="branchPicker"] button',"Routine enquiry"),"Notice capture resets to routine");
+    const noticeStart=await shot("operator-notice-0000.png");
+    await sleep(290);
+    const noticeMid=await shot("operator-notice-0290.png");
+    assert(noticeStart!==noticeMid,"Operator notice action changes actual rendered pixels during motion");
+    await sleep(750);await shot("operator-notice-1040.png");
+  }else{
+    await shot("operator-notice-hosted-baseline.png");
+  }
   assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Visitor can choose exception branch");
   assert(await click('#interactive-stories [class*="continue"]',"Continue to AI brief"),"Operator proceeds to the AI brief");
   await shot("operator-read-0000.png");
@@ -146,7 +159,15 @@ try{
   assert(await click('#interactive-stories [class*="continue"]',"Continue to Review"),"Operator reaches human review");
   await shot("operator-alert-0000.png");
   await sleep(320);await shot("operator-alert-0320.png");
+  if(hasActorV2){
+    const contactAtPeak=await js("(()=>{const hand=document.querySelector('#interactive-stories [data-rig=\"wrist\"]');const desk=document.querySelector('#interactive-stories [data-prop=\"desktop-edge\"]');return !!hand&&!!desk&&hand.getBoundingClientRect().bottom<=desk.getBoundingClientRect().bottom-1})()");
+    assert(contactAtPeak,"Alert hand must never hang below the front desk edge at motion peak");
+  }
   await sleep(900);await shot("operator-alert-1220.png");
+  if(hasActorV2){
+    const contactAtSettle=await js("(()=>{const hand=document.querySelector('#interactive-stories [data-rig=\"wrist\"]');const desk=document.querySelector('#interactive-stories [data-prop=\"desktop-edge\"]');return !!hand&&!!desk&&hand.getBoundingClientRect().bottom<=desk.getBoundingClientRect().bottom-1})()");
+    assert(contactAtSettle,"Alert hand remains above the desk edge after motion settles");
+  }
   assert(await js("document.querySelector('#interactive-stories [data-scene-state=\"blocked\"]')!==null"),"Operator acting changes to a blocked safety pose");
   assert(await js("!!document.querySelector('#scenario-lab [data-phase=\"blocked\"]')"),"Six-stage theater synchronizes with operator safety stop");
   assert(await js("!!document.querySelector('#scenario-lab [data-kind=\"needs-review\"]')"),"Existing event ledger synchronizes with the character's review requirement");

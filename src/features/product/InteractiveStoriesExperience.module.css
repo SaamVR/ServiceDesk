@@ -262,18 +262,18 @@
 }
 @keyframes actorAlertShoulder{
   0%,26%{transform:rotate(-2deg)}
-  61%{transform:rotate(-10deg)}
-  100%{transform:rotate(-8deg)}
+  61%{transform:rotate(10deg)}
+  100%{transform:rotate(8deg)}
 }
 @keyframes actorAlertElbow{
   0%,29%{transform:rotate(2deg)}
-  63%{transform:rotate(-17deg)}
-  100%{transform:rotate(-13deg)}
+  63%{transform:rotate(16deg)}
+  100%{transform:rotate(14deg)}
 }
 @keyframes actorAlertHand{
   0%,29%{transform:rotate(0)}
-  63%{transform:rotate(-9deg)}
-  100%{transform:rotate(-6deg)}
+  63%{transform:rotate(5deg)}
+  100%{transform:rotate(3deg)}
 }
 @keyframes actorTypingElbow{
   0%,24%{transform:rotate(1deg)}
