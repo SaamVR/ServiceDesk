@@ -330,6 +330,109 @@
   100%{opacity:1;transform:translateY(0) scale(1)}
 }
 
+
+/* Acting pass V3. A stable SVG node interpolates between poses instead of
+   remounting and starting each keyframe at zero. Gaze leads the neck; shoulders
+   and elbows overlap; hands settle last. Two drawn facial projections swap
+   only on intentional monitor-facing shots. No continuously looping body. */
+.illustration[data-acting-mode="continuity"] .bodyRig,
+.illustration[data-acting-mode="continuity"] .head,
+.illustration[data-acting-mode="continuity"] .upperArm,
+.illustration[data-acting-mode="continuity"] .forearm,
+.illustration[data-acting-mode="continuity"] .hand,
+.illustration[data-acting-mode="continuity"] .backArm,
+.illustration[data-acting-mode="continuity"] .pupils,
+.illustration[data-acting-mode="continuity"] .brows,
+.illustration[data-acting-mode="continuity"] .eventMarker{
+  animation:none;
+  transform:none;
+  transition-property:transform;
+  transition-duration:.85s;
+  transition-timing-function:cubic-bezier(.2,.78,.22,1);
+}
+.illustration[data-acting-mode="continuity"] .pupils{transition-duration:.38s;transition-delay:0ms}
+.illustration[data-acting-mode="continuity"] .head{transition-duration:.76s;transition-delay:90ms}
+.illustration[data-acting-mode="continuity"] .bodyRig{transition-duration:.9s;transition-delay:155ms}
+.illustration[data-acting-mode="continuity"] .upperArm{transition-duration:.9s;transition-delay:215ms}
+.illustration[data-acting-mode="continuity"] .forearm{transition-duration:.84s;transition-delay:260ms}
+.illustration[data-acting-mode="continuity"] .hand{transition-duration:.7s;transition-delay:300ms}
+.illustration[data-acting-mode="continuity"] .backArm{transition-duration:.8s;transition-delay:185ms}
+.illustration[data-acting-mode="continuity"] .brows{transition-duration:.43s;transition-delay:100ms}
+.illustration[data-acting-mode="continuity"] .eyeSockets{animation:actorBlink 7.2s linear 1.7s infinite}
+.illustration[data-acting-mode="continuity"] .faceFront,
+.illustration[data-acting-mode="continuity"] .faceQuarter{
+  transition:opacity .3s cubic-bezier(.25,.6,.25,1) 80ms;
+  transform-box:view-box;
+  transform-origin:507px 204px;
+}
+.illustration[data-acting-mode="continuity"] .faceFront{opacity:1}
+.illustration[data-acting-mode="continuity"] .faceQuarter{opacity:0}
+.illustration[data-acting-mode="continuity"] .faceQuarter .quarterEyes{
+  transform-box:view-box;
+  transform-origin:495px 205px;
+  animation:actorBlink 7.2s linear 1.7s infinite;
+}
+.illustration[data-acting-mode="continuity"] .quarterPupils{
+  transition:transform .38s ease-out;
+}
+.illustration[data-acting-mode="continuity"] .smile,
+.illustration[data-acting-mode="continuity"] .thinkingMouth,
+.illustration[data-acting-mode="continuity"] .concern,
+.illustration[data-acting-mode="continuity"] .quarterMouth{
+  transition:opacity .22s ease 75ms;
+}
+.illustration[data-acting-mode="continuity"] .smile{opacity:1}
+.illustration[data-acting-mode="continuity"] .thinkingMouth,
+.illustration[data-acting-mode="continuity"] .concern{opacity:0}
+/* Look at the screen: alter silhouette/feature spacing rather than simply
+   squashing a frontal face. Read, type and handoff share the same camera side. */
+.illustration[data-acting-mode="continuity"][data-pose="read"] .faceFront,
+.illustration[data-acting-mode="continuity"][data-pose="type"] .faceFront,
+.illustration[data-acting-mode="continuity"][data-pose="gesture"] .faceFront{opacity:0}
+.illustration[data-acting-mode="continuity"][data-pose="read"] .faceQuarter,
+.illustration[data-acting-mode="continuity"][data-pose="type"] .faceQuarter,
+.illustration[data-acting-mode="continuity"][data-pose="gesture"] .faceQuarter{opacity:1}
+.illustration[data-acting-mode="continuity"][data-pose="notice"] .bodyRig{transform:translate(-2px,0) rotate(-.35deg)}
+.illustration[data-acting-mode="continuity"][data-pose="notice"] .head{transform:translate(-3px,1px) rotate(-4deg)}
+.illustration[data-acting-mode="continuity"][data-pose="notice"] .pupils{transform:translate(-4px,0)}
+.illustration[data-acting-mode="continuity"][data-pose="notice"] .upperArm{transform:rotate(-2.5deg)}
+.illustration[data-acting-mode="continuity"][data-pose="notice"] .forearm{transform:rotate(-1deg)}
+.illustration[data-acting-mode="continuity"][data-pose="read"] .bodyRig{transform:translate(-3px,1px) rotate(-.8deg)}
+.illustration[data-acting-mode="continuity"][data-pose="read"] .head{transform:translate(-4px,2px) rotate(-6deg)}
+.illustration[data-acting-mode="continuity"][data-pose="read"] .pupils{transform:translate(-3px,2px)}
+.illustration[data-acting-mode="continuity"][data-pose="read"] .upperArm{transform:rotate(-2deg)}
+.illustration[data-acting-mode="continuity"][data-pose="read"] .forearm{transform:rotate(2deg)}
+.illustration[data-acting-mode="continuity"][data-pose="read"] .smile{opacity:0}
+.illustration[data-acting-mode="continuity"][data-pose="read"] .thinkingMouth{opacity:1}
+.illustration[data-acting-mode="continuity"][data-pose="decide"] .head{transform:rotate(2deg)}
+.illustration[data-acting-mode="continuity"][data-pose="decide"] .pupils{transform:translate(-1px,-.5px)}
+.illustration[data-acting-mode="continuity"][data-pose="decide"] .brows{transform:translateY(1.2px)}
+.illustration[data-acting-mode="continuity"][data-pose="decide"] .forearm{transform:rotate(-3deg)}
+.illustration[data-acting-mode="continuity"][data-pose="decide"] .hand{transform:rotate(3deg)}
+.illustration[data-acting-mode="continuity"][data-pose="decide"] .smile{opacity:0}
+.illustration[data-acting-mode="continuity"][data-pose="decide"] .thinkingMouth{opacity:1}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .bodyRig{transform:translate(2px,-2px) rotate(.5deg)}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .head{transform:translate(0,-2px) rotate(2.8deg)}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .pupils{transform:translate(1px,-2px)}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .brows{transform:translateY(-3.2px)}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .upperArm{transform:rotate(8deg)}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .forearm{transform:rotate(14deg)}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .hand{transform:rotate(3deg)}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .concern{opacity:1}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .smile{opacity:0}
+.illustration[data-acting-mode="continuity"][data-pose="type"] .bodyRig{transform:translate(-3px,1px) rotate(-.8deg)}
+.illustration[data-acting-mode="continuity"][data-pose="type"] .head{transform:translate(-3px,2px) rotate(-6deg)}
+.illustration[data-acting-mode="continuity"][data-pose="type"] .pupils{transform:translate(-3px,2px)}
+.illustration[data-acting-mode="continuity"][data-pose="type"] .forearm{transform:rotate(1deg)}
+.illustration[data-acting-mode="continuity"][data-pose="type"] .hand{transform:translateY(1px)}
+.illustration[data-acting-mode="continuity"][data-pose="gesture"] .head{transform:translate(-3px,1px) rotate(-4deg)}
+.illustration[data-acting-mode="continuity"][data-pose="gesture"] .upperArm{transform:rotate(7deg)}
+.illustration[data-acting-mode="continuity"][data-pose="gesture"] .forearm{transform:rotate(11deg)}
+.illustration[data-acting-mode="continuity"][data-pose="gesture"] .hand{transform:rotate(4deg)}
+.illustration[data-acting-mode="continuity"][data-pose="relief"] .bodyRig{transform:translate(0,2px) rotate(-.5deg)}
+.illustration[data-acting-mode="continuity"][data-pose="relief"] .head{transform:translate(0,1px) rotate(-1.8deg)}
+.illustration[data-acting-mode="continuity"][data-pose="relief"] .backArm{transform:rotate(1deg)}
+
 :global(html[data-portfolio-theme="dark"]) .stories{
   --story-ink:#eaf9ed;--story-soft-ink:#b3d9c5;--story-border:#345f4f;--story-paper:#153e35;--story-mist:#194c3e;--story-card:#123a31;
   background:radial-gradient(circle at 77% 8%,#235b46 0,transparent 50%),linear-gradient(180deg,#0f2926,#133a30);

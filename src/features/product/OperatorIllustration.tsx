@@ -14,6 +14,8 @@ export function OperatorIllustration({
     <svg
       className={styles.illustration}
       data-pose={pose}
+      data-acting-mode="continuity"
+      data-acting-version="v3"
       viewBox="0 0 720 500"
       role="img"
       aria-label="Illustrated human operator at a desk, responding to the current simulated business event"
@@ -91,6 +93,7 @@ export function OperatorIllustration({
       <path d="M472 282q23 34 52 0" stroke="#a2ebc6" strokeWidth="7" strokeLinecap="round" fill="none"/>
 
       <g className={styles.head}>
+        <g className={styles.faceFront} data-rig="face-front">
         <path d="M453 176c-6-38 11-69 52-71 37-2 62 23 60 68l-12 66-88-1Z" fill="#223a34"/>
         <ellipse cx="462" cy="204" rx="11" ry="16" fill="#bc7b5d"/>
         <ellipse cx="552" cy="204" rx="11" ry="16" fill="#bc7b5d"/>
@@ -116,6 +119,32 @@ export function OperatorIllustration({
         <path className={styles.thinkingMouth} d="M499 241q10 2 18-1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
         <path className={styles.concern} d="M497 242q10-6 21 1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
         <path d="M483 258q23 14 48-1" fill="none" stroke="#ab785d" strokeWidth="2" opacity=".55"/>
+        </g>
+        {/* An independently illustrated three-quarter LEFT view for looking toward the monitor.
+            The nose, near/far eyes, cheek, jaw and visible ear have distinct proportions;
+            scaling the front face horizontally is not a believable head turn. */}
+        <g className={styles.faceQuarter} data-rig="face-quarter" aria-hidden="true">
+          <path d="M476 162Q473 120 508 111Q545 107 561 148Q565 183 558 223L546 252Q527 276 500 266L477 250Q455 229 460 204Z" fill="url(#sd-hair)"/>
+          <path d="M540 192q17-3 20 11q4 16-9 27l-12-2Z" fill="#ae7056"/>
+          <path d="M481 153Q498 133 522 138Q546 141 549 171L546 217Q543 254 517 266Q492 273 472 253Q460 239 462 227L451 224Q446 220 454 209L463 196Q465 168 481 153Z" fill="url(#sd-skin)"/>
+          <path d="M526 161q20 23 17 57q0 30-22 46q27-11 32-48l-5-55Z" fill="#995f52" opacity=".13"/>
+          <path d="M469 166q9-33 40-42q34-7 49 31q-14 3-26-9q-13 8-28 9q-15 12-35 11Z" fill="url(#sd-hair)"/>
+          <path d="M472 155Q487 131 515 127" fill="none" stroke="#688277" strokeWidth="5" strokeLinecap="round" opacity=".3"/>
+          <path d="M479 192q9-7 19-4m17 1q7-4 14-1" fill="none" stroke="#563a33" strokeWidth="3.4" strokeLinecap="round"/>
+          <g className={styles.quarterEyes} data-rig="quarter-eyelids">
+            <path d="M474 205q7-9 17-1q-5 10-17 1Z" fill="#f8ead7"/>
+            <path d="M512 204q5-7 12-1q-5 9-12 1Z" fill="#f8ead7" opacity=".9"/>
+            <g className={styles.quarterPupils} data-rig="quarter-gaze" fill="#253b33">
+              <ellipse cx="480" cy="205" rx="3.5" ry="4.8"/>
+              <ellipse cx="517" cy="204" rx="2.4" ry="4"/>
+              <circle cx="481" cy="203" r="1" fill="#fff" opacity=".8"/>
+            </g>
+          </g>
+          <path d="M472 205L451 221q-3 5 7 7l16-2" fill="none" stroke="#a86c55" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M485 241q10 3 19-2" className={styles.quarterMouth} fill="none" stroke="#793e38" strokeWidth="3" strokeLinecap="round"/>
+          <path d="M482 250q14 12 29 3" fill="none" stroke="#ad765f" opacity=".35" strokeWidth="2"/>
+          <path d="M534 201q8 9 2 19" fill="none" stroke="#9b624f" opacity=".24" strokeWidth="4" strokeLinecap="round"/>
+        </g>
       </g>
 
       {/* The arm is jointed shoulder → elbow → wrist; hand stays anchored to the keyboard. */}

@@ -42,7 +42,6 @@ function InteractiveOperatorStory({
           </div>
           <div className={styles.artwork} data-scene-state={beat.blocked ? "blocked" : beat.pose}>
             <OperatorIllustration
-              key={state.scenarioId + "-" + state.step + "-" + String(beat.blocked)}
               pose={beat.pose}
               screen={beat.screen}
               blocked={beat.blocked}
