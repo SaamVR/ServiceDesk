@@ -126,28 +126,52 @@ try{
   assert(await js("!!document.querySelector('a[href=\"#interactive-stories-play\"]')"),"Hero links directly to the playable stage");
   await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start',behavior:'instant'})");
   await sleep(200);await shot("interactive-story-play-desktop-1440.png");
-  // Hosted smoke can run before manual deploy, so it must not mislabel the old
-  // published source as a regression; exact-source build requires the V2 rig.
+  // A pre-deployment hosted run validates the current release, while source
+  // requires V3; post-deployment rerun verifies the same V3 actor on Render.
   const hasActorV2=await js("document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')!==null");
+  const hasActorV3=await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')!==null");
+  if(!process.env.PORTFOLIO_QA_BASE_URL){
+    assert(hasActorV3,"Exact source includes the V3 seamless acting system");
+  }
+  if(hasActorV3){
+    assert(await js("!!document.querySelector('#interactive-stories [data-rig=\"face-front\"]')"),"Front portrait remains a distinct artwork");
+    assert(await js("!!document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')"),"Artist-drawn quarter profile has independent anatomy");
+    assert(await js("document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]').querySelectorAll('path').length>=9"),"Quarter face contains separately drawn contour, jaw, nose, mouth and hair");
+    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).transitionDuration)>.3"),"Multi-joint acting uses interpolated continuity");
+    assert(await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName==='none'"),"CSS keyframe resets are disabled on the V3 elbow");
+    await js("window.__operatorStableNode=document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')");
+  }
   if(hasActorV2){
     assert(await js("document.querySelector('#interactive-stories [data-rig=\"elbow\"]')!==null"),"Operator has a real nested elbow articulation group");
     assert(await js("document.querySelector('#interactive-stories [data-rig=\"wrist\"]')!==null"),"Operator has a separate wrist and hand group");
     assert(await js("document.querySelector('#interactive-stories [data-rig=\"gaze\"]')!==null"),"Operator has independent gaze tracking");
-    const animatedArm=await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName");
-    assert(animatedArm.includes("actorReachElbow"),"Operator elbow follows choreographed keyframes");
+    if(!hasActorV3){
+      const animatedArm=await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName");
+      assert(animatedArm.includes("actorReachElbow"),"Legacy V2 operator elbow follows choreographed keyframes");
+    }
   }else{
     assert(!!process.env.PORTFOLIO_QA_BASE_URL,"New articulated character is missing from exact source build");
   }
   if(hasActorV2){
-    // The initial page may have settled before we reach the section. Explicit
-    // branch reset forces the first acting beat to replay before frame capture.
-    assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Notice capture enters another scenario first");
-    assert(await click('#interactive-stories [class*="branchPicker"] button',"Routine enquiry"),"Notice capture resets to routine");
+    if(hasActorV3){
+      assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Operator continuity capture starts from exception branch");
+      assert(await click('#interactive-stories [class*="continue"]',"Continue to AI brief"),"Operator continuity enters reading scene");
+      await sleep(1000);
+      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')).opacity)>.97"),"Quarter portrait is visible after moving toward the screen");
+      assert(await click('#interactive-stories [class*="secondaryControls"] button',"Previous event"),"Operator continuity can revisit notice");
+      assert(await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')===window.__operatorStableNode"),"Character DOM identity is preserved across stages");
+    }else{
+      assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Notice capture enters another scenario first");
+      assert(await click('#interactive-stories [class*="branchPicker"] button',"Routine enquiry"),"Notice capture resets to routine");
+    }
     const noticeStart=await shot("operator-notice-0000.png");
     await sleep(290);
     const noticeMid=await shot("operator-notice-0290.png");
     assert(noticeStart!==noticeMid,"Operator notice action changes actual rendered pixels during motion");
     await sleep(750);await shot("operator-notice-1040.png");
+    if(hasActorV3){
+      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-front\"]')).opacity)>.97"),"Frontal portrait returns after screen-facing scene");
+    }
   }else{
     await shot("operator-notice-hosted-baseline.png");
   }
@@ -156,6 +180,11 @@ try{
   await shot("operator-read-0000.png");
   await sleep(330);await shot("operator-read-0330.png");
   await sleep(780);await shot("operator-read-1110.png");
+  if(hasActorV3){
+    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')).opacity)>.97"),"AI reading displays a fully drawn three-quarter facial view");
+    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-front\"]')).opacity)<.03"),"Front portrait is hidden while reading");
+    assert(await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')===window.__operatorStableNode"),"Actor persists when entering the AI reading scene");
+  }
   assert(await click('#interactive-stories [class*="continue"]',"Continue to Review"),"Operator reaches human review");
   await shot("operator-alert-0000.png");
   await sleep(320);await shot("operator-alert-0320.png");
@@ -164,6 +193,11 @@ try{
     assert(contactAtPeak,"Alert hand must never hang below the front desk edge at motion peak");
   }
   await sleep(900);await shot("operator-alert-1220.png");
+  if(hasActorV3){
+    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-front\"]')).opacity)>.97"),"Alert returns to the frontal character acting view");
+    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')).opacity)<.03"),"Three-quarter portrait is hidden during frontal alert");
+    assert(await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')===window.__operatorStableNode"),"Actor identity persists through safety review");
+  }
   if(hasActorV2){
     const contactAtSettle=await js("(()=>{const hand=document.querySelector('#interactive-stories [data-rig=\"wrist\"]');const desk=document.querySelector('#interactive-stories [data-prop=\"desktop-edge\"]');return !!hand&&!!desk&&hand.getBoundingClientRect().bottom<=desk.getBoundingClientRect().bottom-1})()");
     assert(contactAtSettle,"Alert hand remains above the desk edge after motion settles");
@@ -319,6 +353,11 @@ try{
  if(storyPresent){
    const reducedRigV2=await js("document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')!==null");
    if(reducedRigV2){
+     const reducedV3=await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')!==null");
+     if(reducedV3){
+       assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).transitionDuration||'0')<=0.01"),"Operator shoulder transitions honor reduced motion");
+       assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')).transitionDuration||'0')<=0.01"),"Face projection transitions honor reduced motion");
+     }
      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).animationDuration||'0')<=0.01"),"Operator shoulder honors reduced motion");
      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"eyelids\"]')).animationDuration||'0')<=0.01"),"Operator blinking honors reduced motion");
    }else{
