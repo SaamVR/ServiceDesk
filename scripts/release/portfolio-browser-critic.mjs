@@ -120,12 +120,16 @@ try{
   assert(await js("document.querySelector('#interactive-stories h2')?.textContent?.includes('Meet the person')"),"Human-acted interactive story renders");
   await js("document.getElementById('interactive-stories').scrollIntoView({block:'start'})");
   await sleep(250);await shot("interactive-stories-desktop-1440.png");
+  assert(await js("!!document.querySelector('a[href=\"#interactive-stories-play\"]')"),"Hero links directly to the playable stage");
+  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start'})");
+  await sleep(200);await shot("interactive-story-play-desktop-1440.png");
   assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Visitor can choose exception branch");
   assert(await click('#interactive-stories [class*="continue"]',"Continue to AI brief"),"Operator proceeds to the AI brief");
   assert(await click('#interactive-stories [class*="continue"]',"Continue to Review"),"Operator reaches human review");
   assert(await js("document.querySelector('#interactive-stories [data-scene-state=\"blocked\"]')!==null"),"Operator acting changes to a blocked safety pose");
   assert(await js("!!document.querySelector('#scenario-lab [data-phase=\"blocked\"]')"),"Six-stage theater synchronizes with operator safety stop");
   assert(await js("!!document.querySelector('#scenario-lab [data-kind=\"needs-review\"]')"),"Existing event ledger synchronizes with the character's review requirement");
+  await sleep(450);await shot("interactive-story-human-gate-1440.png");
   assert(await click('#interactive-stories [class*="continue"]',"Acknowledge fictional review"),"Fictional human checkpoint is explicitly acknowledged");
   assert(await js("document.querySelector('#interactive-stories [data-scene-state=\"blocked\"]')===null"),"Character returns from alert without asserting a provider outcome");
   assert(await click('#interactive-stories [class*="continue"]',"Continue to Schedule"),"Reviewed example can continue to scheduling");
@@ -188,10 +192,17 @@ try{
  assert(await js("document.documentElement.dataset.portfolioTheme==='light'"),"Mobile light mode restored");
 
  await shot("home-375.png");await noOverrun("Home 375");
- if(storyPresent){await js("document.getElementById('interactive-stories').scrollIntoView({block:'start'})");await sleep(180);await shot("interactive-stories-mobile-375.png");await noOverrun("Story 375");}
+ if(storyPresent){
+  await js("document.querySelector('header details[open]')?.removeAttribute('open')");
+  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start'})");
+  await sleep(180);await shot("interactive-stories-mobile-375.png");await noOverrun("Story 375");
+ }
  await setViewport(320,740,true);await navigate("/");
  await shot("home-320.png");await noOverrun("Home 320");
- if(storyPresent){await js("document.getElementById('interactive-stories').scrollIntoView({block:'start'})");await sleep(180);await shot("interactive-stories-mobile-320.png");await noOverrun("Story 320");}
+ if(storyPresent){
+  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start'})");
+  await sleep(180);await shot("interactive-stories-mobile-320.png");await noOverrun("Story 320");
+ }
 
  await setViewport(1440,900);await navigate("/demo");
  assert((await js("document.querySelector('h1')?.textContent||''")).includes("Overview"),"Dashboard overview renders");

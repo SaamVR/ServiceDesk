@@ -34,7 +34,7 @@ function InteractiveOperatorStory({
         <p>Run a fictional business enquiry from the operator&apos;s desk. Your decisions change the character&apos;s reaction, the six-stage process and the event ledger below—all without contacting a real customer or service.</p>
       </div>
 
-      <div className={styles.experience}>
+      <div className={styles.experience} id="interactive-stories-play">
         <div className={styles.stage}>
           <div className={styles.stageChrome}>
             <span className={styles.liveMark}><span aria-hidden="true"/> THE OPERATOR&apos;S DESK</span>

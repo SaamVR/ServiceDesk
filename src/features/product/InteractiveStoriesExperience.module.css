@@ -23,7 +23,7 @@
 .intro h2{font-family:Manrope,"DM Sans","Segoe UI",system-ui,sans-serif;font-weight:850;font-size:clamp(2.8rem,5vw,5.5rem);line-height:1.08;letter-spacing:-.07em;margin:0;max-width:930px}
 .intro h2 em{font-style:normal;color:#249d7d}
 .intro>p{margin:0 0 8px;max-width:450px;color:var(--story-soft-ink);font-size:.95rem;line-height:1.85}
-.experience{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(365px,.94fr);border-radius:22px;overflow:hidden;box-shadow:0 24px 74px #164b3522;background:#fff;border:1px solid var(--story-border)}
+.experience{scroll-margin-top:92px;display:grid;grid-template-columns:minmax(0,1.06fr) minmax(365px,.94fr);border-radius:22px;overflow:hidden;box-shadow:0 24px 74px #164b3522;background:#fff;border:1px solid var(--story-border)}
 .stage{min-width:0;background:#163b36;display:flex;flex-direction:column}
 .stageChrome{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#11312e;color:#b9ddcc;padding:16px 21px;font-weight:850;font-size:.61rem;letter-spacing:.12em}
 .liveMark{display:flex;align-items:center;gap:9px;color:#dbfbe7}
