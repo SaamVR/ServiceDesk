@@ -116,7 +116,7 @@ export function AutomationMotionHome() {
           <p className={styles.heroLead}>One customer message becomes a reviewed quote, scheduled visit and accountable follow-up. Explore the AI-assisted handoffs and human decisions.</p>
           <div className={styles.heroActions}>
             <Link href="/demo" className={styles.primaryCta}>Explore guided dashboard <span aria-hidden="true">↗</span></Link>
-            <a href="#scenario-lab" className={styles.secondaryCta}>Run workflow simulation <span aria-hidden="true">↘</span></a>
+            <a href="#interactive-stories" className={styles.secondaryCta}>Play the operator story <span aria-hidden="true">↘</span></a>
           </div>
           <p className={styles.heroBoundary}><span className={styles.boundaryDot} /> Interactive fictional walkthrough. Source-level prototypes; no live customer, AI or payment actions.</p>
         </div>

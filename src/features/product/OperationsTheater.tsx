@@ -46,7 +46,7 @@ export function OperationsTheater({ state, dispatch }: { state: TheaterState; di
     sync();
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     const node = sectionRef.current;
@@ -65,7 +65,7 @@ export function OperationsTheater({ state, dispatch }: { state: TheaterState; di
       if (document.visibilityState === "visible") dispatch({ type: "TICK" });
     }, 2550);
     return () => window.clearInterval(id);
-  }, [state.playing, visible, reduced]);
+  }, [state.playing, visible, reduced, dispatch]);
 
   const signalSummary = [
     { name: "Property size", found: /\b\d+\s*(?:bed(?:room)?s?|rooms?)\b/i.test(state.message) },

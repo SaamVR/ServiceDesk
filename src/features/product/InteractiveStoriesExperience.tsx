@@ -31,13 +31,13 @@ function InteractiveOperatorStory({
           <p className={styles.eyebrow}><span className={styles.eyebrowSquare} aria-hidden="true">✦</span> FEATURED EXPERIENCE / PLAYABLE STORY</p>
           <h2 id="interactive-stories-title">Meet the person <em>behind the automation.</em></h2>
         </div>
-        <p>Run a fictional business enquiry from the operator's desk. Your decisions change the character's reaction, the six-stage process and the event ledger below—all without contacting a real customer or service.</p>
+        <p>Run a fictional business enquiry from the operator&apos;s desk. Your decisions change the character&apos;s reaction, the six-stage process and the event ledger below—all without contacting a real customer or service.</p>
       </div>
 
       <div className={styles.experience}>
         <div className={styles.stage}>
           <div className={styles.stageChrome}>
-            <span className={styles.liveMark}><span aria-hidden="true"/> THE OPERATOR'S DESK</span>
+            <span className={styles.liveMark}><span aria-hidden="true"/> THE OPERATOR&apos;S DESK</span>
             <span>CHAPTER 01 / INTERACTIVE</span>
           </div>
           <div className={styles.artwork} data-scene-state={beat.blocked ? "blocked" : beat.pose}>
