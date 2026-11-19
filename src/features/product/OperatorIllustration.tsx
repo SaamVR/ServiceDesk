@@ -27,6 +27,16 @@ export function OperatorIllustration({
           <stop offset="0" stopColor="#1e927a"/>
           <stop offset="1" stopColor="#116251"/>
         </linearGradient>
+        <linearGradient id="sd-skin" x1="0" y1="0" x2="1" y2=".75">
+          <stop offset="0" stopColor="#dca485"/>
+          <stop offset=".56" stopColor="#ca8d6f"/>
+          <stop offset="1" stopColor="#ad715c"/>
+        </linearGradient>
+        <linearGradient id="sd-hair" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#426055"/>
+          <stop offset=".58" stopColor="#253d34"/>
+          <stop offset="1" stopColor="#1a342e"/>
+        </linearGradient>
         <linearGradient id="sd-screen" x1="0" x2="1" y1="0" y2="1">
           <stop offset="0" stopColor="#123b39"/>
           <stop offset="1" stopColor="#082928"/>
@@ -66,12 +76,15 @@ export function OperatorIllustration({
       <path d="M493 369v74M460 446h70" stroke="#346b65" strokeWidth="11" strokeLinecap="round"/>
       <path d="M451 446h-18m97 0h18" stroke="#346b65" strokeWidth="7" strokeLinecap="round"/>
 
+      <g className={styles.bodyRig} data-rig="body">
       <g className={styles.backArm}>
         <path d="M552 303c37 11 47 53 21 73l-60 23-22-31 46-27-9-17Z" fill="#0f6d59"/>
         <path d="M509 369c20-10 39-13 48-25" fill="none" stroke="#3eaa88" strokeWidth="4" opacity=".55"/>
         <ellipse cx="496" cy="381" rx="18" ry="14" fill="#b87758" transform="rotate(-17 496 381)"/>
       </g>
       <path d="M422 302Q440 275 473 273h68q37 4 52 64l17 89H387l20-101q4-15 15-23Z" fill="url(#sd-shirt)"/>
+      <path d="M456 297q-13 28-12 58M536 291q17 39 13 79" fill="none" stroke="#4ac09d" strokeWidth="4" strokeLinecap="round" opacity=".26"/>
+      <path d="M430 392c35-10 116-10 165 0" fill="none" stroke="#0d5548" strokeWidth="5" opacity=".42"/>
       <path d="M427 322q18 32 34 48" stroke="#41b598" strokeWidth="6" opacity=".55" fill="none"/>
       <path d="M546 292q-8 43 4 73" stroke="#0d5649" strokeWidth="5" opacity=".55" fill="none"/>
       <path d="M484 264v20c0 19 28 21 31 1v-21Z" fill="#ad7054"/>
@@ -81,25 +94,46 @@ export function OperatorIllustration({
         <path d="M453 176c-6-38 11-69 52-71 37-2 62 23 60 68l-12 66-88-1Z" fill="#223a34"/>
         <ellipse cx="462" cy="204" rx="11" ry="16" fill="#bc7b5d"/>
         <ellipse cx="552" cy="204" rx="11" ry="16" fill="#bc7b5d"/>
-        <path d="M458 163c8-28 30-38 50-37 32 0 49 19 49 52v36c0 39-22 65-50 65-27 0-50-27-50-66Z" fill="#c78c6d"/>
-        <path d="M456 167c8-34 27-50 57-51 30-1 55 18 55 54-15-3-33-13-43-29-15 15-42 28-69 26Z" fill="#243832"/>
+        <path d="M458 163c8-28 30-38 50-37 32 0 49 19 49 52v36c0 39-22 65-50 65-27 0-50-27-50-66Z" fill="url(#sd-skin)"/>
+        <path d="M542 175q13 19 10 42c-1 30-15 49-30 58 19-7 36-26 36-61v-38Z" fill="#945c4d" opacity=".12"/>
+        <path d="M470 222q8 5 15 0m49 0q7 5 13 0" stroke="#af745d" strokeWidth="3" opacity=".22" fill="none" strokeLinecap="round"/>
+        <path d="M456 167c8-34 27-50 57-51 30-1 55 18 55 54-15-3-33-13-43-29-15 15-42 28-69 26Z" fill="url(#sd-hair)"/>
+        <path d="M470 145q17-24 45-22" stroke="#6b8777" strokeWidth="5" strokeLinecap="round" opacity=".32" fill="none"/>
         <path d="M464 166c7-29 26-45 51-47" fill="none" stroke="#34544b" strokeWidth="9" strokeLinecap="round"/>
         <path className={styles.brows} d="M476 191q11-6 23-1m18-1q13-5 23 2" fill="none" stroke="#4f3a33" strokeWidth="3.6" strokeLinecap="round"/>
-        <g className={styles.eyes} fill="#283b33">
-          <ellipse cx="488" cy="207" rx="3.7" ry="5.3"/>
-          <ellipse cx="529" cy="207" rx="3.7" ry="5.3"/>
+        <g className={styles.eyeSockets} data-rig="eyelids">
+          <ellipse cx="488" cy="208" rx="9.1" ry="6.4" fill="#f7e9d5" opacity=".96"/>
+          <ellipse cx="529" cy="208" rx="9.1" ry="6.4" fill="#f7e9d5" opacity=".96"/>
+          <g className={styles.pupils} fill="#263a31" data-rig="gaze">
+            <ellipse cx="488" cy="208" rx="3.6" ry="5"/>
+            <ellipse cx="529" cy="208" rx="3.6" ry="5"/>
+            <circle cx="489" cy="206.5" r="1.15" fill="#fff" opacity=".83"/>
+            <circle cx="530" cy="206.5" r="1.15" fill="#fff" opacity=".83"/>
+          </g>
         </g>
         <path d="M507 207l-4 18q4 5 10 1" fill="none" stroke="#a66e57" strokeWidth="3" strokeLinecap="round"/>
         <path className={styles.smile} d="M496 240q11 10 23-1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
+        <path className={styles.thinkingMouth} d="M499 241q10 2 18-1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
         <path className={styles.concern} d="M497 242q10-6 21 1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
         <path d="M483 258q23 14 48-1" fill="none" stroke="#ab785d" strokeWidth="2" opacity=".55"/>
       </g>
 
-      {/* Forearm has its own pivot instead of turning the entire character as a rigid image. */}
-      <g className={styles.frontArm}>
-        <path d="M424 315c-19 6-30 23-45 43l-31 24 18 19 51-25c16-8 28-22 36-37Z" fill="#1f9175"/>
-        <path d="M350 376c-13 0-24 8-27 18l25 3 20-9Z" fill="#c78c6d"/>
-        <path d="m326 389-10 3m19 2-9 5m19-3-5 6" stroke="#ac7356" strokeWidth="3.5" strokeLinecap="round"/>
+      {/* The arm is jointed shoulder → elbow → wrist; hand stays anchored to the keyboard. */}
+      <g className={styles.frontArm} data-rig="front-arm">
+        <g className={styles.upperArm} data-rig="shoulder">
+          <path d="M429 310c-17 1-30 18-46 41l-12 17 21 16c19-16 39-32 51-52Z" fill="#218e75"/>
+          <path d="M426 318q-13 18-28 31" stroke="#52bfa0" strokeWidth="4" strokeLinecap="round" opacity=".35" fill="none"/>
+          <g className={styles.forearm} data-rig="elbow">
+            <path d="M378 354c-11 8-26 19-39 25l7 17c18-2 35-12 49-23l2-6Z" fill="#178267"/>
+            <path d="M367 374q-10 9-19 9" stroke="#63c5a1" strokeWidth="3" fill="none" opacity=".45"/>
+            <g className={styles.hand} data-rig="wrist">
+              <path d="M348 380c-8-4-15-4-23 0l-13 8c-5 4-3 9 3 10l34-1 9-10Z" fill="url(#sd-skin)"/>
+              <path d="m323 387-10 2m17 3-11 2m18 1-11 2" stroke="#a66c57" strokeWidth="2.2" strokeLinecap="round" opacity=".75"/>
+              <path d="M319 380q6-6 13-4" stroke="#efb89a" strokeWidth="2.6" fill="none" opacity=".5"/>
+            </g>
+          </g>
+        </g>
+      </g>
       </g>
 
       {/* Desktop is layered above the lower body, anchoring hand movement. */}

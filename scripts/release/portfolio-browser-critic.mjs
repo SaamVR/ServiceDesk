@@ -123,9 +123,24 @@ try{
   assert(await js("!!document.querySelector('a[href=\"#interactive-stories-play\"]')"),"Hero links directly to the playable stage");
   await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start',behavior:'instant'})");
   await sleep(200);await shot("interactive-story-play-desktop-1440.png");
+  assert(await js("document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')!==null"),"Operator has a real shoulder articulation group");
+  assert(await js("document.querySelector('#interactive-stories [data-rig=\"elbow\"]')!==null"),"Operator has a real nested elbow articulation group");
+  assert(await js("document.querySelector('#interactive-stories [data-rig=\"wrist\"]')!==null"),"Operator has a separate wrist and hand group");
+  assert(await js("document.querySelector('#interactive-stories [data-rig=\"gaze\"]')!==null"),"Operator has independent gaze tracking");
+  const animatedArm=await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName");
+  assert(animatedArm.includes("actorReachElbow"),"Operator elbow follows choreographed keyframes");
+  await shot("operator-notice-0200.png");
+  await sleep(250);await shot("operator-notice-0450.png");
+  await sleep(520);await shot("operator-notice-0970.png");
   assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Visitor can choose exception branch");
   assert(await click('#interactive-stories [class*="continue"]',"Continue to AI brief"),"Operator proceeds to the AI brief");
+  await shot("operator-read-0000.png");
+  await sleep(330);await shot("operator-read-0330.png");
+  await sleep(780);await shot("operator-read-1110.png");
   assert(await click('#interactive-stories [class*="continue"]',"Continue to Review"),"Operator reaches human review");
+  await shot("operator-alert-0000.png");
+  await sleep(320);await shot("operator-alert-0320.png");
+  await sleep(900);await shot("operator-alert-1220.png");
   assert(await js("document.querySelector('#interactive-stories [data-scene-state=\"blocked\"]')!==null"),"Operator acting changes to a blocked safety pose");
   assert(await js("!!document.querySelector('#scenario-lab [data-phase=\"blocked\"]')"),"Six-stage theater synchronizes with operator safety stop");
   assert(await js("!!document.querySelector('#scenario-lab [data-kind=\"needs-review\"]')"),"Existing event ledger synchronizes with the character's review requirement");
@@ -274,6 +289,10 @@ try{
  await send("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
  await navigate("/");await sleep(200);
  assert(await js("document.body.textContent?.includes('Motion off')"),"Reduced-motion disables cinematic autoplay");
+ if(storyPresent){
+   assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).animationDuration||'0')<=0.01"),"Operator shoulder honors reduced motion");
+   assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"eyelids\"]')).animationDuration||'0')<=0.01"),"Operator blinking honors reduced motion");
+ }
  await shot("home-reduced-motion-320.png");
  const blocked=await fetch(url+"/auth/sign-in",{redirect:"manual"});
  assert(blocked.status===404||blocked.status===403,"Portfolio blocks sign-in HTTP route (HTTP "+blocked.status+")");
