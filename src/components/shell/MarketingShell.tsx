@@ -6,6 +6,7 @@ import brightStyles from "@/features/product/BrightHomeExperience.module.css";
 import { OperationalFlowHero } from "./OperationalFlowHero";
 import { ProductStoryHero, type ProductStoryHeroKind } from "./ProductStoryHero";
 import { MarketingNavLinks } from "./MarketingNavLinks";
+import { PortfolioThemeToggle } from "@/features/product/PortfolioThemeToggle";
 import { ownerRegistrationAvailable, ownerRegistrationPubliclyAvailable } from "@/features/auth/owner-registration-readiness";
 import { marketingHeroEntry, marketingRegistrationEntry } from "@/features/auth/marketing-entry-policy";
 
@@ -36,9 +37,15 @@ export function MarketingShell({
   homeEdition = false,
   brightEdition = false,
 }: MarketingShellProps) {
-  const registrationEnabled = ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
-  const registration = marketingRegistrationEntry(registrationEnabled);
-  const heroAction = marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
+  // Portfolio-only is a presentation mode, never a grant of tenant or provider authority.
+  const portfolioMode = process.env.SERVICEDESK_PORTFOLIO_MODE === "true";
+  const registrationEnabled = !portfolioMode && ownerRegistrationAvailable() && ownerRegistrationPubliclyAvailable();
+  const registration = portfolioMode
+    ? { href: "/demo", desktop: "Guided dashboard", mobile: "Dashboard" }
+    : marketingRegistrationEntry(registrationEnabled);
+  const heroAction = portfolioMode
+    ? { href: "/work/business-automation", label: "View the case study" }
+    : marketingHeroEntry(registrationEnabled, primaryHref, primaryLabel);
   return (
     <main className={homeEdition ? `site-shell ${brightStyles.shell}` : brightEdition ? `site-shell ${brightStyles.shell}` : "site-shell"}>
       <a className={styles.skipLink} href="#public-main-content">Skip to content</a>
@@ -58,10 +65,11 @@ export function MarketingShell({
           </span>
         </Link>
         <nav className={styles.desktopNav} aria-label="Primary navigation">
-          <MarketingNavLinks variant="desktop" />
+          <MarketingNavLinks variant="desktop" portfolioMode={portfolioMode} />
         </nav>
         <div className={styles.actions}>
-          <Link className={styles.signIn} href="/auth/sign-in">Sign in</Link>
+          {!portfolioMode ? <Link className={styles.signIn} href="/auth/sign-in">Sign in</Link> : null}
+          {portfolioMode ? <span className={styles.desktopThemeToggle}><PortfolioThemeToggle /></span> : null}
           <Link className={styles.primaryAction} href={registration.href}>
             <span className={styles.desktopActionLabel}>{registration.desktop}</span>
             <span className={styles.mobileActionLabel}>{registration.mobile}</span>
@@ -74,12 +82,23 @@ export function MarketingShell({
             </summary>
             <nav className={styles.mobileMenuPanel} aria-label="Mobile product navigation">
               <p className={styles.menuEyebrow}>Explore the platform</p>
-              <MarketingNavLinks variant="mobile" />
+              <MarketingNavLinks variant="mobile" portfolioMode={portfolioMode} />
               <div className={styles.mobileMenuFooter}>
-                <Link href="/contact">Contact sales <span aria-hidden="true">↗</span></Link>
-                <Link href="/help">Help center <span aria-hidden="true">↗</span></Link>
-                <Link href="/auth/sign-in">Sign in <span aria-hidden="true">↗</span></Link>
+                {portfolioMode ? (
+                  <>
+                    <Link href="/work/business-automation">Case study <span aria-hidden="true">↗</span></Link>
+                    <Link href="/demo">Guided dashboard <span aria-hidden="true">↗</span></Link>
+                    <Link href="/sandbox">Workflow sandbox <span aria-hidden="true">↗</span></Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/contact">Contact sales <span aria-hidden="true">↗</span></Link>
+                    <Link href="/help">Help center <span aria-hidden="true">↗</span></Link>
+                    <Link href="/auth/sign-in">Sign in <span aria-hidden="true">↗</span></Link>
+                  </>
+                )}
               </div>
+              {portfolioMode ? <div className={styles.mobileThemeToggle}><PortfolioThemeToggle /></div> : null}
             </nav>
           </details>
         </div>
@@ -109,7 +128,7 @@ export function MarketingShell({
       <footer className="site-footer">
         <div>
           <strong>ServiceDesk AI</strong>
-          <p>Customer communication, scheduling, payments and service operations in one practical workspace.</p>
+          <p>{portfolioMode ? "Portfolio demonstration of connected business automation. All interactive sample data is synthetic; no live financial or provider actions." : "Customer communication, scheduling, payments and service operations in one practical workspace."}</p>
         </div>
         <nav aria-label="Legal">
           <Link href="/privacy">Privacy</Link>

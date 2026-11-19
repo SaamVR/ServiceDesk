@@ -1,0 +1,119 @@
+name: ServiceDesk Portfolio — source and Chrome QA
+on:
+  push:
+    branches:
+      - feat/servicedesk-automation-portfolio-case-study-20261118
+    paths:
+      - "src/features/product/AutomationMotionHome.*"
+      - "src/features/product/portfolio-theme.ts"
+      - "src/features/product/PortfolioThemeToggle.*"
+      - "src/features/product/AutomationCaseStudy.*"
+      - "src/components/shell/MarketingShell.tsx"
+      - "src/components/shell/MarketingNavV3.module.css"
+      - "src/app/layout.tsx"
+      - "src/app/globals.css"
+      - "src/features/product/CinematicHero.*"
+      - "src/features/product/DemoOperationsDashboard.*"
+      - "src/features/product/demo-dashboard-model.ts"
+      - "src/features/product/ai-review-model.ts"
+      - "src/features/product/quick-switch-model.ts"
+      - "src/features/product/DemoQuickSwitch.*"
+      - "src/features/product/OperationsTheater.*"
+      - "src/features/product/InteractiveStoriesExperience.*"
+      - "src/features/product/OperatorIllustration.tsx"
+      - "src/features/product/interactive-story-model.ts"
+      - "src/features/product/WorkflowComparison.*"
+      - "tests/e2e/v4-portfolio*.test.ts"
+      - "scripts/release/portfolio-browser-critic.mjs"
+      - ".github/workflows/portfolio-motion-chrome-rc.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: servicedesk-portfolio-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-code-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SERVICEDESK_PORTFOLIO_MODE: "true"
+      SERVICEDESK_OWNER_REGISTRATION_ENABLED: "false"
+      SERVICEDESK_F23_OWNER_HOLD_RELEASE_ENABLED: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.17.1, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2, cache: pnpm }
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Focused real Vitest regressions
+        run: pnpm exec vitest run tests/e2e/v4-portfolio-guided-dashboard.test.ts tests/e2e/v4-portfolio-operations-theater.test.ts tests/e2e/v4-portfolio-motion-integrity.test.ts tests/e2e/v4-portfolio-route-guard.test.ts tests/e2e/v4-portfolio-ai-review.test.ts tests/e2e/v4-portfolio-quick-switch.test.ts tests/e2e/v4-portfolio-theme.test.ts tests/e2e/v4-portfolio-interactive-story.test.ts
+      - name: Lint changed presentation components and typecheck
+        run: |
+          pnpm exec eslint src/features/product/PortfolioThemeToggle.tsx src/features/product/portfolio-theme.ts src/components/shell/MarketingShell.tsx src/app/layout.tsx src/features/product/AutomationMotionHome.tsx src/features/product/CinematicHero.tsx src/features/product/DemoOperationsDashboard.tsx src/features/product/DemoQuickSwitch.tsx src/features/product/ai-review-model.ts src/features/product/quick-switch-model.ts src/features/product/OperationsTheater.tsx src/features/product/InteractiveStoriesExperience.tsx src/features/product/OperatorIllustration.tsx src/features/product/interactive-story-model.ts src/features/product/WorkflowComparison.tsx src/features/product/demo-dashboard-model.ts
+          pnpm typecheck
+      - name: Optimized Next production build
+        run: pnpm build
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Serve portfolio build
+        run: |
+          pnpm start -H 127.0.0.1 -p 3000 > "$RUNNER_TEMP/portfolio-next.log" 2>&1 &
+          for i in $(seq 1 70); do
+            if curl -fsS http://127.0.0.1:3000/demo > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/portfolio-next.log"
+          exit 1
+      - name: Chrome motion, mobile and guidance critic
+        env:
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+          PORTFOLIO_QA_OUTPUT: ${{ runner.temp }}/portfolio-critic
+        run: node scripts/release/portfolio-browser-critic.mjs
+      - name: Retain browser captures and QA receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: servicedesk-portfolio-browser-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/portfolio-critic/
+            ${{ runner.temp }}/portfolio-next.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  hosted-browser-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.23.2 }
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+      - name: Wake and probe the existing Render portfolio
+        run: |
+          for i in $(seq 1 18); do
+            if curl -fsSL --connect-timeout 8 --max-time 45 https://servicedesk-automation-portfolio.onrender.com/demo >/dev/null; then exit 0; fi
+            sleep 5
+          done
+          echo "Hosted portfolio unavailable for independent QA"
+          exit 1
+      - name: Chrome hosted UI and accessibility verification
+        env:
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+          PORTFOLIO_QA_BASE_URL: https://servicedesk-automation-portfolio.onrender.com
+          PORTFOLIO_QA_OUTPUT: ${{ runner.temp }}/portfolio-hosted-critic
+        run: node scripts/release/portfolio-browser-critic.mjs
+      - name: Retain hosted screenshots and browser receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: servicedesk-portfolio-hosted-browser-${{ github.sha }}
+          path: ${{ runner.temp }}/portfolio-hosted-critic/
+          if-no-files-found: warn
+          retention-days: 7

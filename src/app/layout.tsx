@@ -18,9 +18,12 @@ export const metadata: Metadata = {
   },
 };
 
+const themeBootstrap = `(function(){try{var choice=window.localStorage.getItem("servicedesk-portfolio-theme-v1");document.documentElement.dataset.portfolioTheme=choice==="dark"?"dark":"light";}catch(e){document.documentElement.dataset.portfolioTheme="light";}})();`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      {process.env.SERVICEDESK_PORTFOLIO_MODE === "true" ? <head><script dangerouslySetInnerHTML={{ __html: themeBootstrap }} /></head> : null}
       <body>
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <div id="main-content">{children}</div>

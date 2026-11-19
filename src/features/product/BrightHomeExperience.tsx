@@ -87,7 +87,7 @@ function ServiceGallery() {
               </li>
             ))}
           </ol>
-          <Link className={styles.processLink} href="/features">Explore the workflow <Arrow /></Link>
+          <Link className={styles.processLink} href="/work/business-automation">Explore the automation case study <Arrow /></Link>
         </div>
         <div className={styles.processArt} aria-label="Clean spaces and a professional home-cleaning moment">
           <div className={styles.processLargePhoto} role="img" aria-label="Professional cleaners working in a bright, airy living room" />
