@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useReducer, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type Dispatch } from "react";
 import {
-  initialTheaterState, scenarioFor, theaterIsBlocked, theaterLedger,
-  theaterScenarios, theaterSteps, theaterTransition,
-  type TheaterChannel, type TheaterView,
+  scenarioFor, theaterIsBlocked, theaterLedger,
+  theaterScenarios, theaterSteps,
+  type TheaterAction, type TheaterState, type TheaterChannel, type TheaterView,
 } from "./operations-theater-model";
 import styles from "./OperationsTheater.module.css";
 
@@ -26,8 +26,7 @@ const channels: readonly { id: TheaterChannel; title: string }[] = [
   { id: "voice", title: "Voice-style" },
 ];
 
-export function OperationsTheater() {
-  const [state, dispatch] = useReducer(theaterTransition, undefined, () => initialTheaterState());
+export function OperationsTheater({ state, dispatch }: { state: TheaterState; dispatch: Dispatch<TheaterAction> }) {
   const [reduced, setReduced] = useState(false);
   const [visible, setVisible] = useState(false);
   const sectionRef = useRef<HTMLElement | null>(null);

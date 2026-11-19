@@ -6,7 +6,7 @@ import { motionJourney, aiShowcaseModules, integrationShowcase, recoveryShowcase
 import { automationPlaybooks, automationPlaybookCategories } from "../operations/automation-playbooks";
 import { filterAutomationPlaybooks, type PlaybookCategoryFilter, type PlaybookSeverityFilter } from "../operations/automation-playbook-finder";
 import styles from "./AutomationMotionHome.module.css";
-import { OperationsTheater } from "./OperationsTheater";
+import { InteractiveStoriesExperience } from "./InteractiveStoriesExperience";
 import { CinematicHero } from "./CinematicHero";
 import { WorkflowComparison } from "./WorkflowComparison";
 
@@ -131,7 +131,7 @@ export function AutomationMotionHome() {
       </div>
     </section>
 
-    <OperationsTheater />
+    <InteractiveStoriesExperience />
     <WorkflowComparison />
 
     <section className={styles.sectionLight} id="live-workflow" aria-labelledby="journey-title" ref={stageRef}>

@@ -19,6 +19,9 @@ on:
       - "src/features/product/quick-switch-model.ts"
       - "src/features/product/DemoQuickSwitch.*"
       - "src/features/product/OperationsTheater.*"
+      - "src/features/product/InteractiveStoriesExperience.*"
+      - "src/features/product/OperatorIllustration.tsx"
+      - "src/features/product/interactive-story-model.ts"
       - "src/features/product/WorkflowComparison.*"
       - "tests/e2e/v4-portfolio*.test.ts"
       - "scripts/release/portfolio-browser-critic.mjs"
@@ -48,10 +51,10 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Focused real Vitest regressions
-        run: pnpm exec vitest run tests/e2e/v4-portfolio-guided-dashboard.test.ts tests/e2e/v4-portfolio-operations-theater.test.ts tests/e2e/v4-portfolio-motion-integrity.test.ts tests/e2e/v4-portfolio-route-guard.test.ts tests/e2e/v4-portfolio-ai-review.test.ts tests/e2e/v4-portfolio-quick-switch.test.ts tests/e2e/v4-portfolio-theme.test.ts
+        run: pnpm exec vitest run tests/e2e/v4-portfolio-guided-dashboard.test.ts tests/e2e/v4-portfolio-operations-theater.test.ts tests/e2e/v4-portfolio-motion-integrity.test.ts tests/e2e/v4-portfolio-route-guard.test.ts tests/e2e/v4-portfolio-ai-review.test.ts tests/e2e/v4-portfolio-quick-switch.test.ts tests/e2e/v4-portfolio-theme.test.ts tests/e2e/v4-portfolio-interactive-story.test.ts
       - name: Lint changed presentation components and typecheck
         run: |
-          pnpm exec eslint src/features/product/PortfolioThemeToggle.tsx src/features/product/portfolio-theme.ts src/components/shell/MarketingShell.tsx src/app/layout.tsx src/features/product/AutomationMotionHome.tsx src/features/product/CinematicHero.tsx src/features/product/DemoOperationsDashboard.tsx src/features/product/DemoQuickSwitch.tsx src/features/product/ai-review-model.ts src/features/product/quick-switch-model.ts src/features/product/OperationsTheater.tsx src/features/product/WorkflowComparison.tsx src/features/product/demo-dashboard-model.ts
+          pnpm exec eslint src/features/product/PortfolioThemeToggle.tsx src/features/product/portfolio-theme.ts src/components/shell/MarketingShell.tsx src/app/layout.tsx src/features/product/AutomationMotionHome.tsx src/features/product/CinematicHero.tsx src/features/product/DemoOperationsDashboard.tsx src/features/product/DemoQuickSwitch.tsx src/features/product/ai-review-model.ts src/features/product/quick-switch-model.ts src/features/product/OperationsTheater.tsx src/features/product/InteractiveStoriesExperience.tsx src/features/product/OperatorIllustration.tsx src/features/product/interactive-story-model.ts src/features/product/WorkflowComparison.tsx src/features/product/demo-dashboard-model.ts
           pnpm typecheck
       - name: Optimized Next production build
         run: pnpm build
