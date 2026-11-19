@@ -139,7 +139,9 @@ try{
     assert(await js("document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]').querySelectorAll('path').length>=9"),"Quarter face contains separately drawn contour, jaw, nose, mouth and hair");
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).transitionDuration)>.3"),"Multi-joint acting uses interpolated continuity");
     assert(await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName==='none'"),"CSS keyframe resets are disabled on the V3 elbow");
-    await js("window.__operatorStableNode=document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')");
+    assert(await js("(()=>{window.__operatorStableNode=document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]');return true})()"),"QA stores persistent actor identity without returning a DOM object");
+    const badgeVisible=await js("(()=>{const badge=document.querySelector('#interactive-stories [data-rig=\"notice-badge\"]');const svg=document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]');if(!badge||!svg)return false;const r=badge.getBoundingClientRect(),s=svg.getBoundingClientRect();return r.left>s.left+7&&r.top>s.top+25&&r.right<s.right-7})()");
+    assert(badgeVisible,"Notification icon stays within the vector scene after CSS transforms");
   }
   if(hasActorV2){
     assert(await js("document.querySelector('#interactive-stories [data-rig=\"elbow\"]')!==null"),"Operator has a real nested elbow articulation group");

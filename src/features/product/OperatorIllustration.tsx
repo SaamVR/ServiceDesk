@@ -199,7 +199,7 @@ export function OperatorIllustration({
       <rect x="225" y="335" width="30" height="45" rx="5" fill="#397467"/>
       <path d="M183 380h113" stroke="#397467" strokeWidth="13" strokeLinecap="round"/>
 
-      <g className={styles.eventMarker} transform="translate(61 104)">
+      <g className={styles.eventMarker} data-rig="notice-badge" transform="translate(61 104)">
         <circle r="29" fill={blocked ? "#fff0db" : "#e9fff0"}/>
         {blocked ? (
           <path d="M0-14 14 12h-28Z" fill="none" stroke="#a85b32" strokeWidth="3"/>

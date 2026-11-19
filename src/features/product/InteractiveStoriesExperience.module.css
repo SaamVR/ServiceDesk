@@ -350,6 +350,12 @@
   transition-duration:.85s;
   transition-timing-function:cubic-bezier(.2,.78,.22,1);
 }
+.illustration[data-acting-mode="continuity"] .eventMarker{
+  /* CSS transform must preserve the SVG's translate(61 104) baseline;
+     transform:none overrides the original attribute and clips the icon. */
+  transform:translate(61px,104px);
+  transition:opacity .32s ease;
+}
 .illustration[data-acting-mode="continuity"] .pupils{transition-duration:.38s;transition-delay:0ms}
 .illustration[data-acting-mode="continuity"] .head{transition-duration:.76s;transition-delay:90ms}
 .illustration[data-acting-mode="continuity"] .bodyRig{transition-duration:.9s;transition-delay:155ms}
