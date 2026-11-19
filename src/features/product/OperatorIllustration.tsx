@@ -126,7 +126,7 @@ export function OperatorIllustration({
         <g className={styles.faceQuarter} data-rig="face-quarter" aria-hidden="true">
           <path d="M476 162Q473 120 508 111Q545 107 561 148Q565 183 558 223L546 252Q527 276 500 266L477 250Q455 229 460 204Z" fill="url(#sd-hair)"/>
           <path d="M540 192q17-3 20 11q4 16-9 27l-12-2Z" fill="#ae7056"/>
-          <path d="M481 153Q498 133 522 138Q546 141 549 171L546 217Q543 254 517 266Q492 273 472 253Q460 239 462 227L451 224Q446 220 454 209L463 196Q465 168 481 153Z" fill="url(#sd-skin)"/>
+          <path d="M481 153Q498 133 522 138Q546 141 549 171L546 217Q543 254 517 266Q492 273 474 253Q464 238 468 226L461 224Q457 221 463 212L470 196Q469 169 481 153Z" fill="url(#sd-skin)"/>
           <path d="M526 161q20 23 17 57q0 30-22 46q27-11 32-48l-5-55Z" fill="#995f52" opacity=".13"/>
           <path d="M469 166q9-33 40-42q34-7 49 31q-14 3-26-9q-13 8-28 9q-15 12-35 11Z" fill="url(#sd-hair)"/>
           <path d="M472 155Q487 131 515 127" fill="none" stroke="#688277" strokeWidth="5" strokeLinecap="round" opacity=".3"/>
@@ -140,7 +140,7 @@ export function OperatorIllustration({
               <circle cx="481" cy="203" r="1" fill="#fff" opacity=".8"/>
             </g>
           </g>
-          <path d="M472 205L451 221q-3 5 7 7l16-2" fill="none" stroke="#a86c55" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M470 207q-4 6-9 12q-2 4 5 5l9-2" fill="none" stroke="#a86c55" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/>
           <path d="M485 241q10 3 19-2" className={styles.quarterMouth} fill="none" stroke="#793e38" strokeWidth="3" strokeLinecap="round"/>
           <path d="M482 250q14 12 29 3" fill="none" stroke="#ad765f" opacity=".35" strokeWidth="2"/>
           <path d="M534 201q8 9 2 19" fill="none" stroke="#9b624f" opacity=".24" strokeWidth="4" strokeLinecap="round"/>
