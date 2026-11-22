@@ -1,249 +1,94 @@
 "use client";
 
+/** Original externally sourced character illustration:
+ * Humaaans sitting-2 by Pablo Stanley (CC0 on humaaans.com).
+ * Exact raw SVG preserved in /public/portfolio/humaaans/sitting-2.svg,
+ * provenance in /public/portfolio/humaaans/SOURCE.md.
+ * No human body outlines are generated or redrawn here.
+ */
 import type { OperatorPose } from "./interactive-story-model";
 import styles from "./InteractiveStoriesExperience.module.css";
 
-export function OperatorIllustration({
-  pose, screen, blocked,
-}: {
-  pose: OperatorPose;
-  screen: string;
-  blocked: boolean;
-}) {
-  return (
-    <svg
-      className={styles.illustration}
-      data-pose={pose}
-      data-acting-mode="continuity"
-      data-acting-version="v3"
-      viewBox="0 0 720 500"
-      role="img"
-      aria-label="Illustrated human operator at a desk, responding to the current simulated business event"
-    >
-      <defs>
-        <linearGradient id="sd-wall" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0" stopColor="#e4f4e8"/>
-          <stop offset="1" stopColor="#b6dec9"/>
-        </linearGradient>
-        <linearGradient id="sd-shirt" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0" stopColor="#1e927a"/>
-          <stop offset="1" stopColor="#116251"/>
-        </linearGradient>
-        <linearGradient id="sd-skin" x1="0" y1="0" x2="1" y2=".75">
-          <stop offset="0" stopColor="#dca485"/>
-          <stop offset=".56" stopColor="#ca8d6f"/>
-          <stop offset="1" stopColor="#ad715c"/>
-        </linearGradient>
-        <linearGradient id="sd-hair" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#426055"/>
-          <stop offset=".58" stopColor="#253d34"/>
-          <stop offset="1" stopColor="#1a342e"/>
-        </linearGradient>
-        <linearGradient id="sd-screen" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0" stopColor="#123b39"/>
-          <stop offset="1" stopColor="#082928"/>
-        </linearGradient>
-        <linearGradient id="sd-window" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0" stopColor="#ecfcf0"/>
-          <stop offset="1" stopColor="#c4e9dc"/>
-        </linearGradient>
-        <clipPath id="sd-screen-clip"><rect x="114" y="153" width="260" height="165" rx="11"/></clipPath>
-      </defs>
-
-      <rect width="720" height="500" rx="22" fill="url(#sd-wall)"/>
-      <path d="M0 365C145 334 286 372 422 346S619 323 720 340V500H0Z" fill="#d4ebdf" opacity=".87"/>
-      <circle cx="85" cy="67" r="165" fill="#f4fff7" opacity=".4"/>
-      <path d="M0 391H720" stroke="#a6cdbb" strokeWidth="2"/>
-
-      {/* Architectural environment: the movement is never an arbitrary floating icon. */}
-      <rect x="480" y="44" width="191" height="210" rx="95" fill="#92c6ad"/>
-      <path d="M492 147a84 84 0 0 1 168 0v92H492Z" fill="url(#sd-window)"/>
-      <path d="M576 68V239M492 153h168" stroke="#a2d2bb" strokeWidth="9"/>
-      <path d="M506 227C538 207 551 202 573 222c31-30 53-22 81-10v27H506Z" fill="#78b89c" opacity=".65"/>
-      <path d="M545 227c30-21 47-13 69-2" stroke="#8dc7ae" strokeWidth="6" fill="none"/>
-      <g aria-hidden="true">
-        <path d="M659 365c-17-34-35-63-46-100" stroke="#3d775d" strokeWidth="7" strokeLinecap="round"/>
-        <path d="M659 351c17-37 20-63 21-102" stroke="#3d775d" strokeWidth="7" strokeLinecap="round"/>
-        <path d="M643 306c-31-2-48-16-50-37 29 1 47 11 50 37Z" fill="#267b5a"/>
-        <path d="M670 286c-4-30 11-47 37-57 2 29-9 47-37 57Z" fill="#3f9a6c"/>
-        <path d="M640 341c-24 2-36-5-45-22 19-8 35-2 45 22Z" fill="#4d9b72"/>
-        <path d="M670 335c14-18 28-22 43-20-6 21-20 27-43 20Z" fill="#2b7759"/>
-        <path d="M633 351h48l-7 43h-35Z" fill="#d38b6d"/>
-        <path d="M634 352h47" stroke="#b77860" strokeWidth="5"/>
-      </g>
-
-      {/* Chair, operator, and articulated layers. */}
-      <path d="M437 283c0-48 22-67 66-67 45 0 70 24 70 73v113H437Z" fill="#184d4b"/>
-      <path d="M450 282c0-37 21-53 52-53 35 0 57 20 57 55v87H450Z" fill="#245e59"/>
-      <path d="M493 369v74M460 446h70" stroke="#346b65" strokeWidth="11" strokeLinecap="round"/>
-      <path d="M451 446h-18m97 0h18" stroke="#346b65" strokeWidth="7" strokeLinecap="round"/>
-
-      <g className={styles.bodyRig} data-rig="body">
-      <g className={styles.backArm}>
-        <path d="M552 303c37 11 47 53 21 73l-60 23-22-31 46-27-9-17Z" fill="#0f6d59"/>
-        <path d="M509 369c20-10 39-13 48-25" fill="none" stroke="#3eaa88" strokeWidth="4" opacity=".55"/>
-        <ellipse cx="496" cy="381" rx="18" ry="14" fill="#b87758" transform="rotate(-17 496 381)"/>
-      </g>
-      <path d="M422 302Q440 275 473 273h68q37 4 52 64l17 89H387l20-101q4-15 15-23Z" fill="url(#sd-shirt)"/>
-      <path d="M456 297q-13 28-12 58M536 291q17 39 13 79" fill="none" stroke="#4ac09d" strokeWidth="4" strokeLinecap="round" opacity=".26"/>
-      <path d="M430 392c35-10 116-10 165 0" fill="none" stroke="#0d5548" strokeWidth="5" opacity=".42"/>
-      <path d="M427 322q18 32 34 48" stroke="#41b598" strokeWidth="6" opacity=".55" fill="none"/>
-      <path d="M546 292q-8 43 4 73" stroke="#0d5649" strokeWidth="5" opacity=".55" fill="none"/>
-      <path d="M484 264v20c0 19 28 21 31 1v-21Z" fill="#ad7054"/>
-      <path d="M472 282q23 34 52 0" stroke="#a2ebc6" strokeWidth="7" strokeLinecap="round" fill="none"/>
-
-      <g className={styles.head}>
-        <g className={styles.faceFront} data-rig="face-front">
-        <path d="M453 176c-6-38 11-69 52-71 37-2 62 23 60 68l-12 66-88-1Z" fill="#223a34"/>
-        <ellipse cx="462" cy="204" rx="11" ry="16" fill="#bc7b5d"/>
-        <ellipse cx="552" cy="204" rx="11" ry="16" fill="#bc7b5d"/>
-        <path d="M458 163c8-28 30-38 50-37 32 0 49 19 49 52v36c0 39-22 65-50 65-27 0-50-27-50-66Z" fill="url(#sd-skin)"/>
-        <path d="M542 175q13 19 10 42c-1 30-15 49-30 58 19-7 36-26 36-61v-38Z" fill="#945c4d" opacity=".12"/>
-        <path d="M470 222q8 5 15 0m49 0q7 5 13 0" stroke="#af745d" strokeWidth="3" opacity=".22" fill="none" strokeLinecap="round"/>
-        <path d="M456 167c8-34 27-50 57-51 30-1 55 18 55 54-15-3-33-13-43-29-15 15-42 28-69 26Z" fill="url(#sd-hair)"/>
-        <path d="M470 145q17-24 45-22" stroke="#6b8777" strokeWidth="5" strokeLinecap="round" opacity=".32" fill="none"/>
-        <path d="M464 166c7-29 26-45 51-47" fill="none" stroke="#34544b" strokeWidth="9" strokeLinecap="round"/>
-        <path className={styles.brows} d="M476 191q11-6 23-1m18-1q13-5 23 2" fill="none" stroke="#4f3a33" strokeWidth="3.6" strokeLinecap="round"/>
-        <g className={styles.eyeSockets} data-rig="eyelids">
-          <ellipse cx="488" cy="208" rx="9.1" ry="6.4" fill="#f7e9d5" opacity=".96"/>
-          <ellipse cx="529" cy="208" rx="9.1" ry="6.4" fill="#f7e9d5" opacity=".96"/>
-          <g className={styles.pupils} fill="#263a31" data-rig="gaze">
-            <ellipse cx="488" cy="208" rx="3.6" ry="5"/>
-            <ellipse cx="529" cy="208" rx="3.6" ry="5"/>
-            <circle cx="489" cy="206.5" r="1.15" fill="#fff" opacity=".83"/>
-            <circle cx="530" cy="206.5" r="1.15" fill="#fff" opacity=".83"/>
-          </g>
-        </g>
-        <path d="M507 207l-4 18q4 5 10 1" fill="none" stroke="#a66e57" strokeWidth="3" strokeLinecap="round"/>
-        <path className={styles.smile} d="M496 240q11 10 23-1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
-        <path className={styles.cheekExpression} data-rig="face-cheek" d="M482 238q5 4 9 2m30 0q5 2 9-3" fill="none" stroke="#a8705d" strokeWidth="2.2" strokeLinecap="round" opacity=".55"/>
-        <path className={styles.focusExpression} data-rig="face-focus" d="M497 183q8 4 14 0" fill="none" stroke="#875544" strokeWidth="2.3" strokeLinecap="round" opacity=".5"/>
-        <path className={styles.alertExpression} data-rig="face-alert" d="M476 185q8-7 18-5m25 1q8-4 17 5" fill="none" stroke="#624035" strokeWidth="2.6" strokeLinecap="round" opacity=".55"/>
-        <path className={styles.thinkingMouth} d="M499 241q10 2 18-1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
-        <path className={styles.concern} d="M497 242q10-6 21 1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
-        <path d="M483 258q23 14 48-1" fill="none" stroke="#ab785d" strokeWidth="2" opacity=".55"/>
-        </g>
-        {/* An independently illustrated three-quarter LEFT view for looking toward the monitor.
-            The nose, near/far eyes, cheek, jaw and visible ear have distinct proportions;
-            scaling the front face horizontally is not a believable head turn. */}
-        <g className={styles.faceQuarter} data-rig="face-quarter" aria-hidden="true">
-          <path d="M476 162Q473 120 508 111Q545 107 561 148Q565 183 558 223L546 252Q527 276 500 266L477 250Q455 229 460 204Z" fill="url(#sd-hair)"/>
-          <path d="M540 192q17-3 20 11q4 16-9 27l-12-2Z" fill="#ae7056"/>
-          <path d="M481 153Q498 133 522 138Q546 141 549 171L546 217Q543 254 517 266Q492 273 474 253Q464 238 468 226L461 224Q457 221 463 212L470 196Q469 169 481 153Z" fill="url(#sd-skin)"/>
-          <path d="M526 161q20 23 17 57q0 30-22 46q27-11 32-48l-5-55Z" fill="#995f52" opacity=".13"/>
-          <path d="M469 166q9-33 40-42q34-7 49 31q-14 3-26-9q-13 8-28 9q-15 12-35 11Z" fill="url(#sd-hair)"/>
-          <path d="M472 155Q487 131 515 127" fill="none" stroke="#688277" strokeWidth="5" strokeLinecap="round" opacity=".3"/>
-          <path d="M479 192q9-7 19-4m17 1q7-4 14-1" fill="none" stroke="#563a33" strokeWidth="3.4" strokeLinecap="round"/>
-          <g className={styles.quarterEyes} data-rig="quarter-eyelids">
-            <path d="M474 205q7-9 17-1q-5 10-17 1Z" fill="#f8ead7"/>
-            <path d="M512 204q5-7 12-1q-5 9-12 1Z" fill="#f8ead7" opacity=".9"/>
-            <g className={styles.quarterPupils} data-rig="quarter-gaze" fill="#253b33">
-              <ellipse cx="480" cy="205" rx="3.5" ry="4.8"/>
-              <ellipse cx="517" cy="204" rx="2.4" ry="4"/>
-              <circle cx="481" cy="203" r="1" fill="#fff" opacity=".8"/>
+const HUMAAANS_SITTING = String.raw`<svg width="380px" height="400px" viewBox="0 0 380 400" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    
+    <title>humaaans/sitting-2</title>
+    <desc>Created with Sketch.</desc>
+    <g id="humaaans/sitting-2" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="A-Human/Sitting" transform="translate(190.000000, 200.500000) scale(-1, 1) translate(-190.000000, -200.500000) translate(40.000000, 24.000000)">
+            <g id="Head/Front/Rad" transform="translate(82.000000, 0.000000)">
+                <g id="Head" stroke-width="1" transform="translate(54.000000, 31.000000)" fill="#B28B67">
+                    <path d="M8.26227388,34.4901268 C3.65436435,29.0813759 0.535634794,22.4528771 1.05677633,15.0254539 C2.55833022,-6.37502057 32.3485306,-1.66718886 38.1433414,9.13393292 C43.9381521,19.9350547 43.249578,47.3329958 35.7603014,49.2634576 C32.7735882,50.033323 26.4110012,48.1474609 19.935372,44.244306 L24,73 L0,73 L8.26227388,34.4901268 Z"></path>
+                </g>
+                <path d="M95.4066181,38.9017011 C96.181796,38.1335173 96.604637,37.0370644 96.970412,35.9959366 C97.3502694,34.9144095 97.7193579,33.8217377 97.9715531,32.6960301 C98.4754831,30.446804 98.4802693,27.8601542 96.8757008,26.1136308 C95.5888613,24.7130885 93.6580039,24.0849092 91.8759783,23.9483875 C90.6887283,23.8573398 89.4693557,24.0236137 88.3312561,24.397755 C87.2020846,24.7689112 86.2287403,25.5086363 85.1340846,25.9677555 C85.0922975,23.5438969 84.6770959,21.0076965 83.4474146,18.9380781 C82.2641224,16.9467707 80.3775371,15.8293221 78.2290003,15.5336907 C76.0237656,15.230298 73.8461434,15.7463343 71.8719342,16.8139306 C71.3776685,17.0813024 70.888005,17.3614108 70.4194191,17.6784359 C70.027044,17.943917 69.6191137,18.2636287 69.1587196,18.3715924 C68.6454933,18.4920937 68.3910891,18.1956663 68.0575289,17.8212265 C67.6664423,17.3822075 67.2258372,16.9955285 66.7595523,16.6527315 C64.6978111,15.1372602 61.9926962,14.5141557 59.6041137,15.4225429 C58.5035673,15.8410637 57.4333948,16.5518327 56.6867499,17.531267 C56.0211941,18.4043297 55.5464414,19.7892496 54.627862,20.3975277 C54.2380641,20.6557449 53.9627664,20.3136445 53.6078524,20.0608006 C53.074745,19.6808879 52.5663049,19.2616705 52.0267546,18.8921065 C51.2688806,18.3728859 50.448326,17.9845153 49.5696008,17.7812252 C48.2832216,17.4836038 46.505522,17.5533573 46.1377221,19.2381872 C45.9996591,19.8710433 46.1055074,20.5478808 46.1501478,21.1855131 C46.2113557,22.0610635 46.2752329,22.9363153 46.3512596,23.8105721 C46.40897,24.4743744 46.4819593,25.1154894 46.6072285,25.767351 C46.674051,26.1148248 46.8831704,26.7626067 46.7341544,27.110578 C46.5479534,27.5455173 45.6885571,27.2982457 45.3214015,27.3133706 C44.5962024,27.3433218 43.8679659,27.47049 43.1974398,27.7803507 C42.6777706,28.0205574 42.1314092,28.3738025 41.9120731,28.9694434 C41.7772315,29.3353257 41.8127597,29.7111587 41.8764528,30.0875886 C41.9528477,30.5393443 41.8654998,30.778954 41.8084337,31.2347894 C40.8344451,30.7551721 37.4592643,29.6895659 37.0345824,31.4350943 C36.8932059,32.0163069 37.2151688,32.6730443 37.460829,33.1632092 C37.8916777,34.0229382 38.4565395,34.8087345 39.0340112,35.5581116 C40.2385651,37.1214452 41.6766296,38.4698465 43.2238559,39.6230176 C41.4110883,40.428914 40.9379003,42.8060049 42.5074008,44.2222691 C43.2003852,44.8475627 44.1321265,44.9867711 45.0062496,44.9467698 C45.3261876,44.9321425 45.7874102,44.8091535 46.0391451,44.8648767 C46.174631,44.8948279 46.3196892,45.0096574 46.5073629,45.0224936 C47.741002,45.1069739 49.1335978,44.8097505 50.3395323,44.5360104 C52.4883453,44.0482337 54.522658,43.0301912 56.1839244,41.4796939 C56.6100789,41.0819697 56.9621396,40.8530072 57.5357455,40.858878 C58.038387,40.8639528 58.5315481,41.0017682 59.0337294,41.0145049 C60.3624479,41.0484363 61.5604668,40.3988633 62.7942901,39.9665112 C62.8698566,41.6333306 63.3445173,43.4691107 64.0263646,44.9686611 C64.5823904,46.1914862 65.7435005,46.3692033 66.8844533,46.4764704 C70.5329989,46.819765 74.1944304,46.4366682 77.8475782,46.441743 C74.3112318,47.241072 70.6569795,47.5705353 67.1520195,48.5111623 C65.5677002,48.9362505 66.7775005,50.0040458 67.4549298,50.7442685 C68.570387,51.9632129 69.3997776,53.4735099 69.9750402,55.0646055 C71.70497,52.8096081 74.7626979,51.3237895 77.4716786,52.016548 C80.464885,52.781846 82.5725552,56.8296371 80.6585414,59.7396803 C79.5473181,61.428988 77.540618,62.0811481 75.8708838,62.8069425 C77.1734624,64.1612146 77.4885222,66.161378 78.2725362,67.846208 C78.6592047,68.6770803 79.2019765,69.6165133 80.0667112,69.9060748 C80.3866493,70.0132424 80.7618126,70.0223969 81.0141918,70.2832012 C81.3268585,70.6060971 81.4013205,70.9671037 81.8005988,71.244625 C83.3938461,72.3523221 85.8825703,72.2669462 87.294771,70.8214274 C88.571854,69.5141219 88.2395823,67.4453991 87.1729994,66.1199836 C88.8708064,65.4122993 91.9639705,64.502121 91.2892105,61.8570614 C94.96813,61.612775 103.90044,55.6462162 98.9627536,51.2862759 C101.672563,49.7547841 104.162115,46.011978 102.421509,42.7126686 C101.081193,40.1720899 97.9640977,39.0364317 95.4066181,38.9017011" id="hair" fill="#191847" transform="translate(70.000000, 43.500000) scale(-1, 1) translate(-70.000000, -43.500000) "></path>
             </g>
-          </g>
-          <path d="M470 207q-4 6-9 12q-2 4 5 5l9-2" fill="none" stroke="#a86c55" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M485 241q10 3 19-2" className={styles.quarterMouth} fill="none" stroke="#793e38" strokeWidth="3" strokeLinecap="round"/>
-          <path className={styles.quarterFocus} data-rig="quarter-focus" d="M475 192q7-5 14-4m23 0q7-3 12 1" fill="none" stroke="#765044" strokeWidth="2.5" strokeLinecap="round"/>
-          <path d="M477 227q7 5 14 1m21-1q5 3 10-1" stroke="#bb795f" strokeWidth="2.1" strokeLinecap="round" fill="none" opacity=".26"/>
-          <path d="M482 250q14 12 29 3" fill="none" stroke="#ad765f" opacity=".35" strokeWidth="2"/>
-          <path d="M534 201q8 9 2 19" fill="none" stroke="#9b624f" opacity=".24" strokeWidth="4" strokeLinecap="round"/>
-        </g>
-      </g>
-
-      {/* The arm is jointed shoulder → elbow → wrist; hand stays anchored to the keyboard. */}
-      <g className={styles.frontArm} data-rig="front-arm">
-        <g className={styles.upperArm} data-rig="shoulder">
-          <path d="M429 310c-17 1-30 18-46 41l-12 17 21 16c19-16 39-32 51-52Z" fill="#218e75"/>
-          <path d="M426 318q-13 18-28 31" stroke="#52bfa0" strokeWidth="4" strokeLinecap="round" opacity=".35" fill="none"/>
-          <g className={styles.forearm} data-rig="elbow">
-            <path d="M378 354c-11 8-26 19-39 25l7 17c18-2 35-12 49-23l2-6Z" fill="#178267"/>
-            <path d="M367 374q-10 9-19 9" stroke="#63c5a1" strokeWidth="3" fill="none" opacity=".45"/>
-            <g className={styles.hand} data-rig="wrist">
-              {/* Resting hand: narrow wrist, four individually outlined knuckles,
-                  a real thumb fold and soft fingertip contact with the desktop. */}
-              <g className={styles.handRest} data-rig="hand-rest">
-                <path d="M357 383q-5-5-12-6l-12-2q-7-1-13 3l-12 8q-5 4-2 8q3 4 9 2l22 1q11 0 18-6Z" fill="url(#sd-skin)"/>
-                <path d="M312 388q10-7 19-6q6 1 15 4" fill="none" stroke="#f0b99b" strokeWidth="2.4" strokeLinecap="round" opacity=".55"/>
-                <path d="M307 393q6 2 13 1m-2-7q8 4 15 5m-9-12q8 2 14 6m-4-11q7 2 12 5" fill="none" stroke="#a96d59" strokeWidth="1.8" strokeLinecap="round" opacity=".8"/>
-                <path d="M332 379q-8-7-14-5q-6 3-4 7l11 3" fill="#ce9678" stroke="#b77960" strokeWidth="1.8" strokeLinejoin="round"/>
-                <path d="M312 390l-3 1m11 3-3 2m8-1-4 2" stroke="#eab69a" strokeWidth="2.4" strokeLinecap="round"/>
-                <path d="M349 379q5 5 4 10" fill="none" stroke="#9c614f" strokeWidth="2" opacity=".36"/>
-              </g>
-              {/* Review gesture uses a separate elbow-to-palm anatomy
-                  and appears in front of the operator rather than behind the screen. */}
+            <g id="Bottom/Sitting/Skinny-Jeans-1" transform="translate(0.000000, 187.000000)">
+                <g id="Objects/Seat/Cube" transform="translate(10.000000, 42.000000)" stroke-width="1">
+                    <g id="Seat" transform="translate(55.000000, 0.000000)">
+                        <polygon id="Seat-Stuff" fill="#C5CFD6" points="27.6226415 0 104.877193 0 115 124 0 124"></polygon>
+                        <polygon id="Seat-Stuff" fill-opacity="0.1" fill="#000000" points="27.6226415 0 51.3828011 0 65.6037736 124 0 124"></polygon>
+                    </g>
+                </g>
+                <path d="M257.953294,20.7561262 C266.190093,15.8101469 280.009488,22.164715 280,29.2384154 C279.971611,50.4029106 260.656682,150.1511 259.648224,156.456711 C258.639766,162.762321 247.83665,164.42787 247.20755,156.477375 C246.206544,143.826795 244.3468,100.033121 246.20755,79.7626522 C246.975628,71.3954284 247.802807,63.4267637 248.617148,56.3175946 C238.481902,74.6206031 222.807229,100.825998 201.593128,134.933778 L190.076573,129.672175 C199.120166,99.8760987 206.535776,78.8408618 212.323403,66.5664641 C222.233227,45.5497154 231.525307,27.551672 235.436043,21.2120072 C241.587634,11.2397104 252.295462,14.7191925 257.953294,20.7561262 Z" id="Skin" fill="#B28B67"></path>
+                <path d="M208.819223,123.340112 L213.936922,21.8299349 C217.625361,4.27739957 248.84365,12.4235349 248.830812,21.8299349 C248.801666,43.1853748 235.973522,116.956762 235.964839,123.319261 L208.819223,123.340112 Z" id="LegLower" fill="#1F28CF" transform="translate(228.825019, 67.419630) rotate(20.000000) translate(-228.825019, -67.419630) "></path>
+                <g id="Accessories/Shoe/Flat-Sneaker" transform="translate(215.500000, 133.000000) rotate(30.000000) translate(-215.500000, -133.000000) translate(185.000000, 113.000000)" fill="#E4E4E4">
+                    <path d="M2.67813181,25.4019242 C1.55937727,28.3884109 1,30.6229931 1,32.1056708 C1,33.908957 1.3004142,36.5404001 1.90124261,40 C3.99318117,40 22.7937852,40 58.3030548,40 C59.768738,35.1545073 58.9226607,32.5385816 55.7648228,32.1522232 C52.606985,31.7658647 49.9837155,31.4170139 47.8950143,31.1056708 L21.6799926,19.4188835 C21.1755635,19.1940064 20.584344,19.4206282 20.359467,19.9250573 C20.35562,19.9336867 20.3518954,19.9423702 20.3482945,19.9511052 L18.6632131,24.038695 C15.7398812,25.4026522 13.3643706,26.0846307 11.5366811,26.0846307 C10.0517269,26.0846307 8.00099246,25.4849054 5.38447792,24.2854549 L5.38448339,24.285443 C4.38038273,23.8251478 3.19325534,24.2659892 2.73296014,25.2700899 C2.71312074,25.3133681 2.69483298,25.3573409 2.67813181,25.4019242 Z" id="shoe"></path>
+                </g>
+                <g id="Accessories/Shoe/Flat-Sneaker" transform="translate(242.000000, 126.000000)" fill="#E4E4E4">
+                    <path d="M2.67813181,25.4019242 C1.55937727,28.3884109 1,30.6229931 1,32.1056708 C1,33.908957 1.3004142,36.5404001 1.90124261,40 C3.99318117,40 22.7937852,40 58.3030548,40 C59.768738,35.1545073 58.9226607,32.5385816 55.7648228,32.1522232 C52.606985,31.7658647 49.9837155,31.4170139 47.8950143,31.1056708 L21.6799926,19.4188835 C21.1755635,19.1940064 20.584344,19.4206282 20.359467,19.9250573 C20.35562,19.9336867 20.3518954,19.9423702 20.3482945,19.9511052 L18.6632131,24.038695 C15.7398812,25.4026522 13.3643706,26.0846307 11.5366811,26.0846307 C10.0517269,26.0846307 8.00099246,25.4849054 5.38447792,24.2854549 L5.38448339,24.285443 C4.38038273,23.8251478 3.19325534,24.2659892 2.73296014,25.2700899 C2.71312074,25.3133681 2.69483298,25.3573409 2.67813181,25.4019242 Z" id="shoe"></path>
+                </g>
+                <path d="M282.770373,36.4330278 C282.770373,63 270.1536,124.970293 270.145616,130.820112 L243,130.840963 C246.973277,75.5454811 248.382172,47.5998928 247.226683,47.0041979 C245.49345,46.1106556 176.175838,53.9250306 155.386358,53.9250306 C125.407825,53.9250306 113.006307,35.0203971 112,-4.40536496e-13 L171.386358,-4.40536496e-13 C183.477954,1.29386693 246.548825,14.0152568 269.972097,18.3884129 C280,20.2606358 282.770373,29.1145109 282.770373,36.4330278 Z" id="Leg-and-Butt" fill="#2B44FF"></path>
             </g>
-          </g>
+            <g id="Body/Pointing-Forward" transform="translate(22.000000, 82.000000)">
+                <path d="M158.638039,42.7002327 L193.347821,23.6898218 C199.119845,16.8355222 204.806897,11.5121983 210.408976,7.71984988 C212.120791,7.00519513 215.114322,6.57263502 212.314801,11.541507 C209.515281,16.510379 206.794075,21.8627914 208.22032,23.3935933 C209.646565,24.9243953 213.203036,22.7859324 214.904525,25.3293729 C216.038851,27.0249998 209.962902,29.703613 196.676679,33.3652124 L171.455792,56.4576422 L158.638039,42.7002327 Z M213,58.7398397 L228.246523,50.3642065 C230.385826,42.2239107 232.943102,38.1282526 235.918351,38.0772323 C238.203961,37.0137608 234.223587,47.2997848 238.556381,46.4077826 C242.889175,45.5157805 253.464286,37.6506887 255.286431,39.2475996 C257.982176,41.6101262 255.578484,48.864452 252.746364,52.4730906 C247.453134,59.2176317 243.070569,61.5240612 232.238377,64.5443446 C226.574749,66.1235046 220.451364,69.288795 213.868224,74.0402157 L213,58.7398397 Z" id="Skin" fill="#997659"></path>
+                <path d="M142.857986,34.7503025 C154.885997,36.5253162 171.300289,36.5253162 190.103565,28.3861499 L194.443447,44.4123074 C180.805809,54.2415559 162.712714,61.226516 148.287694,58.5246963 C136.919984,56.3955135 133.271725,41.6595451 142.857986,34.7503025 Z" id="Sleeve" fill="#2026A2" transform="translate(165.898282, 43.748060) rotate(-9.000000) translate(-165.898282, -43.748060) "></path>
+                <path d="M158.104267,62.7612342 C171.011057,65.9801048 192.654946,62.184167 223.035933,51.3734208 C230.571674,66.9635189 234.055257,78.0780631 233.486685,84.7170535 C207.424274,98.3310492 185.086537,104.400834 166.683227,104.801533 C167.268059,115.72137 165.938918,126.111847 161.473933,135.605966 C152.29468,155.124265 98.5450578,137.048144 80.4727876,140.605966 C69.1554006,103.85132 91.0379108,88.9143806 91.0555178,65.3966157 C91.0747993,39.6421572 111.75441,-1.42108547e-13 114.797001,-1.42108547e-13 L142.54375,1.15166749e-13 C144.0747,19.6690193 151.7804,41.3459827 158.104267,62.7612342 Z" id="Clothes" fill="#1F28CF"></path>
+            </g>
         </g>
-      </g>
-      <g className={styles.reviewArm} data-rig="review-arm">
-        {/* A bent, raised forearm: shoulder (430,315), elbow (411,355),
-            wrist (444,310). The monitor ends at x=387 so the full signal
-            hand remains visible and never resembles a detached limb. */}
-        <path d="M427 310Q409 314 400 340Q395 351 405 360L423 367Q438 345 448 327Z" fill="url(#sd-shirt)"/>
-        <path d="M417 320Q408 334 408 346" fill="none" stroke="#55c6a5" strokeWidth="4" strokeLinecap="round" opacity=".47"/>
-        <path d="M405 352Q419 336 426 316L434 305Q441 296 449 303Q446 319 438 337Q430 355 422 365Z" fill="url(#sd-skin)"/>
-        <path d="M430 318Q426 340 418 354" fill="none" stroke="#e4a78a" strokeWidth="2.8" strokeLinecap="round" opacity=".44"/>
-        <path d="M404 351q10 7 19 9" stroke="#176d5a" strokeWidth="5" strokeLinecap="round" opacity=".4"/>
-        <g className={styles.handSignal} data-rig="hand-stop" transform="translate(105 -78)">
-          <path d="M353 386q-2-6-4-11l9-24q2-6-2-8q-5-2-7 4l-5 15-1-29q0-7-5-7q-6 0-6 7l1 28-6-26q-2-6-7-4q-4 2-2 8l6 27-9-18q-3-6-8-3q-4 3-1 8l13 27q5 10 12 15l4 6Z" fill="url(#sd-skin)" stroke="#a86c55" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-          <path d="M332 384q-9-8-13-16l-11-12q-5-5-9 0q-3 4 1 9l10 14q7 10 21 14" fill="#c99073" stroke="#ac7059" strokeWidth="1.8" strokeLinejoin="round"/>
-          <path d="M333 335l3 25m-12-20 6 25m20-14-5 18" stroke="#e9b394" strokeWidth="2.3" strokeLinecap="round" opacity=".63" fill="none"/>
-          <path d="M317 378q9-4 15 2" fill="none" stroke="#985e50" strokeWidth="2.2" opacity=".36"/>
-          <path d="M341 375q-5 8-7 14" fill="none" stroke="#a56b55" strokeWidth="2" opacity=".35"/>
-        </g>
-      </g>
-      </g>
+    </g>
+</svg>`;
 
-      {/* Desktop is layered above the lower body, anchoring hand movement. */}
-      <rect data-prop="desktop-edge" x="36" y="392" width="650" height="27" rx="13" fill="#2a685a"/>
-      <path d="M50 399h620" stroke="#62a68a" strokeWidth="3" opacity=".75"/>
-      <rect x="79" y="413" width="23" height="87" rx="8" fill="#255b50"/>
-      <rect x="627" y="413" width="23" height="87" rx="8" fill="#255b50"/>
-      <rect x="265" y="393" width="136" height="13" rx="6" fill="#c2d7cb"/>
-      <path d="M279 399h105" stroke="#7b9e90" strokeWidth="3" strokeDasharray="7 5"/>
-      <ellipse cx="445" cy="400" rx="22" ry="6" fill="#1b4d42" opacity=".65"/>
+const scenes: Record<OperatorPose, {eyebrow:string; headline:string; detail:string; status:string; progress:number}> = {
+ notice: {eyebrow:"01  /  INTAKE",headline:"A new enquiry has arrived",detail:"Customer details are captured for review.",status:"Inbox item received",progress:1},
+ read: {eyebrow:"02  /  AI ASSIST",headline:"A draft, not a decision",detail:"AI summarizes; the operator checks accuracy.",status:"Draft awaits human review",progress:2},
+ decide: {eyebrow:"03  /  HUMAN REVIEW",headline:"A person checks the scope",detail:"Price and consent stay with the operator.",status:"Review in progress",progress:2},
+ alert: {eyebrow:"03  /  SAFETY STOP",headline:"An exception needs a person",detail:"Unusual scope is held; no silent approval.",status:"Human checkpoint required",progress:2},
+ type: {eyebrow:"04  /  SCHEDULE",headline:"Check live availability",detail:"A slot is never promised from stale data.",status:"Capacity review only",progress:3},
+ gesture: {eyebrow:"05  /  FIELD WORK",headline:"Hand off with clarity",detail:"Task notes and the checklist stay visible.",status:"Handoff prepared",progress:3},
+ relief: {eyebrow:"06  /  AFTERCARE",headline:"Close the loop responsibly",detail:"A follow-up is drafted, not falsely sent.",status:"Draft ready for review",progress:3}
+};
 
-      {/* Functional product representation lives on the monitor. */}
-      <rect data-prop="monitor-shell" x="94" y="135" width="293" height="202" rx="19" fill="#16433d"/>
-      <rect x="105" y="146" width="271" height="177" rx="12" fill="url(#sd-screen)"/>
-      <g clipPath="url(#sd-screen-clip)">
-        <path d="M110 183h269" stroke="#326a5c" strokeWidth="1.8"/>
-        <circle cx="130" cy="166" r="5" fill="#63d5a8"/>
-        <text x="147" y="171" fontSize="11" fontFamily="system-ui,sans-serif" letterSpacing="1.2" fontWeight="750" fill="#c9efdc">ServiceDesk / LOCAL</text>
-        <rect x="126" y="199" width="225" height="34" rx="9" fill={blocked ? "#785b3e" : "#1e574c"}/>
-        <circle cx="143" cy="216" r="8" fill={blocked ? "#f8c99d" : "#7ce4ad"}/>
-        <text x="158" y="220" fontFamily="system-ui,sans-serif" fontWeight="800" fontSize="13" fill="#f3fff6">{screen}</text>
-        <rect x="128" y="250" width="156" height="8" rx="4" fill="#7aaf98"/>
-        <rect x="128" y="268" width="186" height="7" rx="3" fill="#436f61"/>
-        <rect x="128" y="284" width="127" height="7" rx="3" fill="#436f61"/>
-        <rect x="307" y="248" width="43" height="43" rx="11" fill={blocked ? "#c88b64" : "#317b65"}/>
-        {blocked ? (
-          <g fill="none" stroke="#fff0d1" strokeWidth="3" strokeLinecap="round">
-            <path d="M329 257v17"/><circle cx="329" cy="283" r="1.3" fill="#fff0d1"/>
-          </g>
-        ) : (
-          <path d="m317 271 8 8 14-17" fill="none" stroke="#b9f6d0" strokeWidth="3.7" strokeLinecap="round" strokeLinejoin="round"/>
-        )}
-      </g>
-      <rect x="225" y="335" width="30" height="45" rx="5" fill="#397467"/>
-      <path d="M183 380h113" stroke="#397467" strokeWidth="13" strokeLinecap="round"/>
-
-      <g className={styles.eventMarker} data-rig="notice-badge" transform="translate(61 104)">
-        <circle r="29" fill={blocked ? "#fff0db" : "#e9fff0"}/>
-        {blocked ? (
-          <path d="M0-14 14 12h-28Z" fill="none" stroke="#a85b32" strokeWidth="3"/>
-        ) : (
-          <path d="M-12-7H12V10H-12ZM-12-7 0 3 12-7" stroke="#287a59" strokeWidth="2.6" fill="none" strokeLinejoin="round"/>
-        )}
-      </g>
-      <rect x="31" y="26" width="162" height="31" rx="15.5" fill="#f8fff8" opacity=".92"/>
-      <circle cx="48" cy="41.5" r="5" fill="#3fb989"/>
-      <text x="61" y="46" fontFamily="system-ui,sans-serif" fontSize="12" fontWeight="800" fill="#286652">OPERATOR / ONLINE</text>
-
-      <rect x="37" y="463" width="243" height="26" rx="13" fill="#f0fff4" opacity=".88"/>
-      <text x="51" y="481" fontFamily="system-ui,sans-serif" fontSize="11" letterSpacing=".35" fill="#356955" fontWeight="750">ORIGINAL VECTOR · LOCAL SIMULATION</text>
-    </svg>
-  );
+export function OperatorIllustration({pose,screen,blocked}:{
+ pose:OperatorPose;screen:string;blocked:boolean
+}){
+ const scene=scenes[pose];
+ return <div
+   className={styles.licensedScene}
+   data-pose={pose}
+   data-asset-origin="humaaans"
+   data-source-artwork="sitting-2"
+   role="group"
+   aria-label={"Human operator and local workflow simulation: "+scene.headline}
+ >
+   <div className={styles.licenseMast} aria-hidden="true">A PERSON IN THE LOOP</div>
+   <span className={styles.licenseNumber} aria-hidden="true">{String(scene.progress).padStart(2,"0")}</span>
+   <div className={styles.storyBackdrop} aria-hidden="true" />
+   <div className={styles.storyFloor} aria-hidden="true" />
+   <div className={styles.onlineActor} data-licensed-actor="sitting-2"
+      aria-hidden="true" dangerouslySetInnerHTML={{__html:HUMAAANS_SITTING}}/>
+   <div className={styles.licensedScreen} data-story-screen="active" aria-hidden="true">
+     <div className={styles.licensedScreenTop}><strong>ServiceDesk / DEMO</strong><span>OPERATOR VIEW</span></div>
+     <div className={styles.licensedRequest}>
+       <div className={styles.licensedEyebrow}>{scene.eyebrow}</div>
+       <h4>{scene.headline}</h4>
+       <p>{scene.detail}</p>
+     </div>
+     <div className={styles.licensedProgress}>{[1,2,3].map(n=><i key={n} data-lit={n<=scene.progress}/>)}</div>
+     <div className={styles.licensedStatus} data-review-required={blocked}>{scene.status} · {screen}</div>
+   </div>
+   <svg className={styles.licenseTrail} viewBox="0 0 240 60" aria-hidden="true" focusable="false">
+     <path d="M4 36C66 8 127 60 231 22"/>
+     <circle className={styles.licensedTrailDot} cx="231" cy="22" r="7" />
+   </svg>
+   <div className={styles.licensedArtworkCredit}>Character artwork: <a href="https://humaaans.com/" target="_blank" rel="noopener noreferrer">Humaaans / Pablo Stanley</a></div>
+ </div>;
 }

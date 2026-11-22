@@ -52,7 +52,7 @@ function InteractiveOperatorStory({
             </div>
           </div>
           <div className={styles.stageFooter}>
-            <span>ORIGINAL VECTOR CHARACTER · EVENT-DRIVEN ACTING</span>
+            <span>HUMAAANS VECTOR ART · ORIGINAL INTERACTIVE STORY</span>
             <span>NO AUDIO · NO AUTOPLAY</span>
           </div>
         </div>
