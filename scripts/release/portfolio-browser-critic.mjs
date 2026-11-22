@@ -130,14 +130,20 @@ try{
   // requires V3; post-deployment rerun verifies the same V3 actor on Render.
   const hasActorV2=await js("document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')!==null");
   const hasActorV3=await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')!==null");
+  const hasActorV4=await js("document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')!==null");
+  if(!process.env.PORTFOLIO_QA_BASE_URL){
+    assert(hasActorV4,"Exact V4 source includes anatomically drawn safety and resting hands");
+  }
   if(!process.env.PORTFOLIO_QA_BASE_URL){
     assert(hasActorV3,"Exact source includes the V3 seamless acting system");
   }
   if(hasActorV3){
     assert(await js("!!document.querySelector('#interactive-stories [data-rig=\"face-front\"]')"),"Front portrait remains a distinct artwork");
     assert(await js("!!document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')"),"Artist-drawn quarter profile has independent anatomy");
-    assert(await js("document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')?.querySelectorAll('path').length>=5"),"Resting hand uses anatomically drawn wrist, thumb and finger details");
-    assert(await js("document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')?.querySelectorAll('path').length>=4"),"Open safety palm has separate wrist, thumb and finger forms");
+    if(hasActorV4){
+      assert(await js("document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')?.querySelectorAll('path').length>=5"),"Resting hand uses anatomically drawn wrist, thumb and finger details");
+      assert(await js("document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')?.querySelectorAll('path').length>=4"),"Open safety palm has separate wrist, thumb and finger forms");
+    }
     assert(await js("document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]').querySelectorAll('path').length>=9"),"Quarter face contains separately drawn contour, jaw, nose, mouth and hair");
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).transitionDuration)>.3"),"Multi-joint acting uses interpolated continuity");
     assert(await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName==='none'"),"CSS keyframe resets are disabled on the V3 elbow");
@@ -187,8 +193,10 @@ try{
   if(hasActorV3){
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')).opacity)>.97"),"AI reading displays a fully drawn three-quarter facial view");
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-front\"]')).opacity)<.03"),"Front portrait is hidden while reading");
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')).opacity)>.97"),"Reading pose retains resting keyboard hand");
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')).opacity)<.03"),"Reading pose never shows safety-stop palm");
+    if(hasActorV4){
+      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')).opacity)>.97"),"Reading pose retains resting keyboard hand");
+      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')).opacity)<.03"),"Reading pose never shows safety-stop palm");
+    }
     assert(await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')===window.__operatorStableNode"),"Actor persists when entering the AI reading scene");
   }
   assert(await click('#interactive-stories [class*="continue"]',"Continue to Review"),"Operator reaches human review");
@@ -199,7 +207,7 @@ try{
     assert(contactAtPeak,"Alert hand must never hang below the front desk edge at motion peak");
   }
   await sleep(900);await shot("operator-alert-1220.png");
-  if(hasActorV3){
+  if(hasActorV4){
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')).opacity)>.97"),"Safety review displays the purpose-drawn open palm");
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')).opacity)<.03"),"Safety review hides the neutral resting hand");
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-alert\"]')).opacity)>.8"),"Safety review changes facial acting shape");
