@@ -539,7 +539,11 @@
 .licensedArtworkCredit a{color:#235f4b;text-decoration:underline;text-underline-offset:2px}
 .artwork:has(.licensedScene){background:#dcefe5;align-items:stretch;min-height:455px}
 .artwork:has(.licensedScene) .actionTag{bottom:18px;right:14px;max-width:220px;z-index:7;font-size:.63rem}
-:global(html[data-portfolio-theme="dark"]) .licensedScene{background:radial-gradient(ellipse at 77% 40%,#c7dfd0 0,#adcdbd 44%,transparent 70%),linear-gradient(145deg,#a2c6ae,#d4e9da);color:#164437}
+:global(html[data-portfolio-theme="dark"]) .licensedScene{background:radial-gradient(ellipse at 77% 40%,#376b57 0,#204f41 44%,transparent 70%),linear-gradient(145deg,#123d35,#1d5143);color:#e6f6e9}
+:global(html[data-portfolio-theme="dark"]) .licenseMast{color:#d5f8e3}
+:global(html[data-portfolio-theme="dark"]) .licenseNumber{color:#c0f2d2;opacity:.29}
+:global(html[data-portfolio-theme="dark"]) .storyFloor{background:#91d2ac55}
+:global(html[data-portfolio-theme="dark"]) .licensedArtworkCredit{background:#f1fff0e8;color:#245b48}
 @media(max-width:800px){.onlineActor{width:56%;right:-4%;bottom:46px}.licensedScreen{left:4%;top:22%;width:54%}.licensedScreenTop{padding:10px}.licensedRequest{padding:12px 11px 5px}.licensedProgress{padding:8px 12px}.licensedScreen{min-height:190px}.licensedStatus{padding:9px 11px}.licensedArtworkCredit{bottom:9px;left:9px;font-size:.54rem}.artwork:has(.licensedScene) .actionTag{bottom:38px;right:8px}}
 @media(max-width:480px){.licensedScene{min-height:400px;aspect-ratio:auto}.storyBackdrop{top:90px;right:-43px;width:68%;height:65%}.onlineActor{width:64%;right:-9%;height:66%;bottom:58px}.licensedScreen{top:25%;left:3%;width:57%;min-height:180px;border-radius:12px}.licensedRequest h4{font-size:.82rem}.licensedRequest p{font-size:.62rem}.licensedStatus{font-size:.56rem}.licenseMast{left:14px;top:16px}.licenseNumber{font-size:2.1rem}.artwork:has(.licensedScene){min-height:400px}.artwork:has(.licensedScene) .actionTag{font-size:.55rem;max-width:160px;padding:6px;bottom:40px;right:5px}}
 @media(prefers-reduced-motion:reduce){.onlineActor,.onlineActor :global([id="Head/Front/Rad"]),.onlineActor :global([id="Body/Pointing-Forward"]),.licensedScreen,.licensedProgress i,.licenseTrail path{transition-duration:.01ms!important;animation-duration:.01ms!important}}

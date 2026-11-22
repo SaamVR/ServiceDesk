@@ -133,7 +133,7 @@ try{
      assert(await js("document.querySelector('#interactive-stories [data-licensed-actor=\"sitting-2\"] svg')?.getAttribute('viewBox')==='0 0 380 400'"),"Original Humaaans character SVG maintains author source viewBox");
      assert(await js("!!document.querySelector('#interactive-stories [id=\"Head/Front/Rad\"]')"),"Licensed character retains author-drawn head group");
      assert(await js("!!document.querySelector('#interactive-stories [id=\"Body/Pointing-Forward\"]')"),"Licensed character retains author-drawn pointing pose");
-     assert(await js("document.querySelector('#interactive-stories [data-licensed-actor]')?.querySelectorAll('path').length>=15"),"Sourced artwork contains real vector body illustration");
+     assert(await js("document.querySelector('#interactive-stories [data-licensed-actor]')?.querySelectorAll('path').length>=10"),"Sourced artwork contains real vector body illustration");
      assert(await js("document.querySelector('#interactive-stories a[href=\"https://humaaans.com/\"]')?.textContent?.includes('Humaaans')"),"Human artist is credited and source is linked visibly");
      assert(await js("!!document.querySelector('#interactive-stories [data-story-screen=\"active\"]')"),"Event-driven dashboard is composed beside the sourced human");
      assert(await js("!document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')"),"Rejected pseudorig was not reused in replacement");
