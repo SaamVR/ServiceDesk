@@ -6,17 +6,27 @@ import styles from "./MarketingNavV3.module.css";
 
 /** Concise information architecture for the public site. */
 export const marketingLinks = [
+  { href: "/work/business-automation", label: "Case study", description: "See the automation project" },
   { href: "/features", label: "Product", description: "Explore the operations platform" },
   { href: "/use-cases/cleaning", label: "Solutions", description: "Built for cleaning teams" },
   { href: "/integrations", label: "Integrations", description: "Connect your existing tools" },
   { href: "/pricing", label: "Pricing", description: "Understand quote controls" },
 ] as const;
 
-export function MarketingNavLinks({ variant }: { variant: "desktop" | "mobile" }) {
+const portfolioLinks = [
+  { href: "/demo", label: "Dashboard demo", description: "Explore the guided operations workspace" },
+  { href: "/#scenario-lab", label: "Live scenario", description: "Trigger and inspect connected business events" },
+  { href: "/#ai-studio", label: "AI studio", description: "Explore six AI-assisted examples" },
+  { href: "/#playbooks", label: "27 automations", description: "Search the real draft rule catalogue" },
+  { href: "/#integrations", label: "Integrations", description: "Inspect evidence and provider handoffs" },
+  { href: "/work/business-automation", label: "Case study", description: "Read the design and engineering story" },
+] as const;
+
+export function MarketingNavLinks({ variant, portfolioMode = false }: { variant: "desktop" | "mobile"; portfolioMode?: boolean }) {
   const pathname = usePathname() ?? "";
   return (
     <>
-      {marketingLinks.map((item) => (
+      {(portfolioMode ? portfolioLinks : marketingLinks).map((item) => (
         <Link
           key={item.href}
           href={item.href}

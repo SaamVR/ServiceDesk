@@ -312,3 +312,38 @@
   .brightHeader:global(.site-header) { min-height: 65px; padding-inline: 18px; }
   .brightHeader .brandName { letter-spacing: -.04em; }
 }
+
+/* Portfolio theme switch stays visible on desktop and in the mobile navigation. */
+.desktopThemeToggle{display:flex;align-items:center}
+.mobileThemeToggle{display:none}
+:global(html[data-portfolio-theme="dark"]) .brightHeader:global(.site-header){
+  background:rgb(12 37 32 / 97%);border-bottom-color:#2b5c4b;color:#e4f8eb;
+}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .brand,
+:global(html[data-portfolio-theme="dark"]) .brightHeader .brandName{color:#e8ffee}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .brandAi{color:#91e5bd}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .brandCaption{color:#a8d0b7}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .navLink{color:#b3d8c4}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .navLink:hover,
+:global(html[data-portfolio-theme="dark"]) .brightHeader .navLink[aria-current="page"]{color:#b5fbd0}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .navLink::after{background:#8bdfb5}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .menuToggle{
+  background:#1b4b3d;color:#e5ffed;border-color:#3f8064
+}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .mobileMenuPanel{
+  background:#10332c;color:#e7fff0;border-color:#39715b
+}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .menuEyebrow{color:#a0d6ba}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .mobileLink{background:#194438;border-color:#346e55}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .mobileLink:hover{background:#245746}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .mobileLinkCopy strong{color:#e2ffee}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .mobileLinkCopy small{color:#b3d3bf}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .mobileMenuFooter{border-color:#356950}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .mobileMenuFooter a{color:#c1eacb}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .primaryAction{background:#a7edc3;border-color:#a7edc3;color:#124c37}
+:global(html[data-portfolio-theme="dark"]) .brightHeader .primaryAction:hover{background:#c9fbd9;border-color:#c9fbd9;color:#124c37}
+@media(max-width:640px){
+  .desktopThemeToggle{display:none}
+  .mobileThemeToggle{display:block;grid-column:1/-1;padding-top:10px;border-top:1px solid #cde4d8}
+  :global(html[data-portfolio-theme="dark"]) .mobileThemeToggle{border-top-color:#346f58}
+}

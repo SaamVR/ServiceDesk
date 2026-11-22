@@ -2353,3 +2353,12 @@ p { color: var(--muted); }
 
 /* Marketing sample quote: make fixture values visibly distinct from live billing. */
 .pricing-illustrative-note { margin: 12px 0 0; color: var(--muted); font-size: .83rem; line-height: 1.6; }
+
+/* Explicit portfolio presentation only. No color changes to the SaaS tenant shell. */
+html[data-portfolio-theme="dark"]{color-scheme:dark}
+html[data-portfolio-theme="light"]{color-scheme:light}
+html[data-portfolio-theme="dark"] body{background:#0c231f;color:#e6f8eb}
+html[data-portfolio-theme="dark"] .site-footer{background:#102e28;border-color:#306852;color:#e3f8eb}
+html[data-portfolio-theme="dark"] .site-footer p{color:#b6d8c5}
+html[data-portfolio-theme="dark"] .site-footer a{color:#caefda}
+html[data-portfolio-theme="dark"] .site-footer a:hover{color:#fff}
