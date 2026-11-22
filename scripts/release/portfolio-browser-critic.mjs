@@ -120,123 +120,69 @@ try{
 
  const storyPresent=await js("!!document.querySelector('#interactive-stories')");
  if(storyPresent){
-  assert(await js("document.querySelector('#interactive-stories h2')?.textContent?.includes('Meet the person')"),"Human-acted interactive story renders");
-  await js("document.getElementById('interactive-stories').scrollIntoView({block:'start'})");
-  await sleep(250);await shot("interactive-stories-desktop-1440.png");
-  assert(await js("!!document.querySelector('a[href=\"#interactive-stories-play\"]')"),"Hero links directly to the playable stage");
-  await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start',behavior:'instant'})");
-  await sleep(200);await shot("interactive-story-play-desktop-1440.png");
-  // A pre-deployment hosted run validates the current release, while source
-  // requires V3; post-deployment rerun verifies the same V3 actor on Render.
-  const hasActorV2=await js("document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')!==null");
-  const hasActorV3=await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')!==null");
-  const hasActorV4=await js("document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')!==null");
-  if(!process.env.PORTFOLIO_QA_BASE_URL){
-    assert(hasActorV4,"Exact V4 source includes anatomically drawn safety and resting hands");
-  }
-  if(!process.env.PORTFOLIO_QA_BASE_URL){
-    assert(hasActorV3,"Exact source includes the V3 seamless acting system");
-  }
-  if(hasActorV3){
-    assert(await js("!!document.querySelector('#interactive-stories [data-rig=\"face-front\"]')"),"Front portrait remains a distinct artwork");
-    assert(await js("!!document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')"),"Artist-drawn quarter profile has independent anatomy");
-    if(hasActorV4){
-      assert(await js("document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')?.querySelectorAll('path').length>=5"),"Resting hand uses anatomically drawn wrist, thumb and finger details");
-      assert(await js("document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')?.querySelectorAll('path').length>=4"),"Open safety palm has separate wrist, thumb and finger forms");
-      assert(await js("document.querySelector('#interactive-stories [data-rig=\"review-arm\"]')?.contains(document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]'))"),"Raised palm is attached to a drawn upper arm and forearm");
-    }
-    assert(await js("document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]').querySelectorAll('path').length>=9"),"Quarter face contains separately drawn contour, jaw, nose, mouth and hair");
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).transitionDuration)>.3"),"Multi-joint acting uses interpolated continuity");
-    assert(await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName==='none'"),"CSS keyframe resets are disabled on the V3 elbow");
-    assert(await js("(()=>{window.__operatorStableNode=document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]');return true})()"),"QA stores persistent actor identity without returning a DOM object");
-    const badgeVisible=await js("(()=>{const badge=document.querySelector('#interactive-stories [data-rig=\"notice-badge\"]');const svg=document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]');if(!badge||!svg)return false;const r=badge.getBoundingClientRect(),s=svg.getBoundingClientRect();return r.left>s.left+7&&r.top>s.top+25&&r.right<s.right-7})()");
-    assert(badgeVisible,"Notification icon stays within the vector scene after CSS transforms");
-  }
-  if(hasActorV2){
-    assert(await js("document.querySelector('#interactive-stories [data-rig=\"elbow\"]')!==null"),"Operator has a real nested elbow articulation group");
-    assert(await js("document.querySelector('#interactive-stories [data-rig=\"wrist\"]')!==null"),"Operator has a separate wrist and hand group");
-    assert(await js("document.querySelector('#interactive-stories [data-rig=\"gaze\"]')!==null"),"Operator has independent gaze tracking");
-    if(!hasActorV3){
-      const animatedArm=await js("getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"elbow\"]')).animationName");
-      assert(animatedArm.includes("actorReachElbow"),"Legacy V2 operator elbow follows choreographed keyframes");
-    }
-  }else{
-    assert(!!process.env.PORTFOLIO_QA_BASE_URL,"New articulated character is missing from exact source build");
-  }
-  if(hasActorV2){
-    if(hasActorV3){
-      assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Operator continuity capture starts from exception branch");
-      assert(await click('#interactive-stories [class*="continue"]',"Continue to AI brief"),"Operator continuity enters reading scene");
-      await sleep(1000);
-      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')).opacity)>.97"),"Quarter portrait is visible after moving toward the screen");
-      assert(await click('#interactive-stories [class*="secondaryControls"] button',"Previous event"),"Operator continuity can revisit notice");
-      assert(await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')===window.__operatorStableNode"),"Character DOM identity is preserved across stages");
-    }else{
-      assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Notice capture enters another scenario first");
-      assert(await click('#interactive-stories [class*="branchPicker"] button',"Routine enquiry"),"Notice capture resets to routine");
-    }
-    const noticeStart=await shot("operator-notice-0000.png");
-    await sleep(290);
-    const noticeMid=await shot("operator-notice-0290.png");
-    assert(noticeStart!==noticeMid,"Operator notice action changes actual rendered pixels during motion");
-    await sleep(750);await shot("operator-notice-1040.png");
-    if(hasActorV3){
-      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-front\"]')).opacity)>.97"),"Frontal portrait returns after screen-facing scene");
-    }
-  }else{
-    await shot("operator-notice-hosted-baseline.png");
-  }
-  assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Visitor can choose exception branch");
-  assert(await click('#interactive-stories [class*="continue"]',"Continue to AI brief"),"Operator proceeds to the AI brief");
-  await shot("operator-read-0000.png");
-  await sleep(330);await shot("operator-read-0330.png");
-  await sleep(780);await shot("operator-read-1110.png");
-  if(hasActorV3){
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')).opacity)>.97"),"AI reading displays a fully drawn three-quarter facial view");
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-front\"]')).opacity)<.03"),"Front portrait is hidden while reading");
-    if(hasActorV4){
-      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')).opacity)>.97"),"Reading pose retains resting keyboard hand");
-      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')).opacity)<.03"),"Reading pose never shows safety-stop palm");
-    }
-    assert(await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')===window.__operatorStableNode"),"Actor persists when entering the AI reading scene");
-  }
-  assert(await click('#interactive-stories [class*="continue"]',"Continue to Review"),"Operator reaches human review");
-  await shot("operator-alert-0000.png");
-  await sleep(320);await shot("operator-alert-0320.png");
-  if(hasActorV2){
-    const contactAtPeak=await js("(()=>{const hand=document.querySelector('#interactive-stories [data-rig=\"wrist\"]');const desk=document.querySelector('#interactive-stories [data-prop=\"desktop-edge\"]');return !!hand&&!!desk&&hand.getBoundingClientRect().bottom<=desk.getBoundingClientRect().bottom-1})()");
-    assert(contactAtPeak,"Alert hand must never hang below the front desk edge at motion peak");
-  }
-  await sleep(900);await shot("operator-alert-1220.png");
-  if(hasActorV4){
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')).opacity)>.97"),"Safety review displays the purpose-drawn open palm");
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"review-arm\"]')).opacity)>.97"),"Raised bent-arm silhouette is visible in safety review");
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"front-arm\"]')).opacity)<.03"),"Review replaces the neutral desk arm with the bent safety arm");
-    const safetyPalmVisible=await js("(()=>{const palm=document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]'),monitor=document.querySelector('#interactive-stories [data-prop=\"monitor-shell\"]'),desk=document.querySelector('#interactive-stories [data-prop=\"desktop-edge\"]');if(!palm||!monitor||!desk)return false;const p=palm.getBoundingClientRect(),m=monitor.getBoundingClientRect(),d=desk.getBoundingClientRect();return p.left>m.right-2&&p.bottom<d.top-2})()");
-    assert(safetyPalmVisible,"Open safety palm is completely to the right of the monitor and above the desk");
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')).opacity)<.03"),"Safety review hides the neutral resting hand");
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-alert\"]')).opacity)>.8"),"Safety review changes facial acting shape");
-  }
-  if(hasActorV3){
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-front\"]')).opacity)>.97"),"Alert returns to the frontal character acting view");
-    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]')).opacity)<.03"),"Three-quarter portrait is hidden during frontal alert");
-    assert(await js("document.querySelector('#interactive-stories svg[data-acting-version=\"v3\"]')===window.__operatorStableNode"),"Actor identity persists through safety review");
-  }
-  if(hasActorV2){
-    const contactAtSettle=await js("(()=>{const hand=document.querySelector('#interactive-stories [data-rig=\"wrist\"]');const desk=document.querySelector('#interactive-stories [data-prop=\"desktop-edge\"]');return !!hand&&!!desk&&hand.getBoundingClientRect().bottom<=desk.getBoundingClientRect().bottom-1})()");
-    assert(contactAtSettle,"Alert hand remains above the desk edge after motion settles");
-  }
-  assert(await js("document.querySelector('#interactive-stories [data-scene-state=\"blocked\"]')!==null"),"Operator acting changes to a blocked safety pose");
-  assert(await js("!!document.querySelector('#scenario-lab [data-phase=\"blocked\"]')"),"Six-stage theater synchronizes with operator safety stop");
-  assert(await js("!!document.querySelector('#scenario-lab [data-kind=\"needs-review\"]')"),"Existing event ledger synchronizes with the character's review requirement");
-  await sleep(450);await shot("interactive-story-human-gate-1440.png");
-  assert(await click('#interactive-stories [class*="continue"]',"Acknowledge fictional review"),"Fictional human checkpoint is explicitly acknowledged");
-  assert(await js("document.querySelector('#interactive-stories [data-scene-state=\"blocked\"]')===null"),"Character returns from alert without asserting a provider outcome");
-  assert(await click('#interactive-stories [class*="continue"]',"Continue to Schedule"),"Reviewed example can continue to scheduling");
-  assert(await click('#interactive-stories [class*="branchPicker"] button',"Routine enquiry"),"Switching to routine branch resets shared story");
-  assert(await js("document.querySelectorAll('#scenario-lab [class*=\"ledger\"] > li').length===1"),"Theater ledger resets with the character scenario");
+   assert(await js("document.querySelector('#interactive-stories h2')?.textContent?.includes('Meet the person')"),"Interactive human authority story renders");
+   await js("document.getElementById('interactive-stories').scrollIntoView({block:'start'})");
+   await sleep(250);await shot("interactive-stories-desktop-1440.png");
+   assert(await js("!!document.querySelector('a[href=\"#interactive-stories-play\"]')"),"Hero links to the playable story");
+   await js("document.getElementById('interactive-stories-play').scrollIntoView({block:'start',behavior:'instant'})");
+   await sleep(200);await shot("interactive-story-play-desktop-1440.png");
+   const sourced=await js("document.querySelector('#interactive-stories [data-asset-origin=\"humaaans\"]')!==null");
+   if(!process.env.PORTFOLIO_QA_BASE_URL)assert(sourced,"Exact source must use licensed external artwork rather than rejected custom rig");
+   if(sourced){
+     assert(await js("!document.querySelector('#interactive-stories svg[data-acting-version]')"),"Rejected original SVG actor is absent");
+     assert(await js("document.querySelector('#interactive-stories [data-licensed-actor=\"sitting-2\"] svg')?.getAttribute('viewBox')==='0 0 380 400'"),"Original Humaaans character SVG maintains author source viewBox");
+     assert(await js("!!document.querySelector('#interactive-stories [id=\"Head/Front/Rad\"]')"),"Licensed character retains author-drawn head group");
+     assert(await js("!!document.querySelector('#interactive-stories [id=\"Body/Pointing-Forward\"]')"),"Licensed character retains author-drawn pointing pose");
+     assert(await js("document.querySelector('#interactive-stories [data-licensed-actor]')?.querySelectorAll('path').length>=15"),"Sourced artwork contains real vector body illustration");
+     assert(await js("document.querySelector('#interactive-stories a[href=\"https://humaaans.com/\"]')?.textContent?.includes('Humaaans')"),"Human artist is credited and source is linked visibly");
+     assert(await js("!!document.querySelector('#interactive-stories [data-story-screen=\"active\"]')"),"Event-driven dashboard is composed beside the sourced human");
+     assert(await js("!document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')"),"Rejected pseudorig was not reused in replacement");
+     assert(await js("(()=>{const human=document.querySelector('#interactive-stories [data-licensed-actor]');const panel=document.querySelector('#interactive-stories [data-story-screen]');if(!human||!panel)return false;const a=human.getBoundingClientRect(),p=panel.getBoundingClientRect();return a.width>120&&a.height>150&&p.width>120&&p.height>150})()"),"Professional illustration and functional dashboard both occupy meaningful stage area");
+     await js("(()=>{window.__sourcedActor=document.querySelector('#interactive-stories [data-licensed-actor]');return true})()");
+   }
+   assert(await click('#interactive-stories [class*="branchPicker"] button',"Scope exception"),"Visitor selects exception branch");
+   await shot("operator-notice-0000.png");
+   await sleep(290);
+   const notice=await shot("operator-notice-0290.png");
+   await sleep(750);await shot("operator-notice-1040.png");
+   if(sourced){
+     assert(await js("document.querySelector('#interactive-stories [data-pose=\"notice\"]')!==null"),"Incoming enquiry puts sourced character in notice pose");
+     assert(await js("document.querySelector('#interactive-stories [data-story-screen]')?.textContent?.includes('new enquiry')"),"Event card reflects the actual enquiry");
+   }
+   assert(await click('#interactive-stories [class*="continue"]',"Continue to AI brief"),"Advance to AI assistance without a real provider call");
+   await shot("operator-read-0000.png");
+   await sleep(330);
+   const reading=await shot("operator-read-0330.png");
+   await sleep(780);await shot("operator-read-1110.png");
+   if(sourced){
+     assert(await js("document.querySelector('#interactive-stories [data-pose=\"read\"]')!==null"),"Human acting responds to AI draft");
+     assert(await js("document.querySelector('#interactive-stories [data-story-screen]')?.textContent?.includes('draft')"),"AI draft is explicitly labeled advisory");
+     assert(await js("document.querySelector('#interactive-stories [data-licensed-actor]')===window.__sourcedActor"),"Source artwork DOM remains mounted while story advances");
+     assert(reading!==notice,"AI reading scene is visually distinct from new enquiry");
+     const headTurn=await js("getComputedStyle(document.querySelector('#interactive-stories [id=\"Head/Front/Rad\"]')).transform");
+     assert(headTurn!=='none',"Online modular human head is animated rather than a static screenshot");
+   }
+   assert(await click('#interactive-stories [class*="continue"]',"Continue to Review"),"Human checkpoint responds to scope exception");
+   await shot("operator-alert-0000.png");
+   await sleep(320);await shot("operator-alert-0320.png");
+   await sleep(900);await shot("operator-alert-1220.png");
+   assert(await js("document.querySelector('#interactive-stories [data-scene-state=\"blocked\"]')!==null"),"Safety checkpoint changes stage to blocked");
+   assert(await js("!!document.querySelector('#scenario-lab [data-phase=\"blocked\"]')"),"Operations Theater synchronizes with story safety stop");
+   assert(await js("!!document.querySelector('#scenario-lab [data-kind=\"needs-review\"]')"),"Ledger reflects blocked review event");
+   if(sourced){
+     assert(await js("document.querySelector('#interactive-stories [data-pose=\"alert\"]')!==null"),"Sourced character responds to safety exception");
+     assert(await js("document.querySelector('#interactive-stories [data-story-screen]')?.textContent?.includes('checkpoint')"),"Storyboard visibly explains human review checkpoint");
+     assert(await js("document.querySelector('#interactive-stories [data-review-required=\"true\"]')!==null"),"Simulated exception has distinct review status");
+     assert(await js("document.querySelector('#interactive-stories [data-licensed-actor]')===window.__sourcedActor"),"Original vector person stays stable through blocked scene");
+   }
+   await sleep(250);await shot("interactive-story-human-gate-1440.png");
+   assert(await click('#interactive-stories [class*="continue"]',"Acknowledge fictional review"),"Fictional human review explicitly acknowledged");
+   assert(await js("document.querySelector('#interactive-stories [data-scene-state=\"blocked\"]')===null"),"Fictional review clears demonstration gate only");
+   assert(await click('#interactive-stories [class*="continue"]',"Continue to Schedule"),"Simulated workflow continues to schedule");
+   assert(await click('#interactive-stories [class*="branchPicker"] button',"Routine enquiry"),"Scenario change resets shared story");
+   assert(await js("document.querySelectorAll('#scenario-lab [class*=\"ledger\"] > li').length===1"),"Shared Operations Theater resets when switching scenarios");
  }else{
-  assert(!!process.env.PORTFOLIO_QA_BASE_URL,"Missing playable story from exact source build");
+   assert(!!process.env.PORTFOLIO_QA_BASE_URL,"Playable story missing from exact source");
  }
  const theaterBackground=()=>js("getComputedStyle(document.querySelector('#scenario-lab [class*=\"mainArea\"]')).backgroundImage");
  const lightStage=await theaterBackground();
