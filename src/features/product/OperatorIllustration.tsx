@@ -116,6 +116,9 @@ export function OperatorIllustration({
         </g>
         <path d="M507 207l-4 18q4 5 10 1" fill="none" stroke="#a66e57" strokeWidth="3" strokeLinecap="round"/>
         <path className={styles.smile} d="M496 240q11 10 23-1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
+        <path className={styles.cheekExpression} data-rig="face-cheek" d="M482 238q5 4 9 2m30 0q5 2 9-3" fill="none" stroke="#a8705d" strokeWidth="2.2" strokeLinecap="round" opacity=".55"/>
+        <path className={styles.focusExpression} data-rig="face-focus" d="M497 183q8 4 14 0" fill="none" stroke="#875544" strokeWidth="2.3" strokeLinecap="round" opacity=".5"/>
+        <path className={styles.alertExpression} data-rig="face-alert" d="M476 185q8-7 18-5m25 1q8-4 17 5" fill="none" stroke="#624035" strokeWidth="2.6" strokeLinecap="round" opacity=".55"/>
         <path className={styles.thinkingMouth} d="M499 241q10 2 18-1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
         <path className={styles.concern} d="M497 242q10-6 21 1" stroke="#753d35" strokeWidth="3.2" strokeLinecap="round" fill="none"/>
         <path d="M483 258q23 14 48-1" fill="none" stroke="#ab785d" strokeWidth="2" opacity=".55"/>
@@ -142,6 +145,8 @@ export function OperatorIllustration({
           </g>
           <path d="M470 207q-4 6-9 12q-2 4 5 5l9-2" fill="none" stroke="#a86c55" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/>
           <path d="M485 241q10 3 19-2" className={styles.quarterMouth} fill="none" stroke="#793e38" strokeWidth="3" strokeLinecap="round"/>
+          <path className={styles.quarterFocus} data-rig="quarter-focus" d="M475 192q7-5 14-4m23 0q7-3 12 1" fill="none" stroke="#765044" strokeWidth="2.5" strokeLinecap="round"/>
+          <path d="M477 227q7 5 14 1m21-1q5 3 10-1" stroke="#bb795f" strokeWidth="2.1" strokeLinecap="round" fill="none" opacity=".26"/>
           <path d="M482 250q14 12 29 3" fill="none" stroke="#ad765f" opacity=".35" strokeWidth="2"/>
           <path d="M534 201q8 9 2 19" fill="none" stroke="#9b624f" opacity=".24" strokeWidth="4" strokeLinecap="round"/>
         </g>
@@ -156,9 +161,26 @@ export function OperatorIllustration({
             <path d="M378 354c-11 8-26 19-39 25l7 17c18-2 35-12 49-23l2-6Z" fill="#178267"/>
             <path d="M367 374q-10 9-19 9" stroke="#63c5a1" strokeWidth="3" fill="none" opacity=".45"/>
             <g className={styles.hand} data-rig="wrist">
-              <path d="M348 380c-8-4-15-4-23 0l-13 8c-5 4-3 9 3 10l34-1 9-10Z" fill="url(#sd-skin)"/>
-              <path d="m323 387-10 2m17 3-11 2m18 1-11 2" stroke="#a66c57" strokeWidth="2.2" strokeLinecap="round" opacity=".75"/>
-              <path d="M319 380q6-6 13-4" stroke="#efb89a" strokeWidth="2.6" fill="none" opacity=".5"/>
+              {/* Resting hand: narrow wrist, four individually outlined knuckles,
+                  a real thumb fold and soft fingertip contact with the desktop. */}
+              <g className={styles.handRest} data-rig="hand-rest">
+                <path d="M357 383q-5-5-12-6l-12-2q-7-1-13 3l-12 8q-5 4-2 8q3 4 9 2l22 1q11 0 18-6Z" fill="url(#sd-skin)"/>
+                <path d="M312 388q10-7 19-6q6 1 15 4" fill="none" stroke="#f0b99b" strokeWidth="2.4" strokeLinecap="round" opacity=".55"/>
+                <path d="M307 393q6 2 13 1m-2-7q8 4 15 5m-9-12q8 2 14 6m-4-11q7 2 12 5" fill="none" stroke="#a96d59" strokeWidth="1.8" strokeLinecap="round" opacity=".8"/>
+                <path d="M332 379q-8-7-14-5q-6 3-4 7l11 3" fill="#ce9678" stroke="#b77960" strokeWidth="1.8" strokeLinejoin="round"/>
+                <path d="M312 390l-3 1m11 3-3 2m8-1-4 2" stroke="#eab69a" strokeWidth="2.4" strokeLinecap="round"/>
+                <path d="M349 379q5 5 4 10" fill="none" stroke="#9c614f" strokeWidth="2" opacity=".36"/>
+              </g>
+              {/* Review stop: open palm with separated tapered fingers, opposing thumb
+                  and the same wrist root. It is a genuinely new hand drawing,
+                  not a rotated or scaled copy of the resting hand. */}
+              <g className={styles.handSignal} data-rig="hand-stop">
+                <path d="M353 386q-2-6-4-11l9-24q2-6-2-8q-5-2-7 4l-5 15-1-29q0-7-5-7q-6 0-6 7l1 28-6-26q-2-6-7-4q-4 2-2 8l6 27-9-18q-3-6-8-3q-4 3-1 8l13 27q5 10 12 15l4 6Z" fill="url(#sd-skin)" stroke="#a86c55" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                <path d="M332 384q-9-8-13-16l-11-12q-5-5-9 0q-3 4 1 9l10 14q7 10 21 14" fill="#c99073" stroke="#ac7059" strokeWidth="1.8" strokeLinejoin="round"/>
+                <path d="M333 335l3 25m-12-20 6 25m20-14-5 18" stroke="#e9b394" strokeWidth="2.3" strokeLinecap="round" opacity=".63" fill="none"/>
+                <path d="M317 378q9-4 15 2" fill="none" stroke="#985e50" strokeWidth="2.2" opacity=".36"/>
+                <path d="M341 375q-5 8-7 14" fill="none" stroke="#a56b55" strokeWidth="2" opacity=".35"/>
+              </g>
             </g>
           </g>
         </g>

@@ -439,6 +439,33 @@
 .illustration[data-acting-mode="continuity"][data-pose="relief"] .head{transform:translate(0,1px) rotate(-1.8deg)}
 .illustration[data-acting-mode="continuity"][data-pose="relief"] .backArm{transform:rotate(1deg)}
 
+
+/* Acting pass V4: purposeful hand silhouettes and expression accents. Hands
+   retain the original wrist pivot, so their contact tests remain meaningful.
+   Only a blocked human-review event opens the safety palm. */
+.illustration[data-acting-mode="continuity"] .handRest,
+.illustration[data-acting-mode="continuity"] .handSignal,
+.illustration[data-acting-mode="continuity"] .cheekExpression,
+.illustration[data-acting-mode="continuity"] .focusExpression,
+.illustration[data-acting-mode="continuity"] .alertExpression,
+.illustration[data-acting-mode="continuity"] .quarterFocus {
+  transition:opacity .22s cubic-bezier(.2,.7,.2,1) 70ms;
+}
+.illustration[data-acting-mode="continuity"] .handRest{opacity:1}
+.illustration[data-acting-mode="continuity"] .handSignal{opacity:0}
+.illustration[data-acting-mode="continuity"] .cheekExpression{opacity:.52}
+.illustration[data-acting-mode="continuity"] .focusExpression,
+.illustration[data-acting-mode="continuity"] .alertExpression,
+.illustration[data-acting-mode="continuity"] .quarterFocus{opacity:0}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .handRest{opacity:0}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .handSignal{opacity:1}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .alertExpression{opacity:.95}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .cheekExpression{opacity:0}
+.illustration[data-acting-mode="continuity"][data-pose="decide"] .focusExpression{opacity:.8}
+.illustration[data-acting-mode="continuity"][data-pose="decide"] .cheekExpression{opacity:0}
+.illustration[data-acting-mode="continuity"][data-pose="read"] .quarterFocus,
+.illustration[data-acting-mode="continuity"][data-pose="type"] .quarterFocus{opacity:.75}
+
 :global(html[data-portfolio-theme="dark"]) .stories{
   --story-ink:#eaf9ed;--story-soft-ink:#b3d9c5;--story-border:#345f4f;--story-paper:#153e35;--story-mist:#194c3e;--story-card:#123a31;
   background:radial-gradient(circle at 77% 8%,#235b46 0,transparent 50%),linear-gradient(180deg,#0f2926,#133a30);
