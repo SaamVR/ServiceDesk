@@ -331,7 +331,14 @@ try{
      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).animationDuration||'0')<=0.01"),"Operator shoulder honors reduced motion");
      assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"eyelids\"]')).animationDuration||'0')<=0.01"),"Operator blinking honors reduced motion");
    }else{
-     assert(!!process.env.PORTFOLIO_QA_BASE_URL,"New articulated operator must exist in the exact-source build");
+     const sourcedReduced=await js("document.querySelector('#interactive-stories [data-asset-origin=\"humaaans\"]')!==null");
+     if(sourcedReduced){
+       assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-licensed-actor]')).transitionDuration||'0')<=0.01"),"Sourced human body acting honors reduced motion");
+       assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [id=\"Head/Front/Rad\"]')).transitionDuration||'0')<=0.01"),"Licensed modular head transitions honor reduced motion");
+       assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-story-screen]')).transitionDuration||'0')<=0.01"),"Editorial scene UI honors reduced motion");
+     }else{
+       assert(!!process.env.PORTFOLIO_QA_BASE_URL,"Expected the sourced Humaaans actor in exact-source build");
+     }
    }
  }
  await shot("home-reduced-motion-320.png");
