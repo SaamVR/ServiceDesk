@@ -171,18 +171,27 @@ export function OperatorIllustration({
                 <path d="M312 390l-3 1m11 3-3 2m8-1-4 2" stroke="#eab69a" strokeWidth="2.4" strokeLinecap="round"/>
                 <path d="M349 379q5 5 4 10" fill="none" stroke="#9c614f" strokeWidth="2" opacity=".36"/>
               </g>
-              {/* Review stop: open palm with separated tapered fingers, opposing thumb
-                  and the same wrist root. It is a genuinely new hand drawing,
-                  not a rotated or scaled copy of the resting hand. */}
-              <g className={styles.handSignal} data-rig="hand-stop">
-                <path d="M353 386q-2-6-4-11l9-24q2-6-2-8q-5-2-7 4l-5 15-1-29q0-7-5-7q-6 0-6 7l1 28-6-26q-2-6-7-4q-4 2-2 8l6 27-9-18q-3-6-8-3q-4 3-1 8l13 27q5 10 12 15l4 6Z" fill="url(#sd-skin)" stroke="#a86c55" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-                <path d="M332 384q-9-8-13-16l-11-12q-5-5-9 0q-3 4 1 9l10 14q7 10 21 14" fill="#c99073" stroke="#ac7059" strokeWidth="1.8" strokeLinejoin="round"/>
-                <path d="M333 335l3 25m-12-20 6 25m20-14-5 18" stroke="#e9b394" strokeWidth="2.3" strokeLinecap="round" opacity=".63" fill="none"/>
-                <path d="M317 378q9-4 15 2" fill="none" stroke="#985e50" strokeWidth="2.2" opacity=".36"/>
-                <path d="M341 375q-5 8-7 14" fill="none" stroke="#a56b55" strokeWidth="2" opacity=".35"/>
-              </g>
+              {/* Review gesture uses a separate elbow-to-palm anatomy
+                  and appears in front of the operator rather than behind the screen. */}
             </g>
           </g>
+        </g>
+      </g>
+      <g className={styles.reviewArm} data-rig="review-arm">
+        {/* A bent, raised forearm: shoulder (430,315), elbow (411,355),
+            wrist (444,310). The monitor ends at x=387 so the full signal
+            hand remains visible and never resembles a detached limb. */}
+        <path d="M427 310Q409 314 400 340Q395 351 405 360L423 367Q438 345 448 327Z" fill="url(#sd-shirt)"/>
+        <path d="M417 320Q408 334 408 346" fill="none" stroke="#55c6a5" strokeWidth="4" strokeLinecap="round" opacity=".47"/>
+        <path d="M405 352Q419 336 426 316L434 305Q441 296 449 303Q446 319 438 337Q430 355 422 365Z" fill="url(#sd-skin)"/>
+        <path d="M430 318Q426 340 418 354" fill="none" stroke="#e4a78a" strokeWidth="2.8" strokeLinecap="round" opacity=".44"/>
+        <path d="M404 351q10 7 19 9" stroke="#176d5a" strokeWidth="5" strokeLinecap="round" opacity=".4"/>
+        <g className={styles.handSignal} data-rig="hand-stop" transform="translate(105 -78)">
+          <path d="M353 386q-2-6-4-11l9-24q2-6-2-8q-5-2-7 4l-5 15-1-29q0-7-5-7q-6 0-6 7l1 28-6-26q-2-6-7-4q-4 2-2 8l6 27-9-18q-3-6-8-3q-4 3-1 8l13 27q5 10 12 15l4 6Z" fill="url(#sd-skin)" stroke="#a86c55" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+          <path d="M332 384q-9-8-13-16l-11-12q-5-5-9 0q-3 4 1 9l10 14q7 10 21 14" fill="#c99073" stroke="#ac7059" strokeWidth="1.8" strokeLinejoin="round"/>
+          <path d="M333 335l3 25m-12-20 6 25m20-14-5 18" stroke="#e9b394" strokeWidth="2.3" strokeLinecap="round" opacity=".63" fill="none"/>
+          <path d="M317 378q9-4 15 2" fill="none" stroke="#985e50" strokeWidth="2.2" opacity=".36"/>
+          <path d="M341 375q-5 8-7 14" fill="none" stroke="#a56b55" strokeWidth="2" opacity=".35"/>
         </g>
       </g>
       </g>
@@ -197,7 +206,7 @@ export function OperatorIllustration({
       <ellipse cx="445" cy="400" rx="22" ry="6" fill="#1b4d42" opacity=".65"/>
 
       {/* Functional product representation lives on the monitor. */}
-      <rect x="94" y="135" width="293" height="202" rx="19" fill="#16433d"/>
+      <rect data-prop="monitor-shell" x="94" y="135" width="293" height="202" rx="19" fill="#16433d"/>
       <rect x="105" y="146" width="271" height="177" rx="12" fill="url(#sd-screen)"/>
       <g clipPath="url(#sd-screen-clip)">
         <path d="M110 183h269" stroke="#326a5c" strokeWidth="1.8"/>

@@ -440,6 +440,26 @@
 .illustration[data-acting-mode="continuity"][data-pose="relief"] .backArm{transform:rotate(1deg)}
 
 
+
+/* V4 director fix: the review gesture has a drawn bent forearm rooted at the
+   shoulder, not an open palm hidden behind the monitor. Crossfade the two
+   complete arms while the raised arm follows a small lift-and-settle arc. */
+.illustration[data-acting-mode="continuity"] .reviewArm {
+  transform-box:view-box;
+  transform-origin:430px 316px;
+  opacity:0;
+  transform:translate(5px,12px) rotate(-5deg);
+  transition:opacity .22s ease 100ms, transform .78s cubic-bezier(.2,.8,.25,1) 50ms;
+}
+.illustration[data-acting-mode="continuity"] .frontArm {
+  transition:opacity .22s ease 70ms;
+}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .frontArm{opacity:0}
+.illustration[data-acting-mode="continuity"][data-pose="alert"] .reviewArm{
+  opacity:1;
+  transform:translate(0,0) rotate(0);
+}
+
 /* Acting pass V4: purposeful hand silhouettes and expression accents. Hands
    retain the original wrist pivot, so their contact tests remain meaningful.
    Only a blocked human-review event opens the safety palm. */

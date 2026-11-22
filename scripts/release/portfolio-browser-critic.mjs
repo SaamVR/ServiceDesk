@@ -143,6 +143,7 @@ try{
     if(hasActorV4){
       assert(await js("document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')?.querySelectorAll('path').length>=5"),"Resting hand uses anatomically drawn wrist, thumb and finger details");
       assert(await js("document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')?.querySelectorAll('path').length>=4"),"Open safety palm has separate wrist, thumb and finger forms");
+      assert(await js("document.querySelector('#interactive-stories [data-rig=\"review-arm\"]')?.contains(document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]'))"),"Raised palm is attached to a drawn upper arm and forearm");
     }
     assert(await js("document.querySelector('#interactive-stories [data-rig=\"face-quarter\"]').querySelectorAll('path').length>=9"),"Quarter face contains separately drawn contour, jaw, nose, mouth and hair");
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"shoulder\"]')).transitionDuration)>.3"),"Multi-joint acting uses interpolated continuity");
@@ -209,6 +210,10 @@ try{
   await sleep(900);await shot("operator-alert-1220.png");
   if(hasActorV4){
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]')).opacity)>.97"),"Safety review displays the purpose-drawn open palm");
+    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"review-arm\"]')).opacity)>.97"),"Raised bent-arm silhouette is visible in safety review");
+    assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"front-arm\"]')).opacity)<.03"),"Review replaces the neutral desk arm with the bent safety arm");
+    const safetyPalmVisible=await js("(()=>{const palm=document.querySelector('#interactive-stories [data-rig=\"hand-stop\"]'),monitor=document.querySelector('#interactive-stories [data-prop=\"monitor-shell\"]'),desk=document.querySelector('#interactive-stories [data-prop=\"desktop-edge\"]');if(!palm||!monitor||!desk)return false;const p=palm.getBoundingClientRect(),m=monitor.getBoundingClientRect(),d=desk.getBoundingClientRect();return p.left>m.right-2&&p.bottom<d.top-2})()");
+    assert(safetyPalmVisible,"Open safety palm is completely to the right of the monitor and above the desk");
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"hand-rest\"]')).opacity)<.03"),"Safety review hides the neutral resting hand");
     assert(await js("parseFloat(getComputedStyle(document.querySelector('#interactive-stories [data-rig=\"face-alert\"]')).opacity)>.8"),"Safety review changes facial acting shape");
   }
